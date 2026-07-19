@@ -16,14 +16,14 @@ use std::ops::RangeInclusive;
 /// It enables type-safe position manipulation, bounds checking, and conversion between
 /// index and length semantics.
 ///
-/// ## Purpose
+/// # Purpose
 ///
 /// This trait serves types that represent "where" something is located.
 /// While [`LengthOps`] asks "how much space?", this trait asks "where am I?".
 /// This semantic distinction enables clearer, more maintainable code by making
 /// position-based operations explicit.
 ///
-/// ## Key Trait Capabilities
+/// # Key Trait Capabilities
 ///
 /// - **Type conversion**: Convert 0-based indices to 1-based lengths via
 ///   [`convert_to_length()`]
@@ -34,36 +34,37 @@ use std::ops::RangeInclusive;
 /// - **Type-safe pairing**: Each index type pairs with a corresponding length type via
 ///   [`LengthType`]
 ///
-/// ## Type System Foundation
+/// # Type System Foundation
 ///
 /// Every `IndexOps` type has an associated [`LengthType`] that represents the
 /// corresponding 1-based size measurement. This creates a bidirectional type-safe
 /// relationship preventing mismatched comparisons at compile time:
 ///
-/// - [`Index`] ↔ [`Length`]
-/// - [`RowIndex`] ↔ [`RowHeight`]
-/// - [`ColIndex`] ↔ [`ColWidth`]
+/// - [`VPIndex`] ↔ [`VPLength`]
+/// - [`VPRow`] ↔ [`VPHeight`]
+/// - [`VPCol`] ↔ [`VPWidth`]
 /// - [`ByteIndex`] ↔ [`ByteLength`]
 /// - [`SegIndex`] ↔ [`SegLength`]
 ///
-/// This pairing prevents type mismatches like comparing [`RowIndex`] with [`ColWidth`].
+/// This pairing prevents type mismatches like comparing [`VPRow`] with
+/// [`VPWidth`].
 ///
-/// ## Implementing Types
+/// # Implementing Types
 ///
 /// The following types in this codebase implement `IndexOps`:
 ///
-/// - [`Index`] - Generic 0-based position (dimension-agnostic)
-/// - [`RowIndex`] - Vertical position in terminal grid
-/// - [`ColIndex`] - Horizontal position in terminal grid
+/// - [`VPIndex`] - Generic 0-based position in viewport (dimension-agnostic)
+/// - [`VPRow`] - Vertical position in terminal grid
+/// - [`VPCol`] - Horizontal position in terminal grid
 /// - [`ByteIndex`] - Byte position in [`UTF-8`] strings
 /// - [`SegIndex`] - Grapheme segment position
 ///
-/// ## Core Operations
+/// # Core Operations
 ///
-/// ### Conversion
+/// ## Conversion
 /// - [`convert_to_length()`] - Convert 0-based index to 1-based length (index + 1)
 ///
-/// ### Clamping
+/// ## Clamping
 /// - [`clamp_to_min_index()`] - Clamp to minimum bound (index-to-index). Use for scroll
 ///   positions with a minimum starting point. Takes an index because lower bounds are
 ///   naturally expressed as minimum positions.
@@ -75,9 +76,9 @@ use std::ops::RangeInclusive;
 /// - [`clamp_to_range()`] - Clamp to inclusive range (index-to-range). Use for [`VT-100`]
 ///   scroll regions or text selections where both endpoints are valid positions.
 ///
-/// ## Visual Reference
+/// # Visual Reference
 ///
-/// ### Index-to-Length Conversion ([`convert_to_length()`])
+/// ## Index-to-Length Conversion ([`convert_to_length()`])
 ///
 /// ```text
 /// Index=5 to length conversion:
@@ -90,7 +91,7 @@ use std::ops::RangeInclusive;
 ///                      convert_to_length() = 6
 /// ```
 ///
-/// ### Clamping to Maximum Length ([`clamp_to_max_length()`])
+/// ## Clamping to Maximum Length ([`clamp_to_max_length()`])
 ///
 /// ```text
 /// Clamping index=15 to max_length=10:
@@ -103,7 +104,7 @@ use std::ops::RangeInclusive;
 /// Result: clamp_to_max_length(15, max=10) = 9
 /// ```
 ///
-/// ### Clamping to Minimum Index ([`clamp_to_min_index()`])
+/// ## Clamping to Minimum Index ([`clamp_to_min_index()`])
 ///
 /// ```text
 /// Clamping index=2 to min_bound=5:
@@ -117,7 +118,7 @@ use std::ops::RangeInclusive;
 /// Result: clamp_to_min_index(2, min=5) = 5
 /// ```
 ///
-/// ### Clamping to Inclusive Range ([`clamp_to_range()`])
+/// ## Clamping to Inclusive Range ([`clamp_to_range()`])
 ///
 /// ```text
 /// Clamping to inclusive range [3..=7]:
@@ -132,7 +133,7 @@ use std::ops::RangeInclusive;
 /// clamp_to_range(9, [3..=7]) = 7  (clamped to end)
 /// ```
 ///
-/// ## Design Philosophy
+/// # Design Philosophy
 ///
 /// This trait embodies "index-centric thinking" - operations that naturally arise when
 /// working with positions and locations. Index operations complement length operations,
@@ -144,45 +145,45 @@ use std::ops::RangeInclusive;
 /// Both perspectives are useful in different contexts and provide natural ways to express
 /// bounds checking.
 ///
-/// ## Comparison with [`LengthOps`]
+/// # Comparison with [`LengthOps`]
 ///
 /// For a detailed side-by-side comparison of this trait (0-based positions) and
 /// [`LengthOps`] (1-based sizes), see the [module-level comparison table].
 /// This table clarifies when to use each trait based on your specific use case.
 ///
-/// ## Examples
+/// # Examples
 ///
 /// This trait provides comprehensive position manipulation:
 ///
 /// ```rust
-/// use r3bl_tui::{IndexOps, col, width};
+/// use r3bl_tui::{IndexOps, vp_col, vp_width};
 ///
-/// let position = col(5);
-/// let container_width = width(10);
+/// let position = vp_col(5);
+/// let container_width = vp_width(10);
 ///
 /// // Convert index to length (5 → 6, since 0-based → 1-based)
 /// let length = position.convert_to_length();
 /// assert_eq!(length.as_usize(), 6);
 ///
 /// // Clamp to maximum container size
-/// let large_pos = col(15);
+/// let large_pos = vp_col(15);
 /// let clamped = large_pos.clamp_to_max_length(container_width);
-/// assert_eq!(clamped, col(9));  // Clamped to max valid index
+/// assert_eq!(clamped, vp_col(9));  // Clamped to max valid index
 ///
 /// // Clamp to minimum bound
-/// let small_pos = col(2);
-/// let min_bound = col(5);
+/// let small_pos = vp_col(2);
+/// let min_bound = vp_col(5);
 /// let clamped_min = small_pos.clamp_to_min_index(min_bound);
-/// assert_eq!(clamped_min, col(5));  // Clamped up to minimum
+/// assert_eq!(clamped_min, vp_col(5));  // Clamped up to minimum
 ///
 /// // Clamp to inclusive range (e.g., VT-100 scroll region)
-/// let scroll_region = col(3)..=col(7);
-/// assert_eq!(col(1).clamp_to_range(scroll_region.clone()), col(3));  // Below range
-/// assert_eq!(col(5).clamp_to_range(scroll_region.clone()), col(5));  // Within
-/// assert_eq!(col(9).clamp_to_range(scroll_region.clone()), col(7));  // Above range
+/// let scroll_region = vp_col(3)..=vp_col(7);
+/// assert_eq!(vp_col(1).clamp_to_range(scroll_region.clone()), vp_col(3));  // Below range
+/// assert_eq!(vp_col(5).clamp_to_range(scroll_region.clone()), vp_col(5));  // Within
+/// assert_eq!(vp_col(9).clamp_to_range(scroll_region.clone()), vp_col(7));  // Above range
 /// ```
 ///
-/// ## See Also
+/// # See Also
 ///
 /// - [`LengthOps`] - Operations specific to length/size values (the paired trait)
 /// - [`NumericValue`] - Base trait that `IndexOps` extends
@@ -191,27 +192,27 @@ use std::ops::RangeInclusive;
 /// - [`ViewportBoundsCheck`] - Viewport visibility using hybrid operations
 /// - [module-level comparison table] - `IndexOps` vs `LengthOps` at a glance
 ///
-/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+/// [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ByteLength`]: crate::ByteLength
 /// [`clamp_to_max_length()`]: IndexOps::clamp_to_max_length
 /// [`clamp_to_min_index()`]: IndexOps::clamp_to_min_index
 /// [`clamp_to_range()`]: IndexOps::clamp_to_range
-/// [`ColIndex`]: crate::ColIndex
-/// [`ColWidth`]: crate::ColWidth
 /// [`convert_to_length()`]: IndexOps::convert_to_length
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
-/// [`Index`]: crate::Index
-/// [`Length`]: crate::Length
 /// [`LengthOps`]: crate::LengthOps
 /// [`LengthType`]: Self::LengthType
 /// [`NumericValue`]: crate::NumericValue
-/// [`RowHeight`]: crate::RowHeight
-/// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`VPCol`]: crate::VPCol
+/// [`VPHeight`]: crate::VPHeight
+/// [`VPIndex`]: crate::VPIndex
+/// [`VPLength`]: crate::VPLength
+/// [`VPRow`]: crate::VPRow
+/// [`VPWidth`]: crate::VPWidth
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
 pub trait IndexOps: NumericValue {
@@ -219,22 +220,27 @@ pub trait IndexOps: NumericValue {
     ///
     /// The constraint [`LengthOps<IndexType = Self>`] creates a bidirectional
     /// relationship: this ensures that the length type's [`Self::IndexType`] points back
-    /// to this same index type, preventing type mismatches like [`ColIndex`] ↔
-    /// [`RowHeight`].
+    /// to this same index type, preventing type mismatches like [`VPCol`] ↔
+    /// [`VPHeight`].
     ///
-    /// [`ColIndex`]: crate::ColIndex
     /// [`LengthOps<IndexType = Self>`]: crate::LengthOps
-    /// [`RowHeight`]: crate::RowHeight
     /// [`Self::IndexType`]: crate::LengthOps::IndexType
+    /// [`VPCol`]: crate::VPCol
+    /// [`VPHeight`]: crate::VPHeight
     type LengthType: LengthOps<IndexType = Self>;
 
     /// Converts this 0-based index to 1-based length (adds 1).
     ///
     /// See the [trait documentation][Self] for index/length relationship.
-    fn convert_to_length(&self) -> Self::LengthType {
-        // NumericValue provides the following methods.
-        Self::LengthType::from(self.as_usize() + 1)
-    }
+    ///
+    /// # Implementation Notes
+    ///
+    /// This method does not have a default implementation because `Self::LengthType` no
+    /// longer guarantees an infallible `From<usize>` conversion (to prevent silent
+    /// truncation hazards on [`u16`]-backed screen coordinates). Each type must implement
+    /// this safely using its native underlying type (e.g., [`u16`] for screen indices,
+    /// [`usize`] for storage indices).
+    fn convert_to_length(&self) -> Self::LengthType;
 
     /// Clamp this index to stay within container bounds `[0, length)`.
     ///
@@ -286,58 +292,58 @@ pub trait IndexOps: NumericValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{idx, len};
+    use crate::{vp_idx, vp_len};
 
     #[test]
     fn test_convert_to_length() {
-        let index = idx(5);
+        let index = vp_idx(5u16);
         let length = index.convert_to_length();
         assert_eq!(length.as_usize(), 6);
     }
 
     #[test]
     fn test_clamp_to_max_length() {
-        let index = idx(5);
-        let max_length = len(10);
+        let index = vp_idx(5u16);
+        let max_length = vp_len(10);
         assert_eq!(index.clamp_to_max_length(max_length), index);
 
-        let large_index = idx(15);
+        let large_index = vp_idx(15u16);
         let clamped = large_index.clamp_to_max_length(max_length);
         assert_eq!(clamped.as_usize(), 9); // max_length - 1
     }
 
     #[test]
     fn test_clamp_to_min_index() {
-        let index = idx(5);
-        let min_bound = idx(3);
+        let index = vp_idx(5u16);
+        let min_bound = vp_idx(3u16);
         assert_eq!(index.clamp_to_min_index(min_bound), index);
 
-        let small_index = idx(1);
+        let small_index = vp_idx(1u16);
         let clamped = small_index.clamp_to_min_index(min_bound);
         assert_eq!(clamped, min_bound);
     }
 
     #[test]
     fn test_clamp_to_range() {
-        let range = idx(3)..=idx(7);
+        let range = vp_idx(3u16)..=vp_idx(7u16);
 
         // Below range - clamped to start
-        assert_eq!(idx(1).clamp_to_range(range.clone()), idx(3));
-        assert_eq!(idx(0).clamp_to_range(range.clone()), idx(3));
+        assert_eq!(vp_idx(1u16).clamp_to_range(range.clone()), vp_idx(3u16));
+        assert_eq!(vp_idx(0u16).clamp_to_range(range.clone()), vp_idx(3u16));
 
         // Within range - unchanged
-        assert_eq!(idx(3).clamp_to_range(range.clone()), idx(3));
-        assert_eq!(idx(5).clamp_to_range(range.clone()), idx(5));
-        assert_eq!(idx(7).clamp_to_range(range.clone()), idx(7));
+        assert_eq!(vp_idx(3u16).clamp_to_range(range.clone()), vp_idx(3u16));
+        assert_eq!(vp_idx(5u16).clamp_to_range(range.clone()), vp_idx(5u16));
+        assert_eq!(vp_idx(7u16).clamp_to_range(range.clone()), vp_idx(7u16));
 
         // Above range - clamped to end
-        assert_eq!(idx(8).clamp_to_range(range.clone()), idx(7));
-        assert_eq!(idx(10).clamp_to_range(range.clone()), idx(7));
+        assert_eq!(vp_idx(8u16).clamp_to_range(range.clone()), vp_idx(7u16));
+        assert_eq!(vp_idx(10u16).clamp_to_range(range.clone()), vp_idx(7u16));
 
         // Single-element range
-        let single = idx(5)..=idx(5);
-        assert_eq!(idx(3).clamp_to_range(single.clone()), idx(5));
-        assert_eq!(idx(5).clamp_to_range(single.clone()), idx(5));
-        assert_eq!(idx(7).clamp_to_range(single.clone()), idx(5));
+        let single = vp_idx(5u16)..=vp_idx(5u16);
+        assert_eq!(vp_idx(3u16).clamp_to_range(single.clone()), vp_idx(5u16));
+        assert_eq!(vp_idx(5u16).clamp_to_range(single.clone()), vp_idx(5u16));
+        assert_eq!(vp_idx(7u16).clamp_to_range(single.clone()), vp_idx(5u16));
     }
 }

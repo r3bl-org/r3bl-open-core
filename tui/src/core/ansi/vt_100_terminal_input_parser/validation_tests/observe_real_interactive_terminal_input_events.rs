@@ -396,7 +396,7 @@ fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
     // Format: ESC [ < button ; col ; row M / m
     //         1   2 3 ^content^               ^last
     let content = std::str::from_utf8(&raw[3..raw.len().saturating_sub(1)]).ok()?;
-    let action_char = *raw.last()? as char;
+    let action_char = char::from(*raw.last()?);
 
     // Parse semicolon-separated values
     let parts: Vec<&str> = content.split(';').collect();

@@ -4,9 +4,9 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
-    EscSequence, Pos, TermRow, col, height, width,
-            ofs_buf::test_fixtures_ofs_buf::*,
-            row, term_col, term_row, PendingWrap};
+    ofs_buf::test_fixtures_ofs_buf::*, term_col, term_row, vp_col, vp_height, vp_row,
+    vp_width, EscSequence, PendingWrap, TermRow,
+};
 use crate::core::ansi::{
     constants::{CSI_PARAM_SEPARATOR, CSI_START},
     vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
@@ -47,11 +47,13 @@ pub mod positioning {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Start at a non-home position.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(5) + vp_col(5));
         performer.print('X');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(6),
+            vp_row(5) + vp_col(6),
             "Cursor should move right after printing X"
         );
 
@@ -62,14 +64,14 @@ pub mod positioning {
         // Verify cursor is at home position (r:0,c:0), in 0-based index
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(0),
+            vp_row(0) + vp_col(0),
             "Cursor should be at home position (r:0,c:0)"
         );
 
         performer.print('H'); // Mark home position
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(1),
+            vp_row(0) + vp_col(1),
             "Cursor should move right after printing H"
         );
 
@@ -78,7 +80,7 @@ pub mod positioning {
         assert_plain_char_at(&ofs_buf_vt_100, 0, 0, 'H');
 
         // Verify final cursor position in buffer (`␩` in the diagram)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(1)); // After writing 'H'
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(1)); // After writing 'H'
     }
 
     #[test]
@@ -113,8 +115,8 @@ pub mod positioning {
         // Verify cursor is at (r:4,c:9) in 0-based indexing
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(9),
-            "Cursor should be at (r:4,c:9) in 0-based indexing"
+            vp_row(4) + vp_col(9),
+            "Cursor should be at (r:4,c:9) after positioning"
         );
 
         performer.print('A');
@@ -122,11 +124,14 @@ pub mod positioning {
         // Verify cursor stays at (r:4,c:9) because of deferred wrapping
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(9),
-            "Cursor should be at (r:4,c:9) after writing A"
+            vp_row(4) + vp_col(9),
+            "Cursor should stay at (r:4,c:9) because of deferred wrapping"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
             "Pending wrap should be set"
         );
@@ -135,8 +140,8 @@ pub mod positioning {
         assert_plain_char_at(&ofs_buf_vt_100, 4, 9, 'A');
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(9),
-            "Final cursor position should be at (r:4,c:9)"
+            vp_row(4) + vp_col(9),
+            "ofs_buf_vt_100 cursor pos should be (r:4,c:9) after processing"
         );
     }
 
@@ -166,8 +171,11 @@ pub mod positioning {
 
         // Verify cursor is clamped to buffer boundaries (r:9,c:9) in 0-based indexing
         assert_eq!(
-            performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(9),
+            performer
+                .ofs_buf_vt_100
+                .primary_buffer_mut()
+                .get_cursor_pos(),
+            vp_row(9) + vp_col(9),
             "Cursor should be clamped to buffer boundaries at (r:9,c:9)"
         );
 
@@ -182,8 +190,11 @@ pub mod positioning {
         performer.apply_ansi_bytes(raw_sequence);
 
         assert_eq!(
-            performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(0),
+            performer
+                .ofs_buf_vt_100
+                .primary_buffer_mut()
+                .get_cursor_pos(),
+            vp_row(0) + vp_col(0),
             "Parser should clamp invalid coordinate 0 to 1, resulting in buffer position (r:0,c:0)"
         );
 
@@ -226,7 +237,7 @@ pub mod positioning {
         performer.apply_ansi_bytes(cup_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(2) + col(3),
+            vp_row(2) + vp_col(3),
             "Cursor should be at (r:2,c:3) after CUP"
         );
         performer.print('D');
@@ -237,7 +248,7 @@ pub mod positioning {
         performer.apply_ansi_bytes(hvp_sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(6),
+            vp_row(5) + vp_col(6),
             "Cursor should be at (r:5,c:6) after HVP"
         );
         performer.print('E');
@@ -273,10 +284,12 @@ pub mod positioning {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Move to a known position first.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(5) + vp_col(5));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(5),
+            vp_row(5) + vp_col(5),
             "Cursor should be at (r:5,c:5) to start"
         );
         performer.print('S'); // Mark start position
@@ -286,7 +299,7 @@ pub mod positioning {
         performer.apply_ansi_bytes(format!("{CSI_START}H"));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(0),
+            vp_row(0) + vp_col(0),
             "Cursor should be at (r:0,c:0) after ESC[H (no params)"
         );
         performer.print('H'); // Mark home
@@ -296,7 +309,7 @@ pub mod positioning {
         performer.apply_ansi_bytes(format!("{CSI_START}3H"));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(2) + col(0),
+            vp_row(2) + vp_col(0),
             "Cursor should be at (r:2,c:0) after ESC[3H (col missing, defaults to 1)"
         );
         performer.print('R'); // Mark row-only
@@ -306,7 +319,7 @@ pub mod positioning {
         performer.apply_ansi_bytes(format!("{CSI_START}{CSI_PARAM_SEPARATOR}5H"));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(4),
+            vp_row(0) + vp_col(4),
             "Cursor should be at (r:0,c:4) after ESC[;5H (row missing, defaults to 1)"
         );
         performer.print('C'); // Mark column-only
@@ -350,35 +363,40 @@ pub mod movement {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // 1. Start at row 5, col 3, write a 'A'.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(3));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(5) + vp_col(3));
         performer.print('A');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(4),
+            vp_row(5) + vp_col(4),
             "Cursor should be at (r:5,c:4) after printing 'A'"
         );
 
         // 2. Move up 2 rows and write 'B'.
-        performer.ofs_buf_vt_100.move_cursor_up(height(2));
+        performer.ofs_buf_vt_100.move_cursor_up(vp_height(2));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(4),
+            vp_row(3) + vp_col(4),
             "Cursor should be at (r:3,c:4) after moving up 2 rows, after printing 'A'"
         );
 
         performer.print('B');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(5),
+            vp_row(3) + vp_col(5),
             "Cursor should be at (r:3,c:5) after printing 'B'"
         );
 
         // 3. Try to move up beyond boundary.
-        performer.ofs_buf_vt_100.move_cursor_up(height(10));
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index, row(0)); // Should stop at row 0
+        performer.ofs_buf_vt_100.move_cursor_up(vp_height(10));
+        assert_eq!(
+            performer.ofs_buf_vt_100.get_cursor_pos().row_index,
+            vp_row(0)
+        ); // Should stop at row 0
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(5),
+            vp_row(0) + vp_col(5),
             "Column should remain the same, 5, after moving up, row clamped to 0"
         );
         performer.print('C');
@@ -418,28 +436,30 @@ pub mod movement {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // 1. Start at row 2, write a character.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(2) + col(4));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(2) + vp_col(4));
         performer.print('X');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(2) + col(5),
+            vp_row(2) + vp_col(5),
             "Cursor should move right after printing X, to (r:2,c:5)"
         );
 
         // 2. Move down 3 rows and write another character.
-        performer.ofs_buf_vt_100.move_cursor_down(height(3));
+        performer.ofs_buf_vt_100.move_cursor_down(vp_height(3));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(5),
+            vp_row(5) + vp_col(5),
             "Cursor should be at (r:5,c:5) after moving down 3 rows"
         );
         performer.print('Y');
 
         // 3. Try to move down beyond boundary.
-        performer.ofs_buf_vt_100.move_cursor_down(height(10));
+        performer.ofs_buf_vt_100.move_cursor_down(vp_height(10));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(6),
+            vp_row(9) + vp_col(6),
             "Cursor row should be clamped to bottom boundary, row 9, col remains 6"
         );
         performer.print('Z');
@@ -473,17 +493,25 @@ pub mod movement {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // 1. Start at column 3, write a character.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(3));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(4) + vp_col(3));
         performer.print('L');
 
         // 2. Move forward 2 columns and write another character.
-        performer.ofs_buf_vt_100.move_cursor_right(width(2));
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().col_index, col(6)); // Should be at column 6
+        performer.ofs_buf_vt_100.move_cursor_right(vp_width(2));
+        assert_eq!(
+            performer.ofs_buf_vt_100.get_cursor_pos().col_index,
+            vp_col(6)
+        ); // Should be at column 6
         performer.print('M');
 
         // 3. Try to move forward beyond boundary.
-        performer.ofs_buf_vt_100.move_cursor_right(width(10));
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().col_index, col(9)); // Should stop at column 9
+        performer.ofs_buf_vt_100.move_cursor_right(vp_width(10));
+        assert_eq!(
+            performer.ofs_buf_vt_100.get_cursor_pos().col_index,
+            vp_col(9)
+        ); // Should stop at column 9
         performer.print('N');
 
         // Verify characters are in correct positions.
@@ -515,33 +543,35 @@ pub mod movement {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // 1. Start at column 7, write a character.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(6) + col(7));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(6) + vp_col(7));
         performer.print('P');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(8),
+            vp_row(6) + vp_col(8),
             "Cursor should move right after printing P, to (r:6,c:8)"
         );
 
         // 2. Move backward 3 columns and write another character.
-        performer.ofs_buf_vt_100.move_cursor_left(width(3));
+        performer.ofs_buf_vt_100.move_cursor_left(vp_width(3));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(5),
+            vp_row(6) + vp_col(5),
             "Should be at column 5, row 6, after moving backward 3"
         );
         performer.print('Q');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(6),
+            vp_row(6) + vp_col(6),
             "Cursor should move right after printing Q, to (r:6,c:6)"
         );
 
         // 3. Try to move backward beyond boundary.
-        performer.ofs_buf_vt_100.move_cursor_left(width(10));
+        performer.ofs_buf_vt_100.move_cursor_left(vp_width(10));
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(0),
+            vp_row(6) + vp_col(0),
             "Should stop at column 0, same row 6, after moving backward and hitting boundary"
         );
         performer.print('R');
@@ -586,11 +616,13 @@ pub mod save_restore {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Move to (r:3,c:5) and write 'A'
-        performer.ofs_buf_vt_100.set_cursor_pos(row(3) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(3) + vp_col(5));
         performer.print('A');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(6),
+            vp_row(3) + vp_col(6),
             "Cursor should be at (r:3,c:6) after printing 'A'"
         );
 
@@ -598,11 +630,13 @@ pub mod save_restore {
         performer.apply_ansi_bytes(CsiSequence::SaveCursor.to_string());
 
         // Move elsewhere
-        performer.ofs_buf_vt_100.set_cursor_pos(row(7) + col(2));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(7) + vp_col(2));
         performer.print('B');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(7) + col(3),
+            vp_row(7) + vp_col(3),
             "Cursor should be at (r:7,c:3) after printing 'B'"
         );
 
@@ -612,14 +646,14 @@ pub mod save_restore {
         // Should be back at saved position.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(6),
+            vp_row(3) + vp_col(6),
             "Cursor should be restored to (r:3,c:6)"
         );
 
         performer.print('C');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(7),
+            vp_row(3) + vp_col(7),
             "Cursor should be at (r:3,c:7) after printing 'C'"
         );
 
@@ -631,7 +665,7 @@ pub mod save_restore {
         // Verify saved cursor position persisted in buffer.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(7),
+            vp_row(3) + vp_col(7),
             "ofs_buf_vt_100 cursor pos should be (r:3,c:7) after processing"
         );
     }
@@ -657,11 +691,13 @@ pub mod save_restore {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Move cursor to position (r:3,c:5) and write 'A'
-        performer.ofs_buf_vt_100.set_cursor_pos(row(3) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(3) + vp_col(5));
         performer.print('A');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(6),
+            vp_row(3) + vp_col(6),
             "Cursor should be at (r:3,c:6) after printing 'A'"
         );
 
@@ -669,11 +705,13 @@ pub mod save_restore {
         performer.apply_ansi_bytes(EscSequence::SaveCursor.to_string());
 
         // Move cursor elsewhere and write 'B'.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(7) + col(2));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(7) + vp_col(2));
         performer.print('B');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(7) + col(3),
+            vp_row(7) + vp_col(3),
             "Cursor should be at (r:7,c:3) after printing 'B'"
         );
 
@@ -683,24 +721,21 @@ pub mod save_restore {
         // Verify cursor was restored.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            Pos {
-                row_index: row(3),
-                col_index: col(6),
-            }
+            vp_row(3) + vp_col(6)
         );
 
         // Write 'C' at restored position.
         performer.print('C');
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(7),
+            vp_row(3) + vp_col(7),
             "Cursor should be at (r:3,c:7) after printing 'C'"
         );
 
         // Verify saved cursor position persisted in buffer.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(7),
+            vp_row(3) + vp_col(7),
             "ofs_buf_vt_100 cursor pos should be (r:3,c:7) after processing"
         );
 
@@ -733,7 +768,7 @@ pub mod vertical_position_absolute {
         // Verify cursor moved to row 6 (0-based), column unchanged
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(5),
+            vp_row(6) + vp_col(5),
             "VPA should move to row 6 (0-based) while preserving column 5"
         );
     }
@@ -754,7 +789,7 @@ pub mod vertical_position_absolute {
         // Verify cursor moved to row 0 (0-based), column unchanged
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(8),
+            vp_row(0) + vp_col(8),
             "VPA default should move to row 0 (0-based) while preserving column 8"
         );
     }
@@ -777,7 +812,7 @@ pub mod vertical_position_absolute {
         // Verify cursor clamped to last row (9 in 0-based), column unchanged
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(3),
+            vp_row(9) + vp_col(3),
             "VPA should clamp to row 9 (0-based) when target is beyond buffer"
         );
     }
@@ -800,7 +835,7 @@ pub mod vertical_position_absolute {
         // Verify cursor moved to row 0 (0-based), column unchanged
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(2),
+            vp_row(0) + vp_col(2),
             "VPA with parameter 1 should move to row 0 (0-based) while preserving column 2"
         );
     }
@@ -827,7 +862,7 @@ pub mod vertical_position_absolute {
             // Verify column position preserved.
             assert_eq!(
                 ofs_buf_vt_100.get_cursor_pos(),
-                row(7) + col(col_pos),
+                vp_row(7) + vp_col(col_pos),
                 "VPA should preserve column {col_pos} when moving to row 7"
             );
         }

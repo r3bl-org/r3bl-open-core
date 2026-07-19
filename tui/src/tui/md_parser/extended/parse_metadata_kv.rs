@@ -66,7 +66,8 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         let input = "@title: Something";
-        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) =
+            parse_unique_kv_opt_eol(TITLE, input).expect("conversion error");
         println!(
             "input: '{i}', output: '{o}'",
             i = fg_black(input).bg_yellow(),
@@ -79,7 +80,8 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_with_eol() {
         let input = "@title: Something\n";
-        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) =
+            parse_unique_kv_opt_eol(TITLE, input).expect("conversion error");
         println!(
             "input: '{i}', output: '{o}'",
             i = fg_black(input).bg_yellow(),
@@ -102,7 +104,8 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            fg_black(&inline_string!("{:?}", it.err().unwrap())).bg_yellow(),
+            fg_black(&inline_string!("{:?}", it.expect_err("conversion error")))
+                .bg_yellow(),
         );
     }
 
@@ -119,7 +122,8 @@ mod test_parse_title_no_eol {
 
         println!(
             "err: '{}'",
-            fg_black(&inline_string!("{:?}", it.err().unwrap())).bg_yellow(),
+            fg_black(&inline_string!("{:?}", it.expect_err("conversion error")))
+                .bg_yellow(),
         );
     }
 
@@ -128,7 +132,8 @@ mod test_parse_title_no_eol {
         let input = "@title: \nfoo\nbar";
         println!("input: '{}'", fg_black(input).bg_cyan());
 
-        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) =
+            parse_unique_kv_opt_eol(TITLE, input).expect("conversion error");
         println!(
             "input: '{i}', output: '{o}'",
             i = fg_black(input).bg_yellow(),
@@ -143,7 +148,8 @@ mod test_parse_title_no_eol {
         let input = "@title:  a\nfoo\nbar";
         println!("input: '{}'", fg_black(input).bg_cyan());
 
-        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) =
+            parse_unique_kv_opt_eol(TITLE, input).expect("conversion error");
         println!(
             "input: '{i}', output: '{o}'",
             i = fg_black(input).bg_yellow(),
@@ -158,7 +164,8 @@ mod test_parse_title_no_eol {
         let input = "@title: \n\n# heading1\n## heading2";
         println!("❯ input: \n'{}'", fg_black(input).bg_cyan());
 
-        let (remainder, title) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
+        let (remainder, title) =
+            parse_unique_kv_opt_eol(TITLE, input).expect("conversion error");
         println!(
             "❯ remainder: \n'{r}'\n❯ title: \n'{t}'",
             r = fg_black(remainder).bg_yellow(),

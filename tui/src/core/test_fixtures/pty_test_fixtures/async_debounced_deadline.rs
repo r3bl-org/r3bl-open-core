@@ -6,7 +6,7 @@ use std::time::Duration;
 
 /// Async debounced deadline for "do X after Y ms of no activity" pattern.
 ///
-/// This is useful for batching rapid input events in PTY tests. When events arrive
+/// This is useful for batching rapid input events in [`PTY`] tests. When events arrive
 /// rapidly (e.g., "hello world" as 11 individual character events), you want to
 /// process all of them before taking action (e.g., printing line state).
 ///
@@ -51,6 +51,7 @@ use std::time::Duration;
 /// ```
 ///
 /// [`Deadline`]: crate::Deadline
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub struct AsyncDebouncedDeadline {
     /// The current deadline, if set. None means no deadline pending.
@@ -246,12 +247,12 @@ mod tests {
         let mut debounce = AsyncDebouncedDeadline::new(Duration::from_millis(10));
 
         debounce.reset();
-        let first = debounce.get().unwrap();
+        let first = debounce.get().expect("conversion error");
 
         std::thread::sleep(Duration::from_millis(5));
 
         debounce.reset();
-        let second = debounce.get().unwrap();
+        let second = debounce.get().expect("conversion error");
 
         // Second deadline should be later than first
         assert!(second > first);

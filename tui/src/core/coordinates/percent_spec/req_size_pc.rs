@@ -14,9 +14,9 @@ use std::fmt::{self, Debug};
 ///    [Result] type, since the `?` operator is used here.
 /// 2. Directly create it using the [`ReqSizePc`] struct with [`crate::Pc`] values.
 ///
-/// Note that [`crate::Size`], defined as:
-/// - height or [`crate::Size::row_height`],
-/// - width or [`crate::Size::col_width`].
+/// Note that [`crate::VPSize`], defined as:
+/// - height or [`crate::VPSize::row_height`],
+/// - width or [`crate::VPSize::col_width`].
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ReqSizePc {
     pub width_pc: Pc,

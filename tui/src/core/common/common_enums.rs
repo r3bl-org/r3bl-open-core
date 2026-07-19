@@ -66,10 +66,10 @@ pub enum Continuation<E = ()> {
 ///
 /// [`Continuation::ReturnError(e)`]: Continuation::ReturnError
 impl<E> From<Result<(), E>> for Continuation<E> {
-    fn from(result: Result<(), E>) -> Self {
+    fn from(result: Result<(), E>) -> Continuation<E> {
         match result {
-            Ok(()) => Self::Continue,
-            Err(e) => Self::ReturnError(e),
+            Ok(()) => Continuation::Continue,
+            Err(e) => Continuation::ReturnError(e),
         }
     }
 }

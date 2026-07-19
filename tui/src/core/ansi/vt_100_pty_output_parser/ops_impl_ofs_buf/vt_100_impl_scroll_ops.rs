@@ -15,13 +15,13 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
-//! [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
+//! [`RI`]: https://vt100.net/docs/vt100-ug/chapter3.html#RI
 //! [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
 //! [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
 
 use crate::{ArrayBoundsCheck, ArrayUnderflowResult, LengthOps, OfsBufVT100,
-            PixelCharLine, RowHeight, core::coordinates::bounds_check::RangeConvertExt,
-            ok, row};
+            ShiftLinesDirection, VPHeight,
+            core::coordinates::bounds_check::RangeConvertExt, ok, vp_row};
 
 impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -66,7 +66,7 @@ impl OfsBufVT100 {
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
     pub fn index_down(&mut self) -> miette::Result<()> {
-        let current_row = self.get_cursor_pos().row_index;
+        let current_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
 
         // Get bottom boundary of scroll region from inclusive range.
         let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
@@ -76,11 +76,11 @@ impl OfsBufVT100 {
             == ArrayUnderflowResult::Underflowed
         {
             // Not at scroll region bottom - just move cursor down.
-            self.move_cursor_down(RowHeight::from(1));
+            self.move_cursor_down(VPHeight::from(1));
             ok!()
         } else {
             // At scroll region bottom - scroll buffer content up by one line.
-            self.scroll_buffer_up()
+            self.scroll_buffer_up(VPHeight::from(1))
         }
     }
 
@@ -124,9 +124,9 @@ impl OfsBufVT100 {
     /// Returns an error if the scroll operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
+    /// [`RI`]: https://vt100.net/docs/vt100-ug/chapter3.html#RI
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
-        let current_row = self.get_cursor_pos().row_index;
+        let current_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
 
         // Get top boundary of scroll region from inclusive range.
         let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
@@ -135,22 +135,51 @@ impl OfsBufVT100 {
         match scroll_top_boundary.underflows(current_row) {
             ArrayUnderflowResult::Underflowed => {
                 // Not at scroll region top - just move cursor up.
-                self.move_cursor_up(RowHeight::from(1));
+                self.move_cursor_up(VPHeight::from(1));
                 ok!()
             }
             ArrayUnderflowResult::Within => {
                 // At scroll region top - scroll buffer content down by one line.
-                self.scroll_buffer_down()
+                self.scroll_buffer_down(VPHeight::from(1))
             }
         }
     }
 
-    /// Scroll buffer content up by one line (for `ESC D` at bottom).
+    /// Scroll buffer content up by `amount` lines.
     ///
-    /// The top line is lost (or saved to scrollback), and a new empty line appears at
-    /// bottom.
+    /// Implements [`SU`] (Scroll Up) and standard linefeed scrolling. Multiple lines at
+    /// the top are lost (or saved to scrollback), and new empty lines appear at the
+    /// bottom. Respects [`DECSTBM`] scroll region margins.
     ///
-    /// Respects [`DECSTBM`] scroll region margins.
+    /// # Example - Scrolling up by 2 lines
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A (will be lost)               │   (row 1, 0-based)
+    ///              │  2  │ Line B (will be lost)               │
+    ///              │  3  │ Line C                              │
+    ///              │  4  │ Line D                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After scroll_buffer_up(2):
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ Line C (moved up 2)                 │
+    ///              │  2  │ Line D (moved up 2)                 │
+    ///              │  3  │ (blank line)                        │
+    ///              │  4  │ (blank line)                        │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: 2 lines scrolled up, Lines A and B lost, 2 blank lines added at bottom
+    /// ```
     ///
     /// # Use Case
     ///
@@ -188,7 +217,7 @@ impl OfsBufVT100 {
     /// scrollback history, perfectly mimicking the behavior of a standard terminal
     /// emulator.
     ///
-    /// See [`shift_lines_up()`] for detailed behavior and examples.
+    /// See [`shift_lines_in_range`] for detailed behavior and examples.
     ///
     /// # Errors
     ///
@@ -198,11 +227,11 @@ impl OfsBufVT100 {
     /// [`IND`]: https://vt100.net/docs/vt510-rm/IND.html
     /// [`pty_mux`]: crate::core::pty::pty_mux
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
+    /// [`shift_lines_in_range`]: OfsBufVT100::shift_lines_in_range
+    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
-        // Get scroll region as an inclusive range and convert to
-        // exclusive for iteration.
+    pub fn scroll_buffer_up(&mut self, amount: VPHeight) -> miette::Result<()> {
+        // Get scroll region as an inclusive range and convert to exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Restricted Scrolling (Not Full Screen): Terminals support a feature called
@@ -217,42 +246,69 @@ impl OfsBufVT100 {
         //   history would become polluted with random fragments of vim's UI!
         let is_unrestricted_scroll = {
             // 1) The scroll region must start at the absolute top of the terminal.
-            let region_starts_at_top = *scroll_region.start() == row(0);
+            let region_starts_at_top = *scroll_region.start() == vp_row(0);
 
             // 2) The scroll region must end at the absolute bottom of the terminal.
             let region_ends_at_bottom = *scroll_region.end()
-                == self.ofs_buf.get_window_size().row_height.convert_to_index();
+                == self
+                    .get_active_screen_buffer()
+                    .get_viewport()
+                    .get_height()
+                    .convert_to_index();
 
             region_starts_at_top && region_ends_at_bottom
         };
 
         if is_unrestricted_scroll {
-            // Get the line that is about to be evicted from the top.
-            let row_index_at_top_pending_eviction = scroll_region.start().as_usize();
-
-            // Clone the evicted line because `shift_lines_up()` uses a zero-allocation
-            // `Slice::rotate_left()` optimization and wipes the original line memory to
-            // recycle it.
-            if let Some(row) = self.ofs_buf.get_row(row_index_at_top_pending_eviction) {
-                let evicted_line = row.to_vec();
-
-                // Push it to our scrollback history, maintaining capacity limit.
-                self.scrollback_buffer
-                    .push_and_enforce_limit(PixelCharLine {
-                        pixel_chars: evicted_line,
-                    });
-            }
+            let empty_char = self.create_empty_pixel_char();
+            self.get_active_screen_buffer_mut()
+                .allocate_new_lines_at_bottom(amount.into(), empty_char);
+            return ok!();
         }
 
-        // Use shift_lines_up to shift lines up within the scroll region.
-        self.shift_lines_up(scroll_region.to_exclusive(), 1)
+        // Use shift_lines_in_range to shift lines up within the scroll region.
+        self.shift_lines_in_range(
+            ShiftLinesDirection::Up,
+            scroll_region.to_exclusive(),
+            amount,
+        )
     }
 
-    /// Scroll buffer content down by one line (for `ESC M` at top).
+    /// Scroll buffer content down by `amount` lines.
     ///
-    /// The bottom line is lost, and a new empty line appears at top.
+    /// Implements [`SD`] (Scroll Down) and [`RI`] (Reverse Index) scrolling. Multiple
+    /// lines at the bottom are lost, and new empty lines appear at top. Respects
+    /// [`DECSTBM`] scroll region margins.
     ///
-    /// Respects [`DECSTBM`] scroll region margins.
+    /// # Example - Scrolling down by 2 lines
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A                              │   (row 1, 0-based)
+    ///              │  2  │ Line B                              │
+    ///              │  3  │ Line C (will be lost)               │
+    ///              │  4  │ Line D (will be lost)               │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After scroll_buffer_down(2):
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ (blank line)                        │
+    ///              │  2  │ (blank line)                        │
+    ///              │  3  │ Line A (moved down 2)               │
+    ///              │  4  │ Line B (moved down 2)               │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: 2 lines scrolled down, Lines C and D lost, 2 blank lines added at top
+    /// ```
     ///
     /// # Use Case
     ///
@@ -285,7 +341,7 @@ impl OfsBufVT100 {
     /// completely, and a blank line is made available at the top of the virtual screen
     /// for the child process to use.
     ///
-    /// See [`shift_lines_down()`] for detailed behavior and examples.
+    /// See [`shift_lines_in_range`] for detailed behavior and examples.
     ///
     /// # Errors
     ///
@@ -294,143 +350,48 @@ impl OfsBufVT100 {
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`pty_mux`]: crate::core::pty::pty_mux
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`RI`]: https://vt100.net/docs/vt510-rm/RI.html
-    /// [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
-    pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
+    /// [`RI`]: https://vt100.net/docs/vt100-ug/chapter3.html#RI
+    /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
+    /// [`shift_lines_in_range`]: OfsBufVT100::shift_lines_in_range
+    pub fn scroll_buffer_down(&mut self, amount: VPHeight) -> miette::Result<()> {
         // Get scroll region as an inclusive range and convert to exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
-        // Use shift_lines_down to shift lines down within the scroll region.
-        self.shift_lines_down(scroll_region.to_exclusive(), 1)
-    }
-
-    /// Handle [`SU`] (Scroll Up) - scroll display up by n lines.
-    ///
-    /// Multiple lines at the top are lost, new empty lines appear at bottom. Respects
-    /// [`DECSTBM`] scroll region margins.
-    ///
-    /// Example - Scrolling up by 2 lines
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top
-    ///              │  1  │ Line A (will be lost)               │   (row 1, 0-based)
-    ///              │  2  │ Line B (will be lost)               │
-    ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
-    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After scroll_up(2):
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ Line C (moved up 2)                 │
-    ///              │  2  │ Line D (moved up 2)                 │
-    ///              │  3  │ (blank line)                        │
-    ///              │  4  │ (blank line)                        │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: 2 lines scrolled up, Lines A and B lost, 2 blank lines added at bottom
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the scroll operation fails.
-    ///
-    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
-    pub fn scroll_up(&mut self, how_many: RowHeight) -> miette::Result<()> {
-        for _ in 0..how_many.as_u16() {
-            self.scroll_buffer_up()?;
-        }
-        ok!()
-    }
-
-    /// Handle [`SD`] (Scroll Down) - scroll display down by n lines.
-    ///
-    /// Multiple lines at the bottom are lost, new empty lines appear at top. Respects
-    /// [`DECSTBM`] scroll region margins.
-    ///
-    /// Example - Scrolling down by 2 lines
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ↓  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top
-    ///              │  1  │ Line A                              │   (row 1, 0-based)
-    ///              │  2  │ Line B                              │
-    ///              │  3  │ Line C (will be lost)               │
-    ///              │  4  │ Line D (will be lost)               │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
-    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After scroll_down(2):
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ (blank line)                        │
-    ///              │  2  │ (blank line)                        │
-    ///              │  3  │ Line A (moved down 2)               │
-    ///              │  4  │ Line B (moved down 2)               │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: 2 lines scrolled down, Lines C and D lost, 2 blank lines added at top
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the scroll operation fails.
-    ///
-    /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
-    pub fn scroll_down(&mut self, how_many: RowHeight) -> miette::Result<()> {
-        for _ in 0..how_many.as_u16() {
-            self.scroll_buffer_down()?;
-        }
-        ok!()
+        // Use shift_lines_in_range to shift lines down within the scroll region.
+        self.shift_lines_in_range(
+            ShiftLinesDirection::Down,
+            scroll_region.to_exclusive(),
+            amount,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{OfsBufVT100, col, height, idx, row, term_row,
+    use crate::{OfsBufVT100, PixelChar, term_row,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_vt100_test_buffer_with_size},
-                vt_100_pty_output_conformance_tests::nz,
-                width};
+                vp_col, vp_height, vp_idx, vp_row, vp_width,
+                vt_100_pty_output_conformance_tests::nz};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        create_vt100_test_buffer_with_size(width(10), height(6))
+        create_vt100_test_buffer_with_size(vp_width(10), vp_height(6))
     }
 
     fn fill_buffer_with_test_content(buffer: &mut OfsBufVT100) {
-        // Fill buffer with identifiable content:
-        // Row 0: "0000000000"
-        // Row 1: "1111111111"
-        // Row 2: "2222222222"
-        // Row 3: "3333333333"
-        // Row 4: "4444444444"
-        // Row 5: "5555555555"
+        // Fill buffer with identifiable content: Row 0: "0000000000" Row 1: "1111111111"
+        // Row 2: "2222222222" Row 3: "3333333333" Row 4: "4444444444" Row 5: "5555555555"
         for row_idx in 0..6 {
             for col_idx in 0..10 {
-                buffer.cursor_to_position(row(row_idx), col(col_idx));
-                let index = idx(row_idx);
-                let _unused =
-                    buffer.print_char(char::from_digit(index.as_u32(), 10).unwrap());
+                buffer.cursor_to_position(vp_row(row_idx), vp_col(col_idx));
+                let index = vp_idx(row_idx);
+                let _unused = buffer.print_char(
+                    char::from_digit(index.as_u32(), 10).expect("conversion error"),
+                );
             }
         }
-        buffer.cursor_to_position(row(0), col(0));
+        buffer.cursor_to_position(vp_row(0), vp_col(0));
     }
 
     #[test]
@@ -439,13 +400,21 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at row 2, col 5.
-        buffer.set_cursor_pos(row(2) + col(5));
+        buffer
+            .get_active_screen_buffer_mut()
+            .set_cursor_pos(vp_row(2) + vp_col(5));
 
         let _unused = buffer.index_down();
 
         // Cursor should move down one row.
-        assert_eq!(buffer.get_cursor_pos().row_index, row(3));
-        assert_eq!(buffer.get_cursor_pos().col_index, col(5));
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().row_index,
+            vp_row(3)
+        );
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().col_index,
+            vp_col(5)
+        );
 
         // Content should remain unchanged.
         assert_plain_char_at(&buffer, 2, 0, '2');
@@ -458,24 +427,40 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at bottom row (row 5).
-        buffer.set_cursor_pos(row(5) + col(3));
+        buffer
+            .get_active_screen_buffer_mut()
+            .set_cursor_pos(vp_row(5) + vp_col(3));
 
         let _unused = buffer.index_down();
 
         // Cursor should stay at bottom row.
-        assert_eq!(buffer.get_cursor_pos().row_index, row(5));
-        assert_eq!(buffer.get_cursor_pos().col_index, col(3));
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().row_index,
+            vp_row(5)
+        );
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().col_index,
+            vp_col(3)
+        );
 
         // Buffer should have scrolled up - top line lost, new blank line at bottom.
         assert_plain_char_at(&buffer, 0, 0, '1'); // Row 1 moved to row 0
         assert_plain_char_at(&buffer, 1, 0, '2'); // Row 2 moved to row 1
         assert_plain_char_at(&buffer, 4, 0, '5'); // Row 5 moved to row 4
 
-        // New blank line at bottom (row 5) should be empty.
-        let bottom_char = buffer.get_char(row(5) + col(0));
+        let bottom_char = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(5) + vp_col(0));
         assert!(
             bottom_char.is_none()
-                || matches!(bottom_char, Some(crate::PixelChar::Spacer))
+                || matches!(bottom_char, Some(PixelChar::Spacer))
+                || matches!(
+                    bottom_char,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
         );
     }
 
@@ -485,13 +470,21 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at row 3, col 2.
-        buffer.set_cursor_pos(row(3) + col(2));
+        buffer
+            .get_active_screen_buffer_mut()
+            .set_cursor_pos(vp_row(3) + vp_col(2));
 
         let _unused = buffer.reverse_index_up();
 
         // Cursor should move up one row.
-        assert_eq!(buffer.get_cursor_pos().row_index, row(2));
-        assert_eq!(buffer.get_cursor_pos().col_index, col(2));
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().row_index,
+            vp_row(2)
+        );
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().col_index,
+            vp_col(2)
+        );
 
         // Content should remain unchanged.
         assert_plain_char_at(&buffer, 2, 0, '2');
@@ -504,18 +497,38 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Position cursor at top row (row 0).
-        buffer.set_cursor_pos(row(0) + col(7));
+        buffer
+            .get_active_screen_buffer_mut()
+            .set_cursor_pos(vp_row(0) + vp_col(7));
 
         let _unused = buffer.reverse_index_up();
 
         // Cursor should stay at top row.
-        assert_eq!(buffer.get_cursor_pos().row_index, row(0));
-        assert_eq!(buffer.get_cursor_pos().col_index, col(7));
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().row_index,
+            vp_row(0)
+        );
+        assert_eq!(
+            buffer.get_active_screen_buffer().get_cursor_pos().col_index,
+            vp_col(7)
+        );
 
-        // Buffer should have scrolled down - bottom line lost, new blank line at top.
-        // New blank line at top (row 0) should be empty.
-        let top_char = buffer.get_char(row(0) + col(0));
-        assert!(top_char.is_none() || matches!(top_char, Some(crate::PixelChar::Spacer)));
+        // Buffer should have scrolled down - bottom line lost, new blank line at top. New
+        // blank line at top (row 0) should be empty.
+        let top_char = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(0) + vp_col(0));
+        assert!(
+            top_char.is_none()
+                || matches!(top_char, Some(PixelChar::Spacer))
+                || matches!(
+                    top_char,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
+        );
 
         assert_plain_char_at(&buffer, 1, 0, '0'); // Row 0 moved to row 1
         assert_plain_char_at(&buffer, 2, 0, '1'); // Row 1 moved to row 2
@@ -527,7 +540,7 @@ mod tests_scroll_vert_ops {
         let mut buffer = create_test_buffer();
         fill_buffer_with_test_content(&mut buffer);
 
-        let _unused = buffer.scroll_up(RowHeight::from(2));
+        let _unused = buffer.scroll_buffer_up(VPHeight::from(2));
 
         // Top 2 lines should be lost, content shifted up.
         assert_plain_char_at(&buffer, 0, 0, '2'); // Row 2 moved to row 0
@@ -536,15 +549,33 @@ mod tests_scroll_vert_ops {
         assert_plain_char_at(&buffer, 3, 0, '5'); // Row 5 moved to row 3
 
         // Bottom 2 lines should be blank.
-        let blank_line_1 = buffer.get_char(row(4) + col(0));
-        let blank_line_2 = buffer.get_char(row(5) + col(0));
+        let blank_line_1 = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(4) + vp_col(0));
+        let blank_line_2 = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(5) + vp_col(0));
         assert!(
             blank_line_1.is_none()
-                || matches!(blank_line_1, Some(crate::PixelChar::Spacer))
+                || matches!(blank_line_1, Some(PixelChar::Spacer))
+                || matches!(
+                    blank_line_1,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
         );
         assert!(
             blank_line_2.is_none()
-                || matches!(blank_line_2, Some(crate::PixelChar::Spacer))
+                || matches!(blank_line_2, Some(PixelChar::Spacer))
+                || matches!(
+                    blank_line_2,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
         );
     }
 
@@ -553,18 +584,36 @@ mod tests_scroll_vert_ops {
         let mut buffer = create_test_buffer();
         fill_buffer_with_test_content(&mut buffer);
 
-        let _unused = buffer.scroll_down(RowHeight::from(2));
+        let _unused = buffer.scroll_buffer_down(VPHeight::from(2));
 
         // Top 2 lines should be blank.
-        let blank_line_1 = buffer.get_char(row(0) + col(0));
-        let blank_line_2 = buffer.get_char(row(1) + col(0));
+        let blank_line_1 = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(0) + vp_col(0));
+        let blank_line_2 = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(1) + vp_col(0));
         assert!(
             blank_line_1.is_none()
-                || matches!(blank_line_1, Some(crate::PixelChar::Spacer))
+                || matches!(blank_line_1, Some(PixelChar::Spacer))
+                || matches!(
+                    blank_line_1,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
         );
         assert!(
             blank_line_2.is_none()
-                || matches!(blank_line_2, Some(crate::PixelChar::Spacer))
+                || matches!(blank_line_2, Some(PixelChar::Spacer))
+                || matches!(
+                    blank_line_2,
+                    Some(PixelChar::PlainText {
+                        display_char: ' ',
+                        ..
+                    })
+                )
         );
 
         // Content should be shifted down.
@@ -580,11 +629,13 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Set up scroll region from row 1 to row 4.
-        buffer.parser_global_state.scroll_region_top = Some(term_row(nz(2)));
-        buffer.parser_global_state.scroll_region_bottom = Some(term_row(nz(5)));
+        buffer.get_parser_global_state_mut().scroll_region_top = Some(term_row(nz(2)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom = Some(term_row(nz(5)));
 
         // Position cursor at scroll region bottom.
-        buffer.set_cursor_pos(row(4) + col(0));
+        buffer
+            .get_active_screen_buffer_mut()
+            .set_cursor_pos(vp_row(4) + vp_col(0));
 
         let _unused = buffer.index_down();
 
@@ -596,9 +647,9 @@ mod tests_scroll_vert_ops {
         assert_plain_char_at(&buffer, 5, 0, '5'); // Row 5 unchanged (outside region)
 
         // New blank line should appear at row 4.
-        let blank_char = buffer.get_char(row(4) + col(0));
-        assert!(
-            blank_char.is_none() || matches!(blank_char, Some(crate::PixelChar::Spacer))
-        );
+        let blank_char = buffer
+            .get_active_screen_buffer()
+            .get_char(vp_row(4) + vp_col(0));
+        assert!(blank_char.is_none() || matches!(blank_char, Some(PixelChar::Spacer)));
     }
 }

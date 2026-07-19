@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::ex_rc::Id;
-use r3bl_tui::{ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId,
-               HasEditorBuffers};
-use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
+use r3bl_tui::{CIndex, ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
+               FileExtensionToken, FlexBoxId, HasEditorBuffers, c_index};
+use rustc_hash::FxHashMap;
+use std::fmt::{Debug, Display, Formatter, Result};
 
 pub const FILE_CONTENT_ARRAY: [&str; 3] = [
     include_str!("slide1.md"),
@@ -23,8 +24,8 @@ pub enum AppSignal {
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-    pub current_slide_index: usize,
+    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
+    pub current_slide_index: CIndex,
 }
 
 pub mod state_mutator {
@@ -45,7 +46,7 @@ pub mod state_mutator {
         state: &mut State,
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
-        if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
+        if state.current_slide_index < c_index(FILE_CONTENT_ARRAY.len() - 1) {
             state.current_slide_index += 1;
             state
                 .editor_buffers
@@ -61,7 +62,7 @@ pub mod state_mutator {
         state: &mut State,
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
-        if state.current_slide_index > 0 {
+        if state.current_slide_index > c_index(0) {
             state.current_slide_index -= 1;
             state
                 .editor_buffers
@@ -73,8 +74,8 @@ pub mod state_mutator {
         }
     }
 
-    pub fn get_slide_content<'a>(arg: usize) -> Vec<&'a str> {
-        let slide_content = FILE_CONTENT_ARRAY[arg];
+    pub fn get_slide_content<'a>(arg: impl Into<CIndex>) -> Vec<&'a str> {
+        let slide_content = FILE_CONTENT_ARRAY[arg.into().as_usize()];
         let mut it = vec![];
         for line in slide_content.lines() {
             it.push(line);
@@ -84,14 +85,15 @@ pub mod state_mutator {
 
     pub fn get_initial_state() -> State {
         let editor_buffer = {
-            let mut it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
-            it.init_with(get_slide_content(0));
+            let mut it =
+                EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
+            it.init_with(get_slide_content(c_index(0)));
 
             it
         };
 
         let editor_buffers = {
-            let mut it = HashMap::new();
+            let mut it = FxHashMap::default();
             let id = FlexBoxId::from(Id::Editor);
             it.insert(id, editor_buffer);
             it
@@ -99,7 +101,7 @@ pub mod state_mutator {
 
         State {
             editor_buffers,
-            current_slide_index: 0,
+            current_slide_index: c_index(0),
         }
     }
 }
@@ -134,14 +136,14 @@ mod debug_format_helper {
     use super::{Debug, Formatter, Result, State};
 
     impl Debug for State {
+        #[allow(clippy::nonstandard_macro_braces)]
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {f,
 "State [
   - current_slide_index:\n{:?}
   - editor_buffers:\n{:?}
 ]",
-                    self.current_slide_index,
-                    self.editor_buffers,
+                self.current_slide_index, self.editor_buffers,
             }
         }
     }
@@ -170,7 +172,7 @@ mod impl_display {
             write!(
                 f,
                 "State[slide={}/{}, editors={}",
-                slide_index + 1,
+                slide_index.as_usize() + 1,
                 total_slides,
                 editor_count
             )?;

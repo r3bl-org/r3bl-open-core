@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{TuiStyledText, sizing::VecTuiStyledText};
-use crate::{ColWidth, ConvertToPlainText, GCStringOwned, InlineString, join,
+use crate::{ConvertToPlainText, GCStringOwned, InlineString, VPWidth, join,
             join_with_index_fmt, ok};
 use std::{fmt::Debug,
           ops::{AddAssign, Index}};
@@ -90,7 +90,7 @@ mod impl_display {
 
     impl TuiStyledTexts {
         #[must_use]
-        pub fn display_width(&self) -> ColWidth {
+        pub fn display_width(&self) -> VPWidth {
             let plain_text = self.to_plain_text();
 
             GCStringOwned::from(plain_text.as_str()).width()
@@ -147,11 +147,11 @@ mod tests {
 
                 tui_styled_texts! {
                     tui_styled_text! {
-                        @style: maybe_style1.unwrap(),
+                        @style: maybe_style1.expect("conversion error"),
                         @text: "Hello",
                     },
                     tui_styled_text! {
-                        @style: maybe_style2.unwrap(),
+                        @style: maybe_style2.expect("conversion error"),
                         @text: "World",
                     }
                 }

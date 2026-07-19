@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CSI_START, ControlSequence, CursorKeyMode, FunctionKey, Key, KeyPress,
-            KeyState, ModifierKeysMask, Size, SpecialKey};
+            KeyState, LossyConvertToByte, ModifierKeysMask, VPSize, SpecialKey,
+            WideningCastToU32};
 
 /// Input events that can be sent to an interactive [`PTY`] session.
 ///
@@ -22,7 +23,7 @@ pub enum PtyInputEvent {
     SendControl(ControlSequence, CursorKeyMode),
 
     /// Request a terminal window resize.
-    Resize(Size),
+    Resize(VPSize),
 
     /// Explicit flush without writing new data.
     ///
@@ -76,7 +77,7 @@ impl ModifierState {
 /// Instead of 300+ explicit pattern matches, this uses algorithmic generation
 /// based on terminal standards and modifier encoding.
 impl From<KeyPress> for Option<PtyInputEvent> {
-    fn from(key: KeyPress) -> Self {
+    fn from(key: KeyPress) -> Option<PtyInputEvent> {
         match key {
             KeyPress::Plain { key } => convert_plain_key(key),
             KeyPress::WithModifiers { key, mask } => {
@@ -142,12 +143,12 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             // For ASCII characters, use ESC + char.
             if ch.is_ascii() {
                 PtyInputEvent::SendControl(
-                    ControlSequence::RawSequence(vec![0x1B, ch as u8]),
+                    ControlSequence::RawSequence(vec![0x1B, ch.to_u8_lossy()]),
                     CursorKeyMode::default(),
                 )
             } else {
                 // For non-ASCII, use CSI u sequences.
-                generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
+                generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier())
             }
         }
 
@@ -159,7 +160,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
         } if ch == ' ' => {
             // Shift+Space typically sends regular space but some apps detect it via CSI
             // u.
-            generate_csi_u_sequence(' ' as u32, modifiers.to_csi_modifier())
+            generate_csi_u_sequence(' '.as_u32_widening(), modifiers.to_csi_modifier())
         }
 
         // Alt+Shift combinations.
@@ -173,7 +174,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                 PtyInputEvent::SendControl(
                     ControlSequence::RawSequence(vec![
                         0x1B,
-                        ch.to_ascii_uppercase() as u8,
+                        ch.to_ascii_uppercase().to_u8_lossy(),
                     ]),
                     CursorKeyMode::default(),
                 )
@@ -181,11 +182,11 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                 // For other ASCII chars, send ESC + char (shift is handled by the char.
                 // itself)
                 PtyInputEvent::SendControl(
-                    ControlSequence::RawSequence(vec![0x1B, ch as u8]),
+                    ControlSequence::RawSequence(vec![0x1B, ch.to_u8_lossy()]),
                     CursorKeyMode::default(),
                 )
             } else {
-                generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
+                generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier())
             }
         }
 
@@ -202,7 +203,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                 )
             } else {
                 // Fallback to CSI u for unsupported combinations.
-                generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
+                generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier())
             }
         }
 
@@ -219,11 +220,14 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                 ch
             };
             // Use CSI u sequences for Ctrl+Shift combinations.
-            generate_csi_u_sequence(target_char as u32, modifiers.to_csi_modifier())
+            generate_csi_u_sequence(
+                target_char.as_u32_widening(),
+                modifiers.to_csi_modifier(),
+            )
         }
 
         // Other combinations default to CSI u sequences.
-        _ => generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier()),
+        _ => generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier()),
     }
 }
 
@@ -261,7 +265,7 @@ fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
                     CursorKeyMode::default(),
                 )
             } else {
-                generate_csi_u_sequence(ch as u32, 5)
+                generate_csi_u_sequence(ch.as_u32_widening(), 5)
             }
         }
     }
@@ -297,15 +301,20 @@ fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
         ), // Ctrl+_ -> US
 
         // Additional important symbols.
-        '-' => generate_csi_u_sequence('-' as u32, 5), // Ctrl+- (zoom out)
-        '=' => generate_csi_u_sequence('=' as u32, 5), // Ctrl+= (zoom in)
-        '+' => generate_csi_u_sequence('+' as u32, 5), // Ctrl++ (also zoom in)
-        ';' => generate_csi_u_sequence(';' as u32, 5), // Ctrl+; (editor shortcut)
-        '\'' => generate_csi_u_sequence('\'' as u32, 5), // Ctrl+' (editor shortcut)
-        ',' => generate_csi_u_sequence(',' as u32, 5), // Ctrl+, (settings)
-        '.' => generate_csi_u_sequence('.' as u32, 5), // Ctrl+. (context menu)
-        '/' => generate_csi_u_sequence('/' as u32, 5), // Ctrl+/ (comment)
-        _ => generate_csi_u_sequence(ch as u32, 5),    // Fallback for other symbols
+        '-' => generate_csi_u_sequence('-'.as_u32_widening(), 5), // Ctrl+- (zoom out)
+        '=' => generate_csi_u_sequence('='.as_u32_widening(), 5), // Ctrl+= (zoom in)
+        '+' => generate_csi_u_sequence('+'.as_u32_widening(), 5), /* Ctrl++ (also zoom */
+        // in)
+        ';' => generate_csi_u_sequence(';'.as_u32_widening(), 5), /* Ctrl+; (editor */
+        // shortcut)
+        '\'' => generate_csi_u_sequence('\''.as_u32_widening(), 5), /* Ctrl+' (editor */
+        // shortcut)
+        ',' => generate_csi_u_sequence(','.as_u32_widening(), 5), // Ctrl+, (settings)
+        '.' => generate_csi_u_sequence('.'.as_u32_widening(), 5), /* Ctrl+. (context */
+        // menu)
+        '/' => generate_csi_u_sequence('/'.as_u32_widening(), 5), // Ctrl+/ (comment)
+        _ => generate_csi_u_sequence(ch.as_u32_widening(), 5),    /* Fallback for
+                                                                    * other symbols */
     }
 }
 
@@ -341,7 +350,7 @@ fn convert_ctrl_number(ch: char) -> PtyInputEvent {
             CursorKeyMode::default(),
         ), // Ctrl+8 -> DEL
         // For 0, 1, 9 use CSI u sequences as they don't have traditional control codes.
-        _ => generate_csi_u_sequence(ch as u32, 5),
+        _ => generate_csi_u_sequence(ch.as_u32_widening(), 5),
     }
 }
 
@@ -358,9 +367,9 @@ fn convert_ctrl_character(ch: char) -> PtyInputEvent {
 fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     match ch {
         // Lowercase letters.
-        c @ 'a'..='z' => Some((c as u8) - b'a' + 1),
+        c @ 'a'..='z' => Some(c.to_u8_lossy() - b'a' + 1),
         // Uppercase letters (same control codes as lowercase)
-        c @ 'A'..='Z' => Some((c as u8) - b'A' + 1),
+        c @ 'A'..='Z' => Some(c.to_u8_lossy() - b'A' + 1),
         _ => None,
     }
 }
@@ -446,14 +455,14 @@ fn convert_special_key(
 
     // Modified special keys - use CSI sequences algorithmically.
     let (base_seq, key_code) = match special {
-        SpecialKey::Up => ("A", 'A' as u32),
-        SpecialKey::Down => ("B", 'B' as u32),
-        SpecialKey::Right => ("C", 'C' as u32),
-        SpecialKey::Left => ("D", 'D' as u32),
-        SpecialKey::Home => ("H", 'H' as u32),
-        SpecialKey::End => ("F", 'F' as u32),
-        SpecialKey::Tab => ("I", 'I' as u32),
-        SpecialKey::Enter => ("M", 'M' as u32),
+        SpecialKey::Up => ("A", 'A'.as_u32_widening()),
+        SpecialKey::Down => ("B", 'B'.as_u32_widening()),
+        SpecialKey::Right => ("C", 'C'.as_u32_widening()),
+        SpecialKey::Left => ("D", 'D'.as_u32_widening()),
+        SpecialKey::Home => ("H", 'H'.as_u32_widening()),
+        SpecialKey::End => ("F", 'F'.as_u32_widening()),
+        SpecialKey::Tab => ("I", 'I'.as_u32_widening()),
+        SpecialKey::Enter => ("M", 'M'.as_u32_widening()),
         SpecialKey::PageUp => ("~", 5),
         SpecialKey::PageDown => ("~", 6),
         SpecialKey::Insert => ("~", 2),
@@ -513,7 +522,7 @@ fn convert_function_key(
                 4 => 'S',
                 _ => unreachable!(),
             };
-            (letter.to_string(), letter as u32)
+            (letter.to_string(), letter.as_u32_widening())
         }
         5..=12 => {
             // F5-F12 use numeric sequences.

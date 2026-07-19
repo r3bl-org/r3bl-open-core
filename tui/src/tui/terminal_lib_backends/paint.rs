@@ -40,60 +40,29 @@
 
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
-            LengthOps, LockedOutputDevice, OfsBuf, OfsBufPaint, OfsBufPaintImpl,
-            PixelCharDiffChunks, Pos, Size, TERMINAL_LIB_BACKEND, TerminalLibBackend};
+            LengthOps, LockedOutputDevice, OfsBuf, PixelCharDiffChunks, VPPos, VPSize,
+            paint_ofs_buf, paint_ofs_buf_diff, render_ofs_buf, render_ofs_buf_diff};
 use std::fmt::Debug;
 
 /// Executes a selective redraw (diff) paint.
 fn perform_diff_paint(
     diff_chunks: &PixelCharDiffChunks,
-    window_size: Size,
+    window_size: VPSize,
     locked_output_device: LockedOutputDevice<'_>,
 ) {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OfsBufPaintImpl {};
-            let render_ops = crossterm_impl.render_diff(diff_chunks);
-            crossterm_impl.paint_diff(render_ops, window_size, locked_output_device);
-        }
-        TerminalLibBackend::DirectToAnsi => {
-            // DirectToAnsi uses the same converter as Crossterm
-            // (OfsBuf → RenderOpOutput)
-            // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OfsBufPaintImpl {};
-            let render_ops = converter.render_diff(diff_chunks);
-            converter.paint_diff(render_ops, window_size, locked_output_device);
-        }
-    }
+    let render_ops = render_ofs_buf_diff(diff_chunks);
+    paint_ofs_buf_diff(render_ops, window_size, locked_output_device);
 }
 
 /// Executes a complete redraw (full) paint.
 fn perform_full_paint(
     ofs_buf: &OfsBuf,
     flush_kind: FlushKind,
-    window_size: Size,
+    window_size: VPSize,
     locked_output_device: LockedOutputDevice<'_>,
 ) {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => {
-            let mut crossterm_impl = OfsBufPaintImpl {};
-            let render_ops = crossterm_impl.render(ofs_buf);
-            crossterm_impl.paint(
-                render_ops,
-                flush_kind,
-                window_size,
-                locked_output_device,
-            );
-        }
-        TerminalLibBackend::DirectToAnsi => {
-            // DirectToAnsi uses the same converter as Crossterm
-            // (OfsBuf → RenderOpOutput)
-            // The difference is only in execution (via routing in render_op_output.rs)
-            let mut converter = OfsBufPaintImpl {};
-            let render_ops = converter.render(ofs_buf);
-            converter.paint(render_ops, flush_kind, window_size, locked_output_device);
-        }
-    }
+    let render_ops = render_ofs_buf(ofs_buf);
+    paint_ofs_buf(render_ops, flush_kind, window_size, locked_output_device);
 }
 
 /// Paint the render pipeline. The render pipeline contains a list of
@@ -102,6 +71,7 @@ fn perform_full_paint(
 /// 1. Actually executing those [`RenderOpOutputVec`] in the correct order.
 /// 2. And routing the execution to the correct backend specified in
 ///    [`TERMINAL_LIB_BACKEND`].
+///
 ///
 /// See [`RenderOpCommon`] for more details of "atomic paint operations".
 ///
@@ -114,10 +84,10 @@ fn perform_full_paint(
 /// This will also panic if all offscreen buffers are currently taken, which
 /// indicates a bug in the buffer pool management.
 ///
-/// [`crate::RenderOpCommon`]: crate::RenderOpCommon
-/// [`RenderOpCommon`]: crate::RenderOpCommon
-/// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-/// [`ZOrder`]: crate::ZOrder
+/// [`RenderOpCommon`]: crate::tui::RenderOpCommon
+/// [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+/// [`ZOrder`]: crate::tui::ZOrder
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
@@ -179,28 +149,31 @@ pub fn paint<S, AS>(
     global_data.maybe_saved_ofs_buf = Some(buffer_from_pool);
 }
 
-/// 1. Ensure that the [Pos] is within the bounds of the terminal window using
+/// 1. Ensure that the [`VPPos`] is within the bounds of the terminal window using
 ///    [`RenderOpsLocalData`].
-/// 2. If the [Pos] is outside the bounds of the window then it is clamped to the nearest
-///    edge of the window. This clamped [Pos] is returned.
-/// 3. This also saves the clamped [Pos] to [`RenderOpsLocalData`].
+/// 2. If the [`VPPos`] is outside the bounds of the window then it is clamped to the
+///    nearest edge of the window. This clamped [`VPPos`] is returned.
+/// 3. This also saves the clamped [`VPPos`] to [`RenderOpsLocalData`].
 ///
-/// Note that printing [`crate::SPACER_GLYPH`] by
+/// Note that printing [`SPACER_GLYPH`] by
 /// [`crate::compositor_render_ops_to_ofs_buf::process_render_op`] will trigger
-/// clipping the [Pos] to the nearest edge of the window. This is OK. This is because the
-/// spacer is painted at the very last column of the terminal window due to the way in
+/// clipping the [`VPPos`] to the nearest edge of the window. This is OK. This is because
+/// the spacer is painted at the very last column of the terminal window due to the way in
 /// which the spacers are repeated. No checks are supposed to be done when
-/// [`crate::OfsBuf`] is painting, so there is no clean way to skip this clipping
+/// [`OfsBuf`] is painting, so there is no clean way to skip this clipping
 /// check.
 ///
 /// See the `test_sanitize_and_save_abs_pos` for more details on the behavior of this
 /// function.
+///
+/// [`SPACER_GLYPH`]: crate::core::SPACER_GLYPH
+/// [`VPPos`]: crate::core::VPPos
 pub fn sanitize_and_save_abs_pos(
-    orig_abs_pos: Pos,
-    window_size: Size,
+    orig_abs_pos: VPPos,
+    window_size: VPSize,
     render_local_data: &mut RenderOpsLocalData,
-) -> Pos {
-    let Size {
+) -> VPPos {
+    let VPSize {
         col_width: window_width,
         row_height: window_height,
     } = window_size;
@@ -231,7 +204,7 @@ pub fn sanitize_and_save_abs_pos(
     sanitized_abs_pos
 }
 
-fn debug(orig_pos: Pos, sanitized_pos: Pos) {
+fn debug(orig_pos: VPPos, sanitized_pos: VPPos) {
     DEBUG_TUI_COMPOSITOR.then(|| {
         if sanitized_pos != orig_pos {
             // % is Display, ? is Debug.

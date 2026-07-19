@@ -29,9 +29,9 @@ pub use tcp_stream_fixtures::*;
 /// The `Err(dyn Any + Send)` variant contains the payload captured during the panic.
 /// Panicking generates a string message or payload.
 ///
-/// For example, when a [`Mutex`] `lock().unwrap()` panics due to lock poisoning, the
-/// [`Result::Err(PoisonError)`] gets formatted to a string and the type is erased (just a
-/// string is left).
+/// For example, when a [`Mutex`] `lock().expect("conversion error")` panics due to lock
+/// poisoning, the [`Result::Err(PoisonError)`] gets formatted to a string and the type is
+/// erased (just a string is left).
 ///
 /// # Example
 ///

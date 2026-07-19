@@ -87,7 +87,7 @@ use std::debug_assert_matches;
 /// See [`OfsBufVT100::insert_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::insert_chars`]: crate::OfsBufVT100::insert_chars
+/// [`OfsBufVT100::insert_chars`]: crate::core::ansi::OfsBufVT100::insert_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -97,7 +97,10 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
         result,
         Ok(()),
         "Failed to insert {how_many:?} chars at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -111,7 +114,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// See [`OfsBufVT100::delete_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::delete_chars`]: crate::OfsBufVT100::delete_chars
+/// [`OfsBufVT100::delete_chars`]: crate::core::ansi::OfsBufVT100::delete_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -121,7 +124,10 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
         result,
         Ok(()),
         "Failed to delete {how_many:?} chars at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -133,7 +139,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// See [`OfsBufVT100::clear_chars`] for the implementation of this shim.
 ///
-/// [`OfsBufVT100::clear_chars`]: crate::OfsBufVT100::clear_chars
+/// [`OfsBufVT100::clear_chars`]: crate::core::ansi::OfsBufVT100::clear_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -143,7 +149,10 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
         result,
         Ok(()),
         "Failed to erase {how_many:?} chars at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -155,7 +164,7 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 /// See [`OfsBufVT100::print_char`] for the implementation of this shim.
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OfsBufVT100::print_char`]: crate::OfsBufVT100::print_char
+/// [`OfsBufVT100::print_char`]: crate::core::ansi::OfsBufVT100::print_char
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
     let result = performer.ofs_buf_vt_100.print_char(ch);
@@ -163,6 +172,9 @@ pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
         result,
         Ok(()),
         "Failed to print char {ch:?} at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }

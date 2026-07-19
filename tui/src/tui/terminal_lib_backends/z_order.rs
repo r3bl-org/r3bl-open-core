@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::WideningCastToUsize;
 use std::{fmt::Debug,
           ops::{Index, IndexMut}};
 use strum::EnumCount;
@@ -13,12 +14,22 @@ pub enum ZOrder {
     Glass,
 }
 
+impl WideningCastToUsize for ZOrder {
+    fn as_usize_widening(self) -> usize {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as usize
+        }
+    }
+}
+
 impl ZOrder {
     /// Contains the priority that is used to paint the different groups of render
     /// operations: [`RenderOpCommon`], [`RenderOpIR`] and [`RenderOpOutput`] (operations
     /// at different Z orders).
     ///
-    /// [`RenderOpCommon`]: crate::RenderOpCommon
+    /// [`RenderOpCommon`]: crate::tui::RenderOpCommon
     /// [`RenderOpIR`]: crate::RenderOpIR
     /// [`RenderOpOutput`]: crate::RenderOpOutput
     #[must_use]
@@ -30,12 +41,12 @@ impl ZOrder {
 impl<T> Index<ZOrder> for [T; ZOrder::COUNT] {
     type Output = T;
 
-    fn index(&self, index: ZOrder) -> &Self::Output { &self[index as usize] }
+    fn index(&self, index: ZOrder) -> &Self::Output { &self[index.as_usize_widening()] }
 }
 
 impl<T> IndexMut<ZOrder> for [T; ZOrder::COUNT] {
     fn index_mut(&mut self, index: ZOrder) -> &mut Self::Output {
-        &mut self[index as usize]
+        &mut self[index.as_usize_widening()]
     }
 }
 
@@ -45,9 +56,9 @@ mod tests {
 
     #[test]
     fn test_z_order_discriminants() {
-        assert_eq!(ZOrder::Normal as usize, 0);
-        assert_eq!(ZOrder::High as usize, 1);
-        assert_eq!(ZOrder::Glass as usize, 2);
+        assert_eq!(ZOrder::Normal.as_usize_widening(), 0);
+        assert_eq!(ZOrder::High.as_usize_widening(), 1);
+        assert_eq!(ZOrder::Glass.as_usize_widening(), 2);
         assert_eq!(ZOrder::COUNT, 3);
     }
 

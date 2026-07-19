@@ -5,6 +5,7 @@
 //! Convert inline markdown links to reference-style links.
 
 use regex::Regex;
+use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
 
 /// Regex to match inline markdown links: `[text](url)`
@@ -76,7 +77,7 @@ pub fn convert_links(text: &str) -> String {
 
     // Collect inline links and their URLs
     let mut link_info: Vec<(String, String)> = Vec::new();
-    let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut seen_urls: FxHashSet<String> = FxHashSet::default();
 
     for caps in INLINE_LINK_REGEX.captures_iter(&protected_text) {
         #[allow(clippy::unwrap_used, reason = "Regex capture group 0 is guaranteed to exist")]

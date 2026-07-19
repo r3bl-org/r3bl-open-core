@@ -1,13 +1,13 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach source files.
-pub mod layout_error;
-pub mod surface;
 pub mod flex_box;
 pub mod flex_box_id;
 pub mod layout_and_positioning_traits;
+pub mod layout_error;
 pub mod partial_flex_box;
 pub mod props;
+pub mod surface;
 
 // Re-export the public items.
 pub use flex_box::*;

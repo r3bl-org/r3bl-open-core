@@ -3,6 +3,7 @@
 //! 1-based terminal position combining column and row coordinates.
 
 use super::{TermCol, TermRow};
+use crate::VPPos;
 use std::num::NonZeroU16;
 
 /// 1-based terminal position combining column and row coordinates.
@@ -88,6 +89,26 @@ impl TermPos {
         Self {
             col: TermCol::from_raw_non_zero_value(col_nz),
             row: TermRow::from_raw_non_zero_value(row_nz),
+        }
+    }
+}
+
+impl From<TermPos> for VPPos {
+    /// Converts 1-based terminal coordinates to 0-based viewport coordinates.
+    fn from(value: TermPos) -> VPPos {
+        VPPos {
+            col_index: value.col.into(),
+            row_index: value.row.into(),
+        }
+    }
+}
+
+impl From<VPPos> for TermPos {
+    /// Converts 0-based viewport coordinates to 1-based terminal coordinates.
+    fn from(value: VPPos) -> TermPos {
+        TermPos {
+            col: value.col_index.into(),
+            row: value.row_index.into(),
         }
     }
 }

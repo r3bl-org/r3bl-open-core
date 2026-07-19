@@ -19,7 +19,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{EscSequence, TermColDelta, TermRow, TermRowDelta,
+use crate::{EscSequence, TermColDelta, TermRow, TermRowDelta, WideningCastToUsize,
             core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_col_delta,
             term_row, term_row_delta};
 use std::num::NonZeroU16;
@@ -74,7 +74,7 @@ pub fn move_up(count: u16) -> String {
     let delta = if count <= 1 {
         TermRowDelta::ONE
     } else {
-        term_row_delta(count).unwrap()
+        term_row_delta(count).expect("conversion error")
     };
     CsiSequence::CursorUp(delta).to_string()
 }
@@ -96,7 +96,7 @@ pub fn move_down(count: u16) -> String {
     let delta = if count <= 1 {
         TermRowDelta::ONE
     } else {
-        term_row_delta(count).unwrap()
+        term_row_delta(count).expect("conversion error")
     };
     CsiSequence::CursorDown(delta).to_string()
 }
@@ -118,7 +118,7 @@ pub fn move_right(count: u16) -> String {
     let delta = if count <= 1 {
         TermColDelta::ONE
     } else {
-        term_col_delta(count).unwrap()
+        term_col_delta(count).expect("conversion error")
     };
     CsiSequence::CursorForward(delta).to_string()
 }
@@ -140,7 +140,7 @@ pub fn move_left(count: u16) -> String {
     let delta = if count <= 1 {
         TermColDelta::ONE
     } else {
-        term_col_delta(count).unwrap()
+        term_col_delta(count).expect("conversion error")
     };
     CsiSequence::CursorBackward(delta).to_string()
 }
@@ -256,7 +256,7 @@ pub fn draw_box_outline(top_row: u16, left_col: u16, width: u16, height: u16) ->
 
     // Top edge.
     sequence.push_str(&move_to_position(nz(top_row), nz(left_col)));
-    sequence.push_str(&"+".repeat(width as usize));
+    sequence.push_str(&"+".repeat(width.as_usize_widening()));
 
     // Side edges.
     for row in (top_row + 1)..(top_row + height - 1) {
@@ -268,7 +268,7 @@ pub fn draw_box_outline(top_row: u16, left_col: u16, width: u16, height: u16) ->
 
     // Bottom edge.
     sequence.push_str(&move_to_position(nz(top_row + height - 1), nz(left_col)));
-    sequence.push_str(&"+".repeat(width as usize));
+    sequence.push_str(&"+".repeat(width.as_usize_widening()));
 
     sequence
 }

@@ -231,9 +231,13 @@ pub fn send_cmd_via_guard(guard: &SubscriberGuard<TestWorker>, cmd: u8) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap();
+        .expect("conversion error");
     rt.block_on(async {
-        guard.get_input_sender().send(cmd).await.unwrap();
+        guard
+            .get_input_sender()
+            .send(cmd)
+            .await
+            .expect("conversion error");
     });
 }
 
@@ -268,7 +272,7 @@ pub fn spawn_worker_loop(
         .spawn(move || {
             run_worker_loop::<TestWorker>(worker, (), sender, shared_state);
         })
-        .unwrap()
+        .expect("conversion error")
 }
 
 /// Assert that a process-isolated test child exited successfully.

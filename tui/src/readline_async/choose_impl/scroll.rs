@@ -45,7 +45,8 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crate::{ChUnit, DEVELOPMENT_MODE, ch, fg_green, inline_string};
+use crate::{ChUnit, DEVELOPMENT_MODE, RangeBoundsResult, ViewportBoundsCheck, ch,
+            fg_green, inline_string, vp_idx, vp_len};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {
@@ -99,22 +100,27 @@ pub fn locate_cursor_in_viewport(
         CaretVerticalViewportLocation::AtAbsoluteBottom
     } else if abs_row_index == ch(0) {
         CaretVerticalViewportLocation::AtAbsoluteTop
-    } else if abs_row_index < scroll_offset_row_index {
-        CaretVerticalViewportLocation::AboveTopOfViewport
-    } else if abs_row_index == scroll_offset_row_index {
-        CaretVerticalViewportLocation::AtTopOfViewport
-    }
-    // When comparing height or width or size to index, we need to subtract 1.
-    else if abs_row_index > scroll_offset_row_index
-        && abs_row_index < (scroll_offset_row_index + display_height - 1)
-    {
-        CaretVerticalViewportLocation::InMiddleOfViewport
-    } else if abs_row_index == (scroll_offset_row_index + display_height - 1) {
-        CaretVerticalViewportLocation::AtBottomOfViewport
-    } else if abs_row_index > (scroll_offset_row_index + display_height - 1) {
-        CaretVerticalViewportLocation::BelowBottomOfViewport
     } else {
-        CaretVerticalViewportLocation::NotFound
+        match vp_idx(abs_row_index).check_viewport_bounds(
+            vp_idx(scroll_offset_row_index),
+            vp_len(display_height),
+        ) {
+            RangeBoundsResult::Underflowed => {
+                CaretVerticalViewportLocation::AboveTopOfViewport
+            }
+            RangeBoundsResult::Overflowed => {
+                CaretVerticalViewportLocation::BelowBottomOfViewport
+            }
+            RangeBoundsResult::Within => {
+                if abs_row_index == scroll_offset_row_index {
+                    CaretVerticalViewportLocation::AtTopOfViewport
+                } else if abs_row_index == scroll_offset_row_index + display_height - 1 {
+                    CaretVerticalViewportLocation::AtBottomOfViewport
+                } else {
+                    CaretVerticalViewportLocation::InMiddleOfViewport
+                }
+            }
+        }
     }
 }
 

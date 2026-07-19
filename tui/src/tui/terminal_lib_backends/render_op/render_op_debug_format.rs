@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::RenderOpCommon;
-use std::fmt::{Formatter, Result};
+use std::fmt::Formatter;
 
 /// Trait for formatting [`RenderOpCommon`] instances in debug output.
 ///
@@ -20,5 +20,6 @@ pub trait RenderOpDebugFormat {
     /// # Errors
     ///
     /// Returns a formatting error if writing to the formatter fails.
-    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result;
+    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>)
+    -> std::fmt::Result;
 }

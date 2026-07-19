@@ -1,24 +1,30 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Index, Length, LengthOps, NumericValue, idx, len};
+use crate::{CIndex, CLength, LengthOps, c_index, c_len};
 
 /// There are two implementations of this trait:
 /// - [`super::RingBufferStack`] which uses a fixed-size array on the stack.
 /// - [`super::RingBufferHeap`] which uses a [`Vec`] on the heap.
 pub trait RingBuffer<T, const N: usize> {
-    fn len(&self) -> Length;
+    fn len(&self) -> CLength;
 
-    fn is_full(&self) -> bool { self.len() == len(N) }
+    fn is_full(&self) -> bool { self.len() == c_len(N) }
 
     fn clear(&mut self);
 
-    fn get(&self, arg_index: impl Into<Index>) -> Option<&T>;
+    fn get(&self, arg_index: impl Into<CIndex>) -> Option<&T>;
 
-    fn is_empty(&self) -> bool { self.len().is_zero() }
+    fn is_empty(&self) -> bool { self.len().is_empty() }
 
-    fn first(&self) -> Option<&T> { self.get(idx(0)) }
+    fn first(&self) -> Option<&T> { self.get(c_index(0)) }
 
-    fn last(&self) -> Option<&T> { self.get(self.len().convert_to_index()) }
+    fn last(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
+        } else {
+            self.get(self.len().convert_to_index())
+        }
+    }
 
     fn add(&mut self, value: T);
 
@@ -26,7 +32,7 @@ pub trait RingBuffer<T, const N: usize> {
 
     fn remove_head(&mut self) -> Option<T>;
 
-    fn truncate(&mut self, arg_index: impl Into<Index>);
+    fn truncate(&mut self, arg_index: impl Into<CIndex>);
 
     fn push(&mut self, value: T) { self.add(value); }
 
@@ -45,15 +51,14 @@ pub trait RingBuffer<T, const N: usize> {
     ///   this function.
     fn as_slice(&self) -> Vec<&T> {
         let slice = self.as_slice_raw();
-        let acc: Vec<&T> = slice.iter().filter_map(|item| item.as_ref()).collect();
-        acc
+        slice.iter().filter_map(|item| item.as_ref()).collect()
     }
 
     /// Gets a mutable reference to an element at the given index.
     /// Returns None if index >= count (out of bounds).
-    fn get_mut(&mut self, arg_index: impl Into<Index>) -> Option<&mut T>;
+    fn get_mut(&mut self, arg_index: impl Into<CIndex>) -> Option<&mut T>;
 
     /// Sets the value at the given index.
     /// Returns Some(()) if successful (index < count), None if out of bounds.
-    fn set(&mut self, arg_index: impl Into<Index>, value: T) -> Option<()>;
+    fn set(&mut self, arg_index: impl Into<CIndex>, value: T) -> Option<()>;
 }

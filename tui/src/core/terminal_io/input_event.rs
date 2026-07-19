@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{KeyPress, MouseInput, Size, core::resilient_reactor_thread::ShutdownReason,
-            height, width};
+
+use crate::{KeyPress, MouseInput, VPSize, core::resilient_reactor_thread::ShutdownReason};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
@@ -23,7 +23,7 @@ use crossterm::event::{Event as CTEvent,
 /// 2. **Specialized Types** (Clean abstractions)
 ///    - [`KeyPress`]: Normalized keyboard input
 ///    - [`MouseInput`]: Standardized mouse events
-///    - [`Size`]: Terminal dimensions
+///    - [`VPSize`]: Terminal dimensions
 ///    - [`FocusEvent`]: Window focus changes
 ///
 /// 3. **`InputEvent`** (This enum - unified interface)
@@ -62,7 +62,7 @@ use crossterm::event::{Event as CTEvent,
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputEvent {
     Keyboard(KeyPress),
-    Resize(Size),
+    Resize(VPSize),
     Mouse(MouseInput),
     Focus(FocusEvent),
 
@@ -179,8 +179,8 @@ mod helpers {
 }
 
 pub(crate) mod converters {
-    use super::{CTEvent, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent, height,
-                width};
+    use super::{CTEvent, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent};
+    use crate::{vp_height, vp_width};
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();
@@ -194,7 +194,7 @@ pub(crate) mod converters {
                 CTEvent::Key(key_event) => Ok(key_event.try_into()?),
                 CTEvent::Mouse(mouse_event) => Ok(mouse_event.into()),
                 CTEvent::Resize(columns, rows) => {
-                    Ok(InputEvent::Resize(width(columns) + height(rows)))
+                    Ok(InputEvent::Resize(vp_width(columns) + vp_height(rows)))
                 }
                 CTEvent::FocusGained => Ok(InputEvent::Focus(FocusEvent::Gained)),
                 CTEvent::FocusLost => Ok(InputEvent::Focus(FocusEvent::Lost)),
@@ -206,7 +206,9 @@ pub(crate) mod converters {
     impl From<MouseEvent> for InputEvent {
         /// Typecast / convert [`MouseEvent`] to
         /// [`InputEvent::Mouse`].
-        fn from(mouse_event: MouseEvent) -> Self { InputEvent::Mouse(mouse_event.into()) }
+        fn from(mouse_event: MouseEvent) -> InputEvent {
+            InputEvent::Mouse(mouse_event.into())
+        }
     }
 
     impl TryFrom<KeyEvent> for InputEvent {

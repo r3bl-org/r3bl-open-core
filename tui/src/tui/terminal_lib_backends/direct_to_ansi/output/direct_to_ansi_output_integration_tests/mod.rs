@@ -77,7 +77,7 @@
 //! **Supporting Types:**
 //! - [`RenderOpsLocalData`]: Tracks cursor position, `fg_color`, `bg_color` for
 //!   optimization
-//! - [`Pos`]: Position with `row_index` and `col_index` fields (0-based indices)
+//! - [`VPPos`]: Position with `row_index` and `col_index` fields (0-based indices)
 //! - [`RenderOpCommon`]: Enum variants for common operations ([`SetFgColor`],
 //!   [`SetBgColor`], [`MoveCursorPositionAbs`], [`ClearScreen`], [`show_cursor`],
 //!   [`hide_cursor`], etc.)
@@ -92,10 +92,9 @@
 //! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
 //! [`MoveCursorPositionAbs`]: crate::render_op::RenderOpCommon::MoveCursorPositionAbs
 //! [`MoveCursorPositionRelTo`]: crate::render_op::RenderOpCommon::MoveCursorPositionRelTo
-//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
-//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`OutputDevice`]: crate::OutputDevice
-//! [`Pos`]: crate::Pos
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpCommon`]: crate::render_op::RenderOpCommon
 //! [`RenderOpOutput::Common`]: crate::RenderOpOutput::Common
@@ -103,7 +102,7 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_paint_render_op_impl::RenderOpPaintImplDirectToAnsi
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 //! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
 //! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
 //! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
@@ -111,6 +110,7 @@
 //! [`show_cursor`]: crate::TerminalModeController::show_cursor
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`TuiStyle`]: crate::TuiStyle
+//! [`VPPos`]: crate::core::VPPos
 
 // Byte-level tests (StdoutMock).
 #[cfg(test)]
@@ -137,22 +137,23 @@ mod text_operations_rendered;
 // Shared test helpers.
 #[cfg(test)]
 mod test_helpers {
-    use crate::{OutputDevice, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
-                StdoutMock, TuiColor, col, height, pos, render_op::RenderOpCommon, row,
+    use crate::{OutputDevice, RenderOpOutput, RenderOpPaint, RenderOpsLocalData,
+                StdoutMock, TuiColor, VPSize, render_op::RenderOpCommon,
                 terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
-                test_fixtures::output_device_fixtures::OutputDeviceExt, width};
+                test_fixtures::output_device_fixtures::OutputDeviceExt, vp_height,
+                vp_pos, vp_width};
 
     /// Creates initial test state with default values
     pub fn create_test_state() -> RenderOpsLocalData {
         RenderOpsLocalData {
-            cursor_pos: pos(row(0) + col(0)),
+            cursor_pos: vp_pos(0, 0),
             fg_color: None,
             bg_color: None,
         }
     }
 
     /// Standard window size for tests
-    pub fn test_window_size() -> Size { Size::new((width(80), height(24))) }
+    pub fn test_window_size() -> VPSize { vp_width(80) + vp_height(24) }
 
     /// Creates a mock output device for testing
     pub fn create_mock_output() -> (OutputDevice, StdoutMock) { OutputDevice::new_mock() }

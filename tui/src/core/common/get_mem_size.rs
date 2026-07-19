@@ -92,6 +92,7 @@ pub type MemoizedMemorySize = MemoizedValue<MemorySize>;
 /// # Example
 /// ```
 /// use r3bl_tui::{CachedMemorySize, GetMemSize, MemoizedMemorySize};
+/// use std::mem::size_of;
 ///
 /// struct MyDataStructure {
 ///     data: Vec<String>,
@@ -103,7 +104,7 @@ pub type MemoizedMemorySize = MemoizedValue<MemorySize>;
 ///     fn get_mem_size(&self) -> usize {
 ///         // Expensive calculation - sum of all string lengths
 ///         self.data.iter().map(|s| s.len()).sum::<usize>()
-///             + std::mem::size_of::<Vec<String>>()
+///             + size_of::<Vec<String>>()
 ///     }
 /// }
 ///
@@ -140,14 +141,14 @@ pub type MemoizedMemorySize = MemoizedValue<MemorySize>;
 ///
 /// // First call calculates and caches
 /// let size1 = my_struct.get_cached_memory_size();
-/// assert!(size1.size().unwrap() > 0);
+/// assert!(size1.size().expect("conversion error") > 0);
 ///
 /// // Add more data - this invalidates the cache
 /// my_struct.add_data("More data with a longer string".to_string());
 ///
 /// // This triggers recalculation
 /// let size2 = my_struct.get_cached_memory_size();
-/// assert!(size2.size().unwrap() > size1.size().unwrap());
+/// assert!(size2.size().expect("conversion error") > size1.size().expect("conversion error"));
 /// ```
 pub trait CachedMemorySize: GetMemSize {
     /// Returns an immutable reference to the memory size cache.

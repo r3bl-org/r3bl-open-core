@@ -111,7 +111,7 @@
 //!
 //! ```ignore
 //! fn create_realistic_terminal_buffer() -> OfsBufVT100 {
-//!     OfsBufVT100::new_empty(height(25) + width(80))
+//!     OfsBufVT100::new_empty(vp_height(25) + vp_width(80))
 //! }
 //! ```
 //!
@@ -319,7 +319,7 @@
 //! use crate::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
 //!
 //! // Create realistic terminal buffer
-//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(25) + width(80));
+//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(vp_height(25) + vp_width(80));
 //!
 //! // Apply vim status line sequence
 //! let sequence = vim_sequences::vim_status_line("INSERT", 25);
@@ -339,7 +339,7 @@
 //! [`EscSequence`]: crate::EscSequence
 //! [`FastStringify`]: crate::fast_stringify::FastStringify
 //! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
-//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
 //! [`SGR`]: crate::SgrCode

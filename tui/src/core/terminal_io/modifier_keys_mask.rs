@@ -70,7 +70,7 @@ pub enum MatchResult {
 }
 
 impl From<bool> for MatchResult {
-    fn from(other: bool) -> Self {
+    fn from(other: bool) -> MatchResult {
         if other {
             MatchResult::Matches
         } else {

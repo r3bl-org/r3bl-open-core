@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{CsiSequence, EraseDisplayMode, FunctionKey,
-            GCStringOwned, InputEvent, Key, KeyPress, KeyState, LineStateLiveness,
-            NumericValue, ReadlineError, ReadlineEvent, SafeHistory, Size, SpecialKey,
-            col, early_return_if_paused, find_next_word_end, find_next_word_start,
-            find_prev_word_start, row, seg_index};
+use crate::{CsiSequence, EraseDisplayMode, FunctionKey, GCStringOwned, InputEvent, Key,
+            KeyPress, KeyState, LineStateLiveness, NarrowingCastToU16, NumericValue,
+            ReadlineError, ReadlineEvent, SafeHistory, SpecialKey, VPSize, ansi_output,
+            early_return_if_paused, find_next_word_end, find_next_word_start,
+            find_prev_word_start, seg_index, vp_col, vp_row};
 use std::{io::Write, num::NonZeroU8};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -17,7 +17,7 @@ fn get_byte_offset_at_seg_index(line: &GCStringOwned, seg_idx: usize) -> usize {
     if seg_idx >= line.segment_count().as_usize() {
         return line.bytes_size().as_usize();
     }
-    if let Some(seg) = line.get(seg_index(seg_idx)) {
+    if let Some(seg) = line.get(seg_index((seg_idx).as_u16_narrowing())) {
         seg.start_byte_index.as_usize()
     } else {
         line.bytes_size().as_usize()
@@ -97,20 +97,24 @@ pub fn handle_regular_key(
 
         // Function keys F1-F12.
         // unwrap() is safe: literal values 1-12 are guaranteed non-zero.
-        #[allow(clippy::unwrap_in_result, clippy::unwrap_used, reason = "Hardcoded non-zero values")]
+        #[allow(
+            clippy::unwrap_in_result,
+            clippy::unwrap_used,
+            reason = "Hardcoded non-zero values"
+        )]
         Key::FunctionKey(fn_key) => Ok(Some(ReadlineEvent::FnKey(match fn_key {
-            FunctionKey::F1 => NonZeroU8::new(1).unwrap(),
-            FunctionKey::F2 => NonZeroU8::new(2).unwrap(),
-            FunctionKey::F3 => NonZeroU8::new(3).unwrap(),
-            FunctionKey::F4 => NonZeroU8::new(4).unwrap(),
-            FunctionKey::F5 => NonZeroU8::new(5).unwrap(),
-            FunctionKey::F6 => NonZeroU8::new(6).unwrap(),
-            FunctionKey::F7 => NonZeroU8::new(7).unwrap(),
-            FunctionKey::F8 => NonZeroU8::new(8).unwrap(),
-            FunctionKey::F9 => NonZeroU8::new(9).unwrap(),
-            FunctionKey::F10 => NonZeroU8::new(10).unwrap(),
-            FunctionKey::F11 => NonZeroU8::new(11).unwrap(),
-            FunctionKey::F12 => NonZeroU8::new(12).unwrap(),
+            FunctionKey::F1 => NonZeroU8::new(1).expect("conversion error"),
+            FunctionKey::F2 => NonZeroU8::new(2).expect("conversion error"),
+            FunctionKey::F3 => NonZeroU8::new(3).expect("conversion error"),
+            FunctionKey::F4 => NonZeroU8::new(4).expect("conversion error"),
+            FunctionKey::F5 => NonZeroU8::new(5).expect("conversion error"),
+            FunctionKey::F6 => NonZeroU8::new(6).expect("conversion error"),
+            FunctionKey::F7 => NonZeroU8::new(7).expect("conversion error"),
+            FunctionKey::F8 => NonZeroU8::new(8).expect("conversion error"),
+            FunctionKey::F9 => NonZeroU8::new(9).expect("conversion error"),
+            FunctionKey::F10 => NonZeroU8::new(10).expect("conversion error"),
+            FunctionKey::F11 => NonZeroU8::new(11).expect("conversion error"),
+            FunctionKey::F12 => NonZeroU8::new(12).expect("conversion error"),
         }))),
 
         // Catch-all for unhandled keys.
@@ -123,7 +127,7 @@ pub fn handle_regular_key(
 /// Handles terminal resize events.
 pub fn handle_resize(
     line_state: &mut LineState,
-    size: Size,
+    size: VPSize,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
@@ -177,7 +181,10 @@ fn handle_ctrl_l(
             .to_string()
             .as_bytes(),
     )?;
-    term.write_all(crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes())?;
+    term.write_all(
+        ansi_output::cursor_movement::cursor_position(vp_row(0).into(), vp_col(0).into())
+            .as_bytes(),
+    )?;
     line_state.clear_and_render_and_flush(term)?;
     Ok(None)
 }
@@ -234,7 +241,7 @@ fn handle_ctrl_w(
         line_state.line = GCStringOwned::new(format!("{left}{right}"));
 
         // Move cursor to deletion point.
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
 
@@ -287,7 +294,7 @@ fn handle_ctrl_left(
         let cursor_pos = line_state.line_cursor_grapheme.as_usize();
         // Find start of previous word using word_boundaries module.
         let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
     }
@@ -312,7 +319,7 @@ fn handle_ctrl_right(
     if cursor_pos < line_len {
         // Find start of next word using word_boundaries module.
         let word_start = find_next_word_start(line_state.line.as_str(), cursor_pos);
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
     }
@@ -337,7 +344,7 @@ fn handle_alt_b(
         let cursor_pos = line_state.line_cursor_grapheme.as_usize();
         // Find start of previous word.
         let word_start = find_prev_word_start(line_state.line.as_str(), cursor_pos);
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
     }
@@ -362,7 +369,7 @@ fn handle_alt_f(
     if cursor_pos < line_len {
         // Find start of next word.
         let word_start = find_next_word_start(line_state.line.as_str(), cursor_pos);
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
     }
@@ -427,7 +434,7 @@ fn handle_alt_backspace(
         let right = &line_state.line.as_str()[end_byte..];
         line_state.line = GCStringOwned::new(format!("{left}{right}"));
 
-        #[allow(clippy::cast_possible_wrap)]
+        #[allow(clippy::cast_possible_wrap, clippy::as_conversions)]
         let movement = word_start as isize - cursor_pos as isize;
         line_state.move_cursor(movement)?;
         line_state.clear_and_render_and_flush(term)?;
@@ -548,13 +555,15 @@ fn handle_end(
 }
 
 // Navigate to older history entry.
-#[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+#[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
 fn handle_up(
     line_state: &mut LineState,
     term: &mut dyn Write,
     safe_history: &SafeHistory,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    if let Some(line) = safe_history.write(|history| history.search_next().map(String::from)) {
+    if let Some(line) =
+        safe_history.write(|history| history.search_next().map(String::from))
+    {
         line_state.line = GCStringOwned::new(line);
         line_state.clear(term)?;
         line_state.move_cursor(100_000)?;
@@ -564,7 +573,7 @@ fn handle_up(
 }
 
 // Navigate to newer history entry.
-#[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+#[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
 fn handle_down(
     line_state: &mut LineState,
     term: &mut dyn Write,
@@ -647,12 +656,12 @@ impl LineState {
     /// ## Basic Usage (Simulated Events)
     ///
     /// ```rust
-    /// use r3bl_tui::{InputEvent, KeyPress, SpecialKey, LineState, Size, StdoutMock,
-    ///               ReadlineEvent, height, seg_index, width, StdMutex};
+    /// use r3bl_tui::{InputEvent, KeyPress, LineState, ReadlineEvent, StdMutex,
+    ///               StdoutMock, VPSize, seg_index, vp_height, vp_width, SpecialKey};
     /// use std::sync::Arc;
     ///
     /// // Setup
-    /// let mut line_state = LineState::new(String::new(), Size::new((width(80), height(24))));
+    /// let mut line_state = LineState::new(String::new(), vp_width(80) + vp_height(24));
     /// let mut stdout = StdoutMock::default();
     /// let (history, _) = r3bl_tui::readline_async::readline_async_impl::History::new();
     /// let safe_history = Arc::new(StdMutex::new(history));
@@ -667,7 +676,7 @@ impl LineState {
     ///         &event,
     ///         &mut stdout,
     ///         &safe_history
-    ///     ).unwrap();
+    ///     ).expect("conversion error");
     ///
     ///     // Normal character input returns None
     ///     assert!(result.is_none());
@@ -685,7 +694,7 @@ impl LineState {
     ///     &enter_event,
     ///     &mut stdout,
     ///     &safe_history
-    /// ).unwrap();
+    /// ).expect("conversion error");
     ///
     /// // Enter returns Some(ReadlineEvent::Line)
     /// match result {
@@ -723,7 +732,7 @@ impl LineState {
     /// [`pty_ctrl_navigation_test`]:
     ///     crate::readline_async::readline_async_impl::readline_async_integration_tests::pty_ctrl_navigation_test
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn apply_event_and_render(
         &mut self,
         event: &InputEvent,
@@ -764,8 +773,8 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{History, ModifierKeysMask, Size, StdMutex,
-                core::test_fixtures::StdoutMock, height, width};
+    use crate::{History, ModifierKeysMask, StdMutex, core::test_fixtures::StdoutMock,
+                vp_col, vp_height, vp_width};
     use std::sync::Arc;
 
     // cspell:words ello testx
@@ -773,26 +782,21 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_add_char() {
-        let mut line = LineState::new("foo".into(), Size::new((width(100), height(100))));
+        let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
 
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::Character('a'),
         });
 
-        let it = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let it = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
@@ -802,55 +806,45 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_move_cursor() {
-        let mut line = LineState::new("foo".into(), Size::new((width(100), height(100))));
+        let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
 
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Right),
         });
 
-        let it = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let it = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
-        assert_eq!(line.current_column, col(3));
+        assert_eq!(line.current_column, vp_col(3));
     }
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_search_next() {
-        let mut line = LineState::new("foo".into(), Size::new((width(100), height(100))));
+        let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
 
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
         });
 
-        let it = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let it = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
@@ -861,12 +855,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_d_empty_line_eof() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('d'),
@@ -877,13 +870,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+D on empty line should return EOF.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Eof))));
@@ -891,14 +879,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_d_non_empty_deletes_char() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("abc");
         line.line_cursor_grapheme = seg_index(1); // Cursor after 'a'
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('d'),
@@ -909,13 +896,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+D on non-empty line should delete char at cursor.
         assert!(matches!(result, Ok(None)));
@@ -925,14 +907,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_w_word_boundaries() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('w'),
@@ -943,13 +924,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(result, Ok(None)));
         // "world" should be deleted, leaving "hello ".
@@ -958,14 +934,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_left_word_navigation() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(15); // End of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::SpecialKey(SpecialKey::Left),
@@ -977,49 +952,33 @@ mod tests {
         });
 
         // First Ctrl+Left should move to start of "foo".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(12));
 
         // Second Ctrl+Left should move to start of "world".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(6));
 
         // Third Ctrl+Left should move to start of "hello".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
     #[tokio::test]
     async fn test_ctrl_right_word_navigation() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::SpecialKey(SpecialKey::Right),
@@ -1031,36 +990,21 @@ mod tests {
         });
 
         // First Ctrl+Right should move to start of "world" (after hyphen).
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(6));
 
         // Second Ctrl+Right should move to start of "foo".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(12));
 
         // Third Ctrl+Right should move to end (no next word).
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(15));
     }
 
@@ -1068,14 +1012,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_alt_b_backward_word() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // End of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('b'),
@@ -1087,49 +1030,33 @@ mod tests {
         });
 
         // First Alt+B should move to start of "three".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(8));
 
         // Second Alt+B should move to start of "two".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
 
         // Third Alt+B should move to start of "one".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
     #[tokio::test]
     async fn test_alt_f_forward_word() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('f'),
@@ -1141,49 +1068,33 @@ mod tests {
         });
 
         // First Alt+F should move to start of "two".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
 
         // Second Alt+F should move to start of "three".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(8));
 
         // Third Alt+F should move to end (no next word).
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line_cursor_grapheme, seg_index(13));
     }
 
     #[tokio::test]
     async fn test_alt_d_kill_word() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("foo bar baz");
         line.line_cursor_grapheme = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('d'),
@@ -1195,38 +1106,27 @@ mod tests {
         });
 
         // First Alt+D should delete "foo".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line.as_str(), " bar baz");
 
         // Second Alt+D should delete " bar".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line.as_str(), " baz");
     }
 
     #[tokio::test]
     async fn test_alt_backspace_backward_kill_word() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::SpecialKey(SpecialKey::Backspace),
@@ -1238,25 +1138,15 @@ mod tests {
         });
 
         // First Alt+Backspace should delete "three".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line.as_str(), "one two ");
 
         // Second Alt+Backspace should delete "two ".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line.as_str(), "one ");
     }
 
@@ -1264,13 +1154,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_c_interrupt() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("some input");
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('c'),
@@ -1281,13 +1170,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+C should signal interrupt.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Interrupted))));
@@ -1295,13 +1179,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_l_clear_screen() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("test");
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('l'),
@@ -1312,13 +1195,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+L should clear screen and re-render.
         assert!(matches!(result, Ok(None)));
@@ -1328,14 +1206,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_u_delete_to_start() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(6); // After "hello "
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('u'),
@@ -1346,13 +1223,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+U should delete from cursor to start.
         assert!(matches!(result, Ok(None)));
@@ -1363,14 +1235,13 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "emacs")]
     async fn test_ctrl_a_move_to_start() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('a'),
@@ -1381,13 +1252,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+A should move cursor to start.
         assert!(matches!(result, Ok(None)));
@@ -1397,14 +1263,13 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "emacs")]
     async fn test_ctrl_e_move_to_end() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('e'),
@@ -1415,13 +1280,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+E should move cursor to end.
         assert!(matches!(result, Ok(None)));
@@ -1430,25 +1290,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_enter_submit_line() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Enter),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Enter should return the line.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Line(ref s))) if s == "hello"));
@@ -1458,26 +1312,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_backspace_delete_before() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Backspace),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Backspace should delete character before cursor.
         assert!(matches!(result, Ok(None)));
@@ -1487,26 +1335,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_key_delete_at_cursor() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Delete),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Delete should delete character at cursor.
         assert!(matches!(result, Ok(None)));
@@ -1515,26 +1357,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_left_arrow_move_left() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Left),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Left arrow should move cursor left one position.
         assert!(matches!(result, Ok(None)));
@@ -1543,26 +1379,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_home_key_move_to_start() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Home),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Home should move cursor to start of line.
         assert!(matches!(result, Ok(None)));
@@ -1571,26 +1401,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_end_key_move_to_end() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::End),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // End should move cursor to end of line.
         assert!(matches!(result, Ok(None)));
@@ -1599,12 +1423,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_down_arrow_history_next() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Add some history entries.
         safe_history.write(|history| history.update(Some("first".to_string())));
@@ -1615,10 +1438,9 @@ mod tests {
             key: Key::SpecialKey(SpecialKey::Up),
         });
 
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&up_event, stdout, &safe_history)
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&up_event, stdout, &safe_history))
+            .expect("conversion error");
         assert_eq!(line.line.as_str(), "second");
 
         // Now test down arrow.
@@ -1626,9 +1448,8 @@ mod tests {
             key: Key::SpecialKey(SpecialKey::Down),
         });
 
-        let result = safe_output_terminal.write(|term| {
-            line.apply_event_and_render(&down_event, term, &safe_history)
-        });
+        let result = safe_output_terminal
+            .write(|term| line.apply_event_and_render(&down_event, term, &safe_history));
 
         assert!(matches!(result, Ok(None)));
     }
@@ -1637,14 +1458,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_unicode_emoji_word_operations() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello 🎉 world");
         line.line_cursor_grapheme = seg_index(14); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('w'),
@@ -1656,14 +1476,9 @@ mod tests {
         });
 
         // Ctrl+W should delete "world".
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
 
         // Should have "hello 🎉 " remaining.
         assert_eq!(line.line.as_str(), "hello 🎉 ");
@@ -1671,12 +1486,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_w_empty_line() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('w'),
@@ -1687,13 +1501,8 @@ mod tests {
             },
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         // Should not panic or error on empty line.
         assert!(matches!(result, Ok(None)));
@@ -1702,14 +1511,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_word_boundaries_with_only_punctuation() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("...---===");
         line.line_cursor_grapheme = seg_index(9); // At end
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::SpecialKey(SpecialKey::Left),
@@ -1721,14 +1529,9 @@ mod tests {
         });
 
         // Ctrl+Left on punctuation-only string.
-        safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        })
-        .unwrap();
+        safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .expect("conversion error");
 
         // Punctuation-only strings are treated as one "word", so jumps to start.
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
@@ -1736,12 +1539,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_ctrl_left_unicode() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Setup: "hello 世界 test"
         line.line = GCStringOwned::new("hello 世界 test");
@@ -1788,12 +1590,11 @@ mod tests {
     /// Test that F1-F12 keys are correctly converted to FnKey(1)-FnKey(12).
     #[tokio::test]
     async fn test_fnkey_f1_through_f12() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Test all function keys F1-F12.
         let test_cases = [
@@ -1817,12 +1618,8 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                        line.apply_event_and_render(
-                            &event,
-                            stdout,
-                            &safe_history,
-                        )
-                    });
+                line.apply_event_and_render(&event, stdout, &safe_history)
+            });
             assert!(
                 matches!(result, Ok(Some(ReadlineEvent::FnKey(n))) if n.get() == expected_num),
                 "Expected FnKey({expected_num}) for {fn_key:?}, got {result:?}"
@@ -1835,12 +1632,11 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::type_complexity)]
     async fn test_passthrough_special_keys() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Test pass-through keys: Tab, BackTab, PageUp, PageDown, Insert.
         let test_cases: &[(SpecialKey, fn(&ReadlineEvent) -> bool)] = &[
@@ -1859,12 +1655,8 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                        line.apply_event_and_render(
-                            &event,
-                            stdout,
-                            &safe_history,
-                        )
-                    });
+                line.apply_event_and_render(&event, stdout, &safe_history)
+            });
             match result {
                 Ok(Some(ref readline_event)) => {
                     assert!(
@@ -1883,14 +1675,13 @@ mod tests {
     /// events).
     #[tokio::test]
     async fn test_internal_special_keys_return_none() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("test");
         line.line_cursor_grapheme = seg_index(2); // Middle of line
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // These keys modify state and return Ok(None).
         let internal_keys = [
@@ -1913,12 +1704,8 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                        line.apply_event_and_render(
-                            &event,
-                            stdout,
-                            &safe_history,
-                        )
-                    });
+                line.apply_event_and_render(&event, stdout, &safe_history)
+            });
             assert!(
                 matches!(result, Ok(None)),
                 "Expected Ok(None) for internal key {special_key:?}, got {result:?}"
@@ -1929,25 +1716,19 @@ mod tests {
     /// Test that Esc key (and other unhandled `SpecialKey`s) return `UnhandledKey`.
     #[tokio::test]
     async fn test_unhandled_special_key_returns_unhandled_event() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
-        let safe_output_terminal = Arc::new(StdMutex::new( stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
-        let safe_history = Arc::new(StdMutex::new( history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Esc is not explicitly handled, so it should return UnhandledKey.
         let event = InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Esc),
         });
 
-        let result = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(
-                &event,
-                stdout,
-                &safe_history,
-            )
-        });
+        let result = safe_output_terminal
+            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(
             matches!(result, Ok(Some(ReadlineEvent::UnhandledKey(_)))),

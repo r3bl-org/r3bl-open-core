@@ -135,8 +135,8 @@ mod tests_parse_block_smart_list {
     fn test_with_unicode() {
         let input = "- straight 😃 foo bar baz\n";
         let result = parse_smart_list_block(input);
-        let remainder = result.as_ref().unwrap().0;
-        let output = &result.as_ref().unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let output = &result.as_ref().expect("conversion error").1;
         assert_eq2!(remainder, "");
         assert_eq2!(
             output,
@@ -162,9 +162,9 @@ mod tests_parse_block_smart_list {
         {
             let input = ["- [ ] todo"].join("\n");
             let result = parse_smart_list_block(&input);
-            let remainder = result.as_ref().unwrap().0;
-            let (lines, _bullet_kind, _indent) = result.unwrap().1;
-            let first_line = lines.first().unwrap();
+            let remainder = result.as_ref().expect("conversion error").0;
+            let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
+            let first_line = lines.first().expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 first_line,
@@ -184,9 +184,9 @@ mod tests_parse_block_smart_list {
         {
             let input = ["- [x] done"].join("\n");
             let result = parse_smart_list_block(&input);
-            let remainder = result.as_ref().unwrap().0;
-            let (lines, _bullet_kind, _indent) = result.unwrap().1;
-            let first_line = lines.first().unwrap();
+            let remainder = result.as_ref().expect("conversion error").0;
+            let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
+            let first_line = lines.first().expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 first_line,
@@ -206,9 +206,9 @@ mod tests_parse_block_smart_list {
         {
             let input = ["- [ ]todo"].join("\n");
             let result = parse_smart_list_block(&input);
-            let remainder = result.as_ref().unwrap().0;
-            let (lines, _bullet_kind, _indent) = result.unwrap().1;
-            let first_line = lines.first().unwrap();
+            let remainder = result.as_ref().expect("conversion error").0;
+            let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
+            let first_line = lines.first().expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 first_line,
@@ -228,9 +228,9 @@ mod tests_parse_block_smart_list {
         {
             let input = ["- [x]done"].join("\n");
             let result = parse_smart_list_block(&input);
-            let remainder = result.as_ref().unwrap().0;
-            let (lines, _bullet_kind, _indent) = result.unwrap().1;
-            let first_line = lines.first().unwrap();
+            let remainder = result.as_ref().expect("conversion error").0;
+            let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
+            let first_line = lines.first().expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 first_line,
@@ -270,8 +270,8 @@ mod tests_parse_block_smart_list {
         ]
         .into();
         let result = parse_smart_list_block(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
         assert_eq2!(remainder, "");
         assert_eq2!(lines, expected);
     }
@@ -299,8 +299,8 @@ mod tests_parse_block_smart_list {
         ]
         .into();
         let result = parse_smart_list_block(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
         assert_eq2!(remainder, "- foo1\n  bar1 baz1\n");
         assert_eq2!(lines, expected);
     }
@@ -330,8 +330,8 @@ mod tests_parse_block_smart_list {
         ]
         .into();
         let result = parse_smart_list_block(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
         assert_eq2!(remainder, "");
         assert_eq2!(lines, expected);
     }
@@ -361,8 +361,8 @@ mod tests_parse_block_smart_list {
         ]
         .into();
         let result = parse_smart_list_block(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let (lines, _bullet_kind, _indent) = result.expect("conversion error").1;
         assert_eq2!(remainder, "1. foo\n   bar baz\n");
         assert_eq2!(lines, expected);
     }
@@ -460,14 +460,14 @@ mod tests_bullet_kinds {
         // Unordered.
         {
             let input = "- foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            let (_remainder, actual) = parse_smart_list(input).expect("conversion error");
             assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         }
 
         // Ordered.
         {
             let input = "1. foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            let (_remainder, actual) = parse_smart_list(input).expect("conversion error");
             assert_eq2!(actual.bullet_kind, BulletKind::Ordered(1));
         }
     }
@@ -576,7 +576,7 @@ mod tests_parse_smart_list {
     #[test]
     fn test_one_line() {
         let input = "- foo";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
+        let (remainder, actual) = parse_smart_list(input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             actual,
@@ -592,7 +592,7 @@ mod tests_parse_smart_list {
     #[test]
     fn test_one_line_trailing_new_line() {
         let input = "- foo\n";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
+        let (remainder, actual) = parse_smart_list(input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             actual,
@@ -609,7 +609,7 @@ mod tests_parse_smart_list {
     fn test_two_lines_last_is_empty() {
         let input = "- foo\n\n";
         let actual = parse_smart_list(input);
-        let (remainder, actual) = actual.unwrap();
+        let (remainder, actual) = actual.expect("conversion error");
         assert_eq2!(remainder, "\n");
         assert_eq2!(
             actual,
@@ -625,7 +625,7 @@ mod tests_parse_smart_list {
     #[test]
     fn test_two_lines() {
         let input = "- foo\n  bar baz";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
+        let (remainder, actual) = parse_smart_list(input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             actual,
@@ -644,7 +644,7 @@ mod tests_parse_smart_list {
     #[test]
     fn test_three_lines_last_is_empty() {
         let input = "- foo\n  bar baz\n";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
+        let (remainder, actual) = parse_smart_list(input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             actual,
@@ -663,7 +663,7 @@ mod tests_parse_smart_list {
     #[test]
     fn test_three_lines() {
         let input = "- foo\n  bar baz\n  qux";
-        let (remainder, actual) = parse_smart_list(input).unwrap();
+        let (remainder, actual) = parse_smart_list(input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             actual,
@@ -684,7 +684,7 @@ mod tests_parse_smart_list {
         // Indent = 0 Ok.
         {
             let input = "- foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            let (_remainder, actual) = parse_smart_list(input).expect("conversion error");
             assert_eq2!(actual.indent, 0);
             assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         }
@@ -705,7 +705,7 @@ mod tests_parse_smart_list {
         // Indent = 2 Ok.
         {
             let input = "  - foo";
-            let (_remainder, actual) = parse_smart_list(input).unwrap();
+            let (_remainder, actual) = parse_smart_list(input).expect("conversion error");
             assert_eq2!(actual.indent, 2);
             assert_eq2!(actual.bullet_kind, BulletKind::Unordered);
         }
@@ -873,8 +873,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 1);
@@ -887,8 +887,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 1);
@@ -901,8 +901,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -917,8 +917,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "1. ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -933,8 +933,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 2;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -949,8 +949,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 2;
         let bullet = "1. ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -965,8 +965,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "- new item\n  its content");
         assert_eq2!(lines.len(), 2);
@@ -980,8 +980,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "1. ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "2. new item\n   its content");
         assert_eq2!(lines.len(), 2);
@@ -995,8 +995,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "  - nested item");
         assert_eq2!(lines.len(), 2);
@@ -1010,8 +1010,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "\nother content");
         assert_eq2!(lines.len(), 2);
@@ -1025,8 +1025,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "  \n  third line");
         assert_eq2!(lines.len(), 1);
@@ -1039,8 +1039,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, " second line");
         assert_eq2!(lines.len(), 1);
@@ -1053,8 +1053,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "   second line");
         assert_eq2!(lines.len(), 1);
@@ -1067,8 +1067,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "10. ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -1083,8 +1083,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "100. ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -1099,8 +1099,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "");
         assert_eq2!(lines.len(), 3);
@@ -1116,8 +1116,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 0;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "  - not a list item\n  1. also not a list item");
         assert_eq2!(lines.len(), 1);
@@ -1130,8 +1130,8 @@ mod tests_parse_smart_list_content_lines {
         let indent = 4;
         let bullet = "- ";
 
-        let (remainder, lines) =
-            parse_smart_list_content_lines(input, indent, bullet).unwrap();
+        let (remainder, lines) = parse_smart_list_content_lines(input, indent, bullet)
+            .expect("conversion error");
 
         assert_eq2!(remainder, "    - nested list");
         assert_eq2!(lines.len(), 3);
@@ -1145,7 +1145,8 @@ mod tests_parse_smart_list_content_lines {
         // Simple test with null padding right after list.
         {
             let input = "- item\n\0\0\0rest";
-            let (remainder, smart_list_ir) = parse_smart_list(input).unwrap();
+            let (remainder, smart_list_ir) =
+                parse_smart_list(input).expect("conversion error");
             assert_eq2!(remainder, "rest");
             assert_eq2!(smart_list_ir.content_lines.len(), 1);
             assert_eq2!(smart_list_ir.bullet_kind, BulletKind::Unordered);
@@ -1157,7 +1158,8 @@ mod tests_parse_smart_list_content_lines {
             let indent = 0;
             let bullet = "- ";
             let (remainder, lines) =
-                parse_smart_list_content_lines(input, indent, bullet).unwrap();
+                parse_smart_list_content_lines(input, indent, bullet)
+                    .expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(lines.len(), 1);
             assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));

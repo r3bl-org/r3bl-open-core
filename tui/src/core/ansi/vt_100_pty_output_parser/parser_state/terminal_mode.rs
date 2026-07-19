@@ -2,7 +2,26 @@
 
 use super::super::modes::{MouseTrackingFormat, MouseTrackingMode,
                           terminal_mode_state_todo};
-use crate::{ActiveScreenBuffer, CursorKeyMode};
+use crate::CursorKeyMode;
+
+/// Internal offscreen buffer state for the alternate screen.
+///
+/// This represents the *internal state* of the engine, tracking whether the grid
+/// buffers are currently swapped.
+///
+/// For the external VT100 mode requested by the child process, see
+/// [`RequestedScreenMode`].
+///
+/// [`RequestedScreenMode`]: crate::RequestedScreenMode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ActiveScreenBuffer {
+    /// Alternate screen buffer is actively displayed.
+    Alternate,
+
+    /// Alternate screen buffer is inactive, primary screen is displayed.
+    #[default]
+    Primary,
+}
 
 /// State tracking for terminal operational modes.
 ///
@@ -11,7 +30,7 @@ use crate::{ActiveScreenBuffer, CursorKeyMode};
 /// underlying [`PTY`] process.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -24,7 +43,7 @@ pub struct TerminalModeState {
     /// Toggled by the [`AnsiToOfsBufPerformer`] when processing the `ESC [ ? 1 h` and
     /// `ESC [ ? 1 l` sequences.
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     /// [`DECCKM`]: https://vt100.net/docs/vt100-ug/chapter3.html#DECCKM
     pub cursor_key_mode: CursorKeyMode,
 
@@ -36,7 +55,7 @@ pub struct TerminalModeState {
     /// Toggled by the [`AnsiToOfsBufPerformer`] when processing the `ESC [ ? 1049 h`
     /// and `ESC [ ? 1049 l` sequences.
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     pub active_screen_buffer: ActiveScreenBuffer,
 
     /// Mouse tracking enabled/disabled state.

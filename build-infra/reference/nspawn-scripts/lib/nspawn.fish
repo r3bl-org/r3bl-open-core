@@ -5,6 +5,9 @@
 # Usage: source /path/to/tests/lib/nspawn.fish
 #
 # Provides functions for test execution and machine inspection.
+#
+# Btrfs CoW Optimization: zygotes/machines use `cp -a --reflink=auto` 
+# for instant, zero-copy cloning, drastically accelerating setup/teardown.
 
 # ============================================================================
 # Configuration
@@ -375,7 +378,7 @@ function nuke_machine -a distro -d "Nuclear option: force kill + delete + recrea
     # Step 4: Recreate from zygote
     if test -d $zygote_path
         echo "Step 4: Recreating from zygote..."
-        sudo cp -a $zygote_path $machine_path
+        sudo cp -a --reflink=auto $zygote_path $machine_path
         echo "  Recreated from $zygote_path"
         echo ""
         echo "$machine_name nuked and recreated. Use './run.fish start $distro' to boot."
@@ -432,7 +435,7 @@ function save_zygote -a distro -d "Save machine as zygote (golden image)"
     end
 
     echo "Saving $machine_name as zygote..."
-    sudo cp -a $machine_path $zygote_path
+    sudo cp -a --reflink=auto $machine_path $zygote_path
     set size (get_dir_size $zygote_path)
     echo "Zygote saved: $zygote_path ($size)"
 end
@@ -468,7 +471,7 @@ function restore_from_zygote -a distro -d "Restore machine from zygote (clean st
     end
 
     echo "Restoring $machine_name from zygote..."
-    sudo cp -a $zygote_path $machine_path
+    sudo cp -a --reflink=auto $zygote_path $machine_path
     echo "Restored clean $machine_name"
 end
 

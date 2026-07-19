@@ -1,14 +1,14 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{BLOCK_DOTS, BRAILLE_DOTS, ColWidth, GCStringOwned, InlineString,
-            SpinnerColor, SpinnerStyle, SpinnerTemplate, contains_ansi_escape_sequence,
-            fg_color, inline_string, width};
+use crate::{BLOCK_DOTS, BRAILLE_DOTS, GCStringOwned, InlineString, SpinnerColor,
+            SpinnerStyle, SpinnerTemplate, VPWidth, contains_ansi_escape_sequence,
+            fg_color, inline_string, vp_width};
 use std::ops::Not;
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
     message: &str,
     count: usize,
-    display_width: ColWidth,
+    display_width: VPWidth,
 ) -> InlineString {
     debug_assert!(contains_ansi_escape_sequence(message).not());
 
@@ -20,8 +20,8 @@ pub fn render_tick(
 
             let text = GCStringOwned::from(message);
             let text_trunc = text.trunc_end_to_fit(
-                display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
-                                           * last display col */
+                display_width - vp_width(3), /* 1 for symbol, 1 for space, 1 empty for
+                                              * last display col */
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 
@@ -34,8 +34,8 @@ pub fn render_tick(
 
             let text = GCStringOwned::from(message);
             let text_trunc = text.trunc_end_to_fit(
-                display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
-                                           * last display col */
+                display_width - vp_width(3), /* 1 for symbol, 1 for space, 1 empty for
+                                              * last display col */
             );
             let text_trunc_fmt = apply_color(text_trunc, &mut style.color);
 
@@ -48,7 +48,7 @@ pub fn render_tick(
 pub fn render_final_tick(
     style: &SpinnerStyle,
     final_message: &str,
-    display_width: ColWidth,
+    display_width: VPWidth,
 ) -> InlineString {
     let text = GCStringOwned::from(final_message);
     let text_trunc = text.trunc_end_to_fit(display_width);

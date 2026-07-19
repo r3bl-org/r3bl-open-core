@@ -63,7 +63,7 @@ fn run_all_restart_tests_sequentially() {
         test_panic_after_events,
         test_no_restart_after_panic,
         // Group C Step 6: RRT<TestWorker> integration tests.
-        test_subscribe_spawns_thread,           
+        test_subscribe_spawns_thread,
         test_subscribe_fast_path_reuse,
         test_subscribe_slow_path_after_termination,
         test_shutdown_received_by_subscriber,

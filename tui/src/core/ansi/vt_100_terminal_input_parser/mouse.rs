@@ -172,7 +172,7 @@
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
                             VT100MouseButtonIR, VT100ScrollDirectionIR};
-use crate::{ByteOffset, KeyState, TermPos, byte_offset,
+use crate::{ByteOffset, KeyState, TermPos, WideningCastToU16, byte_offset,
             core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
                                     MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
@@ -253,7 +253,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     }
 
     // Extract the action character (terminator).
-    let action_char = sequence[bytes_consumed.as_last_byte_index()] as char;
+    let action_char = char::from(sequence[bytes_consumed.as_last_byte_index()]);
 
     // Parse the content between ESC[< and M/m
     // Skip prefix (MOUSE_SGR_PREFIX_LEN bytes) and suffix (1 byte).
@@ -362,15 +362,19 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Extract button, column, and row bytes.
     // Since we verified sequence.len() >= MOUSE_X10_MIN_LEN (6), we can safely index up
     // to 5.
-    let part_button_byte = u16::from(sequence[3]); // Widen to u16 for consistent constant usage
+    let part_button_byte = (sequence[3]).as_u16_widening(); // Widen to u16 for consistent constant usage
     let part_cx = sequence[4];
     let part_cy = sequence[5];
 
     // Convert raw bytes to 1-based coordinates.
     // X10 encoding: byte value - 32 = position (with offset for positions > 95).
     // Positions are 1-based in the terminal.
-    let col = u16::from(part_cx).saturating_sub(MOUSE_X10_COORD_OFFSET);
-    let row = u16::from(part_cy).saturating_sub(MOUSE_X10_COORD_OFFSET);
+    let col = part_cx
+        .as_u16_widening()
+        .saturating_sub(MOUSE_X10_COORD_OFFSET);
+    let row = part_cy
+        .as_u16_widening()
+        .saturating_sub(MOUSE_X10_COORD_OFFSET);
 
     // Handle invalid coordinates.
     if col == 0 || row == 0 {

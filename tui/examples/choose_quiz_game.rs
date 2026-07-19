@@ -2,9 +2,9 @@
 
 use r3bl_tui::{DefaultIoDevices, InlineString, TuiAvailabilityChooseExt, TuiColor,
                assert_terminal_is_interactive, choose, cli_text_inline, get_size,
-               height, new_style, ok,
+               new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
-               set_mimalloc_in_main, usize, width};
+               set_mimalloc_in_main, vp_height, vp_width};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -63,10 +63,10 @@ pub async fn main() -> miette::Result<()> {
 
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> =
-        serde_json::from_str(JSON_DATA).unwrap();
+        serde_json::from_str(JSON_DATA).expect("conversion error");
     // Get display size.
-    let max_width_col_count = usize(*size.col_width);
-    let max_height_row_count: usize = 5;
+    let max_width_col_count = **size.col_width;
+    let max_height_row_count: u16 = 5;
 
     let mut score = 0;
     let correct_answer_color = TuiColor::Rgb((255, 216, 9).into());
@@ -83,8 +83,8 @@ pub async fn main() -> miette::Result<()> {
         let maybe_user_choice = choose(
             question,
             options,
-            Some(height(max_height_row_count)),
-            Some(width(max_width_col_count)),
+            Some(vp_height(max_height_row_count)),
+            Some(vp_width(max_width_col_count)),
             HowToChoose::Single,
             StyleSheet::default(),
             io_devices.as_mut_tuple(),
@@ -235,7 +235,7 @@ fn check_user_input_and_display_result(
     let question_number = all_questions_and_answers
         .iter()
         .position(|it| it.question == question_data.question)
-        .unwrap()
+        .expect("conversion error")
         + 1;
 
     let user_input_str = user_input.as_str();

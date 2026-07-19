@@ -74,7 +74,7 @@
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/

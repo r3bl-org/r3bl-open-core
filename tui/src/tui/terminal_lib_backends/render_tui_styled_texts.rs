@@ -54,11 +54,11 @@ mod tests {
 
                 tui_styled_texts! {
                     tui_styled_text! {
-                        @style: maybe_style1.unwrap(),
+                        @style: maybe_style1.expect("conversion error"),
                         @text: "Hello",
                     },
                     tui_styled_text! {
-                        @style: maybe_style2.unwrap(),
+                        @style: maybe_style2.expect("conversion error"),
                         @text: "World",
                     }
                 }

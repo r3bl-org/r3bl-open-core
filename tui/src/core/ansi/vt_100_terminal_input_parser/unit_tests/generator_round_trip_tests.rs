@@ -7,7 +7,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{KeyState,
+use crate::{KeyState, VPWidth, VPHeight,
             core::ansi::{generator::*,
                          vt_100_terminal_input_parser::{VT100FocusStateIR,
                                                         VT100InputEventIR,
@@ -22,48 +22,48 @@ use crate::{KeyState,
 #[test]
 fn test_generate_resize_event() {
     let event = VT100InputEventIR::Resize {
-        row_height: crate::RowHeight::from(24),
-        col_width: crate::ColWidth::from(80),
+        row_height: VPHeight::from(24),
+        col_width: VPWidth::from(80),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[8;24;80t");
 }
 
 #[test]
 fn test_generate_focus_gained() {
     let event = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[I");
 }
 
 #[test]
 fn test_generate_focus_lost() {
     let event = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[O");
 }
 
 #[test]
 fn test_generate_paste_start() {
     let event = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[200~");
 }
 
 #[test]
 fn test_generate_paste_end() {
     let event = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[201~");
 }
 
 #[test]
 fn test_roundtrip_resize_event() {
     let original_event = VT100InputEventIR::Resize {
-        row_height: crate::RowHeight::from(30),
-        col_width: crate::ColWidth::from(120),
+        row_height: VPHeight::from(30),
+        col_width: VPWidth::from(120),
     };
-    let bytes = generate_keyboard_sequence(&original_event).unwrap();
+    let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
     let (parsed_event, bytes_consumed) =
         parse_terminal_event(&bytes).expect("Should parse");
 
@@ -74,7 +74,8 @@ fn test_roundtrip_resize_event() {
 #[test]
 fn test_roundtrip_focus_events() {
     let original_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
-    let bytes_gained = generate_keyboard_sequence(&original_gained).unwrap();
+    let bytes_gained =
+        generate_keyboard_sequence(&original_gained).expect("conversion error");
     let (parsed_gained, bytes_consumed) =
         parse_terminal_event(&bytes_gained).expect("Should parse");
 
@@ -82,7 +83,8 @@ fn test_roundtrip_focus_events() {
     assert_eq!(bytes_consumed.as_usize(), bytes_gained.len());
 
     let original_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
-    let bytes_lost = generate_keyboard_sequence(&original_lost).unwrap();
+    let bytes_lost =
+        generate_keyboard_sequence(&original_lost).expect("conversion error");
     let (parsed_lost, bytes_consumed) =
         parse_terminal_event(&bytes_lost).expect("Should parse");
 
@@ -93,7 +95,8 @@ fn test_roundtrip_focus_events() {
 #[test]
 fn test_roundtrip_paste_events() {
     let original_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
-    let bytes_start = generate_keyboard_sequence(&original_start).unwrap();
+    let bytes_start =
+        generate_keyboard_sequence(&original_start).expect("conversion error");
     let (parsed_start, bytes_consumed) =
         parse_terminal_event(&bytes_start).expect("Should parse");
 
@@ -101,7 +104,7 @@ fn test_roundtrip_paste_events() {
     assert_eq!(bytes_consumed.as_usize(), bytes_start.len());
 
     let original_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-    let bytes_end = generate_keyboard_sequence(&original_end).unwrap();
+    let bytes_end = generate_keyboard_sequence(&original_end).expect("conversion error");
     let (parsed_end, bytes_consumed) =
         parse_terminal_event(&bytes_end).expect("Should parse");
 
@@ -117,7 +120,7 @@ fn test_generate_arrow_up() {
         code: VT100KeyCodeIR::Up,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[A");
 }
 
@@ -127,7 +130,7 @@ fn test_generate_arrow_down() {
         code: VT100KeyCodeIR::Down,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[B");
 }
 
@@ -137,7 +140,7 @@ fn test_generate_arrow_right() {
         code: VT100KeyCodeIR::Right,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[C");
 }
 
@@ -147,7 +150,7 @@ fn test_generate_arrow_left() {
         code: VT100KeyCodeIR::Left,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[D");
 }
 
@@ -163,7 +166,7 @@ fn test_generate_shift_up() {
             ctrl: KeyState::NotPressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift modifier: parameter = 1 + 1 = 2
     assert_eq!(bytes, b"\x1b[1;2A");
 }
@@ -178,7 +181,7 @@ fn test_generate_alt_right() {
             ctrl: KeyState::NotPressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Alt modifier: parameter = 1 + 2 = 3
     assert_eq!(bytes, b"\x1b[1;3C");
 }
@@ -193,7 +196,7 @@ fn test_generate_ctrl_down() {
             ctrl: KeyState::Pressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Ctrl modifier: parameter = 1 + 4 = 5
     assert_eq!(bytes, b"\x1b[1;5B");
 }
@@ -208,7 +211,7 @@ fn test_generate_ctrl_alt_shift_left() {
             ctrl: KeyState::Pressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift+Alt+Ctrl modifiers: parameter = 1 + 7 = 8
     assert_eq!(bytes, b"\x1b[1;8D");
 }
@@ -221,7 +224,7 @@ fn test_generate_home_key() {
         code: VT100KeyCodeIR::Home,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[H");
 }
 
@@ -231,7 +234,7 @@ fn test_generate_end_key() {
         code: VT100KeyCodeIR::End,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[F");
 }
 
@@ -241,7 +244,7 @@ fn test_generate_insert_key() {
         code: VT100KeyCodeIR::Insert,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[2~");
 }
 
@@ -251,7 +254,7 @@ fn test_generate_delete_key() {
         code: VT100KeyCodeIR::Delete,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[3~");
 }
 
@@ -261,7 +264,7 @@ fn test_generate_page_up() {
         code: VT100KeyCodeIR::PageUp,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[5~");
 }
 
@@ -271,7 +274,7 @@ fn test_generate_page_down() {
         code: VT100KeyCodeIR::PageDown,
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[6~");
 }
 
@@ -283,7 +286,7 @@ fn test_generate_f1_key() {
         code: VT100KeyCodeIR::Function(1),
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[11~");
 }
 
@@ -293,7 +296,7 @@ fn test_generate_f6_key() {
         code: VT100KeyCodeIR::Function(6),
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[17~");
 }
 
@@ -303,7 +306,7 @@ fn test_generate_f12_key() {
         code: VT100KeyCodeIR::Function(12),
         modifiers: VT100KeyModifiersIR::default(),
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[24~");
 }
 
@@ -319,7 +322,7 @@ fn test_generate_shift_f5() {
             ctrl: KeyState::NotPressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift modifier: parameter = 1 + 1 = 2
     assert_eq!(bytes, b"\x1b[15;2~");
 }
@@ -334,7 +337,7 @@ fn test_generate_ctrl_alt_f10() {
             ctrl: KeyState::Pressed,
         },
     };
-    let bytes = generate_keyboard_sequence(&event).unwrap();
+    let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Ctrl+Alt modifiers: parameter = 1 + 6 = 7
     assert_eq!(bytes, b"\x1b[21;7~");
 }
@@ -401,7 +404,7 @@ fn test_roundtrip_arrow_up() {
         modifiers: VT100KeyModifiersIR::default(),
     };
 
-    let bytes = generate_keyboard_sequence(&original_event).unwrap();
+    let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
     let (parsed_event, bytes_consumed) =
         parse_keyboard_sequence(&bytes).expect("Should parse");
 
@@ -420,7 +423,7 @@ fn test_roundtrip_ctrl_alt_f10() {
         },
     };
 
-    let bytes = generate_keyboard_sequence(&original_event).unwrap();
+    let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
     let (parsed_event, bytes_consumed) =
         parse_keyboard_sequence(&bytes).expect("Should parse");
 
@@ -439,7 +442,7 @@ fn test_roundtrip_insert_key_with_shift() {
         },
     };
 
-    let bytes = generate_keyboard_sequence(&original_event).unwrap();
+    let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
     let (parsed_event, bytes_consumed) =
         parse_keyboard_sequence(&bytes).expect("Should parse");
 

@@ -43,9 +43,16 @@ pub mod decstbm_margins {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Verify initial state - no margins set
-        assert_eq!(ofs_buf_vt_100.parser_global_state.scroll_region_top, None);
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.scroll_region_bottom,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_top,
+            None
+        );
+        assert_eq!(
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_bottom,
             None
         );
 

@@ -54,11 +54,14 @@
 //! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 
-use r3bl_tui::{EventPropagation, InputEvent, IntoErr, Key, KeyPress, KeyState,
-               ModifierKeysMask, TuiAvailability, assert_terminal_is_interactive,
+use r3bl_tui::{DefaultIoDevices, EventPropagation, InputEvent, IntoErr, Key, KeyPress,
+               KeyState, ModifierKeysMask, TuiAvailability, TuiAvailabilityChooseExt,
+               assert_terminal_is_interactive, choose,
                core::pty_mux::{PTYMux, ProcessManager},
-               is_command_available, ok, set_mimalloc_in_main,
-               show_notification_non_blocking, try_initialize_logging_global};
+               is_command_available, ok,
+               readline_async::{HowToChoose, style::StyleSheet},
+               set_mimalloc_in_main, show_notification_non_blocking,
+               try_initialize_logging_global};
 use tracing_core::LevelFilter;
 
 const ENABLE_NOTIFICATIONS: bool = false;
@@ -102,6 +105,30 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
     println!();
 
+    // Ask user for confirmation before taking over screen.
+    let maybe_user_choice = {
+        let mut default_io_devices = DefaultIoDevices::default();
+        choose(
+            "🚀 Ready to launch the PTY Multiplexer demo?",
+            &["Yes, launch PTY Multiplexer demo", "No, exit"],
+            None,
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .get_first_result()
+        .await?
+    };
+
+    match maybe_user_choice {
+        Some(ref choice) if choice.starts_with("Yes") => {}
+        _ => {
+            println!("👋 Exiting without running demo.");
+            return ok!();
+        }
+    }
+
     let mut builder = PTYMux::builder();
     let mut added_count = 0;
 
@@ -113,11 +140,11 @@ async fn main() -> miette::Result<()> {
     }
 
     if added_count == 0 {
-        miette::bail!(
+        return Err(miette::miette!(
             "No configured processes are available on this system. \
             Please ensure at least one of (hx, less, htop, gitui, bash, fish) \
             is installed and in PATH."
-        );
+        ));
     }
 
     builder = builder.input_interceptor_fn(Box::new(interceptor_fn));
@@ -163,7 +190,7 @@ fn interceptor_fn(
             let process_index = (fn_number - 1) as usize;
 
             if process_index < process_manager.processes().len() {
-                let old_index = process_manager.active_index();
+                let old_index = process_manager.focused_index();
                 if old_index != process_index {
                     process_manager.switch_to(process_index);
 

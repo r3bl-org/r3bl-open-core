@@ -63,9 +63,9 @@ use miette::IntoDiagnostic;
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
-/// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -126,9 +126,9 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// - Platform is not supported (e.g., WASM, embedded targets without OS)
 /// - Lock is poisoned (internal state corruption)
 ///
-/// [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [module documentation]: mod@crate::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {

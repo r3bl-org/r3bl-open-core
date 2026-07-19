@@ -43,7 +43,7 @@ pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
     let metadata = fs::metadata(file).into_diagnostic()?;
 
     if !metadata.is_file() {
-        miette::bail!("This is not a file: '{}'", file.display());
+        return Err(miette::miette!("This is not a file: '{}'", file.display()));
     }
 
     // Set execute permissions for owner, group, and others on this file. 755 means:
@@ -76,17 +76,17 @@ mod tests_permissions {
     #[test]
     fn test_set_file_executable() {
         // Create the root temp dir.
-        let root = try_create_temp_dir().unwrap();
+        let root = try_create_temp_dir().expect("conversion error");
 
         let new_dir = root.join("test_set_file_executable");
-        fs::create_dir_all(&new_dir).unwrap();
+        fs::create_dir_all(&new_dir).expect("conversion error");
 
         let new_file = new_dir.join("test_set_file_executable.sh");
-        fs::write(&new_file, "echo 'Hello, World!'").unwrap();
+        fs::write(&new_file, "echo 'Hello, World!'").expect("conversion error");
 
-        try_set_file_executable(&new_file).unwrap();
+        try_set_file_executable(&new_file).expect("conversion error");
 
-        let metadata = fs::metadata(&new_file).unwrap();
+        let metadata = fs::metadata(&new_file).expect("conversion error");
         let lhs = metadata.permissions();
 
         // Assert that the file has executable permission for owner, group, and others:
@@ -100,10 +100,10 @@ mod tests_permissions {
     #[test]
     fn test_set_file_executable_on_non_file() {
         // Create the root temp dir.
-        let root = try_create_temp_dir().unwrap();
+        let root = try_create_temp_dir().expect("conversion error");
 
         let new_dir = root.join("test_set_file_executable_on_non_file");
-        fs::create_dir_all(&new_dir).unwrap();
+        fs::create_dir_all(&new_dir).expect("conversion error");
 
         let result = try_set_file_executable(&new_dir);
         assert!(result.is_err());
@@ -112,10 +112,10 @@ mod tests_permissions {
     #[test]
     fn test_set_file_executable_on_non_existent_file() {
         // Create the root temp dir.
-        let root = try_create_temp_dir().unwrap();
+        let root = try_create_temp_dir().expect("conversion error");
 
         let new_dir = root.join("test_set_file_executable_on_non_existent_file");
-        fs::create_dir_all(&new_dir).unwrap();
+        fs::create_dir_all(&new_dir).expect("conversion error");
 
         let non_existent_file = new_dir.join("non_existent_file.sh");
         let result = try_set_file_executable(&non_existent_file);

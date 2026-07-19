@@ -138,8 +138,8 @@ mod tests_integration_block_smart_lists {
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
         let result = parse_markdown(&gap_buffer);
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let md_doc: MdDocument<'_> = result.expect("conversion error").1;
 
         // md_doc.console_log_fg();
         // remainder.console_log_bg();
@@ -179,8 +179,8 @@ mod tests_integration_block_smart_lists {
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
         let result = parse_markdown(&gap_buffer);
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let md_doc: MdDocument<'_> = result.expect("conversion error").1;
 
         // console_log!(md_doc);
         // console_log!(remainder);
@@ -235,8 +235,8 @@ mod tests_integration_block_smart_lists {
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
         let result = parse_markdown(&gap_buffer);
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let md_doc: MdDocument<'_> = result.expect("conversion error").1;
 
         // console_log!(md_doc);
         // console_log!(remainder);
@@ -279,8 +279,8 @@ mod tests_integration_block_smart_lists {
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
         let result = parse_markdown(&gap_buffer);
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument<'_> = result.unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let md_doc: MdDocument<'_> = result.expect("conversion error").1;
 
         // console_log!(md_doc);
         // console_log!(remainder);
@@ -306,7 +306,7 @@ mod tests_parse_markdown {
     fn test_no_line() {
         let input = "Something";
         let gap_buffer = ZeroCopyGapBuffer::from(input);
-        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, blocks) = parse_markdown(&gap_buffer).expect("conversion error");
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -320,7 +320,7 @@ mod tests_parse_markdown {
     fn test_one_line() {
         let input = "Something\n";
         let gap_buffer = ZeroCopyGapBuffer::from(input);
-        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, blocks) = parse_markdown(&gap_buffer).expect("conversion error");
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -334,7 +334,7 @@ mod tests_parse_markdown {
     fn test_parse_markdown_with_invalid_text_in_heading() {
         let input = ["# LINE 1", "", "##% LINE 2 FOO_BAR:", ""].join("\n");
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
-        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, blocks) = parse_markdown(&gap_buffer).expect("conversion error");
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:#?}");
         assert_eq2!(remainder, "");
@@ -367,7 +367,7 @@ mod tests_parse_markdown {
     fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
-        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, blocks) = parse_markdown(&gap_buffer).expect("conversion error");
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:?}");
         assert_eq2!(remainder, "");
@@ -424,7 +424,8 @@ mod tests_parse_markdown {
         .join("\n");
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
-        let (remainder, list_block) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, list_block) =
+            parse_markdown(&gap_buffer).expect("conversion error");
 
         let vec_block = vec![
             MdElement::Title("Something"),
@@ -666,7 +667,7 @@ mod tests_parse_markdown {
         .join("\n");
 
         let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
-        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, blocks) = parse_markdown(&gap_buffer).expect("conversion error");
 
         // println!("🍎input: '{}'", input);
         // println!("🍎remainder: {:?}", remainder);

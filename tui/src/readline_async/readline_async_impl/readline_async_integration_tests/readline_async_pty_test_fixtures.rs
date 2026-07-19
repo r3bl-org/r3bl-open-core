@@ -2,9 +2,9 @@
 
 use crate::{AsyncDebouncedDeadline, CONTROL_C, DebouncedState, GLYPH_CONTROLLED,
             GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, KeyState, MSG_CONTROLLED_READY,
-            MSG_LINE_PREFIX, PtyTestContext, SegIndex, Size, StdMutex,
+            MSG_LINE_PREFIX, PtyTestContext, SegIndex, StdMutex,
             core::test_fixtures::StdoutMock, direct_to_ansi::DirectToAnsiInputDevice,
-            height, readline_async::readline_async_impl::LineState, width};
+            readline_async::readline_async_impl::LineState, vp_height, vp_width};
 use std::{io::{Write, stdout},
           sync::Arc,
           time::Duration};
@@ -44,10 +44,8 @@ use std::{io::{Write, stdout},
 /// [`stdout`]: std::io::stdout
 /// [inactivity watchdog]: crate::AsyncDebouncedDeadline
 pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegIndex) {
-    let mut line_state = LineState::new(
-        initial_text.to_string(),
-        Size::new((width(100), height(100))),
-    );
+    let mut line_state =
+        LineState::new(initial_text.to_string(), vp_width(100) + vp_height(100));
     line_state.line_cursor_grapheme = initial_cursor;
 
     let mut input_device = DirectToAnsiInputDevice::new()

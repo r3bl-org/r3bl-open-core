@@ -192,7 +192,8 @@ mod tests {
         // Line with newline and null padding.
         {
             let input = "hello\n\0\0\0world";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "world");
         }
@@ -200,7 +201,8 @@ mod tests {
         // Line with just newline, no null padding.
         {
             let input = "hello\nworld";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "world");
         }
@@ -208,7 +210,8 @@ mod tests {
         // Line without newline (EOI)
         {
             let input = "hello";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "");
         }
@@ -216,7 +219,8 @@ mod tests {
         // Empty line with null padding.
         {
             let input = "\n\0\0\0next";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "");
             assert_eq2!(remainder, "next");
         }
@@ -224,7 +228,8 @@ mod tests {
         // Unicode content
         {
             let input = "Hello 👋 世界\n\0\0\0";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "Hello 👋 世界");
             assert_eq2!(remainder, "");
         }
@@ -232,7 +237,8 @@ mod tests {
         // Multiple newlines (edge case)
         {
             let input = "line1\n\0\0\0line2\n\0\0\0";
-            let (remainder, content) = parse_null_padded_line(input).unwrap();
+            let (remainder, content) =
+                parse_null_padded_line(input).expect("conversion error");
             assert_eq2!(content, "line1");
             assert_eq2!(remainder, "line2\n\0\0\0");
         }

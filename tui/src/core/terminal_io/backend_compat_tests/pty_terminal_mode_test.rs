@@ -10,9 +10,9 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{OutputDevice, PtyTestContext, PtyTestMode,
-            TerminalModeController, generate_pty_test};
-use crate::ansi_output::{cursor_visibility, terminal_modes};
+use crate::{OutputDevice, PtyTestContext, PtyTestMode, TerminalModeController,
+            ansi_output::{cursor_visibility, terminal_modes},
+            generate_pty_test};
 use std::io::{Read, Write};
 
 generate_pty_test! {
@@ -109,19 +109,21 @@ fn controller(context: PtyTestContext) {
 /// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("READY");
-    std::io::stdout().flush().unwrap();
+    std::io::stdout().flush().expect("conversion error");
 
     let device = OutputDevice::new_stdout();
 
-    device.enter_alternate_screen().unwrap();
-    device.exit_alternate_screen().unwrap();
-    device.hide_cursor().unwrap();
-    device.show_cursor().unwrap();
-    device.enable_mouse_tracking().unwrap();
-    device.disable_mouse_tracking().unwrap();
-    device.enable_bracketed_paste().unwrap();
-    device.disable_bracketed_paste().unwrap();
+    device.enter_alternate_screen().expect("conversion error");
+    device.exit_alternate_screen().expect("conversion error");
+    device.hide_cursor().expect("conversion error");
+    device.show_cursor().expect("conversion error");
+    device.enable_mouse_tracking().expect("conversion error");
+    device.disable_mouse_tracking().expect("conversion error");
+    device.enable_bracketed_paste().expect("conversion error");
+    device.disable_bracketed_paste().expect("conversion error");
 
-    std::io::stdout().write_all(b"DONE").unwrap();
-    std::io::stdout().flush().unwrap();
+    std::io::stdout()
+        .write_all(b"DONE")
+        .expect("conversion error");
+    std::io::stdout().flush().expect("conversion error");
 }

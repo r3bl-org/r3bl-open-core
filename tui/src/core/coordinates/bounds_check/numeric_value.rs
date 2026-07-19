@@ -1,268 +1,222 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Base traits for numeric conversions - see [`NumericValue`] and [`NumericConversions`].
+//! Base traits for numeric conversions - see [`NumericValue`], [`NumericConversions`],
+//! [`ScreenCoordinate`], [`StorageCoordinate`].
 
 /// Base trait for reading numeric values from wrapper types.
 ///
-/// `NumericConversions` provides the foundational conversion methods that enable all
-/// numeric types in the bounds checking system to convert to standard Rust integer
-/// types. It separates the concern of "reading values" from "constructing values".
+/// [`NumericConversions`] provides the foundational conversion methods that enable all
+/// numeric types in the bounds checking system to convert to standard Rust integer types.
+/// It separates the concern of "reading values" from "constructing values".
 ///
 /// ## Purpose
 ///
-/// This trait serves as the minimal interface for types that wrap numeric
-/// values and need to expose those values as [`usize`] or [`u16`]. This trait is extended
-/// by [`NumericValue`] (which adds construction from integers) and is also used by
-/// types that cannot be constructed from arbitrary integers (like terminal coordinates
+/// This trait serves as the minimal interface for types that wrap numeric values and need
+/// to expose those values as [`usize`] or [`u16`]. This trait is extended by
+/// [`NumericValue`] (which adds arithmetic, ordering, and zero-checking) and is also used
+/// by types that cannot be constructed from arbitrary integers (like terminal coordinates
 /// that must be non-zero).
 ///
 /// ## Implementing Types
 ///
 /// This trait is implemented by:
 /// - All index and length types (via [`NumericValue`])
-/// - Terminal coordinate types ([`TermRow`], [`TermCol`]) that wrap [`NonZeroU16`]
+/// - Terminal coordinate types ([`TermRow`], [`TermCol`], [`CsiCount`]) that wrap
+///   [`NonZeroU16`]
 ///
 /// ## Design Rationale
 ///
-/// By separating reading ([`as_usize`], [`as_u16`]) from construction ([`From<usize>`],
-/// [`From<u16>`]), we allow types with construction constraints (like non-zero values)
-/// to participate in generic numeric operations without violating their invariants.
+/// By separating reading ([`as_usize`], [`try_as_u16`]) from construction
+/// ([`From<usize>`], [`From<u16>`]), we allow types with construction constraints (like
+/// non-zero values) to participate in generic numeric operations without violating their
+/// invariants.
 ///
-/// [`as_u16`]: Self::as_u16
+/// See [Trait Hierarchy of Coordinate Types] for a visual overview of how these traits
+/// relate.
+///
 /// [`as_usize`]: Self::as_usize
+/// [`CsiCount`]: crate::CsiCount
 /// [`From<u16>`]: std::convert::From
 /// [`From<usize>`]: std::convert::From
 /// [`NonZeroU16`]: std::num::NonZeroU16
 /// [`TermCol`]: crate::TermCol
 /// [`TermRow`]: crate::TermRow
+/// [`try_as_u16`]: Self::try_as_u16
+/// [Trait Hierarchy of Coordinate Types]:
+///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
 pub trait NumericConversions: Copy + Sized {
-    /// Converts to a [`usize`] value for array indexing and size calculations.
+    /// Converts to a [`usize`] value for array indexing, length calculations, and generic
+    /// numeric operations across all coordinate types.
     ///
-    /// This is the preferred conversion method for most operations due to its
-    /// flexibility and compatibility with Rust's standard library.
+    /// This is the preferred conversion method for most operations due to its flexibility
+    /// and compatibility with Rust's standard library.
     fn as_usize(&self) -> usize;
 
-    /// Converts to a [`u16`] value for terminal and [`PTY`] operations.
+    /// Attempts to convert to a [`u16`] value for screen operations or downcasting
+    /// [`StorageCoordinate`] types to [`ScreenCoordinate`] types.
     ///
-    /// Use this when interfacing with terminal libraries or [`PTY`] operations
-    /// that require 16-bit values.
+    /// This is a fallible conversion since types that implement this trait (such as
+    /// [`usize`]-backed storage types) may wrap values that exceed [`u16::MAX`].
     ///
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    fn as_u16(&self) -> u16;
+    /// Returns [`None`] if the value exceeds [`u16::MAX`].
+    ///
+    /// [`ScreenCoordinate`]: ScreenCoordinate
+    /// [`StorageCoordinate`]: StorageCoordinate
+    fn try_as_u16(&self) -> Option<u16> { u16::try_from(self.as_usize()).ok() }
 }
 
-/// Base trait for numeric conversions in the bounds checking system.
+/// Base trait for arithmetic, ordering, and zero-checking on coordinate values.
 ///
-/// `NumericValue` provides standardized numeric conversion capabilities for any type that
-/// represents a numeric value. It enables generic implementations that can work with
-/// diverse numeric types without knowing their specific implementation details.
+/// [`NumericValue`] provides standardized arithmetic, ordering, and zero-checking
+/// capabilities for any type that represents a numeric coordinate value.
 ///
 /// ## Purpose
 ///
-/// This trait serves a single, focused purpose: standardized numeric conversion for
-/// comparison operations. Any type that wraps a numeric value and needs to participate in
-/// generic numeric operations can implement this trait.
+/// This trait extends [`NumericConversions`] and serves as the foundational super-trait
+/// for all index and length types in the system, requiring basic arithmetic
+/// ([`std::ops::Add`], [`std::ops::Sub`]), total ordering ([`Ord`]), and zero checking
+/// ([`is_zero()`]).
 ///
 /// ## Key Trait Capabilities
 ///
-/// - **Numeric conversions**: Convert to [`usize`] and [`u16`] via [`as_usize()`] and
-///   [`as_u16()`]
-/// - **Instance construction**: Create instances from [`usize`] and [`u16`] via
-///   `From<usize>` and `From<u16>`
-/// - **Zero checking**: Test if a value represents zero via [`is_zero()`]
-/// - **Generic foundation**: Enables type-safe generic implementations across numeric
+/// - **Inherited Conversions**: Read machine-width integer representations via
+///   [`as_usize()`] and [`try_as_u16()`]
+/// - **Core Arithmetic & Ordering**: Perform addition, subtraction, and comparison
+///   operations
+/// - **Zero Checking**: Test if a position or value represents zero via [`is_zero()`]
+/// - **Generic Foundation**: Enables type-safe generic implementations across coordinate
 ///   types
 ///
 /// ## Implementing Types
 ///
-/// While this trait is general-purpose, it is currently implemented by all index and
-/// length types in the bounds checking system:
+/// While this trait is general-purpose, it is implemented by all screen and storage
+/// coordinate types in the system:
 ///
-/// **Index types** (0-based positions):
-/// - [`Index`] - Generic position (dimension-agnostic)
-/// - [`RowIndex`] - Vertical position in terminal grid
-/// - [`ColIndex`] - Horizontal position in terminal grid
-/// - [`ByteIndex`] - Byte position in [`UTF-8`] strings
-/// - [`SegIndex`] - Grapheme segment position
+/// **Screen Coordinates** (16-bit grid bounds):
+/// - [`VPRow`], [`VPCol`], [`VPHeight`], [`VPWidth`], [`VPLength`], [`VPIndex`]
 ///
-/// **Length types** (1-based sizes):
-/// - [`Length`] - Generic size (dimension-agnostic)
-/// - [`RowHeight`] - Vertical size in terminal grid
-/// - [`ColWidth`] - Horizontal size in terminal grid
-/// - [`ByteLength`] - Byte count in [`UTF-8`] strings
-/// - [`SegLength`] - Grapheme segment count
-///
-/// **Other numeric types**:
-/// - [`ChUnit`] - Character unit for text measurement
+/// **Storage Coordinates** (64-bit continuous bounds):
+/// - [`CRow`], [`CCol`], [`ScrollbackAmount`], [`ByteIndex`], [`ByteLength`]
 ///
 /// ## Examples
 ///
-/// The [`NumericValue`] trait provides standardized numeric conversions for all
-/// index and length types:
+/// The [`NumericValue`] trait provides standardized numeric conversions and zero
+/// checking:
 ///
 /// ```rust
-/// use r3bl_tui::{col, width, ColIndex, ColWidth, NumericValue};
+/// use r3bl_tui::{NumericValue, ScreenCoordinate, VPCol, VPWidth, vp_col, vp_width};
 ///
-/// let index = col(42);
-/// let length = width(100);
+/// let index = vp_col(42);
+/// let length = vp_width(100);
 ///
 /// // Convert to numeric types
-/// let buffer_pos: usize = index.as_usize(); // For array indexing
-/// let terminal_col: u16 = index.as_u16();   // For terminal/PTY operations
+/// let buffer_pos: usize = index.as_usize(); // Inherited from NumericConversions
+/// let terminal_col: u16 = index.as_u16();   // From ScreenCoordinate
 /// assert_eq!(buffer_pos, 42);
 /// assert_eq!(terminal_col, 42);
 ///
-/// // Create from numeric types
-/// let from_usize = ColIndex::from(42_usize);
-/// let from_u16 = ColIndex::from(42_u16);
-/// assert_eq!(index, from_usize);
+/// // Create screen coordinates from u16
+/// let from_u16 = VPCol::from(42);
 /// assert_eq!(index, from_u16);
 ///
 /// // Check for zero values
-/// let zero_length = width(0);
-/// let non_zero_length = width(10);
+/// let zero_length = vp_width(0);
+/// let non_zero_length = vp_width(10);
 /// assert!(zero_length.is_zero());
 /// assert!(!non_zero_length.is_zero());
 /// ```
 ///
-/// [`as_u16()`]: NumericConversions::as_u16
+/// See [Trait Hierarchy of Coordinate Types] for a visual overview of how these traits
+/// relate.
+///
+/// [`as_u16()`]: ScreenCoordinate::as_u16
 /// [`as_usize()`]: NumericConversions::as_usize
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`ByteLength`]: crate::ByteLength
+/// [`CCol`]: crate::CCol
 /// [`ChUnit`]: crate::ChUnit
-/// [`ColIndex`]: crate::ColIndex
-/// [`ColWidth`]: crate::ColWidth
-/// [`Index`]: crate::Index
+/// [`CRow`]: crate::CRow
 /// [`is_zero()`]: Self::is_zero
-/// [`Length`]: crate::Length
-/// [`RowHeight`]: crate::RowHeight
-/// [`RowIndex`]: crate::RowIndex
+/// [`ScrollbackAmount`]: crate::ScrollbackAmount
 /// [`SegIndex`]: crate::SegIndex
 /// [`SegLength`]: crate::SegLength
+/// [`try_as_u16()`]: NumericConversions::try_as_u16
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub trait NumericValue: NumericConversions + From<usize> + From<u16> + Ord {
-    /// Checks if the unit value is zero.
+/// [`VPCol`]: crate::VPCol
+/// [`VPHeight`]: crate::VPHeight
+/// [`VPIndex`]: crate::VPIndex
+/// [`VPLength`]: crate::VPLength
+/// [`VPRow`]: crate::VPRow
+/// [`VPWidth`]: crate::VPWidth
+/// [Trait Hierarchy of Coordinate Types]:
+///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+pub trait NumericValue: NumericConversions + Ord {
+    /// Checks if this numeric value or coordinate index is 0.
     ///
-    /// See [trait-level documentation] for usage guidelines. The default
-    /// implementation uses `as_usize() == 0`. Types with special zero semantics
-    /// can override this method if needed.
+    /// Index types ([`VPRow`], [`VPCol`]) represent 0-based coordinate
+    /// positions (where `0` is the origin/start). Coordinates are not containers that
+    /// can be "empty"; semantically, an index is tested for whether its position
+    /// value is zero (`index.is_zero()`).
     ///
-    /// ## Common Use Cases
+    /// For checking if a length or dimension has 0 size, see [`LengthOps::is_empty()`].
     ///
-    /// - Empty container checks
-    /// - Origin position tests
-    /// - Validation and edge case handling
-    /// - Initialization verification
-    ///
-    /// [trait-level documentation]: NumericValue
+    /// [`LengthOps::is_empty()`]: crate::LengthOps::is_empty
+    /// [`VPCol`]: crate::VPCol
+    /// [`VPRow`]: crate::VPRow
     fn is_zero(&self) -> bool { self.as_usize() == 0 }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::ops::{Add, Sub};
-
-    // Test implementation for unit testing
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    struct TestUnit(usize);
-
-    impl From<usize> for TestUnit {
-        fn from(value: usize) -> Self { TestUnit(value) }
-    }
-
-    impl From<u16> for TestUnit {
-        fn from(value: u16) -> Self { TestUnit(value as usize) }
-    }
-
-    impl Add for TestUnit {
-        type Output = Self;
-        fn add(self, other: Self) -> Self { TestUnit(self.0.saturating_add(other.0)) }
-    }
-
-    impl Sub for TestUnit {
-        type Output = Self;
-        fn sub(self, other: Self) -> Self { TestUnit(self.0.saturating_sub(other.0)) }
-    }
-
-    impl NumericConversions for TestUnit {
-        fn as_usize(&self) -> usize { self.0 }
-
-        #[allow(clippy::cast_possible_truncation)]
-        fn as_u16(&self) -> u16 { self.0 as u16 }
-    }
-
-    impl NumericValue for TestUnit {}
-
-    #[test]
-    fn test_as_usize_conversion() {
-        let unit = TestUnit::from(42usize);
-        assert_eq!(unit.as_usize(), 42);
-    }
-
-    #[test]
-    fn test_as_u16_conversion() {
-        let unit = TestUnit::from(42usize);
-        assert_eq!(unit.as_u16(), 42u16);
-    }
-
-    #[test]
-    fn test_from_usize() {
-        let unit = TestUnit::from(123usize);
-        assert_eq!(unit.as_usize(), 123);
-    }
-
-    #[test]
-    fn test_from_u16() {
-        let unit = TestUnit::from(456u16);
-        assert_eq!(unit.as_usize(), 456);
-    }
-
-    #[test]
-    fn test_is_zero_default_implementation() {
-        let zero_unit = TestUnit::from(0usize);
-        let non_zero_unit = TestUnit::from(42usize);
-
-        assert!(zero_unit.is_zero());
-        assert!(!non_zero_unit.is_zero());
-    }
-
-    #[test]
-    fn test_zero_edge_cases() {
-        // Test conversion edge cases for zero
-        let zero_from_usize = TestUnit::from(0usize);
-        let zero_from_u16 = TestUnit::from(0u16);
-
-        assert!(zero_from_usize.is_zero());
-        assert!(zero_from_u16.is_zero());
-        assert_eq!(zero_from_usize.as_usize(), 0);
-        assert_eq!(zero_from_u16.as_u16(), 0);
-    }
-
-    #[test]
-    fn test_large_values() {
-        // Test with larger values to ensure conversion stability
-        let large_value = 65535usize;
-        let unit = TestUnit::from(large_value);
-
-        assert_eq!(unit.as_usize(), large_value);
-        #[allow(clippy::cast_possible_truncation)]
-        let expected_u16 = large_value as u16;
-        assert_eq!(unit.as_u16(), expected_u16);
-        assert!(!unit.is_zero());
-    }
-
-    #[test]
-    fn test_u16_overflow_edge_case() {
-        // Test what happens when usize value exceeds u16 range
-        let large_value = 70000usize; // Exceeds u16::MAX (65535)
-        let unit = TestUnit::from(large_value);
-
-        assert_eq!(unit.as_usize(), large_value);
-        // This should truncate to fit in u16
-        #[allow(clippy::cast_possible_truncation)]
-        let expected_u16 = large_value as u16;
-        assert_eq!(unit.as_u16(), expected_u16);
-        assert!(!unit.is_zero());
-    }
+/// A coordinate type backed by a 16-bit integer, used for screen / display dimensions.
+///
+/// Types implementing this trait (such as [`VPRow`] and [`VPCol`]) represent
+/// screen / display terminal grid coordinates bounded by 16-bit integer space (up to
+/// 65,535). They provide infallible extraction to [`u16`] via [`as_u16`] and construction
+/// from [`u16`].
+///
+/// See [Trait Hierarchy of Coordinate Types] for a visual overview of how these traits
+/// relate.
+///
+/// [`as_u16`]: Self::as_u16
+/// [`VPCol`]: crate::VPCol
+/// [`VPRow`]: crate::VPRow
+/// [Trait Hierarchy of Coordinate Types]:
+///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+pub trait ScreenCoordinate: NumericValue + From<u16> {
+    fn as_u16(&self) -> u16;
 }
+
+/// A coordinate type backed by a [`usize`] integer, used for storage and document space.
+/// This is a marker trait that captures the more restrictive trait bounds for types that
+/// represent continuous in-memory canvas space, document [`UTF-8`] byte offsets, and
+/// scrollback storage history.
+///
+/// See [Trait Hierarchy of Coordinate Types] for a visual overview of how these traits
+/// relate.
+///
+/// ## Purpose
+///
+/// This trait marks types that represent continuous in-memory canvas space, document
+/// [`UTF-8`] byte offsets, and scrollback storage history (such as [`CRow`],
+/// [`ScrollbackAmount`], and [`ByteIndex`]).
+///
+/// Unlike [`ScreenCoordinate`] types (which are bounded by 16-bit screen / display
+/// terminal grid dimensions), [`StorageCoordinate`] types require machine-width integer
+/// addressability to handle large buffers (such as documents exceeding 65,535 lines or 64
+/// KB).
+///
+/// ## Capabilities and Bounds
+///
+/// As a marker trait, [`StorageCoordinate`] defines no additional methods beyond those
+/// inherited from [`NumericValue`] (such as [`as_usize`]). It enforces the super-trait
+/// bound [`From<usize>`], guaranteeing that any implementing type can be infallibly
+/// constructed from a [`usize`].
+///
+/// [`as_usize`]: NumericConversions::as_usize
+/// [`ByteIndex`]: crate::ByteIndex
+/// [`CRow`]: crate::CRow
+/// [`ScreenCoordinate`]: crate::ScreenCoordinate
+/// [`ScrollbackAmount`]: crate::ScrollbackAmount
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [Trait Hierarchy of Coordinate Types]:
+///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+pub trait StorageCoordinate: NumericValue + From<usize> {}

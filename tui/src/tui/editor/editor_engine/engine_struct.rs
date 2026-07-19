@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PartialFlexBox, Size, StyleUSSpanLines, get_cached_syntax_set,
+use crate::{PartialFlexBox, StyleUSSpanLines, VPSize, get_cached_syntax_set,
             get_cached_theme};
 use std::fmt::Debug;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
@@ -58,7 +58,9 @@ impl EditorEngine {
     }
 
     #[must_use]
-    pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
+    pub fn viewport(&self) -> VPSize {
+        self.current_box.style_adjusted_bounds.bounds_size
+    }
 
     pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
         self.ast_cache = Some(ast_cache);
@@ -116,7 +118,7 @@ pub enum SyntaxHighlightMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, height, width};
+    use crate::{assert_eq2, vp_height, vp_width};
 
     #[test]
     fn test_editor_engine_new() {
@@ -145,11 +147,12 @@ mod tests {
         let mut engine = EditorEngine::default();
 
         // Default viewport should be empty.
-        assert_eq2!(engine.viewport(), Size::default());
+        assert_eq2!(engine.viewport(), VPSize::default());
 
         // Set a custom viewport.
-        engine.current_box.style_adjusted_bounds_size = width(100) + height(50);
-        assert_eq2!(engine.viewport(), width(100) + height(50));
+        engine.current_box.style_adjusted_bounds.bounds_size =
+            vp_width(100) + vp_height(50);
+        assert_eq2!(engine.viewport(), vp_width(100) + vp_height(50));
     }
 
     #[test]

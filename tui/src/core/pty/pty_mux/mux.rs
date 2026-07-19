@@ -9,15 +9,17 @@
 
 use super::{MAX_PROCESSES, OUTPUT_POLL_INTERVAL_MS, OutputRenderer, Process,
             ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS};
-use crate::{Continuation, DEBUG_TUI_PTY_MUX, EventPropagation,
-            InputEvent, Size, TerminalInteractiveStatus, TuiAvailability, col,
+use crate::{Continuation, DEBUG_TUI_PTY_MUX, EventPropagation, InputEvent,
+            TerminalInteractiveStatus, TuiAvailability, VPSize, VPWidth,
+            ansi_output::{cursor_movement::cursor_position,
+                          screen_clearing::clear_screen},
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscController,
                    pty::pty_mux::{AdaptiveRenderResult::{Render, Skip},
                                   Budget, input_router},
                    terminal_io::{InputDevice, OutputDevice, TerminalModeController}},
-            format_no_alloc, ok, row};
+            format_no_alloc, ok, vp_col, vp_row};
 use std::{fmt::Debug,
           thread::sleep,
           time::{Duration, Instant}};
@@ -47,7 +49,8 @@ use tokio::time::interval;
 #[derive(Default)]
 pub struct PTYMuxBuilder {
     process_configs: Vec<(String, String, Vec<String>)>,
-    terminal_size: Option<Size>,
+    terminal_size: Option<VPSize>,
+    virtual_terminal_width: Option<VPWidth>,
     maybe_input_interceptor_fn: Option<Box<InputInterceptorFn>>,
 }
 
@@ -80,6 +83,7 @@ mod impl_pty_mux_builder {
             f.debug_struct("PTYMuxBuilder")
                 .field("process_configs", &self.process_configs)
                 .field("terminal_size", &self.terminal_size)
+                .field("virtual_terminal_width", &self.virtual_terminal_width)
                 .field(
                     "maybe_input_interceptor_fn",
                     &if self.maybe_input_interceptor_fn.is_some() {
@@ -108,8 +112,21 @@ mod impl_pty_mux_builder {
 
         /// Sets the terminal size for the multiplexer.
         #[must_use]
-        pub fn terminal_size(mut self, size: Size) -> Self {
+        pub fn terminal_size(mut self, size: VPSize) -> Self {
             self.terminal_size = Some(size);
+            self
+        }
+
+        /// Sets the virtual terminal width for child processes managed by the
+        /// multiplexer.
+        ///
+        /// If not set, child processes inherit the physical terminal's column width.
+        /// When configured with a wider width (e.g. 1000), child processes output wide
+        /// lines without hard wrapping, allowing the user to pan horizontally
+        /// across the canvas.
+        #[must_use]
+        pub fn virtual_terminal_width(mut self, width: impl Into<VPWidth>) -> Self {
+            self.virtual_terminal_width = Some(width.into());
             self
         }
 
@@ -164,12 +181,19 @@ mod impl_pty_mux_builder {
                             Some(size) => size,
                             None => get_size()?,
                         };
+                        let virtual_terminal_width = self.virtual_terminal_width;
 
                         let processes = self
                             .process_configs
                             .into_iter()
                             .map(|(name, command, args)| {
-                                Process::new(name, command, args, terminal_size)
+                                Process::new_with_virtual_width(
+                                    name,
+                                    command,
+                                    args,
+                                    terminal_size,
+                                    virtual_terminal_width,
+                                )
                             })
                             .collect();
 
@@ -206,7 +230,7 @@ mod impl_pty_mux_builder {
 pub struct PTYMux {
     process_manager: ProcessManager,
     output_renderer: OutputRenderer,
-    terminal_size: Size,
+    terminal_size: VPSize,
     output_device: OutputDevice,
     input_device: InputDevice,
     maybe_input_interceptor_fn: Option<Box<InputInterceptorFn>>,
@@ -303,10 +327,9 @@ mod impl_pty_mux {
 
             // Clear screen before showing first process.
             self.output_device.write(|out| {
-                let _unused =
-                    out.write_all(crate::ansi_output::screen_clearing::clear_screen().as_bytes());
+                let _unused = out.write_all(clear_screen().as_bytes());
                 let _unused = out.write_all(
-                    crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes(),
+                    cursor_position(vp_row(0).into(), vp_col(0).into()).as_bytes(),
                 );
                 let _unused = out.flush();
             });
@@ -372,8 +395,8 @@ mod impl_pty_mux {
                                     &self.output_device,
                                     &self.process_manager
                                 )?;
-                                // Clear the "needs rendering" flag for the active process.
-                                self.process_manager.mark_active_as_rendered();
+                                // Clear the "needs rendering" flag for the focused process.
+                                self.process_manager.mark_focused_as_rendered();
                                 render_budget.mark_end();
                             },
                             Skip => {
@@ -469,13 +492,13 @@ mod impl_pty_mux {
             osc: &mut OscController<'_>,
             title_buffer: &mut String,
         ) -> miette::Result<()> {
-            // Check if the active process has set a custom terminal title.
-            if let Some(custom_title) = self.process_manager.active_terminal_title() {
+            // Check if the focused process has set a custom terminal title.
+            if let Some(custom_title) = self.process_manager.focused_terminal_title() {
                 // Use the process's custom title.
                 format_no_alloc!(
                     title_buffer,
                     "PTYMux - {} - {}",
-                    self.process_manager.active_name(),
+                    self.process_manager.focused_name(),
                     custom_title
                 );
             } else {
@@ -483,7 +506,7 @@ mod impl_pty_mux {
                 format_no_alloc!(
                     title_buffer,
                     "PTYMux - {}",
-                    self.process_manager.active_name()
+                    self.process_manager.focused_name()
                 );
             }
 
@@ -495,7 +518,7 @@ mod impl_pty_mux {
         ///
         /// This method is called when the terminal is resized and ensures all components
         /// are aware of the new size.
-        pub fn update_terminal_size(&mut self, new_size: Size) {
+        pub fn update_terminal_size(&mut self, new_size: VPSize) {
             self.terminal_size = new_size;
             self.process_manager.handle_terminal_resize(new_size);
             self.output_renderer.update_terminal_size(new_size);
@@ -503,7 +526,7 @@ mod impl_pty_mux {
 
         /// Gets the current terminal size.
         #[must_use]
-        pub fn terminal_size(&self) -> Size { self.terminal_size }
+        pub fn terminal_size(&self) -> VPSize { self.terminal_size }
 
         /// Gets a reference to the process manager.
         #[must_use]
@@ -607,10 +630,9 @@ mod impl_pty_mux {
                 };
             });
             self.output_device.write(|out| {
-                let _unused =
-                    out.write_all(crate::ansi_output::screen_clearing::clear_screen().as_bytes());
+                let _unused = out.write_all(clear_screen().as_bytes());
                 let _unused = out.write_all(
-                    crate::ansi_output::cursor_movement::cursor_position(row(0), col(0)).as_bytes(),
+                    cursor_position(vp_row(0).into(), vp_col(0).into()).as_bytes(),
                 );
                 let _unused = out.flush();
             });
@@ -705,5 +727,25 @@ mod impl_pty_mux {
             });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{vp_height, vp_size, vp_width};
+
+    #[test]
+    fn test_builder_virtual_terminal_width_configuration() {
+        let builder = PTYMuxBuilder::default()
+            .add_process("bash", "bash", vec![])
+            .terminal_size(vp_size(vp_width(80), vp_height(25)))
+            .virtual_terminal_width(vp_width(1000));
+
+        assert_eq!(builder.virtual_terminal_width, Some(vp_width(1000)));
+        assert_eq!(
+            builder.terminal_size,
+            Some(vp_size(vp_width(80), vp_height(25)))
+        );
     }
 }

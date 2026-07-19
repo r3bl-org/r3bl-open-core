@@ -71,7 +71,7 @@ use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 /// If cursor is at start of line, behavior depends on terminal settings.
 /// See [`OfsBufVT100::handle_backspace`] for detailed behavior.
 ///
-/// [`OfsBufVT100::handle_backspace`]: crate::OfsBufVT100::handle_backspace
+/// [`OfsBufVT100::handle_backspace`]: crate::core::ansi::OfsBufVT100::handle_backspace
 pub fn handle_backspace(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf_vt_100.handle_backspace();
 }
@@ -80,7 +80,7 @@ pub fn handle_backspace(performer: &mut AnsiToOfsBufPerformer) {
 /// Tab stops are typically at columns 0, 8, 16, 24, 32, etc.
 /// See [`OfsBufVT100::handle_tab`] for detailed behavior and examples.
 ///
-/// [`OfsBufVT100::handle_tab`]: crate::OfsBufVT100::handle_tab
+/// [`OfsBufVT100::handle_tab`]: crate::core::ansi::OfsBufVT100::handle_tab
 pub fn handle_tab(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf_vt_100.handle_tab();
 }
@@ -89,7 +89,7 @@ pub fn handle_tab(performer: &mut AnsiToOfsBufPerformer) {
 /// Cursor column position remains unchanged.
 /// See [`OfsBufVT100::handle_line_feed`] for detailed behavior.
 ///
-/// [`OfsBufVT100::handle_line_feed`]: crate::OfsBufVT100::handle_line_feed
+/// [`OfsBufVT100::handle_line_feed`]: crate::core::ansi::OfsBufVT100::handle_line_feed
 pub fn handle_line_feed(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf_vt_100.handle_line_feed();
 }
@@ -98,7 +98,7 @@ pub fn handle_line_feed(performer: &mut AnsiToOfsBufPerformer) {
 /// Cursor row position remains unchanged.
 /// See [`OfsBufVT100::handle_carriage_return`] for detailed behavior.
 ///
-/// [`OfsBufVT100::handle_carriage_return`]: crate::OfsBufVT100::handle_carriage_return
+/// [`OfsBufVT100::handle_carriage_return`]: crate::core::ansi::OfsBufVT100::handle_carriage_return
 pub fn handle_carriage_return(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf_vt_100.handle_carriage_return();
 }

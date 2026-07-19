@@ -51,7 +51,12 @@ mod tests {
     fn test_read_line_eio_to_eof_passes_through_normal_read() {
         let mut reader = Cursor::new("hello\nworld\n");
         let mut buf = String::new();
-        assert_eq!(reader.read_line_eio_to_eof(&mut buf).unwrap(), 6);
+        assert_eq!(
+            reader
+                .read_line_eio_to_eof(&mut buf)
+                .expect("conversion error"),
+            6
+        );
         assert_eq!(buf, "hello\n");
     }
 
@@ -62,7 +67,7 @@ mod tests {
         };
         let result = reader.read_line_eio_to_eof(&mut String::new());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0);
+        assert_eq!(result.expect("conversion error"), 0);
     }
 
     #[test]
@@ -76,7 +81,7 @@ mod tests {
         let result = reader.read_line_eio_to_eof(&mut String::new());
         assert!(result.is_err());
         let raw_os_err = result.unwrap_err().raw_os_error();
-        assert_eq!(raw_os_err.unwrap(), 1);
+        assert_eq!(raw_os_err.expect("conversion error"), 1);
     }
 
     #[test]

@@ -26,9 +26,9 @@
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 //! [child process's `TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
 
-use crate::{CaughtPanicResult, GLYPH_SUCCESS, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
-            MSG_SUCCESS, PtyTestContext, PtyTestMode, disable_raw_mode,
-            enable_raw_mode, extract_panic_message, generate_pty_test,
+use crate::{CaughtPanicResult, GLYPH_SUCCESS, MSG_CONTROLLED_READY,
+            MSG_CONTROLLED_STARTING, MSG_SUCCESS, PtyTestContext, PtyTestMode,
+            disable_raw_mode, enable_raw_mode, extract_panic_message, generate_pty_test,
             terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS};
 use rustix::termios::Termios;
 use std::{io::{Write, stdout},
@@ -51,7 +51,7 @@ fn controller(
 ) {
     child
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-        .unwrap();
+        .expect("conversion error");
 
     // Capture all output until MSG_SUCCESS. This implicitly verifies all previous steps
     // (poisoning, recovery, and re-enabling) because the controlled process uses
@@ -72,12 +72,12 @@ fn controller(
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
     println!("{MSG_CONTROLLED_READY}");
-    stdout().flush().unwrap();
+    stdout().flush().expect("conversion error");
 
     // 1. Poison the mutex by panicking while holding it in a background thread.
     let result: CaughtPanicResult = std::thread::spawn(|| {
         SAVED_TERMIOS.lock_raw(|result: LockResult<MutexGuard<Option<Termios>>>| {
-            let _guard = result.unwrap();
+            let _guard = result.expect("conversion error");
             panic!("Intentional panic to poison SAVED_TERMIOS");
         });
     })
@@ -109,5 +109,5 @@ fn controlled() {
 
     println!("{GLYPH_SUCCESS} test_saved_termios_poisoning_recovery passed");
     println!("{MSG_SUCCESS}");
-    stdout().flush().unwrap();
+    stdout().flush().expect("conversion error");
 }

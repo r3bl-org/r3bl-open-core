@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, Surface, SurfaceBounds};
+use crate::{VPBoundingBox, CommonResult, FlexBox, FlexBoxId, InputEvent, Surface};
 use std::fmt::Debug;
 
 /// See [`crate::App`].
@@ -52,7 +52,7 @@ where
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         current_box: FlexBox,
-        surface_bounds: SurfaceBounds,
+        surface_bounds: VPBoundingBox,
         has_focus: &mut HasFocus,
     ) -> CommonResult;
 

@@ -123,8 +123,8 @@
 //! pattern is consistently implemented throughout the module:
 //!
 //! - The performer contains minimal logic and acts purely as a translation layer
-//! - [`ANSI`] sequence parameters are parsed and translated into appropriate
-//!   [`OfsBuf`] method calls
+//! - [`ANSI`] sequence parameters are parsed and translated into appropriate [`OfsBuf`]
+//!   method calls
 //! - All actual terminal buffer operations (cursor movement, scrolling, text rendering)
 //!   are implemented in [`OfsBuf`] methods
 //! - This separation ensures clear boundaries between [`ANSI`] protocol handling and
@@ -158,8 +158,8 @@
 //! Each operations file contains **thin shim functions** that:
 //! 1. Parse [`ANSI`] sequence parameters, and act as the protocol boundary layer (using
 //!    [`vte::Params`] and [`ParamsExt`])
-//! 2. Delegate to the corresponding [`OfsBuf`] implementation (which are not
-//!    aware of [`vte::Params`])
+//! 2. Delegate to the corresponding [`OfsBuf`] implementation (which are not aware of
+//!    [`vte::Params`])
 //! 3. Provide clear documentation about the [`ANSI`] specification
 //!
 //! The [`OfsBuf`] implementation files contain the **actual terminal logic**:
@@ -174,10 +174,8 @@
 //!
 //! This module uses a delegation-based testing approach that differs from the codebase
 //! norm:
-//! - The operations in this module are thin wrappers that delegate to [`OfsBuf`]
-//!   methods
-//! - [`OfsBuf`] methods have comprehensive unit tests (following codebase
-//!   convention)
+//! - The operations in this module are thin wrappers that delegate to [`OfsBuf`] methods
+//! - [`OfsBuf`] methods have comprehensive unit tests (following codebase convention)
 //! - [`VT-100`] conformance tests in the conformance tests verify end-to-end behavior
 //!
 //! This approach avoids redundant testing while ensuring both unit-level correctness (in
@@ -196,7 +194,7 @@
 //! [`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
 //! [`kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`ParamsExt`]: crate::ParamsExt
@@ -218,27 +216,34 @@ use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                   vt_100_shim_margin_ops, vt_100_shim_mode_ops, vt_100_shim_osc_ops,
                   vt_100_shim_scroll_ops, vt_100_shim_sgr_ops, vt_100_shim_terminal_ops}};
 use crate::{DEBUG_TUI_VT100_PARSER,
-            core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN, CHA_CURSOR_COLUMN,
+            core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN,
+                                    CBT_CURSOR_BACKWARD_TAB, CHA_CURSOR_COLUMN,
                                     CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
-                                    CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
-                                    CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
-                                    CUP_CURSOR_POSITION, CUU_CURSOR_UP, DA_DEVICE_ATTRIBUTES,
-                                    DCH_DELETE_CHAR, DECRC_RESTORE_CURSOR, DECSC_SAVE_CURSOR,
-                                    DECSTBM_SET_MARGINS, DL_DELETE_LINE, DSR_DEVICE_STATUS,
-                                    ECH_ERASE_CHAR, ED_ERASE_DISPLAY, EL_ERASE_LINE,
-                                    G0_CHARSET_INTERMEDIATE, HVP_CURSOR_POSITION,
-                                    ICH_INSERT_CHAR, IL_INSERT_LINE, IND_INDEX_DOWN,
-                                    LINE_FEED, RCP_RESTORE_CURSOR, RI_REVERSE_INDEX_UP,
+                                    CHT_CURSOR_FORWARD_TAB, CNL_CURSOR_NEXT_LINE,
+                                    CPL_CURSOR_PREV_LINE, CUB_CURSOR_BACKWARD,
+                                    CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
+                                    CUP_CURSOR_POSITION, CUU_CURSOR_UP,
+                                    DA_DEVICE_ATTRIBUTES, DCH_DELETE_CHAR,
+                                    DEC_PRIVATE_SEQUENCES, DECDC_DELETE_COLUMN,
+                                    DECERA_RECTANGULAR_ERASE, DECIC_INSERT_COLUMN,
+                                    DECLL_LOAD_LEDS, DECRC_RESTORE_CURSOR,
+                                    DECREQTPARM_REQUEST_TERMINAL_PARAMETERS,
+                                    DECSC_SAVE_CURSOR, DECSCUSR_SET_CURSOR_STYLE,
+                                    DECSTBM_SET_MARGINS, DL_DELETE_LINE,
+                                    DSR_DEVICE_STATUS, ECH_ERASE_CHAR,
+                                    ED_ERASE_DISPLAY, EL_ERASE_LINE,
+                                    G0_CHARSET_INTERMEDIATE,
+                                    HPA_HORIZONTAL_POSITION_ABSOLUTE,
+                                    HPR_HORIZONTAL_POSITION_RELATIVE,
+                                    HVP_CURSOR_POSITION, ICH_INSERT_CHAR,
+                                    IL_INSERT_LINE, IND_INDEX_DOWN, LINE_FEED,
+                                    NP_NEXT_PAGE, PP_PRECEDING_PAGE,
+                                    RCP_RESTORE_CURSOR, RI_REVERSE_INDEX_UP,
                                     RIS_RESET_TERMINAL, RM_RESET_MODE, SCP_SAVE_CURSOR,
                                     SD_SCROLL_DOWN, SGR_SET_GRAPHICS, SM_SET_MODE,
-                                    SU_SCROLL_UP, VPA_VERTICAL_POSITION,
-                                    CHT_CURSOR_FORWARD_TAB, CBT_CURSOR_BACKWARD_TAB, TBC_TAB_CLEAR,
-                                    HPR_HORIZONTAL_POSITION_RELATIVE, VPR_VERTICAL_POSITION_RELATIVE,
-                                    HPA_HORIZONTAL_POSITION_ABSOLUTE, NP_NEXT_PAGE, PP_PRECEDING_PAGE,
-                                    DECLL_LOAD_LEDS, DECIC_INSERT_COLUMN, DECDC_DELETE_COLUMN,
-                                    WINDOW_MANIPULATION, DECSCUSR_SET_CURSOR_STYLE,
-                                    DEC_PRIVATE_SEQUENCES, DECREQTPARM_REQUEST_TERMINAL_PARAMETERS,
-                                    DECERA_RECTANGULAR_ERASE, TAB},
+                                    SU_SCROLL_UP, TAB, TBC_TAB_CLEAR,
+                                    VPA_VERTICAL_POSITION,
+                                    VPR_VERTICAL_POSITION_RELATIVE, WINDOW_MANIPULATION},
             vt_100_shim_da_ops};
 use vte::{Params, Perform};
 
@@ -893,7 +898,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             DEBUG_TUI_VT100_PARSER.then(|| {
                 tracing::warn!(
                     "ESC {}: Discarding malformed sequence (VTE parser exceeded limits)",
-                    byte as char
+                    char::from(byte)
                 );
             });
             return;

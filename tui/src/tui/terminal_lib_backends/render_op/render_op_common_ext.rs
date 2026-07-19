@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{RenderOpCommon, RenderOpIR, RenderOpOutput};
-use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
+use crate::{InlineString, VPPos, TuiColor, TuiStyle, VPCol, VPHeight};
 
 /// Trait providing ergonomic helper methods for common operations.
 ///
@@ -29,7 +29,7 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 ///
 /// # Usage
 ///
-/// Instead of `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))`,
+/// Instead of `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos.into()))`,
 /// use the ergonomic helper method: `RenderOpIR::move_cursor(pos)`.
 ///
 /// [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
@@ -40,27 +40,27 @@ pub trait RenderOpCommonExt: Sized {
     // === Cursor Movement Operations ===
 
     #[must_use]
-    fn move_cursor(pos: Pos) -> Self {
+    fn move_cursor(pos: VPPos) -> Self {
         Self::from_common(RenderOpCommon::MoveCursorPositionAbs(pos))
     }
 
     #[must_use]
-    fn move_cursor_rel(origin: Pos, offset: Pos) -> Self {
+    fn move_cursor_rel(origin: VPPos, offset: VPPos) -> Self {
         Self::from_common(RenderOpCommon::MoveCursorPositionRelTo(origin, offset))
     }
 
     #[must_use]
-    fn move_to_column(col: ColIndex) -> Self {
+    fn move_to_column(col: VPCol) -> Self {
         Self::from_common(RenderOpCommon::MoveCursorToColumn(col))
     }
 
     #[must_use]
-    fn move_to_next_line(rows: RowHeight) -> Self {
+    fn move_to_next_line(rows: VPHeight) -> Self {
         Self::from_common(RenderOpCommon::MoveCursorToNextLine(rows))
     }
 
     #[must_use]
-    fn move_to_previous_line(rows: RowHeight) -> Self {
+    fn move_to_previous_line(rows: VPHeight) -> Self {
         Self::from_common(RenderOpCommon::MoveCursorToPreviousLine(rows))
     }
 

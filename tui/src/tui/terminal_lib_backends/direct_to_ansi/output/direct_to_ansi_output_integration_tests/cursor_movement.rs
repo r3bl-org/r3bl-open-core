@@ -18,11 +18,11 @@
 //! [`MoveCursorToColumn`]: crate::render_op::RenderOpCommon::MoveCursorToColumn
 //! [`MoveCursorToNextLine`]: crate::render_op::RenderOpCommon::MoveCursorToNextLine
 //! [`MoveCursorToPreviousLine`]: crate::render_op::RenderOpCommon::MoveCursorToPreviousLine
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{ColIndex, RowIndex, col, height, pos, render_op::RenderOpCommon, row,
-            term_row_delta, tui_color};
+use crate::{ansi_output, render_op::RenderOpCommon, term_row_delta, tui_color, vp_col,
+            vp_height, vp_row};
 
 #[test]
 fn test_move_cursor_absolute_origin() {
@@ -30,15 +30,15 @@ fn test_move_cursor_absolute_origin() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let op = RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0)));
+    let op = RenderOpCommon::MoveCursorPositionAbs(vp_row(0) + vp_col(0));
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI H with 1-based indexing: row 0 (0-based) = 1 (1-based), col 0 = 1
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_position(row(0), col(0))
+        ansi_output::cursor_movement::cursor_position(vp_row(0).into(), vp_col(0).into())
     );
-    assert_eq!(state.cursor_pos, pos(row(0) + col(0)));
+    assert_eq!(state.cursor_pos, vp_row(0) + vp_col(0));
 }
 
 #[test]
@@ -47,15 +47,18 @@ fn test_move_cursor_absolute_5_10() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let op = RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10)));
+    let op = RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10));
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI H with 1-based: row 5 (0-based) = 6 (1-based), col 10 = 11
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_position(row(5), col(10))
+        ansi_output::cursor_movement::cursor_position(
+            vp_row(5).into(),
+            vp_col(10).into()
+        )
     );
-    assert_eq!(state.cursor_pos, pos(row(5) + col(10)));
+    assert_eq!(state.cursor_pos, vp_row(5) + vp_col(10));
 }
 
 #[test]
@@ -64,15 +67,18 @@ fn test_move_cursor_absolute_20_40() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let op = RenderOpCommon::MoveCursorPositionAbs(pos(row(20) + col(40)));
+    let op = RenderOpCommon::MoveCursorPositionAbs(vp_row(20) + vp_col(40));
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // row 20 = 21, col 40 = 41 in 1-based
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_position(row(20), col(40))
+        ansi_output::cursor_movement::cursor_position(
+            vp_row(20).into(),
+            vp_col(40).into()
+        )
     );
-    assert_eq!(state.cursor_pos, pos(row(20) + col(40)));
+    assert_eq!(state.cursor_pos, vp_row(20) + vp_col(40));
 }
 
 #[test]
@@ -81,18 +87,21 @@ fn test_move_cursor_relative_to() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let origin = pos(row(5) + col(3));
-    let relative = pos(row(2) + col(7));
+    let origin = vp_row(5) + vp_col(3);
+    let relative = vp_row(2) + vp_col(7);
     let op = RenderOpCommon::MoveCursorPositionRelTo(origin, relative);
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
-    // Final position: row(5+2) + col(3+7) = row(7) + col(10)
+    // Final position: vp_row(5+2) + vp_col(3+7) = vp_row(7) + vp_col(10)
     // ANSI: row 7 = 8, col 10 = 11
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_position(row(7), col(10))
+        ansi_output::cursor_movement::cursor_position(
+            vp_row(7).into(),
+            vp_col(10).into()
+        )
     );
-    assert_eq!(state.cursor_pos, pos(row(7) + col(10)));
+    assert_eq!(state.cursor_pos, vp_row(7) + vp_col(10));
 }
 
 #[test]
@@ -102,24 +111,24 @@ fn test_move_cursor_to_column() {
     let mut state = create_test_state();
 
     // First move to a specific position
-    let move_abs = RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(5)));
+    let move_abs = RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(5));
     let _unused = execute_and_capture(move_abs, &mut state, &output_device, &stdout_mock);
     let initial_row = state.cursor_pos.row_index;
 
     // Now move to column 20 (should keep same row)
     let (output_device2, stdout_mock2) = create_mock_output();
-    let op = RenderOpCommon::MoveCursorToColumn(ColIndex::new(20));
+    let op = RenderOpCommon::MoveCursorToColumn(vp_col(20));
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 21G (1-based column index)
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_to_column(ColIndex::new(20))
+        ansi_output::cursor_movement::cursor_to_column(vp_col(20).into())
     );
     // Row should remain unchanged
     assert_eq!(state.cursor_pos.row_index, initial_row);
     // Column should be updated
-    assert_eq!(state.cursor_pos.col_index, ColIndex::new(20));
+    assert_eq!(state.cursor_pos.col_index, vp_col(20));
 }
 
 #[test]
@@ -129,21 +138,23 @@ fn test_move_cursor_to_next_line() {
     let mut state = create_test_state();
 
     // First position cursor at (5, 10)
-    let move_abs = RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10)));
+    let move_abs = RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10));
     let _unused = execute_and_capture(move_abs, &mut state, &output_device, &stdout_mock);
 
     // Move down 3 lines (to row 8, column 0)
     let (output_device2, stdout_mock2) = create_mock_output();
-    let op = RenderOpCommon::MoveCursorToNextLine(height(3));
+    let op = RenderOpCommon::MoveCursorToNextLine(vp_height(3));
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 3E (move down 3 lines and to column 0)
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_next_line(term_row_delta(3).unwrap())
+        ansi_output::cursor_movement::cursor_next_line(
+            term_row_delta(3).expect("conversion error")
+        )
     );
-    assert_eq!(state.cursor_pos.row_index, RowIndex::new(8));
-    assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
+    assert_eq!(state.cursor_pos.row_index, vp_row(8));
+    assert_eq!(state.cursor_pos.col_index, vp_col(0));
 }
 
 #[test]
@@ -153,23 +164,23 @@ fn test_move_cursor_to_previous_line() {
     let mut state = create_test_state();
 
     // First position cursor at (10, 15)
-    let move_abs = RenderOpCommon::MoveCursorPositionAbs(pos(row(10) + col(15)));
+    let move_abs = RenderOpCommon::MoveCursorPositionAbs(vp_row(10) + vp_col(15));
     let _unused = execute_and_capture(move_abs, &mut state, &output_device, &stdout_mock);
 
     // Move up 3 lines (to row 7, column 0)
     let (output_device2, stdout_mock2) = create_mock_output();
-    let op = RenderOpCommon::MoveCursorToPreviousLine(height(3));
+    let op = RenderOpCommon::MoveCursorToPreviousLine(vp_height(3));
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 3F (move up 3 lines and to column 0)
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_previous_line(
-            term_row_delta(3).unwrap()
+        ansi_output::cursor_movement::cursor_previous_line(
+            term_row_delta(3).expect("conversion error")
         )
     );
-    assert_eq!(state.cursor_pos.row_index, RowIndex::new(7));
-    assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
+    assert_eq!(state.cursor_pos.row_index, vp_row(7));
+    assert_eq!(state.cursor_pos.col_index, vp_col(0));
 }
 
 #[test]
@@ -179,9 +190,9 @@ fn test_multiple_cursor_moves_sequence() {
     let mut state = create_test_state();
 
     let ops = vec![
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(5))),
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(10) + col(20))),
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(5)),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(10) + vp_col(20)),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(0) + vp_col(0)),
     ];
 
     let output =
@@ -189,26 +200,26 @@ fn test_multiple_cursor_moves_sequence() {
 
     // Should contain all three ANSI sequences
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(5),
-            col(5)
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(5).into(),
+            vp_col(5).into()
         ))
     );
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(10),
-            col(20)
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(10).into(),
+            vp_col(20).into()
         ))
     );
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(0),
-            col(0)
-        ))
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(0).into(),
+            vp_col(0).into()
+        )),
     );
 
     // Final state should match last position
-    assert_eq!(state.cursor_pos, pos(row(0) + col(0)));
+    assert_eq!(state.cursor_pos, vp_row(0) + vp_col(0));
 }
 
 #[test]
@@ -218,7 +229,7 @@ fn test_cursor_state_persists_across_operations() {
     let mut state = create_test_state();
 
     // Set cursor position
-    let move_op = RenderOpCommon::MoveCursorPositionAbs(pos(row(7) + col(12)));
+    let move_op = RenderOpCommon::MoveCursorPositionAbs(vp_row(7) + vp_col(12));
     let _unused = execute_and_capture(move_op, &mut state, &output_device, &stdout_mock);
     let saved_pos = state.cursor_pos;
 
@@ -238,7 +249,7 @@ fn test_cursor_overwrite_same_position() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let pos_val = pos(row(8) + col(15));
+    let pos_val = vp_row(8) + vp_col(15);
     let op1 = RenderOpCommon::MoveCursorPositionAbs(pos_val);
     let _unused = execute_and_capture(op1, &mut state, &output_device, &stdout_mock);
 
@@ -250,7 +261,10 @@ fn test_cursor_overwrite_same_position() {
     // Both should generate same ANSI sequence
     assert_eq!(
         output,
-        crate::ansi_output::cursor_movement::cursor_position(row(8), col(15))
+        ansi_output::cursor_movement::cursor_position(
+            vp_row(8).into(),
+            vp_col(15).into()
+        )
     );
     assert_eq!(state.cursor_pos, pos_val);
 }

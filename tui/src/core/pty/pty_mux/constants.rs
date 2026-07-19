@@ -1,15 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::ChUnitPrimitiveType;
-
 /// The number of lines to scroll back or forward when a mouse wheel event is received.
 /// This is typically 3 lines to match standard operating system defaults.
-pub const MOUSE_SCROLL_BY_AMOUNT: usize = 3;
+pub const MOUSE_SCROLL_BY_AMOUNT: u16 = 3;
 
 /// The fraction of the viewport height that the page up or down scroll back or forwards
 /// action scrolls. If you use `1` that will just use the full viewport height, `2` is
 /// half, `3` is one third.
-pub const PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR: ChUnitPrimitiveType = 3;
+pub const PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR: u16 = 3;
 
 /// The interval in milliseconds at which the status bar at the bottom of the terminal is
 /// forced to re-render to update the visual state.

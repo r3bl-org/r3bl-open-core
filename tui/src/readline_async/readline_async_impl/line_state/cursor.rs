@@ -1,10 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::ok;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CsiSequence,
-            CursorBoundsCheck, NumericValue, Seg, StringLength, TermCol, TermColDelta,
-            TermRowDelta, col, seg_index, term_col_delta, term_row_delta, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CsiSequence, CursorBoundsCheck,
+            NarrowingCastToU16, NumericValue, RangeExt, Seg, StringLength, TermCol,
+            TermColDelta, TermRowDelta, VPWidth, ok, seg_index, term_col_delta,
+            term_row_delta, vp_col, vp_width};
 use std::io::{self, Write};
 
 impl LineState {
@@ -17,7 +17,7 @@ impl LineState {
     /// A [`TermRowDelta`] representing how many rows down the position is.
     /// Returns `None` if the calculated delta is zero (position is on the first line).
     #[must_use]
-    pub fn line_height(&self, pos: ColWidth) -> Option<TermRowDelta> {
+    pub fn line_height(&self, pos: VPWidth) -> Option<TermRowDelta> {
         term_row_delta(pos / self.term_size.col_width)
     }
 
@@ -31,7 +31,7 @@ impl LineState {
     /// Returns `None` if the calculated delta is zero (position is at the start of a
     /// row).
     #[must_use]
-    pub fn line_column_offset(&self, pos: ColWidth) -> Option<TermColDelta> {
+    pub fn line_column_offset(&self, pos: VPWidth) -> Option<TermColDelta> {
         term_col_delta(pos % self.term_size.col_width)
     }
 
@@ -46,7 +46,7 @@ impl LineState {
     pub fn move_to_beginning(
         &self,
         term: &mut dyn Write,
-        from: ColWidth,
+        from: VPWidth,
     ) -> io::Result<()> {
         // Calculate row delta from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row.
@@ -78,7 +78,7 @@ impl LineState {
     pub fn move_from_beginning(
         &self,
         term: &mut dyn Write,
-        to: ColWidth,
+        to: VPWidth,
     ) -> io::Result<()> {
         // Calculate deltas from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row, 80%80 = 0 cols.
@@ -110,23 +110,20 @@ impl LineState {
         if change > 0 {
             let count = self.line.segment_count();
 
-            // We know that change is positive, so we can safely cast it to usize.
-            #[allow(clippy::cast_sign_loss)]
-            let change_usize = change as usize;
-
-            let new_position = self.line_cursor_grapheme + seg_index(change_usize);
+            let change_u16 = change.as_u16_narrowing();
+            let new_position = self.line_cursor_grapheme + seg_index(change_u16);
             // Use CursorBoundsCheck for text cursor positioning (allows position ==
             // length).
             self.line_cursor_grapheme = count.clamp_cursor_position(new_position);
         } else {
             // Use unsigned_abs() to convert negative change to
             // positive amount to subtract.
-            let change_seg_idx = seg_index(change.unsigned_abs());
+            let change_seg_idx = seg_index(change.unsigned_abs().as_u16_narrowing());
             self.line_cursor_grapheme = if change_seg_idx
                 .overflows(self.line_cursor_grapheme.convert_to_seg_length())
                 == ArrayOverflowResult::Overflowed
             {
-                seg_index(0)
+                seg_index(0u16)
             } else {
                 self.line_cursor_grapheme - change_seg_idx
             };
@@ -138,7 +135,7 @@ impl LineState {
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
-        self.current_column = col(prompt_len + line_display_width.as_u16());
+        self.current_column = vp_col(prompt_len + line_display_width.as_u16());
 
         ok!()
     }
@@ -147,10 +144,11 @@ impl LineState {
     ///
     /// Uses pre-computed segment metadata for O(n) where n is segments up to cursor,
     /// rather than re-parsing the entire string.
-    fn calculate_display_width_up_to_cursor(&self) -> ColWidth {
-        let mut total_width = width(0);
-        for i in 0..self.line_cursor_grapheme.as_usize() {
-            if let Some(seg) = self.line.get(seg_index(i)) {
+    fn calculate_display_width_up_to_cursor(&self) -> VPWidth {
+        let mut total_width = vp_width(0);
+        let seg_range = ..self.line_cursor_grapheme;
+        for seg_idx in seg_range.as_index_iter() {
+            if let Some(seg) = self.line.get(seg_idx) {
                 total_width += seg.display_width;
             }
         }
@@ -170,7 +168,7 @@ impl LineState {
         if self.line_cursor_grapheme.is_zero() {
             return None;
         }
-        self.line.get(self.line_cursor_grapheme - seg_index(1))
+        self.line.get(self.line_cursor_grapheme - seg_index(1u16))
     }
 
     /// Returns the grapheme cluster segment at the cursor position (to be deleted by
@@ -200,8 +198,8 @@ impl LineState {
     ///
     /// Returns an error if writing to the terminal fails.
     pub fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        // Column index value equals distance from start (col 5 = 5 chars from start).
-        self.move_to_beginning(term, width(self.current_column.as_u16()))?;
+        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
+        self.move_to_beginning(term, cursor_distance_from_start)?;
 
         ok!()
     }
@@ -217,8 +215,8 @@ impl LineState {
     ///
     /// [`reset_cursor`]: Self::reset_cursor
     pub fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        // Column index value equals distance from start (col 5 = 5 chars from start).
-        self.move_from_beginning(term, width(self.current_column.as_u16()))?;
+        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
+        self.move_from_beginning(term, cursor_distance_from_start)?;
 
         ok!()
     }
@@ -228,7 +226,7 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
-                ESC_START, core::test_fixtures::StdoutMock, height, width, Size};
+                ESC_START, core::test_fixtures::StdoutMock, vp_height, vp_width};
     use test_case::test_case;
 
     /// Checks if the string contains a `CursorForward` sequence ([`CSI`] <n> C).
@@ -239,7 +237,7 @@ mod tests {
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
-            if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET as char) {
+            if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
                 // Read digits.
                 let mut has_digits = false;
                 while let Some(&next) = chars.peek() {
@@ -265,7 +263,7 @@ mod tests {
     fn contains_move_cursor_down(s: &str) -> bool {
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
-            if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET as char) {
+            if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
                 let mut has_digits = false;
                 while let Some(&next) = chars.peek() {
                     if next.is_ascii_digit() {
@@ -313,17 +311,18 @@ mod tests {
     #[test_case(240, 3 ; "240 cols = 3 row boundary")]
     #[test_case(320, 4 ; "320 cols = 4 row boundary")]
     fn test_move_from_beginning_at_row_boundary(position: u16, expected_rows: u16) {
-        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
+        let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, width(position))
-            .unwrap();
+            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit CursorDown with correct row count.
-        let expected_move_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
+        let expected_move_cursor_down =
+            format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
         assert!(
             output_str.contains(&expected_move_cursor_down),
             "position={position}: expected CursorDown({expected_rows}), got: {output_str:?}"
@@ -339,12 +338,12 @@ mod tests {
     /// Test position 0: should emit NO movement at all.
     #[test]
     fn test_move_from_beginning_at_zero() {
-        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
+        let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, width(0))
-            .unwrap();
+            .move_from_beginning(&mut stdout_mock, vp_width(0))
+            .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
@@ -362,12 +361,12 @@ mod tests {
     #[test_case(40, 40 ; "40 cols = half row")]
     #[test_case(79, 79 ; "79 cols = last column before wrap")]
     fn test_move_from_beginning_within_first_row(position: u16, expected_cols: u16) {
-        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
+        let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, width(position))
-            .unwrap();
+            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
@@ -397,17 +396,18 @@ mod tests {
         expected_rows: u16,
         expected_cols: u16,
     ) {
-        let line_state = LineState::new(String::new(), Size::new((width(80), height(100))));
+        let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, width(position))
-            .unwrap();
+            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
 
         // Must emit both CursorDown and CursorForward.
-        let expected_move_cursor_down = format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
+        let expected_move_cursor_down =
+            format!("{CSI_START}{expected_rows}{CUD_CURSOR_DOWN}");
         let expected_move_cursor_right =
             format!("{CSI_START}{expected_cols}{CUF_CURSOR_FORWARD}");
 

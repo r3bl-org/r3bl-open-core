@@ -16,6 +16,10 @@ pub const DISPLAY_LOG_TELEMETRY: bool = true;
 /// If set to `true` it enables file logging for entire module.
 pub const DEBUG_TUI_MOD: bool = true;
 
+/// Enable or disable bounds checking debug logging. This logs bounds check conversions,
+/// such as when a saturating cast to `u16` overflows or underflows.
+pub const DEBUG_TUI_BOUNDS_CHECK: bool = false;
+
 /// Enable or disable MD parser debug logging. This makes the parser very slow when
 /// enabled.
 pub const DEBUG_MD_PARSER: bool = false;

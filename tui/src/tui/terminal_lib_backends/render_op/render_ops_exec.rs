@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{LockedOutputDevice, Size};
+use crate::{LockedOutputDevice, VPSize};
 
 /// Trait for render operation collections that can be executed.
 ///
@@ -50,10 +50,10 @@ use crate::{LockedOutputDevice, Size};
 /// # Example
 ///
 /// ```no_run
-/// # use r3bl_tui::{RenderOpsExec, RenderOpOutputVec, Size, PaintMode};
+/// # use r3bl_tui::{RenderOpsExec, RenderOpOutputVec, VPSize, PaintMode};
 /// # fn example(ops: &RenderOpOutputVec) {
 /// // Only RenderOpOutputVec implements this trait
-/// ops.execute_all(Size::default(), todo!());
+/// ops.execute_all(VPSize::default(), todo!());
 /// # }
 /// ```
 ///
@@ -66,9 +66,9 @@ use crate::{LockedOutputDevice, Size};
 /// ```
 ///
 /// [`RenderOpIR`]: crate::RenderOpIR
-/// [`RenderOpIRVec`]: crate::RenderOpIRVec
+/// [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 /// [`RenderOpOutput`]: crate::RenderOpOutput
-/// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+/// [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 pub trait RenderOpsExec {
     /// Executes all render operations in the collection sequentially.
     ///
@@ -83,7 +83,7 @@ pub trait RenderOpsExec {
     /// - `locked_output_device`: Locked terminal output for thread-safe writing
     fn execute_all(
         &self,
-        window_size: Size,
+        window_size: VPSize,
         locked_output_device: LockedOutputDevice<'_>,
     );
 }

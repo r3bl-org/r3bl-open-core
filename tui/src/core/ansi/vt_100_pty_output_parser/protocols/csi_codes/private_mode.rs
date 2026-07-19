@@ -67,7 +67,7 @@ pub enum PrivateModeType {
     X11MouseTracking,
 
     /// Cell Motion Mouse Tracking (1002).
-    /// 
+    ///
     /// Sends clicks and drag events (when the mouse moves while a button is held down).
     ///
     /// **Note:** See [`MouseTrackingMode`] for how our engine handles this.
@@ -108,9 +108,8 @@ pub enum PrivateModeType {
     Other(u16),
 }
 
-impl PrivateModeType {
-    #[must_use]
-    pub fn as_u16(&self) -> u16 {
+impl crate::WideningCastToU16 for PrivateModeType {
+    fn as_u16_widening(self) -> u16 {
         match self {
             Self::CursorKeys => DECCKM_CURSOR_KEYS,
             Self::Vt52Mode => DECANM_VT52_MODE,
@@ -126,35 +125,35 @@ impl PrivateModeType {
             Self::CellMotionMouseTracking => CELL_MOTION_MOUSE_TRACKING,
             Self::ApplicationMouseTracking => APPLICATION_MOUSE_TRACKING,
             Self::SgrMouseMode => SGR_MOUSE_MODE,
-            Self::Other(n) => *n,
+            Self::Other(n) => n,
         }
     }
 }
 
 impl From<u16> for PrivateModeType {
-    fn from(value: u16) -> Self {
+    fn from(value: u16) -> PrivateModeType {
         match value {
-            DECCKM_CURSOR_KEYS => Self::CursorKeys,
-            DECANM_VT52_MODE => Self::Vt52Mode,
-            DECCOLM_132_COLUMN => Self::Column132,
-            DECSCLM_SMOOTH_SCROLL => Self::SmoothScroll,
-            DECSCNM_REVERSE_VIDEO => Self::ReverseVideo,
-            DECOM_ORIGIN_MODE => Self::OriginMode,
-            DECAWM_AUTO_WRAP => Self::AutoWrap,
-            DECTCEM_SHOW_CURSOR => Self::ShowCursor,
-            SAVE_CURSOR_DEC => Self::SaveCursorDec,
-            ALT_SCREEN_BUFFER => Self::AlternateScreenBuffer,
-            X11_MOUSE_TRACKING => Self::X11MouseTracking,
-            CELL_MOTION_MOUSE_TRACKING => Self::CellMotionMouseTracking,
-            APPLICATION_MOUSE_TRACKING => Self::ApplicationMouseTracking,
-            SGR_MOUSE_MODE => Self::SgrMouseMode,
-            n => Self::Other(n),
+            DECCKM_CURSOR_KEYS => PrivateModeType::CursorKeys,
+            DECANM_VT52_MODE => PrivateModeType::Vt52Mode,
+            DECCOLM_132_COLUMN => PrivateModeType::Column132,
+            DECSCLM_SMOOTH_SCROLL => PrivateModeType::SmoothScroll,
+            DECSCNM_REVERSE_VIDEO => PrivateModeType::ReverseVideo,
+            DECOM_ORIGIN_MODE => PrivateModeType::OriginMode,
+            DECAWM_AUTO_WRAP => PrivateModeType::AutoWrap,
+            DECTCEM_SHOW_CURSOR => PrivateModeType::ShowCursor,
+            SAVE_CURSOR_DEC => PrivateModeType::SaveCursorDec,
+            ALT_SCREEN_BUFFER => PrivateModeType::AlternateScreenBuffer,
+            X11_MOUSE_TRACKING => PrivateModeType::X11MouseTracking,
+            CELL_MOTION_MOUSE_TRACKING => PrivateModeType::CellMotionMouseTracking,
+            APPLICATION_MOUSE_TRACKING => PrivateModeType::ApplicationMouseTracking,
+            SGR_MOUSE_MODE => PrivateModeType::SgrMouseMode,
+            n => PrivateModeType::Other(n),
         }
     }
 }
 
 impl From<&vte::Params> for PrivateModeType {
-    fn from(params: &vte::Params) -> Self {
+    fn from(params: &vte::Params) -> PrivateModeType {
         let mode_num = params.extract_nth_single_opt_raw(0).unwrap_or(0);
         mode_num.into()
     }

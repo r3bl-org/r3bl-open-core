@@ -166,15 +166,15 @@ impl PixelCharRenderer {
     /// style actually changes, reducing output size by ~30%.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`PlainText { display_char, style }`]: crate::PixelChar::PlainText
+    /// [`PlainText { display_char, style }`]: crate::tui::PixelChar::PlainText
     /// [`render_line()`]: Self::render_line
     /// [`RenderOp`]: crate::render_op::RenderOpCommon
     /// [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
     /// [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor
     /// [`SGR_RESET_BYTES`]: crate::SGR_RESET_BYTES
-    /// [`Spacer`]: crate::PixelChar::Spacer
+    /// [`Spacer`]: crate::tui::PixelChar::Spacer
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    /// [`Void`]: crate::PixelChar::Void
+    /// [`Void`]: crate::tui::PixelChar::Void
     pub fn render_line(&mut self, pixels: &[PixelChar]) -> &[u8] {
         self.buffer.clear();
         self.current_style = TuiStyle::default();

@@ -311,7 +311,7 @@
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
 //! [`direct_to_ansi` mod docs: Bypassing `terminfo`]:
 //!     mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`MasterPty`]: portable_pty::MasterPty

@@ -44,7 +44,7 @@ pub enum RRTEvent<E> {
 /// Converts a domain event into an [`RRTEvent::Worker`] (for sending through the
 /// channel).
 impl<E> From<E> for RRTEvent<E> {
-    fn from(event: E) -> Self { Self::Worker(event) }
+    fn from(event: E) -> RRTEvent<E> { RRTEvent::Worker(event) }
 }
 
 /// Details of a framework-initiated shutdown of the dedicated thread.

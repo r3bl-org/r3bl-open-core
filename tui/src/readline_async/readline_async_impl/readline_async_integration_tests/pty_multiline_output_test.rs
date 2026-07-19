@@ -163,15 +163,15 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
-//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`PTY`]: crate::core::pty
 //! [`SharedWriter`]: crate::SharedWriter
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS, LineStateControlSignal,
-            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, OfsBufVT100, PtyTestContext,
-            PtyTestMode, SharedWriter, Size, generate_pty_test, height, ok,
-            readline_async::readline_async_impl::LineState, width};
+            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, NarrowingCastToU16, OfsBufVT100,
+            PixelChar, PtyTestContext, PtyTestMode, SharedWriter, generate_pty_test, ok,
+            readline_async::readline_async_impl::LineState, vp_height, vp_width};
 use std::io::Write;
 
 generate_pty_test! {
@@ -293,7 +293,7 @@ fn controller(context: PtyTestContext) {
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+/// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 struct CaptureOutputBytes(Vec<u8>);
 
 impl CaptureOutputBytes {
@@ -311,14 +311,15 @@ impl Write for CaptureOutputBytes {
 
 /// Extracts text content from an [`OfsBufVT100`] row for verification.
 ///
-/// [`OfsBufVT100`]: crate::OfsBufVT100
-fn get_line_content(buf: &crate::OfsBufVT100, row: usize, max_cols: usize) -> String {
-    buf.ofs_buf.get_row(row).unwrap()
+/// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
+fn get_line_content(buf: &OfsBufVT100, row: usize, max_cols: usize) -> String {
+    buf.get_row((row.as_u16_narrowing()).into())
+        .expect("conversion error")
         .iter()
         .take(max_cols)
-        .map(|pixel_char| match pixel_char {
-            crate::PixelChar::PlainText { display_char, .. } => *display_char,
-            crate::PixelChar::Spacer | crate::PixelChar::Void => ' ',
+        .map(|&pixel_char| match pixel_char {
+            PixelChar::PlainText { display_char, .. } => display_char,
+            PixelChar::Spacer | PixelChar::Void => ' ',
         })
         .collect::<String>()
         .trim_end()
@@ -332,7 +333,7 @@ fn get_line_content(buf: &crate::OfsBufVT100, row: usize, max_cols: usize) -> St
 ///
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
-/// [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+/// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [module docs]: self
@@ -345,7 +346,7 @@ fn controlled() {
 
     // Create LineState and SharedWriter.
     // Use 80x24 terminal size to match typical terminal.
-    let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
+    let mut line_state = LineState::new("> ".into(), vp_width(80) + vp_height(24));
     let mut shared_writer = SharedWriter::new(tx);
 
     // Create an ANSI capture buffer to collect output bytes.
@@ -354,13 +355,13 @@ fn controlled() {
     // Render initial prompt.
     line_state
         .render_and_flush(&mut capture_output_bytes)
-        .unwrap();
+        .expect("conversion error");
 
     // Simulate multiple lines of logging output (like the bug report shows).
     // Each line ends with newline, so they should each start at column 1.
-    writeln!(shared_writer, "Line 1: first message").unwrap();
-    writeln!(shared_writer, "Line 2: second message").unwrap();
-    writeln!(shared_writer, "Line 3: third message").unwrap();
+    writeln!(shared_writer, "Line 1: first message").expect("conversion error");
+    writeln!(shared_writer, "Line 2: second message").expect("conversion error");
+    writeln!(shared_writer, "Line 3: third message").expect("conversion error");
 
     // Process the channel messages (simulating what Readline does).
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -369,14 +370,14 @@ fn controlled() {
             if let LineStateControlSignal::Line(data) = signal {
                 line_state
                     .print_data_and_flush(data.as_bytes(), &mut capture_output_bytes)
-                    .unwrap();
+                    .expect("conversion error");
             }
         }
     });
 
     // Now apply the captured ANSI bytes to an OfsBufVT100 to see the actual
     // rendered output - this is what the user would see in the terminal.
-    let mut ofs_buf = OfsBufVT100::new_empty(height(24) + width(80));
+    let mut ofs_buf = OfsBufVT100::new_empty(vp_height(24) + vp_width(80));
     let captured_bytes = capture_output_bytes.take_bytes();
     let _events = ofs_buf.apply_ansi_bytes(&captured_bytes);
 

@@ -135,7 +135,7 @@ fn parse_csi_terminal_parameters(
 
         if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
             // Digit: accumulate in current_num
-            current_num.push(byte as char);
+            current_num.push(char::from(byte));
         } else if byte == ANSI_PARAM_SEPARATOR {
             // Semicolon: parameter separator
             if !current_num.is_empty() {
@@ -172,8 +172,8 @@ fn parse_csi_terminal_parameters(
         let cols = params[2];
         Some((
             VT100InputEventIR::Resize {
-                col_width: crate::ColWidth::from(cols),
-                row_height: crate::RowHeight::from(rows),
+                col_width: crate::VPWidth::from(cols),
+                row_height: crate::VPHeight::from(rows),
             },
             byte_offset(total_consumed),
         ))
@@ -210,8 +210,8 @@ mod tests {
     fn test_resize_event() {
         // Round-trip test: Generate sequence from VT100InputEventIR, then parse it back
         let original_event = VT100InputEventIR::Resize {
-            row_height: crate::RowHeight::from(24),
-            col_width: crate::ColWidth::from(80),
+            row_height: crate::VPHeight::from(24),
+            col_width: crate::VPWidth::from(80),
         };
         let seq = generate_keyboard_sequence(&original_event)
             .expect("Failed to generate resize sequence");

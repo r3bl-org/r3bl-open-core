@@ -17,13 +17,13 @@
 //!
 //! [clipped]: StyleUSSpanLine::clip
 
-use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineString,
-            PatternMatcherStateMachine, RenderList, ScrOfs, TuiStyle, TuiStyledTexts,
+use crate::{CCol, CPos, CharacterMatchResult, GCStringOwned, InlineString, ParseList,
+            PatternMatcherStateMachine, RenderList, TuiStyle, TuiStyledTexts, VPWidth,
             get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::md_parser_constants::{COLON, COMMA, SPACE},
-            tiny_inline_string, tui_styled_text, width};
+            tiny_inline_string, tui_styled_text, vp_width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -69,7 +69,7 @@ impl StyleUSSpanLine {
     #[must_use]
     pub fn from_csvp(
         key: &str,
-        tag_list: &crate::ParseList<&'_ str>,
+        tag_list: &ParseList<&'_ str>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
@@ -142,20 +142,20 @@ impl StyleUSSpanLine {
     #[must_use]
     pub fn clip(
         &self,
-        scr_ofs: ScrOfs,
-        max_display_col_count: ColWidth,
+        vp_origin: CPos,
+        max_display_col_count: VPWidth,
     ) -> TuiStyledTexts {
-        let scroll_offset_col_index = scr_ofs.col_index;
+        let vp_origin_col_index: CCol = vp_origin.col_index;
 
         // Populated and returned at the end.
         let mut list: RenderList<StyleUSSpan> = RenderList::default();
 
         // Clip w/out syntax highlighting & store this as a pattern to match against.
         let plain_text_pattern: &str =
-            &self.get_plain_text_clipped(scroll_offset_col_index, max_display_col_count);
+            &self.get_plain_text_clipped(vp_origin_col_index, max_display_col_count);
         let mut matcher = PatternMatcherStateMachine::new(
             plain_text_pattern,
-            Some(scroll_offset_col_index),
+            Some(vp_origin_col_index),
         );
 
         // Main loop over each `styled_text_segment` in the `List` (the list represents a
@@ -199,8 +199,8 @@ impl StyleUSSpanLine {
     }
 
     #[must_use]
-    pub fn display_width(&self) -> ColWidth {
-        let mut display_width = width(0);
+    pub fn display_width(&self) -> VPWidth {
+        let mut display_width = vp_width(0);
         for span in self.iter() {
             display_width += span.text_gcs.display_width;
         }
@@ -217,16 +217,16 @@ impl StyleUSSpanLine {
         plain_text_acc
     }
 
-    /// Clip the content `[scroll_offset.col .. max cols]`.
+    /// Clip the content `[vp_origin.col .. max cols]`.
     #[must_use]
     pub fn get_plain_text_clipped(
         &self,
-        scroll_offset_col_index: ColIndex,
-        max_display_col_count: ColWidth,
+        vp_origin_col_index: CCol,
+        max_display_col_count: VPWidth,
     ) -> InlineString {
         let line = self.get_plain_text();
         let line_gcs: GCStringOwned = line.into();
-        let str = line_gcs.clip(scroll_offset_col_index, max_display_col_count);
+        let str = line_gcs.clip(vp_origin_col_index, max_display_col_count);
         InlineString::from(str)
     }
 }
@@ -236,11 +236,13 @@ mod convert {
     use super::*;
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
-        fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }
+        fn from((style, text): (&TuiStyle, &str)) -> StyleUSSpan {
+            StyleUSSpan::new(*style, text)
+        }
     }
 
     impl From<StyleUSSpanLine> for TuiStyledTexts {
-        fn from(styles: StyleUSSpanLine) -> Self {
+        fn from(styles: StyleUSSpanLine) -> TuiStyledTexts {
             let mut acc = TuiStyledTexts::default();
             for StyleUSSpan {
                 style, text_gcs, ..
@@ -259,8 +261,8 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, assert_eq2, ch,
-                col, new_style, render_list, row, scr_ofs, tui_color};
+    use crate::{ConvertToPlainText, RenderList, assert_eq2, c_pos, ch, new_style,
+                render_list, tui_color};
 
     mod fixtures {
         use super::*;
@@ -318,7 +320,7 @@ mod tests_clip_styled_texts {
     fn list_1_range_2_5() {
         assert_eq2!(fixtures::get_list().len(), 3);
 
-        let scroll_offset_col_index = ch(2);
+        let vp_origin_col_index = ch(2);
         let max_display_col_count = ch(5);
         let expected_clipped_string = "rst s";
 
@@ -327,23 +329,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
             let clipped =
-                fixtures::get_list().clip(scr_ofs, width(*max_display_col_count));
+                fixtures::get_list().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 3);
             let lhs = clipped.to_plain_text();
@@ -375,7 +373,7 @@ mod tests_clip_styled_texts {
     fn list_1_range_0_3() {
         assert_eq2!(fixtures::get_list().len(), 3);
 
-        let scroll_offset_col_index = ch(0);
+        let vp_origin_col_index = ch(0);
         let max_display_col_count = ch(3);
         let expected_clipped_string = "fir";
 
@@ -384,23 +382,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
             let clipped =
-                fixtures::get_list().clip(scr_ofs, width(*max_display_col_count));
+                fixtures::get_list().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let left = clipped.to_plain_text();
@@ -433,7 +427,7 @@ mod tests_clip_styled_texts {
     fn list_1_range_0_5() {
         assert_eq2!(fixtures::get_list().len(), 3);
 
-        let scroll_offset_col_index = ch(0);
+        let vp_origin_col_index = ch(0);
         let max_display_col_count = ch(5);
         let expected_clipped_string = "first";
 
@@ -442,23 +436,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
             let clipped =
-                fixtures::get_list().clip(scr_ofs, width(*max_display_col_count));
+                fixtures::get_list().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let lhs = clipped.to_plain_text();
@@ -491,7 +481,7 @@ mod tests_clip_styled_texts {
     fn list_1_range_2_8() {
         assert_eq2!(fixtures::get_list().len(), 3);
 
-        let scroll_offset_col_index = ch(2);
+        let vp_origin_col_index = ch(2);
         let max_display_col_count = ch(8);
         let expected_clipped_string = "rst seco";
 
@@ -500,23 +490,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
             let clipped =
-                fixtures::get_list().clip(scr_ofs, width(*max_display_col_count));
+                fixtures::get_list().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 3);
             let left = clipped.to_plain_text();
@@ -536,7 +522,7 @@ mod tests_clip_styled_texts {
             }
         }
 
-        let scroll_offset_col_index = ch(1);
+        let vp_origin_col_index = ch(1);
         let max_display_col_count = ch(77);
         let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
 
@@ -552,22 +538,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
-            let clipped = get_list_alt().clip(scr_ofs, width(*max_display_col_count));
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
+            let clipped =
+                get_list_alt().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let lhs = clipped.to_plain_text();
@@ -587,7 +570,7 @@ mod tests_clip_styled_texts {
             }
         }
 
-        let scroll_offset_col_index = ch(1);
+        let vp_origin_col_index = ch(1);
         let max_display_col_count = ch(77);
         let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
 
@@ -604,22 +587,19 @@ mod tests_clip_styled_texts {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
             let text_gcs: GCStringOwned = text.into();
 
-            let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
+            let trunc_1_str = text_gcs.trunc_start_by(vp_width(*vp_origin_col_index));
             let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
-            let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
+            let trunc_2_str =
+                trunc_1_gcs.trunc_end_to_fit(vp_width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
         }
 
         // clip version.
         {
-            let scr_ofs = scr_ofs(
-                /* just need this col_index */
-                col(*scroll_offset_col_index) +
-                /* row is not used, so set it to an improbable value */
-                row(ChUnitPrimitiveType::MAX),
-            );
-            let clipped = get_list_alt().clip(scr_ofs, width(*max_display_col_count));
+            let vp_origin = c_pos(vp_origin_col_index.as_usize(), usize::MAX);
+            let clipped =
+                get_list_alt().clip(vp_origin, vp_width(*max_display_col_count));
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let left = clipped.to_plain_text();

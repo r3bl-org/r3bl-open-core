@@ -3,7 +3,7 @@
 //! Tests for performer lifecycle - creation, initialization, and direct state mutation.
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AnsiToOfsBufPerformer, Pos, TuiStyle, col, row};
+use crate::{AnsiToOfsBufPerformer, TuiStyle, VPPos, vp_col, vp_row};
 use vte::Perform;
 
 #[test]
@@ -13,18 +13,21 @@ fn test_performer_creation() {
     let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        Pos::default(),
+        VPPos::default(),
         "New performer should initialize cursor position to (0,0)"
     );
     assert_eq!(
-        performer.ofs_buf_vt_100.parser_global_state.current_style,
+        performer
+            .ofs_buf_vt_100
+            .get_parser_global_state()
+            .current_style,
         TuiStyle::default(),
         "New performer should initialize current_style to default"
     );
     assert!(
         performer
             .ofs_buf_vt_100
-            .parser_global_state
+            .get_parser_global_state()
             .pending_osc_events
             .is_empty(),
         "New performer should initialize pending_osc_events to empty"
@@ -41,18 +44,20 @@ fn test_state_persists_in_buffer_across_performer_lifecycles() {
     // First performer session.
     {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
-        performer.ofs_buf_vt_100.set_cursor_pos(row(1) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(1) + vp_col(5));
         performer.print('A'); // Cursor advances to (r:1,c:6)
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(1) + col(6),
+            vp_row(1) + vp_col(6),
             "Cursor should advance after printing a character"
         );
     } // End of first performer scope - changes are already in buffer
 
     assert_eq!(
         ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(6),
+        vp_row(1) + vp_col(6),
         "Buffer position should persist after performer goes out of scope"
     );
 
@@ -62,22 +67,24 @@ fn test_state_persists_in_buffer_across_performer_lifecycles() {
         // New performer should initialize with buffer's current cursor position.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(1) + col(6),
+            vp_row(1) + vp_col(6),
             "New performer should start with buffer's current position"
         );
 
-        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(2));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(4) + vp_col(2));
         performer.print('B'); // Cursor advances to (r:4,c:3)
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(3),
+            vp_row(4) + vp_col(3),
             "Cursor should advance after printing a character"
         );
     } // End of second performer scope - changes are already in buffer
 
     assert_eq!(
         ofs_buf_vt_100.get_cursor_pos(),
-        row(4) + col(3),
+        vp_row(4) + vp_col(3),
         "Buffer position should persist after second performer goes out of scope"
     );
 
@@ -86,14 +93,14 @@ fn test_state_persists_in_buffer_across_performer_lifecycles() {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(3),
+            vp_row(4) + vp_col(3),
             "Third performer should start with previous session's final position"
         );
     } // End of third performer scope - no changes made
 
     assert_eq!(
         ofs_buf_vt_100.get_cursor_pos(),
-        row(4) + col(3),
+        vp_row(4) + vp_col(3),
         "Buffer position should persist across performer lifecycles"
     );
 }

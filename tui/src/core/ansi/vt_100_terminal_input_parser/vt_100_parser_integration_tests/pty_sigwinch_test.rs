@@ -62,13 +62,12 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 
-use crate::{MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, GLYPH_WAITING,
-            InputEvent, PtyTestContext, PtyTestMode, Size,
-            generate_pty_test, height, size,
-            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice, width};
-use std::{io::Write,
-          time::Duration};
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            PtyTestContext, PtyTestMode, VPSize, generate_pty_test,
+            tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
+            vp_height, vp_width};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_sigwinch,
@@ -106,7 +105,7 @@ fn controller(context: PtyTestContext) {
     std::thread::sleep(Duration::from_millis(200));
 
     // Resize the PTY - this sends SIGWINCH to the controlled process.
-    let new_size: Size = size(width(100) + height(30));
+    let new_size: VPSize = vp_width(100) + vp_height(30);
 
     eprintln!(
         "📐 PTY Controller: Resizing PTY to {:?}x{:?}...",

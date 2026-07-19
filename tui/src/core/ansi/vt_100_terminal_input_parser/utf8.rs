@@ -142,7 +142,7 @@
 //! - **Display rendering**: Calculated separately using the [`unicode_width`] crate. See
 //!   [`mod@crate::graphemes`] for comprehensive documentation on Unicode display width,
 //!   grapheme clusters, and the three types of indices ([`ByteIndex`], [`SegIndex`],
-//!   [`ColIndex`]).
+//!   [`VPCol`]).
 //!
 //! ## Why This Matters
 //!
@@ -165,7 +165,6 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`ByteOffset`]: crate::ByteOffset
-//! [`ColIndex`]: crate::ColIndex
 //! [`convert_input_event()`]:
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
@@ -174,6 +173,7 @@
 //! [`SegIndex`]: crate::SegIndex
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VPCol`]: crate::VPCol
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 //! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [parent module documentation]: mod@super#primary-consumer

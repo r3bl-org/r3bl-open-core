@@ -89,8 +89,10 @@ async fn test_stdout_mock_no_strip_ansi() {
 
     let normal_text = "hello world";
 
-    stdout_mock.write_all(normal_text.as_bytes()).unwrap();
-    stdout_mock.flush().unwrap();
+    stdout_mock
+        .write_all(normal_text.as_bytes())
+        .expect("conversion error");
+    stdout_mock.flush().expect("conversion error");
 
     pretty_assertions::assert_eq!(
         stdout_mock.get_copy_of_buffer_as_string(),
@@ -111,8 +113,10 @@ async fn test_stdout_mock_strip_ansi() {
     let normal_text = "hello world";
     let red_text = format!("{SGR_FG_RED_STR}{normal_text}{SGR_RESET_STR}"); // Resets color after.
 
-    stdout_mock.write_all(red_text.as_bytes()).unwrap();
-    stdout_mock.flush().unwrap();
+    stdout_mock
+        .write_all(red_text.as_bytes())
+        .expect("conversion error");
+    stdout_mock.flush().expect("conversion error");
 
     pretty_assertions::assert_eq!(
         stdout_mock.get_copy_of_buffer_as_string_strip_ansi(),

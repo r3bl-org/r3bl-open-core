@@ -2,8 +2,7 @@
 
 // cspell::ignore cfssljson
 
-use crate::ok;
-use crate::script::http_client::create_client_with_user_agent;
+use crate::{ok, script::http_client::create_client_with_user_agent};
 use miette::IntoDiagnostic;
 use std::{fs, io::Write, path::Path};
 
@@ -44,10 +43,10 @@ mod tests_download {
     #[tokio::test]
     async fn test_download_file_overwrite_existing() {
         // Create the root temp dir.
-        let root = try_create_temp_dir().unwrap();
+        let root = try_create_temp_dir().expect("conversion error");
 
         let new_dir = root.join("test_download_file_overwrite_existing");
-        fs::create_dir_all(&new_dir).unwrap();
+        fs::create_dir_all(&new_dir).expect("conversion error");
 
         let source_url = "https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljson_1.6.5_linux_amd64";
         let destination_file = new_dir.join("cfssljson");
@@ -73,7 +72,7 @@ mod tests_download {
             }
         }
 
-        let meta_data = destination_file.metadata().unwrap();
+        let meta_data = destination_file.metadata().expect("conversion error");
         let og_file_size = meta_data.len();
 
         // Download file again (overwrite existing).
@@ -98,7 +97,7 @@ mod tests_download {
         }
 
         // Ensure that the file sizes are the same.
-        let meta_data = destination_file.metadata().unwrap();
+        let meta_data = destination_file.metadata().expect("conversion error");
         let new_file_size = meta_data.len();
         assert_eq!(og_file_size, new_file_size);
     }

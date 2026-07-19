@@ -20,11 +20,11 @@ impl FlexBoxId {
 }
 
 impl From<FlexBoxId> for u8 {
-    fn from(id: FlexBoxId) -> Self { id.inner }
+    fn from(id: FlexBoxId) -> u8 { id.inner }
 }
 
 impl From<u8> for FlexBoxId {
-    fn from(id: u8) -> Self { Self { inner: id } }
+    fn from(id: u8) -> FlexBoxId { FlexBoxId { inner: id } }
 }
 
 impl Deref for FlexBoxId {

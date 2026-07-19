@@ -74,7 +74,7 @@
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`test_scroll_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_scroll_ops
@@ -103,7 +103,10 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
         result,
         Ok(()),
         "Failed to index down at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -124,47 +127,10 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
         result,
         Ok(()),
         "Failed to reverse index up at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
-    );
-}
-
-/// Scroll buffer content up by one line (for `ESC D` at bottom).
-///
-/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
-///
-/// **Behavior**: The top line is lost, and a new empty line appears at bottom.
-/// Respects [`DECSTBM`] scroll region margins.
-///
-/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [module-level documentation]: self
-pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf_vt_100.scroll_buffer_up();
-    debug_assert_matches!(
-        result,
-        Ok(()),
-        "Failed to scroll buffer up at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
-    );
-}
-
-/// Scroll buffer content down by one line (for `ESC M` at top).
-///
-/// **[`VT-100`] Protocol**: See [module-level documentation] for scroll region handling.
-///
-/// **Behavior**: The bottom line is lost, and a new empty line appears at top.
-/// Respects [`DECSTBM`] scroll region margins.
-///
-/// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [module-level documentation]: self
-pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf_vt_100.scroll_buffer_down();
-    debug_assert_matches!(
-        result,
-        Ok(()),
-        "Failed to scroll buffer down at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -177,12 +143,15 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.scroll_up(how_many);
+    let result = performer.ofs_buf_vt_100.scroll_buffer_up(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
         "Failed to scroll up {how_many:?} lines at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }
 
@@ -195,11 +164,14 @@ pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
 /// [module-level documentation]: self
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.scroll_down(how_many);
+    let result = performer.ofs_buf_vt_100.scroll_buffer_down(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
         "Failed to scroll down {how_many:?} lines at cursor position {:?}",
-        performer.ofs_buf_vt_100.get_cursor_pos()
+        performer
+            .ofs_buf_vt_100
+            .get_active_screen_buffer()
+            .get_cursor_pos()
     );
 }

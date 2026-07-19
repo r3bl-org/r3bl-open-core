@@ -2,16 +2,17 @@
 
 //! [`GCStringOwned`] implementation for owned Unicode grapheme cluster strings.
 
-use crate::{ChUnit, ColIndex, ColWidth, CowInlineString, GraphemeString,
-            GraphemeStringMut, InlineString, Seg, SegContent, SegIndex, SegLength,
-            SegmentArray,
-            graphemes::unicode_segment::{build_segments_for_str,
-                                         calculate_display_width}};
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use crate::{
+    graphemes::unicode_segment::{build_segments_for_str, calculate_display_width},
+    vp_width, CCol, ChUnit, CowInlineString, GraphemeString, GraphemeStringMut,
+    InlineString, NarrowingCastToU16, Seg, SegContent, SegIndex, SegLength,
+    SegmentArray, VPCol, VPWidth,
+};
+use std::fmt::{Debug, Display, Formatter};
 
 /// Wide segments detection result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ContainsWideSegments {
+pub enum ContainsWideSegment {
     Yes,
     No,
 }
@@ -27,19 +28,19 @@ pub struct GCStringOwned {
     /// Pre-computed grapheme cluster segments.
     pub segments: SegmentArray,
     /// Display width of the entire string.
-    pub display_width: ColWidth,
+    pub display_width: VPWidth,
     /// Byte size of the string.
     pub bytes_size: ChUnit,
 }
 
 impl Debug for GCStringOwned {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "GCStringOwned({:?})", self.string.as_str())
     }
 }
 
 impl Display for GCStringOwned {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.string.as_str())
     }
 }
@@ -49,15 +50,15 @@ impl AsRef<str> for GCStringOwned {
 }
 
 impl From<&str> for GCStringOwned {
-    fn from(value: &str) -> Self { Self::new(value) }
+    fn from(value: &str) -> GCStringOwned { GCStringOwned::new(value) }
 }
 
 impl From<String> for GCStringOwned {
-    fn from(value: String) -> Self { Self::new(value) }
+    fn from(value: String) -> GCStringOwned { GCStringOwned::new(value) }
 }
 
 impl From<InlineString> for GCStringOwned {
-    fn from(value: InlineString) -> Self { Self::new(value.as_str()) }
+    fn from(value: InlineString) -> GCStringOwned { GCStringOwned::new(value.as_str()) }
 }
 
 impl<'a> IntoIterator for &'a GCStringOwned {
@@ -68,15 +69,15 @@ impl<'a> IntoIterator for &'a GCStringOwned {
 }
 
 impl From<&InlineString> for GCStringOwned {
-    fn from(value: &InlineString) -> Self { Self::new(value.as_str()) }
+    fn from(value: &InlineString) -> GCStringOwned { GCStringOwned::new(value.as_str()) }
 }
 
 impl From<&'_ &str> for GCStringOwned {
-    fn from(value: &'_ &str) -> Self { Self::new(*value) }
+    fn from(value: &'_ &str) -> GCStringOwned { GCStringOwned::new(*value) }
 }
 
 impl From<&String> for GCStringOwned {
-    fn from(value: &String) -> Self { Self::new(value.as_str()) }
+    fn from(value: &String) -> GCStringOwned { GCStringOwned::new(value.as_str()) }
 }
 
 impl GCStringOwned {
@@ -104,7 +105,7 @@ impl GCStringOwned {
     ///
     /// [`width()`]: Self::width
     #[must_use]
-    pub fn display_width(&self) -> ColWidth { self.display_width }
+    pub fn display_width(&self) -> VPWidth { self.display_width }
 
     /// Gets the byte size of the string.
     #[must_use]
@@ -112,12 +113,14 @@ impl GCStringOwned {
 
     /// Gets the number of grapheme clusters.
     #[must_use]
-    pub fn len(&self) -> SegLength { self.segments.len().into() }
+    pub fn len(&self) -> SegLength { self.segments.len().as_u16_narrowing().into() }
 
     /// Gets the number of grapheme cluster segments. This is the preferred method for
     /// semantic clarity.
     #[must_use]
-    pub fn segment_count(&self) -> SegLength { self.segments.len().into() }
+    pub fn segment_count(&self) -> SegLength {
+        self.segments.len().as_u16_narrowing().into()
+    }
 
     /// Checks if the string is empty.
     #[must_use]
@@ -133,9 +136,9 @@ impl GCStringOwned {
     #[must_use]
     pub fn get_max_seg_index(&self) -> SegIndex {
         if self.segments.is_empty() {
-            SegIndex::from(0)
+            SegIndex::from(0u16)
         } else {
-            SegIndex::from(self.segments.len() - 1)
+            SegIndex::from((self.segments.len() - 1).as_u16_narrowing())
         }
     }
 
@@ -144,22 +147,22 @@ impl GCStringOwned {
 
     /// Gets display width of a single character (utility method).
     #[must_use]
-    pub fn width_char(ch: char) -> ColWidth {
+    pub fn width_char(ch: char) -> VPWidth {
         use unicode_width::UnicodeWidthChar;
-        ColWidth::from(UnicodeWidthChar::width(ch).unwrap_or(0))
+        VPWidth::from(UnicodeWidthChar::width(ch).unwrap_or(0).as_u16_narrowing())
     }
 
     /// Checks if this string contains wide segments (characters wider than 1 column).
     #[must_use]
-    pub fn contains_wide_segments(&self) -> ContainsWideSegments {
+    pub fn contains_wide_segment(&self) -> ContainsWideSegment {
         if self
             .segments
             .iter()
-            .any(|seg| seg.display_width > crate::width(1))
+            .any(|seg| seg.display_width > vp_width(1))
         {
-            ContainsWideSegments::Yes
+            ContainsWideSegment::Yes
         } else {
-            ContainsWideSegments::No
+            ContainsWideSegment::No
         }
     }
 
@@ -172,7 +175,7 @@ impl GCStringOwned {
     ///
     /// [`display_width()`]: Self::display_width
     #[must_use]
-    pub fn width(&self) -> ColWidth { self.display_width }
+    pub fn width(&self) -> VPWidth { self.display_width }
 
     /// Gets the last segment.
     #[must_use]
@@ -185,9 +188,9 @@ pub struct SegStringOwned {
     /// The grapheme cluster slice as `GCStringOwned` (owns both string and segments).
     pub string: GCStringOwned,
     /// The display width of the slice.
-    pub width: ColWidth,
+    pub width: VPWidth,
     /// The display col index at which this grapheme cluster starts.
-    pub start_at: ColIndex,
+    pub start_at: VPCol,
 }
 
 // GraphemeString trait implementation for GCStringOwned.
@@ -199,7 +202,7 @@ impl GraphemeString for GCStringOwned {
 
     fn segments(&self) -> &[Seg] { &self.segments }
 
-    fn display_width(&self) -> ColWidth { self.display_width }
+    fn display_width(&self) -> VPWidth { self.display_width }
 
     fn segment_count(&self) -> SegLength { self.segment_count() }
 
@@ -207,43 +210,43 @@ impl GraphemeString for GCStringOwned {
 
     fn get_seg(&self, index: SegIndex) -> Option<Seg> { self.get(index) }
 
-    fn check_is_in_middle_of_grapheme(&self, col: ColIndex) -> Option<Seg> {
+    fn check_is_in_middle_of_grapheme(&self, col: VPCol) -> Option<Seg> {
         self.check_is_in_middle_of_grapheme(col)
     }
 
-    fn get_seg_at(&self, col: ColIndex) -> Option<SegContent<'_>> {
-        self.get_string_at(col).and_then(|seg_string| {
-            self.segments
-                .iter()
-                .find(|seg| seg.start_display_col_index == seg_string.start_at)
-                .map(|seg| SegContent {
-                    content: seg.get_str(self),
-                    seg: *seg,
-                })
+    fn get_seg_at(&self, col: VPCol) -> Option<SegContent<'_>> {
+        let seg_string = self.get_string_at(col)?;
+        let seg = self
+            .segments
+            .iter()
+            .find(|seg| seg.start_display_col_index == seg_string.start_at)?;
+        Some(SegContent {
+            content: seg.get_str(self),
+            seg: *seg,
         })
     }
 
-    fn get_seg_right_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
-        self.get_string_at_right_of(col).and_then(|seg_string| {
-            self.segments
-                .iter()
-                .find(|seg| seg.start_display_col_index == seg_string.start_at)
-                .map(|seg| SegContent {
-                    content: seg.get_str(self),
-                    seg: *seg,
-                })
+    fn get_seg_right_of(&self, col: VPCol) -> Option<SegContent<'_>> {
+        let seg_string = self.get_string_at_right_of(col)?;
+        let seg = self
+            .segments
+            .iter()
+            .find(|seg| seg.start_display_col_index == seg_string.start_at)?;
+        Some(SegContent {
+            content: seg.get_str(self),
+            seg: *seg,
         })
     }
 
-    fn get_seg_left_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
-        self.get_string_at_left_of(col).and_then(|seg_string| {
-            self.segments
-                .iter()
-                .find(|seg| seg.start_display_col_index == seg_string.start_at)
-                .map(|seg| SegContent {
-                    content: seg.get_str(self),
-                    seg: *seg,
-                })
+    fn get_seg_left_of(&self, col: VPCol) -> Option<SegContent<'_>> {
+        let seg_string = self.get_string_at_left_of(col)?;
+        let seg = self
+            .segments
+            .iter()
+            .find(|seg| seg.start_display_col_index == seg_string.start_at)?;
+        Some(SegContent {
+            content: seg.get_str(self),
+            seg: *seg,
         })
     }
 
@@ -254,19 +257,19 @@ impl GraphemeString for GCStringOwned {
         })
     }
 
-    fn clip(&self, start_col: ColIndex, width: ColWidth) -> Self::StringSlice<'_> {
+    fn clip(&self, start_col: CCol, width: VPWidth) -> Self::StringSlice<'_> {
         CowInlineString::Borrowed(self.clip(start_col, width))
     }
 
-    fn trunc_end_to_fit(&self, width: ColWidth) -> Self::StringSlice<'_> {
+    fn trunc_end_to_fit(&self, width: VPWidth) -> Self::StringSlice<'_> {
         CowInlineString::Borrowed(self.trunc_end_to_fit(width))
     }
 
-    fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
+    fn trunc_end_by(&self, width: VPWidth) -> Self::StringSlice<'_> {
         CowInlineString::Borrowed(self.trunc_end_by(width))
     }
 
-    fn trunc_start_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
+    fn trunc_start_by(&self, width: VPWidth) -> Self::StringSlice<'_> {
         CowInlineString::Borrowed(self.trunc_start_by(width))
     }
 
@@ -276,8 +279,8 @@ impl GraphemeString for GCStringOwned {
 
     fn last(&self) -> Option<Seg> { self.last() }
 
-    fn contains_wide_segments(&self) -> ContainsWideSegments {
-        self.contains_wide_segments()
+    fn contains_wide_segment(&self) -> ContainsWideSegment {
+        self.contains_wide_segment()
     }
 }
 
@@ -285,17 +288,13 @@ impl GraphemeString for GCStringOwned {
 impl GraphemeStringMut for GCStringOwned {
     type MutResult = GCStringOwned; // Returns new instances (immutable paradigm)
 
-    fn insert_text(&mut self, col: ColIndex, text: &str) -> Option<Self::MutResult> {
+    fn insert_text(&mut self, col: VPCol, text: &str) -> Option<Self::MutResult> {
         // Create a new string with text inserted at the column.
         let (new_string, _width) = self.insert_chunk_at_col(col, text);
         Some(GCStringOwned::new(new_string))
     }
 
-    fn delete_range(
-        &mut self,
-        start: ColIndex,
-        end: ColIndex,
-    ) -> Option<Self::MutResult> {
+    fn delete_range(&mut self, start: VPCol, end: VPCol) -> Option<Self::MutResult> {
         // Split at start position.
         if let Some((left, _)) = self.split_at_display_col(start) {
             let left_string = GCStringOwned::new(left);
@@ -316,8 +315,8 @@ impl GraphemeStringMut for GCStringOwned {
 
     fn replace_range(
         &mut self,
-        start: ColIndex,
-        end: ColIndex,
+        start: VPCol,
+        end: VPCol,
         text: &str,
     ) -> Option<Self::MutResult> {
         // First delete the range.
@@ -328,7 +327,7 @@ impl GraphemeStringMut for GCStringOwned {
         })
     }
 
-    fn truncate(&mut self, col: ColIndex) -> Option<Self::MutResult> {
+    fn truncate(&mut self, col: VPCol) -> Option<Self::MutResult> {
         // Split at the column and return the left part.
         if let Some((left, _)) = self.split_at_display_col(col) {
             Some(GCStringOwned::new(left))
@@ -339,9 +338,9 @@ impl GraphemeStringMut for GCStringOwned {
 }
 
 impl From<(Seg, &GCStringOwned)> for SegStringOwned {
-    fn from((seg, gc_string): (Seg, &GCStringOwned)) -> Self {
+    fn from((seg, gc_string): (Seg, &GCStringOwned)) -> SegStringOwned {
         let seg_str = seg.get_str(gc_string);
-        Self {
+        SegStringOwned {
             string: GCStringOwned::new(seg_str),
             width: seg.display_width,
             start_at: seg.start_display_col_index,

@@ -9,13 +9,17 @@ use crate::{RenderOpCommon,
                              ResetColor, RestoreCursorPosition, SaveCursorPosition,
                              SetBgColor, SetFgColor},
             RenderOpDebugFormat};
-use std::fmt::{Formatter, Result};
+use std::fmt::Formatter;
 
 #[derive(Debug)]
 pub struct DirectToAnsiDebugFormatRenderOp;
 
 impl RenderOpDebugFormat for DirectToAnsiDebugFormatRenderOp {
-    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
+    fn fmt_debug(
+        &self,
+        this: &RenderOpCommon,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match this {
             Noop => f.write_str("Noop"),
             ClearScreen => f.write_str("ClearScreen"),

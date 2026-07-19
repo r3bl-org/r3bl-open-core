@@ -7,7 +7,7 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 
-use crate::NumericConversions;
+use crate::WideningCastToU16;
 
 /// Erase display modes for ED (Erase in Display) - `ESC [ n J`.
 ///
@@ -78,13 +78,17 @@ impl EraseDisplayMode {
     }
 }
 
-impl NumericConversions for EraseDisplayMode {
-    fn as_usize(&self) -> usize { *self as usize }
-    fn as_u16(&self) -> u16 { *self as u16 }
+impl WideningCastToU16 for EraseDisplayMode {
+    fn as_u16_widening(self) -> u16 {
+        #[allow(clippy::as_conversions)]
+        {
+            self as u16
+        }
+    }
 }
 
 impl From<u16> for EraseDisplayMode {
-    fn from(value: u16) -> Self { Self::from_param(value) }
+    fn from(value: u16) -> EraseDisplayMode { EraseDisplayMode::from_param(value) }
 }
 
 /// Erase line modes for EL (Erase in Line) - `ESC [ n K`.
@@ -145,13 +149,14 @@ impl EraseLineMode {
     }
 }
 
-impl NumericConversions for EraseLineMode {
-    fn as_usize(&self) -> usize { *self as usize }
-    fn as_u16(&self) -> u16 { *self as u16 }
+impl WideningCastToU16 for EraseLineMode {
+    // XMARK: Intentional numeric casting using as.
+    #[allow(clippy::as_conversions)]
+    fn as_u16_widening(self) -> u16 { self as u16 }
 }
 
 impl From<u16> for EraseLineMode {
-    fn from(value: u16) -> Self { Self::from_param(value) }
+    fn from(value: u16) -> EraseLineMode { EraseLineMode::from_param(value) }
 }
 
 #[cfg(test)]
@@ -189,10 +194,13 @@ mod tests {
 
     #[test]
     fn test_erase_display_mode_as_u16() {
-        assert_eq!(EraseDisplayMode::FromCursorToEnd.as_u16(), 0);
-        assert_eq!(EraseDisplayMode::FromStartToCursor.as_u16(), 1);
-        assert_eq!(EraseDisplayMode::EntireScreen.as_u16(), 2);
-        assert_eq!(EraseDisplayMode::EntireScreenAndScrollback.as_u16(), 3);
+        assert_eq!(EraseDisplayMode::FromCursorToEnd.as_u16_widening(), 0);
+        assert_eq!(EraseDisplayMode::FromStartToCursor.as_u16_widening(), 1);
+        assert_eq!(EraseDisplayMode::EntireScreen.as_u16_widening(), 2);
+        assert_eq!(
+            EraseDisplayMode::EntireScreenAndScrollback.as_u16_widening(),
+            3
+        );
     }
 
     #[test]
@@ -221,9 +229,9 @@ mod tests {
 
     #[test]
     fn test_erase_line_mode_as_u16() {
-        assert_eq!(EraseLineMode::FromCursorToEnd.as_u16(), 0);
-        assert_eq!(EraseLineMode::FromStartToCursor.as_u16(), 1);
-        assert_eq!(EraseLineMode::EntireLine.as_u16(), 2);
+        assert_eq!(EraseLineMode::FromCursorToEnd.as_u16_widening(), 0);
+        assert_eq!(EraseLineMode::FromStartToCursor.as_u16_widening(), 1);
+        assert_eq!(EraseLineMode::EntireLine.as_u16_widening(), 2);
     }
 
     #[test]

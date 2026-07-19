@@ -2,7 +2,7 @@
 
 use super::{super::ProcessManager, keyboard_command::KeyboardCommand,
             mouse_command::MouseCommand};
-use crate::{Continuation, DEBUG_TUI_PTY_MUX, InputEvent, Size};
+use crate::{Continuation, DEBUG_TUI_PTY_MUX, InputEvent, VPSize};
 
 /// Dynamic input event routing for the [`PTY`] multiplexer.
 ///
@@ -41,12 +41,12 @@ pub fn handle_input(
     event: InputEvent,
     process_manager: &mut ProcessManager,
 ) -> miette::Result<Continuation> {
-    let active_buffer = process_manager.active_buffer();
+    let focused_process_buffer = process_manager.focused_process_buffer();
 
     match event {
         InputEvent::Keyboard(key) => {
             // Decision - convert key press to command.
-            let keyboard_command = KeyboardCommand::from((key, active_buffer));
+            let keyboard_command = KeyboardCommand::from((key, focused_process_buffer));
             DEBUG_TUI_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
@@ -58,15 +58,15 @@ pub fn handle_input(
             // Execute the command.
             match keyboard_command {
                 KeyboardCommand::ScrollHistoryBack(amount) => {
-                    process_manager.active_process_mut().scroll_back_by(amount);
+                    process_manager.focused_process_mut().scroll_back_by(amount);
                 }
                 KeyboardCommand::ScrollHistoryForward(amount) => {
                     process_manager
-                        .active_process_mut()
+                        .focused_process_mut()
                         .scroll_forward_by(amount);
                 }
                 KeyboardCommand::ForwardToProcess(pty_event) => {
-                    process_manager.active_process_mut().maybe_scroll_offset = None;
+                    process_manager.focused_process_mut().maybe_scroll_offset = None;
                     process_manager.send_input(pty_event);
                 }
                 KeyboardCommand::Ignore => {}
@@ -74,7 +74,8 @@ pub fn handle_input(
         }
         InputEvent::Mouse(mouse_input) => {
             // Decision - convert mouse input to command.
-            let mouse_command = MouseCommand::from((&mouse_input, active_buffer));
+            let mouse_command =
+                MouseCommand::from((&mouse_input, focused_process_buffer));
             DEBUG_TUI_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
@@ -86,12 +87,18 @@ pub fn handle_input(
             // Execute the command.
             match mouse_command {
                 MouseCommand::ScrollHistoryBack(amount) => {
-                    process_manager.active_process_mut().scroll_back_by(amount);
+                    process_manager.focused_process_mut().scroll_back_by(amount);
                 }
                 MouseCommand::ScrollHistoryForward(amount) => {
                     process_manager
-                        .active_process_mut()
+                        .focused_process_mut()
                         .scroll_forward_by(amount);
+                }
+                MouseCommand::PanHistoryLeft(amount) => {
+                    process_manager.focused_process_mut().pan_left_by(amount);
+                }
+                MouseCommand::PanHistoryRight(amount) => {
+                    process_manager.focused_process_mut().pan_right_by(amount);
                 }
                 MouseCommand::ForwardToProcess(pty_event) => {
                     process_manager.send_input(pty_event);
@@ -123,7 +130,7 @@ pub fn handle_input(
 /// sessions to reserve space for the status bar.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-fn handle_resize(process_manager: &mut ProcessManager, new_size: Size) {
+fn handle_resize(process_manager: &mut ProcessManager, new_size: VPSize) {
     // Update manager's size (full terminal size)
     process_manager.handle_terminal_resize(new_size);
 

@@ -663,7 +663,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// ```no_run
     /// # #[cfg(target_os = "linux")]
-    /// # fn main() -> miette::Result<()> { tokio::runtime::Runtime::new().unwrap().block_on(async_main()) }
+    /// # fn main() -> miette::Result<()> { tokio::runtime::Runtime::new().expect("conversion error").block_on(async_main()) }
     /// # #[cfg(target_os = "linux")]
     /// # async fn async_main() -> miette::Result<()> {
     /// use r3bl_tui::{DirectToAnsiInputDevice, ok, InputEvent};

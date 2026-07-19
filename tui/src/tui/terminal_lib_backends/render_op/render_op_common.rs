@@ -20,34 +20,33 @@
 //! # Context
 //!
 //! These shared operations are used identically in:
-//! - [`crate::RenderOpIR`] - IR layer for components/app (with clipping info)
-//! - [`crate::RenderOpOutput`] - Output layer for backend (post-clipping)
+//! - [`RenderOpIR`] - IR layer for components/app (with clipping info)
+//! - [`RenderOpOutput`] - Output layer for backend (post-clipping)
 //!
 //! The enum defines operations like cursor movement, colors, text, and screen control
 //! that every stage of the pipeline needs to understand.
 //!
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
+use crate::{InlineString, VPPos, TuiColor, TuiStyle, VPCol, VPHeight};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RenderOpCommon {
-
     /// Move cursor to absolute position. This is always painted on top.
     ///
     /// Position is the absolute column and row on the terminal screen.
     /// The compositor uses [`sanitize_and_save_abs_pos`] to clean up the given position.
     ///
     /// [`sanitize_and_save_abs_pos`]: crate::paint::sanitize_and_save_abs_pos
-    MoveCursorPositionAbs(/* absolute position */ Pos),
+    MoveCursorPositionAbs(/* absolute position */ VPPos),
 
     /// Move cursor relative to origin. 1st position is origin, 2nd is offset.
     ///
     /// They are added together to move the absolute position on the terminal screen.
     /// Then [`RenderOpCommon::MoveCursorPositionAbs`] is used internally.
     MoveCursorPositionRelTo(
-        /* origin position */ Pos,
-        /* relative position */ Pos,
+        /* origin position */ VPPos,
+        /* relative position */ VPPos,
     ),
 
     /// Clears the entire terminal screen and positions cursor at top-left.
@@ -86,7 +85,7 @@ pub enum RenderOpCommon {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
-    MoveCursorToColumn(ColIndex),
+    MoveCursorToColumn(VPCol),
 
     /// Move cursor down by N lines and to column 0 (start of line).
     ///
@@ -95,7 +94,7 @@ pub enum RenderOpCommon {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
-    MoveCursorToNextLine(RowHeight),
+    MoveCursorToNextLine(VPHeight),
 
     /// Move cursor up by N lines and to column 0 (start of line).
     ///
@@ -104,7 +103,7 @@ pub enum RenderOpCommon {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
-    MoveCursorToPreviousLine(RowHeight),
+    MoveCursorToPreviousLine(VPHeight),
 
     /// Clear current line only, leaving cursor position unchanged.
     ///
@@ -150,7 +149,6 @@ pub enum RenderOpCommon {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     PrintStyledText(InlineString),
 
-
     /// Save cursor position to be restored later.
     ///
     /// Maps to [`CSI`] `s` [`ANSI`] sequence (also known as [`DECSC`] - save cursor).
@@ -181,11 +179,31 @@ pub enum RenderOpCommon {
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     RestoreCursorPosition,
 
-
     /// No-operation render operation that does nothing when executed.
     ///
     /// Used as a placeholder or default value in situations where a render operation
     /// is required but no actual rendering should occur. Safe to include in operation
     /// lists as it has no side effects.
     Noop,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{vp_col, vp_height};
+
+    #[test]
+    fn test_render_op_common_viewport_aliases() {
+        let op_col = RenderOpCommon::MoveCursorToColumn(vp_col(5));
+        assert_eq!(op_col, RenderOpCommon::MoveCursorToColumn(vp_col(5)));
+
+        let op_next = RenderOpCommon::MoveCursorToNextLine(vp_height(3));
+        assert_eq!(op_next, RenderOpCommon::MoveCursorToNextLine(vp_height(3)));
+
+        let op_prev = RenderOpCommon::MoveCursorToPreviousLine(vp_height(2));
+        assert_eq!(
+            op_prev,
+            RenderOpCommon::MoveCursorToPreviousLine(vp_height(2))
+        );
+    }
 }

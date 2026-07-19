@@ -1,8 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{early_return_if_paused, ok};
-use crate::{CsiSequence, EraseDisplayMode, LineStateLiveness, StringLength, width};
+use crate::{
+    early_return_if_paused, ok, vp_col, vp_width, CsiSequence, EraseDisplayMode,
+    LineStateLiveness, StringLength,
+};
 use std::io::{self, Write};
 
 impl LineState {
@@ -14,8 +16,8 @@ impl LineState {
     pub fn clear(&self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
-        // Column index value equals distance from start (col 5 = 5 chars from start).
-        self.move_to_beginning(term, width(self.current_column.as_u16()))?;
+        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
+        self.move_to_beginning(term, cursor_distance_from_start)?;
         // ED 0 = Erase from cursor to end of screen (CSI 0J).
         term.write_all(
             CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd)
@@ -43,11 +45,11 @@ impl LineState {
         // Use pre-computed display width from GCStringOwned.
         let line_display_width = self.line.width();
 
-        let total_line_len = width(prompt_len) + line_display_width;
+        let total_line_len = vp_width(prompt_len) + line_display_width;
 
         self.move_to_beginning(term, total_line_len)?;
-        // Column index value equals distance from start (col 5 = 5 chars from start).
-        self.move_from_beginning(term, width(self.current_column.as_u16()))?;
+        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
+        self.move_from_beginning(term, cursor_distance_from_start)?;
 
         term.flush()?;
 
@@ -73,14 +75,16 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{CHA_CURSOR_COLUMN, CSI_START, ED_ERASE_DISPLAY, ED_ERASE_TO_END,
-                GCStringOwned, core::test_fixtures::StdoutMock, height, width, Size};
+                GCStringOwned, core::test_fixtures::StdoutMock, vp_height, vp_width};
 
     #[test]
     fn test_clear_writes_escape_sequences() {
-        let line_state = LineState::new("prompt> ".into(), Size::new((width(80), height(24))));
+        let line_state = LineState::new("prompt> ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.clear(&mut stdout_mock).unwrap();
+        line_state
+            .clear(&mut stdout_mock)
+            .expect("conversion error");
         let output = stdout_mock.get_copy_of_buffer_as_string();
 
         // Should contain CursorHorizontalAbsolute (move to column 1).
@@ -100,11 +104,13 @@ mod tests {
 
     #[test]
     fn test_render_and_flush_outputs_prompt_and_line() {
-        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("$ ".into(), vp_width(80) + vp_height(24));
         line_state.line = GCStringOwned::new("hello");
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.render_and_flush(&mut stdout_mock).unwrap();
+        line_state
+            .render_and_flush(&mut stdout_mock)
+            .expect("conversion error");
         let output = stdout_mock.get_copy_of_buffer_as_string();
 
         // Should contain the prompt and line content.

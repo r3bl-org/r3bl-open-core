@@ -13,20 +13,28 @@
 //! - Interactions between scroll regions and cursor positioning
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AutoWrapMode, EscSequence, TuiStyle, col,
+use crate::{AutoWrapMode, EscSequence, OfsBufVT100, PendingWrap, PixelChar, RangeExt,
+            TuiStyle,
             core::ansi::{constants::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType,
                                                     ansi_parser_public_api::AnsiToOfsBufPerformer}},
             ofs_buf::test_fixtures_ofs_buf::*,
-            row, term_col, term_row, term_row_delta};
+            term_col, term_row, term_row_delta, vp_col, vp_row};
 use vte::Perform;
-use crate::{OfsBufVT100, PendingWrap, PixelChar};
 
 fn fill_buffer_with_lines(ofs_buf_vt_100: &mut OfsBufVT100) {
-    for r in 0..ofs_buf_vt_100.ofs_buf.get_window_size().row_height.as_usize() {
-        let line_text = format!("Line-{r}");
+    let row_height = ofs_buf_vt_100
+        .primary_buffer_mut()
+        .get_window_size()
+        .row_height;
+    let row_range = ..row_height;
+    for row_idx in row_range.as_index_iter() {
+        let line_text = format!("Line-{}", row_idx.as_usize());
         for (c, char) in line_text.chars().enumerate() {
-            ofs_buf_vt_100.ofs_buf.get_row_mut(r).unwrap()[c] = PixelChar::PlainText {
+            ofs_buf_vt_100
+                .primary_buffer_mut()
+                .get_row_mut(row_idx)
+                .expect("conversion error")[c] = PixelChar::PlainText {
                 display_char: char,
                 style: TuiStyle::default(),
             };
@@ -65,7 +73,10 @@ pub mod auto_wrap {
 
         // Verify auto-wrap is enabled by default.
         assert!(
-            performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .auto_wrap_mode
                 == AutoWrapMode::Enabled,
             "Auto-wrap mode should be enabled by default"
         );
@@ -78,11 +89,14 @@ pub mod auto_wrap {
         // Verify cursor is clamped at right margin with pending wrap
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(9),
+            vp_row(0) + vp_col(9),
             "Cursor should be at (r:0,c:9) clamped after printing 10 characters"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
         );
 
@@ -92,7 +106,7 @@ pub mod auto_wrap {
         // Verify cursor wrapped to next line.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(1) + col(1),
+            vp_row(1) + vp_col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
 
@@ -125,13 +139,18 @@ pub mod auto_wrap {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Disable auto-wrap mode using CSI `?7l`.
-        let sequence =
-            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
+        let sequence = CsiSequence::DisablePrivateMode(smallvec::smallvec![
+            PrivateModeType::AutoWrap
+        ])
+        .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify auto-wrap is now disabled.
         assert!(
-            performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .auto_wrap_mode
                 == AutoWrapMode::Disabled,
             "Auto-wrap mode should be disabled after CSI ?7l"
         );
@@ -147,7 +166,7 @@ pub mod auto_wrap {
         // Verify cursor stays at right margin.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(9),
+            (vp_row(0) + vp_col(9)),
             "Cursor should stay at (r:0,c:9) without wrapping"
         );
 
@@ -163,25 +182,38 @@ pub mod auto_wrap {
 
         // Start with default (enabled)
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .auto_wrap_mode,
             AutoWrapMode::Enabled
         );
 
         // Disable auto-wrap.
-        let disable_sequence =
-            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
+        let disable_sequence = CsiSequence::DisablePrivateMode(smallvec::smallvec![
+            PrivateModeType::AutoWrap
+        ])
+        .to_string();
         performer.apply_ansi_bytes(disable_sequence);
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .auto_wrap_mode,
             AutoWrapMode::Disabled
         );
 
         // Re-enable auto-wrap using CSI `?7h`.
-        let enable_sequence =
-            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
+        let enable_sequence = CsiSequence::EnablePrivateMode(smallvec::smallvec![
+            PrivateModeType::AutoWrap
+        ])
+        .to_string();
         performer.apply_ansi_bytes(enable_sequence);
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .auto_wrap_mode,
             AutoWrapMode::Enabled
         );
 
@@ -194,7 +226,7 @@ pub mod auto_wrap {
         // Verify wrapping occurred.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(1) + col(1),
+            (vp_row(1) + vp_col(1)),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
 
@@ -242,38 +274,49 @@ pub mod auto_wrap {
         // Now cursor should be clamped at (r:0,c:9) with pending wrap
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(9),
+            (vp_row(0) + vp_col(9)),
             "Cursor should be clamped at (r:0,c:9) after printing 10 characters"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
         );
 
         // Disable auto-wrap mode.
-        let sequence =
-            CsiSequence::DisablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
+        let sequence = CsiSequence::DisablePrivateMode(smallvec::smallvec![
+            PrivateModeType::AutoWrap
+        ])
+        .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Move to end of line 2 and test clamping.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(2) + col(9));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(2) + vp_col(9));
         performer.print('X'); // At boundary
         performer.print('Y'); // Should clamp to (r:2,c:9) and overwrite 'X'
 
         // Re-enable auto-wrap mode.
-        let sequence =
-            CsiSequence::EnablePrivateMode(smallvec::smallvec![PrivateModeType::AutoWrap]).to_string();
+        let sequence = CsiSequence::EnablePrivateMode(smallvec::smallvec![
+            PrivateModeType::AutoWrap
+        ])
+        .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Move to a new position and test wrapping again.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(2) + col(9));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(2) + vp_col(9));
         performer.print('A');
         performer.print('B'); // Should wrap to row 3
 
         // Verify final cursor position.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(3) + col(1),
+            (vp_row(3) + vp_col(1)),
             "Cursor should be at (r:3,c:1) after wrapping"
         );
 
@@ -323,7 +366,7 @@ pub mod line_wrapping {
         // Verify cursor wrapped to next line.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(1) + col(1),
+            (vp_row(1) + vp_col(1)),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
 
@@ -366,7 +409,9 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Move cursor to the last row.
-        performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.row_index = row(9));
+        performer
+            .ofs_buf_vt_100
+            .update_cursor_pos(|pos| pos.row_index = vp_row(9));
 
         // Execute Index (ESC D)
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
@@ -401,7 +446,9 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Move cursor to the first row.
-        performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.row_index = row(0));
+        performer
+            .ofs_buf_vt_100
+            .update_cursor_pos(|pos| pos.row_index = vp_row(0));
 
         // Execute Reverse Index (ESC M)
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
@@ -439,7 +486,9 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Execute Scroll Up by 2 lines (CSI 2 S)
-        let sequence = CsiSequence::ScrollUp(term_row_delta(2).unwrap()).to_string();
+        let sequence =
+            CsiSequence::ScrollUp(term_row_delta(2).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify buffer scrolled up by 2: "Line-2" is now at row 0.
@@ -474,7 +523,9 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Execute Scroll Down by 3 lines (CSI 3 T)
-        let sequence = CsiSequence::ScrollDown(term_row_delta(3).unwrap()).to_string();
+        let sequence =
+            CsiSequence::ScrollDown(term_row_delta(3).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify buffer scrolled down by 3: first 3 lines are empty
@@ -513,7 +564,9 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Execute Scroll Up by 20 lines (more than height)
-        let sequence = CsiSequence::ScrollUp(term_row_delta(20).unwrap()).to_string();
+        let sequence =
+            CsiSequence::ScrollUp(term_row_delta(20).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify the entire buffer is empty.
@@ -531,7 +584,9 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
         // Execute Scroll Down by 20 lines (more than height)
-        let sequence = CsiSequence::ScrollDown(term_row_delta(20).unwrap()).to_string();
+        let sequence =
+            CsiSequence::ScrollDown(term_row_delta(20).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify the entire buffer is empty.
@@ -562,13 +617,15 @@ pub mod scrolling {
         // Row 7: │Line-7│
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
-        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(0));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(5) + vp_col(0));
 
         // Execute Index (ESC D) - should just move cursor down
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(0),
+            (vp_row(6) + vp_col(0)),
             "Cursor should move down"
         );
         assert_plain_text_at(performer.ofs_buf_vt_100, 5, 0, "Line-5");
@@ -577,7 +634,7 @@ pub mod scrolling {
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(0),
+            (vp_row(5) + vp_col(0)),
             "Cursor should move up"
         );
         assert_plain_text_at(performer.ofs_buf_vt_100, 6, 0, "Line-6");
@@ -594,8 +651,10 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Send CSI sequence with explicit default parameter 1.
-        let scroll_up_sequence =
-            format!("{}", CsiSequence::ScrollUp(term_row_delta(1).unwrap()));
+        let scroll_up_sequence = format!(
+            "{}",
+            CsiSequence::ScrollUp(term_row_delta(1).expect("conversion error"))
+        );
         performer.apply_ansi_bytes(scroll_up_sequence.as_bytes());
 
         // After scrolling up by 1, Line-1 should be at row 0.
@@ -615,8 +674,10 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Send CSI sequence with explicit default parameter 1.
-        let scroll_down_sequence =
-            format!("{}", CsiSequence::ScrollDown(term_row_delta(1).unwrap()));
+        let scroll_down_sequence = format!(
+            "{}",
+            CsiSequence::ScrollDown(term_row_delta(1).expect("conversion error"))
+        );
         performer.apply_ansi_bytes(scroll_down_sequence.as_bytes());
 
         // After scrolling down by 1, top row should be empty.
@@ -637,40 +698,52 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Test ESC D (Index) at bottom - cursor should remain at bottom
-        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(5));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(9) + vp_col(5));
         performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(5),
+            (vp_row(9) + vp_col(5)),
             "Cursor should remain at bottom after ESC D scroll"
         );
 
         // Test ESC M (Reverse Index) at top - cursor should remain at top
-        performer.ofs_buf_vt_100.set_cursor_pos(row(0) + col(3));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(0) + vp_col(3));
         performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(3),
+            vp_row(0) + vp_col(3),
             "Cursor should remain at top after ESC M scroll"
         );
 
         // Test CSI S (Scroll Up) - cursor position should be unchanged
-        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(7));
-        let sequence = CsiSequence::ScrollUp(term_row_delta(2).unwrap()).to_string();
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(4) + vp_col(7));
+        let sequence =
+            CsiSequence::ScrollUp(term_row_delta(2).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(4) + col(7),
+            vp_row(4) + vp_col(7),
             "Cursor position should be unchanged after CSI S scroll"
         );
 
         // Test CSI T (Scroll Down) - cursor position should be unchanged
-        performer.ofs_buf_vt_100.set_cursor_pos(row(6) + col(2));
-        let sequence = CsiSequence::ScrollDown(term_row_delta(1).unwrap()).to_string();
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(6) + vp_col(2));
+        let sequence =
+            CsiSequence::ScrollDown(term_row_delta(1).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(6) + col(2),
+            vp_row(6) + vp_col(2),
             "Cursor position should be unchanged after CSI T scroll"
         );
     }
@@ -700,7 +773,7 @@ pub mod scrolling {
         assert_empty_at(performer.ofs_buf_vt_100, 9, 0);
 
         // Reset buffer for next test.
-        fill_buffer_with_lines(performer.ofs_buf_vt_100);
+        fill_buffer_with_lines(&mut *performer.ofs_buf_vt_100);
 
         // Test CSI 0 T (Scroll Down by 0 lines) - also treated as 1
         // Use raw ANSI bytes since type-safe API prevents zero deltas
@@ -711,12 +784,15 @@ pub mod scrolling {
         assert_plain_text_at(performer.ofs_buf_vt_100, 1, 0, "Line-0");
 
         // Reset buffer for final test.
-        fill_buffer_with_lines(performer.ofs_buf_vt_100);
+        fill_buffer_with_lines(&mut *performer.ofs_buf_vt_100);
 
         // Test single line scroll up followed by single line scroll down.
-        let sequence_up = CsiSequence::ScrollUp(term_row_delta(1).unwrap()).to_string();
+        let sequence_up =
+            CsiSequence::ScrollUp(term_row_delta(1).expect("conversion error"))
+                .to_string();
         let sequence_down =
-            CsiSequence::ScrollDown(term_row_delta(1).unwrap()).to_string();
+            CsiSequence::ScrollDown(term_row_delta(1).expect("conversion error"))
+                .to_string();
 
         performer.apply_ansi_bytes(sequence_up); // Line-0 lost, Line-1->0, empty at bottom
         performer.apply_ansi_bytes(sequence_down); // Empty at top, Line-1->1, Line-2->0
@@ -750,7 +826,9 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Fill the last line except for the last character.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(0));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(9) + vp_col(0));
         for c in "ABCDEFGHI".chars() {
             performer.print(c);
         }
@@ -758,7 +836,7 @@ pub mod line_wrap_scroll_interaction {
         // Verify cursor is at the last position.
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(9),
+            vp_row(9) + vp_col(9),
             "Cursor should be at last position (9,9)"
         );
 
@@ -772,11 +850,14 @@ pub mod line_wrap_scroll_interaction {
         // J gets written at (9,9), cursor enters pending wrap state
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(9),
+            vp_row(9) + vp_col(9),
             "Cursor should clamp at (9,9) after printing J"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
         );
 
@@ -796,7 +877,9 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Position cursor on row 5 (not the last row).
-        performer.ofs_buf_vt_100.set_cursor_pos(row(5) + col(9));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(5) + vp_col(9));
 
         // Print character that should wrap.
         performer.print('X');
@@ -804,11 +887,14 @@ pub mod line_wrap_scroll_interaction {
         // X gets written at (5,9), cursor enters pending wrap state
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(5) + col(9),
+            vp_row(5) + vp_col(9),
             "Cursor should clamp to (5,9) after printing"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
         );
 
@@ -831,7 +917,9 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
 
         // Position at bottom line, leave room for some characters.
-        performer.ofs_buf_vt_100.set_cursor_pos(row(9) + col(7));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(9) + vp_col(7));
 
         // Print characters that fill and wrap the line.
         performer.print('A'); // written at (9,7), cursor to (9,8)
@@ -841,18 +929,22 @@ pub mod line_wrap_scroll_interaction {
         // After wrap, cursor should be at (9,9) with pending wrap Yes
         assert_eq!(
             performer.ofs_buf_vt_100.get_cursor_pos(),
-            row(9) + col(9),
+            vp_row(9) + vp_col(9),
             "Should clamp to column 9 after printing C"
         );
         assert_eq!(
-            performer.ofs_buf_vt_100.parser_global_state.pending_wrap,
+            performer
+                .ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .pending_wrap,
             PendingWrap::Yes,
         );
 
         // Verify no scrolling yet - Line-0 still at top.
         assert_plain_text_at(performer.ofs_buf_vt_100, 0, 0, "Line-0");
 
-        // Continue printing - should apply pending wrap, move to next row (which scrolls buffer), and write at column 0.
+        // Continue printing - should apply pending wrap, move to next row (which scrolls
+        // buffer), and write at column 0.
         performer.print('D'); // scrolls, writes at (9,0), cursor to (9,1)
         performer.print('E'); // writes at (9,1), cursor to (9,2)
 
@@ -896,14 +988,14 @@ pub mod decstbm_scroll_margins {
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_top,
             Some(term_row(nz(3)))
         );
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_bottom,
             Some(term_row(nz(7)))
         );
@@ -924,14 +1016,14 @@ pub mod decstbm_scroll_margins {
         assert!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_top
                 .is_some()
         );
         assert!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_bottom
                 .is_some()
         );
@@ -948,14 +1040,14 @@ pub mod decstbm_scroll_margins {
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_top,
             None
         );
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state()
                 .scroll_region_bottom,
             None
         );
@@ -965,7 +1057,7 @@ pub mod decstbm_scroll_margins {
     fn test_scrolling_within_margins() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
-        fill_buffer_with_lines(performer.ofs_buf_vt_100);
+        fill_buffer_with_lines(&mut *performer.ofs_buf_vt_100);
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
@@ -976,7 +1068,9 @@ pub mod decstbm_scroll_margins {
         performer.apply_ansi_bytes(set_margins);
 
         // Scroll up one line - should only affect rows 2-6 (0-based)
-        let scroll_up = CsiSequence::ScrollUp(term_row_delta(1).unwrap()).to_string();
+        let scroll_up =
+            CsiSequence::ScrollUp(term_row_delta(1).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(scroll_up);
 
         // Content outside scroll region should be unchanged.
@@ -1015,12 +1109,28 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // 0-based row 2
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            2
+        ); // 0-based row 2
 
         // Try to move cursor up - should be clamped to scroll region top.
-        let move_cursor_up = CsiSequence::CursorUp(term_row_delta(5).unwrap()).to_string();
+        let move_cursor_up =
+            CsiSequence::CursorUp(term_row_delta(5).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(move_cursor_up);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // Still at top margin
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            2
+        ); // Still at top margin
 
         // Move cursor to bottom of scroll region.
         let cursor_pos_bottom = CsiSequence::CursorPosition {
@@ -1029,12 +1139,28 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos_bottom);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // 0-based row 6
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            6
+        ); // 0-based row 6
 
         // Try to move cursor down - should be clamped to scroll region bottom.
-        let move_cursor_down = CsiSequence::CursorDown(term_row_delta(5).unwrap()).to_string();
+        let move_cursor_down =
+            CsiSequence::CursorDown(term_row_delta(5).expect("conversion error"))
+                .to_string();
         performer.apply_ansi_bytes(move_cursor_down);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // Still at bottom margin
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            6
+        ); // Still at bottom margin
     }
 
     #[test]
@@ -1057,7 +1183,14 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_above);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 2); // Clamped to top margin
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            2
+        ); // Clamped to top margin
 
         // Try to position cursor below scroll region.
         let cursor_below = CsiSequence::CursorPosition {
@@ -1066,7 +1199,14 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_below);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 6); // Clamped to bottom margin
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            6
+        ); // Clamped to bottom margin
 
         // Position within scroll region should work normally.
         let cursor_within = CsiSequence::CursorPosition {
@@ -1075,14 +1215,21 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_within);
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().row_index.as_usize(), 4); // 0-based row 4
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .row_index
+                .as_usize(),
+            4
+        ); // 0-based row 4
     }
 
     #[test]
     fn test_index_and_reverse_index_with_margins() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf_vt_100);
-        fill_buffer_with_lines(performer.ofs_buf_vt_100);
+        fill_buffer_with_lines(&mut *performer.ofs_buf_vt_100);
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
@@ -1145,7 +1292,7 @@ pub mod decstbm_scroll_margins {
         assert!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_top
                 .is_some()
         );
@@ -1158,14 +1305,14 @@ pub mod decstbm_scroll_margins {
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_top,
             None
         );
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_bottom,
             None
         );
@@ -1188,14 +1335,14 @@ pub mod decstbm_scroll_margins {
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_top,
             None
         );
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_bottom,
             None
         );
@@ -1212,14 +1359,14 @@ pub mod decstbm_scroll_margins {
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_top,
             Some(term_row(nz(1)))
         );
         assert_eq!(
             performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .scroll_region_bottom,
             Some(term_row(nz(10)))
         );
@@ -1257,12 +1404,12 @@ pub mod cursor_boundary_operations {
         // Execute CursorNextLine (should move to next line, column 1)
         let next_line_sequence = format!(
             "{}",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(next_line_sequence);
 
         // Should be at row 5, column 1 (within scroll region)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(0)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(4) + vp_col(0)); // 0-based
     }
 
     #[test]
@@ -1292,12 +1439,12 @@ pub mod cursor_boundary_operations {
         // Execute CursorNextLine (should cause scrolling within region)
         let next_line_sequence = format!(
             "{}",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(next_line_sequence);
 
         // Should remain at row 7, column 1 (region boundary), but content should scroll
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(6) + col(0)); // 0-based row 6 = 1-based row 7
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(6) + vp_col(0)); // 0-based row 6 = 1-based row 7
     }
 
     #[test]
@@ -1327,12 +1474,12 @@ pub mod cursor_boundary_operations {
         // Execute CursorPrevLine (should move to previous line, column 1)
         let prev_line_sequence = format!(
             "{}",
-            CsiSequence::CursorPrevLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorPrevLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(prev_line_sequence);
 
         // Should be at row 4, column 1 (within scroll region)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(3) + col(0)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(3) + vp_col(0)); // 0-based
     }
 
     #[test]
@@ -1362,12 +1509,12 @@ pub mod cursor_boundary_operations {
         // Execute CursorPrevLine (should cause scrolling or stay at boundary)
         let prev_line_sequence = format!(
             "{}",
-            CsiSequence::CursorPrevLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorPrevLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(prev_line_sequence);
 
         // Should remain at row 3, column 1 (region boundary)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(0)); // 0-based row 2 = 1-based row 3
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(2) + vp_col(0)); // 0-based row 2 = 1-based row 3
     }
 
     #[test]
@@ -1397,7 +1544,7 @@ pub mod cursor_boundary_operations {
         // Execute CursorNextLine (should work normally outside region)
         let next_line_sequence = format!(
             "{}",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(next_line_sequence);
 
@@ -1406,7 +1553,7 @@ pub mod cursor_boundary_operations {
         // column 0 From row 2 (1-based) to row 3 (1-based) = from row 1 (0-based)
         // to row 2 (0-based) But test shows cursor at row 4 (0-based), so
         // CursorNextLine(1) moved from row 1 to row 4
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(0)); // 0-based - matches actual behavior
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(4) + vp_col(0)); // 0-based - matches actual behavior
     }
 }
 
@@ -1432,8 +1579,12 @@ pub mod boundary_validation {
         // This behavior depends on implementation - some terminals ignore invalid ranges
         // We test that the system doesn't crash and maintains a valid state
         if let (Some(top), Some(bottom)) = (
-            ofs_buf_vt_100.parser_global_state.scroll_region_top,
-            ofs_buf_vt_100.parser_global_state.scroll_region_bottom,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_top,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_bottom,
         ) {
             assert!(top.value() <= bottom.value()); // Compare the inner NonZeroU16 values
         }
@@ -1455,7 +1606,10 @@ pub mod boundary_validation {
 
         // Implementation should clamp or ignore invalid bounds
         // We verify the system remains in a valid state
-        if let Some(bottom) = ofs_buf_vt_100.parser_global_state.scroll_region_bottom {
+        if let Some(bottom) = ofs_buf_vt_100
+            .get_parser_global_state_mut()
+            .scroll_region_bottom
+        {
             assert!(bottom.value().get() <= 10); // Compare the inner u16 value
         }
     }
@@ -1490,7 +1644,7 @@ pub mod boundary_validation {
 
         // Cursor should stay within or handle the single-line region appropriately
         // Exact behavior may vary by implementation
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(9)); // Within buffer bounds
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= vp_row(9)); // Within buffer bounds
     }
 
     #[test]
@@ -1522,12 +1676,12 @@ pub mod boundary_validation {
         let scroll_ops = format!(
             "{}{}",
             "Text at bottom",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(scroll_ops);
 
         // Should handle full-buffer scrolling correctly
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(9)); // Should stay at bottom row
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, vp_row(9)); // Should stay at bottom row
     }
 }
 
@@ -1583,16 +1737,16 @@ pub mod complex_interactions {
                 col: term_col(nz(6))
             },
             // Should cause scrolling
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()),
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error")),
             "NewText",
             // Should move up within region
-            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap())
+            CsiSequence::CursorPrevLine(term_row_delta(2).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(complex_ops);
 
         // Verify the cursor is within the scroll region bounds
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= row(2)); // >= row 3 (1-based)
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(6)); // <= row 7 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= vp_row(2)); // >= row 3 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= vp_row(6)); // <= row 7 (1-based)
     }
 
     #[test]
@@ -1626,15 +1780,15 @@ pub mod complex_interactions {
         // Based on actual behavior: line feed may move cursor beyond expected bounds
         // Current implementation may not fully respect scroll region boundaries for LF
         // Verify the cursor position is reasonable within the buffer bounds
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10)); // Within buffer bounds
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10)); // Within buffer bounds
 
         // Send carriage return + line feed combination
         let crlf_sequence = "\r\n";
         let _result = ofs_buf_vt_100.apply_ansi_bytes(crlf_sequence);
 
         // Should handle the combination and move to beginning of next line
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10)); // Within buffer bounds
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0)); // Should be at column 1
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10)); // Within buffer bounds
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(0)); // Should be at column 1
     }
 
     #[test]
@@ -1665,14 +1819,14 @@ pub mod complex_interactions {
         let text_overflow = format!(
             "{}{}{}{}",
             "Line1",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap()),
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error")),
             "Line2",
-            CsiSequence::CursorNextLine(term_row_delta(1).unwrap())
+            CsiSequence::CursorNextLine(term_row_delta(1).expect("conversion error"))
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(text_overflow);
 
         // Final cursor position should be within the narrow scroll region
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= row(4)); // >= row 5 (1-based)
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= row(5)); // <= row 6 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index >= vp_row(4)); // >= row 5 (1-based)
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index <= vp_row(5)); // <= row 6 (1-based)
     }
 }

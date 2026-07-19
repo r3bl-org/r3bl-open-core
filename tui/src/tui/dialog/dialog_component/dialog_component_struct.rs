@@ -1,10 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
-            DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfigOptions,
+            DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfig,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
-            OnDialogPressFn, SurfaceBounds,
+            OnDialogPressFn, VPBoundingBox,
             common::{CommonError, CommonErrorType, CommonResult},
             ok};
 use std::fmt::Debug;
@@ -51,13 +51,13 @@ where
     /// necessary arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
-    /// - Surface bounds: [`SurfaceBounds`] containing the bounds of the current box.
+    /// - Surface bounds: [`VPBoundingBox`] containing the bounds of the current box.
     ///
     /// Note:
     /// 1. The 3rd argument `_current_box` [`FlexBox`] is ignored since the dialog
     ///    component breaks out of whatever box the layout places it in, and ends up
     ///    painting itself over the entire screen.
-    /// 2. However, [`SurfaceBounds`] is saved for later use. And it is used to restrict
+    /// 2. However, [`VPBoundingBox`] is saved for later use. And it is used to restrict
     ///    where the dialog can be placed on the screen.
     ///
     /// [DialogEngineApi::render_engine]: DialogEngineApi::render_engine
@@ -65,7 +65,7 @@ where
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         _current_box: FlexBox,         /* Ignore this. */
-        surface_bounds: SurfaceBounds, /* Save this. */
+        surface_bounds: VPBoundingBox, /* Save this. */
         has_focus: &mut HasFocus,
     ) -> CommonResult {
         // Unpack the global data.
@@ -82,14 +82,8 @@ where
 
         match state.get_mut_dialog_buffer(self_id) {
             Some(_) => {
-                let args = {
-                    DialogEngineArgs {
-                        self_id,
-                        global_data,
-                        engine: dialog_engine,
-                        has_focus,
-                    }
-                };
+                let args =
+                    DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
                 DialogEngineApi::render_engine(args)
             }
             None => ok!(),
@@ -206,7 +200,7 @@ where
     /// dispatched to the given store.
     pub fn new(
         id: FlexBoxId,
-        dialog_options: DialogEngineConfigOptions,
+        dialog_options: DialogEngineConfig,
         editor_options: EditorEngineConfig,
         on_dialog_press_handler: OnDialogPressFn<S, AS>,
         on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, AS>,
@@ -225,7 +219,7 @@ where
 
     pub fn new_boxed(
         id: FlexBoxId,
-        dialog_options: DialogEngineConfigOptions,
+        dialog_options: DialogEngineConfig,
         editor_options: EditorEngineConfig,
         on_dialog_press_handler: OnDialogPressFn<S, AS>,
         on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, AS>,

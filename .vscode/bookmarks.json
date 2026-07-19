@@ -1,37 +1,22 @@
 {
 	"files": [
 		{
-			"path": "tui/src/core/common/scoped_mutex/thread_lock_state_machine.rs",
+			"path": "tui/src/tui/editor/editor_engine/validate_scroll_on_resize.rs",
 			"bookmarks": [
 				{
-					"line": 93,
+					"line": 85,
 					"column": 0,
-					"label": ""
+					"label": "this is where code smell exists between old and new canvas & viewport world - should use viewport bounds check"
 				}
 			]
 		},
 		{
-			"path": "tui/src/core/common/scoped_mutex/deadlock_prevention.rs",
+			"path": "task/modernize-editor-using-new-units.md",
 			"bookmarks": [
 				{
-					"line": 14,
+					"line": 403,
 					"column": 0,
-					"label": ""
-				}
-			]
-		},
-		{
-			"path": "tui/src/readline_async/readline_async_impl/readline.rs",
-			"bookmarks": [
-				{
-					"line": 333,
-					"column": 4,
-					"label": ""
-				},
-				{
-					"line": 1163,
-					"column": 69,
-					"label": ""
+					"label": "We stopped work here to jump off into viewport_bounds_check.md"
 				}
 			]
 		}

@@ -326,6 +326,30 @@ fn process_item(item: &Data) -> Result<Output> {
 
 ---
 
+## Complex Trait Bounds Documentation
+
+When defining complex trait bounds (e.g., in a `where` clause with multiple trait constraints), format them clearly with block comments (`/* ... */`) aligned on the right to explain the purpose of each bound. This makes complex type acrobatics much easier to understand.
+
+**✅ Good:**
+```rust
+where
+    Self::IndexType:
+          ArrayBoundsCheck<Self>        /* Ensure index can check overflow against this length */
+        + Sub<Output = Self::IndexType> /* Allow subtracting index types for distance */
+        + IndexOps,                     /* Base index operations */
+```
+
+**❌ Bad:**
+```rust
+where
+    // Ensure index can check overflow against this length
+    // Allow subtracting index types for distance
+    // Base index operations
+    Self::IndexType: ArrayBoundsCheck<Self> + Sub<Output = Self::IndexType> + IndexOps,
+```
+
+---
+
 ## cargo fmt Formatting Rules
 
 ### Indentation
@@ -374,18 +398,16 @@ let result = some_function_with_many_params(param1, param2, param3, param4, para
 
 ```rust
 // ✅ Good - organized imports
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read};
 
-use external_crate::SomeType;
+use rustc_hash::FxHashMap;
 
 use crate::internal::Module;
 
 // ❌ Bad - unorganized
 use crate::internal::Module;
-use std::collections::HashMap;
-use external_crate::SomeType;
+use rustc_hash::FxHashMap;
 use std::io::{self, Read};
 use std::fs::File;
 ```
@@ -537,6 +559,30 @@ use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
 
 ---
 
+## Prefer `?` Operator / Early Returns over `.and_then()` (Mandatory)
+
+Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead, write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else` statements). The only acceptable exception is for boolean constant gating in tracing/logging calls if necessary, though even then, canonical Rust is preferred.
+
+**✅ Good:**
+```rust
+fn get_char(&self, pos: Pos) -> Option<PixelChar> {
+    let row = self.get_row(pos.row_index)?;
+    let cell = row.get(pos.col_index.as_usize())?;
+    Some(*cell)
+}
+```
+
+**❌ Bad:**
+```rust
+fn get_char(&self, pos: Pos) -> Option<PixelChar> {
+    self.get_row(pos.row_index)
+        .and_then(|row| row.get(pos.col_index.as_usize()))
+        .copied()
+}
+```
+
+---
+
 ## Summary Checklist
 
 When running the `run-clippy` skill:
@@ -544,6 +590,7 @@ When running the `run-clippy` skill:
 - [ ] `cargo clippy --all-targets` shows no warnings
 - [ ] Comment punctuation follows rules (single-line: period, wrapped: period at end, independent: each gets period)
 - [ ] Suppressed lints (`#[allow(...)]`) include the built-in `reason` parameter
+- [ ] No `.and_then()` used for Option/Result combinators (prefer `?` early returns)
 - [ ] Module organization follows private + re-export pattern where appropriate
 - [ ] Rustdoc reference-style links properly formatted (if applicable)
 - [ ] Tests pass after auto-fixes: `cargo test --all-targets`

@@ -41,4 +41,16 @@ exclude = [
     "^https?://api\\.star-history\\.com/",
     # Medium blocks scrapers.
     "^https?://medium\\.com/",
+    # Stack Overflow blocks automated link checkers (returns 403 to bots).
+    "^https?://stackoverflow\\.com/",
+    # GNU.org times out automated link checkers.
+    "^https?://(www\\.)?gnu\\.org/",
 ]
+
+# Exclude specific files from link checking.
+exclude_path = [
+    # Exclude files which contain dummy and mock URLs in unit tests (these are regexes).
+    "build-infra/src/cargo_rustdoc_fmt/link_converter\\.rs",
+    "build-infra/src/cargo_rustdoc_fmt/technical_term_linker\\.rs",
+]
+

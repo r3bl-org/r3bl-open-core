@@ -24,7 +24,7 @@ pub enum EventLoopResult {
 pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
-    on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
+    mut on_keypress_fn: impl FnMut(&mut S, InputEvent) -> EventLoopResult,
     input_device: &mut InputDevice,
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
@@ -42,7 +42,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     loop {
         let maybe_ie = input_device.next().await;
         if let Some(ie) = maybe_ie {
-            let event_loop_result = on_keypress(state, ie);
+            let event_loop_result = on_keypress_fn(state, ie);
             if let Some(result) =
                 handle_event_loop_result(function_component, event_loop_result, state)
             {
@@ -67,7 +67,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
 pub fn enter_event_loop_sync<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
-    on_keypress: impl Fn(&mut S, InputEvent) -> EventLoopResult,
+    mut on_keypress_fn: impl FnMut(&mut S, InputEvent) -> EventLoopResult,
     key_press_reader: &mut impl KeyPressReader,
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
@@ -87,7 +87,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
         if let Some(ie) = maybe_ie {
             if let Some(result) = handle_event_loop_result(
                 function_component,
-                on_keypress(state, ie),
+                on_keypress_fn(state, ie),
                 state,
             ) {
                 return_this = result;

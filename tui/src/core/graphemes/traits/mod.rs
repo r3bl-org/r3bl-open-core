@@ -14,8 +14,7 @@
 //! - **Future extensibility**: If additional document storage types are added beyond
 //!   [`ZeroCopyGapBuffer`], they can implement these traits for seamless integration.
 //! - **Generic document operations**: New code can work with document-like structures
-//!   generically through the [`GraphemeDoc`] and [`GraphemeDocMut`] traits, without being
-//!   tied to specific implementations.
+//!   generically, without being tied to specific implementations.
 //! - **Cross-implementation interoperability**: Enables potential interoperability
 //!   between [`ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing code to
 //!   work with either storage format.
@@ -23,8 +22,6 @@
 //! ## Core Traits
 //!
 //! - [`GraphemeString`]: Single-line grapheme-aware string operations.
-//! - [`GraphemeDoc`]: Multi-line document read operations.
-//! - [`GraphemeDocMut`]: Multi-line document mutation operations.
 //!
 //! ## Implementation Status
 //!
@@ -36,13 +33,11 @@
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach
-pub mod grapheme_doc;
 pub mod grapheme_string;
 pub mod grapheme_string_owned_ext;
 pub mod seg_content;
 
 // Re-export
-pub use grapheme_doc::*;
 pub use grapheme_string::*;
 pub use grapheme_string_owned_ext::*;
 pub use seg_content::*;

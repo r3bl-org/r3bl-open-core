@@ -498,7 +498,7 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
     {
         let _recursion_guard = DeadlockPreventionGuard::new(self);
         #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
-        let state_guard = self.state.lock().unwrap();
+        let state_guard = self.state.lock().expect("conversion error");
         fun(&*state_guard)
     }
 
@@ -519,7 +519,7 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
     {
         let _recursion_guard = DeadlockPreventionGuard::new(self);
         #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
-        let mut state_guard = self.state.lock().unwrap();
+        let mut state_guard = self.state.lock().expect("conversion error");
         fun(&mut *state_guard)
     }
 
@@ -581,20 +581,20 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
     /// a slice (e.g., `[u8]`). If so, a pointer to it is a "wide pointer" containing both
     /// the memory address and metadata (like the length of the slice).
     ///
-    /// Rust does not allow casting a wide pointer directly to a `usize`. To extract just
-    /// the memory address, we must first cast it to a "thin pointer" (`*const ()`). This
-    /// explicitly strips away the metadata (e.g., discarding the slice length), leaving a
-    /// pure memory address that can safely be cast to `usize`.
+    /// Rust's strict provenance API provides the `addr()` method to safely extract just
+    /// the memory address from a pointer, whether it is thin or wide. Calling `.addr()`
+    /// explicitly discards any metadata (like the slice length) and provenance, leaving
+    /// a pure integer address.
     ///
-    /// This loss of metadata is acceptable because we only use the resulting `usize` as a
-    /// unique identifier (the mutex memory address) and never intend to cast it back or
-    /// dereference it.
+    /// This loss of metadata is exactly what we want because we only use the resulting
+    /// [`usize`] as a unique identifier (the mutex memory address) and never intend to
+    /// reconstruct the pointer or dereference it.
     ///
     /// [`SharedLedger`]: crate::SharedLedger
     #[must_use]
     pub fn get_address(&self) -> usize {
         let ptr = std::ptr::from_ref(self);
-        ptr.cast::<()>() as usize
+        ptr.addr()
     }
 }
 
@@ -673,7 +673,8 @@ mod tests_core {
             let sm = Arc::clone(&sm);
             move || {
                 // Poison the mutex. The following happens in write():
-                // 1. In write(), thread calls mutex.lock().unwrap() to get a lock.
+                // 1. In write(), thread calls mutex.lock().expect("conversion error") to
+                //    get a lock.
                 // 2. While holding lock, thread panics.
                 sm.write(|it| {
                     *it = 42;
@@ -694,8 +695,8 @@ mod tests_core {
         let result_err: CaughtPanicResult = std::panic::catch_unwind(|| {
             // Mutex is poisoned. The following happens in read():
             // 1. Thread calls mutex.lock() which returns a result - Err(PoisonError).
-            // 2. result.unwrap() will format Err(PoisonError) into a string and call
-            //    panic!(string).
+            // 2. result.expect("conversion error") will format Err(PoisonError) into a
+            //    string and call panic!(string).
             sm.read(|&it| it);
         });
         assert!(extract_panic_message(result_err).contains("PoisonError"));

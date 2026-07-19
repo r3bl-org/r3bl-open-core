@@ -85,8 +85,8 @@ pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 ///
 /// [`InlineVec`] is specifically optimized for small collections that will *almost
 /// always* stay under [`16`] items. Excellent use cases include:
-/// - Editor component state (e.g., tracking a few selected rows in [`SelectionList`], or
-///   storing 1-3 lines for bulk deletion in [`EditorEngine`]).
+/// - Editor component state (e.g., tracking a few selected rows in
+///   [`SelectionContainer`], or storing 1-3 lines for bulk deletion in [`EditorEngine`]).
 /// - UI choice lists (e.g., `["Yes", "No"]`)
 /// - Styling collections (e.g., [`TuiStylesheet`] which usually holds a handful of
 ///   [`TuiStyle`]s).
@@ -104,7 +104,7 @@ pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 /// [`16`]: INLINE_VEC_SIZE
 /// [`CustomEventFormatter`]: crate::CustomEventFormatter
 /// [`EditorEngine`]: crate::EditorEngine
-/// [`SelectionList`]: crate::SelectionList
+/// [`SelectionContainer`]: crate::SelectionContainer
 /// [`TuiStyle`]: crate::TuiStyle
 /// [`TuiStylesheet`]: crate::TuiStylesheet
 /// [spill]: smallvec::SmallVec::spilled

@@ -222,6 +222,8 @@ pub const CARRIAGE_RETURN: u8 = b'\r';
 /// Value: `27` dec, `1B` hex.
 ///
 /// [`ESC`]: crate::ANSI_ESC
+// XMARK: Intentional numeric casting using as.
+#[allow(clippy::as_conversions)]
 pub const ESC_START: char = ESC_STR.as_bytes()[0] as char;
 
 /// Escape Start: Start string: the escape character (`27` dec, `1B` hex).

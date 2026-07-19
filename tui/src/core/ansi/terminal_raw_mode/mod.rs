@@ -228,8 +228,8 @@
 //!
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+//! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 //! [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [`iTerm2`]: https://iterm2.com/
@@ -237,7 +237,7 @@
 //! [`PTY`]: crate::pty
 //! [`rustix`]: https://docs.rs/rustix
 //! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`Terminator`]: https://gnome-terminator.org/
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html

@@ -94,7 +94,10 @@ mod tests {
     fn test_expired() {
         let mut rate_limiter = RateLimiter::new(Duration::from_nanos(1));
         let now = Instant::now();
-        rate_limiter.update_last_run(now.checked_sub(Duration::from_nanos(2)).unwrap());
+        rate_limiter.update_last_run(
+            now.checked_sub(Duration::from_nanos(2))
+                .expect("conversion error"),
+        );
         assert_eq!(rate_limiter.get_status(now), RateLimitStatus::Expired);
     }
 
@@ -110,7 +113,10 @@ mod tests {
     fn test_from_expired_to_active() {
         let mut rate_limiter = RateLimiter::new(Duration::from_nanos(1));
         let now = Instant::now();
-        rate_limiter.update_last_run(now.checked_sub(Duration::from_nanos(2)).unwrap());
+        rate_limiter.update_last_run(
+            now.checked_sub(Duration::from_nanos(2))
+                .expect("conversion error"),
+        );
         assert_eq!(rate_limiter.get_status(now), RateLimitStatus::Expired);
         rate_limiter.update_last_run(now);
         assert_eq!(rate_limiter.get_status(now), RateLimitStatus::Active);

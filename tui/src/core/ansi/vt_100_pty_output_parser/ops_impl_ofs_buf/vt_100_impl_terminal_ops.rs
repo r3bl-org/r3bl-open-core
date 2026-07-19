@@ -35,7 +35,7 @@ impl OfsBufVT100 {
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`ESC`]: crate::EscSequence
     pub fn select_ascii_character_set(&mut self) {
-        self.parser_global_state.character_set = CharacterSet::Ascii;
+        self.get_parser_global_state_mut().character_set = CharacterSet::Ascii;
     }
 
     /// Select [`DEC`] Special Graphics character set for box-drawing characters.
@@ -54,7 +54,7 @@ impl OfsBufVT100 {
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`ESC`]: crate::EscSequence
     pub fn select_dec_graphics_character_set(&mut self) {
-        self.parser_global_state.character_set = CharacterSet::DECGraphics;
+        self.get_parser_global_state_mut().character_set = CharacterSet::DECGraphics;
     }
 
     /// Translate [`DEC`] Special Graphics characters to Unicode box-drawing characters.
@@ -85,10 +85,10 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_char_set_ops {
     use super::*;
-    use crate::{OfsBufVT100, height, width};
+    use crate::{OfsBufVT100, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        let size = width(10) + height(6);
+        let size = vp_width(10) + vp_height(6);
         OfsBufVT100::new_empty(size)
     }
 
@@ -97,12 +97,12 @@ mod tests_char_set_ops {
         let mut buffer = create_test_buffer();
 
         // Start with DEC graphics character set.
-        buffer.parser_global_state.character_set = CharacterSet::DECGraphics;
+        buffer.get_parser_global_state_mut().character_set = CharacterSet::DECGraphics;
 
         buffer.select_ascii_character_set();
 
         assert_eq!(
-            buffer.parser_global_state.character_set,
+            buffer.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
     }
@@ -112,12 +112,12 @@ mod tests_char_set_ops {
         let mut buffer = create_test_buffer();
 
         // Start with ASCII character set (default).
-        buffer.parser_global_state.character_set = CharacterSet::Ascii;
+        buffer.get_parser_global_state_mut().character_set = CharacterSet::Ascii;
 
         buffer.select_dec_graphics_character_set();
 
         assert_eq!(
-            buffer.parser_global_state.character_set,
+            buffer.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
     }
@@ -190,21 +190,21 @@ mod tests_char_set_ops {
 
         // Verify initial state is ASCII (default).
         assert_eq!(
-            buffer.parser_global_state.character_set,
+            buffer.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
 
         // Switch to DEC graphics and verify persistence.
         buffer.select_dec_graphics_character_set();
         assert_eq!(
-            buffer.parser_global_state.character_set,
+            buffer.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
 
         // Switch back to ASCII and verify persistence.
         buffer.select_ascii_character_set();
         assert_eq!(
-            buffer.parser_global_state.character_set,
+            buffer.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
     }
@@ -217,13 +217,13 @@ mod tests_char_set_ops {
         for _ in 0..3 {
             buffer.select_dec_graphics_character_set();
             assert_eq!(
-                buffer.parser_global_state.character_set,
+                buffer.get_parser_global_state_mut().character_set,
                 CharacterSet::DECGraphics
             );
 
             buffer.select_ascii_character_set();
             assert_eq!(
-                buffer.parser_global_state.character_set,
+                buffer.get_parser_global_state_mut().character_set,
                 CharacterSet::Ascii
             );
         }

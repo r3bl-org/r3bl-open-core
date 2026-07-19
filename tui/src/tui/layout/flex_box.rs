@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::FlexBoxId;
-use crate::ok;
-use crate::{Pos, ReqSizePc, Size, TuiStyle};
+use crate::{VPBoundingBox, ReqSizePc, TuiStyle, VPPos, ok};
 use std::fmt::Debug;
 
 /// Direction of the layout of the box.
@@ -20,12 +19,10 @@ pub enum LayoutDirection {
 pub struct FlexBox {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
-    pub origin_pos: Pos,
-    pub bounds_size: Size,
-    pub style_adjusted_origin_pos: Pos,
-    pub style_adjusted_bounds_size: Size,
+    pub bounds: VPBoundingBox,
+    pub style_adjusted_bounds: VPBoundingBox,
     pub requested_size_percent: ReqSizePc,
-    pub insertion_pos_for_next_box: Option<Pos>,
+    pub insertion_pos_for_next_box: Option<VPPos>,
     pub maybe_computed_style: Option<TuiStyle>,
 }
 
@@ -41,17 +38,11 @@ impl Debug for FlexBox {
         // Require fields.
         write!(f, "FlexBox id: {:?}{EOL}", self.id)?;
         write!(f, "dir: {:?}{EOL}", self.dir)?;
-        write!(f, "origin_pos: {:?}{EOL}", self.origin_pos)?;
-        write!(f, "bounds_size: {:?}{EOL}", self.bounds_size)?;
+        write!(f, "bounds: {:?}{EOL}", self.bounds)?;
         write!(
             f,
-            "style_adjusted_origin_pos: {:?}{EOL}",
-            self.style_adjusted_origin_pos
-        )?;
-        write!(
-            f,
-            "style_adjusted_bounds_size: {:?}{EOL}",
-            self.style_adjusted_bounds_size
+            "style_adjusted_bounds: {:?}{EOL}",
+            self.style_adjusted_bounds
         )?;
         write!(
             f,
@@ -97,10 +88,8 @@ mod tests {
         let flex_box = FlexBox::default();
         assert_eq!(flex_box.id, FlexBoxId::default());
         assert_eq!(flex_box.dir, LayoutDirection::Horizontal);
-        assert_eq!(flex_box.origin_pos, Pos::default());
-        assert_eq!(flex_box.bounds_size, Size::default());
-        assert_eq!(flex_box.style_adjusted_origin_pos, Pos::default());
-        assert_eq!(flex_box.style_adjusted_bounds_size, Size::default());
+        assert_eq!(flex_box.bounds, VPBoundingBox::default());
+        assert_eq!(flex_box.style_adjusted_bounds, VPBoundingBox::default());
         assert_eq!(flex_box.requested_size_percent, ReqSizePc::default());
         assert!(flex_box.insertion_pos_for_next_box.is_none());
         assert!(flex_box.maybe_computed_style.is_none());

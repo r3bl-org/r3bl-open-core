@@ -30,6 +30,7 @@
 #   ./check.fish --check      Run typecheck only (cargo check)
 #   ./check.fish --build      Run build only (cargo build)
 #   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
+#   ./check.fish --fmt        Run formatting on changed files (cargo fmt + cargo-rustdoc-fmt)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (full, with deps, dep-doc caching)
 #   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)
@@ -46,8 +47,8 @@
 #   check_recovery.fish        Target cleanup, recovery helpers, logging
 #   check_detection.fish       ICE and stale artifact detection
 #   check_toolchain.fish       Toolchain validation, corruption detection, auto-repair
+#   check_docs.fish            Doc runners, staging sync, dep-doc cache, and background task orchestration
 #   check_cargo.fish           Pure cargo command wrappers (check, build, clippy, test, docs)
-#   check_docs.fish            Doc sync (staging → serving) and orphan detection
 #   check_orchestrators.fish   Check composition, result aggregation, retry with recovery
 #   check_watch.fish           Watch mode loop, sliding window debounce, check dispatch
 
@@ -62,8 +63,8 @@ source $__check_dir/check_cli.fish             # parse_arguments, show_help — 
 source $__check_dir/check_recovery.fish        # log_message, cleanup_*, dirs_for_check_type — uses constants
 source $__check_dir/check_detection.fish       # ICE/stale detection — uses log_message from check_recovery
 source $__check_dir/check_toolchain.fish       # ensure_toolchain_installed — uses script_lib functions
-source $__check_dir/check_cargo.fish           # Pure check wrappers — uses constants + ionice_wrapper
-source $__check_dir/check_docs.fish            # sync_docs_to_serving — uses constants
+source $__check_dir/check_docs.fish            # Doc runners, sync, staging, background task — uses constants
+source $__check_dir/check_cargo.fish           # Pure check wrappers — uses constants + check_docs + ionice_wrapper
 source $__check_dir/check_orchestrators.fish   # Composes checks — uses cargo, docs, recovery, detection
 source $__check_dir/check_watch.fish           # Watch mode — uses lock, orchestrators, recovery, constants
 
@@ -120,11 +121,25 @@ function main
             # Kill orphaned file watcher processes (inotifywait/fswatch)
             kill_orphaned_watchers
 
+            # Remove background full doc build PID file if present
+            if test -f $CHECK_FULL_DOC_PID_FILE
+                set -l bg_doc_pid (cat $CHECK_FULL_DOC_PID_FILE 2>/dev/null | string trim)
+                if is_process_alive $bg_doc_pid
+                    kill $bg_doc_pid 2>/dev/null
+                end
+                command rm -f $CHECK_FULL_DOC_PID_FILE 2>/dev/null
+            end
+
             # Purge any project-related zombie processes
             purge_zombie_processes
 
             echo "✅ Cleanup complete"
             return 0
+        case star-history
+            echo ""
+            echo "⭐ Re-generating star history SVG chart..."
+            run_check_with_recovery check_star_history "star-history"
+            return $status
         case check
             # Check-only mode: fast typecheck
             check_config_changed $CHECK_TARGET_DIR $CONFIG_FILES_TO_WATCH
@@ -203,6 +218,20 @@ function main
             end
 
             return $clippy_status
+        case fmt
+            # Format mode: cargo fmt + cargo-rustdoc-fmt on changed files
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
+
+            echo ""
+            echo "🎨 Formatting changed Rust files (cargo fmt + cargo-rustdoc-fmt)..."
+            check_cargo_fmt_changed
+            return $status
         case full
             # Full mode: comprehensive pre-commit check
             # Runs: check + build + clippy + tests + doctests + doc build + windows build + lychee
@@ -274,7 +303,7 @@ function main
 
             echo ""
             echo "📝 Formatting rustdoc comments on changed files..."
-            run_rustdoc_fmt
+            run_rustdoc_fmt >/dev/null 2>&1
 
             echo ""
             echo "⚡ Building documentation (quick-doc, no ext crate links)..."
@@ -321,7 +350,7 @@ function main
 
             echo ""
             echo "📝 Formatting rustdoc comments on changed files..."
-            run_rustdoc_fmt
+            run_rustdoc_fmt >/dev/null 2>&1
 
             echo ""
             echo "📚 Building documentation (full, with deps)..."

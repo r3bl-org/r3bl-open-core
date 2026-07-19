@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::ok;
-use std::{fmt::{Display, Formatter, Result},
+use std::{fmt::{Display, Formatter},
           time::Duration};
 
 /// This is a wrapper struct around [Duration] so that we can "implement"
@@ -40,9 +40,8 @@ mod accessor {
         #[must_use]
         #[allow(clippy::manual_checked_ops)]
         pub fn get_as_fps(&self) -> u32 {
-            let num_of_micros_in_one_sec = 1_000_000;
-            let total_micros = self.inner.as_secs() * num_of_micros_in_one_sec
-                + u64::from(self.inner.subsec_micros());
+            let num_of_micros_in_one_sec = 1_000_000_u128;
+            let total_micros = self.inner.as_micros();
             // Avoid division by zero.
             if total_micros > 0 {
                 u32::try_from(num_of_micros_in_one_sec / total_micros).unwrap_or(u32::MAX)
@@ -66,15 +65,15 @@ mod converters {
     use super::{Duration, TimeDuration};
 
     impl From<Duration> for TimeDuration {
-        fn from(duration: Duration) -> Self { Self { inner: duration } }
+        fn from(duration: Duration) -> TimeDuration { TimeDuration { inner: duration } }
     }
 
     impl From<TimeDuration> for Duration {
-        fn from(time_duration: TimeDuration) -> Self { time_duration.inner }
+        fn from(time_duration: TimeDuration) -> Duration { time_duration.inner }
     }
 
     impl From<&TimeDuration> for Duration {
-        fn from(time_duration: &TimeDuration) -> Self { time_duration.inner }
+        fn from(time_duration: &TimeDuration) -> Duration { time_duration.inner }
     }
 }
 
@@ -83,7 +82,7 @@ mod display_formatter {
     use super::*;
 
     impl Display for TimeDuration {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let secs = self.get_only_secs();
             let millis = self.get_only_millis();
             let micros = self.get_only_micros();

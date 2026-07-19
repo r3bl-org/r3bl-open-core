@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::modes::{AutoWrapMode, CursorVisibilityMode};
-use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
+use crate::{VPPos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 
 /// Encapsulated runtime state tracking active graphic renditions, terminal attributes,
 /// and protocol requests for [`ANSI`] sequence parsing.
@@ -36,12 +36,11 @@ use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 ///   - To keep primary and alternate screen drawing logic simple, we use
 ///     [`std::mem::swap()`] in [`set_alt_screen_mode()`] to physically swap the screen's
 ///     underlying [`OfsBuf`] data when switching to another screen.
-///   - Because of this, the [`OfsBuf`] and its [`OfsBuf::get_cursor_pos()`]
-///     **always** represent the currently visible screen (regardless of whether it is
-///     primary or alternate).
-///   - The hidden screen's data and its specific cursor position are parked in
-///     [`HiddenScreenState`] (in its [`hidden_buffer`] and [`hidden_cursor_pos`]) until
-///     they are swapped back when the screen switches.
+///   - Because of this, the [`OfsBuf`] and its [`OfsBuf::get_cursor_pos()`] **always**
+///     represent the currently visible screen (regardless of whether it is primary or
+///     alternate).
+///   - The hidden screen's data and its specific cursor position are parked in the
+///     alternate buffer until they are swapped back when the screen switches.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
@@ -51,13 +50,10 @@ use crate::{Pos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
 /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
 /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
 /// [`DSR`]: crate::PtyResponseEvent
-/// [`hidden_buffer`]: crate::HiddenScreenState::hidden_buffer
-/// [`hidden_cursor_pos`]: crate::HiddenScreenState::hidden_cursor_pos
-/// [`HiddenScreenState`]: crate::HiddenScreenState
-/// [`OfsBuf::get_cursor_pos()`]: crate::OfsBuf::get_cursor_pos
-/// [`OfsBuf`]: crate::OfsBuf
+/// [`OfsBuf::get_cursor_pos()`]: crate::tui::OfsBuf::get_cursor_pos
+/// [`OfsBuf`]: crate::tui::OfsBuf
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`set_alt_screen_mode()`]: crate::OfsBufVT100::set_alt_screen_mode
+/// [`set_alt_screen_mode()`]: crate::core::ansi::OfsBufVT100::set_alt_screen_mode
 /// [`SGR`]: crate::SgrCode
 /// [`std::mem::swap()`]: std::mem::swap
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -95,8 +91,8 @@ pub struct ParserGlobalState {
     /// [`CSI`]: crate::CsiSequence
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
-    /// [`OfsBuf::get_cursor_pos()`]: crate::OfsBuf::get_cursor_pos
-    pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
+    /// [`OfsBuf::get_cursor_pos()`]: crate::tui::OfsBuf::get_cursor_pos
+    pub cursor_pos_for_esc_save_and_restore: Option<VPPos>,
 
     /// Active character set for [`ANSI`] escape sequence support.
     ///
@@ -115,7 +111,7 @@ pub struct ParserGlobalState {
     /// ```
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`ESC`]: crate::EscSequence
@@ -140,7 +136,7 @@ pub struct ParserGlobalState {
     /// stays at the right margin and subsequent characters overwrite.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub auto_wrap_mode: AutoWrapMode,
@@ -190,7 +186,7 @@ pub struct ParserGlobalState {
     /// ESC [ r          - Reset to full screen (clears both margins)
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`ESC`]: crate::EscSequence
     /// [`scroll_region_bottom`]: Self::scroll_region_bottom
@@ -216,7 +212,7 @@ pub struct ParserGlobalState {
     /// - Cursor movement is constrained to the region boundaries
     /// - Content outside the region remains unchanged during scrolling
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
     /// [`CSI`]: crate::CsiSequence
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
     /// [`ESC`]: crate::EscSequence
@@ -249,7 +245,7 @@ impl ParserGlobalState {
 /// Used by [`AnsiToOfsBufPerformer`] to handle `ESC ( <char>` sequences that switch
 /// between [`ASCII`] and [`DEC`] line-drawing graphics.
 ///
-/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`ESC`]: crate::EscSequence

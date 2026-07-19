@@ -19,21 +19,21 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DSR`]: crate::DsrSequence
-//! [`handle_cursor_position_request`]: crate::OfsBufVT100::handle_cursor_position_request
-//! [`handle_status_report_request`]: crate::OfsBufVT100::handle_status_report_request
+//! [`handle_cursor_position_request`]: OfsBufVT100::handle_cursor_position_request
+//! [`handle_status_report_request`]: OfsBufVT100::handle_status_report_request
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_pty_output_parser::ops::dsr_ops`]:
 //!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_dsr_ops
 
-use crate::{PtyResponseEvent, OfsBufVT100, TermCol, TermRow};
+use crate::{OfsBufVT100, PtyResponseEvent, TermCol, TermRow};
 
 impl OfsBufVT100 {
     /// Handles device status report request.
     ///
     /// Queues a response indicating terminal is OK (`ESC [ 0 n`).
     pub fn handle_status_report_request(&mut self) {
-        self.parser_global_state
+        self.get_parser_global_state_mut()
             .pending_pty_response_events
             .push(PtyResponseEvent::TerminalStatus);
     }
@@ -44,10 +44,11 @@ impl OfsBufVT100 {
     /// Converts 0-based internal position to 1-based terminal position.
     pub fn handle_cursor_position_request(&mut self) {
         // Convert 0-based internal position to 1-based terminal position.
-        // Uses type-safe From<RowIndex>/From<ColIndex> conversions.
-        let row = TermRow::from(self.get_cursor_pos().row_index);
-        let col = TermCol::from(self.get_cursor_pos().col_index);
-        self.parser_global_state
+        // Uses type-safe From<VPRow>/From<VPCol> conversions via .into().
+        let cursor_pos = self.get_active_screen_buffer().get_cursor_pos();
+        let row: TermRow = cursor_pos.row_index.into();
+        let col: TermCol = cursor_pos.col_index.into();
+        self.get_parser_global_state_mut()
             .pending_pty_response_events
             .push(PtyResponseEvent::CursorPosition { row, col });
     }
@@ -56,10 +57,10 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_dsr_ops {
     use super::*;
-    use crate::{OfsBufVT100, col, height, row, width};
+    use crate::{OfsBufVT100, vp_col, vp_height, vp_row, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        let size = width(10) + height(6);
+        let size = vp_width(10) + vp_height(6);
         OfsBufVT100::new_empty(size)
     }
 
@@ -68,14 +69,27 @@ mod tests_dsr_ops {
         let mut buffer = create_test_buffer();
 
         // Initially no pending responses.
-        assert!(buffer.parser_global_state.pending_pty_response_events.is_empty());
+        assert!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events
+                .is_empty()
+        );
 
         buffer.handle_status_report_request();
 
         // Should have one terminal status response.
-        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 1);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events
+                .len(),
+            1
+        );
         assert!(matches!(
-            buffer.parser_global_state.pending_pty_response_events[0],
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events[0],
             PtyResponseEvent::TerminalStatus
         ));
     }
@@ -83,14 +97,21 @@ mod tests_dsr_ops {
     #[test]
     fn test_handle_cursor_position_request() {
         let mut buffer = create_test_buffer();
-        buffer.set_cursor_pos(row(2) + col(5));
+        buffer.set_cursor_pos(vp_row(2) + vp_col(5));
 
         buffer.handle_cursor_position_request();
 
         // Should have one cursor position response.
-        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 1);
-        if let PtyResponseEvent::CursorPosition { row, col } =
-            &buffer.parser_global_state.pending_pty_response_events[0]
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events
+                .len(),
+            1
+        );
+        if let PtyResponseEvent::CursorPosition { row, col } = &buffer
+            .get_parser_global_state_mut()
+            .pending_pty_response_events[0]
         {
             // 0-based internal (2,5) becomes 1-based terminal (3,6)
             assert_eq!(row.as_u16(), 3);
@@ -108,13 +129,23 @@ mod tests_dsr_ops {
         buffer.handle_cursor_position_request();
 
         // Should have both responses queued.
-        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 2);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events
+                .len(),
+            2
+        );
         assert!(matches!(
-            buffer.parser_global_state.pending_pty_response_events[0],
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events[0],
             PtyResponseEvent::TerminalStatus
         ));
         assert!(matches!(
-            buffer.parser_global_state.pending_pty_response_events[1],
+            buffer
+                .get_parser_global_state_mut()
+                .pending_pty_response_events[1],
             PtyResponseEvent::CursorPosition { .. }
         ));
     }

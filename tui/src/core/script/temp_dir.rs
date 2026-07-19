@@ -110,7 +110,7 @@ impl Drop for TempDir {
 ///
 /// ```no_run
 /// use r3bl_tui::try_create_temp_dir;
-/// let root = try_create_temp_dir().unwrap();
+/// let root = try_create_temp_dir().expect("conversion error");
 /// let new_dir = root.join("test_set_file_executable");
 /// ```
 impl Deref for TempDir {
@@ -127,7 +127,7 @@ impl Deref for TempDir {
 ///
 /// ```no_run
 /// use r3bl_tui::try_create_temp_dir;
-/// let root = try_create_temp_dir().unwrap();
+/// let root = try_create_temp_dir().expect("conversion error");
 /// println!("Temp dir: {}", root);
 /// ```
 impl Display for TempDir {
@@ -147,9 +147,9 @@ impl Display for TempDir {
 ///
 /// ```no_run
 /// use r3bl_tui::try_create_temp_dir;
-/// let root = try_create_temp_dir().unwrap();
-/// std::fs::create_dir_all(root.join("test_set_file_executable")).unwrap();
-/// std::fs::remove_dir_all(root).unwrap();
+/// let root = try_create_temp_dir().expect("conversion error");
+/// std::fs::create_dir_all(root.join("test_set_file_executable")).expect("conversion error");
+/// std::fs::remove_dir_all(root).expect("conversion error");
 /// ```
 impl AsRef<Path> for TempDir {
     fn as_ref(&self) -> &Path { &self.inner }
@@ -236,7 +236,7 @@ mod tests_temp_dir {
 
     #[test]
     fn test_temp_dir() {
-        let temp_dir = try_create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().expect("conversion error");
         println!(
             "Temp dir: {}",
             fg_lizard_green(temp_dir.inner.display().to_string())
@@ -247,7 +247,7 @@ mod tests_temp_dir {
 
     #[test]
     fn test_temp_dir_join() {
-        let temp_dir = try_create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().expect("conversion error");
         let expected_prefix = temp_dir.inner.display().to_string();
 
         let new_sub_dir = temp_dir.join("test_set_file_executable");
@@ -263,7 +263,7 @@ mod tests_temp_dir {
 
     #[test]
     fn test_temp_dir_drop() {
-        let temp_dir = try_create_temp_dir().unwrap();
+        let temp_dir = try_create_temp_dir().expect("conversion error");
 
         let copy_of_path = temp_dir.inner.clone();
         println!(

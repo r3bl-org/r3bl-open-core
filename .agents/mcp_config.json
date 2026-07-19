@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "rust-refactor": {
-      "command": "/home/nazmul/.cargo/bin/rustmcp",
+    "rust-analyzer": {
+      "command": "rust-analyzer-mcp-server",
       "args": []
     }
   }

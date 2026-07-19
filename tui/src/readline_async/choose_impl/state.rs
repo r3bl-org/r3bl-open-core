@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ChUnit, CliTextInline,
-            HowToChoose, InlineString, InlineVec, ItemsOwned, Size,
+            HowToChoose, InlineString, InlineVec, ItemsOwned, VPSize,
             get_scroll_adjusted_row_index, locate_cursor_in_viewport};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -30,7 +30,7 @@ pub struct State {
     pub resize_hint: Option<ResizeHint>,
 
     /// Used to determine if the terminal has been resized.
-    pub window_size: Option<Size>,
+    pub window_size: Option<VPSize>,
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -50,31 +50,33 @@ mod convert_to_header {
     use super::{CliTextInline, Header, InlineString, InlineVec};
 
     impl From<Vec<Vec<CliTextInline>>> for Header {
-        fn from(header: Vec<Vec<CliTextInline>>) -> Self {
+        fn from(header: Vec<Vec<CliTextInline>>) -> Header {
             Header::MultiLine(header.into_iter().map(InlineVec::from).collect())
         }
     }
 
     impl From<InlineVec<InlineVec<CliTextInline>>> for Header {
-        fn from(header: InlineVec<InlineVec<CliTextInline>>) -> Self {
+        fn from(header: InlineVec<InlineVec<CliTextInline>>) -> Header {
             Header::MultiLine(header)
         }
     }
 
     impl From<InlineString> for Header {
-        fn from(header: InlineString) -> Self { Header::SingleLine(header) }
+        fn from(header: InlineString) -> Header { Header::SingleLine(header) }
     }
 
     impl From<String> for Header {
-        fn from(header: String) -> Self { Header::SingleLine(InlineString::from(header)) }
+        fn from(header: String) -> Header {
+            Header::SingleLine(InlineString::from(header))
+        }
     }
 
     impl From<&str> for Header {
-        fn from(header: &str) -> Self { Header::SingleLine(InlineString::from(header)) }
+        fn from(header: &str) -> Header { Header::SingleLine(InlineString::from(header)) }
     }
 
     impl Default for Header {
-        fn default() -> Self { Header::SingleLine(InlineString::new()) }
+        fn default() -> Header { Header::SingleLine(InlineString::new()) }
     }
 }
 
@@ -103,14 +105,14 @@ mod tests {
 }
 
 impl CalculateResizeHint for State {
-    fn set_size(&mut self, new_size: Size) {
+    fn set_size(&mut self, new_size: VPSize) {
         self.window_size = Some(new_size);
         self.clear_resize_hint();
     }
 
     fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
 
-    fn set_resize_hint(&mut self, new_size: Size) {
+    fn set_resize_hint(&mut self, new_size: VPSize) {
         self.resize_hint = self
             .window_size
             .and_then(|old_size| Self::calculate_resize_hint(old_size, new_size));
@@ -152,7 +154,7 @@ impl State {
     }
 
     /// Helper method to determine resize hint based on old and new sizes.
-    fn calculate_resize_hint(old_size: Size, new_size: Size) -> Option<ResizeHint> {
+    fn calculate_resize_hint(old_size: VPSize, new_size: VPSize) -> Option<ResizeHint> {
         if new_size == old_size {
             return None;
         }

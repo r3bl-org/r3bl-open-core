@@ -301,11 +301,8 @@ mod tests {
             assert_ne!(current_branch, initial_branch);
 
             // Ensure the branch exists in the list of branches.
-            let (_, branch_info) = crate::try_get_local_branches().await.0?;
-            assert_eq!(
-                branch_info.exists_locally("new-feature"),
-                crate::BranchExists::Yes
-            );
+            let (_, branch_info) = try_get_local_branches().await.0?;
+            assert_eq!(branch_info.exists_locally("new-feature"), BranchExists::Yes);
 
             ok!(())
         })
@@ -337,22 +334,13 @@ mod tests {
                     .await?;
 
             // Verify branches exist.
-            let (_, branch_info) = crate::try_get_local_branches().await.0?;
+            let (_, branch_info) = try_get_local_branches().await.0?;
 
-            assert_eq!(branch_info.exists_locally("main"), crate::BranchExists::Yes);
+            assert_eq!(branch_info.exists_locally("main"), BranchExists::Yes);
 
-            assert_eq!(
-                branch_info.exists_locally("branch1"),
-                crate::BranchExists::Yes
-            );
-            assert_eq!(
-                branch_info.exists_locally("branch2"),
-                crate::BranchExists::Yes
-            );
-            assert_eq!(
-                branch_info.exists_locally("branch3"),
-                crate::BranchExists::Yes
-            );
+            assert_eq!(branch_info.exists_locally("branch1"), BranchExists::Yes);
+            assert_eq!(branch_info.exists_locally("branch2"), BranchExists::Yes);
+            assert_eq!(branch_info.exists_locally("branch3"), BranchExists::Yes);
 
             // Delete branches.
             let res = try_delete_branches(&inline_vec!["branch1", "branch2"].into())
@@ -361,20 +349,11 @@ mod tests {
             assert!(res.is_ok());
 
             // Verify branches are deleted.
-            let (_, branch_info) = crate::try_get_local_branches().await.0?;
+            let (_, branch_info) = try_get_local_branches().await.0?;
 
-            assert_eq!(
-                branch_info.exists_locally("branch1"),
-                crate::BranchExists::No
-            );
-            assert_eq!(
-                branch_info.exists_locally("branch2"),
-                crate::BranchExists::No
-            );
-            assert_eq!(
-                branch_info.exists_locally("branch3"),
-                crate::BranchExists::Yes
-            );
+            assert_eq!(branch_info.exists_locally("branch1"), BranchExists::No);
+            assert_eq!(branch_info.exists_locally("branch2"), BranchExists::No);
+            assert_eq!(branch_info.exists_locally("branch3"), BranchExists::Yes);
 
             ok!(())
         })

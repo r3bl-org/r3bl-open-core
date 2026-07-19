@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-#![allow(clippy::cast_possible_truncation)]
-
-use crate::{Button, KeyState, MouseInput, MouseInputKind, TermCol, TermRow,
+use crate::{Button, KeyState, MouseInput, MouseInputKind, NarrowingCastToU8, TermCol,
+            TermRow,
             core::ansi::constants::{MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
@@ -53,9 +52,9 @@ pub fn generate(mouse_input: &MouseInput, x: TermCol, y: TermRow) -> Option<Vec<
         }
     }
 
-    let cb = (button_code + MOUSE_X10_COORD_OFFSET) as u8;
-    let cx = (x_val + MOUSE_X10_COORD_OFFSET) as u8;
-    let cy = (y_val + MOUSE_X10_COORD_OFFSET) as u8;
+    let cb = (button_code + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
+    let cx = (x_val + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
+    let cy = (y_val + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
 
     let mut bytes = Vec::with_capacity(6);
     bytes.extend_from_slice(MOUSE_X10_PREFIX);
@@ -77,46 +76,49 @@ fn get_button_code(button: Button) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, row, Button, KeyState, ModifierKeysMask, MouseInput, MouseInputKind};
+    use crate::{Button, KeyState, ModifierKeysMask, MouseInput, MouseInputKind,
+                term_col, term_row, vp_col, vp_row};
     use core::num::NonZeroU16;
 
     #[test]
     #[allow(clippy::too_many_lines)]
     fn test_legacy_mouse_sequence() {
-        let nz_10 = NonZeroU16::new(10).unwrap();
-        let term_col = crate::term_col(nz_10);
-        let term_row = crate::term_row(nz_10);
+        let nz_10 = NonZeroU16::new(10).expect("conversion error");
+        let term_col_val = term_col(nz_10);
+        let term_row_val = term_row(nz_10);
 
-        let cb_offset = MOUSE_X10_COORD_OFFSET as u8;
-        let cx = (10 + MOUSE_X10_COORD_OFFSET) as u8;
-        let cy = (10 + MOUSE_X10_COORD_OFFSET) as u8;
+        let cb_offset = MOUSE_X10_COORD_OFFSET.as_u8_narrowing();
+        let cx = (10 + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
+        let cy = (10 + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
 
         // 1. Left click at x=10, y=10
         let input1 = MouseInput {
-            pos: col(9) + row(9),
+            pos: vp_col(9) + vp_row(9),
             kind: MouseInputKind::MouseDown(Button::Left),
             maybe_modifier_keys: None,
         };
-        let bytes1 = generate(&input1, term_col, term_row).unwrap();
+        let bytes1 =
+            generate(&input1, term_col_val, term_row_val).expect("conversion error");
 
         let mut expected1 = Vec::new();
         expected1.extend_from_slice(MOUSE_X10_PREFIX);
-        expected1.push(MOUSE_LEFT_BUTTON_CODE as u8 + cb_offset);
+        expected1.push(MOUSE_LEFT_BUTTON_CODE.as_u8_narrowing() + cb_offset);
         expected1.push(cx);
         expected1.push(cy);
         assert_eq!(bytes1, expected1);
 
         // 2. Left release at x=10, y=10
         let input2 = MouseInput {
-            pos: col(9) + row(9),
+            pos: vp_col(9) + vp_row(9),
             kind: MouseInputKind::MouseUp(Button::Left),
             maybe_modifier_keys: None,
         };
-        let bytes2 = generate(&input2, term_col, term_row).unwrap();
+        let bytes2 =
+            generate(&input2, term_col_val, term_row_val).expect("conversion error");
 
         let mut expected2 = Vec::new();
         expected2.extend_from_slice(MOUSE_X10_PREFIX);
-        expected2.push(MOUSE_RELEASE_BUTTON_CODE as u8 + cb_offset);
+        expected2.push(MOUSE_RELEASE_BUTTON_CODE.as_u8_narrowing() + cb_offset);
         expected2.push(cx);
         expected2.push(cy);
         assert_eq!(bytes2, expected2);
@@ -125,23 +127,27 @@ mod tests {
         let mut modifiers = ModifierKeysMask::new();
         modifiers.shift_key_state = KeyState::Pressed;
         let input3 = MouseInput {
-            pos: col(9) + row(9),
+            pos: vp_col(9) + vp_row(9),
             kind: MouseInputKind::MouseDown(Button::Right),
             maybe_modifier_keys: Some(modifiers),
         };
-        let bytes3 = generate(&input3, term_col, term_row).unwrap();
+        let bytes3 =
+            generate(&input3, term_col_val, term_row_val).expect("conversion error");
 
         let mut expected_bytes3 = Vec::new();
         expected_bytes3.extend_from_slice(MOUSE_X10_PREFIX);
-        expected_bytes3.push((MOUSE_RIGHT_BUTTON_CODE | MOUSE_MODIFIER_SHIFT) as u8 + cb_offset);
+        expected_bytes3.push(
+            (MOUSE_RIGHT_BUTTON_CODE | MOUSE_MODIFIER_SHIFT).as_u8_narrowing()
+                + cb_offset,
+        );
         expected_bytes3.push(cx);
         expected_bytes3.push(cy);
         assert_eq!(bytes3, expected_bytes3);
 
         // 4. Out of bounds coordinates (should return None)
-        let nz_224 = NonZeroU16::new(224).unwrap();
-        let term_col_oob = crate::term_col(nz_224);
-        let bytes4 = generate(&input1, term_col_oob, term_row);
+        let nz_224 = NonZeroU16::new(224).expect("conversion error");
+        let term_col_oob = term_col(nz_224);
+        let bytes4 = generate(&input1, term_col_oob, term_row_val);
         assert!(bytes4.is_none());
     }
 }

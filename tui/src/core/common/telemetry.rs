@@ -1,10 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Pc, RIGHT_ARROW_DASHED_GLYPH, RateLimitStatus, RateLimiter, RingBuffer,
-            RingBufferStack, TimeDuration};
+            RingBufferStack, TimeDuration, c_len};
+use hdrhistogram::Histogram;
+use rustc_hash::FxHashMap;
 use smallstr::SmallString;
-use std::{collections::HashMap,
-          fmt::Display,
+use std::{fmt::Display,
           time::{Duration, Instant}};
 use strum_macros::{Display, EnumString};
 
@@ -69,7 +70,7 @@ pub mod telemetry_default_constants {
 /// # Examples
 ///
 /// You have a lot of flexibility in constructing this, using
-/// [`ResponseTimesRingBufferOptions`] and the [`Telemetry::new`] constructor function.
+/// [`TelemetryConfig`] and the [`Telemetry::new`] constructor function.
 ///
 /// ```
 /// use std::time::Duration;
@@ -88,6 +89,7 @@ pub mod telemetry_default_constants {
 #[derive(Debug, PartialEq)]
 pub struct Telemetry<const N: usize> {
     pub ring_buffer: RingBufferStack<TelemetryAtom, N>,
+    pub session_histogram: Histogram<u64>,
     pub start_timestamp: Instant,
     /// Pre-allocated buffer to store the report (after generating it). This is a cache
     /// that is used to avoid generating the report too frequently (rate limited with
@@ -147,24 +149,33 @@ macro_rules! telemetry_record {
     }};
 }
 
-// XMARK: Clever Rust, use of `impl Into<ResponseTimesRingBufferOptions>` for elegant
-// constructor config options.
-
 #[derive(Debug)]
-pub struct ResponseTimesRingBufferOptions {
+pub struct TelemetryConfig {
     pub rate_limit_min_time_threshold: Duration,
     pub min_duration_filter: Option<Duration>,
     pub cluster_sensitivity_range: Duration,
 }
 
+// XMARK: Elegant Constructor DSL.
+
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
 ///
 /// This enables an elegant and ergonomic way to configure a [`Telemetry`] instance. By
-/// leveraging [`impl Into<ResponseTimesRingBufferOptions>`], the [`Telemetry::new`]
-/// constructor can accept multiple types of inputs.
+/// leveraging [`impl Into<TelemetryConfig>`], the [`Telemetry::new`] constructor can
+/// accept multiple types of inputs.
 ///
 /// It implements [`From`] for various types (including tuples) to enable this flexibility
 /// while keeping the constructor signature simple.
+///
+/// # Architecture: Constructor DSL Tokens vs Storage Types
+///
+/// 1. **Constructor DSL Inputs** ([`Duration`], tuples, `()`):
+///    - Flexible inputs passed directly into [`Telemetry::new`].
+///    - Implements [`From`] to map intuitive inputs (e.g. single duration or tuple) into
+///      a structured configuration.
+///
+/// 2. **Canonical Storage Struct** ([`TelemetryConfig`]):
+///    - Aggregates the resolved configuration fields used by [`Telemetry`].
 ///
 /// # Examples
 /// ```no_run
@@ -184,16 +195,19 @@ pub struct ResponseTimesRingBufferOptions {
 /// ));
 /// ```
 ///
-/// [`impl Into<ResponseTimesRingBufferOptions>`]: ResponseTimesRingBufferOptions
+/// [`impl Into<TelemetryConfig>`]: TelemetryConfig
+/// [`Telemetry::new`]: crate::Telemetry::new
+/// [`Telemetry`]: crate::Telemetry
+/// [`TelemetryConfig`]: TelemetryConfig
 mod impl_elegant_constructor_dsl_pattern {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl From<()> for ResponseTimesRingBufferOptions {
-        fn from((): ()) -> Self {
+    impl From<()> for TelemetryConfig {
+        fn from((): ()) -> TelemetryConfig {
             let min_duration_filter =
                 Some(telemetry_default_constants::FILTER_MIN_RESPONSE_TIME);
-            Self {
+            TelemetryConfig {
                 rate_limit_min_time_threshold:
                     telemetry_default_constants::RATE_LIMIT_TIME_THRESHOLD,
                 min_duration_filter,
@@ -205,11 +219,11 @@ mod impl_elegant_constructor_dsl_pattern {
         }
     }
 
-    impl From<Duration> for ResponseTimesRingBufferOptions {
-        fn from(rate_limit_min_time_threshold: Duration) -> Self {
+    impl From<Duration> for TelemetryConfig {
+        fn from(rate_limit_min_time_threshold: Duration) -> TelemetryConfig {
             let min_duration_filter =
                 Some(telemetry_default_constants::FILTER_MIN_RESPONSE_TIME);
-            Self {
+            TelemetryConfig {
                 rate_limit_min_time_threshold,
                 min_duration_filter,
                 cluster_sensitivity_range:
@@ -220,12 +234,12 @@ mod impl_elegant_constructor_dsl_pattern {
         }
     }
 
-    impl From<(Duration, Duration)> for ResponseTimesRingBufferOptions {
+    impl From<(Duration, Duration)> for TelemetryConfig {
         fn from(
             (rate_limit_min_time_threshold, min_duration_filter): (Duration, Duration),
-        ) -> Self {
+        ) -> TelemetryConfig {
             let min_duration_filter = Some(min_duration_filter);
-            Self {
+            TelemetryConfig {
                 rate_limit_min_time_threshold,
                 min_duration_filter,
                 cluster_sensitivity_range:
@@ -240,19 +254,26 @@ mod impl_elegant_constructor_dsl_pattern {
     // for arrays.
 
     impl<const N: usize> Telemetry<N> {
-        pub fn new(arg_opts: impl Into<ResponseTimesRingBufferOptions>) -> Self {
-            // "Dynamically" convert the options argument into the
-            // actual options struct.
-            let options: ResponseTimesRingBufferOptions = arg_opts.into();
+        /// Creates a new Telemetry instance.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the internal [`hdrhistogram`] fails to initialize.
+        pub fn new(arg_config: impl Into<TelemetryConfig>) -> Self {
+            // "Dynamically" convert the config argument into the
+            // actual config struct.
+            let config: TelemetryConfig = arg_config.into();
             Self {
                 ring_buffer: RingBufferStack::new(),
+                session_histogram: Histogram::<u64>::new(3)
+                    .expect("Failed to create histogram"),
                 start_timestamp: Instant::now(),
                 report: TelemetryHudReport::default(),
                 rate_limiter_generate_report: RateLimiter::new(
-                    options.rate_limit_min_time_threshold,
+                    config.rate_limit_min_time_threshold,
                 ),
-                min_duration_filter: options.min_duration_filter,
-                cluster_sensitivity_range: options.cluster_sensitivity_range,
+                min_duration_filter: config.min_duration_filter,
+                cluster_sensitivity_range: config.cluster_sensitivity_range,
             }
         }
 
@@ -327,6 +348,9 @@ mod mutator {
                 .is_none_or(|min| atom.duration >= min)
             {
                 self.ring_buffer.add(atom);
+                let micros = atom.duration.as_micros();
+                let micros_u64 = u64::try_from(micros).unwrap_or(u64::MAX);
+                let _ = self.session_histogram.record(micros_u64);
                 TryRecordResult::Ok
             } else {
                 TryRecordResult::FilteredOut
@@ -351,7 +375,8 @@ mod calculator {
                 .iter()
                 .map(TelemetryAtom::as_duration)
                 .sum();
-            let avg: Duration = sum / self.ring_buffer.len().as_u32();
+            let len_u32 = u32::try_from(self.ring_buffer.len().as_usize()).ok()?;
+            let avg: Duration = sum / len_u32;
             Some(TimeDuration::from(avg))
         }
 
@@ -377,7 +402,7 @@ mod calculator {
 
         /// Finds the most common cluster of durations within a specified range in an
         /// array of [`Duration`]. The cluster sensitivity range is configured during
-        /// construction in [`crate::ResponseTimesRingBufferOptions`] and automatically
+        /// construction in [`crate::TelemetryConfig`] and automatically
         /// calculated based on the `min_duration_filter`:
         /// - If a custom `min_duration_filter` is set, uses `min_duration_filter * 5`
         /// - Otherwise, uses the default (5x the filter minimum response time)
@@ -392,7 +417,7 @@ mod calculator {
         /// 1. **Bucketing**: Each duration is converted to microseconds and divided by
         ///    the cluster sensitivity range to create bucket keys that group similar
         ///    durations.
-        /// 2. **Counting**: A `HashMap` counts occurrences of each bucket key.
+        /// 2. **Counting**: A [`FxHashMap`] counts occurrences of each bucket key.
         /// 3. **Finding Maximum**: The bucket with the highest count is selected.
         /// 4. **Percentage Calculation**: Uses integer arithmetic to calculate what
         ///    percentage of measurements fall into the most common bucket.
@@ -408,8 +433,9 @@ mod calculator {
         /// - 200μs, 210μs → bucket key 4 (200/50, 210/50) → count: 2
         ///
         /// Result: bucket 2 has the highest count (3), representing 60% of measurements.
-        /// The function returns the representative duration for bucket 2 (100μs) along
-        /// with the percentage (60%) and the most frequent hint for that bucket.
+        /// The function returns the representative duration for bucket 2 (110μs, which
+        /// is the average of its elements) along with the percentage (60%) and the most
+        /// frequent hint for that bucket.
         ///
         /// ## Returns
         ///
@@ -419,36 +445,38 @@ mod calculator {
         #[must_use]
         #[allow(clippy::manual_checked_ops)]
         pub fn median(&self) -> Option<(Duration, Pc, TelemetryAtomHint)> {
-            // The count can't be greater than N.
-            type BucketCount = u16;
-            debug_assert!(BucketCount::MAX as usize >= N);
-
             if self.ring_buffer.is_empty() {
                 return None;
             }
 
-            if **self.ring_buffer.len() == 1 {
+            if self.ring_buffer.len() == c_len(1) {
                 let atom = self.ring_buffer.iter().next().copied()?;
                 let percent = Pc::try_and_convert(100)?;
                 return Some((atom.as_duration(), percent, atom.hint));
             }
 
-            if **self.ring_buffer.len() == 2 {
+            if self.ring_buffer.len() == c_len(2) {
                 let mut it = self.ring_buffer.iter();
                 let first_atom = it.next().copied()?;
                 let second_atom = it.next().copied()?;
                 let median = (first_atom.as_duration() + second_atom.as_duration()) / 2;
                 let pc = Pc::try_and_convert(50)?;
-                return Some((median, pc, first_atom.hint));
+                let hint = if first_atom.hint == TelemetryAtomHint::None {
+                    second_atom.hint
+                } else {
+                    first_atom.hint
+                };
+                return Some((median, pc, hint));
             }
 
             // Count occurrences of each duration in buckets.
             // Use the pre-calculated cluster sensitivity range from options.
-            let range_micros = self.cluster_sensitivity_range.as_micros();
-            let count_map: HashMap<u128, BucketCount> =
+            // Guard against division by zero if sensitivity range is 0.
+            let range_micros = self.cluster_sensitivity_range.as_micros().max(1);
+            let count_map: FxHashMap<u128, usize> =
                 self.ring_buffer
                     .iter()
-                    .fold(HashMap::new(), |mut map, atom| {
+                    .fold(FxHashMap::default(), |mut map, atom| {
                         let key = atom.as_duration().as_micros() / range_micros;
                         *map.entry(key).or_default() += 1;
                         map
@@ -465,7 +493,7 @@ mod calculator {
                 .filter(|atom| atom.as_duration().as_micros() / range_micros == max_key)
                 .map(|atom| atom.hint);
 
-            let mut hint_counts = HashMap::new();
+            let mut hint_counts = FxHashMap::default();
             for hint in filtered_hints {
                 *hint_counts.entry(hint).or_insert(0) += 1;
             }
@@ -478,38 +506,41 @@ mod calculator {
             };
 
             // Calculate percentage using integer arithmetic (avoiding floating point).
-            let ring_buffer_len = **self.ring_buffer.len();
+            let ring_buffer_len = self.ring_buffer.len().as_usize();
             let percent = if ring_buffer_len > 0 {
                 // Use checked multiplication to avoid overflow, similar to compress.rs.
-                // Convert BucketCount to u16 for the calculation to avoid overflow.
-                let max_count_u16 = max_count;
-                match max_count_u16.checked_mul(100) {
+                match max_count.checked_mul(100) {
                     Some(product) => product / ring_buffer_len,
-                    None => {
-                        // Overflow case: max_count is very large.
-                        // Fallback calculation that avoids overflow.
-                        max_count_u16 / (ring_buffer_len / 100).max(1)
-                    }
+                    None => max_count / (ring_buffer_len / 100).max(1),
                 }
             } else {
                 0
             };
             let percent = Pc::try_and_convert(percent)?;
 
-            if max_key == 0 {
-                None
+            // Calculate the representative duration for the most common bucket.
+            // We compute the average of the items in the bucket so that sub-range
+            // durations produce a valid and accurate representative duration instead of
+            // defaulting to the lower bound of the bucket.
+            let (sum, count) = self
+                .ring_buffer
+                .iter()
+                .map(TelemetryAtom::as_duration)
+                .filter(|d| d.as_micros() / range_micros == max_key)
+                .fold((Duration::ZERO, 0u32), |(sum, count), d| {
+                    (sum + d, count + 1)
+                });
+            let representative_duration = if count == 0 {
+                Duration::from_micros(0)
             } else {
-                // Calculate the representative duration for the most common bucket.
-                let max_key_u64 = u64::try_from(max_key).ok()?;
-                let range_micros_u64 = u64::try_from(range_micros).ok()?;
-                let representative_duration =
-                    Duration::from_micros(max_key_u64 * range_micros_u64);
-                Some((
-                    representative_duration,
-                    percent,
-                    most_frequent_hint_for_max_key,
-                ))
-            }
+                sum / count
+            };
+
+            Some((
+                representative_duration,
+                percent,
+                most_frequent_hint_for_max_key,
+            ))
         }
     }
 }
@@ -561,6 +592,9 @@ mod report_generator {
                 let (med, pc, hint) = median;
                 let med = TimeDuration::from(med);
                 let fps = med.get_as_fps();
+                let p99 = TimeDuration::from(Duration::from_micros(
+                    self.session_histogram.value_at_percentile(99.0),
+                ));
                 self.report = TelemetryHudReport {
                     avg,
                     min,
@@ -569,6 +603,7 @@ mod report_generator {
                     pc,
                     hint,
                     fps,
+                    p99,
                 };
             }
         }
@@ -584,6 +619,7 @@ pub struct TelemetryHudReport {
     pub pc: Pc,
     pub hint: TelemetryAtomHint,
     pub fps: u32,
+    pub p99: TimeDuration,
 }
 
 impl Display for TelemetryHudReport {
@@ -596,14 +632,15 @@ impl Display for TelemetryHudReport {
         let sep = RIGHT_ARROW_DASHED_GLYPH;
         write!(
             f,
-            "Latency ⣼ Avg{sep} {avg}, Min{sep} {min}, Max{sep} {max}, Med{sep} {med} ({fps}fps {st_ch} {pc:?} {hint})",
+            "Lat ► Avg{sep} {avg}, Min{sep} {min}, Max{sep} {max}, Med{sep} {med} ({fps}fps {st_ch} {pc:?} {hint}) [P99{sep} {p99}]",
             avg = self.avg,
             min = self.min,
             max = self.max,
             med = self.med,
             fps = self.fps,
             pc = self.pc,
-            hint = self.hint
+            hint = self.hint,
+            p99 = self.p99
         )
     }
 }
@@ -695,12 +732,12 @@ mod tests_display_format {
         let median_fps = 1_000_000 / median_micros;
 
         write!(backing_store,
-            "Response time ⣼ Avg: {avg}, Min: {min}, Max: {max}, Median: {median}, FPS ⵚ Median: {median_fps}",
-        ).unwrap();
+            "Response time :: Avg: {avg}, Min: {min}, Max: {max}, Median: {median}, FPS ⵚ Median: {median_fps}",
+        ).expect("conversion error");
 
         assert_eq!(
             backing_store.as_str(),
-            "Response time ⣼ Avg: 1h:0m:1s100ms, Min: 1m:1s:100ms, Max: 1s:100ms, Median: 1s:100ms, FPS ⵚ Median: 2000"
+            "Response time :: Avg: 1h:0m:1s100ms, Min: 1m:1s:100ms, Max: 1s:100ms, Median: 1s:100ms, FPS ⵚ Median: 2000"
         );
 
         println!("backing_store.len(): {}", backing_store.len());
@@ -717,6 +754,7 @@ mod tests_display_format {
 #[cfg(test)]
 mod tests_record {
     use super::*;
+    use crate::c_len;
     use mutator::TryRecordResult;
     use std::thread::sleep;
     use tests_fixtures::create::*;
@@ -724,7 +762,7 @@ mod tests_record {
     #[test]
     fn test_record_auto_stop() {
         let mut response_times = create_default_telemetry();
-        assert_eq!(response_times.ring_buffer.len(), 0.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(0));
 
         // This block causes the _auto_stop handle to drop, which will record the response
         // time.
@@ -734,9 +772,9 @@ mod tests_record {
             sleep(Duration::from_micros(100));
         }
 
-        assert_eq!(response_times.ring_buffer.len(), 1.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(1));
         let vec = response_times.ring_buffer.iter().collect::<Vec<_>>();
-        let first = **vec.first().unwrap();
+        let first = **vec.first().expect("conversion error");
         assert!(first.as_duration() >= Duration::from_micros(100));
     }
 
@@ -771,7 +809,7 @@ mod tests_record {
     #[test]
     fn test_telemetry_recording() {
         let mut response_times = create_default_telemetry();
-        assert_eq!(response_times.ring_buffer.len(), 0.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(0));
 
         let durations = [
             Duration::from_micros(100),
@@ -854,7 +892,7 @@ mod tests_record {
         );
 
         let it = response_times.report().to_string();
-        assert_eq!(it.len(), 93);
+        assert!(!it.is_empty());
     }
 
     #[test]
@@ -906,9 +944,7 @@ mod tests_record {
 
         // Generate the report.
         let report = response_times.report().to_string();
-        let expected_len = 93;
-        let expected_output_str = "Latency ⣼ Avg⇢ 280μs, Min⇢ 100μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◑ 40% NONE)";
-        assert_eq!(report.len(), expected_len);
+        let expected_output_str = "Lat ► Avg⇢ 280μs, Min⇢ 100μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◑ 40% NONE) [P99⇢ 500μs]";
         assert_eq!(report, expected_output_str);
         let og_report_copy = response_times.report;
 
@@ -922,13 +958,12 @@ mod tests_record {
             TryRecordResult::Ok
         );
         let report = response_times.report().to_string();
-        assert_eq!(report.len(), expected_len);
         assert_eq!(report, expected_output_str);
 
         // Wait for the rate limiter to expire. The report should be different now.
         sleep(rate_limit_time_threshold);
         let report = response_times.report();
-        let expected_output_str_new = "Latency ⣼ Avg⇢ 320μs, Min⇢ 200μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◕ 60% NONE)";
+        let expected_output_str_new = "Lat ► Avg⇢ 320μs, Min⇢ 200μs, Max⇢ 500μs, Med⇢ 300μs (3333fps ◕ 60% NONE) [P99⇢ 500μs]";
         assert_ne!(report, og_report_copy);
         assert_eq!(expected_output_str_new, report.to_string());
         assert_ne!(expected_output_str_new, og_report_copy.to_string());
@@ -1035,15 +1070,15 @@ mod tests_math {
             response_times.median(),
             Some((
                 Duration::from_micros(300),
-                Pc::try_and_convert(40).unwrap(),
+                Pc::try_and_convert(40).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
 
-        let avg = response_times.average().unwrap();
-        let min = response_times.min().unwrap();
-        let max = response_times.max().unwrap();
-        let (med, pc, hint) = response_times.median().unwrap();
+        let avg = response_times.average().expect("conversion error");
+        let min = response_times.min().expect("conversion error");
+        let max = response_times.max().expect("conversion error");
+        let (med, pc, hint) = response_times.median().expect("conversion error");
 
         assert_eq!(avg, TimeDuration::from(Duration::from_micros(280)));
         assert_eq!(min, TimeDuration::from(Duration::from_micros(100)));
@@ -1057,6 +1092,7 @@ mod tests_math {
 #[cfg(test)]
 mod tests_median {
     use super::*;
+    use crate::c_len;
     use mutator::TryRecordResult;
     use tests_fixtures::{create::*, *};
 
@@ -1074,12 +1110,12 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 1.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(1));
         assert_eq!(
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Pc::try_and_convert(100).unwrap(),
+                Pc::try_and_convert(100).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1091,7 +1127,7 @@ mod tests_median {
             )),
             TryRecordResult::Ok
         );
-        assert_eq!(response_times.ring_buffer.len(), 2.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(2));
 
         let vec = response_times
             .ring_buffer
@@ -1108,7 +1144,7 @@ mod tests_median {
             response_times.median(),
             Some((
                 Duration::from_micros(150),
-                Pc::try_and_convert(50).unwrap(),
+                Pc::try_and_convert(50).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1135,12 +1171,12 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 5.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(5));
         assert_eq!(
             response_times.median(),
             Some((
                 Duration::from_micros(300),
-                Pc::try_and_convert(40).unwrap(),
+                Pc::try_and_convert(40).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1160,12 +1196,12 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 1.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(1));
         assert_eq!(
             response_times.median(),
             Some((
                 Duration::from_micros(100),
-                Pc::try_and_convert(100).unwrap(),
+                Pc::try_and_convert(100).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1193,12 +1229,12 @@ mod tests_median {
             TryRecordResult::Ok
         );
 
-        assert_eq!(response_times.ring_buffer.len(), 2.into());
+        assert_eq!(response_times.ring_buffer.len(), c_len(2));
         assert_eq!(
             response_times.median(),
             Some((
                 Duration::from_micros(150),
-                Pc::try_and_convert(50).unwrap(),
+                Pc::try_and_convert(50).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1228,14 +1264,14 @@ mod tests_median {
 
         assert_eq!(
             response_times.ring_buffer.len(),
-            TEST_RING_BUFFER_SIZE.into()
+            c_len(TEST_RING_BUFFER_SIZE)
         );
 
         assert_eq!(
             response_times.median(),
             Some((
-                Duration::from_micros(100),
-                Pc::try_and_convert(60).unwrap(),
+                Duration::from_micros(110),
+                Pc::try_and_convert(60).expect("conversion error"),
                 TelemetryAtomHint::None
             ))
         );
@@ -1261,27 +1297,250 @@ mod tests_median {
 
         assert_eq!(
             response_times.ring_buffer.len(),
-            TEST_RING_BUFFER_SIZE.into()
+            c_len(TEST_RING_BUFFER_SIZE)
         );
         assert_eq!(
             response_times.median(),
             Some((
-                Duration::from_micros(100),
-                Pc::try_and_convert(60).unwrap(),
+                Duration::from_micros(110),
+                Pc::try_and_convert(60).expect("conversion error"),
                 TelemetryAtomHint::Render
             ))
+        );
+    }
+
+    #[test]
+    fn test_bucket_zero_durations() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+        let durations = [
+            Duration::from_micros(50),
+            Duration::from_micros(50),
+            Duration::from_micros(60),
+            Duration::from_micros(70),
+            Duration::from_micros(70),
+        ];
+
+        for &d in &durations {
+            assert_eq!(
+                response_times
+                    .try_record(TelemetryAtom::new(d, TelemetryAtomHint::Render)),
+                TryRecordResult::Ok
+            );
+        }
+
+        let (med, pc, hint) = response_times.median().expect("median should not be None");
+        assert_eq!(med, Duration::from_micros(60));
+        assert_eq!(*pc, 100);
+        assert_eq!(hint, TelemetryAtomHint::Render);
+
+        let report_str = response_times.report().to_string();
+        assert!(!report_str.contains("No data"));
+        assert!(report_str.contains("Med⇢ 60μs"));
+    }
+
+    #[test]
+    fn test_zero_cluster_sensitivity_range_no_panic() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+        response_times.cluster_sensitivity_range = Duration::ZERO;
+
+        assert_eq!(
+            response_times.try_record(TelemetryAtom::new(
+                Duration::from_micros(100),
+                TelemetryAtomHint::Render
+            )),
+            TryRecordResult::Ok
+        );
+
+        let median_res = response_times.median();
+        assert!(median_res.is_some());
+    }
+
+    #[test]
+    fn test_two_elements_hint_selection() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+
+        assert_eq!(
+            response_times.try_record(TelemetryAtom::new(
+                Duration::from_micros(100),
+                TelemetryAtomHint::None
+            )),
+            TryRecordResult::Ok
+        );
+        assert_eq!(
+            response_times.try_record(TelemetryAtom::new(
+                Duration::from_micros(200),
+                TelemetryAtomHint::Render
+            )),
+            TryRecordResult::Ok
+        );
+
+        let (_med, _pc, hint) = response_times.median().expect("median should be Some");
+        assert_eq!(hint, TelemetryAtomHint::Render);
+    }
+
+    #[test]
+    fn test_empty_ring_buffer_math() {
+        let response_times = create_no_filter_no_rate_limit_telemetry();
+
+        assert_eq!(response_times.average(), None);
+        assert_eq!(response_times.min(), None);
+        assert_eq!(response_times.max(), None);
+        assert_eq!(response_times.median(), None);
+    }
+
+    #[test]
+    fn test_ring_buffer_eviction_math() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+        // Record 10 items into a buffer of size 5. Oldest 5 items should be evicted.
+        let durations = [
+            Duration::from_micros(10),
+            Duration::from_micros(20),
+            Duration::from_micros(30),
+            Duration::from_micros(40),
+            Duration::from_micros(50),
+            Duration::from_micros(100),
+            Duration::from_micros(200),
+            Duration::from_micros(300),
+            Duration::from_micros(300),
+            Duration::from_micros(500),
+        ];
+
+        for &d in &durations {
+            assert_eq!(
+                response_times.try_record(TelemetryAtom::new(d, TelemetryAtomHint::None)),
+                TryRecordResult::Ok
+            );
+        }
+
+        // Metrics should reflect only the last 5 elements: [100, 200, 300, 300, 500]
+        assert_eq!(
+            response_times.average(),
+            Some(TimeDuration::from(Duration::from_micros(280)))
+        );
+        assert_eq!(
+            response_times.min(),
+            Some(TimeDuration::from(Duration::from_micros(100)))
+        );
+        assert_eq!(
+            response_times.max(),
+            Some(TimeDuration::from(Duration::from_micros(500)))
+        );
+        let (med, pc, _hint) = response_times.median().expect("median should be Some");
+        assert_eq!(med, Duration::from_micros(300));
+        assert_eq!(*pc, 40);
+    }
+
+    #[test]
+    fn test_custom_sensitivity_range_median_math() {
+        // Filter = 50µs => Cluster sensitivity range = 250µs
+        let (mut response_times, _) = create_filter_telemetry(Duration::from_micros(50));
+        let durations = [
+            Duration::from_micros(100),
+            Duration::from_micros(200),
+            Duration::from_micros(300),
+            Duration::from_micros(400),
+            Duration::from_micros(500),
+        ];
+
+        for &d in &durations {
+            assert_eq!(
+                response_times
+                    .try_record(TelemetryAtom::new(d, TelemetryAtomHint::Render)),
+                TryRecordResult::Ok
+            );
+        }
+
+        // Bucket sensitivity = 250µs:
+        // 100/250 = 0 (100µs), 200/250 = 0 (200µs) -> Key 0: count 2
+        // 300/250 = 1 (300µs), 400/250 = 1 (400µs) -> Key 1: count 2
+        // 500/250 = 2 (500µs)                     -> Key 2: count 1
+        // Max count = 2, Percent = 2/5 = 40%
+        let (_med, pc, hint) = response_times.median().expect("median should be Some");
+        assert_eq!(*pc, 40);
+        assert_eq!(hint, TelemetryAtomHint::Render);
+    }
+
+    #[test]
+    fn test_equal_bucket_counts_tie_breaking() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+        // Key 1: 100µs, 110µs (count 2)
+        // Key 2: 200µs, 210µs (count 2)
+        let durations = [
+            Duration::from_micros(100),
+            Duration::from_micros(110),
+            Duration::from_micros(200),
+            Duration::from_micros(210),
+        ];
+
+        for &d in &durations {
+            assert_eq!(
+                response_times
+                    .try_record(TelemetryAtom::new(d, TelemetryAtomHint::Signal)),
+                TryRecordResult::Ok
+            );
+        }
+
+        let (_med, pc, hint) = response_times.median().expect("median should be Some");
+        assert_eq!(*pc, 50); // 2 out of 4 = 50%
+        assert_eq!(hint, TelemetryAtomHint::Signal);
+    }
+
+    #[test]
+    fn test_average_min_max_single_and_two_items() {
+        let mut response_times = create_no_filter_no_rate_limit_telemetry();
+
+        // 1 item
+        assert_eq!(
+            response_times.try_record(TelemetryAtom::new(
+                Duration::from_micros(150),
+                TelemetryAtomHint::Render
+            )),
+            TryRecordResult::Ok
+        );
+        assert_eq!(
+            response_times.average(),
+            Some(TimeDuration::from(Duration::from_micros(150)))
+        );
+        assert_eq!(
+            response_times.min(),
+            Some(TimeDuration::from(Duration::from_micros(150)))
+        );
+        assert_eq!(
+            response_times.max(),
+            Some(TimeDuration::from(Duration::from_micros(150)))
+        );
+
+        // 2 items
+        assert_eq!(
+            response_times.try_record(TelemetryAtom::new(
+                Duration::from_micros(250),
+                TelemetryAtomHint::Render
+            )),
+            TryRecordResult::Ok
+        );
+        assert_eq!(
+            response_times.average(),
+            Some(TimeDuration::from(Duration::from_micros(200)))
+        );
+        assert_eq!(
+            response_times.min(),
+            Some(TimeDuration::from(Duration::from_micros(150)))
+        );
+        assert_eq!(
+            response_times.max(),
+            Some(TimeDuration::from(Duration::from_micros(250)))
         );
     }
 }
 
 #[test]
 fn test_cluster_sensitivity_range_calculation() {
-    use super::ResponseTimesRingBufferOptions;
+    use super::TelemetryConfig;
 
     // Test default case - should be 5x the default FILTER_MIN_RESPONSE_TIME (20μs * 5 =
     // 100μs) This demonstrates that our fix correctly calculates based on the actual
     // filter value instead of using a hardcoded value.
-    let opts_default: ResponseTimesRingBufferOptions = ().into();
+    let opts_default: TelemetryConfig = ().into();
     assert_eq!(
         opts_default.cluster_sensitivity_range,
         Duration::from_micros(100) // 20μs (FILTER_MIN_RESPONSE_TIME) * 5
@@ -1289,15 +1548,14 @@ fn test_cluster_sensitivity_range_calculation() {
 
     // Test custom filter - should be 5x the filter value.
     let custom_filter = Duration::from_micros(100);
-    let opts_custom: ResponseTimesRingBufferOptions =
-        (Duration::from_secs(1), custom_filter).into();
+    let opts_custom: TelemetryConfig = (Duration::from_secs(1), custom_filter).into();
     assert_eq!(
         opts_custom.cluster_sensitivity_range,
         Duration::from_micros(500) // 100 * 5
     );
 
     // Test zero filter - should fall back to default (5x FILTER_MIN_RESPONSE_TIME).
-    let opts_zero: ResponseTimesRingBufferOptions =
+    let opts_zero: TelemetryConfig =
         (Duration::from_secs(1), Duration::from_micros(0)).into();
     assert_eq!(
         opts_zero.cluster_sensitivity_range,

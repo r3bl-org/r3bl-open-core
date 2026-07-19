@@ -1,31 +1,31 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use super::{SelectMode, scroll_editor_content};
-use crate::{CaretDirection, ContainsWideSegments, CursorBoundsCheck,
-            CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
-            NumericValue, SegStringOwned,
-            caret_locate::{self, RowContentPositionStatus, locate_col},
-            caret_mut, caret_scr_adj, col, empty_check_early_return,
-            multiline_disabled_check_early_return, row};
+use crate::{CWidth, CaretDirection, CursorBoundsCheck, CursorPositionBoundsStatus,
+            EditorArgsMut, EditorBuffer, EditorEngine, NumericValue, RangeExt,
+            RowContentPositionStatus, WideSegmentLookahead, c_caret, c_col, c_row,
+            c_width, caret_mut, empty_check_early_return, locate_col, locate_row,
+            multiline_disabled_check_early_return};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
-    match caret_locate::locate_row(buffer) {
+    match locate_row(buffer) {
         RowContentPositionStatus::OnFirstRow => {
-            // Do nothing if the caret (scroll adjusted) is at the top.
-            if buffer.get_caret_scr_adj().col_index != col(0) {
+            // Do nothing if the caret is already at the start of the first row.
+            if buffer.get_c_caret().col_index != c_col(0) {
                 // When buffer_mut goes out of scope, it will be dropped and
                 // validation performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    scroll_editor_content::reset_caret_col(
-                        buffer_mut.inner.caret_raw,
-                        buffer_mut.inner.scr_ofs,
+                    scroll_editor_content::horiz_caret_movement::reset_c_caret_col(
+                        buffer_mut.inner.c_caret,
+                        buffer_mut.inner.viewport,
                     );
                 }
             }
@@ -40,28 +40,27 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
                     // There is a line above the caret.
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    scroll_editor_content::dec_caret_row(
-                        buffer_mut.inner.caret_raw,
-                        buffer_mut.inner.scr_ofs,
+                    scroll_editor_content::vert_caret_movement::dec_c_caret_row(
+                        buffer_mut.inner.c_caret,
+                        buffer_mut.inner.viewport,
                     );
                 }
 
-                scroll_editor_content::clip_caret_to_content_width(EditorArgsMut {
-                    engine,
-                    buffer,
-                });
+                scroll_editor_content::clip_caret_to_bounds::clip_c_caret_to_content_width(
+                    EditorArgsMut::new(buffer, engine),
+                );
             }
         }
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
+    sel_mod.update_selection_based_on_c_caret_movement_in_multiple_lines(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 }
 
@@ -74,23 +73,23 @@ pub fn page_up(
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
-    let viewport_height = engine.viewport().row_height;
-    scroll_editor_content::change_caret_row_by(
-        EditorArgsMut { engine, buffer },
-        viewport_height,
+    let vp_height = engine.viewport().row_height;
+    scroll_editor_content::vert_caret_movement::change_c_caret_row_by(
+        EditorArgsMut::new(buffer, engine),
+        vp_height,
         CaretDirection::Up,
     );
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
+    sel_mod.update_selection_based_on_c_caret_movement_in_multiple_lines(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 }
 
@@ -99,39 +98,37 @@ pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Selec
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
-    if buffer.next_line_below_caret_to_string().is_some() {
+    if buffer.get_next_line_below_caret().is_some() {
         // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             // There is a line below the caret.
             let buffer_mut = buffer.get_mut(engine.viewport());
 
-            scroll_editor_content::inc_caret_row(
-                buffer_mut.inner.caret_raw,
-                buffer_mut.inner.scr_ofs,
-                buffer_mut.inner.vp.row_height,
+            scroll_editor_content::vert_caret_movement::inc_c_caret_row(
+                buffer_mut.inner.c_caret,
+                buffer_mut.inner.viewport,
             );
         }
 
-        scroll_editor_content::clip_caret_to_content_width(EditorArgsMut {
-            engine,
-            buffer,
-        });
+        scroll_editor_content::clip_caret_to_bounds::clip_c_caret_to_content_width(
+            EditorArgsMut::new(buffer, engine),
+        );
     } else {
         // Move to the end of the line.
         caret_mut::to_end_of_line(buffer, engine, sel_mod);
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
+    sel_mod.update_selection_based_on_c_caret_movement_in_multiple_lines(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 }
 
@@ -144,29 +141,32 @@ pub fn page_down(
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
-    let viewport_height = engine.viewport().row_height;
-    scroll_editor_content::change_caret_row_by(
-        EditorArgsMut { engine, buffer },
-        viewport_height,
+    let vp_height = engine.viewport().row_height;
+    scroll_editor_content::vert_caret_movement::change_c_caret_row_by(
+        EditorArgsMut::new(buffer, engine),
+        vp_height,
         CaretDirection::Down,
     );
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
+    sel_mod.update_selection_based_on_c_caret_movement_in_multiple_lines(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 }
 
 /// Depending on [`SelectMode`], this acts as a:
 /// - Convenience function for simply calling [left] repeatedly.
-/// - Convenience function for simply calling [`scroll_editor_content::reset_caret_col`].
+/// - Convenience function for simply calling
+///   [`scroll_editor_content::reset_c_caret_col`].
+///
+/// [`scroll_editor_content::reset_c_caret_col`]: super::scroll_editor_content::horiz_caret_movement::reset_c_caret_col
 pub fn to_start_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -176,8 +176,9 @@ pub fn to_start_of_line(
 
     match sel_mod {
         SelectMode::Enabled => {
-            let caret = buffer.get_caret_scr_adj();
-            for _ in 0..caret.col_index.value {
+            let caret = buffer.get_c_caret();
+            let col_range = ..caret.col_index;
+            for _ in col_range.as_index_iter() {
                 left(buffer, engine, sel_mod);
             }
         }
@@ -187,9 +188,9 @@ pub fn to_start_of_line(
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                scroll_editor_content::reset_caret_col(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
+                scroll_editor_content::horiz_caret_movement::reset_c_caret_col(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
                 );
             }
         }
@@ -198,7 +199,10 @@ pub fn to_start_of_line(
 
 /// Depending on [`SelectMode`], this acts as a:
 /// - Convenience function for simply calling [right] repeatedly.
-/// - Convenience function for simply calling [`scroll_editor_content::set_caret_col_to`].
+/// - Convenience function for simply calling
+///   [`scroll_editor_content::set_c_caret_col_to`].
+///
+/// [`scroll_editor_content::set_c_caret_col_to`]: super::scroll_editor_content::horiz_caret_movement::set_c_caret_col_to
 pub fn to_end_of_line(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -208,30 +212,30 @@ pub fn to_end_of_line(
 
     match sel_mod {
         SelectMode::Enabled => {
-            let caret = buffer.get_caret_scr_adj();
-            let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
-            for _ in caret.col_index.value..line_display_width.value {
+            let caret = buffer.get_c_caret();
+            let line_display_width = buffer
+                .get_lines()
+                .get_line_display_width_at_row_index(buffer.get_c_caret().row_index);
+            for _ in (caret.col_index..line_display_width.eol_cursor_position())
+                .as_index_iter()
+            {
                 right(buffer, engine, sel_mod);
             }
         }
         SelectMode::Disabled => {
-            let line_display_width = buffer.get_line_display_width_at_row_index(
-                buffer.get_caret_scr_adj().row_index,
-            );
+            let line_display_width = buffer
+                .get_lines()
+                .get_line_display_width_at_row_index(buffer.get_c_caret().row_index);
 
             // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                scroll_editor_content::set_caret_col_to(
-                    // This caret col index goes 1 past the end of the line width, ie:
-                    // - `line_display_width` which is the same as:
-                    // - `line_display_width.convert_to_index() /*-1*/ + 1`
+                scroll_editor_content::horiz_caret_movement::set_c_caret_col_to(
                     line_display_width.eol_cursor_position(),
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    buffer_mut.inner.vp.col_width,
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
                     line_display_width,
                 );
             }
@@ -245,8 +249,9 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
     let max_row_index = buffer.get_max_row_index();
 
     let max_col_index = {
-        let last_line_display_width =
-            buffer.get_line_display_width_at_row_index(max_row_index);
+        let last_line_display_width = buffer
+            .get_lines()
+            .get_line_display_width_at_row_index(max_row_index);
 
         // This caret col index goes 1 past the end of the line width, ie:
         // - `last_line_display_width` which is the same as:
@@ -256,10 +261,10 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 
     buffer.clear_selection();
 
-    sel_mod.update_selection_based_on_caret_movement_in_multiple_lines(
+    sel_mod.update_selection_based_on_c_caret_movement_in_multiple_lines(
         buffer,
-        Some(caret_scr_adj(col(0) + row(0))),
-        Some(caret_scr_adj(max_col_index + max_row_index)),
+        Some(c_caret(c_col(0) + c_row(0))),
+        Some(c_caret(max_col_index + max_row_index)),
     );
 }
 
@@ -287,12 +292,12 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
 
-    let line_is_empty = buffer.line_at_caret_is_empty();
+    let line_is_empty = buffer.is_line_at_caret_empty();
 
     let caret_col_loc_in_line = locate_col(buffer);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
     match caret_col_loc_in_line {
         // Special case of empty line w/ caret at start.
@@ -312,13 +317,13 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.handle_selection_single_line_caret_movement(
+    sel_mod.handle_selection_single_line_c_caret_movement(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 }
 
@@ -326,96 +331,147 @@ mod right_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// 1. Check for wide unicode character to the right of the caret.
-    /// 2. [`validate::apply_change`] checks for wide unicode character at the start of
-    ///    the viewport.
-    pub fn right_normal(
-        buffer: &mut EditorBuffer,
-        engine: &mut EditorEngine,
-    ) -> Option<()> {
-        let SegStringOwned {
-            width: unicode_width_at_caret,
-            ..
-        } = buffer.string_at_caret()?;
+    /// Advances the caret position to the right to the start of the next grapheme
+    /// cluster, skipping across multi-column display widths (such as jumbo emojis) when
+    /// necessary.
+    ///
+    /// # Jumbo Emoji & Multi-Column Grapheme Skipping
+    ///
+    /// A jumbo emoji (such as `🙏🏽` or `😀`) has a display width greater than 1
+    /// (typically [`c_width(2)`]). The editor treats each jumbo emoji as a single logical
+    /// character while respecting its multi-column visual width:
+    ///
+    /// 1. Moving onto a jumbo emoji:
+    ///   - When the caret is sitting on an [`ASCII`] character immediately to the left of
+    ///     a jumbo emoji, pressing `Right` advances the caret by 1 column onto the
+    ///     starting display column of the jumbo emoji.
+    /// 2. Moving off a jumbo emoji:
+    ///   - Let's say the caret is standing **ON** a multi-column grapheme cluster (e.g.,
+    ///     display width 2). The caret is **ON** the first half of the jumbo emoji.
+    ///   - Pressing `Right` skips all interior columns of the cluster and places the
+    ///     caret at the start of the next character.
+    /// 3. Adjacency Gating:
+    ///   - Distant jumbo emojis further down the line are ignored until the caret becomes
+    ///     immediately adjacent (checked via
+    ///     [`WideSegmentLookahead::ImmediatelyAdjacent`]).
+    ///
+    /// ```text
+    /// 🙏🏽: [ ]  (jumbo emoji, width 2, cols 1..3)
+    ///
+    /// Step 0: Caret starts at col 0 ('a')
+    ///
+    ///       col:  0   1   2   3
+    ///           ┌───┬───┬───┬───┐
+    ///     line: │▲a │ [ │ ] │ b │
+    ///           └───┴───┴───┴───┘
+    ///
+    /// Step 1: Press Right on 'a' (col 0)
+    ///
+    ///       col:  0   1   2   3
+    ///           ┌───┬───┬───┬───┐
+    ///     line: │ a │▲[ │ ] │ b │  (Caret moves 1 col onto start of "🙏🏽" at col 1)
+    ///           └───┴───┴───┴───┘
+    ///
+    /// Step 2: Press Right on "🙏🏽" (col 1)
+    ///
+    ///       col:  0   1   2   3
+    ///           ┌───┬───┬───┬───┐
+    ///     line: │ a │ [ │ ] │▲b │  (Col 2 skipped -> Caret jumps 2 cols onto 'b' at col 3)
+    ///           └───┴───┴───┴───┘
+    /// ```
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`c_width(2)`]: crate::c_width
+    pub fn right_normal(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
+        let unicode_width_at_caret = buffer
+            .get_seg_at_caret()
+            .map_or(c_width(1), |seg| seg.display_width);
 
-        let max_display_width = buffer.get_line_display_width_at_caret_scr_adj();
+        let max_display_width = buffer
+            .get_lines()
+            .get_line_display_width_at_row_index(buffer.get_c_caret().row_index);
 
-        let maybe_char_to_right_of_caret = buffer.string_to_right_of_caret();
+        let caret_col = buffer.get_c_caret().col_index;
+        let lookahead = buffer
+            .get_lines()
+            .get_line_info(buffer.get_c_caret().row_index)
+            .map_or(WideSegmentLookahead::None, |line_info| {
+                line_info
+                    .lookahead_wide_segment_to_right(caret_col, unicode_width_at_caret)
+            });
 
-        match maybe_char_to_right_of_caret {
-            Some(right_of_caret_seg_string) => {
-                let chunk_to_right_of_caret_gcs = right_of_caret_seg_string.string;
-
-                match chunk_to_right_of_caret_gcs.contains_wide_segments() {
-                    ContainsWideSegments::Yes => {
-                        let jump_by_col_width = chunk_to_right_of_caret_gcs.display_width
-                            + unicode_width_at_caret;
-                        let move_left_by_amt = chunk_to_right_of_caret_gcs.display_width;
-                        {
-                            let buffer_mut = buffer.get_mut(engine.viewport());
-
-                            scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.inner.caret_raw,
-                                buffer_mut.inner.scr_ofs,
-                                jump_by_col_width,
-                                max_display_width,
-                                buffer_mut.inner.vp.col_width,
-                            );
-                        }
-                        if !move_left_by_amt.is_zero() {
-                            // When buffer_mut goes out of scope, it will be dropped and
-                            // validation performed.
-                            {
-                                let buffer_mut = buffer.get_mut(engine.viewport());
-
-                                scroll_editor_content::dec_caret_col_by(
-                                    buffer_mut.inner.caret_raw,
-                                    buffer_mut.inner.scr_ofs,
-                                    move_left_by_amt,
-                                );
-                            }
-                        }
-                    }
-                    ContainsWideSegments::No => {
-                        // When buffer_mut goes out of scope, it will be dropped and
-                        // validation performed.
-                        {
-                            let buffer_mut = buffer.get_mut(engine.viewport());
-
-                            scroll_editor_content::inc_caret_col_by(
-                                buffer_mut.inner.caret_raw,
-                                buffer_mut.inner.scr_ofs,
-                                unicode_width_at_caret,
-                                max_display_width,
-                                buffer_mut.inner.vp.col_width,
-                            );
-                        }
-                    }
-                }
+        match lookahead {
+            WideSegmentLookahead::ImmediatelyAdjacent(right_seg) => {
+                jump_adjacent_wide_segment(
+                    buffer,
+                    engine,
+                    unicode_width_at_caret,
+                    right_seg.display_width,
+                    max_display_width,
+                );
             }
-
-            None => {
-                // When buffer_mut goes out of scope, it will be dropped and
-                // validation performed.
-                {
-                    let buffer_mut = buffer.get_mut(engine.viewport());
-
-                    scroll_editor_content::inc_caret_col_by(
-                        buffer_mut.inner.caret_raw,
-                        buffer_mut.inner.scr_ofs,
-                        unicode_width_at_caret,
-                        max_display_width,
-                        buffer_mut.inner.vp.col_width,
-                    );
-                }
+            WideSegmentLookahead::Distant(_) | WideSegmentLookahead::None => {
+                step_caret_normal(
+                    buffer,
+                    engine,
+                    unicode_width_at_caret,
+                    max_display_width,
+                );
             }
         }
+    }
 
-        None
+    /// Advances the caret past an immediately adjacent wide grapheme cluster (jumbo
+    /// emoji), placing the caret ON the starting column of the jumbo emoji.
+    fn jump_adjacent_wide_segment(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        unicode_width_at_caret: CWidth,
+        emoji_width: CWidth,
+        max_display_width: CWidth,
+    ) {
+        let jump_by_col_width = emoji_width + unicode_width_at_caret;
+
+        // Note: Block scope `{}` ensures the EditorBufferMutWithDrop RAII guard drops
+        // and runs drop-time validation assertions immediately after scrolling.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            scroll_editor_content::horiz_caret_movement::inc_c_caret_col_by(
+                buffer_mut.inner.c_caret,
+                buffer_mut.inner.viewport,
+                jump_by_col_width,
+                max_display_width,
+            );
+        }
+
+        if !emoji_width.is_zero() {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            scroll_editor_content::horiz_caret_movement::dec_c_caret_col_by(
+                buffer_mut.inner.c_caret,
+                buffer_mut.inner.viewport,
+                emoji_width,
+            );
+        }
+    }
+
+    /// Advances the caret by 1 standard column position.
+    fn step_caret_normal(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        unicode_width_at_caret: CWidth,
+        max_display_width: CWidth,
+    ) {
+        let buffer_mut = buffer.get_mut(engine.viewport());
+        scroll_editor_content::horiz_caret_movement::inc_c_caret_col_by(
+            buffer_mut.inner.c_caret,
+            buffer_mut.inner.viewport,
+            unicode_width_at_caret,
+            max_display_width,
+        );
     }
 
     pub fn right_at_end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
-        if buffer.next_line_below_caret_to_string().is_some() {
+        if buffer.get_next_line_below_caret().is_some() {
             // If there is a line below the caret, move the caret to the start of
             // the next line.
 
@@ -424,15 +480,14 @@ mod right_helper {
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                scroll_editor_content::inc_caret_row(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    buffer_mut.inner.vp.row_height,
+                scroll_editor_content::vert_caret_movement::inc_c_caret_row(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
                 );
 
-                scroll_editor_content::reset_caret_col(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
+                scroll_editor_content::horiz_caret_movement::reset_c_caret_col(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
                 );
             }
         }
@@ -469,7 +524,7 @@ pub fn left(
     empty_check_early_return!(buffer, @None);
 
     // This is only set if sel_mod is enabled.
-    let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_prev_c_caret = sel_mod.get_c_caret(buffer);
 
     match locate_col(buffer) {
         CursorPositionBoundsStatus::AtStart => {
@@ -488,13 +543,13 @@ pub fn left(
     }
 
     // This is only set if sel_mod is enabled.
-    let maybe_curr_caret = sel_mod.get_caret_scr_adj(buffer);
+    let maybe_curr_c_caret = sel_mod.get_c_caret(buffer);
 
     // This is only runs if sel_mod is enabled.
-    sel_mod.handle_selection_single_line_caret_movement(
+    sel_mod.handle_selection_single_line_c_caret_movement(
         buffer,
-        maybe_prev_caret,
-        maybe_curr_caret,
+        maybe_prev_c_caret,
+        maybe_curr_c_caret,
     );
 
     None
@@ -505,7 +560,7 @@ mod left_helper {
     use super::*;
 
     pub fn left_at_start(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
-        if buffer.prev_line_above_caret().is_some() {
+        if buffer.get_prev_line_above_caret().is_some() {
             // If there is a line above the caret, move the caret to the end of
             // the previous line.
 
@@ -514,9 +569,9 @@ mod left_helper {
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
-                scroll_editor_content::dec_caret_row(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
+                scroll_editor_content::vert_caret_movement::dec_c_caret_row(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
                 );
             }
 
@@ -525,51 +580,53 @@ mod left_helper {
     }
 
     pub fn left_at_end(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
-        if let Some(seg_slice) = buffer.string_at_end_of_line_at_caret_scr_adj() {
+        if let Some(seg) = buffer.get_seg_at_end_of_line_at_c_caret() {
             // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
-                scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    seg_slice.width,
+                scroll_editor_content::horiz_caret_movement::dec_c_caret_col_by(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
+                    seg.display_width,
                 );
             }
         }
     }
 
     pub fn left_in_middle(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
-        if let Some(left_seg_string) = buffer.string_to_left_of_caret() {
+        if let Some(left_seg) = buffer.get_seg_to_left_of_caret() {
             // When buffer_mut goes out of scope, it will be dropped & validation
             // performed.
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());
 
-                scroll_editor_content::dec_caret_col_by(
-                    buffer_mut.inner.caret_raw,
-                    buffer_mut.inner.scr_ofs,
-                    left_seg_string.width,
+                scroll_editor_content::horiz_caret_movement::dec_c_caret_col_by(
+                    buffer_mut.inner.c_caret,
+                    buffer_mut.inner.viewport,
+                    left_seg.display_width,
                 );
             }
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work.
+#[cfg(any(test, doc))]
+pub mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                assert_eq2, caret_raw, caret_scr_adj,
-                clipboard_service::clipboard_test_fixtures::TestClipboard,
-                col,
+                FileExtensionToken, assert_eq2, c_caret, c_col, c_height, c_row,
+                clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
-                height, row};
+                vp_caret, vp_col, vp_row};
 
     #[test]
     fn editor_validate_caret_pos_on_up() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -588,7 +645,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(1)));
 
         // Move caret up. It should not be in the middle of the smiley face.
         // R ┌──────────┐
@@ -602,12 +659,13 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(2) + c_row(0)));
     }
 
     #[test]
     fn editor_validate_caret_pos_on_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -626,7 +684,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(2) + c_row(1)));
 
         // Move caret up, and right. It should wrap around to the start of the next line
         // and be to the left of the smiley face.
@@ -644,7 +702,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(1)));
 
         // Move caret down. It should move to the end of the last line.
         // R ┌──────────┐
@@ -658,12 +716,13 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(2) + c_row(1)));
     }
 
     #[test]
     fn editor_move_caret_up_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -686,7 +745,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(2)));
 
         // Move caret down. Goes to end of line 2 and stops.
         // `this` should look like:
@@ -707,7 +766,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(2)));
 
         // Move caret up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -716,7 +775,7 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(1)));
 
         // Move caret up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -725,7 +784,7 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(0)));
 
         // Move caret up a few times. Caret moves to position 0.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -738,7 +797,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // Move right to end of line. Then down.
         // `this` should look like:
@@ -758,7 +817,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(2) + c_row(1)));
 
         // Move caret down.
         // `this` should look like:
@@ -774,13 +833,14 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(2)));
     }
 
     #[allow(clippy::too_many_lines)]
     #[test]
     fn editor_move_caret_left_right() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "a".
@@ -828,7 +888,7 @@ mod tests {
         );
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,)
-                .unwrap()
+                .expect("conversion error")
                 .content(),
             "1a"
         );
@@ -877,7 +937,7 @@ mod tests {
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,)
-                .unwrap()
+                .expect("conversion error")
                 .content(),
             "12a"
         );
@@ -898,7 +958,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert::none_is_at_caret(&buffer);
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(3) + c_row(0)));
 
         // Move caret left.
         // `this` should look like:
@@ -916,7 +976,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // Move caret to end of line, press enter, then move caret left (should be at end
         // of prev line). `this` should look like:
@@ -937,7 +997,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(3) + c_row(0)));
 
         // Move caret right (should be at start of next line).
         // `this` should look like:
@@ -952,7 +1012,7 @@ mod tests {
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(1)));
 
         // Press enter. Press up. Press right (should be at start of next line).
         // `this` should look like:
@@ -972,12 +1032,13 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(2)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(2)));
     }
 
     #[test]
     fn editor_move_caret_home_end() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello". Then press home.
@@ -995,7 +1056,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // Press end.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1004,12 +1065,13 @@ mod tests {
             vec![EditorEvent::End],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(5) + c_row(0)));
     }
 
-    #[test]
-    fn editor_move_caret_home_end_overflow_viewport() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+    #[cfg_attr(not(doc), test)]
+    pub fn editor_move_caret_home_end_overflow_viewport() {
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // console_log!(OK_RAW "press hello");
@@ -1038,7 +1100,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // console_log!(OK_RAW "press end");
 
@@ -1049,13 +1111,14 @@ mod tests {
             vec![EditorEvent::End],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_raw(), caret_raw(col(9) + row(0)));
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(15) + row(0)));
+        assert_eq2!(buffer.get_vp_caret(), vp_caret(vp_col(9) + vp_row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(15) + c_row(0)));
     }
 
     #[test]
     fn editor_move_caret_page_up_page_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello" many times.
@@ -1073,7 +1136,7 @@ mod tests {
             );
             count -= 1;
         }
-        assert_eq2!(buffer.len(), height(max_lines + 1)); /* One empty line after content */
+        assert_eq2!(buffer.get_c_height(), c_height(max_lines + 1)); /* One empty line after content */
 
         // Press page up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1082,7 +1145,7 @@ mod tests {
             vec![EditorEvent::PageUp],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(10)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(10)));
 
         // Press page up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1091,7 +1154,7 @@ mod tests {
             vec![EditorEvent::PageUp],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // Press page up.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1100,7 +1163,7 @@ mod tests {
             vec![EditorEvent::PageUp],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(0)));
 
         // Press page down.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1110,7 +1173,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(10)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(10)));
 
         // Press page down.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1119,7 +1182,7 @@ mod tests {
             vec![EditorEvent::PageDown],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(20)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(20)));
 
         // Press page down.
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1128,6 +1191,214 @@ mod tests {
             vec![EditorEvent::PageDown],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(20)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(0) + c_row(20)));
+    }
+
+    #[test]
+    fn test_jumbo_emoji_caret_navigation_step_by_step() {
+        // String layout: "a🙏🏽b"
+        // 'a'  is col 0 (width 1)
+        // "🙏🏽" is cols 1..3 (width 2)
+        // 'b'  is col 3 (width 1)
+
+        let mut buffer = EditorBuffer::default();
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertString("a🙏🏽b".to_string())],
+            &mut TestClipboard::default(),
+        );
+
+        // Caret is at end of line (col 4). Move caret to start of line (col 0).
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Home],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
+
+        // 1. Press Right from 'a': moves caret onto start of jumbo emoji (col 1)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(1));
+        let res1 = buffer.get_lines().get_string_at_col(c_row(0), c_col(1));
+        assert_eq2!(res1.unwrap().string.string, "🙏🏽");
+
+        // 2. Press Right while standing ON jumbo emoji (col 1): skips 2nd half (col 2)
+        //    onto 'b' (col 3)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(3));
+        let res2 = buffer.get_lines().get_string_at_col(c_row(0), c_col(3));
+        assert_eq2!(res2.unwrap().string.string, "b");
+
+        // 3. Press Left from 'b' (col 3): moves caret back onto start of jumbo emoji (col
+        //    1)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(1));
+        let res3 = buffer.get_lines().get_string_at_col(c_row(0), c_col(1));
+        assert_eq2!(res3.unwrap().string.string, "🙏🏽");
+
+        // 4. Press Left while standing ON jumbo emoji (col 1): moves caret back onto 'a'
+        //    (col 0)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
+    }
+
+    #[test]
+    fn test_consecutive_jumbo_emojis_navigation() {
+        // String layout: "🙏🏽😀"
+        // "🙏🏽" is cols 0..2 (width 2)
+        // "😀" is cols 2..4 (width 2)
+
+        let mut buffer = EditorBuffer::default();
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertString("🙏🏽😀".to_string())],
+            &mut TestClipboard::default(),
+        );
+
+        // Caret is at end of line (col 4). Move to start (col 0).
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Home],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
+
+        // 1. Press Right on "🙏🏽" (col 0): skips col 1 onto "😀" (col 2)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(2));
+
+        // 2. Press Right on "😀" (col 2): skips col 3 onto EOL (col 4)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(4));
+
+        // 3. Press Left from EOL (col 4): lands on start of "😀" (col 2)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(2));
+
+        // 4. Press Left from "😀" (col 2): lands on start of "🙏🏽" (col 0)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
+    }
+
+    #[test]
+    fn test_distant_jumbo_emoji_navigation_with_spaces() {
+        // String layout: "a   🙏🏽"
+        // 'a'  is col 0 (width 1)
+        // ' '  is col 1 (width 1)
+        // ' '  is col 2 (width 1)
+        // ' '  is col 3 (width 1)
+        // "🙏🏽" is cols 4..6 (width 2)
+
+        let mut buffer = EditorBuffer::default();
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::InsertString("a   🙏🏽".to_string())],
+            &mut TestClipboard::default(),
+        );
+
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::Home],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
+
+        // Step 1: Right from 'a' (col 0) -> moves 1 col to space (col 1)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(1));
+
+        // Step 2: Right from space (col 1) -> moves 1 col to space (col 2)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(2));
+
+        // Step 3: Right from space (col 2) -> moves 1 col to space (col 3)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(3));
+
+        // Step 4: Right from space (col 3, adjacent to "🙏🏽") -> moves 1 col onto "🙏🏽"
+        // (col 4)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(4));
+
+        // Step 5: Right ON "🙏🏽" (col 4) -> jumps 2 cols onto EOL (col 6)
+        EditorEvent::apply_editor_events::<(), ()>(
+            &mut engine,
+            &mut buffer,
+            vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
+        );
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(6));
     }
 }

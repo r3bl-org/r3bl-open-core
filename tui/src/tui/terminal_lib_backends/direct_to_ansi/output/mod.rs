@@ -18,7 +18,7 @@
 //! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
-//! [`RenderOpCommon`]: crate::RenderOpCommon
+//! [`RenderOpCommon`]: crate::tui::RenderOpCommon
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi

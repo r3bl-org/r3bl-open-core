@@ -118,7 +118,7 @@
 //! ├── vt_100_shim_line_ops      → ├── impl_line_ops    (insert/delete lines)
 //! ├── vt_100_shim_scroll_ops    → ├── impl_scroll_ops  (scrolling, regions)
 //! ├── vt_100_shim_terminal_ops  → ├── impl_terminal_ops(reset, clear, charset)
-//! └── bounds_check.rs           → └── impl_ansi_scroll_helper (scroll region utilities)
+//! └── bounds_check.rs           → └── impl_ansi_panning (scroll region utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:
@@ -142,15 +142,16 @@
 //!
 //! **Examples:**
 //! - [`set_char()`], [`fill_char_range()`], [`copy_chars_within_line()`]
-//! - [`clear_line()`], [`shift_lines_up()`], [`shift_lines_down()`]
+//! - [`clear_line()`], [`shift_lines_in_range()`]
 //! - [`insert_chars()`], [`delete_chars()`]
 //!
 //! **Usage Pattern:**
 //! ```rust
-//! # use r3bl_tui::*;
-//! # let mut buffer = OfsBuf::new_empty(Size { col_width: width(10), row_height: height(5) });
-//! # let pos = Pos { row_index: row(1), col_index: col(1) };
-//! # let pixel_char = PixelChar::default();
+//! use r3bl_tui::*;
+//! let mut buffer = OfsBuf::new(
+//!     Flat2DArray::new_empty(vp_width(10) + vp_height(5), PixelChar::default()));
+//! let pos = vp_pos(1, 1);
+//! let pixel_char = PixelChar::default();
 //! // In production code, failures are often ignored for terminal resilience
 //! buffer.set_char(pos, pixel_char);
 //!
@@ -172,9 +173,10 @@
 //!
 //! **Usage Pattern:**
 //! ```rust
-//! # use r3bl_tui::*;
-//! # let buffer = OfsBuf::new_empty(Size { col_width: width(10), row_height: height(5) });
-//! # let pos = Pos { row_index: row(1), col_index: col(1) };
+//! use r3bl_tui::*;
+//! let buffer = OfsBuf::new(
+//!     Flat2DArray::new_empty(vp_width(10) + vp_height(5), PixelChar::default()));
+//! let pos = vp_pos(1, 1);
 //! if let Some(char) = buffer.get_char(pos) {
 //!     // Process the character
 //! }
@@ -208,24 +210,24 @@
 //! ### Development Safety (Debug Builds)
 //!
 //! Debug assertions catch issues during development:
-//! ```rust
-//! use r3bl_tui::{len, row, col, Pos, OfsBufVT100, width, height};
+//! ```rust,ignore
+//! use r3bl_tui::{vp_col, vp_height, vp_len, vp_row, vp_width, OfsBufVT100, Pos};
 //!
-//! let mut vt100 = OfsBufVT100::new_empty(width(10) + height(5));
-//! vt100.set_cursor_pos(Pos { row_index: row(1), col_index: col(1) });
-//! let count = len(1);
+//! let mut vt100 = OfsBufVT100::new_empty(vp_width(10) + vp_height(5));
+//! vt100.get_active_screen_buffer_mut().set_cursor_pos(vp_row(1) + vp_col(1));
+//! let count = vp_len(1);
+//! vt100.insert_spaces(count);
+//! vt100.delete_chars(count);
+//! vt100.erase_chars(count);
 //!
-//! // In parser operations
-//! let success = vt100.delete_chars(count);
-//! debug_assert!(success.is_ok(), "Failed to delete {:?} chars at cursor", count);
-//!
-//! let row = row(1);
-//! let source = col(0);
-//! let end = col(1);
-//! let dest = col(2);
+//! let row = vp_row(1);
+//! let source = vp_col(0);
+//! let end = vp_col(1);
+//! let dest = vp_col(2);
 //!
 //! // In internal operations with edge case awareness
-//! let success = vt100.ofs_buf.copy_chars_within_line(row, source..end, dest);
+//! let success = vt100.primary_buffer_mut().copy_chars_within_line(
+//!     row, source..end, dest);
 //! debug_assert!(success.is_ok() || source >= end,
 //!     "Failed to copy chars, range: {:?}..{:?}", source, end);
 //! ```
@@ -251,7 +253,7 @@
 //! All bounds checking uses type-safe utilities from [`bounds_check`]:
 //! - [`IndexOps`] for 0-based indices
 //! - [`LengthOps`] for 1-based lengths
-//! - [`Pos`] for 2D positions combining row and column indices
+//! - [`VPPos`] for 2D positions combining row and column indices
 //!
 //! ### Validation Helpers - Preferred Pattern
 //!
@@ -263,13 +265,6 @@
 //! The module exports three core validation methods (see below) that handle the
 //! complexity of range validation and return structured data ready for safe array access.
 //! See actual implementations in the codebase for usage patterns:
-//! - [`fill_char_range()`] (column range operation)
-//! - [`copy_chars_within_line()`] (column range operation)
-//! - Tests in [`Flat2DArray`] (comprehensive examples)
-//!
-//! #### Core Validation Methods
-//! - [`validate_col_range_mut()`] for column range validation
-//! - [`validate_row_range_mut()`] for row range validation
 //!
 //! #### Validation Benefits
 //!
@@ -285,43 +280,50 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`bounds_check`]: crate::bounds_check
-//! [`clear_line()`]: crate::OfsBufVT100::clear_line
-//! [`copy_chars_within_line()`]: crate::OfsBuf::copy_chars_within_line
+//! [`clear_line()`]: crate::core::ansi::OfsBufVT100::clear_line
+//! [`copy_chars_within_line()`]: crate::tui::OfsBuf::copy_chars_within_line
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-//! [`delete_chars()`]: crate::OfsBufVT100::delete_chars
-//! [`diff()`]: crate::OfsBuf::diff
-//! [`fill_char_range()`]: crate::OfsBuf::fill_char_range
-//! [`Flat2DArray`]: crate::Flat2DArray
-//! [`get_char()`]: crate::OfsBuf::get_char
-//! [`get_line()`]: crate::OfsBuf::get_line
-//! [`handle_backspace()`]: crate::OfsBufVT100::handle_backspace
-//! [`handle_line_feed()`]: crate::OfsBufVT100::handle_line_feed
-//! [`handle_tab()`]: crate::OfsBufVT100::handle_tab
+//! [`delete_chars()`]: crate::core::ansi::OfsBufVT100::delete_chars
+//! [`diff()`]: crate::tui::OfsBuf::diff
+//! [`fill_char_range()`]: crate::tui::OfsBuf::fill_char_range
+//! [`Flat2DArray`]: crate::core::Flat2DArray
+//! [`get_char()`]: crate::tui::OfsBuf::get_char
+//! [`get_line()`]: crate::tui::OfsBuf::get_line
+//! [`handle_backspace()`]: crate::core::ansi::OfsBufVT100::handle_backspace
+//! [`handle_line_feed()`]: crate::core::ansi::OfsBufVT100::handle_line_feed
+//! [`handle_tab()`]: crate::core::ansi::OfsBufVT100::handle_tab
 //! [`IndexOps`]: crate::bounds_check::IndexOps
-//! [`insert_chars()`]: crate::OfsBufVT100::insert_chars
+//! [`insert_chars()`]: crate::core::ansi::OfsBufVT100::insert_chars
 //! [`LengthOps`]: crate::bounds_check::LengthOps
-//! [`move_cursor_down()`]: crate::OfsBufVT100::move_cursor_down
-//! [`move_cursor_left()`]: crate::OfsBufVT100::move_cursor_left
-//! [`move_cursor_right()`]: crate::OfsBufVT100::move_cursor_right
-//! [`move_cursor_up()`]: crate::OfsBufVT100::move_cursor_up
+//! [`move_cursor_down()`]: crate::core::ansi::OfsBufVT100::move_cursor_down
+//! [`move_cursor_left()`]: crate::core::ansi::OfsBufVT100::move_cursor_left
+//! [`move_cursor_right()`]: crate::core::ansi::OfsBufVT100::move_cursor_right
+//! [`move_cursor_up()`]: crate::core::ansi::OfsBufVT100::move_cursor_up
 //! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`Option<&PixelCharLine>`]: std::option::Option
 //! [`Option<PixelChar>`]: std::option::Option
 //! [`Option<PixelCharDiffChunks>`]: std::option::Option
 //! [`Option<T>`]: std::option::Option
 //! [`PixelChar::Void`]: PixelChar::Void
-//! [`Pos`]: crate::Pos
 //! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
-//! [`reset_all_style_attributes()`]: crate::OfsBufVT100::reset_all_style_attributes
-//! [`set_char()`]: crate::OfsBuf::set_char
-//! [`set_foreground_color()`]: crate::OfsBufVT100::set_foreground_color
-//! [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
-//! [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
+//! [`reset_all_style_attributes()`]: crate::core::ansi::OfsBufVT100::reset_all_style_attributes
+//! [`set_char()`]: crate::tui::OfsBuf::set_char
+//! [`set_foreground_color()`]: crate::core::ansi::OfsBufVT100::set_foreground_color
+//! [`shift_lines_in_range()`]: crate::core::ansi::OfsBufVT100::shift_lines_in_range
 //! [`TuiStyle`]: crate::TuiStyle
-//! [`validate_col_range_mut()`]: crate::Flat2DArray::validate_col_range_mut
-//! [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
+//! [`VPPos`]: crate::core::VPPos
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
+
+#![rustfmt::skip]
+
+// Attach.
+mod bulk_ops;
+mod storage;
+mod core;
+mod line_level_ops;
+mod pixel_char;
+mod pixel_char_line;
 
 // Attach private modules (hide internal structure).
 // Some modules are conditionally public for documentation to allow rustdoc links.
@@ -329,31 +331,22 @@
 pub mod diff_chunks;
 #[cfg(not(any(test, doc)))]
 mod diff_chunks;
-
-mod ofs_buf_bulk_ops;
-
 #[cfg(any(test, doc))]
-pub mod ofs_buf_char_ops;
+pub mod char_ops;
 #[cfg(not(any(test, doc)))]
-mod ofs_buf_char_ops;
-
-mod ofs_buf_core;
-mod ofs_buf_line_level_ops;
-
+mod char_ops;
 #[cfg(any(test, doc))]
 pub mod paint_impl;
 #[cfg(not(any(test, doc)))]
 mod paint_impl;
 
-mod growable;
-mod pixel_char;
-
 // Re-export public API (flat, ergonomic surface).
 pub use diff_chunks::*;
-pub use growable::*;
-pub use ofs_buf_core::*;
+pub use core::*;
 pub use paint_impl::*;
 pub use pixel_char::*;
+pub use pixel_char_line::*;
+pub use storage::*;
 
 #[cfg(any(test, doc))]
 pub mod test_fixtures_ofs_buf;

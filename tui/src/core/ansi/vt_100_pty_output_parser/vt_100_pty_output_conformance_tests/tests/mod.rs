@@ -35,7 +35,7 @@
 //! 3. **Implementation**: [`vt_100_impl_char_ops`] - Buffer logic (has unit tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`operations::char_ops`]: super::super::ops::vt_100_shim_char_ops
 //! [`operations`]: super::super::ops

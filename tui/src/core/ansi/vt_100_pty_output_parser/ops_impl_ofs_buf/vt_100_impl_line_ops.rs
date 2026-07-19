@@ -7,8 +7,8 @@
 //! This module implements line-level operations that correspond to [`ANSI`] line
 //! sequences. These include:
 //!
-//! - `IL` (Insert Lines) - [`shift_lines_down()`]
-//! - `DL` (Delete Lines) - [`shift_lines_up()`]
+//! - `IL` (Insert Lines) - [`shift_lines_in_range()`] (Down)
+//! - `DL` (Delete Lines) - [`shift_lines_in_range()`] (Up)
 //! - `EL` (Erase Line) - [`clear_line()`]
 //!
 //! All operations maintain [`VT-100`] compliance and handle proper line manipulation
@@ -52,17 +52,16 @@
 //! scroll region, the operation is skipped entirely.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`clear_line()`]: crate::OfsBufVT100::clear_line
-//! [`shift_lines_down()`]: crate::OfsBufVT100::shift_lines_down
-//! [`shift_lines_up()`]: crate::OfsBufVT100::shift_lines_up
+//! [`clear_line()`]: OfsBufVT100::clear_line
+//! [`shift_lines_in_range()`]: OfsBufVT100::shift_lines_in_range
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [Interval Notation]: crate::bounds_check#interval-notation
 
-use crate::{Length, OfsBufVT100, PixelChar, RowHeight, RowIndex,
-            core::coordinates::bounds_check::{RangeBoundsExt, RangeBoundsResult,
-                                              RangeConvertExt},
+use crate::{OfsBufVT100, PixelChar, RangeExclusive, ShiftLinesDirection, VPHeight,
+            VPLength, VPRow,
+            core::coordinates::bounds_check::{RangeBoundsExt, RangeConvertExt,
+                                              RangeValidityStatus},
             ok};
-use std::ops::Range;
 
 impl OfsBufVT100 {
     /// Clear an entire line by filling it with blank characters.
@@ -72,36 +71,23 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the row is out of bounds.
-    pub fn clear_line(&mut self, row: RowIndex) -> miette::Result<()> {
-        // Use type-safe row validation via validation helpers.
-        let next_row = RowIndex::from(row.as_usize() + 1);
-        let row_range = row..next_row;
-        let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
-            miette::bail!("Operation failed");
+    pub fn clear_line(&mut self, row: VPRow) -> miette::Result<()> {
+        let active_buf = self.get_active_screen_buffer_mut();
+        let Some(row_data) = active_buf.get_row_mut(row) else {
+            return Err(miette::miette!("Row index {row:?} out of bounds"));
         };
-
-        // Safe to clear the validated line.
-        lines.fill(PixelChar::Spacer);
-
-        // Debug assertion to verify the line was actually cleared.
-        debug_assert!(
-            lines.iter().all(|ch| *ch == PixelChar::Spacer),
-            "Line clear operation failed at row {row:?}"
-        );
-
+        row_data.fill(PixelChar::Spacer);
         ok!()
     }
-
-    /// Shift lines up within a range by the specified amount.
+    /// Shifts lines upward or downward within a range by the specified amount.
     ///
-    /// - Lines at the bottom of the range are filled with blank lines.
-    /// - Returns true if the operation was successful.
+    /// - For **Up**: Lines at the bottom of the range are filled with blank lines. Used
+    ///   by [`ANSI`] [`DL`] (Delete Line) and [`SU`] (Scroll Up).
+    /// - For **Down**: Lines at the top of the range are filled with blank lines. Used by
+    ///   [`ANSI`] [`IL`] (Insert Line) and [`SD`] (Scroll Down).
     ///
-    /// Used by [`ANSI`] [`DL`] (Delete Line) and [`SU`] (Scroll Up) operations.
-    ///
-    /// **Performance Note:** This method uses a zero-allocation [`rotate_left`] operation
-    /// to shift the lines in-place, and recycles the old top line into a blank line at
-    /// the bottom. This avoids memory reallocation churn during scrolling.
+    /// **Performance Note:** This method avoids memory reallocation churn during
+    /// scrolling.
     ///
     /// # Errors
     ///
@@ -109,92 +95,30 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`DL`]: https://vt100.net/docs/vt510-rm/DL.html
-    /// [`is_row_range_valid()`]: crate::Flat2DArray::is_row_range_valid
-    /// [`rotate_left`]: slice::rotate_left
-    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
-    /// [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
-    pub fn shift_lines_up(
-        &mut self,
-        row_range: Range<RowIndex>,
-        arg_shift_by: impl Into<Length>,
-    ) -> miette::Result<()> {
-        let shift_by: Length = arg_shift_by.into();
-        // Use lightweight validation-only method without creating unused slice
-        if !self.is_row_range_valid(row_range.clone()) {
-            miette::bail!("Operation failed");
-        }
-
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-
-        // Shift lines up using rotate_left for better performance
-        for _ in 0..shift_by.as_usize() {
-            // Use rotate_left to shift lines up efficiently
-            let range_len = end_idx - start_idx;
-            if range_len > 1 {
-                self.ofs_buf.rotate_rows_left(start_idx, end_idx, 1);
-            }
-
-            // Clear the bottom line (which is now at the end after rotation).
-            if let Some(row) = self.get_row_mut(end_idx.saturating_sub(1)) {
-                row.fill(PixelChar::Spacer);
-            }
-        }
-
-        ok!()
-    }
-
-    /// Shift lines down within a range by the specified amount.
-    ///
-    /// - Lines at the top of the range are filled with blank lines.
-    /// - Returns true if the operation was successful.
-    ///
-    /// Used by [`ANSI`] [`IL`] (Insert Line) and [`SD`] (Scroll Down) operations.
-    ///
-    /// For scrolling operations, this is also used to scroll buffer content down. The
-    /// bottom line is lost, and a new empty line appears at top.
-    ///
-    /// **Performance Note:** This method uses a zero-allocation [`rotate_right`]
-    /// operation to shift the lines in-place, and recycles the old bottom line into a
-    /// blank line at the top. This avoids memory reallocation churn during scrolling.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the row range is invalid or out of bounds.
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`IL`]: https://vt100.net/docs/vt510-rm/IL.html
-    /// [`is_row_range_valid()`]: crate::Flat2DArray::is_row_range_valid
-    /// [`rotate_right`]: slice::rotate_right
     /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
-    /// [`validate_row_range_mut()`]: crate::Flat2DArray::validate_row_range_mut
-    pub fn shift_lines_down(
+    /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
+    pub fn shift_lines_in_range(
         &mut self,
-        row_range: Range<RowIndex>,
-        arg_shift_by: impl Into<Length>,
+        direction: ShiftLinesDirection,
+        row_range: RangeExclusive<VPRow>,
+        arg_shift_by: impl Into<VPLength>,
     ) -> miette::Result<()> {
-        let shift_by: Length = arg_shift_by.into();
-        // Use lightweight validation-only method without creating unused slice
-        if !self.is_row_range_valid(row_range.clone()) {
-            miette::bail!("Invalid row range");
+        let shift_by: VPLength = arg_shift_by.into();
+        let row_height = self.get_active_screen_buffer().get_viewport().get_height();
+
+        if row_range.check_range_is_valid_for_length(row_height)
+            != RangeValidityStatus::Valid
+        {
+            return Err(miette::miette!("Invalid row range"));
         }
 
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-
-        // Shift lines down using rotate_right for better performance
-        for _ in 0..shift_by.as_usize() {
-            // Use rotate_right to shift lines down efficiently
-            let range_len = end_idx - start_idx;
-            if range_len > 1 {
-                self.ofs_buf.rotate_rows_right(start_idx, end_idx, 1);
-            }
-
-            // Clear the top line (which is now at the beginning after rotation).
-            if let Some(row) = self.ofs_buf.get_row_mut(start_idx) {
-                row.fill(PixelChar::Spacer);
-            }
-        }
+        self.get_active_screen_buffer_mut().shift_lines_in_range(
+            direction,
+            row_range,
+            shift_by,
+            PixelChar::Spacer,
+        );
 
         ok!()
     }
@@ -217,36 +141,24 @@ impl OfsBufVT100 {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn insert_lines_at(
         &mut self,
-        row_index: RowIndex,
-        how_many: RowHeight,
+        row_index: VPRow,
+        how_many: VPHeight,
     ) -> miette::Result<()> {
         // Get scroll region as an inclusive range.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Only operate within scroll region - use type-safe inclusive range checking.
-        if scroll_region.check_index_is_within(row_index) != RangeBoundsResult::Within {
+        if !scroll_region.contains(&row_index) {
             // Skip operation - cursor is outside scroll region.
             return ok!();
         }
 
         let scroll_bottom = *scroll_region.end();
 
-        // Use shift_lines_down to shift lines down by how_many positions.
-        // Convert the inclusive range [row_index, scroll_bottom] to exclusive for
-        // iteration.
-        self.shift_lines_down((row_index..=scroll_bottom).to_exclusive(), how_many)?;
-
-        // Clear the newly inserted lines (shift_lines_down fills with blanks at the top).
-        for offset in 0..how_many.as_u16() {
-            if let Some(clear_row_u16) = row_index.as_u16().checked_add(offset) {
-                let clear_row = RowIndex::from(clear_row_u16);
-                if clear_row <= scroll_bottom {
-                    self.clear_line(clear_row)?;
-                }
-            }
-        }
-
-        ok!()
+        // Use shift_lines_in_range to shift lines down by how_many positions (vacated
+        // lines are automatically filled with blanks).
+        let exclusive_range = (row_index..=scroll_bottom).to_exclusive();
+        self.shift_lines_in_range(ShiftLinesDirection::Down, exclusive_range, how_many)
     }
 
     /// Delete multiple lines at the specified row position.
@@ -267,66 +179,53 @@ impl OfsBufVT100 {
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn delete_lines_at(
         &mut self,
-        row_index: RowIndex,
-        how_many: RowHeight,
+        row_index: VPRow,
+        how_many: VPHeight,
     ) -> miette::Result<()> {
         // Get scroll region as an inclusive range.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Only operate within scroll region - use type-safe inclusive range checking.
-        if scroll_region.check_index_is_within(row_index) != RangeBoundsResult::Within {
+        if !scroll_region.contains(&row_index) {
             // Skip operation - cursor is outside scroll region.
             return ok!();
         }
 
-        // Use shift_lines_up to shift lines up by how_many positions.
-        // Convert the inclusive range [row_index, scroll_bottom] to exclusive for
-        // iteration.
-        self.shift_lines_up((row_index..=*scroll_region.end()).to_exclusive(), how_many)?;
-
-        // Clear the bottom lines of the scroll region (shift_lines_up fills with blanks
-        // at the bottom).
-        for offset in 0..how_many.as_u16() {
-            if let Some(clear_row_u16) = scroll_region.end().as_u16().checked_sub(offset)
-            {
-                let clear_row = RowIndex::from(clear_row_u16);
-                if clear_row >= row_index {
-                    self.clear_line(clear_row)?;
-                }
-            }
-        }
-
-        ok!()
+        // Use shift_lines_in_range to shift lines up by how_many positions (vacated lines
+        // are automatically filled with blanks).
+        let exclusive_range = (row_index..=*scroll_region.end()).to_exclusive();
+        self.shift_lines_in_range(ShiftLinesDirection::Up, exclusive_range, how_many)
     }
 }
 
 #[cfg(test)]
 mod tests_line_ops {
     use super::*;
-    use crate::{OfsBufVT100, PixelCharLine, TermRow, col, height, len, row,
+    use crate::{OfsBufVT100, PixelCharLine, TermRow,
                 test_fixtures_ofs_buf::{create_plain_test_char,
                                         create_test_line_with_chars,
                                         create_vt100_test_buffer_with_size},
-                width};
+                vp_col, vp_height, vp_len, vp_row, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        create_vt100_test_buffer_with_size(width(4), height(5))
+        create_vt100_test_buffer_with_size(vp_width(4), vp_height(5))
     }
 
     fn create_test_char(ch: char) -> PixelChar { create_plain_test_char(ch) }
 
     fn create_test_line(chars: &[char]) -> PixelCharLine {
-        create_test_line_with_chars(width(4), chars)
+        create_test_line_with_chars(vp_width(4), chars)
     }
 
     #[test]
     fn test_clear_line() {
         let mut buffer = create_test_buffer();
-        let test_row = row(1);
+        let test_row = vp_row(1);
 
         // Fill the line with test characters first.
         for col_idx in 0..4 {
-            let _unused = buffer.set_char(test_row + col(col_idx), create_test_char('X'));
+            let _unused =
+                buffer.set_char(test_row + vp_col(col_idx), create_test_char('X'));
         }
 
         // Clear the line.
@@ -335,8 +234,8 @@ mod tests_line_ops {
 
         // Verify all characters are now spacers.
         for col_idx in 0..4 {
-            let pos = test_row + col(col_idx);
-            let char = buffer.get_char(pos).unwrap();
+            let pos = vp_row(test_row) + vp_col(col_idx);
+            let char = buffer.get_char(pos).expect("conversion error");
             assert_eq!(char, PixelChar::Spacer);
         }
     }
@@ -344,7 +243,7 @@ mod tests_line_ops {
     #[test]
     fn test_clear_line_out_of_bounds() {
         let mut buffer = create_test_buffer();
-        let result = buffer.clear_line(row(10)); // Out of bounds
+        let result = buffer.clear_line(vp_row(10)); // Out of bounds
         assert!(result.is_err());
     }
 
@@ -353,18 +252,25 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
-        let result = buffer.shift_lines_up(row(1)..row(4), len(1));
+        let result = buffer.shift_lines_in_range(
+            ShiftLinesDirection::Up,
+            vp_row(1)..vp_row(4),
+            vp_len(1),
+        );
         assert!(result.is_ok());
 
         // Verify the shift: line 2 content should now be at line 1, etc.
-        let line1 = buffer.get_line(row(1)).unwrap();
-        let line2 = buffer.get_line(row(2)).unwrap();
-        let line3 = buffer.get_line(row(3)).unwrap();
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
+        let line3 = buffer.get_line(vp_row(3)).expect("conversion error");
 
         // Line 1 should now have what was line 2's content (all 'B' characters).
         for col_idx in 0..4 {
@@ -383,14 +289,23 @@ mod tests_line_ops {
 
         // Additional verification using get_char method.
         assert_eq!(
-            buffer.get_char(row(1) + col(0)).unwrap(),
+            buffer
+                .get_char(vp_row(1) + vp_col(0))
+                .expect("conversion error"),
             create_test_char('B')
         );
         assert_eq!(
-            buffer.get_char(row(2) + col(0)).unwrap(),
+            buffer
+                .get_char(vp_row(2) + vp_col(0))
+                .expect("conversion error"),
             create_test_char('C')
         );
-        assert_eq!(buffer.get_char(row(3) + col(0)).unwrap(), PixelChar::Spacer);
+        assert_eq!(
+            buffer
+                .get_char(vp_row(3) + vp_col(0))
+                .expect("conversion error"),
+            PixelChar::Spacer
+        );
     }
 
     #[test]
@@ -398,18 +313,25 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
-        let result = buffer.shift_lines_down(row(1)..row(4), len(1));
+        let result = buffer.shift_lines_in_range(
+            ShiftLinesDirection::Down,
+            vp_row(1)..vp_row(4),
+            vp_len(1),
+        );
         assert!(result.is_ok());
 
         // Verify the shift: line 1 content should now be at line 2, etc.
-        let line1 = buffer.get_line(row(1)).unwrap();
-        let line2 = buffer.get_line(row(2)).unwrap();
-        let line3 = buffer.get_line(row(3)).unwrap();
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
+        let line3 = buffer.get_line(vp_row(3)).expect("conversion error");
 
         // Line 1 should now be blank (all spacers).
         for col_idx in 0..4 {
@@ -427,13 +349,22 @@ mod tests_line_ops {
         }
 
         // Additional verification using get_char method.
-        assert_eq!(buffer.get_char(row(1) + col(0)).unwrap(), PixelChar::Spacer);
         assert_eq!(
-            buffer.get_char(row(2) + col(0)).unwrap(),
+            buffer
+                .get_char(vp_row(1) + vp_col(0))
+                .expect("conversion error"),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer
+                .get_char(vp_row(2) + vp_col(0))
+                .expect("conversion error"),
             create_test_char('A')
         );
         assert_eq!(
-            buffer.get_char(row(3) + col(0)).unwrap(),
+            buffer
+                .get_char(vp_row(3) + vp_col(0))
+                .expect("conversion error"),
             create_test_char('B')
         );
     }
@@ -443,22 +374,27 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 1 line at row 1.
-        let result = buffer.insert_lines_at(row(1), height(1));
+        let result = buffer.insert_lines_at(vp_row(1), vp_height(1));
         assert!(result.is_ok());
 
         // Verify: blank line at row 1, A's at row 2, B's at row 3, C's lost.
-        let line1 = buffer.get_line(row(1)).unwrap();
-        let line2 = buffer.get_line(row(2)).unwrap();
-        let line3 = buffer.get_line(row(3)).unwrap();
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
+        let line3 = buffer.get_line(vp_row(3)).expect("conversion error");
 
         for col_idx in 0..4 {
             assert_eq!(line1[col_idx], PixelChar::Spacer);
@@ -472,29 +408,33 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), &create_test_line(&['X', 'X', 'X', 'X']));
-        let _unused = buffer.set_line(row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused =
+            buffer.set_line(vp_row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to insert at row 0 (outside scroll region) - should be no-op.
-        let result = buffer.insert_lines_at(row(0), height(1));
+        let result = buffer.insert_lines_at(vp_row(0), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 0 unchanged.
-        let line0 = buffer.get_line(row(0)).unwrap();
+        let line0 = buffer.get_line(vp_row(0)).expect("conversion error");
         for col_idx in 0..4 {
             assert_eq!(line0[col_idx], create_test_char('X'));
         }
 
         // Try to insert at row 4 (outside scroll region) - should be no-op.
-        let result = buffer.insert_lines_at(row(4), height(1));
+        let result = buffer.insert_lines_at(vp_row(4), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 4 unchanged.
-        let line4 = buffer.get_line(row(4)).unwrap();
+        let line4 = buffer.get_line(vp_row(4)).expect("conversion error");
         for col_idx in 0..4 {
             assert_eq!(line4[col_idx], create_test_char('Y'));
         }
@@ -505,22 +445,27 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(1), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Delete 1 line at row 1.
-        let result = buffer.delete_lines_at(row(1), height(1));
+        let result = buffer.delete_lines_at(vp_row(1), vp_height(1));
         assert!(result.is_ok());
 
         // Verify: B's at row 1, C's at row 2, blank line at row 3.
-        let line1 = buffer.get_line(row(1)).unwrap();
-        let line2 = buffer.get_line(row(2)).unwrap();
-        let line3 = buffer.get_line(row(3)).unwrap();
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
+        let line3 = buffer.get_line(vp_row(3)).expect("conversion error");
 
         for col_idx in 0..4 {
             assert_eq!(line1[col_idx], create_test_char('B'));
@@ -534,29 +479,33 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 1-3 (inclusive).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(1)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(3)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(3)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), &create_test_line(&['X', 'X', 'X', 'X']));
-        let _unused = buffer.set_line(row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused =
+            buffer.set_line(vp_row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to delete at row 0 (outside scroll region) - should be no-op.
-        let result = buffer.delete_lines_at(row(0), height(1));
+        let result = buffer.delete_lines_at(vp_row(0), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 0 unchanged.
-        let line0 = buffer.get_line(row(0)).unwrap();
+        let line0 = buffer.get_line(vp_row(0)).expect("conversion error");
         for col_idx in 0..4 {
             assert_eq!(line0[col_idx], create_test_char('X'));
         }
 
         // Try to delete at row 4 (outside scroll region) - should be no-op.
-        let result = buffer.delete_lines_at(row(4), height(1));
+        let result = buffer.delete_lines_at(vp_row(4), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 4 unchanged.
-        let line4 = buffer.get_line(row(4)).unwrap();
+        let line4 = buffer.get_line(vp_row(4)).expect("conversion error");
         for col_idx in 0..4 {
             assert_eq!(line4[col_idx], create_test_char('Y'));
         }
@@ -567,29 +516,34 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 0-4 (entire buffer).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(0)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(0)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(4)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(1), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 2 lines at row 0.
-        let result = buffer.insert_lines_at(row(0), height(2));
+        let result = buffer.insert_lines_at(vp_row(0), vp_height(2));
         assert!(result.is_ok());
 
         // Verify: 2 blank lines at rows 0-1, A's at row 2, B's at row 3, C's at row 4.
         for row_idx in 0..2 {
-            let line = buffer.get_line(row(row_idx)).unwrap();
+            let line = buffer.get_line(vp_row(row_idx)).expect("conversion error");
             for col_idx in 0..4 {
                 assert_eq!(line[col_idx], PixelChar::Spacer);
             }
         }
 
-        let line2 = buffer.get_line(row(2)).unwrap();
-        let line3 = buffer.get_line(row(3)).unwrap();
-        let line4 = buffer.get_line(row(4)).unwrap();
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
+        let line3 = buffer.get_line(vp_row(3)).expect("conversion error");
+        let line4 = buffer.get_line(vp_row(4)).expect("conversion error");
 
         for col_idx in 0..4 {
             assert_eq!(line2[col_idx], create_test_char('A'));
@@ -599,28 +553,84 @@ mod tests_line_ops {
     }
 
     #[test]
+    fn test_insert_lines_at_exceeding_how_many_preserves_lines_above_row_index() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region to rows 1-4 (inclusive).
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(4)));
+
+        // Set up initial lines.
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(4), &create_test_line(&['D', 'D', 'D', 'D']));
+
+        // Insert 10 lines starting at row 2 (inside scroll region [1..=4], but row_index
+        // > scroll_top). Lines available from row 2 to row 4 = 3 lines.
+        // how_many = 10 (exceeds 3).
+        let result = buffer.insert_lines_at(vp_row(2), vp_height(10));
+        assert!(result.is_ok());
+
+        // Verify:
+        // - Row 0 (outside scroll region) is untouched ('X').
+        // - Row 1 (inside scroll region, but above row_index 2) is untouched ('A').
+        // - Rows 2, 3, 4 are cleared (Spacer) because inserted blank lines fill the
+        //   region.
+        let line0 = buffer.get_line(vp_row(0)).expect("conversion error");
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+
+        for col_idx in 0..4 {
+            assert_eq!(line0[col_idx], create_test_char('X'));
+            assert_eq!(line1[col_idx], create_test_char('A'));
+        }
+
+        for row_idx in 2..=4 {
+            let line = buffer.get_line(vp_row(row_idx)).expect("conversion error");
+            for col_idx in 0..4 {
+                assert_eq!(line[col_idx], PixelChar::Spacer);
+            }
+        }
+    }
+
+    #[test]
     fn test_delete_lines_at_multiple_lines() {
         let mut buffer = create_test_buffer();
 
         // Set scroll region to rows 0-4 (entire buffer).
-        buffer.parser_global_state.scroll_region_top = Some(TermRow::from(row(0)));
-        buffer.parser_global_state.scroll_region_bottom = Some(TermRow::from(row(4)));
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(0)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(4)));
 
         // Set up initial lines.
-        let _unused = buffer.set_line(row(0), &create_test_line(&['A', 'A', 'A', 'A']));
-        let _unused = buffer.set_line(row(1), &create_test_line(&['B', 'B', 'B', 'B']));
-        let _unused = buffer.set_line(row(2), &create_test_line(&['C', 'C', 'C', 'C']));
-        let _unused = buffer.set_line(row(3), &create_test_line(&['D', 'D', 'D', 'D']));
-        let _unused = buffer.set_line(row(4), &create_test_line(&['E', 'E', 'E', 'E']));
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['D', 'D', 'D', 'D']));
+        let _unused =
+            buffer.set_line(vp_row(4), &create_test_line(&['E', 'E', 'E', 'E']));
 
         // Delete 2 lines at row 0.
-        let result = buffer.delete_lines_at(row(0), height(2));
+        let result = buffer.delete_lines_at(vp_row(0), vp_height(2));
         assert!(result.is_ok());
 
         // Verify: C's at row 0, D's at row 1, E's at row 2, blanks at rows 3-4.
-        let line0 = buffer.get_line(row(0)).unwrap();
-        let line1 = buffer.get_line(row(1)).unwrap();
-        let line2 = buffer.get_line(row(2)).unwrap();
+        let line0 = buffer.get_line(vp_row(0)).expect("conversion error");
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+        let line2 = buffer.get_line(vp_row(2)).expect("conversion error");
 
         for col_idx in 0..4 {
             assert_eq!(line0[col_idx], create_test_char('C'));
@@ -629,7 +639,55 @@ mod tests_line_ops {
         }
 
         for row_idx in 3..=4 {
-            let line = buffer.get_line(row(row_idx)).unwrap();
+            let line = buffer.get_line(vp_row(row_idx)).expect("conversion error");
+            for col_idx in 0..4 {
+                assert_eq!(line[col_idx], PixelChar::Spacer);
+            }
+        }
+    }
+
+    #[test]
+    fn test_delete_lines_at_exceeding_how_many_preserves_lines_above_row_index() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region to rows 1-4 (inclusive).
+        buffer.get_parser_global_state_mut().scroll_region_top =
+            Some(TermRow::from(vp_row(1)));
+        buffer.get_parser_global_state_mut().scroll_region_bottom =
+            Some(TermRow::from(vp_row(4)));
+
+        // Set up initial lines.
+        let _unused =
+            buffer.set_line(vp_row(0), &create_test_line(&['X', 'X', 'X', 'X']));
+        let _unused =
+            buffer.set_line(vp_row(1), &create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused =
+            buffer.set_line(vp_row(2), &create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused =
+            buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused =
+            buffer.set_line(vp_row(4), &create_test_line(&['D', 'D', 'D', 'D']));
+
+        // Delete 10 lines starting at row 2 (inside scroll region [1..=4], but row_index
+        // > scroll_top). Lines available from row 2 to row 4 = 3 lines.
+        // how_many = 10 (exceeds 3).
+        let result = buffer.delete_lines_at(vp_row(2), vp_height(10));
+        assert!(result.is_ok());
+
+        // Verify:
+        // - Row 0 (outside scroll region) is untouched ('X').
+        // - Row 1 (inside scroll region, but above row_index 2) is untouched ('A').
+        // - Rows 2, 3, 4 are cleared (Spacer) because B, C, D were shifted off / cleared.
+        let line0 = buffer.get_line(vp_row(0)).expect("conversion error");
+        let line1 = buffer.get_line(vp_row(1)).expect("conversion error");
+
+        for col_idx in 0..4 {
+            assert_eq!(line0[col_idx], create_test_char('X'));
+            assert_eq!(line1[col_idx], create_test_char('A'));
+        }
+
+        for row_idx in 2..=4 {
+            let line = buffer.get_line(vp_row(row_idx)).expect("conversion error");
             for col_idx in 0..4 {
                 assert_eq!(line[col_idx], PixelChar::Spacer);
             }

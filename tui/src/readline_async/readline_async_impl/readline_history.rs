@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX,
-            core::coordinates::{Index, idx, len}};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX, NarrowingCastToU16,
+            VPIndex, vp_idx, vp_len};
 use std::collections::VecDeque;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
@@ -10,7 +10,7 @@ pub struct History {
     pub entries: VecDeque<String>,
     pub max_size: usize,
     pub sender: UnboundedSender<String>,
-    current_position: Option<Index>,
+    current_position: Option<VPIndex>,
 }
 
 impl History {
@@ -55,14 +55,14 @@ impl History {
     // Find next history that matches a given string from an index.
     pub fn search_next(&mut self) -> Option<&str> {
         if let Some(index) = &mut self.current_position {
-            let entries_length = len(self.entries.len());
-            let next_index: Index = *index + 1;
+            let entries_length = vp_len((self.entries.len()).as_u16_narrowing());
+            let next_index: VPIndex = *index + 1;
             if next_index.overflows(entries_length) == ArrayOverflowResult::Within {
                 *index = next_index;
             }
             Some(&self.entries[index.as_usize()])
         } else if !self.entries.is_empty() {
-            self.current_position = Some(idx(0));
+            self.current_position = Some(vp_idx(0u16));
             Some(&self.entries[0])
         } else {
             None
@@ -72,7 +72,7 @@ impl History {
     // Find previous history item that matches a given string from an index.
     pub fn search_previous(&mut self) -> Option<&str> {
         if let Some(index) = &mut self.current_position {
-            if *index == idx(0) {
+            if *index == vp_idx(0u16) {
                 self.current_position = None;
                 return Some("");
             }

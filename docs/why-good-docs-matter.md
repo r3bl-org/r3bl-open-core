@@ -60,7 +60,7 @@ limited English proficiency, making clear, straightforward documentation an incl
 not just a nice-to-have.
 
 This is why we codified inclusivity as a core documentation principle. Our
-[write-documentation](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/skills/write-documentation/SKILL.md)
+[write-documentation](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md)
 skill includes a "Pedagogical Links for Inclusivity" rule: link domain-specific terminology to
 external references (typically Wikipedia) even when the concept seems "obvious." The cost of an
 extra link is near zero; the cost of excluding a reader is high.
@@ -76,7 +76,7 @@ We treat documentation as a first-class artifact, not an afterthought:
 - **Doc tests** verify that every code example in documentation actually compiles and runs.
 - **CI enforcement** - documentation builds are part of our continuous integration pipeline.
 - **Inclusivity by default** - we
-  [link pedagogical terms](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/skills/write-documentation/SKILL.md#pedagogical-links-for-inclusivity)
+  [link pedagogical terms](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md#pedagogical-links-for-inclusivity)
   to external references so no reader is excluded by assumed knowledge.
 
 We follow an inverted pyramid structure: high-level concepts at module and trait level, detailed
@@ -84,7 +84,7 @@ syntax examples at method level. This means developers can understand the big pi
 dive deeper only when they need to.
 
 Our complete documentation conventions are codified in the
-[write-documentation skill](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/skills/write-documentation/SKILL.md),
+[write-documentation skill](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md),
 which covers voice and tone, prose style, structure, intra-doc links, constant conventions, and
 formatting.
 

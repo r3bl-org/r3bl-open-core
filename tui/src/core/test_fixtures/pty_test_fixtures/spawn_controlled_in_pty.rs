@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{PtyCommand, PtyPair, PtyTestChild, height, size, width};
+use crate::{PtyCommand, PtyPair, PtyTestChild, vp_height, vp_width};
 
 /// Creates a [`PTY`] pair and spawns the current test binary as a controlled process.
 ///
@@ -75,7 +75,7 @@ use crate::{PtyCommand, PtyPair, PtyTestChild, height, size, width};
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
-/// [`OfsBuf`]: crate::OfsBuf
+/// [`OfsBuf`]: crate::tui::OfsBuf
 /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
 #[must_use]
 pub fn spawn_controlled_in_pty<'a>(
@@ -97,7 +97,7 @@ pub fn spawn_controlled_in_pty<'a>(
     cmd.args(["--test-threads", "1", "--nocapture", test_name]);
 
     let (pty_pair, child) =
-        PtyPair::open_and_spawn(size(width(cols) + height(rows)), cmd)
+        PtyPair::open_and_spawn(vp_width(cols) + vp_height(rows), cmd)
             .expect("Failed to spawn controlled process");
 
     (backend, pty_pair, PtyTestChild::new(child))

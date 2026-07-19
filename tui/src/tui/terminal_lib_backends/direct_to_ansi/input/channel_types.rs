@@ -13,7 +13,7 @@
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`stdin`]: std::io::stdin
 
-use crate::{InputEvent, Size};
+use crate::{InputEvent, VPSize};
 
 /// Event from the [`mio_poller`] thread, sent through a broadcast channel.
 ///
@@ -77,11 +77,11 @@ pub enum SignalEvent {
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-    Resize(Size),
+    Resize(VPSize),
 }
 
 /// Converts a terminal size into a [`SignalEvent::Resize`] for sending through the
 /// channel.
-impl From<Size> for SignalEvent {
-    fn from(size: Size) -> Self { Self::Resize(size) }
+impl From<VPSize> for SignalEvent {
+    fn from(size: VPSize) -> SignalEvent { SignalEvent::Resize(size) }
 }

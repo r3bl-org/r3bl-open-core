@@ -191,7 +191,9 @@ mod tests_simple_md_highlight {
         let theme = get_cached_theme();
 
         // Prepare Markdown syntax highlighting.
-        let md_syntax = syntax_set.find_syntax_by_extension("md").unwrap();
+        let md_syntax = syntax_set
+            .find_syntax_by_extension("md")
+            .expect("conversion error");
         let mut highlight_lines = HighlightLines::new(md_syntax, theme);
 
         let mut line_idx = 0;
@@ -200,8 +202,9 @@ mod tests_simple_md_highlight {
         for line in /* LinesWithEndings enables use of newlines mode. */
             LinesWithEndings::from(md_content.as_str())
         {
-            let vec_styled_str: Vec<(Style, &str)> =
-                highlight_lines.highlight_line(line, syntax_set).unwrap();
+            let vec_styled_str: Vec<(Style, &str)> = highlight_lines
+                .highlight_line(line, syntax_set)
+                .expect("conversion error");
 
             // // To pretty print the output, use the following:
             // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
@@ -228,7 +231,10 @@ mod tests_simple_md_highlight {
             let col1 = &line[0];
             assert!(col1.get_style().attribs.bold.is_some());
             let col3 = &line[2];
-            assert_eq2!(col3.get_style().color_fg.unwrap(), tui_color!(46, 206, 43));
+            assert_eq2!(
+                col3.get_style().color_fg.expect("conversion error"),
+                tui_color!(46, 206, 43)
+            );
         }
 
         // Interrogate last line.
@@ -238,7 +244,7 @@ mod tests_simple_md_highlight {
             assert_eq2!(line.to_plain_text(), "--- END ---\n");
             let col1 = &line[0];
             assert_eq2!(
-                col1.get_style().color_fg.unwrap(),
+                col1.get_style().color_fg.expect("conversion error"),
                 tui_color!(193, 179, 208)
             );
         }
@@ -308,11 +314,17 @@ mod tests_convert_span_line_and_highlighted_line {
         {
             assert_eq2!(styled_texts[0].get_text(), "st_color_1");
             assert_eq2!(
-                styled_texts[0].get_style().color_fg.unwrap(),
+                styled_texts[0]
+                    .get_style()
+                    .color_fg
+                    .expect("conversion error"),
                 tui_color!(255, 255, 255)
             );
             assert_eq2!(
-                styled_texts[0].get_style().color_bg.unwrap(),
+                styled_texts[0]
+                    .get_style()
+                    .color_bg
+                    .expect("conversion error"),
                 tui_color!(255, 255, 255)
             );
         }
@@ -321,11 +333,17 @@ mod tests_convert_span_line_and_highlighted_line {
         {
             assert_eq2!(styled_texts[1].get_text(), "st_color_2");
             assert_eq2!(
-                styled_texts[1].get_style().color_fg.unwrap(),
+                styled_texts[1]
+                    .get_style()
+                    .color_fg
+                    .expect("conversion error"),
                 tui_color!(0, 0, 0)
             );
             assert_eq2!(
-                styled_texts[1].get_style().color_bg.unwrap(),
+                styled_texts[1]
+                    .get_style()
+                    .color_bg
+                    .expect("conversion error"),
                 tui_color!(0, 0, 0)
             );
             assert!(styled_texts[1].get_style().attribs.bold.is_some());
@@ -335,11 +353,17 @@ mod tests_convert_span_line_and_highlighted_line {
         {
             assert_eq2!(styled_texts[2].get_text(), "st_color_1 and 2");
             assert_eq2!(
-                styled_texts[2].get_style().color_fg.unwrap(),
+                styled_texts[2]
+                    .get_style()
+                    .color_fg
+                    .expect("conversion error"),
                 tui_color!(255, 255, 255)
             );
             assert_eq2!(
-                styled_texts[2].get_style().color_bg.unwrap(),
+                styled_texts[2]
+                    .get_style()
+                    .color_bg
+                    .expect("conversion error"),
                 tui_color!(0, 0, 0)
             );
             assert!(styled_texts[2].get_style().attribs.bold.is_some());
@@ -366,8 +390,14 @@ mod tests_convert_style_and_color {
                 | syntect::highlighting::FontStyle::UNDERLINE,
         };
         let style = convert_style_from_syntect_to_tui(st_style);
-        assert_eq2!(style.color_fg.unwrap(), tui_color!(255, 255, 255));
-        assert_eq2!(style.color_bg.unwrap(), tui_color!(0, 0, 0));
+        assert_eq2!(
+            style.color_fg.expect("conversion error"),
+            tui_color!(255, 255, 255)
+        );
+        assert_eq2!(
+            style.color_bg.expect("conversion error"),
+            tui_color!(0, 0, 0)
+        );
         assert!(style.attribs.bold.is_some());
         assert!(style.attribs.underline.is_some());
     }
@@ -414,9 +444,15 @@ mod tests_convert_style_and_color {
 
         console_log!(my_style);
 
-        assert_eq2!(my_style.padding.unwrap(), ch(3));
-        assert_eq2!(my_style.color_bg.unwrap(), tui_color!(yellow));
-        assert_eq2!(my_style.color_fg.unwrap(), tui_color!(red));
+        assert_eq2!(my_style.padding.expect("conversion error"), ch(3));
+        assert_eq2!(
+            my_style.color_bg.expect("conversion error"),
+            tui_color!(yellow)
+        );
+        assert_eq2!(
+            my_style.color_fg.expect("conversion error"),
+            tui_color!(red)
+        );
         assert!(my_style.attribs.bold.is_some());
         assert!(my_style.attribs.dim.is_some());
         assert!(my_style.computed.is_some());
@@ -429,25 +465,35 @@ mod tests_convert_style_and_color {
 
         let style1 = make_a_style(1);
         let result = stylesheet.add_style(style1);
-        result.unwrap();
+        result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
         let result = stylesheet.add_style(style2);
-        result.unwrap();
+        result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
         // No macro.
-        assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, tui_style_id(1));
-        assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, tui_style_id(2));
-        assert!(stylesheet.find_style_by_id(3).is_none());
-        // Macro.
         assert_eq2!(
-            get_tui_style!(@from: stylesheet, 1).unwrap().id,
+            stylesheet.find_style_by_id(1).expect("conversion error").id,
             tui_style_id(1)
         );
         assert_eq2!(
-            get_tui_style!(@from: stylesheet, 2).unwrap().id,
+            stylesheet.find_style_by_id(2).expect("conversion error").id,
+            tui_style_id(2)
+        );
+        assert!(stylesheet.find_style_by_id(3).is_none());
+        // Macro.
+        assert_eq2!(
+            get_tui_style!(@from: stylesheet, 1)
+                .expect("conversion error")
+                .id,
+            tui_style_id(1)
+        );
+        assert_eq2!(
+            get_tui_style!(@from: stylesheet, 2)
+                .expect("conversion error")
+                .id,
             tui_style_id(2)
         );
         assert!(get_tui_style!(@from: stylesheet, 3).is_none());
@@ -456,21 +502,21 @@ mod tests_convert_style_and_color {
     #[test]
     fn test_stylesheet_find_styles_by_ids() {
         fn assertions_for_find_styles_by_ids(result: Option<&InlineVec<TuiStyle>>) {
-            assert_eq2!(result.unwrap().len(), 2);
-            assert_eq2!(result.unwrap()[0].id, tui_style_id(1));
-            assert_eq2!(result.unwrap()[1].id, tui_style_id(2));
+            assert_eq2!(result.expect("conversion error").len(), 2);
+            assert_eq2!(result.expect("conversion error")[0].id, tui_style_id(1));
+            assert_eq2!(result.expect("conversion error")[1].id, tui_style_id(2));
         }
 
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
         let result = stylesheet.add_style(style1);
-        result.unwrap();
+        result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
         let result = stylesheet.add_style(style2);
-        result.unwrap();
+        result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
         // Contains.
@@ -518,24 +564,51 @@ mod tests_convert_style_and_color {
             };
 
             assert_eq2!(stylesheet.styles.len(), 6);
-            assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, tui_style_id(1));
-            assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, tui_style_id(2));
-            assert_eq2!(stylesheet.find_style_by_id(3).unwrap().id, tui_style_id(3));
-            assert_eq2!(stylesheet.find_style_by_id(4).unwrap().id, tui_style_id(4));
-            assert_eq2!(stylesheet.find_style_by_id(5).unwrap().id, tui_style_id(5));
-            assert_eq2!(stylesheet.find_style_by_id(6).unwrap().id, tui_style_id(6));
+            assert_eq2!(
+                stylesheet.find_style_by_id(1).expect("conversion error").id,
+                tui_style_id(1)
+            );
+            assert_eq2!(
+                stylesheet.find_style_by_id(2).expect("conversion error").id,
+                tui_style_id(2)
+            );
+            assert_eq2!(
+                stylesheet.find_style_by_id(3).expect("conversion error").id,
+                tui_style_id(3)
+            );
+            assert_eq2!(
+                stylesheet.find_style_by_id(4).expect("conversion error").id,
+                tui_style_id(4)
+            );
+            assert_eq2!(
+                stylesheet.find_style_by_id(5).expect("conversion error").id,
+                tui_style_id(5)
+            );
+            assert_eq2!(
+                stylesheet.find_style_by_id(6).expect("conversion error").id,
+                tui_style_id(6)
+            );
             assert!(stylesheet.find_style_by_id(7).is_none());
 
             let result = stylesheet.find_styles_by_ids(&[1, 2]);
-            assert_eq2!(result.as_ref().unwrap().len(), 2);
-            assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_id(1));
-            assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_id(2));
+            assert_eq2!(result.as_ref().expect("conversion error").len(), 2);
+            assert_eq2!(
+                result.as_ref().expect("conversion error")[0].id,
+                tui_style_id(1)
+            );
+            assert_eq2!(
+                result.as_ref().expect("conversion error")[1].id,
+                tui_style_id(2)
+            );
             assert_eq2!(stylesheet.find_styles_by_ids(&[13, 41]), None);
             let style7 = make_a_style(7);
             let result = stylesheet.add_style(style7);
-            result.unwrap();
+            result.expect("conversion error");
             assert_eq2!(stylesheet.styles.len(), 7);
-            assert_eq2!(stylesheet.find_style_by_id(7).unwrap().id, tui_style_id(7));
+            assert_eq2!(
+                stylesheet.find_style_by_id(7).expect("conversion error").id,
+                tui_style_id(7)
+            );
         });
     }
 
@@ -615,7 +688,10 @@ mod tests_language_mapping {
 
         assert!(rust_syntax.is_some());
         assert!(rs_syntax.is_some());
-        assert_eq!(rust_syntax.unwrap().name, rs_syntax.unwrap().name);
+        assert_eq!(
+            rust_syntax.expect("conversion error").name,
+            rs_syntax.expect("conversion error").name
+        );
 
         // Test other common language mappings.
         assert!(try_get_syntax_ref(syntax_set, "javascript").is_some());

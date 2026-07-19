@@ -67,7 +67,7 @@ fn controlled() {
     stdout().flush().expect("Failed to flush");
 
     let rrt = RRT::<RestartTestWorker>::new();
-    let _guard = rrt.try_subscribe(()).unwrap();
+    let _guard = rrt.try_subscribe(()).expect("conversion error");
 
     println!("{SEND_KEY}");
     stdout().flush().expect("Failed to flush");

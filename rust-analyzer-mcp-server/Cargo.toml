@@ -1,0 +1,47 @@
+[package]
+name = "r3bl-rust-analyzer-mcp-server"
+version = "1.1.4"
+edition = "2024"
+readme = "README.md"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+repository = "https://github.com/r3bl-org/r3bl-open-core"
+authors = ["Nazmul Idris <idris@developerlife.com>"]
+documentation = "https://docs.rs/r3bl-rust-analyzer-mcp-server"
+description = """
+Model Context Protocol (MCP) server for rust-analyzer. Built with Rust \
+standard library threads to provide fast AST navigation, hover, definitions, \
+code actions, and compiler diagnostics for AI/LLM coding agents \
+(Claude, Antigravity, Cursor, etc.).\
+"""
+keywords = ["mcp", "rust-analyzer", "ai", "llm", "lsp"]
+categories = ["development-tools", "command-line-utilities", "compilers"]
+
+# https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
+[package.metadata.docs.rs]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rust-analyzer-mcp-server"
+path = "src/main.rs"
+
+[lib]
+name = "r3bl_rust_analyzer_mcp_server"
+path = "src/lib.rs"
+
+[dependencies]
+r3bl_tui = { path = "../tui", version = "0.7.7" }
+clap = { version = "4.5", features = ["derive"] }
+miette = { version = "7.6", features = ["fancy"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+which = "6.0"

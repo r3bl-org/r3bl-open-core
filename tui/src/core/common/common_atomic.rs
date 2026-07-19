@@ -63,7 +63,9 @@ impl AtomicU8Ext for AtomicU8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{collections::HashSet, sync::Arc, thread};
+    use crate::LossyConvertToByte;
+    use rustc_hash::FxHashSet;
+    use std::{sync::Arc, thread};
 
     #[test]
     fn get_returns_initial_value() {
@@ -125,12 +127,12 @@ mod tests {
 
         let all_values: Vec<u8> = handles
             .into_iter()
-            .flat_map(|h| h.join().unwrap())
+            .flat_map(|h| h.join().expect("conversion error"))
             .collect();
 
         // Every returned value must be unique - this is the core guarantee that
         // the wrapping_add approach provides over a separate load.
-        let unique: HashSet<u8> = all_values.iter().copied().collect();
+        let unique: FxHashSet<u8> = all_values.iter().copied().collect();
         assert_eq!(
             unique.len(),
             TOTAL,
@@ -140,8 +142,7 @@ mod tests {
         );
 
         // The final stored value must equal the total number of increments.
-        #[allow(clippy::cast_possible_truncation)]
-        let expected_total: u8 = TOTAL as u8;
+        let expected_total: u8 = TOTAL.to_u8_lossy();
         assert_eq!(counter.get(), expected_total);
     }
 
@@ -152,8 +153,8 @@ mod tests {
         const MAX_THREAD_COUNT: usize = 4;
         const INCREMENTS_PER_THREAD: usize = 100;
         // 4 * 100 = 400, wraps: 400 % 256 = 144.
-        #[allow(clippy::cast_possible_truncation)]
-        const EXPECTED_FINAL: u8 = (MAX_THREAD_COUNT * INCREMENTS_PER_THREAD % 256) as u8;
+        let expected_final: u8 =
+            (MAX_THREAD_COUNT * INCREMENTS_PER_THREAD % 256).to_u8_lossy();
 
         let counter = Arc::new(AtomicU8::new(0));
 
@@ -171,9 +172,9 @@ mod tests {
             .collect();
 
         for h in handles {
-            h.join().unwrap();
+            h.join().expect("conversion error");
         }
 
-        assert_eq!(counter.get(), EXPECTED_FINAL);
+        assert_eq!(counter.get(), expected_final);
     }
 }

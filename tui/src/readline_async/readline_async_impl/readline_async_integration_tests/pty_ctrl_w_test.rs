@@ -53,11 +53,17 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Wait for controlled process to start.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled process confirmed running!");
 
     // Wait for controlled process to be ready.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled is ready (input device created)");
 
     // Test 1: Ctrl+W with space boundary
@@ -66,24 +72,32 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Send "hello world"
-    context.writer
+    context
+        .writer
         .write_all(b"hello world")
         .expect("Failed to write text");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← Line state: {result}");
     assert_eq!(result, "Line: hello world, Cursor: 11");
 
     // Send Ctrl+W (0x17) to delete "world"
-    context.writer.write_all(&[0x17]).expect("Failed to write Ctrl+W");
+    context
+        .writer
+        .write_all(&[0x17])
+        .expect("Failed to write Ctrl+W");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Ctrl+W: {result}");
     assert_eq!(result, "Line: hello , Cursor: 6");
 
@@ -93,31 +107,44 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Clear line with Ctrl+U (0x15) and send "hello-world"
-    context.writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
+    context
+        .writer
+        .write_all(&[0x15])
+        .expect("Failed to write Ctrl+U");
     context.writer.flush().expect("Failed to flush");
 
-    let _result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let _result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
 
-    context.writer
+    context
+        .writer
         .write_all(b"hello-world")
         .expect("Failed to write text");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← Line state: {result}");
     assert_eq!(result, "Line: hello-world, Cursor: 11");
 
     // Send Ctrl+W to delete "world"
-    context.writer.write_all(&[0x17]).expect("Failed to write Ctrl+W");
+    context
+        .writer
+        .write_all(&[0x17])
+        .expect("Failed to write Ctrl+W");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Ctrl+W: {result}");
     assert_eq!(result, "Line: hello-, Cursor: 6");
 

@@ -1,6 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent, GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice, State, StyleSheet, TuiStyle, ch, cli_text_inline, col, core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width, inline_string, ok, queue_commands, usize, width};
+use crate::{
+    core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
+    inline_string, ok, queue_commands, usize, vp_width, c_col, ChUnit,
+    CliTextInline, CommonResult, FunctionComponent, GCStringOwned, Header, HowToChoose,
+    InlineString, InlineVec, OutputDevice, RangeExt, State, StyleSheet, TuiStyle, ch,
+    cli_text_inline, DEVELOPMENT_MODE,
+};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -54,7 +60,7 @@ impl FunctionComponent<State> for SelectComponent {
             &mut self.output_device,
             &state.header,
             &self.style.header_style,
-            render_context.viewport_width,
+            render_context.vp_width,
             render_context.start_display_col_offset,
         )?;
 
@@ -71,9 +77,8 @@ impl FunctionComponent<State> for SelectComponent {
             render_context.header_viewport_height,
         )?;
 
-        self.output_device.write(|out| {
-            out.flush().into_diagnostic()
-        })?;
+        self.output_device
+            .write(|out| out.flush().into_diagnostic())?;
 
         ok!()
     }
@@ -86,7 +91,7 @@ mod render_helper {
     pub struct RenderContext {
         pub header_viewport_height: ChUnit,
         pub items_viewport_height: ChUnit,
-        pub viewport_width: ChUnit,
+        pub vp_width: ChUnit,
         pub start_display_col_offset: usize,
         pub data_row_index_start: ChUnit,
     }
@@ -96,14 +101,14 @@ mod render_helper {
             let header_viewport_height =
                 component.calculate_header_viewport_height(state);
             let items_viewport_height = component.calculate_items_viewport_height(state);
-            let viewport_width = calculate_viewport_width(state);
+            let vp_width = calculate_viewport_width(state);
             let start_display_col_offset = 1;
             let data_row_index_start = state.scroll_offset_row_index;
 
             Self {
                 header_viewport_height,
                 items_viewport_height,
-                viewport_width,
+                vp_width,
                 start_display_col_offset,
                 data_row_index_start,
             }
@@ -135,12 +140,12 @@ mod render_helper {
             tracing::info! {
                 message = "🍎🍎🍎\n render()::state",
                 details = %inline_string!(
-                    "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, viewport_width:{e}",
+                    "\t[raw_caret_row_index: {a}, scroll_offset_row_index: {b}], \n\theader_viewport_height: {c}, items_viewport_height:{d}, vp_width:{e}",
                     a = fg_blue(&inline_string!("{:?}", state.raw_caret_row_index)),
                     b = fg_blue(&inline_string!("{:?}", state.scroll_offset_row_index)),
                     c = fg_blue(&inline_string!("{:?}", render_context.header_viewport_height)),
                     d = fg_blue(&inline_string!("{:?}", render_context.items_viewport_height)),
-                    e = fg_blue(&inline_string!("{:?}", render_context.viewport_width)),
+                    e = fg_blue(&inline_string!("{:?}", render_context.vp_width)),
                 )
             };
         });
@@ -150,7 +155,7 @@ mod render_helper {
         output_device: &mut OutputDevice,
         header: &Header,
         header_style: &TuiStyle,
-        viewport_width: ChUnit,
+        vp_width: ChUnit,
         start_display_col_offset: usize,
     ) -> CommonResult {
         match header {
@@ -158,11 +163,11 @@ mod render_helper {
                 output_device,
                 header_text,
                 header_style,
-                viewport_width,
+                vp_width,
                 start_display_col_offset,
             ),
             Header::MultiLine(header_lines) => {
-                render_multi_line_header(output_device, header_lines, viewport_width)
+                render_multi_line_header(output_device, header_lines, vp_width)
             }
         }
     }
@@ -171,13 +176,13 @@ mod render_helper {
         output_device: &mut OutputDevice,
         header_text: &str,
         header_style: &TuiStyle,
-        viewport_width: ChUnit,
+        vp_width: ChUnit,
         start_display_col_offset: usize,
     ) -> CommonResult {
         let mut header_text =
             format!("{}{}", get_spaces(start_display_col_offset), header_text);
 
-        header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
+        header_text = clip_string_to_width_with_ellipsis(header_text, vp_width);
 
         // Create styled text using ASText with all styling from header_style.
         // This embeds ANSI codes in the string, replacing the individual
@@ -206,11 +211,11 @@ mod render_helper {
     fn render_multi_line_header(
         output_device: &mut OutputDevice,
         header_lines: &InlineVec<InlineVec<CliTextInline>>,
-        viewport_width: ChUnit,
+        max_width: ChUnit,
     ) -> CommonResult {
         // Subtract 3 from viewport width because we need to add "..." to the
         // end of the line.
-        let mut available_space_col_count: ChUnit = viewport_width - 3;
+        let mut available_space_col_count: ChUnit = max_width - 3;
 
         // This is the vector of vectors of AnsiStyledText we want to print to
         // the screen.
@@ -232,8 +237,8 @@ mod render_helper {
                 // processing the rest of the spans in this line.
                 if span_us_display_width > available_space_col_count {
                     // Clip the text to available space.
-                    let clipped_text_str =
-                        span_text_gcs.clip(col(0), width(available_space_col_count));
+                    let clipped_text_str = span_text_gcs
+                        .clip(c_col(0), vp_width(available_space_col_count));
                     let clipped_text = inline_string!("{clipped_text_str}...");
                     header_line_modified.push(clipped_text);
                     break 'inner;
@@ -263,7 +268,7 @@ mod render_helper {
             }
 
             // Reset the available space.
-            available_space_col_count = viewport_width - 3;
+            available_space_col_count = max_width - 3;
             maybe_clipped_text_vec.push(header_line_modified);
         }
 
@@ -323,9 +328,10 @@ mod render_helper {
         render_context: &RenderContext,
     ) -> CommonResult {
         // Print each line in viewport.
-        for viewport_row_index in 0..*render_context.items_viewport_height {
+        let vp_range = ..render_context.items_viewport_height;
+        for viewport_row in vp_range.as_index_iter() {
             let row_context = ItemRowContext::new(
-                ch(viewport_row_index),
+                viewport_row,
                 render_context.data_row_index_start,
                 state,
             );
@@ -344,7 +350,7 @@ mod render_helper {
                 &row_context,
                 &row_prefix,
                 &data_style,
-                render_context.viewport_width,
+                render_context.vp_width,
             )?;
         }
 
@@ -452,14 +458,10 @@ mod render_helper {
                     format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
                 }
                 (Focus::Yes, Select::No) => {
-                    format!(
-                        "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                    )
+                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ")
                 }
                 (Focus::No, Select::Yes) => {
-                    format!(
-                        "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
-                    )
+                    format!("{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
                 }
                 (Focus::No, Select::No) => {
                     format!(
@@ -475,15 +477,14 @@ mod render_helper {
         row_context: &ItemRowContext,
         row_prefix: &str,
         data_style: &TuiStyle,
-        viewport_width: ChUnit,
+        vp_width: ChUnit,
     ) -> CommonResult {
         let data_item = format!("{row_prefix}{}", row_context.data_item);
-        let data_item: String =
-            clip_string_to_width_with_ellipsis(data_item, viewport_width);
+        let data_item: String = clip_string_to_width_with_ellipsis(data_item, vp_width);
         let data_item_gcs = GCStringOwned::from(&data_item);
         let data_item_display_width: ChUnit = *data_item_gcs.display_width;
-        let padding_right = if data_item_display_width < viewport_width {
-            get_spaces(usize(viewport_width - data_item_display_width))
+        let padding_right = if data_item_display_width < vp_width {
+            get_spaces(usize(vp_width - data_item_display_width))
         } else {
             get_spaces(0)
         };
@@ -529,17 +530,14 @@ mod render_helper {
     }
 }
 
-fn clip_string_to_width_with_ellipsis(
-    header_text: String,
-    viewport_width: ChUnit,
-) -> String {
+fn clip_string_to_width_with_ellipsis(header_text: String, max_width: ChUnit) -> String {
     let header_text_gcs = GCStringOwned::from(&header_text);
     let header_text_display_width = header_text_gcs.display_width;
-    let available_space_col_count: ChUnit = viewport_width;
+    let available_space_col_count: ChUnit = max_width;
     if *header_text_display_width > available_space_col_count {
         // Clip the text to available space.
         let clipped_text =
-            header_text_gcs.clip(col(0), width(available_space_col_count - 3));
+            header_text_gcs.clip(c_col(0), vp_width(available_space_col_count - 3));
         let clipped_text = format!("{clipped_text}...");
         return clipped_text;
     }
@@ -563,5 +561,4 @@ mod tests {
             clip_string_to_width_with_ellipsis(short_line.clone(), ChUnit::new(20));
         assert_eq!(clipped_short_line, "This is a short line");
     }
-
 }

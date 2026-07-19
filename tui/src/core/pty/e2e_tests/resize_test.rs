@@ -2,7 +2,7 @@
 
 use super::cross_platform_commands;
 use crate::{DefaultPtySessionConfig, PtyInputEvent, PtyOutputEvent,
-            PtySessionConfigOption, height, size, width};
+            PtySessionConfigOption, vp_height, vp_width};
 use std::time::Duration;
 
 #[tokio::test]
@@ -10,13 +10,13 @@ async fn test_pty_resize() {
     let mut session = cross_platform_commands::bash_or_cmd()
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(size(width(80) + height(24))),
+                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
         )
         .start()
         .expect("Failed to spawn session");
 
     // 1. Resize immediately.
-    let new_size = size(width(100) + height(50));
+    let new_size = vp_width(100) + vp_height(50);
     session
         .tx_input_event
         .send(PtyInputEvent::Resize(new_size))

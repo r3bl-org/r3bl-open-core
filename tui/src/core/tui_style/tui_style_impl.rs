@@ -110,11 +110,12 @@ mod impl_id {
     }
 
     impl From<u8> for TuiStyleId {
-        fn from(id: u8) -> Self { TuiStyleId(id) }
+        fn from(id: u8) -> TuiStyleId { TuiStyleId(id) }
     }
 
     impl Deref for TuiStyleId {
         type Target = u8;
+
         fn deref(&self) -> &Self::Target { &self.0 }
     }
 }
@@ -373,6 +374,15 @@ mod impl_style {
 
         /// Returns a new style with all text attributes and foreground colors cleared,
         /// retaining only the background color.
+        ///
+        /// This is used for Background Color Erase ([`BCE`]) operations in
+        /// [`VT-100`]/[`xterm`] terminal emulation, where cleared regions inherit
+        /// the active background color without inheriting text attributes (bold,
+        /// underline) or foreground colors.
+        ///
+        /// [`BCE`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-BCE
+        /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+        /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
         #[must_use]
         pub fn retain_bg_color_only(&self) -> Self {
             TuiStyle {

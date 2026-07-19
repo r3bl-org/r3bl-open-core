@@ -626,6 +626,17 @@ pub const MODIFIER_PARAMETER_OFFSET: u8 = 1;
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const CTRL_CHAR_RANGE_MAX: u8 = 31;
 
+/// Control Character Mask ([`ANSI`]): 5-bit mask to convert [`ASCII`] letters to C0
+/// control bytes.
+///
+/// Value: `31` dec, `1F` hex (`0b0001_1111`).
+///
+/// Usage: `(letter & CONTROL_CHAR_MASK)` yields `1` for `'a'`, `2` for `'b'`, etc.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+pub const CONTROL_CHAR_MASK: u8 = 0x1F;
+
 /// Null (NUL) ([`ANSI`]): The null control character.
 ///
 /// Value: `0` dec, `00` hex.

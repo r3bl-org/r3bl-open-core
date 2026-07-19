@@ -128,22 +128,25 @@ and commonly supported. But in ASCII art diagrams, stick to standard Unicode.
 
 Doc comments should read naturally and have clear subjects. Avoid abrupt sentence starts.
 
-### Dashes: Use Regular Dashes, Not Em Dashes
+### Dashes, En Dashes & Em Dashes: Do Not Use to Connect Sentences
 
-**Always use regular dashes (`-`) instead of em dashes (`—`) in all documentation.**
+The ASCII **hyphen** / **hyphen-minus** (`-`, `U+002D`) is the **ONLY** dash character permitted anywhere in the codebase. Non-ASCII en dashes (`–`) and em dashes (`—`, endash/emdash) are strictly forbidden.
 
-- Em dashes (`—`, U+2014) have no dedicated keyboard key - they require compose sequences,
-  Unicode input, or copy-paste, which creates friction for contributors.
-- In monospace fonts (terminals, editors), em dashes and regular dashes are nearly
-  indistinguishable, so the typographic benefit is lost.
-- Searching for `-` won't find `—` and vice versa, making grep/search harder.
+**Do NOT use hyphens (`-`), en dashes (`–`), or em dashes (`—`) to connect clauses or sentences in documentation.**
+
+- Connecting sentences or clauses with dashes, en dashes, or em dashes creates an awkward writing style.
+- Use separate sentences or standard punctuation (colons, semicolons, commas, or parentheses) instead.
+- Hyphens (`-`) should only be used for compound words (`type-safe`, `zero-cost`), markdown bullet points (`- Item`), or code/operators, never to join independent thoughts or clauses.
 
 ```rust
-// ❌ Bad: Em dash (can't type from keyboard)
+// ❌ Bad: Connecting sentences/clauses with dashes, en dashes, or em dashes
+/// This is the main trait - implement it to add your logic.
+/// This is the main trait – implement it to add your logic.
 /// This is the main trait — implement it to add your logic.
 
-// ✅ Good: Regular dash (just type it)
-/// This is the main trait - implement it to add your logic.
+// ✅ Good: Separate sentences or proper punctuation
+/// This is the main trait. Implement it to add your logic.
+/// This is the main trait: implement it to add your logic.
 ```
 
 ### Technical Terminology Precision
@@ -298,7 +301,7 @@ Start with "A/An [noun]..." describing what it is:
 /// A contiguous growable array type, written as `Vec<T>`, short for 'vector'.
 pub struct Vec<T> { ... }
 
-/// A UTF-8–encoded, growable string.
+/// A UTF-8-encoded, growable string.
 pub struct String { ... }
 
 /// A mutual exclusion primitive useful for protecting shared data.
@@ -985,6 +988,10 @@ that should right-align for decimal alignment).
 - **Prose readability** - Technical descriptions flow better left-to-right
 - **Code snippets** - Backtick content is easier to read left-aligned
 
+### No `$` or LaTeX Math Delimiters
+
+Do NOT use `$` or `$$` or `\(...\)` LaTeX math delimiters in rustdoc comments or chat responses. They do not render in the user's UI or standard markdown viewers. Use standard Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
+
 ### Verify Documentation Builds
 
 ```bash
@@ -1121,7 +1128,7 @@ Before committing documentation:
 - [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return, Check)
 - [ ] Technical acronyms backticked (`` `ANSI` ``, `` `PTY` ``, `` `VTE` ``); linked when target exists (`` [`VTE`] ``)
 - [ ] Software product names backticked (`` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``)
-- [ ] Regular dashes (`-`) used, not em dashes (`—`)
+- [ ] No dashes, en dashes, or em dashes (`-`, `–`, or `—`, endash/emdash) used to connect sentences or clauses (use proper punctuation or separate sentences)
 - [ ] Escape sequences use `ESC` notation in prose, not `\x1B` (exception: code/doctests)
 - [ ] ASCII diagrams use font-safe Unicode (`■` `□` `→` `▼`) not emoji (`❌` `➡️` `⬇️`)
 - [ ] Markdown tables use left-aligned columns (`:---`)

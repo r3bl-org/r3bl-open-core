@@ -77,8 +77,8 @@ impl<T> From<&[T]> for ParseList<T>
 where
     T: Clone,
 {
-    fn from(slice: &[T]) -> Self {
-        Self {
+    fn from(slice: &[T]) -> ParseList<T> {
+        ParseList {
             inner: slice.to_vec(),
         }
     }
@@ -88,8 +88,8 @@ impl<T, const N: usize> From<[T; N]> for ParseList<T>
 where
     T: Clone,
 {
-    fn from(array: [T; N]) -> Self {
-        Self {
+    fn from(array: [T; N]) -> ParseList<T> {
+        ParseList {
             inner: array.to_vec(),
         }
     }
@@ -127,7 +127,7 @@ impl<T> AddAssign<Vec<T>> for ParseList<T> {
 }
 
 impl<T> From<Vec<T>> for ParseList<T> {
-    fn from(other: Vec<T>) -> Self { Self { inner: other } }
+    fn from(other: Vec<T>) -> ParseList<T> { ParseList { inner: other } }
 }
 
 impl<T> Deref for ParseList<T> {

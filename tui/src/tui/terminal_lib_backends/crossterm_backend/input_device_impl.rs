@@ -41,7 +41,9 @@ impl CrosstermInputDevice {
     async fn next_raw(&mut self) -> miette::Result<crossterm::event::Event> {
         match self.resource.next().fuse().await {
             Some(it) => it.into_diagnostic(),
-            None => miette::bail!("Failed to get next event from input source."),
+            None => Err(miette::miette!(
+                "Failed to get next event from input source."
+            )),
         }
     }
 }

@@ -58,37 +58,49 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Wait for controlled process to start.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled process confirmed running!");
 
     // Wait for controlled process to be ready.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled is ready (input device created)");
 
     // ==================== Setup: Send "hello world test" ====================
     eprintln!("{GLYPH_WAITING} PTY Controller: Setting up line...");
-    context.writer
+    context
+        .writer
         .write_all(b"hello world test")
         .expect("Failed to write text");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← Initial line: {result}");
     assert_eq!(result, "Line: hello world test, Cursor: 16");
 
     // ==================== Test 1: Ctrl+Left to move to start of "test"
     // ====================
     eprintln!("{GLYPH_WAITING} PTY Controller: Test 1 - Ctrl+Left to start of 'test'...");
-    context.writer
+    context
+        .writer
         .write_all(&ctrl_left())
         .expect("Failed to write Ctrl+Left");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Ctrl+Left: {result}");
     assert_eq!(result, "Line: hello world test, Cursor: 12");
 
@@ -97,14 +109,17 @@ fn controller(mut context: PtyTestContext) {
     eprintln!(
         "{GLYPH_WAITING} PTY Controller: Test 2 - Ctrl+Left to start of 'world'..."
     );
-    context.writer
+    context
+        .writer
         .write_all(&ctrl_left())
         .expect("Failed to write Ctrl+Left");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Ctrl+Left: {result}");
     assert_eq!(result, "Line: hello world test, Cursor: 6");
 
@@ -113,14 +128,17 @@ fn controller(mut context: PtyTestContext) {
     eprintln!(
         "{GLYPH_WAITING} PTY Controller: Test 3 - Ctrl+Right to start of 'test'..."
     );
-    context.writer
+    context
+        .writer
         .write_all(&ctrl_right())
         .expect("Failed to write Ctrl+Right");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Ctrl+Right: {result}");
     assert_eq!(result, "Line: hello world test, Cursor: 12");
 

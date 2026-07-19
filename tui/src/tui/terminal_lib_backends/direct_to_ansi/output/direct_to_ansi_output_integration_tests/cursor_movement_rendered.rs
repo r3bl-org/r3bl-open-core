@@ -14,11 +14,11 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`cursor_movement`]: super::cursor_movement
-//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 
 use super::test_helpers_rendered::*;
-use crate::{col, ofs_buf::test_fixtures_ofs_buf::*, pos,
-            render_op::RenderOpCommon, row};
+use crate::{ofs_buf::test_fixtures_ofs_buf::*, render_op::RenderOpCommon, vp_col,
+            vp_pos, vp_row};
 
 /// Verify cursor at origin (0,0) places character at top-left of buffer.
 #[test]
@@ -60,8 +60,8 @@ fn test_move_cursor_absolute_5_10_rendered() {
 fn test_move_cursor_relative_to_rendered() {
     // Create a relative positioning operation.
     // MoveCursorPositionRelTo adds origin + relative positions.
-    let origin = pos(row(5) + col(3));
-    let relative = pos(row(2) + col(7));
+    let origin = vp_pos(3, 5);
+    let relative = vp_row(2) + vp_col(7);
     let move_op = RenderOpCommon::MoveCursorPositionRelTo(origin, relative);
 
     let buffer = execute_ops_and_render(vec![

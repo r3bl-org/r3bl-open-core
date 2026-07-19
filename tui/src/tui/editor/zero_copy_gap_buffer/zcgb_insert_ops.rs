@@ -101,9 +101,9 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CursorBoundsCheck,
-            CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps, NULL_BYTE,
-            NumericValue, RowIndex, SegIndex, byte_offset, len, ok};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CRow,
+            CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
+            NULL_BYTE, byte_offset, c_len, ok};
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
@@ -128,12 +128,12 @@ impl ZeroCopyGapBuffer {
     /// - Segment rebuilding fails
     pub fn insert_text_at_grapheme(
         &mut self,
-        arg_line_index: impl Into<RowIndex>,
-        arg_seg_index: impl Into<SegIndex>,
+        arg_line_index: impl Into<CRow>,
+        arg_seg_index: impl Into<CIndex>,
         text: &str,
     ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
-        let seg_index: SegIndex = arg_seg_index.into();
+        let line_index: CRow = arg_line_index.into();
+        let seg_index: CIndex = arg_seg_index.into();
         // Validate line index and get the byte position.
         let byte_pos = {
             let line_info = self.get_line_info(line_index).ok_or_else(|| {
@@ -189,14 +189,14 @@ impl ZeroCopyGapBuffer {
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn insert_text_at_byte_pos(
         &mut self,
-        arg_line_index: impl Into<RowIndex>,
+        arg_line_index: impl Into<CRow>,
         arg_byte_index: impl Into<ByteIndex>,
         text: &str,
     ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
+        let line_index: CRow = arg_line_index.into();
         let byte_index: ByteIndex = arg_byte_index.into();
         let text_bytes = text.as_bytes();
-        let text_len = len(text_bytes.len());
+        let text_len = c_len(text_bytes.len());
 
         // Get line info and validate position.
         let line_info = self.get_line_info(line_index).ok_or_else(|| {
@@ -208,7 +208,7 @@ impl ZeroCopyGapBuffer {
         // end of the line).
         if line_info
             .content_byte_len
-            .check_cursor_position_bounds(byte_index.into())
+            .check_cursor_position_bounds(byte_index)
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
@@ -220,8 +220,9 @@ impl ZeroCopyGapBuffer {
 
         // Check if we need to extend the line capacity.
         let current_content_len = line_info.content_byte_len;
-        let new_content_len = current_content_len + text_len;
-        let required_capacity = new_content_len + len(1); // +1 for newline
+        let new_content_len =
+            crate::byte_len(current_content_len.as_usize() + text_len.as_usize());
+        let required_capacity = crate::byte_len(new_content_len.as_usize() + 1); // +1 for newline
         if required_capacity > line_info.capacity {
             // Extend the line capacity.
             self.extend_line_capacity(line_index);
@@ -232,7 +233,9 @@ impl ZeroCopyGapBuffer {
             })?;
             if required_capacity > line_info.capacity {
                 // Calculate how many pages we need using type-safe remaining capacity.
-                let additional_capacity_needed = required_capacity - line_info.capacity;
+                let additional_capacity_needed = crate::byte_len(
+                    required_capacity.as_usize() - line_info.capacity.as_usize(),
+                );
                 let pages_needed = additional_capacity_needed
                     .as_usize()
                     .div_ceil(LINE_PAGE_SIZE);
@@ -260,7 +263,7 @@ impl ZeroCopyGapBuffer {
             // Need to move content to the right.
             let move_from = insert_pos;
             let move_to = insert_pos + text_len.as_usize();
-            let move_len = line_content_len.remaining_from(byte_index).as_usize();
+            let move_len = line_content_len.as_usize() - byte_index.as_usize();
 
             // Move content (including the newline).
             for i in (0..=move_len).rev() {
@@ -268,9 +271,7 @@ impl ZeroCopyGapBuffer {
             }
 
             // Clear the gap left behind by the move.
-            for i in move_from..move_from + text_len.as_usize() {
-                self.buffer[i] = NULL_BYTE;
-            }
+            self.buffer[move_from..move_from + text_len.as_usize()].fill(NULL_BYTE);
         }
 
         // Copy the new text into the buffer.
@@ -284,23 +285,24 @@ impl ZeroCopyGapBuffer {
                 line_index.as_usize()
             )
         })?;
-        let new_content_len = current_content_len + text_len;
+        let new_content_len =
+            crate::byte_len(current_content_len.as_usize() + text_len.as_usize());
         line_info_mut.content_byte_len = new_content_len;
 
         // Ensure remainder of line capacity is null-padded.
-        let line_end_length = new_content_len + len(1); // +1 for newline
-        let remaining_capacity = line_info_mut.capacity - line_end_length;
+        let line_end_length = crate::byte_len(new_content_len.as_usize() + 1); // +1 for newline
+        let remaining_capacity = crate::byte_len(
+            line_info_mut.capacity.as_usize() - line_end_length.as_usize(),
+        );
 
         // null-pad if there's remaining capacity.
-        if !remaining_capacity.is_zero() {
+        if !remaining_capacity.is_empty() {
             let buffer_start = line_info_mut.buffer_start.as_usize();
             let line_end = buffer_start + line_end_length.as_usize();
             let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
 
-            // Fill unused capacity with null bytes
-            for i in line_end..capacity_end {
-                self.buffer[i] = NULL_BYTE;
-            }
+            // Fill unused capacity with null bytes.
+            self.buffer[line_end..capacity_end].fill(NULL_BYTE);
         }
 
         ok!()
@@ -313,27 +315,24 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Errors
     /// Returns an error if the line index exceeds the current line count.
-    pub fn insert_empty_line(
-        &mut self,
-        arg_line_index: impl Into<RowIndex>,
-    ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
+    pub fn insert_empty_line(&mut self, arg_line_index: impl Into<CRow>) -> Result<()> {
+        let line_index: CRow = arg_line_index.into();
         // Use cursor position bounds checking for insertion operations.
         // This allows insertion at index == line_count (append at end).
         if self
-            .line_count()
-            .check_cursor_position_bounds(line_index.into())
+            .get_line_count()
+            .check_cursor_position_bounds(line_index)
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
                 "Cannot insert line at index {}, only {} lines exist",
                 line_index.as_usize(),
-                self.line_count().as_usize()
+                self.get_line_count().as_usize()
             ));
         }
 
         // Use the internal method that properly shifts buffer content.
-        self.insert_line_with_buffer_shift(line_index);
+        self.insert_empty_line_at(line_index.as_usize());
 
         ok!()
     }
@@ -342,69 +341,69 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{row, seg_index};
+    use crate::{INITIAL_LINE_SIZE, c_index, c_row};
 
     #[test]
     fn test_insert_at_beginning() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert text at the beginning.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
 
         // Verify the content.
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello");
 
         // Verify segments were rebuilt.
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, len(5));
-        assert_eq!(line_info.content_byte_len, len(5));
+        assert_eq!(line_info.grapheme_count, c_len(5));
+        assert_eq!(line_info.content_byte_len, crate::byte_len(5));
 
         ok!()
     }
 
     #[test]
     fn test_insert_at_end() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // First insert some text.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
 
         // Then insert at the end.
-        buffer.insert_text_at_grapheme(row(0), seg_index(5), " World")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(5u16), " World")?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello World");
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, len(11));
+        assert_eq!(line_info.grapheme_count, c_len(11));
 
         ok!()
     }
 
     #[test]
     fn test_insert_in_middle() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert initial text.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Heo")?;
 
         // Insert in the middle.
-        buffer.insert_text_at_grapheme(row(0), seg_index(2), "ll")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(2u16), "ll")?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello");
 
@@ -413,27 +412,27 @@ mod tests {
 
     #[test]
     fn test_insert_unicode() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert emoji
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello 😀")?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello 😀");
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, len(7)); // "Hello " = 6 + emoji = 1
+        assert_eq!(line_info.grapheme_count, c_len(7)); // "Hello " = 6 + emoji = 1
 
         // Insert more text after emoji.
-        buffer.insert_text_at_grapheme(row(0), seg_index(7), " World")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(7u16), " World")?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content after second insert"))?;
         assert_eq!(content, "Hello 😀 World");
 
@@ -442,23 +441,23 @@ mod tests {
 
     #[test]
     fn test_insert_causes_line_extension() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Create a string that will require line extension.
         let long_text = "A".repeat(300);
 
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), &long_text)?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, &long_text);
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, len(300));
+        assert_eq!(line_info.grapheme_count, c_len(300));
         assert!(line_info.capacity.as_usize() >= 301); // 300 + newline
 
         ok!()
@@ -466,31 +465,31 @@ mod tests {
 
     #[test]
     fn test_insert_empty_line() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer.add_line();
 
         // Add content to lines.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Line 1")?;
-        buffer.insert_text_at_grapheme(row(1), seg_index(0), "Line 2")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Line 1")?;
+        buffer.insert_text_at_grapheme(c_row(1), c_index(0u16), "Line 2")?;
 
         // Insert empty line in middle.
-        buffer.insert_empty_line(row(1))?;
+        buffer.insert_empty_line(c_row(1))?;
 
-        assert_eq!(buffer.line_count(), len(3));
+        assert_eq!(buffer.get_line_count(), crate::c_height(3));
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line 0 content"))?;
         assert_eq!(content, "Line 1");
 
         let content = buffer
-            .get_line_content(row(1))
+            .get_line_content(c_row(1))
             .ok_or_else(|| miette!("Failed to get line 1 content"))?;
         assert_eq!(content, "");
 
         let content = buffer
-            .get_line_content(row(2))
+            .get_line_content(c_row(2))
             .ok_or_else(|| miette!("Failed to get line 2 content"))?;
         assert_eq!(content, "Line 2");
 
@@ -499,9 +498,9 @@ mod tests {
 
     #[test]
     fn test_insert_invalid_line_index() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
 
-        let result = buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello");
+        let result = buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello");
         assert!(result.is_err());
 
         let err_msg = result
@@ -515,36 +514,36 @@ mod tests {
 
     #[test]
     fn test_insert_compound_grapheme_clusters() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert text with compound grapheme clusters.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "👨‍👩‍👧‍👦 Family")?;
 
         let content = buffer
-            .get_line_content(row(0))
+            .get_line_content(c_row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "👨‍👩‍👧‍👦 Family");
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         // The family emoji is 1 grapheme cluster despite being multiple code points.
-        assert_eq!(line_info.grapheme_count, len(8)); // 1 + space + 6 letters
+        assert_eq!(line_info.grapheme_count, c_len(8)); // 1 + space + 6 letters
 
         ok!()
     }
 
     #[test]
     fn test_null_padding_maintained_after_insertion() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert some text.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         let buffer_start = *line_info.buffer_start;
         let content_len = line_info.content_byte_len.as_usize();
@@ -559,11 +558,14 @@ mod tests {
 
         // Verify unused capacity is null-padded.
         let unused_start = buffer_start + content_len + 1; // after content + newline
-        for i in unused_start..(buffer_start + capacity) {
+        for (idx, &byte) in buffer.buffer[unused_start..buffer_start + capacity]
+            .iter()
+            .enumerate()
+        {
+            let i = unused_start + idx;
             assert_eq!(
-                buffer.buffer[i], NULL_BYTE,
-                "Unused buffer position {} should be null-padded after insertion but found: {:?}",
-                i, buffer.buffer[i]
+                byte, NULL_BYTE,
+                "Unused buffer position {i} should be null-padded after insertion but found: {byte:?}"
             );
         }
 
@@ -572,17 +574,17 @@ mod tests {
 
     #[test]
     fn test_null_padding_after_middle_insertion() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert initial text.
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Heo")?;
 
         // Insert in the middle (this will shift existing content)
-        buffer.insert_text_at_grapheme(row(0), seg_index(2), "ll")?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(2u16), "ll")?;
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         let buffer_start = *line_info.buffer_start;
         let content_len = line_info.content_byte_len.as_usize();
@@ -597,11 +599,14 @@ mod tests {
 
         // Verify unused capacity is still null-padded after content shifting.
         let unused_start = buffer_start + content_len + 1;
-        for i in unused_start..(buffer_start + capacity) {
+        for (idx, &byte) in buffer.buffer[unused_start..buffer_start + capacity]
+            .iter()
+            .enumerate()
+        {
+            let i = unused_start + idx;
             assert_eq!(
-                buffer.buffer[i], NULL_BYTE,
-                "Unused buffer position {} should be null-padded after middle insertion but found: {:?}",
-                i, buffer.buffer[i]
+                byte, NULL_BYTE,
+                "Unused buffer position {i} should be null-padded after middle insertion but found: {byte:?}"
             );
         }
 
@@ -610,22 +615,22 @@ mod tests {
 
     #[test]
     fn test_null_padding_after_line_extension() -> Result<()> {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Create text that will cause line extension.
         let long_text = "A".repeat(300);
-        buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
+        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), &long_text)?;
 
         let line_info = buffer
-            .get_line_info(0)
+            .get_line_info(0u16)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         let buffer_start = *line_info.buffer_start;
         let content_len = line_info.content_byte_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify the line was extended.
-        assert!(capacity > crate::INITIAL_LINE_SIZE);
+        assert!(capacity > INITIAL_LINE_SIZE);
 
         // Verify content and newline.
         assert_eq!(
@@ -636,11 +641,14 @@ mod tests {
 
         // Verify unused capacity in extended line is null-padded.
         let unused_start = buffer_start + content_len + 1;
-        for i in unused_start..(buffer_start + capacity) {
+        for (idx, &byte) in buffer.buffer[unused_start..buffer_start + capacity]
+            .iter()
+            .enumerate()
+        {
+            let i = unused_start + idx;
             assert_eq!(
-                buffer.buffer[i], NULL_BYTE,
-                "Extended unused buffer position {} should be null-padded but found: {:?}",
-                i, buffer.buffer[i]
+                byte, NULL_BYTE,
+                "Extended unused buffer position {i} should be null-padded but found: {byte:?}"
             );
         }
 
@@ -651,7 +659,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{row, seg_index};
+    use crate::{c_index, c_row};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -659,144 +667,159 @@ mod benches {
 
     #[bench]
     fn bench_insert_small_text(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         b.iter(|| {
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), black_box("Hello"))
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0u16), black_box("Hello"))
+                .expect("conversion error");
             // Clear content for next iteration.
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(5))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0u16), c_index(5u16))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_insert_at_end(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Initial text")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Initial text")
+            .expect("conversion error");
 
         b.iter(|| {
-            let end_count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let end_count = buffer
+                .get_line_info(0u16)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
                 .insert_text_at_grapheme(
-                    row(0),
-                    seg_index(end_count.as_usize()),
+                    c_row(0),
+                    c_index(end_count.as_usize()),
                     black_box(" more"),
                 )
-                .unwrap();
+                .expect("conversion error");
             // Clear added content.
             buffer
                 .delete_range(
-                    row(0),
-                    seg_index(end_count.as_usize()),
-                    seg_index(end_count.as_usize() + 5),
+                    c_row(0),
+                    c_index(end_count.as_usize()),
+                    c_index(end_count.as_usize() + 5),
                 )
-                .unwrap();
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_insert_unicode(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         b.iter(|| {
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), black_box("Hello 😀 世界"))
-                .unwrap();
+                .insert_text_at_grapheme(
+                    c_row(0),
+                    c_index(0u16),
+                    black_box("Hello 😀 世界"),
+                )
+                .expect("conversion error");
             // Clear content
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0u16)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_insert_causes_extension(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let long_text = "A".repeat(300);
 
         b.iter(|| {
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), black_box(&long_text))
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0u16), black_box(&long_text))
+                .expect("conversion error");
             // Clear content
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(300))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0u16), c_index(300u16))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_insert_empty_line(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
 
         b.iter(|| {
-            buffer.insert_empty_line(row(0)).unwrap();
+            buffer
+                .insert_empty_line(c_row(0))
+                .expect("conversion error");
             // Remove for next iteration.
-            buffer.remove_line(row(0));
+            buffer.remove_line(c_row(0));
         });
     }
 
     #[bench]
     fn bench_insert_middle_of_text(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello World")
+            .expect("conversion error");
 
         b.iter(|| {
             // Insert in middle (after "Hello ")
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(6), black_box("Beautiful "))
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(6u16), black_box("Beautiful "))
+                .expect("conversion error");
             // Remove inserted text.
             buffer
-                .delete_range(row(0), seg_index(6), seg_index(16))
-                .unwrap();
+                .delete_range(c_row(0), c_index(6u16), c_index(16u16))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_insert_at_end_with_optimization(b: &mut Bencher) {
         // This tests the real-world scenario with our optimization.
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Start with a realistic line.
         buffer
             .insert_text_at_grapheme(
-                row(0),
-                seg_index(0),
+                c_row(0),
+                c_index(0u16),
                 "This is a typical line of text",
             )
-            .unwrap();
+            .expect("conversion error");
 
         b.iter(|| {
-            let end_count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let end_count = buffer
+                .get_line_info(0u16)
+                .expect("conversion error")
+                .grapheme_count;
 
             // Append a single character (most common case when typing)
             buffer
                 .insert_text_at_grapheme(
-                    row(0),
-                    seg_index(end_count.as_usize()),
+                    c_row(0),
+                    c_index(end_count.as_usize()),
                     black_box("x"),
                 )
-                .unwrap();
+                .expect("conversion error");
 
             // Delete it to reset for next iteration.
             buffer
-                .delete_grapheme_at(row(0), seg_index(end_count.as_usize()))
-                .unwrap();
+                .delete_grapheme_at(c_row(0), c_index(end_count.as_usize()))
+                .expect("conversion error");
         });
     }
 }

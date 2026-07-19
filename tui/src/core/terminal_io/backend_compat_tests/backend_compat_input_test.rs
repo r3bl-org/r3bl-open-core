@@ -50,13 +50,13 @@
 //! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
 //!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
@@ -73,8 +73,8 @@ use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINA
                          terminal_raw_mode},
             ok, retry_until_success_test, spawn_controlled_in_pty,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{collections::HashMap,
-          fmt::Write as _,
+use rustc_hash::FxHashMap;
+use std::{fmt::Write as _,
           io::{BufRead, Write}};
 
 const BACKEND_NAME_CROSSTERM: &str = "crossterm";
@@ -185,7 +185,7 @@ fn run_single_test_attempt() -> Result<(), String> {
 pub mod controller {
     use super::*;
 
-    /// Runs controller logic and collects events as a `HashMap`.
+    /// Runs controller logic and collects events as a [`FxHashMap`].
     ///
     /// Used by the comparison test to directly capture events without printing. Returns a
     /// map of sequence description → EVENT string.
@@ -201,7 +201,7 @@ pub mod controller {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn run_and_collect(
         (backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild),
-    ) -> Result<HashMap<String, String>, String> {
+    ) -> Result<FxHashMap<String, String>, String> {
         let mut writer = pty_pair
             .controller()
             .take_writer()
@@ -216,7 +216,7 @@ pub mod controller {
         // after the signal is preserved in the reader's internal buffer.
         child.wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)?;
 
-        let mut events = HashMap::new();
+        let mut events = FxHashMap::default();
 
         for (desc, bytes) in generate_test_sequences::all() {
             writer

@@ -5,9 +5,10 @@ use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelC
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress,
-               RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey, SurfaceBounds,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-               glyphs, inline_string, ok, row, send_signal, throws_with_return};
+               RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, VPBoundingBox,
+               ZOrder, ch, glyphs, inline_string, ok, send_signal, throws_with_return,
+               vp_col, vp_row};
 use smallvec::smallvec;
 
 #[derive(Debug, Clone, Default)]
@@ -129,7 +130,7 @@ mod single_column_component_impl_component_trait {
             &mut self,
             global_data: &mut GlobalData<State, AppSignal>,
             current_box: FlexBox,
-            _surface_bounds: SurfaceBounds, /* Ignore this. */
+            _surface_bounds: VPBoundingBox, /* Ignore this. */
             has_focus: &mut HasFocus,
         ) -> CommonResult {
             // Things from component scope.
@@ -140,9 +141,9 @@ mod single_column_component_impl_component_trait {
             let line_2 = inline_string!("box.id: {b:?} - World", b = current_box.id);
 
             // Setup intermediate vars.
-            let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
-            let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
-            let mut content_cursor_pos = col(0) + row(0);
+            let box_origin_pos = current_box.style_adjusted_bounds.origin_pos; // Adjusted for style margin (if any).
+            let box_bounds_size = current_box.style_adjusted_bounds.bounds_size; // Adjusted for style margin (if any).
+            let mut content_cursor_pos = vp_col(0) + vp_row(0);
 
             let mut render_ops = RenderOpIRVec::new();
 

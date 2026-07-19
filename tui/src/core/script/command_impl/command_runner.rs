@@ -79,7 +79,7 @@ pub type TokioCommand = tokio::process::Command;
 ///     )
 ///     .output()
 ///     .await
-///     .unwrap();
+///     .expect("conversion error");
 ///     assert!(output.status.success());
 ///
 ///     // Example 2.
@@ -90,7 +90,7 @@ pub type TokioCommand = tokio::process::Command;
 ///     )
 ///     .run()
 ///     .await
-///     .unwrap();
+///     .expect("conversion error");
 ///     assert_eq!(String::from_utf8_lossy(&run_bytes), "Hello, world!\n");
 ///
 ///     // Example 3.
@@ -177,16 +177,16 @@ impl Run for TokioCommand {
 macro_rules! bail_command_ran_and_failed {
         ($command:expr, $status:expr, $stderr:expr) => {
             use $crate::{fg_lizard_green, fg_frozen_blue, fg_magenta};
-            miette::bail!(
-                "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
-                cmd_label = fg_lizard_green("[command]"),
-                status_label = fg_lizard_green("[status]"),
-                stderr_label = fg_lizard_green("[stderr]"),
-                name = fg_frozen_blue(stringify!($command)),
-                cmd = $command,
-                status = fg_magenta(&format!("{:?}", $status)),
-                stderr = fg_magenta(&String::from_utf8_lossy(&$stderr)),
-            );
+        return Err(miette::miette!(
+            "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
+            cmd_label = fg_lizard_green("[command]"),
+            status_label = fg_lizard_green("[status]"),
+            stderr_label = fg_lizard_green("[stderr]"),
+            name = fg_frozen_blue(stringify!($command)),
+            cmd = $command,
+            status = fg_magenta(&format!("{:?}", $status)),
+            stderr = fg_magenta(&String::from_utf8_lossy(&$stderr)),
+        ));
         };
     }
 
@@ -374,7 +374,7 @@ mod tests_command_runner {
         )
         .run()
         .await
-        .unwrap();
+        .expect("conversion error");
 
         // This captures the output.
         assert_eq!(String::from_utf8_lossy(&output), "Hello, world!\n");
@@ -387,7 +387,7 @@ mod tests_command_runner {
         )
         .run_interactive()
         .await
-        .unwrap();
+        .expect("conversion error");
         assert_eq!(String::from_utf8_lossy(&output), "Hello, world!\n");
     }
 
@@ -408,7 +408,7 @@ mod tests_command_runner {
         )
         .run()
         .await
-        .unwrap();
+        .expect("conversion error");
 
         assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
 
@@ -418,7 +418,7 @@ mod tests_command_runner {
         )
         .run_interactive()
         .await
-        .unwrap();
+        .expect("conversion error");
         assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
     }
 
@@ -456,7 +456,7 @@ mod tests_command_runner {
         let result = pipe(&mut command_one, &mut command_two).await;
         // This is not an error when using tokio::process::Command. However, when using
         // std::process::Command, this will result in an error.
-        assert_eq!("", result.unwrap());
+        assert_eq!("", result.expect("conversion error"));
     }
 
     #[tokio::test]

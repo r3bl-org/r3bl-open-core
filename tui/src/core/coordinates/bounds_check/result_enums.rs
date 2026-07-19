@@ -25,17 +25,17 @@
 /// ## Examples
 ///
 /// ```
-/// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, idx, len};
+/// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_idx, vp_len};
 ///
-/// let index = idx(5);
-/// let length = len(10);
+/// let index = vp_idx(5u16);
+/// let length = vp_len(10);
 /// assert_eq!(index.overflows(length), ArrayOverflowResult::Within);
 ///
-/// let large_index = idx(10);
+/// let large_index = vp_idx(10u16);
 /// assert_eq!(large_index.overflows(length), ArrayOverflowResult::Overflowed);
 /// ```
 ///
-/// [`overflows()`]: crate::ArrayBoundsCheck::overflows
+/// [`overflows()`]: crate::core::ArrayBoundsCheck::overflows
 /// [`RangeBoundsResult`]: crate::RangeBoundsResult
 /// [Interval Notation]: mod@crate::bounds_check#interval-notation
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -55,16 +55,16 @@ pub enum ArrayOverflowResult {
 ///
 /// # Examples
 ///
-/// ```
-/// use r3bl_tui::{ArrayBoundsCheck, ArrayUnderflowResult, row};
+/// ```rust
+/// use r3bl_tui::{ArrayBoundsCheck, ArrayUnderflowResult, vp_row};
 ///
-/// let min_row = row(3);
-/// assert_eq!(row(2).underflows(min_row), ArrayUnderflowResult::Underflowed);
-/// assert_eq!(row(3).underflows(min_row), ArrayUnderflowResult::Within);
-/// assert_eq!(row(5).underflows(min_row), ArrayUnderflowResult::Within);
+/// let min_row = vp_row(3);
+/// assert_eq!(vp_row(2).underflows(min_row), ArrayUnderflowResult::Underflowed);
+/// assert_eq!(vp_row(3).underflows(min_row), ArrayUnderflowResult::Within);
+/// assert_eq!(vp_row(5).underflows(min_row), ArrayUnderflowResult::Within);
 /// ```
 ///
-/// [`underflows`]: crate::ArrayBoundsCheck::underflows
+/// [`underflows`]: crate::core::ArrayBoundsCheck::underflows
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ArrayUnderflowResult {
     /// Index is at or above the minimum bound.
@@ -89,19 +89,19 @@ pub enum ArrayUnderflowResult {
 ///
 /// # Examples
 ///
-/// ```
-/// use r3bl_tui::{RangeBoundsExt, RangeBoundsResult, idx};
+/// ```rust
+/// use r3bl_tui::{RangeBoundsExt, RangeBoundsResult, vp_col};
 ///
-/// let index = idx(5);
-/// let range = idx(3)..idx(8);
+/// let index = vp_col(5);
+/// let range = vp_col(3)..vp_col(8);
 ///
 /// // Check within range [3, 8)
 /// assert_eq!(range.check_index_is_within(index), RangeBoundsResult::Within);
 ///
-/// let low_index = idx(2);
+/// let low_index = vp_col(2);
 /// assert_eq!(range.check_index_is_within(low_index), RangeBoundsResult::Underflowed);
 ///
-/// let high_index = idx(8);
+/// let high_index = vp_col(8);
 /// assert_eq!(range.check_index_is_within(high_index), RangeBoundsResult::Overflowed);
 /// ```
 ///
@@ -131,25 +131,25 @@ pub enum RangeBoundsResult {
 ///
 /// # Examples
 ///
-/// ```
-/// use r3bl_tui::{RangeBoundsExt, RangeValidityStatus, col, width};
+/// ```rust
+/// use r3bl_tui::{RangeBoundsExt, RangeValidityStatus, vp_col, vp_width};
 ///
-/// let buffer_length = width(10);
+/// let buffer_length = vp_width(10);
 ///
 /// // Valid range
-/// let range = col(2)..col(7);
+/// let range = vp_col(2)..vp_col(7);
 /// assert_eq!(range.check_range_is_valid_for_length(buffer_length), RangeValidityStatus::Valid);
 ///
 /// // Inverted range
-/// let inverted = col(8)..col(3);
+/// let inverted = vp_col(8)..vp_col(3);
 /// assert_eq!(inverted.check_range_is_valid_for_length(buffer_length), RangeValidityStatus::Inverted);
 ///
 /// // Start out of bounds
-/// let bad_start = col(15)..col(20);
+/// let bad_start = vp_col(15)..vp_col(20);
 /// assert_eq!(bad_start.check_range_is_valid_for_length(buffer_length), RangeValidityStatus::StartOutOfBounds);
 ///
 /// // End out of bounds
-/// let bad_end = col(5)..col(15);
+/// let bad_end = vp_col(5)..vp_col(15);
 /// assert_eq!(bad_end.check_range_is_valid_for_length(buffer_length), RangeValidityStatus::EndOutOfBounds);
 /// ```
 ///
@@ -180,14 +180,14 @@ pub enum RangeValidityStatus {
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, idx, len};
+/// use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_idx, vp_len};
 ///
-/// let content = len(5);
+/// let content = vp_len(5);
 ///
-/// assert_eq!(content.check_cursor_position_bounds(idx(0)), CursorPositionBoundsStatus::AtStart);
-/// assert_eq!(content.check_cursor_position_bounds(idx(3)), CursorPositionBoundsStatus::Within);
-/// assert_eq!(content.check_cursor_position_bounds(idx(5)), CursorPositionBoundsStatus::AtEnd);
-/// assert_eq!(content.check_cursor_position_bounds(idx(7)), CursorPositionBoundsStatus::Beyond);
+/// assert_eq!(content.check_cursor_position_bounds(vp_idx(0u16)), CursorPositionBoundsStatus::AtStart);
+/// assert_eq!(content.check_cursor_position_bounds(vp_idx(3u16)), CursorPositionBoundsStatus::Within);
+/// assert_eq!(content.check_cursor_position_bounds(vp_idx(5u16)), CursorPositionBoundsStatus::AtEnd);
+/// assert_eq!(content.check_cursor_position_bounds(vp_idx(7u16)), CursorPositionBoundsStatus::Beyond);
 /// ```
 ///
 /// [`check_cursor_position_bounds`]: crate::CursorBoundsCheck::check_cursor_position_bounds
@@ -211,7 +211,7 @@ pub enum CursorPositionBoundsStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ArrayBoundsCheck, idx, len};
+    use crate::{ArrayBoundsCheck, vp_idx, vp_len};
 
     mod array_overflow_result_tests {
         use super::*;
@@ -249,11 +249,11 @@ mod tests {
         #[test]
         fn test_array_overflow_result_with_overflows() {
             // Verify that overflows() returns ArrayOverflowResult
-            let index = idx(5);
-            let length = len(10);
+            let index = vp_idx(5u16);
+            let length = vp_len(10);
             assert_eq!(index.overflows(length), ArrayOverflowResult::Within);
 
-            let large_index = idx(10);
+            let large_index = vp_idx(10u16);
             assert_eq!(
                 large_index.overflows(length),
                 ArrayOverflowResult::Overflowed
@@ -300,7 +300,7 @@ mod tests {
 
     mod range_bounds_result_tests {
         use super::*;
-        use crate::RangeBoundsExt;
+        use crate::{RangeBoundsExt, vp_idx};
 
         #[test]
         fn test_range_bounds_result_equality() {
@@ -346,21 +346,21 @@ mod tests {
         #[test]
         fn test_range_bounds_result_with_check_index_is_within() {
             // Verify that check_index_is_within returns RangeBoundsResult
-            let range = idx(3)..idx(8);
+            let range = vp_idx(3u16)..vp_idx(8u16);
 
-            let index = idx(5);
+            let index = vp_idx(5u16);
             assert_eq!(
                 range.check_index_is_within(index),
                 RangeBoundsResult::Within
             );
 
-            let low_index = idx(2);
+            let low_index = vp_idx(2u16);
             assert_eq!(
                 range.check_index_is_within(low_index),
                 RangeBoundsResult::Underflowed
             );
 
-            let high_index = idx(8);
+            let high_index = vp_idx(8u16);
             assert_eq!(
                 range.check_index_is_within(high_index),
                 RangeBoundsResult::Overflowed
@@ -372,7 +372,7 @@ mod tests {
 #[cfg(test)]
 mod cursor_position_bounds_status_tests {
     use super::*;
-    use crate::{ColIndex, ColWidth, CursorBoundsCheck, RowHeight, RowIndex, idx, len};
+    use crate::{CursorBoundsCheck, VPCol, VPHeight, VPRow, VPWidth, vp_idx, vp_len};
 
     #[test]
     fn test_cursor_position_bounds_status_equality() {
@@ -449,23 +449,23 @@ mod cursor_position_bounds_status_tests {
     #[test]
     fn test_cursor_position_bounds_status_empty_content_precedence() {
         // Test that AtStart takes precedence over AtEnd for empty content.
-        let empty_length = len(0);
+        let empty_length = vp_len(0);
         assert_eq!(
-            empty_length.check_cursor_position_bounds(idx(0)),
+            empty_length.check_cursor_position_bounds(vp_idx(0u16)),
             CursorPositionBoundsStatus::AtStart
         );
 
         // Test with typed indices too.
 
-        let empty_col_width = ColWidth::new(0);
+        let empty_col_width = VPWidth::new(0u16);
         assert_eq!(
-            empty_col_width.check_cursor_position_bounds(ColIndex::new(0)),
+            empty_col_width.check_cursor_position_bounds(VPCol::new(0)),
             CursorPositionBoundsStatus::AtStart
         );
 
-        let empty_row_height = RowHeight::new(0);
+        let empty_row_height = VPHeight::new(0u16);
         assert_eq!(
-            empty_row_height.check_cursor_position_bounds(RowIndex::new(0)),
+            empty_row_height.check_cursor_position_bounds(VPRow::new(0)),
             CursorPositionBoundsStatus::AtStart
         );
     }
@@ -473,37 +473,37 @@ mod cursor_position_bounds_status_tests {
     #[test]
     fn test_cursor_position_bounds_status_comprehensive() {
         // Test all combinations for a length-3 content.
-        let content_length = len(3);
+        let content_length = vp_len(3);
 
         // AtStart: index == 0
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(0)),
+            content_length.check_cursor_position_bounds(vp_idx(0u16)),
             CursorPositionBoundsStatus::AtStart
         );
 
         // Within: 0 < index < length
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(1)),
+            content_length.check_cursor_position_bounds(vp_idx(1u16)),
             CursorPositionBoundsStatus::Within
         );
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(2)),
+            content_length.check_cursor_position_bounds(vp_idx(2u16)),
             CursorPositionBoundsStatus::Within
         );
 
         // AtEnd: index == length && index > 0
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(3)),
+            content_length.check_cursor_position_bounds(vp_idx(3u16)),
             CursorPositionBoundsStatus::AtEnd
         );
 
         // Beyond: index > length
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(4)),
+            content_length.check_cursor_position_bounds(vp_idx(4u16)),
             CursorPositionBoundsStatus::Beyond
         );
         assert_eq!(
-            content_length.check_cursor_position_bounds(idx(10)),
+            content_length.check_cursor_position_bounds(vp_idx(10u16)),
             CursorPositionBoundsStatus::Beyond
         );
     }

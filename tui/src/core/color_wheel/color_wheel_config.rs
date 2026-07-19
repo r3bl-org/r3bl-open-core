@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{Lolcat, LolcatBuilder, Seed};
-use crate::{ColorSupport, TuiColor, global_color_support};
+use crate::{ColorSupport, TuiColor, VPLength, WideningCastToU8, WideningCastToUsize,
+            global_color_support};
 use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
@@ -9,8 +10,9 @@ use smallvec::SmallVec;
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
-pub(in crate::core) mod sizing {
-    use super::{SmallString, SmallVec, TuiColor, defaults};
+pub(super) mod sizing {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub type StringHexColor = SmallString<[u8; MAX_HEX_COLOR_STRING_SIZE]>;
     const MAX_HEX_COLOR_STRING_SIZE: usize = 8;
@@ -18,23 +20,46 @@ pub(in crate::core) mod sizing {
     pub type VecStops = SmallVec<[StringHexColor; MAX_STOPS_SIZE]>;
     const MAX_STOPS_SIZE: usize = 8;
 
+    // XMARK: Intentional numeric casting using as.
+    #[allow(clippy::as_conversions)]
     pub type VecSteps = SmallVec<[TuiColor; defaults::Defaults::Steps as usize]>;
 }
 
 pub mod defaults {
-    use super::sizing::VecStops;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
+    #[allow(clippy::wildcard_imports)]
     #[repr(u8)]
     #[derive(Clone, PartialEq, Eq, Hash, Debug)]
     pub enum Defaults {
         Steps = 64,
     }
 
+    impl WideningCastToUsize for Defaults {
+        fn as_usize_widening(self) -> usize {
+            // XMARK: Intentional numeric casting using as.
+            #[allow(clippy::as_conversions)]
+            {
+                self as usize
+            }
+        }
+    }
+
+    impl WideningCastToU8 for Defaults {
+        fn as_u8_widening(self) -> u8 {
+            #[allow(clippy::as_conversions)]
+            {
+                self as u8
+            }
+        }
+    }
+
     /// Provides an owned copy of the default gradient stops.
     #[must_use]
-    pub fn get_default_gradient_stops() -> VecStops {
+    pub fn get_default_gradient_stops() -> sizing::VecStops {
         let size_hint = DEFAULT_GRADIENT_STOPS.len();
-        let mut stops = VecStops::with_capacity(size_hint);
+        let mut stops = sizing::VecStops::with_capacity(size_hint);
         for &stop in &DEFAULT_GRADIENT_STOPS {
             stops.push(stop.into());
         }
@@ -159,6 +184,16 @@ pub enum ColorWheelSpeed {
     Fast = 2,
 }
 
+impl WideningCastToU8 for ColorWheelSpeed {
+    fn as_u8_widening(self) -> u8 {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as u8
+        }
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, PartialEq, Debug)]
 pub enum GradientKind {
@@ -171,7 +206,7 @@ pub enum GradientKind {
 /// [`GradientLengthKind::NotCalculatedYet`].
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GradientLengthKind {
-    ColorWheel(usize),
+    ColorWheel(VPLength),
     Lolcat(Seed),
     NotCalculatedYet,
 }

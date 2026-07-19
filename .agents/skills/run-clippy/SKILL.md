@@ -156,6 +156,28 @@ When addressing `clippy::unwrap_used` violations or manually reviewing code that
 - **Use `#[allow(clippy::unwrap_used, reason = "...")]`** instead of `.expect()`. The reason should explicitly state the mathematical or logical proof for why the `unwrap()` is safe.
 - **Fallbacks**: If the `unwrap()` is not mathematically proven safe and is truly fallible (e.g., file I/O), rewrite it using `if let Ok()` or propagate the error instead of panicking.
 
+### Step 9: Prefer `?` Operator / Early Returns over `.and_then()` (Mandatory)
+
+Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead, write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else` statements). The only acceptable exception is for boolean constant gating in tracing/logging calls if necessary, though even then, canonical Rust is preferred.
+
+**✅ Good:**
+```rust
+fn get_char(&self, pos: Pos) -> Option<PixelChar> {
+    let row = self.get_row(pos.row_index)?;
+    let cell = row.get(pos.col_index.as_usize())?;
+    Some(*cell)
+}
+```
+
+**❌ Bad:**
+```rust
+fn get_char(&self, pos: Pos) -> Option<PixelChar> {
+    self.get_row(pos.row_index)
+        .and_then(|row| row.get(pos.col_index.as_usize()))
+        .copied()
+}
+```
+
 ## Reporting Results
 
 After completing all steps, report concisely:

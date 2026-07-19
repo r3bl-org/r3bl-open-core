@@ -1,21 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::ex_editor::Id;
-use r3bl_tui::{DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, EditorBuffer, FlexBoxId,
-               HasDialogBuffers, HasEditorBuffers};
-use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
+use r3bl_tui::{DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, EditorBuffer, FileExtensionToken,
+               FlexBoxId, HasDialogBuffers, HasEditorBuffers, ok};
+use rustc_hash::FxHashMap;
+use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Provides default content for the editor example.
 ///
-/// This function loads real-world markdown content that demonstrates various
-/// markdown features including metadata, headings with emojis, lists, code blocks,
-/// and formatting. The content is shared between this example and the parser tests
-/// to ensure consistency.
+/// This function loads real-world markdown content that demonstrates various markdown
+/// features including metadata, headings with emojis, lists, code blocks, and formatting.
+/// The content is shared between this example and the parser tests to ensure consistency.
 ///
-/// The content is loaded from the `r3bl_tui::editor::EX_EDITOR_CONTENT` constant,
-/// which [`include_str!`] the content from an external markdown file, ensuring a
-/// single source of truth for this example data.
+/// The content is loaded from the [`r3bl_tui::editor::EX_EDITOR_CONTENT`] constant, which
+/// [`include_str!`] the content from an external markdown file, ensuring a single source
+/// of truth for this example data.
 ///
 /// # Returns
 ///
@@ -27,8 +26,8 @@ fn get_default_editor_content() -> Vec<&'static str> {
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
+    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: FxHashMap<FlexBoxId, DialogBuffer>,
 }
 
 mod constructor {
@@ -40,28 +39,29 @@ mod constructor {
     }
 
     pub fn get_initial_state() -> State {
-        let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
+        let editor_buffers: FxHashMap<FlexBoxId, EditorBuffer> = {
             let editor_buffer = {
                 let mut editor_buffer =
-                    EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+                    EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
                 let iter = get_default_editor_content().into_iter();
                 editor_buffer.init_with(iter);
                 editor_buffer
             };
-            let mut it = HashMap::new();
+            let mut it = FxHashMap::default();
             it.insert(FlexBoxId::from(Id::Editor), editor_buffer);
             it
         };
 
         State {
             editor_buffers,
-            dialog_buffers: HashMap::default(),
+            dialog_buffers: FxHashMap::default(),
         }
     }
 }
 
 mod impl_editor_support {
-    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -83,7 +83,8 @@ mod impl_editor_support {
 }
 
 mod impl_dialog_support {
-    use super::{DialogBuffer, FlexBoxId, HasDialogBuffers, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
@@ -93,7 +94,8 @@ mod impl_dialog_support {
 }
 
 mod impl_debug {
-    use super::{Debug, Formatter, Result, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -112,8 +114,8 @@ mod impl_debug {
 
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
-    use super::{Display, Formatter, Result, State};
-    use r3bl_tui::ok;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Display for State {
         /// This must be a fast implementation, so we avoid deep traversal of the

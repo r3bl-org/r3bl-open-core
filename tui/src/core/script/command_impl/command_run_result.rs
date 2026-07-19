@@ -2,7 +2,7 @@
 
 use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink, fg_slate_gray,
             inline_string};
-use std::{fmt::{Debug, Display, Error, Formatter, Result as FmtResult},
+use std::{fmt::{Debug, Display, Error, Formatter},
           result::Result as StdResult};
 use tokio::process::Command;
 
@@ -48,7 +48,7 @@ pub(crate) mod display_impl_for_command_run_result {
     use super::*;
 
     impl<T: Debug + Display> Display for CommandRunResult<T> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
                 CommandRunResult::Fail(error_msg, cmd, error_report) => {
                     let header = "🗴 Command ran unsuccessfully";

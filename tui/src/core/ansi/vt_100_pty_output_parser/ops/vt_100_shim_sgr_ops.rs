@@ -57,7 +57,7 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::{AnsiToOfsBufPerformer, ParamsExt};
-use crate::{SgrColorSequence,
+use crate::{NarrowingCastToU8, SgrColorSequence,
             core::ansi::constants::{SGR_BG_BLACK, SGR_BG_BRIGHT_BLACK,
                                     SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT,
                                     SGR_BG_EXTENDED, SGR_BG_WHITE, SGR_BLINK, SGR_BOLD,
@@ -217,7 +217,7 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// [`VTE`]: mod@vte
 /// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let mut idx = 0;
+    let mut idx = 0u16;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Case 1: Colon-separated format (already grouped by VTE as a single slice).
         if let Some(color_seq) = SgrColorSequence::parse_from_raw_slice(param_slice) {
@@ -263,13 +263,12 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
 /// - `None` - Not a valid extended color sequence; caller should handle normally
 ///
 /// [`VTE`]: mod@vte
-#[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 before cast.
 fn try_parse_semicolon_extended_color(
     performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
-    start_idx: usize,
+    start_idx: u16,
     fg_or_bg: u16,
-) -> Option<usize> {
+) -> Option<u16> {
     // Get mode from next position (5 = 256-color, 2 = RGB).
     let mode = params.extract_nth_single_opt_raw(start_idx + 1)?;
 
@@ -282,9 +281,9 @@ fn try_parse_semicolon_extended_color(
             }
 
             let color_seq = if fg_or_bg == SGR_FG_EXTENDED {
-                SgrColorSequence::SetForegroundAnsi256(index as u8)
+                SgrColorSequence::SetForegroundAnsi256(index.as_u8_narrowing())
             } else {
-                SgrColorSequence::SetBackgroundAnsi256(index as u8)
+                SgrColorSequence::SetBackgroundAnsi256(index.as_u8_narrowing())
             };
             performer
                 .ofs_buf_vt_100
@@ -301,9 +300,17 @@ fn try_parse_semicolon_extended_color(
             }
 
             let color_seq = if fg_or_bg == SGR_FG_EXTENDED {
-                SgrColorSequence::SetForegroundRgb(r as u8, g as u8, b as u8)
+                SgrColorSequence::SetForegroundRgb(
+                    r.as_u8_narrowing(),
+                    g.as_u8_narrowing(),
+                    b.as_u8_narrowing(),
+                )
             } else {
-                SgrColorSequence::SetBackgroundRgb(r as u8, g as u8, b as u8)
+                SgrColorSequence::SetBackgroundRgb(
+                    r.as_u8_narrowing(),
+                    g.as_u8_narrowing(),
+                    b.as_u8_narrowing(),
+                )
             };
             performer
                 .ofs_buf_vt_100

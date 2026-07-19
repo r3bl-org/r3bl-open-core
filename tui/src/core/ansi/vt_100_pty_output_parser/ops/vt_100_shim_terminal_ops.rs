@@ -60,7 +60,7 @@
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{Pos, TuiStyle};
+use crate::{TuiStyle, VPPos};
 
 /// Clears all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) {
@@ -71,7 +71,10 @@ fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) {
 ///
 /// [`SGR`]: crate::SgrCode
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf_vt_100.parser_global_state.current_style = TuiStyle::default();
+    performer
+        .ofs_buf_vt_100
+        .get_parser_global_state_mut()
+        .current_style = TuiStyle::default();
 }
 
 /// Reset terminal to initial state (`ESC c`).
@@ -84,12 +87,15 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     let _unused = performer.ofs_buf_vt_100.erase_display_scrollback();
 
     // Reset cursor to home position.
-    performer.ofs_buf_vt_100.set_cursor_pos(Pos::default());
+    performer
+        .ofs_buf_vt_100
+        .get_active_screen_buffer_mut()
+        .set_cursor_pos(VPPos::default());
 
     // Clear saved cursor state.
     performer
         .ofs_buf_vt_100
-        .parser_global_state
+        .get_parser_global_state_mut()
         .cursor_pos_for_esc_save_and_restore = None;
 
     // Reset to ASCII character set.
@@ -98,11 +104,11 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     // Clear DECSTBM scroll region margins.
     performer
         .ofs_buf_vt_100
-        .parser_global_state
+        .get_parser_global_state_mut()
         .scroll_region_top = None;
     performer
         .ofs_buf_vt_100
-        .parser_global_state
+        .get_parser_global_state_mut()
         .scroll_region_bottom = None;
 
     // Clear any `SGR` attributes.

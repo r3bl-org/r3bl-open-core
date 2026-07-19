@@ -19,7 +19,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DA`]: crate::DaSequence
 //! [`handle_device_attributes_request`]:
-//!     crate::OfsBufVT100::handle_device_attributes_request
+//!     crate::core::ansi::OfsBufVT100::handle_device_attributes_request
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_pty_output_parser::ops::vt_100_shim_da_ops`]:
@@ -34,7 +34,7 @@ impl OfsBufVT100 {
     /// [`DA`]: crate::DaSequence
     /// [`PrimaryDeviceAttributes`]: crate::PtyResponseEvent::PrimaryDeviceAttributes
     pub fn handle_device_attributes_request(&mut self) {
-        self.parser_global_state
+        self.get_parser_global_state_mut()
             .pending_pty_response_events
             .push(PtyResponseEvent::PrimaryDeviceAttributes);
     }
@@ -43,20 +43,31 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{height, width};
+    use crate::{vp_height, vp_width};
 
     #[test]
     fn test_handle_device_attributes_request() {
-        let size = width(80) + height(24);
+        let size = vp_width(80) + vp_height(24);
         let mut buffer = OfsBufVT100::new_empty(size);
 
-        assert!(buffer.parser_global_state.pending_pty_response_events.is_empty());
+        assert!(
+            buffer
+                .get_parser_global_state()
+                .pending_pty_response_events
+                .is_empty()
+        );
 
         buffer.handle_device_attributes_request();
 
-        assert_eq!(buffer.parser_global_state.pending_pty_response_events.len(), 1);
         assert_eq!(
-            buffer.parser_global_state.pending_pty_response_events[0],
+            buffer
+                .get_parser_global_state()
+                .pending_pty_response_events
+                .len(),
+            1
+        );
+        assert_eq!(
+            buffer.get_parser_global_state().pending_pty_response_events[0],
             PtyResponseEvent::PrimaryDeviceAttributes
         );
     }

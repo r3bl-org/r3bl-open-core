@@ -97,6 +97,9 @@ smallvec = { version = "1.15.0", features = [
     "const_new",
 ] }
 
+# Fast non-cryptographic hash for HashMaps / HashSets.
+rustc-hash = "2.1.0"
+
 # `mimalloc` is a replacement for the default global allocator. It's optimized for
 # multi-threaded use cases where lots of small objects are created and destroyed.
 # The default allocator is the system allocator that's optimized for single threaded

@@ -79,7 +79,7 @@ macro_rules! fs_paths {
 /// use r3bl_tui::fs_paths;
 /// use r3bl_tui::try_create_temp_dir;
 ///
-/// let temp_dir = try_create_temp_dir().unwrap();
+/// let temp_dir = try_create_temp_dir().expect("conversion error");
 /// let path_1 = fs_paths![with_root: temp_dir => "some_dir"];
 /// let path_2 = fs_paths![with_root: temp_dir => "another_dir"];
 ///
@@ -285,7 +285,7 @@ mod tests {
     fn test_try_directory_exists_not_found_error() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             let new_dir = root.join("test_dir_exists_not_found_error");
 
@@ -300,15 +300,17 @@ mod tests {
     fn test_try_directory_exists_permissions_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a directory, change to it, remove all permissions for user.
             let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            fs::create_dir_all(&no_permissions_dir).expect("conversion error");
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
             assert!(no_permissions_dir.exists());
 
             // Try to check if the directory exists with insufficient permissions. It
@@ -317,28 +319,30 @@ mod tests {
             assert!(result.is_ok());
 
             // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
         });
     }
 
     fn test_try_file_exists() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             let new_dir = root.join("test_file_exists_dir");
-            fs::create_dir_all(&new_dir).unwrap();
+            fs::create_dir_all(&new_dir).expect("conversion error");
 
             let new_file = new_dir.join("test_file_exists_file.txt");
-            fs::write(&new_file, "test").unwrap();
+            fs::write(&new_file, "test").expect("conversion error");
 
-            assert!(try_file_exists(&new_file).unwrap());
-            assert!(!try_file_exists(&new_dir).unwrap());
+            assert!(try_file_exists(&new_file).expect("conversion error"));
+            assert!(!try_file_exists(&new_dir).expect("conversion error"));
 
-            fs::remove_dir_all(&new_dir).unwrap();
+            fs::remove_dir_all(&new_dir).expect("conversion error");
 
             // Ensure that an invalid path returns an error.
             assert!(try_file_exists(&new_file).is_err()); // This file does not exist.
@@ -354,7 +358,7 @@ mod tests {
     fn test_try_file_exists_invalid_name_error() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             let new_dir = root.join("test_file_exists_invalid_name_error\0");
 
@@ -369,15 +373,17 @@ mod tests {
     fn test_try_file_exists_permissions_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a directory, change to it, remove all permissions for user.
             let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            fs::create_dir_all(&no_permissions_dir).expect("conversion error");
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
             assert!(no_permissions_dir.exists());
 
             // Try to check if the file exists with insufficient permissions. It should
@@ -386,31 +392,34 @@ mod tests {
             assert!(result.is_ok());
 
             // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
         });
     }
 
     fn test_try_pwd() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             let new_dir = root.join("test_pwd");
-            fs::create_dir_all(&new_dir).unwrap();
-            env::set_current_dir(&new_dir).unwrap();
+            fs::create_dir_all(&new_dir).expect("conversion error");
+            env::set_current_dir(&new_dir).expect("conversion error");
 
-            let pwd = try_pwd().unwrap();
+            let pwd = try_pwd().expect("conversion error");
             assert!(pwd.exists());
             // Canonicalize new_dir for comparison because env::current_dir() returns
             // the canonical path (resolving symlinks). On macOS, /var is a symlink to
             // /private/var, so temp_dir() returns /var/... but current_dir() returns
             // /private/var/...
             // On Windows, strip the `\\?\` extended-length path prefix.
-            let new_dir_canonical =
-                strip_extended_length_prefix(new_dir.canonicalize().unwrap());
+            let new_dir_canonical = strip_extended_length_prefix(
+                new_dir.canonicalize().expect("conversion error"),
+            );
             assert_eq!(pwd, new_dir_canonical);
         });
     }
@@ -419,16 +428,18 @@ mod tests {
     fn test_try_pwd_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a directory, change to it, remove all permissions for user.
             let no_permissions_dir = root.join("no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            env::set_current_dir(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            fs::create_dir_all(&no_permissions_dir).expect("conversion error");
+            env::set_current_dir(&no_permissions_dir).expect("conversion error");
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
             assert!(no_permissions_dir.exists());
 
             // Try to get the pwd with insufficient permissions.
@@ -442,13 +453,15 @@ mod tests {
             assert!(result.is_err());
 
             // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
 
             // Delete this directory, and try pwd again. It will not longer exist.
-            fs::remove_dir_all(&no_permissions_dir).unwrap();
+            fs::remove_dir_all(&no_permissions_dir).expect("conversion error");
             let result = try_pwd();
             assert!(result.is_err());
             assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
@@ -458,18 +471,18 @@ mod tests {
     fn test_try_write() {
         with_saved_pwd!({
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a new file.
             let content = "Hello, world!";
             let file_name = "test_file.txt";
-            try_write_file(&root, file_name, content).unwrap();
+            try_write_file(&root, file_name, content).expect("conversion error");
             let file_path = root.join(file_name);
 
             // Check if the file exists and has the correct content.
             assert!(file_path.exists());
             assert!(file_path.is_file());
-            let read_content = fs::read_to_string(&file_path).unwrap();
+            let read_content = fs::read_to_string(&file_path).expect("conversion error");
             assert_eq!(read_content, content);
 
             // root will be deleted at the end of the test when it is dropped.
@@ -481,15 +494,16 @@ mod tests {
             use crate::{MkdirOptions::*, try_mkdir};
 
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a temporary directory.
             let tmp_root_dir = fs_paths!(with_root: root => "test_create_clean_new_dir");
-            try_mkdir(&tmp_root_dir, CreateIntermediateDirectories).unwrap();
+            try_mkdir(&tmp_root_dir, CreateIntermediateDirectories)
+                .expect("conversion error");
 
             // Create a new directory inside the temporary directory.
             let new_dir = fs_paths!(with_root: tmp_root_dir => "new_dir");
-            try_mkdir(&new_dir, CreateIntermediateDirectories).unwrap();
+            try_mkdir(&new_dir, CreateIntermediateDirectories).expect("conversion error");
             assert!(new_dir.exists());
 
             // Try & fail to create the same directory again non destructively.
@@ -500,12 +514,13 @@ mod tests {
 
             // Create a file inside the new directory.
             let file_path = new_dir.join("test_file.txt");
-            fs::write(&file_path, "test").unwrap();
+            fs::write(&file_path, "test").expect("conversion error");
             assert!(file_path.exists());
 
             // Call `mkdir` again with destructive options and ensure the directory is
             // clean.
-            try_mkdir(&new_dir, CreateIntermediateDirectoriesAndPurgeExisting).unwrap();
+            try_mkdir(&new_dir, CreateIntermediateDirectoriesAndPurgeExisting)
+                .expect("conversion error");
 
             // Ensure the directory is clean.
             assert!(new_dir.exists());
@@ -519,22 +534,24 @@ mod tests {
             use crate::try_cd;
 
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a new temporary directory.
             let new_tmp_dir =
                 fs_paths!(with_root: root => "test_change_dir_permissions_errors");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
+            fs::create_dir_all(&new_tmp_dir).expect("conversion error");
             assert!(new_tmp_dir.exists());
 
             // Create a directory with no permissions for user.
             let no_permissions_dir =
                 fs_paths!(with_root: new_tmp_dir => "no_permissions_dir");
-            fs::create_dir_all(&no_permissions_dir).unwrap();
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            fs::create_dir_all(&no_permissions_dir).expect("conversion error");
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o000);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
             assert!(no_permissions_dir.exists());
             // Try to change to a directory with insufficient permissions.
             let result = try_cd(&no_permissions_dir);
@@ -542,10 +559,12 @@ mod tests {
             assert!(matches!(result, Err(FsOpError::PermissionDenied(_))));
 
             // Change the permissions back, so that it can be cleaned up!
-            let mut permissions =
-                fs::metadata(&no_permissions_dir).unwrap().permissions();
+            let mut permissions = fs::metadata(&no_permissions_dir)
+                .expect("conversion error")
+                .permissions();
             permissions.set_mode(0o777);
-            fs::set_permissions(&no_permissions_dir, permissions).unwrap();
+            fs::set_permissions(&no_permissions_dir, permissions)
+                .expect("conversion error");
         });
     }
 
@@ -554,28 +573,32 @@ mod tests {
             use crate::try_cd;
 
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a new temporary directory.
             let new_tmp_dir = fs_paths!(with_root: root => "test_change_dir_happy_path");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
+            fs::create_dir_all(&new_tmp_dir).expect("conversion error");
             assert!(new_tmp_dir.exists());
 
             // Change to the temporary directory.
-            try_cd(&new_tmp_dir).unwrap();
+            try_cd(&new_tmp_dir).expect("conversion error");
             // Canonicalize for comparison because env::current_dir() returns the
             // canonical path. On macOS, /var is a symlink to /private/var.
             // On Windows, strip the `\\?\` extended-length path prefix.
             assert_eq!(
-                env::current_dir().unwrap(),
-                strip_extended_length_prefix(new_tmp_dir.canonicalize().unwrap())
+                env::current_dir().expect("conversion error"),
+                strip_extended_length_prefix(
+                    new_tmp_dir.canonicalize().expect("conversion error")
+                )
             );
 
             // Change back to the original directory.
-            try_cd(&root).unwrap();
+            try_cd(&root).expect("conversion error");
             assert_eq!(
-                env::current_dir().unwrap(),
-                strip_extended_length_prefix(root.canonicalize().unwrap())
+                env::current_dir().expect("conversion error"),
+                strip_extended_length_prefix(
+                    root.canonicalize().expect("conversion error")
+                )
             );
         });
     }
@@ -585,12 +608,12 @@ mod tests {
             use crate::try_cd;
 
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a new temporary directory.
             let new_tmp_dir =
                 fs_paths!(with_root: root => "test_change_dir_non_existent");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
+            fs::create_dir_all(&new_tmp_dir).expect("conversion error");
             assert!(new_tmp_dir.exists());
 
             // Try to change to a non-existent directory.
@@ -601,12 +624,14 @@ mod tests {
             assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
 
             // Change back to the original directory.
-            try_cd(&root).unwrap();
+            try_cd(&root).expect("conversion error");
             // Canonicalize for comparison (macOS /var -> /private/var symlink).
             // On Windows, strip the `\\?\` extended-length path prefix.
             assert_eq!(
-                env::current_dir().unwrap(),
-                strip_extended_length_prefix(root.canonicalize().unwrap())
+                env::current_dir().expect("conversion error"),
+                strip_extended_length_prefix(
+                    root.canonicalize().expect("conversion error")
+                )
             );
         });
     }
@@ -620,12 +645,12 @@ mod tests {
             use crate::try_cd;
 
             // Create the root temp dir.
-            let root = try_create_temp_dir().unwrap();
+            let root = try_create_temp_dir().expect("conversion error");
 
             // Create a new temporary directory.
             let new_tmp_dir =
                 fs_paths!(with_root: root => "test_change_dir_invalid_name");
-            fs::create_dir_all(&new_tmp_dir).unwrap();
+            fs::create_dir_all(&new_tmp_dir).expect("conversion error");
             assert!(new_tmp_dir.exists());
 
             // Try to change to a directory with an invalid name.
@@ -636,12 +661,14 @@ mod tests {
             assert!(matches!(result, Err(FsOpError::InvalidName(_))));
 
             // Change back to the original directory.
-            try_cd(&root).unwrap();
+            try_cd(&root).expect("conversion error");
             // Canonicalize for comparison (macOS /var -> /private/var symlink).
             // On Windows, strip the `\\?\` extended-length path prefix.
             assert_eq!(
-                env::current_dir().unwrap(),
-                strip_extended_length_prefix(root.canonicalize().unwrap())
+                env::current_dir().expect("conversion error"),
+                strip_extended_length_prefix(
+                    root.canonicalize().expect("conversion error")
+                )
             );
         });
     }

@@ -5,7 +5,7 @@
 //! See [`PtyPair`] for the main wrapper struct.
 
 use super::{Controlled, ControlledChild, Controller, PtyCommand};
-use crate::Size;
+use crate::VPSize;
 
 /// Owns both halves of a [`PTY`] pair and manages the controlled side's lifecycle.
 ///
@@ -420,15 +420,15 @@ use crate::Size;
 /// call:
 ///
 /// ```no_run
-/// use r3bl_tui::{PtyCommand, PtyPair, size, width, height};
+/// use r3bl_tui::{vp_height, vp_size, vp_width, PtyCommand, PtyPair};
 ///
 /// let (pty_pair, _child) = PtyPair::open_and_spawn(
-///     size(width(80) + height(24)),
+///     vp_size(vp_width(80), vp_height(24)),
 ///     PtyCommand::new("top")
-/// ).unwrap();
+/// ).expect("conversion error");
 ///
 /// // Reading from the reader will return `EIO` or `EOF` once the child process exits.
-/// let reader = pty_pair.controller().try_clone_reader().unwrap();
+/// let reader = pty_pair.controller().try_clone_reader().expect("conversion error");
 /// ```
 ///
 /// # File Descriptor Ownership
@@ -578,7 +578,7 @@ impl PtyPair {
     /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn open_and_spawn(
-        arg_size: impl Into<Size>,
+        arg_size: impl Into<VPSize>,
         command: PtyCommand,
     ) -> miette::Result<(PtyPair, ControlledChild)> {
         let mut pair = PtyPair::open_raw_pair(arg_size.into())?;
@@ -707,8 +707,8 @@ impl PtyPair {
 
 /// Converts a [`portable_pty::PtyPair`] to a [`PtyPair`] wrapper.
 impl From<portable_pty::PtyPair> for PtyPair {
-    fn from(it: portable_pty::PtyPair) -> Self {
-        Self {
+    fn from(it: portable_pty::PtyPair) -> PtyPair {
+        PtyPair {
             controller: it.master,
             maybe_controlled: Some(it.slave),
         }
@@ -718,8 +718,8 @@ impl From<portable_pty::PtyPair> for PtyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PtyCommand, core::pty::pty_engine::pty_size::DefaultPtySize, height,
-                size, width};
+    use crate::{PtyCommand, core::pty::pty_engine::pty_size::DefaultPtySize, vp_height,
+                vp_width};
 
     #[test]
     fn test_open_raw_pair_default_size() {
@@ -729,7 +729,7 @@ mod tests {
 
     #[test]
     fn test_open_raw_pair_custom_size() {
-        let result = PtyPair::open_raw_pair(size(width(100) + height(30)));
+        let result = PtyPair::open_raw_pair(vp_width(100) + vp_height(30));
         assert!(result.is_ok());
     }
 
@@ -750,7 +750,7 @@ mod tests {
 
         let result = PtyPair::open_and_spawn(DefaultPtySize, command);
         assert!(result.is_ok());
-        let (pty_pair, _child) = result.unwrap();
+        let (pty_pair, _child) = result.expect("conversion error");
         assert!(pty_pair.maybe_controlled.is_none());
     }
 }

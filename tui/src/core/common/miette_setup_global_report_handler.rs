@@ -34,6 +34,7 @@
 //! [example in a test]:
 //!     https://github.com/zkat/miette/blob/6ea86a2248854acf88df345814b6c97d31b8b4d9/tests/test_location.rs#L39
 
+use crate::WideningCastToUsize;
 use miette::MietteHandlerOpts;
 use tracing::debug;
 
@@ -52,7 +53,8 @@ pub fn setup_default_miette_global_report_handler(issues_url: &'static str) {
             let it = match crossterm::terminal::size() {
                 Ok((columns, _rows)) => columns,
                 Err(_) => 80,
-            } as usize;
+            }
+            .as_usize_widening();
             debug!("miette::set_hook -> terminal_width: {}", it);
             it
         };

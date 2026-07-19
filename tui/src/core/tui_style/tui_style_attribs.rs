@@ -77,7 +77,7 @@ use std::ops::{Add, AddAssign};
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
+/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
 /// [`computed`]: crate::TuiStyle::computed
 /// [`id`]: crate::TuiStyle::id
 /// [`lolcat`]: crate::TuiStyle::lolcat
@@ -212,14 +212,23 @@ pub fn tui_style_attribs(arg: impl Into<TuiStyleAttribs>) -> TuiStyleAttribs {
     arg.into()
 }
 
-// XMARK: Clever Rust, use of `impl Into<TuiStyleAttribs>` for elegant constructor style
-// options.
+// XMARK: Elegant Constructor DSL.
 
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
 ///
 /// This enables an elegant, type-safe, and ergonomic DSL for combining style attributes.
 /// By leveraging [`Add`], [`AddAssign`], and [`From`], callers can progressively disclose
 /// their styling needs using the `+` and `+=` operators.
+///
+/// # Architecture: Constructor DSL Tokens vs Storage Types
+///
+/// 1. **Style Attribute Tokens** ([`tui_style_attrib::Bold`],
+///    [`tui_style_attrib::Italic`], etc.):
+///    - Unit structs serving as single-purpose constructor DSL tokens.
+///    - Disambiguate attributes and enable `+` / `+=` operator chaining.
+///
+/// 2. **Canonical Storage Struct** ([`TuiStyleAttribs`]):
+///    - Stores the resolved optional attributes in a unified struct.
 ///
 /// # Examples
 ///
@@ -266,7 +275,7 @@ mod impl_elegant_constructor_dsl_pattern {
         ($type:ty, $field:ident) => {
             // From<$type> for TuiStyleAttribs.
             impl From<$type> for TuiStyleAttribs {
-                fn from(val: $type) -> Self {
+                fn from(val: $type) -> TuiStyleAttribs {
                     TuiStyleAttribs {
                         $field: Some(val),
                         ..Default::default()
@@ -277,6 +286,7 @@ mod impl_elegant_constructor_dsl_pattern {
             // TuiStyleAttribs + $type.
             impl Add<$type> for TuiStyleAttribs {
                 type Output = TuiStyleAttribs;
+
                 fn add(mut self, rhs: $type) -> Self::Output {
                     self.$field = Some(rhs);
                     self
@@ -286,6 +296,7 @@ mod impl_elegant_constructor_dsl_pattern {
             // $type + TuiStyleAttribs
             impl Add<TuiStyleAttribs> for $type {
                 type Output = TuiStyleAttribs;
+
                 fn add(self, mut rhs: TuiStyleAttribs) -> Self::Output {
                     rhs.$field = Some(self);
                     rhs

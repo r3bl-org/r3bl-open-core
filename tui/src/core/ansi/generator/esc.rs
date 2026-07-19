@@ -215,7 +215,7 @@ mod tests {
             EscSequence::SelectDECGraphics,
         ];
 
-        let mut outputs = std::collections::HashSet::new();
+        let mut outputs = rustc_hash::FxHashSet::default();
 
         for sequence in &sequences {
             let output = sequence.to_string();

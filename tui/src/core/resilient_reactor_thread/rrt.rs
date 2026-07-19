@@ -79,7 +79,8 @@ pub fn try_subscribe<W: RRTWorker>(
                         });
 
                         let mut state_guard = shared_state.lock();
-                        state_guard = shared_state.set_state(state_guard, ThreadState::Stopped);
+                        state_guard =
+                            shared_state.set_state(state_guard, ThreadState::Stopped);
                         drop(state_guard);
 
                         return Err(SubscribeError::WorkerCreation(err));
@@ -374,11 +375,11 @@ pub fn try_subscribe<W: RRTWorker>(
 /// const  C: Mutex<Option<i32>> = Mutex::new(None);
 ///
 /// // ── Use sites (behavior diverges) ──
-/// S.lock().unwrap().replace(42);            // mutates the single instance
-/// assert_eq!(*S.lock().unwrap(), Some(42)); // ✅ same Mutex
+/// S.lock().expect("conversion error").replace(42);            // mutates the single instance
+/// assert_eq!(*S.lock().expect("conversion error"), Some(42)); // ✅ same Mutex
 ///
-/// C.lock().unwrap().replace(42);            // mutates a fresh copy
-/// assert_eq!(*C.lock().unwrap(), None);     // ❌ different Mutex!
+/// C.lock().expect("conversion error").replace(42);            // mutates a fresh copy
+/// assert_eq!(*C.lock().expect("conversion error"), None);     // ❌ different Mutex!
 /// ```
 ///
 /// `const` inlines a fresh copy at every use site (like a macro expansion), so mutations
@@ -491,7 +492,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`global_input_resource::SINGLETON`]:
 ///     crate::terminal_lib_backends::direct_to_ansi::input::global_input_resource::SINGLETON
 /// [`InterruptHandle`]: super::InterruptHandle
-/// [`io_uring`]: https://kernel.dk/io_uring.pdf
+/// [`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 /// [`LazyLock`]: std::sync::LazyLock
 /// [`mio::Poll`]: mio::Poll
@@ -855,7 +856,7 @@ impl<W: RRTWorker> From<&ThreadState<W>> for SubscriptionStrategy {
     /// [`Restarting`]: ThreadState::Restarting
     /// [`Starting`]: ThreadState::Starting
     /// [`Stopping`]: ThreadState::Stopping
-    fn from(state: &ThreadState<W>) -> Self {
+    fn from(state: &ThreadState<W>) -> SubscriptionStrategy {
         match state {
             ThreadState::Stopped => SubscriptionStrategy::SlowPath,
             ThreadState::Running(_, _) => SubscriptionStrategy::FastPath,

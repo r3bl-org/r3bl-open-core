@@ -55,9 +55,9 @@ use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevi
                cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
-               height, inline_string,
+               inline_string,
                spinner::Spinner,
-               try_get_latest_release_version_from_crates_io};
+               try_get_latest_release_version_from_crates_io, vp_height};
 use smallvec::smallvec;
 use std::{env::current_exe,
           io::{Error, ErrorKind},
@@ -186,7 +186,7 @@ pub async fn show_exit_message(context: ExitContext) {
         let maybe_user_choice = choose(
             header_with_instructions,
             yes_no_options,
-            Some(height(yes_no_options.len())),
+            Some(vp_height(yes_no_options.len())),
             None,
             HowToChoose::Single,
             StyleSheet::default(),

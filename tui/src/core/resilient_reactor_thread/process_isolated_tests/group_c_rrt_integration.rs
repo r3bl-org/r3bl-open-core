@@ -21,13 +21,11 @@ fn is_stopped(rrt: &RRT<TestWorker>) -> bool {
 pub fn test_subscribe_spawns_thread() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver = setup_factory(
-        vec![(Ok((worker, interrupt)))],
-        no_delay_policy(3),
-    );
+    let _notify_receiver =
+        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(3));
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let guard = rrt.try_subscribe(()).unwrap();
+    let guard = rrt.try_subscribe(()).expect("conversion error");
 
     // Should be running immediately after try_subscribe returns Ok.
     assert!(is_running(&rrt));
@@ -53,18 +51,16 @@ pub fn test_subscribe_spawns_thread() {
 pub fn test_subscribe_fast_path_reuse() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver = setup_factory(
-        vec![(Ok((worker, interrupt)))],
-        no_delay_policy(3),
-    );
+    let _notify_receiver =
+        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(3));
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let _guard1 = rrt.try_subscribe(()).unwrap();
+    let _guard1 = rrt.try_subscribe(()).expect("conversion error");
 
     let gen1 = rrt.get_thread_generation();
 
     // Second subscribe reuses the thread (fast path).
-    let guard2 = rrt.try_subscribe(()).unwrap();
+    let guard2 = rrt.try_subscribe(()).expect("conversion error");
     let gen2 = rrt.get_thread_generation();
 
     assert_eq!(gen1, gen2, "Expected same generation (thread reuse)");
@@ -92,10 +88,7 @@ pub fn test_subscribe_slow_path_after_termination() {
     let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
     let _notify_receiver = setup_factory(
-        vec![
-            (Ok((worker1, interrupt1))),
-            (Ok((worker2, interrupt2))),
-        ],
+        vec![(Ok((worker1, interrupt1))), (Ok((worker2, interrupt2)))],
         no_delay_policy(3),
     );
 
@@ -103,7 +96,7 @@ pub fn test_subscribe_slow_path_after_termination() {
 
     // First subscribe.
     {
-        let guard = rrt.try_subscribe(()).unwrap();
+        let guard = rrt.try_subscribe(()).expect("conversion error");
         let gen1 = rrt.get_thread_generation();
 
         send_cmd_via_guard(&guard, b's');
@@ -117,7 +110,7 @@ pub fn test_subscribe_slow_path_after_termination() {
         assert!(is_stopped(&rrt));
 
         // Second subscribe after termination (slow path).
-        let guard2 = rrt.try_subscribe(()).unwrap();
+        let guard2 = rrt.try_subscribe(()).expect("conversion error");
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation (thread relaunch)");
@@ -144,13 +137,11 @@ pub fn test_subscribe_slow_path_after_termination() {
 pub fn test_shutdown_received_by_subscriber() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver = setup_factory(
-        vec![(Ok((worker, interrupt)))],
-        no_delay_policy(0),
-    );
+    let _notify_receiver =
+        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(0));
 
     let rrt: RRT<TestWorker> = RRT::new();
-    let guard = rrt.try_subscribe(()).unwrap();
+    let guard = rrt.try_subscribe(()).expect("conversion error");
     let mut receiver = guard.receiver.resubscribe();
 
     // Worker returns Restart, budget=0 -> immediate exhaustion.
@@ -160,7 +151,7 @@ pub fn test_shutdown_received_by_subscriber() {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
-        .unwrap();
+        .expect("conversion error");
 
     let found_shutdown = rt.block_on(async {
         let deadline = Instant::now() + Duration::from_secs(5);
@@ -191,10 +182,7 @@ pub fn test_subscribe_after_panic_recovery() {
     let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
     let _notify_receiver = setup_factory(
-        vec![
-            (Ok((worker1, interrupt1))),
-            (Ok((worker2, interrupt2))),
-        ],
+        vec![(Ok((worker1, interrupt1))), (Ok((worker2, interrupt2)))],
         no_delay_policy(3),
     );
 
@@ -202,7 +190,7 @@ pub fn test_subscribe_after_panic_recovery() {
 
     // First subscribe.
     {
-        let guard = rrt.try_subscribe(()).unwrap();
+        let guard = rrt.try_subscribe(()).expect("conversion error");
         let gen1 = rrt.get_thread_generation();
 
         // Cause a panic.
@@ -217,7 +205,7 @@ pub fn test_subscribe_after_panic_recovery() {
         assert!(is_stopped(&rrt));
 
         // Subscribe again after panic (should relaunch).
-        let guard2 = rrt.try_subscribe(()).unwrap();
+        let guard2 = rrt.try_subscribe(()).expect("conversion error");
         let gen2 = rrt.get_thread_generation();
 
         assert_ne!(gen1, gen2, "Expected new generation after panic recovery");

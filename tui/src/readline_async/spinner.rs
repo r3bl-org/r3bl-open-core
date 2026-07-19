@@ -79,8 +79,8 @@ use tokio::{sync::broadcast, time::interval};
 /// [`apply_event_to_line_state_and_render()`]:
 ///     super::readline_internal::apply_event_to_line_state_and_render()
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
-/// [`read_line()`]: crate::ReadlineAsyncContext::read_line()
-/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+/// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()
+/// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`safe_spinner_is_active`]: crate::Readline::safe_spinner_is_active
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin

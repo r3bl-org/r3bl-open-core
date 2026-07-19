@@ -7,14 +7,14 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-               TerminalModeController, assert_terminal_is_interactive, col,
+               TerminalModeController, ansi_output, assert_terminal_is_interactive,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySession,
                             PtySessionBuilder, PtySessionConfigOption},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               ok, row, set_mimalloc_in_main};
+               ok, set_mimalloc_in_main, vp_col, vp_row};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -43,11 +43,14 @@ async fn main() -> miette::Result<()> {
 
     // Clear screen and reset cursor.
     output_device.write(|out| {
-        let _unused = out
-            .write_all(r3bl_tui::ansi_output::screen_clearing::clear_screen().as_bytes());
+        let _unused =
+            out.write_all(ansi_output::screen_clearing::clear_screen().as_bytes());
         let _unused = out.write_all(
-            r3bl_tui::ansi_output::cursor_movement::cursor_position(row(0), col(0))
-                .as_bytes(),
+            ansi_output::cursor_movement::cursor_position(
+                vp_row(0).into(),
+                vp_col(0).into(),
+            )
+            .as_bytes(),
         );
         let _unused = out.flush();
     });

@@ -72,7 +72,12 @@
 
 use super::{OfsBuf, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
-use crate::{ChUnit, ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR, GCStringOwned, MemoizedLenMap, PixelChar, Pos, RenderOpsLocalData, Size, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, ZOrder, ch, col, glyphs::{self, SPACER_GLYPH}, inline_string, usize, width};
+use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
+            GCStringOwned, MemoizedLenMap, NarrowingCastToU16, PixelChar, RangeExt,
+            RenderOpsLocalData, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, VPPos,
+            VPSize, VPWidth, WideningCastToUsize, ZOrder, ch,
+            glyphs::{self, SPACER_GLYPH},
+            inline_string, usize, vp_col, vp_width};
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -80,10 +85,12 @@ impl RenderPipeline {
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
     ///    to turn this IR into actual paint commands for the terminal, you must use the
-    ///    [`crate::OfsBufPaint`] trait implementations.
+    ///    [`paint_impl`] functions.
+    ///
+    /// [`paint_impl`]: crate::terminal_lib_backends::ofs_buf::paint_impl
     pub fn compose_render_ops_into_ofs_buf(
         &self,
-        window_size: Size,
+        window_size: VPSize,
         ofs_buf: &mut OfsBuf, /* Pass in the locked buffer. */
         memoized_len_map: &mut MemoizedLenMap, /* Memoized text width calculations. */
     ) {
@@ -115,7 +122,7 @@ impl RenderPipeline {
 #[allow(clippy::too_many_lines)]
 pub fn process_render_op(
     render_op_ir: &RenderOpIR,
-    window_size: Size,
+    window_size: VPSize,
     ofs_buf: &mut OfsBuf,
     render_local_data: &mut RenderOpsLocalData,
     memoized_len_map: &mut MemoizedLenMap,
@@ -157,7 +164,7 @@ pub fn process_render_op(
 #[allow(clippy::too_many_lines)]
 fn process_common_render_op(
     common_op: &RenderOpCommon,
-    window_size: Size,
+    window_size: VPSize,
     ofs_buf: &mut OfsBuf,
     render_local_data: &mut RenderOpsLocalData,
     memoized_len_map: &mut MemoizedLenMap,
@@ -176,20 +183,20 @@ fn process_common_render_op(
             ofs_buf.update_cursor_pos(|p| p.col_index = *col_index);
         }
         RenderOpCommon::MoveCursorToNextLine(row_height) => {
-            ofs_buf.update_cursor_pos(|p| {
-                p.row_index += *row_height;
-                p.col_index = col(0);
-            });
+            let mut pos: VPPos = ofs_buf.get_cursor_pos();
+            pos.row_index += *row_height;
+            pos.col_index = vp_col(0);
+            ofs_buf.set_cursor_pos(pos);
         }
         RenderOpCommon::MoveCursorToPreviousLine(row_height) => {
-            ofs_buf.update_cursor_pos(|p| {
-                p.row_index -= *row_height;
-                p.col_index = col(0);
-            });
+            let mut pos: VPPos = ofs_buf.get_cursor_pos();
+            pos.row_index -= *row_height;
+            pos.col_index = vp_col(0);
+            ofs_buf.set_cursor_pos(pos);
         }
         RenderOpCommon::ClearCurrentLine => {
             // Clear the current line in the buffer
-            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
+            let row_idx = ofs_buf.get_cursor_pos().row_index;
             if let Some(line) = ofs_buf.get_row_mut(row_idx) {
                 for pixel_char in line.iter_mut() {
                     *pixel_char = PixelChar::Spacer;
@@ -198,26 +205,19 @@ fn process_common_render_op(
         }
         RenderOpCommon::ClearToEndOfLine => {
             // Clear from cursor position to end of current line
-            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
-            let col_idx = ofs_buf.get_cursor_pos().col_index.as_usize();
-            if let Some(line) = ofs_buf.get_row_mut(row_idx) {
-                for col in col_idx..line.len() {
-                    if let Some(pixel_char) = line.get_mut(col) {
-                        *pixel_char = PixelChar::Spacer;
-                    }
-                }
+            let cursor_pos = ofs_buf.get_cursor_pos();
+            if let Some(line) = ofs_buf.get_row_mut(cursor_pos.row_index) {
+                let col_range =
+                    cursor_pos.col_index..vp_col((line.len()).as_u16_narrowing());
+                line[col_range.as_usize_range()].fill(PixelChar::Spacer);
             }
         }
         RenderOpCommon::ClearToStartOfLine => {
             // Clear from start of current line to cursor position (inclusive)
-            let row_idx = ofs_buf.get_cursor_pos().row_index.as_usize();
-            let col_idx = ofs_buf.get_cursor_pos().col_index.as_usize();
-            if let Some(line) = ofs_buf.get_row_mut(row_idx) {
-                for col in 0..=col_idx {
-                    if let Some(pixel_char) = line.get_mut(col) {
-                        *pixel_char = PixelChar::Spacer;
-                    }
-                }
+            let cursor_pos = ofs_buf.get_cursor_pos();
+            if let Some(line) = ofs_buf.get_row_mut(cursor_pos.row_index) {
+                let col_range = vp_col(0)..=cursor_pos.col_index;
+                line[col_range.as_usize_range()].fill(PixelChar::Spacer);
             }
         }
         RenderOpCommon::PrintStyledText(text) => {
@@ -237,7 +237,9 @@ fn process_common_render_op(
             // with memoization for repeated text patterns.
             let text_width =
                 StringLength::StripAnsi.calculate(text.as_str(), memoized_len_map);
-            ofs_buf.update_cursor_pos(|p| p.col_index += text_width);
+            let mut pos: VPPos = ofs_buf.get_cursor_pos();
+            pos.col_index += text_width;
+            ofs_buf.set_cursor_pos(pos);
 
             // Sanitize `ofs_buf.cursor_pos`.
             let pos = sanitize_and_save_abs_pos(
@@ -256,22 +258,18 @@ fn process_common_render_op(
             ofs_buf.clear();
         }
         RenderOpCommon::MoveCursorPositionAbs(new_abs_pos) => {
-            ofs_buf.set_cursor_pos(sanitize_and_save_abs_pos(
-                *new_abs_pos,
-                window_size,
-                render_local_data,
-            ));
+            let pos =
+                sanitize_and_save_abs_pos(*new_abs_pos, window_size, render_local_data);
+            ofs_buf.set_cursor_pos(pos);
         }
         RenderOpCommon::MoveCursorPositionRelTo(
             box_origin_pos_ref,
             content_rel_pos_ref,
         ) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            ofs_buf.set_cursor_pos(sanitize_and_save_abs_pos(
-                new_abs_pos,
-                window_size,
-                render_local_data,
-            ));
+            let pos =
+                sanitize_and_save_abs_pos(new_abs_pos, window_size, render_local_data);
+            ofs_buf.set_cursor_pos(pos);
         }
         RenderOpCommon::SetFgColor(fg_color_ref) => {
             render_local_data.fg_color = Some(*fg_color_ref);
@@ -312,7 +310,7 @@ fn process_common_render_op(
 /// # Arguments
 ///
 /// This will modify the `my_ofs_buf` argument. For plain text it supports
-/// counting [`crate::Seg`]s. The display width of each segment is
+/// counting [`Seg`]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
 ///
 /// # Clipping behavior
@@ -348,16 +346,18 @@ fn process_common_render_op(
 /// the offscreen buffer's available rows (i.e., when
 /// `ofs_buf.my_pos.row_index` is greater than or equal to the number of rows
 /// in `ofs_buf`).
+///
+/// [`Seg`]: crate::core::Seg
 pub fn print_text_with_attributes(
     string: &str,
     maybe_style_ref: Option<&TuiStyle>,
     ofs_buf: &mut OfsBuf,
-    maybe_max_display_col_count: Option<ColWidth>,
+    maybe_max_display_col_count: Option<VPWidth>,
     render_local_data: &RenderOpsLocalData,
-) -> CommonResult<Pos> {
+) -> CommonResult<VPPos> {
     // Get col and row index from `my_pos`.
-    let display_col_index = usize::from(ofs_buf.get_cursor_pos().col_index);
-    let display_row_index = usize::from(ofs_buf.get_cursor_pos().row_index);
+    let display_col_index = ofs_buf.get_cursor_pos().col_index.as_usize_widening();
+    let display_row_index = ofs_buf.get_cursor_pos().row_index;
 
     // Clip text to bounds using helper function.
     let text_gcs = print_text_with_attributes_helper::clip_text_to_bounds(
@@ -391,7 +391,7 @@ pub fn print_text_with_attributes(
                 "insertion at: display_row_index: {a}, display_col_index: {b}, window_size: {c:?},
                 text: '{d}',
                 width: {e:?}",
-                a = display_row_index,
+                a = display_row_index.as_usize(),
                 b = display_col_index,
                 c = ofs_buf.get_window_size(),
                 d = text_gcs.string,
@@ -419,7 +419,7 @@ pub fn print_text_with_attributes(
                     inline_string!(
                         "{ch} [row: {row}, col: {col}] - style: {style:?}",
                         ch = glyphs::BOX_FILL_GLYPH,
-                        row = display_row_index,
+                        row = display_row_index.as_usize(),
                         col = display_col_index,
                         style = style
                     )
@@ -428,7 +428,7 @@ pub fn print_text_with_attributes(
                     inline_string!(
                         "{ch} [row: {row}, col: {col}] - style: None",
                         ch = glyphs::BOX_EMPTY_GLYPH,
-                        row = display_row_index,
+                        row = display_row_index.as_usize(),
                         col = display_col_index,
                     )
                 }
@@ -457,9 +457,9 @@ pub fn print_text_with_attributes(
 
     // Mimic what stdout does and move the position.col_index forward by the width of
     // the text that was added to display.
-    let new_pos = ofs_buf
-        .get_cursor_pos()
-        .add_col(already_inserted_display_width);
+    // Then move cursor past the newly inserted spaces.
+    let mut cursor_pos: VPPos = ofs_buf.get_cursor_pos();
+    let new_pos = cursor_pos.add_col(already_inserted_display_width);
 
     // Replace the line in `my_ofs_buf` with the new line.
     if let Some(line) = ofs_buf.get_row_mut(display_row_index) {
@@ -509,8 +509,8 @@ mod print_text_with_attributes_helper {
     pub fn clip_text_to_bounds(
         string: &str,
         display_col_index: usize,
-        maybe_max_display_col_count: Option<ColWidth>,
-        window_max_display_col_count: ColWidth,
+        maybe_max_display_col_count: Option<VPWidth>,
+        window_max_display_col_count: VPWidth,
     ) -> GCStringOwned {
         // Fast path: calculate string width without creating GCStringOwned.
         let string_width = GCStringOwned::from(string).width();
@@ -530,7 +530,7 @@ mod print_text_with_attributes_helper {
 
         // Slow path: create GCStringOwned for truncation only when necessary.
         let string_gcs = GCStringOwned::from(string);
-        let truncated_str = string_gcs.trunc_end_to_fit(width(effective_max));
+        let truncated_str = string_gcs.trunc_end_to_fit(vp_width(effective_max));
         truncated_str.into()
     }
 
@@ -590,13 +590,10 @@ mod print_text_with_attributes_helper {
                                 clippy::unwrap_used,
                                 reason = "Count == 1 check mathematically proves it has a next char"
                             )]
-                            seg_text.chars().next().unwrap()
+                            seg_text.chars().next().expect("conversion error")
                         } else {
                             // For multi-char segments, use the first char.
-                            seg_text
-                                .chars()
-                                .next()
-                                .unwrap_or(UNICODE_REPLACEMENT_CHAR)
+                            seg_text.chars().next().unwrap_or(UNICODE_REPLACEMENT_CHAR)
                         };
                         PixelChar::PlainText {
                             display_char,
@@ -665,7 +662,7 @@ mod print_text_with_attributes_helper {
         mut insertion_col_index: usize,
         mut already_inserted_display_width: ChUnit,
         display_col_index: usize,
-        maybe_max_display_col_count: Option<ColWidth>,
+        maybe_max_display_col_count: Option<VPWidth>,
     ) -> ChUnit {
         // 🥊Deal w/ padding SPACERs padding to end of line (if
         // `maybe_max_display_col_count` is some).
@@ -688,14 +685,17 @@ mod print_text_with_attributes_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
-    use std::collections::HashMap;
+    use crate::{Flat2DArray, NarrowingCastToU16, NarrowingCastToUsize, assert_eq2,
+                new_style, render_pipeline, tui_color, vp_col, vp_height, vp_pos,
+                vp_row, vp_width};
+    use rustc_hash::FxHashMap;
 
     #[allow(clippy::too_many_lines)]
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
-        let window_size = width(10) + height(2);
-        let mut ofs_buf = OfsBuf::new_empty(window_size);
+        let window_size = vp_width(10) + vp_height(2);
+        let mut ofs_buf =
+            OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -707,13 +707,13 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold italic color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -727,28 +727,28 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[9],
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
                 PixelChar::PlainText {
                     display_char: '5',
                     style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
@@ -766,13 +766,13 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -786,53 +786,57 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
+                PixelChar::Spacer
+            );
         }
     }
 
     #[allow(clippy::too_many_lines)]
     #[test]
     fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
-        let window_size = width(10) + height(2);
+        let window_size = vp_width(10) + vp_height(2);
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
         // Output: R0 "hello12345"
         //            C0123456789
         {
-            let mut ofs_buf = OfsBuf::new_empty(window_size);
+            let mut ofs_buf =
+                OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -846,28 +850,28 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[9],
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
                 PixelChar::PlainText {
                     display_char: '5',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
@@ -880,19 +884,20 @@ mod tests {
         // Output: R0 "hello1234╳"
         //            C0123456789
         {
-            let mut ofs_buf = OfsBuf::new_empty(window_size);
+            let mut ofs_buf =
+                OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -906,45 +911,49 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
+                PixelChar::Spacer
+            );
         }
 
         // R0 "hello123😃"
         //    C0123456789
         {
-            let mut ofs_buf = OfsBuf::new_empty(window_size);
+            let mut ofs_buf =
+                OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!( dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -958,52 +967,56 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[8],
+                ofs_buf.get_row(0.into()).expect("conversion error")[8],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Void);
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
+                PixelChar::Void
+            );
         }
 
         // R0 "hello12😃"
         //    C0123456789
         {
-            let mut ofs_buf = OfsBuf::new_empty(window_size);
+            let mut ofs_buf =
+                OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.set_cursor_pos(col(0) + row(0));
+            ofs_buf.set_cursor_pos(vp_col(0) + vp_row(0));
             let render_local_data = RenderOpsLocalData {
                 fg_color: Some(tui_color!(green)),
                 bg_color: Some(tui_color!(blue)),
                 ..Default::default()
             };
-            let maybe_max_display_col_count = Some(width(10));
+            let maybe_max_display_col_count = Some(vp_width(10));
 
             print_text_with_attributes(
                 text,
@@ -1036,41 +1049,47 @@ mod tests {
             // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
 
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[0],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[4],
+                ofs_buf.get_row(0.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[5],
+                ofs_buf.get_row(0.into()).expect("conversion error")[5],
                 PixelChar::PlainText {
                     display_char: '1',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[7],
+                ofs_buf.get_row(0.into()).expect("conversion error")[7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[8],
+                PixelChar::Void
+            );
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
+                PixelChar::Spacer
+            );
         }
     }
 
     #[test]
     fn test_convert() {
-        let window_size = width(10) + height(2);
+        let window_size = vp_width(10) + vp_height(2);
 
         // Create a RenderPipeline.
         // render_ops:
@@ -1089,7 +1108,7 @@ mod tests {
             RenderOpIR::Common(RenderOpCommon::ResetColor),
             RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
             RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(0))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(vp_pos(0, 0))),
             RenderOpIR::PaintTextWithAttributes(
                 "hello12😃".into(), Some(new_style!(dim bold))),
             RenderOpIR::Common(RenderOpCommon::ResetColor)
@@ -1116,8 +1135,9 @@ mod tests {
         //     0: ╳ .
         //     9: ╳
 
-        let mut ofs_buf = OfsBuf::new_empty(window_size);
-        let mut memoized_len_map = HashMap::new();
+        let mut ofs_buf =
+            OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
+        let mut memoized_len_map = FxHashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1127,26 +1147,32 @@ mod tests {
         // println!("my_ofs_buf: \n{:#?}", my_ofs_buf);
         assert_eq2!(ofs_buf.get_height().as_usize(), 2);
         assert_eq2!(
-            ofs_buf.get_row(0).unwrap()[0],
+            ofs_buf.get_row(0.into()).expect("conversion error")[0],
             PixelChar::PlainText {
                 display_char: 'h',
                 style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
         assert_eq2!(
-            ofs_buf.get_row(0).unwrap()[7],
+            ofs_buf.get_row(0.into()).expect("conversion error")[7],
             PixelChar::PlainText {
                 display_char: '😃',
                 style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
-        assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
-        assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
+        assert_eq2!(
+            ofs_buf.get_row(0.into()).expect("conversion error")[8],
+            PixelChar::Void
+        );
+        assert_eq2!(
+            ofs_buf.get_row(0.into()).expect("conversion error")[9],
+            PixelChar::Spacer
+        );
     }
 
     #[test]
     fn test_convert_non_zero_pos() {
-        let window_size = width(10) + height(2);
+        let window_size = vp_width(10) + vp_height(2);
 
         // pipeline:
         // Some(
@@ -1172,21 +1198,22 @@ mod tests {
             RenderOpIR::Common(RenderOpCommon::ResetColor),
             RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
             RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(2) + row(0))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(vp_pos(2, 0))),
             RenderOpIR::PaintTextWithAttributes(
                 "hello😃".into(), Some(new_style!(dim bold))),
             RenderOpIR::Common(RenderOpCommon::ResetColor),
             RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
             RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(4) + row(1))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(vp_pos(4, 1))),
             RenderOpIR::PaintTextWithAttributes(
                 "world".into(), Some(new_style!(dim bold))),
             RenderOpIR::Common(RenderOpCommon::ResetColor),
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let mut ofs_buf = OfsBuf::new_empty(window_size);
-        let mut memoized_len_map = HashMap::new();
+        let mut ofs_buf =
+            OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
+        let mut memoized_len_map = FxHashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1226,47 +1253,74 @@ mod tests {
 
         // Line 1 (row_index = 0).
         {
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[0], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[1], PixelChar::Spacer);
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[2],
+                ofs_buf.get_row(0.into()).expect("conversion error")[0],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[1],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[2],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[7],
+                ofs_buf.get_row(0.into()).expect("conversion error")[7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[8], PixelChar::Void);
-            assert_eq2!(ofs_buf.get_row(0).unwrap()[9], PixelChar::Spacer);
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[8],
+                PixelChar::Void
+            );
+            assert_eq2!(
+                ofs_buf.get_row(0.into()).expect("conversion error")[9],
+                PixelChar::Spacer
+            );
         }
 
         // Line 2 (row_index = 1)
         {
-            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[0], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[1], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[2], PixelChar::Spacer);
-            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[3], PixelChar::Spacer);
             assert_eq2!(
-                ofs_buf.get_row_mut(1).unwrap()[4],
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[0],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[1],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[2],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[3],
+                PixelChar::Spacer
+            );
+            assert_eq2!(
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[4],
                 PixelChar::PlainText {
                     display_char: 'w',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
-                ofs_buf.get_row_mut(1).unwrap()[8],
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[8],
                 PixelChar::PlainText {
                     display_char: 'd',
                     style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
-            assert_eq2!(ofs_buf.get_row_mut(1).unwrap()[9], PixelChar::Spacer);
+            assert_eq2!(
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")[9],
+                PixelChar::Spacer
+            );
         }
     }
 
@@ -1274,14 +1328,14 @@ mod tests {
     fn test_sanitize_and_save_abs_pos() {
         let max_col = 8;
         let max_row = 2;
-        let window_size = width(max_col) + height(max_row);
+        let window_size = vp_width(max_col) + vp_height(max_row.as_u16_narrowing());
 
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(max_col) + row(0))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(vp_pos(max_col, 0))),
             RenderOpIR::PaintTextWithAttributes(
                 "h".into(), Some(new_style! ( dim bold ))),
             RenderOpIR::Common(RenderOpCommon::ResetColor),
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(max_col+1) + row(1))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(vp_pos(max_col + 1, 1))),
             RenderOpIR::PaintTextWithAttributes(
                 "i".into(), Some(new_style! ( dim bold ))),
             RenderOpIR::Common(RenderOpCommon::ResetColor)
@@ -1292,8 +1346,9 @@ mod tests {
             pipeline.get_all_render_op_in(ZOrder::Normal)
         );
 
-        let mut ofs_buf = OfsBuf::new_empty(window_size);
-        let mut memoized_len_map = HashMap::new();
+        let mut ofs_buf =
+            OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
+        let mut memoized_len_map = FxHashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1307,7 +1362,8 @@ mod tests {
         // Line 1 (row_index = 7)
         {
             assert_eq2!(
-                ofs_buf.get_row(0).unwrap()[max_col - 1],
+                ofs_buf.get_row(0.into()).expect("conversion error")
+                    [max_col.as_usize_narrowing() - 1],
                 PixelChar::PlainText {
                     display_char: 'h',
                     style: new_style! ( dim bold ),
@@ -1317,7 +1373,8 @@ mod tests {
         // Line 2 (row_index = 7)
         {
             assert_eq2!(
-                ofs_buf.get_row_mut(1).unwrap()[max_col - 1],
+                ofs_buf.get_row_mut(1u16.into()).expect("conversion error")
+                    [max_col.as_usize_narrowing() - 1],
                 PixelChar::PlainText {
                     display_char: 'i',
                     style: new_style! ( dim bold ),
@@ -1341,15 +1398,15 @@ mod bench_tests {
         fn clip_text_to_bounds_old(
             string: &str,
             display_col_index: usize,
-            maybe_max_display_col_count: Option<ColWidth>,
-            window_max_display_col_count: ColWidth,
+            maybe_max_display_col_count: Option<VPWidth>,
+            window_max_display_col_count: VPWidth,
         ) -> GCStringOwned {
             // ✂️Clip `arg_text_ref` (if needed) and make `text`.
             let string_gcs: GCStringOwned = string.into();
             let clip_1_str =
                 if let Some(max_display_col_count) = maybe_max_display_col_count {
                     let adj_max = *max_display_col_count - ch(display_col_index);
-                    string_gcs.trunc_end_to_fit(width(adj_max))
+                    string_gcs.trunc_end_to_fit(vp_width(adj_max))
                 } else {
                     string
                 };
@@ -1362,7 +1419,7 @@ mod bench_tests {
                 clip_1_str
             } else {
                 let adj_max = *window_max_display_col_count - ch(display_col_index);
-                clip_1_gcs.trunc_end_to_fit(width(adj_max))
+                clip_1_gcs.trunc_end_to_fit(vp_width(adj_max))
             };
 
             clip_2_str.into()
@@ -1371,37 +1428,39 @@ mod bench_tests {
         #[bench]
         fn bench_clip_text_no_clipping_new(b: &mut Bencher) {
             let text = "Hello, World!";
-            b.iter(|| clip_text_to_bounds(text, 0, None, width(100)));
+            b.iter(|| clip_text_to_bounds(text, 0, None, vp_width(100)));
         }
 
         #[bench]
         fn bench_clip_text_no_clipping_old(b: &mut Bencher) {
             let text = "Hello, World!";
-            b.iter(|| clip_text_to_bounds_old(text, 0, None, width(100)));
+            b.iter(|| clip_text_to_bounds_old(text, 0, None, vp_width(100)));
         }
 
         #[bench]
         fn bench_clip_text_with_clipping_new(b: &mut Bencher) {
             let text = "This is a very long string that needs to be clipped to fit within bounds";
-            b.iter(|| clip_text_to_bounds(text, 10, Some(width(20)), width(80)));
+            b.iter(|| clip_text_to_bounds(text, 10, Some(vp_width(20)), vp_width(80)));
         }
 
         #[bench]
         fn bench_clip_text_with_clipping_old(b: &mut Bencher) {
             let text = "This is a very long string that needs to be clipped to fit within bounds";
-            b.iter(|| clip_text_to_bounds_old(text, 10, Some(width(20)), width(80)));
+            b.iter(|| {
+                clip_text_to_bounds_old(text, 10, Some(vp_width(20)), vp_width(80))
+            });
         }
 
         #[bench]
         fn bench_clip_text_unicode_new(b: &mut Bencher) {
             let text = "Hello 世界! 😀 This is a test with emoji and unicode 🚀";
-            b.iter(|| clip_text_to_bounds(text, 5, Some(width(30)), width(50)));
+            b.iter(|| clip_text_to_bounds(text, 5, Some(vp_width(30)), vp_width(50)));
         }
 
         #[bench]
         fn bench_clip_text_unicode_old(b: &mut Bencher) {
             let text = "Hello 世界! 😀 This is a test with emoji and unicode 🚀";
-            b.iter(|| clip_text_to_bounds_old(text, 5, Some(width(30)), width(50)));
+            b.iter(|| clip_text_to_bounds_old(text, 5, Some(vp_width(30)), vp_width(50)));
         }
 
         #[bench]
@@ -1416,7 +1475,7 @@ mod bench_tests {
 
             b.iter(|| {
                 for text in &texts {
-                    clip_text_to_bounds(text, 0, Some(width(20)), width(80));
+                    clip_text_to_bounds(text, 0, Some(vp_width(20)), vp_width(80));
                 }
             });
         }
@@ -1433,7 +1492,7 @@ mod bench_tests {
 
             b.iter(|| {
                 for text in &texts {
-                    clip_text_to_bounds_old(text, 0, Some(width(20)), width(80));
+                    clip_text_to_bounds_old(text, 0, Some(vp_width(20)), vp_width(80));
                 }
             });
         }

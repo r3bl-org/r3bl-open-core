@@ -23,10 +23,10 @@ pub enum MarginRequest {
 }
 
 impl From<(Option<u16>, Option<u16>)> for MarginRequest {
-    fn from((maybe_top, maybe_bottom): (Option<u16>, Option<u16>)) -> Self {
+    fn from((maybe_top, maybe_bottom): (Option<u16>, Option<u16>)) -> MarginRequest {
         // `VT-100` spec: missing params or zero params mean reset to full screen.
         match (maybe_top, maybe_bottom) {
-            (None | Some(0), None) | (Some(0), Some(0)) => Self::Reset,
+            (None | Some(0), None) | (Some(0), Some(0)) => MarginRequest::Reset,
             _ => {
                 // Convert to 1-based terminal coordinates (`VT-100` spec uses 1-based).
                 let top_row = match maybe_top {
@@ -43,7 +43,7 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
                 let top_nz = unsafe { NonZeroU16::new_unchecked(top_row) };
                 let bottom_nz = unsafe { NonZeroU16::new_unchecked(bottom_row) };
 
-                Self::SetRegion {
+                MarginRequest::SetRegion {
                     top: term_row(top_nz),
                     bottom: term_row(bottom_nz),
                 }
@@ -53,7 +53,7 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
 }
 
 impl From<&vte::Params> for MarginRequest {
-    fn from(params: &vte::Params) -> Self {
+    fn from(params: &vte::Params) -> MarginRequest {
         let maybe_top = params.extract_nth_single_opt_raw(0);
         let maybe_bottom = params.extract_nth_single_opt_raw(1);
         (maybe_top, maybe_bottom).into()

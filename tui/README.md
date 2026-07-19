@@ -2246,7 +2246,7 @@ on the state.
     component is placed).
   - The [`EditorBuffer`] contains the text content in a [`ZeroCopyGapBuffer`]. This
     provides efficient, zero-copy access to editor content. It also contains the
-    scroll offset, caret position, and file extension for syntax highlighting.
+    viewport, caret position, and file extension for syntax highlighting.
 
 In other words,
 
@@ -2254,8 +2254,7 @@ In other words,
   - Contains the logic to process keypresses and modify an editor buffer.
 - [`EditorBuffer`] -> **This goes in the `State`**
   - Contains the data that represents the document being edited. This contains the
-    caret (insertion point) position and scroll position. And in the future can
-    contain lots of other information such as undo / redo history, etc.
+    caret (insertion point) position, viewport, selections, and undo / redo history.
 
 Here are the connection points with the impl of [`Component<S, AS>`] in
 [`EditorComponent`]:
@@ -2627,7 +2626,7 @@ When creating a new dialog box component, two callback functions are passed in:
 
 So far we have covered the use case for a simple modal dialog box. The dialog system
 also supports **async autocomplete capabilities** through the
-[`DialogEngineConfigOptions`] struct, which allows configuring the dialog in
+[`DialogEngineConfig`] struct, which allows configuring the dialog in
 autocomplete mode.
 
 In autocomplete mode, you can provide an async autocomplete provider that performs
@@ -2766,7 +2765,7 @@ feature requests, feel free to add them there too 👍.
 [SegIndex]: crate::SegIndex
 [GCStringOwned]: crate::GCStringOwned
 [HasDialogBuffers]: crate::HasDialogBuffers
-[DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
+[DialogEngineConfig]: crate::DialogEngineConfig
 [`generate_pty_test!`]: crate::generate_pty_test
 [`PtyTestContext`]: crate::PtyTestContext
 [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
@@ -2813,7 +2812,7 @@ feature requests, feel free to add them there too 👍.
 [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
 [`resilient_reactor_thread`]: crate::resilient_reactor_thread
 [`mio_poller`]: crate::mio_poller
-[`io_uring`]: https://kernel.dk/io_uring.pdf
+[`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 [`crossterm`]: crossterm
 [`mio`]: mio
 [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue

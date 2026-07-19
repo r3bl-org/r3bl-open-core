@@ -135,11 +135,11 @@
 //!     mod@crate::core::pty#terminal-emulation--terminfo-masquerading
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
-//! [`RenderOpCommon`]: crate::RenderOpCommon
+//! [`RenderOpCommon`]: crate::tui::RenderOpCommon
 //! [`RenderOpIR`]: crate::RenderOpIR
-//! [`RenderOpIRVec`]: crate::RenderOpIRVec
+//! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 //! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`RenderToAnsi`]: crate::RenderToAnsi
@@ -150,8 +150,8 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]:
 //!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
-//! [`wezterm.terminfo`]: https://wezfurlong.org/wezterm/faq.html
-//! [`WezTerm`]: https://wezfurlong.org/wezterm/
+//! [`wezterm.terminfo`]: https://wezterm.org/faq.html
+//! [`WezTerm`]: https://wezterm.org/
 //! [`winapi`]: https://crates.io/crates/winapi
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture

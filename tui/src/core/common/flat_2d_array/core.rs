@@ -2,7 +2,8 @@
 
 // cspell:words LINESIZE getconf DCACHE VPCMPEQB
 
-use crate::{ColWidth, GetMemSize, RowHeight};
+use crate::{CHeight, CSize, CWidth, GetMemSize};
+use std::mem::size_of;
 
 /// A generic, highly optimized 1D array backing store that provides a safe 2D grid API.
 ///
@@ -55,30 +56,49 @@ use crate::{ColWidth, GetMemSize, RowHeight};
 /// isolated allocation, resizing the viewport doesn't scramble any 1D-to-2D math. We
 /// don't even need to resize the rows; we just pan the viewport!
 ///
-/// # Performance: Scalar vs. [SIMD]
+/// # Do not use `Index` or `IndexMut` for bulk iteration
 ///
 /// By default, this structure exposes 2D scalar operations such as:
-/// - [`try_set()`] and
 /// - `[row][col]` ([`Index`] and [`IndexMut`]).
 ///
-/// However, for performance-critical hot loops (like diffing, clearing, or scrolling),
-/// you should bypass the 2D abstraction by calling [`Self::as_simd()`] or
-/// [`Self::as_simd_mut()`]. See [`Flat1DSimd`] for a detailed breakdown of the massive
-/// architectural benefits this provides.
+/// However, for performance-critical hot loops (like diffing, clearing, or full screen
+/// redraws), you should **bypass** the 2D abstraction and avoid nested `for` loops.
+/// Repeating bounds checks and row math over thousands of pixels adds up.
+///
+/// ```rust
+/// use r3bl_tui::*;
+///
+/// let mut grid = Flat2DArray::<u8>::new_empty((c_width(10), c_height(10)), 0);
+/// let default_pixel = 1;
+/// let height = 10;
+/// let width = 10;
+///
+/// // ❌ Slow: cell-by-cell iteration (redundant bounds checks on every pixel)
+/// for row in 0..height {
+///     for col in 0..width {
+///         grid[row][col] = default_pixel;
+///     }
+/// }
+///
+/// // ✅ Blisteringly Fast: SIMD raw memory iteration (zero bounds checks)
+/// grid.as_simd_mut().fill_all(default_pixel);
+/// ```
+///
+/// See [`Flat1DSimd`] for a detailed breakdown of the massive architectural benefits
+/// this provides.
 ///
 /// [`Box`]: std::boxed::Box
 /// [`GetMemSize`]: crate::GetMemSize
 /// [`Index`]: std::ops::Index
 /// [`IndexMut`]: std::ops::IndexMut
-/// [`OfsBuf`]: crate::OfsBuf
-/// [`OfsBufVT100`]: crate::OfsBufVT100
+/// [`OfsBuf`]: crate::tui::OfsBuf
+/// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 /// [`paint`]: mod@crate::paint
 /// [`PixelCharLine`]: crate::PixelCharLine
 /// [`pop`]: std::vec::Vec::pop
 /// [`push`]: std::vec::Vec::push
 /// [`ScrollbackBuffer`]: crate::ScrollbackBuffer
 /// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
-/// [`try_set()`]: Self::try_set()
 /// [`Vec`]: std::vec::Vec
 /// [`VecDeque`]: std::collections::VecDeque
 /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
@@ -93,16 +113,49 @@ pub struct Flat2DArray<T> {
     pub data: Box<[T]>,
 
     /// The fixed width (columns) of the 2D grid.
-    pub width: ColWidth,
+    pub width: CWidth,
 
     /// The fixed height (rows) of the 2D grid.
-    pub height: RowHeight,
+    pub height: CHeight,
+}
+
+impl<T: Clone> Flat2DArray<T> {
+    /// Creates a new grid filled with the provided default value.
+    ///
+    /// By converting the [`Vec`]`<T>` into a [`Box`]`<[T]>` (a wide pointer) upon
+    /// initialization, we eliminate its ability to grow or shrink. [`Box`]`<[T]>` only
+    /// contains the wide pointer:
+    /// - the start address of the memory allocation, and the length,
+    /// - but not the capacity (which [`Vec`]`<T>` stores).
+    ///
+    /// Note the [`Clone`] trait bound on `T` is required in order for [`vec!`] to fill
+    /// the array with copies of the `default_val`.
+    pub fn new_empty(arg_size: impl Into<CSize>, default_val: T) -> Self {
+        let CSize {
+            col_width: width,
+            row_height: height,
+        } = arg_size.into();
+
+        Self {
+            data: {
+                // Allocate a Vec on the heap to hold the 1D array, and initialize it with
+                // default_val.
+                let size_1d = width.as_usize() * height.as_usize();
+                let vec = vec![default_val; size_1d];
+                // Lock the length by dropping the capacity field, so it cannot grow or
+                // shrink.
+                vec.into_boxed_slice()
+            },
+            width,
+            height,
+        }
+    }
 }
 
 impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
     fn get_mem_size(&self) -> usize {
         // We add the size of the Box wide-pointer and ColWidth/RowHeight.
-        let mut total = std::mem::size_of::<Self>();
+        let mut total = size_of::<Self>();
         // If T::get_mem_size() is a constant (like PixelChar), the compiler
         // will auto-vectorize this into an O(1) multiplication (len * size).
         for item in &self.data {
@@ -133,8 +186,8 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 ///   - Clearing a buffer doesn't require iterating cell by cell; it can be done via a
 ///     bulk slice operation (which is exactly how [`Flat1DSimdMut::fill_all`] is
 ///     implemented under the hood using [`.as_raw_mut_slice().fill()`]).
-///   - This is typically done by [`Canvas::clear_canvas`] when processing a clear screen
-///     command.
+///   - This is typically done when processing a clear screen ansi sequence (filling the
+///     array with spacer [`crate::PixelChar`]s).
 /// - **Cache Locality**
 ///   - A flat 1D array keeps all elements contiguous in memory. When iterating over
 ///     cells, the CPU prefetcher works perfectly, pulling data into [L1]/[L2] cache. A
@@ -146,9 +199,11 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 ///   - Scrolling the buffer up or down can use [`Flat1DSimdMut::copy_within_rows`] (which
 ///     maps to highly optimized [`std::ptr::copy`] instructions) instead of shifting
 ///     pointers or reallocating rows.
-///   - This is done in the [`Canvas`] trait by the [`VT-100` output parser].
+///   - This is done in [`OfsBufVT100`] by the [`VT-100` output parser].
 ///
 /// # The CPU Cache & Hardware Prefetching
+///
+/// *(For an excellent primer on this topic, watch [this video])*
 ///
 /// To understand why [`Flat2DArray`] is so fast, you must understand how data travels
 /// from your RAM to the CPU. Data does not travel 1 byte at a time; it is transferred in
@@ -332,16 +387,14 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 /// [`.chunks_exact(width)`]: slice::chunks_exact
 /// [`.fill()`]: slice::fill
 /// [`.iter()`]: slice::iter
-/// [`Canvas::clear_canvas`]:
-///     crate::core::ansi::vt_100_pty_output_parser::Canvas::clear_canvas
-/// [`Canvas`]: crate::core::ansi::vt_100_pty_output_parser::Canvas
 /// [`chunks_exact`]: slice::chunks_exact
 /// [`Iterator::zip`]: std::iter::Iterator::zip
 /// [`memcmp`]: slice
 /// [`memmove`]: std::ptr::copy
 /// [`memset`]: slice::fill
-/// [`OfsBuf::diff`]: crate::OfsBuf::diff
-/// [`OfsBuf`]: crate::OfsBuf
+/// [`OfsBuf::diff`]: crate::tui::OfsBuf::diff
+/// [`OfsBuf`]: crate::tui::OfsBuf
+/// [`OfsBufVT100`]: crate::core::ansi::vt_100_pty_output_parser::OfsBufVT100
 /// [`slice::copy_within`]: slice::copy_within
 /// [`slice::fill`]: slice::fill
 /// [`slice`]: slice
@@ -368,50 +421,43 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 /// [LLVM]: https://llvm.org/
 /// [RAM]: https://en.wikipedia.org/wiki/Random-access_memory
 /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
+/// [this video]: https://www.youtube.com/watch?v=tIrSvJFRxAg
 /// [virtual terminal tab]:
-///     crate::pty_mux#virtual-terminal-architecture-the-virtual-tab-mental-model
+///     crate::pty_mux#virtual-terminal-architecture
 #[derive(Debug)]
 pub struct Flat1DSimd<'a, T> {
     pub data: &'a [T],
-    pub width: ColWidth,
-    pub height: RowHeight,
+    pub width: CWidth,
+    pub height: CHeight,
 }
 
-/// A mutable zero-cost wrapper for [SIMD]-optimized bulk operations.
-/// See [`Flat1DSimd`] for architectural details.
+/// A mutable zero-cost wrapper for [SIMD]-optimized bulk operations. See [`Flat1DSimd`]
+/// for architectural details.
 ///
 /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
 #[derive(Debug)]
 pub struct Flat1DSimdMut<'a, T> {
     pub data: &'a mut [T],
-    pub width: ColWidth,
-    pub height: RowHeight,
-}
-
-/// Error returned when trying to access coordinates outside the 2D array bounds.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
-pub enum Flat2DArrayError {
-    #[error("2D coordinates are out of bounds")]
-    #[diagnostic(
-        code(r3bl_tui::core::common::flat_2d_array::out_of_bounds),
-        help("Verify that the row and column indices are within the array dimensions.")
-    )]
-    OutOfBounds,
+    pub width: CWidth,
+    pub height: CHeight,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, height, row, width};
+    use crate::{CHeight, CSize, CWidth, c_row};
 
     #[test]
     fn test_new_empty() {
-        let mut grid = Flat2DArray::new_empty((width(10), height(5)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(10usize), CHeight::from(5usize))),
+            0,
+        );
         assert_eq!(grid.as_simd().as_raw_slice().len(), 50);
 
         // Test mutating the underlying data
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&0));
-        grid.as_simd_mut().as_raw_mut_slice()[0] = 99;
+        assert_eq!(grid[c_row(0usize)][0], 0);
+        grid[c_row(0usize)][0] = 99;
         assert_eq!(grid.as_simd().as_raw_slice()[0], 99);
     }
 }

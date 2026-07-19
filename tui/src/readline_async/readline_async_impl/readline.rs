@@ -1,11 +1,13 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChannelCapacity, CommonResultWithError, Continuation, CursorBoundsCheck,
-            CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, InputEvent,
-            KeyPress, LineState, LineStateControlSignal, LineStateLiveness,
-            ModifierKeysMask, OutputDevice, PauseBuffer, SafeHistory, SafeLineState,
-            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, Size, StdMutex,
-            disable_raw_mode, execute_commands_no_lock, join, key_press, ok};
+use crate::{Button, ChannelCapacity, CommonResultWithError, Continuation,
+            CursorBoundsCheck, CursorPositionBoundsStatus, GCStringOwned, History,
+            InputDevice, InputEvent, Key, KeyPress, KeyState, LineState,
+            LineStateControlSignal, LineStateLiveness, ModifierKeysMask, MouseInput,
+            OutputDevice, PauseBuffer, SafeHistory, SafeLineState, SafePauseBuffer,
+            SegIndex, SendRawTerminal, SharedWriter, StdMutex, VPHeight, VPSize,
+            VPWidth, disable_raw_mode, execute_commands_no_lock, join, key_press, ok,
+            vp_col, vp_row};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -30,7 +32,7 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///
 /// This is a replacement for a [`std::io::BufRead::read_line`] function. It is async. It
 /// supports other tasks concurrently writing to the terminal output (via
-/// [`SharedWriter`]s). It also supports being paused so that [`crate::Spinner`] can
+/// [`SharedWriter`]s). It also supports being paused so that [`Spinner`] can
 /// display an indeterminate progress spinner. Then it can be resumed so that the user can
 /// type in the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is
 /// printed out.
@@ -59,30 +61,29 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// Each time this function is called, you have to `await` it to return the user input or
 /// `Interrupted` or `Eof` signal.
 ///
-/// When creating a new [`crate::ReadlineAsyncContext`] instance, you can use this
-/// repeatedly before dropping it. This is because the [`crate::SharedWriter`] is cloned,
-/// and the terminal is kept in `raw mode` until the associated [`crate::Readline`] is
+/// When creating a new [`ReadlineAsyncContext`] instance, you can use this
+/// repeatedly before dropping it. This is because the [`SharedWriter`] is cloned,
+/// and the terminal is kept in `raw mode` until the associated [`Readline`] is
 /// dropped.
 ///
 /// To fully terminate the session, you can call
-/// [`crate::ReadlineAsyncContext::request_shutdown()`] on it's "enclosing context". Then
+/// [`ReadlineAsyncContext::request_shutdown`] on it's "enclosing context". Then
 /// wait for that to complete by calling
-/// [`crate::ReadlineAsyncContext::await_shutdown()`]. If a `readline()` function is
+/// [`ReadlineAsyncContext::await_shutdown`]. If a `readline()` function is
 /// currently running, it will stop and be dropped as well! This is the beauty of
 /// non-blocking terminal input support!
 ///
 /// # Inputs and dependency injection
 ///
 /// There are 2 main resources that must be passed into [`Self::try_new()`]:
-/// - [`InputDevice`] which contains a resource that implements
-///   [`crate::PinnedInputStream`]. This trait represents an async stream of events. It is
-///   typically implemented by [`crossterm::event::EventStream`]. This is used to get
-///   input from the user. However, for testing you can provide your own implementation of
-///   this trait.
-/// - [`OutputDevice`] which contains a resource that implements
-///   [`crate::SafeRawTerminal`]. This trait represents a raw terminal. It is typically
-///   implemented by [`std::io::Stdout`]. This is used to write to the terminal. However,
+/// - [`InputDevice`] which contains a resource that implements [`PinnedInputStream`].
+///   This trait represents an async stream of events. It is typically implemented by
+///   [`crossterm::event::EventStream`]. This is used to get input from the user. However,
 ///   for testing you can provide your own implementation of this trait.
+/// - [`OutputDevice`] which contains a resource that implements [`SafeRawTerminal`]. This
+///   trait represents a raw terminal. It is typically implemented by [`std::io::Stdout`].
+///   This is used to write to the terminal. However, for testing you can provide your own
+///   implementation of this trait.
 ///
 /// Other structs are passed in as well, and these are:
 /// - `prompt` - This prompt will be displayed to the user.
@@ -107,9 +108,9 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// other indeterminate progress indicator. The user input from the terminal is not going
 /// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This
 /// ensures that the user can't enter any input while the terminal is paused. And output
-/// from a [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from
-/// the user input prompt while [`crate::Readline::readline()`] (or
-/// [`crate::ReadlineAsyncContext::read_line`]) is being awaited.
+/// from a [`Spinner`] won't clobber the output from the [`SharedWriter`]s or from
+/// the user input prompt while [`Readline::readline()`] (or
+/// [`ReadlineAsyncContext::read_line`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
 /// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
@@ -125,11 +126,11 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// lost!
 ///
 /// References:
-/// - Review the [`crate::LineState`] struct for more information on exactly how the
-///   terminal is paused and resumed, when it comes to accepting or rejecting user input,
-///   and rendering output or not.
-/// - Review the [`crate::ReadlineAsyncContext`] module docs for more information on the
-///   mental mode and architecture of this.
+/// - Review the [`LineState`] struct for more information on exactly how the terminal is
+///   paused and resumed, when it comes to accepting or rejecting user input, and
+///   rendering output or not.
+/// - Review the [`ReadlineAsyncContext`] module docs for more information on the mental
+///   mode and architecture of this.
 ///
 /// # Usage details
 ///
@@ -145,7 +146,7 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// - While retrieving input with [`readline()`][Readline::readline].
 /// - By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [`crate::SafeRawTerminal`], like
+/// You can provide your own implementation of [`SafeRawTerminal`], like
 /// [`OutputDevice`], via [dependency injection], so that you can mock terminal output for
 /// testing. You can also extend this struct to adapt your own terminal output using this
 /// mechanism. Essentially anything that compiles with `dyn std::io::Write + Send` trait
@@ -159,6 +160,13 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// [`crossterm::event::EventStream`]:
 ///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
 /// [`Pin`]: std::pin::Pin
+/// [`PinnedInputStream`]: crate::core::PinnedInputStream
+/// [`ReadlineAsyncContext::await_shutdown`]: crate::readline_async::ReadlineAsyncContext::await_shutdown
+/// [`ReadlineAsyncContext::read_line`]: crate::readline_async::ReadlineAsyncContext::read_line
+/// [`ReadlineAsyncContext::request_shutdown`]: crate::readline_async::ReadlineAsyncContext::request_shutdown
+/// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
+/// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
+/// [`Spinner`]: crate::readline_async::Spinner
 /// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
@@ -184,12 +192,15 @@ pub struct Readline {
     /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
 
-    /// - Is [Some] if a [`crate::Spinner`] is currently active. This works with the
-    ///   signal [`LineStateControlSignal::SpinnerActive`]; this is used to set the
-    ///   [`crate::Spinner::shutdown_sender`]. Also works with the
+    /// - Is [Some] if a [`Spinner`] is currently active. This works with the signal
+    ///   [`LineStateControlSignal::SpinnerActive`]; this is used to set the
+    ///   [`Spinner::shutdown_sender`]. Also works with the
     ///   [`LineStateControlSignal::Pause`] signal.
-    /// - Is [None] if no [`crate::Spinner`] is active. Also works with the
+    /// - Is [None] if no [`Spinner`] is active. Also works with the
     ///   [`LineStateControlSignal::Resume`] signal.
+    ///
+    /// [`Spinner::shutdown_sender`]: crate::readline_async::Spinner::shutdown_sender
+    /// [`Spinner`]: crate::readline_async::Spinner
     pub safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
 
     /// Shutdown channel.
@@ -235,7 +246,7 @@ pub enum ReadlineEvent {
     UnhandledKey(KeyPress),
 
     /// The terminal was resized.
-    Resized(Size),
+    Resized(VPSize),
 }
 
 /// # Task creation, shutdown and cleanup
@@ -267,7 +278,7 @@ pub mod manage_shared_writer_output {
     use super::*;
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
-    /// - The sender end of the channel is in [`crate::SharedWriter`].
+    /// - The sender end of the channel is in [`SharedWriter`].
     pub fn spawn_task_to_monitor_line_control_channel(
         /* Move */
         mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
@@ -472,7 +483,7 @@ pub mod manage_shared_writer_output {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn flush_internal(
         self_safe_is_paused_buffer: &SafePauseBuffer,
         is_paused: LineStateLiveness,
@@ -564,7 +575,7 @@ impl Readline {
     /// # Errors
     ///
     /// Returns an error if terminal operations fail.
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     #[allow(clippy::needless_pass_by_value)]
     pub fn try_new(
         prompt: String,
@@ -572,7 +583,7 @@ impl Readline {
         /* move */ input_device: InputDevice,
         /* move */ shutdown_complete_sender: broadcast::Sender<()>,
         channel_capacity: ChannelCapacity,
-        size: crate::Size,
+        size: VPSize,
     ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
@@ -674,7 +685,7 @@ impl Readline {
     /// # Errors
     ///
     /// Returns an error if updating the prompt fails.
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn update_prompt(
         &mut self,
         prompt: &str,
@@ -700,7 +711,7 @@ impl Readline {
     /// # Errors
     ///
     /// Returns an error if clearing the screen fails.
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
         self.output_device.write(|term| {
             term.queue(Clear(terminal::ClearType::All))?;
@@ -712,7 +723,7 @@ impl Readline {
         ok!()
     }
 
-    /// Sets maximum history length. The default length is [`crate::HISTORY_SIZE_MAX`].
+    /// Sets maximum history length. The default length is [`HISTORY_SIZE_MAX`].
     ///
     /// # Panics
     ///
@@ -722,6 +733,8 @@ impl Readline {
     ///
     /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
     /// in the crate root documentation for details.
+    ///
+    /// [`HISTORY_SIZE_MAX`]: crate::readline_async::HISTORY_SIZE_MAX
     pub fn set_max_history(&mut self, max_size: usize) {
         self.safe_history.write(|history| {
             history.max_size = max_size;
@@ -759,9 +772,9 @@ impl Readline {
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / `request_shutdown`). The
-    /// [`crate::ReadlineAsyncContext`] can be re-used, since the [`crate::SharedWriter`]
+    /// [`ReadlineAsyncContext`] can be re-used, since the [`SharedWriter`]
     /// is cloned, and the terminal is kept in `raw mode` until the associated
-    /// [`crate::Readline`] is dropped.
+    /// [`Readline`] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [`ReadlineEvent`] or an [`ReadlineError`].
@@ -778,6 +791,8 @@ impl Readline {
     /// # Errors
     ///
     /// Returns an error if reading input fails.
+    ///
+    /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
     pub async fn readline(
         &mut self,
     ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
@@ -872,7 +887,7 @@ impl Readline {
     /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
     /// in the crate root documentation for details.
     ///
-    /// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+    /// [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
     #[must_use]
     pub fn get_cursor_position(&self) -> SegIndex {
         self.safe_line_state
@@ -924,7 +939,7 @@ impl Readline {
     /// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
     /// [`AtStart`]: CursorPositionBoundsStatus::AtStart
     /// [`Beyond`]: CursorPositionBoundsStatus::Beyond
-    /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+    /// [`CursorBoundsCheck`]: CursorBoundsCheck
     /// [`Within`]: CursorPositionBoundsStatus::Within
     #[must_use]
     pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
@@ -983,7 +998,7 @@ pub mod readline_internal {
 
     /// Converts crossterm `KeyCode` to canonical `Key`
     #[must_use]
-    fn convert_key_code_to_key(code: crossterm::event::KeyCode) -> Option<crate::Key> {
+    fn convert_key_code_to_key(code: crossterm::event::KeyCode) -> Option<Key> {
         use crate::{FunctionKey, Key, SpecialKey};
         use crossterm::event::KeyCode;
 
@@ -1030,11 +1045,11 @@ pub mod readline_internal {
     #[must_use]
     fn convert_modifier_keys(
         modifiers: crossterm::event::KeyModifiers,
-    ) -> crate::ModifierKeysMask {
-        use crate::KeyState;
+    ) -> ModifierKeysMask {
+        use KeyState;
         use crossterm::event::KeyModifiers;
 
-        crate::ModifierKeysMask {
+        ModifierKeysMask {
             shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
                 KeyState::Pressed
             } else {
@@ -1055,8 +1070,8 @@ pub mod readline_internal {
 
     /// Converts crossterm mouse button to canonical button
     #[must_use]
-    fn convert_mouse_button(button: crossterm::event::MouseButton) -> crate::Button {
-        use crate::Button;
+    fn convert_mouse_button(button: crossterm::event::MouseButton) -> Button {
+        use Button;
         use crossterm::event::MouseButton;
 
         match button {
@@ -1099,11 +1114,8 @@ pub mod readline_internal {
                 modifiers,
             }) => {
                 let modifiers_mask = convert_modifier_keys(modifiers);
-                let mouse_input = crate::MouseInput {
-                    pos: crate::Pos {
-                        col_index: crate::ColIndex::from(i32::from(column)),
-                        row_index: crate::RowIndex::from(i32::from(row)),
-                    },
+                let mouse_input = MouseInput {
+                    pos: vp_col(column) + vp_row(row),
                     kind: match kind {
                         MouseEventKind::Down(btn) => {
                             MouseInputKind::MouseDown(convert_mouse_button(btn))
@@ -1132,9 +1144,9 @@ pub mod readline_internal {
                 };
                 Some(InputEvent::Mouse(mouse_input))
             }
-            Event::Resize(width, height) => Some(InputEvent::Resize(crate::Size {
-                col_width: crate::ColWidth::from(width),
-                row_height: crate::RowHeight::from(height),
+            Event::Resize(width, height) => Some(InputEvent::Resize(VPSize {
+                col_width: VPWidth::from(width),
+                row_height: VPHeight::from(height),
             })),
             _ => None,
         }
@@ -1158,7 +1170,7 @@ pub mod readline_internal {
 ///    machine loop.
 ///
 /// [`.into()`]: Into::into
-/// [`readline()`]: crate::Readline::readline
+/// [`readline()`]: Readline::readline
 #[derive(Debug, PartialEq, Clone)]
 pub enum ReadlineControlFlow<T, E> {
     ReturnOk(T),
@@ -1167,7 +1179,7 @@ pub enum ReadlineControlFlow<T, E> {
 }
 
 impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
-    fn from(result: Result<Option<T>, E>) -> Self {
+    fn from(result: Result<Option<T>, E>) -> ReadlineControlFlow<T, E> {
         match result {
             Ok(Some(val)) => Self::ReturnOk(val),
             Ok(None) => Self::Continue,
@@ -1194,7 +1206,7 @@ impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
 ///
 /// [`.into()`]: Into::into
 /// [`.into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
-/// [`readline()`]: crate::Readline::readline
+/// [`readline()`]: Readline::readline
 #[derive(Debug, Error, miette::Diagnostic)]
 pub enum ReadlineError {
     /// An internal I/O error occurred.
@@ -1212,7 +1224,7 @@ pub enum ReadlineError {
 ///
 /// [`into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
 impl From<ErrorReport> for ReadlineError {
-    fn from(report: ErrorReport) -> Self {
+    fn from(report: ErrorReport) -> ReadlineError {
         ReadlineError::IO(io::Error::other(format!("{report}")))
     }
 }
@@ -1263,8 +1275,11 @@ mod test_streams {
         let mut count = 0;
         let mut it = gen_input_stream(get_input_vec());
         while let Some(event) = it.next().await {
-            let lhs = event.unwrap();
-            let rhs = get_input_vec()[count].as_ref().unwrap().clone();
+            let lhs = event.expect("conversion error");
+            let rhs = get_input_vec()[count]
+                .as_ref()
+                .expect("conversion error")
+                .clone();
             assert_eq!(lhs, rhs);
             count += 1;
         }
@@ -1274,13 +1289,13 @@ mod test_streams {
 #[cfg(test)]
 mod test_pause_and_resume_support {
     use super::*;
-    use crate::core::test_fixtures::StdoutMock;
+    use crate::{core::test_fixtures::StdoutMock, vp_height, vp_width};
     use manage_shared_writer_output::flush_internal;
 
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data.
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
+        let test_size = vp_width(100) + vp_height(100);
         let safe_line_state = Arc::new(crate::scoped_mutex!(
             SPECIFIC,
             LineState::new("> ".to_string(), test_size)
@@ -1316,7 +1331,7 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data.
-        let test_size = crate::Size::new((crate::width(100), crate::height(100)));
+        let test_size = vp_width(100) + vp_height(100);
         let safe_line_state = Arc::new(crate::scoped_mutex!(
             SPECIFIC,
             LineState::new("> ".to_string(), test_size)

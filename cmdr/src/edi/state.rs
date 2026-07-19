@@ -2,147 +2,29 @@
 
 use crate::{AnalyticsAction, edi::Id, report_analytics};
 use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
-               EditorBuffer, FlexBoxId, HasDialogBuffers, HasEditorBuffers,
-               InlineString, TinyInlineString, fg_green, fg_red, inline_string,
-               into_existing};
-use std::{collections::HashMap,
-          ffi::OsStr,
+               EditorBuffer, FileExtensionToken, FilePathToken, FlexBoxId,
+               HasDialogBuffers, HasEditorBuffers, InlineString, TinyInlineString,
+               fg_green, fg_red, inline_string, into_existing, ok};
+use rustc_hash::FxHashMap;
+use std::{ffi::OsStr,
           fmt::{Debug, Display, Formatter, Result},
           path::Path};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
-}
-
-#[cfg(test)]
-mod state_tests {
-    use super::{constructor, file_utils};
-    use crate::edi::Id;
-    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id, len};
-
-    #[test]
-    fn test_file_extension() {
-        let file_path = Some("foo.rs");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "rs");
-
-        let file_path = Some("foo");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "md");
-
-        let file_path = Some("foo.");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "md");
-
-        let file_path = Some("foo.bar.rs");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "rs");
-
-        let file_path = Some("foo.bar");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "bar");
-
-        let file_path = Some("foo.bar.");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "md");
-
-        let file_path = Some("foo.bar.baz");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "baz");
-
-        let file_path = Some("foo.bar.baz.");
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "md");
-
-        let file_path = None;
-        let file_ext = file_utils::get_file_extension(file_path);
-        assert_eq!(file_ext, "md");
-    }
-
-    #[test]
-    fn test_read_file_content() {
-        // Make up a file name.
-        let filename = &format!(
-            "/tmp/{}_file.md",
-            friendly_random_id::generate_friendly_random_id()
-        );
-        println!("🍍🍎🍏filename: {filename}");
-
-        // Write some content to this file.
-        let content = "This is a test.\nThis is only a test.";
-        std::fs::write(filename.clone(), content).unwrap();
-
-        let expected = file_utils::read_file_into_storage(Some(filename));
-        assert_eq!(expected, content);
-
-        // Delete the file.
-        std::fs::remove_file(filename).unwrap();
-    }
-
-    #[test]
-    fn test_state_constructor() {
-        // Make up a file name.
-        let filename = format!(
-            "/tmp/{}_file.md",
-            friendly_random_id::generate_friendly_random_id()
-        );
-        let maybe_file_path = Some(filename.as_str());
-        println!("🍍🍎🍏filename: {filename}");
-
-        // Write some content to this file.
-        let content = "This is a test.\nThis is only a test.";
-        std::fs::write(filename.clone(), content).unwrap();
-
-        // Create a state.
-        let state = constructor::new(maybe_file_path);
-
-        // Check the state.
-        assert_eq!(state.editor_buffers.len(), 1);
-        assert_eq!(state.dialog_buffers.len(), 0);
-        assert!(
-            state
-                .editor_buffers
-                .contains_key(&FlexBoxId::from(Id::ComponentEditor))
-        );
-        assert_eq!(
-            state
-                .editor_buffers
-                .get(&FlexBoxId::from(Id::ComponentEditor))
-                .unwrap()
-                .content
-                .lines
-                .len(),
-            len(2)
-        );
-        assert_eq!(
-            state
-                .editor_buffers
-                .get(&FlexBoxId::from(Id::ComponentEditor))
-                .unwrap()
-                .content
-                .lines
-                .iter_lines()
-                .map(|line| line.content())
-                .collect::<InlineVec<&str>>()
-                .join("\n"),
-            content
-        );
-
-        // Delete the file.
-        std::fs::remove_file(filename).unwrap();
-    }
+    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: FxHashMap<FlexBoxId, DialogBuffer>,
 }
 
 pub mod constructor {
-    use super::{EditorBuffer, FlexBoxId, HashMap, Id, State, file_utils};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for State {
         fn default() -> Self {
             Self {
                 editor_buffers: create_hash_map_of_editor_buffers(None),
-                dialog_buffers: HashMap::default(),
+                dialog_buffers: FxHashMap::default(),
             }
         }
     }
@@ -152,7 +34,7 @@ pub mod constructor {
         match maybe_file_path {
             Some(_) => State {
                 editor_buffers: create_hash_map_of_editor_buffers(maybe_file_path),
-                dialog_buffers: HashMap::default(),
+                dialog_buffers: FxHashMap::default(),
             },
             None => State::default(),
         }
@@ -160,12 +42,16 @@ pub mod constructor {
 
     fn create_hash_map_of_editor_buffers(
         maybe_file_path: Option<&str>,
-    ) -> HashMap<FlexBoxId, EditorBuffer> {
+    ) -> FxHashMap<FlexBoxId, EditorBuffer> {
         let editor_buffer = {
-            let file_ext = file_utils::get_file_extension(maybe_file_path);
+            let file_ext = &file_utils::get_file_extension(maybe_file_path);
 
-            let mut editor_buffer =
-                EditorBuffer::new_empty(Some(&file_ext), maybe_file_path);
+            let mut editor_buffer = match maybe_file_path {
+                Some(file_path) => EditorBuffer::new_empty(
+                    FileExtensionToken(file_ext) + FilePathToken(file_path),
+                ),
+                None => EditorBuffer::new_empty(()),
+            };
 
             let content = file_utils::read_file_into_storage(maybe_file_path);
             editor_buffer.init_with(content.lines());
@@ -173,7 +59,7 @@ pub mod constructor {
         };
 
         {
-            let mut it = HashMap::new();
+            let mut it = FxHashMap::default();
             it.insert(FlexBoxId::from(Id::ComponentEditor), editor_buffer);
             it
         }
@@ -269,7 +155,8 @@ pub mod file_utils {
 }
 
 mod impl_editor_support {
-    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -291,7 +178,8 @@ mod impl_editor_support {
 }
 
 mod impl_dialog_support {
-    use super::{DialogBuffer, FlexBoxId, HasDialogBuffers, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
@@ -301,7 +189,8 @@ mod impl_dialog_support {
 }
 
 mod impl_debug {
-    use super::{Debug, Formatter, Result, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for State {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -319,8 +208,8 @@ mod impl_debug {
 
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
-    use super::{Display, Formatter, Result, State};
-    use r3bl_tui::ok;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Display for State {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -361,5 +250,214 @@ mod impl_display {
 
             ok!()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{State, constructor, file_utils};
+    use crate::edi::Id;
+    use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId, HasDialogBuffers,
+                   HasEditorBuffers, InlineString, InlineVec, assert_eq2,
+                   friendly_random_id};
+
+    #[test]
+    fn test_file_extension() {
+        let file_path = Some("foo.rs");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "rs");
+
+        let file_path = Some("foo");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "md");
+
+        let file_path = Some("foo.");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "md");
+
+        let file_path = Some("foo.bar.rs");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "rs");
+
+        let file_path = Some("foo.bar");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "bar");
+
+        let file_path = Some("foo.bar.");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "md");
+
+        let file_path = Some("foo.bar.baz");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "baz");
+
+        let file_path = Some("foo.bar.baz.");
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "md");
+
+        let file_path = None;
+        let file_ext = file_utils::get_file_extension(file_path);
+        assert_eq2!(file_ext, "md");
+    }
+
+    #[test]
+    fn test_read_file_content() {
+        // Make up a file name.
+        let filename = &format!(
+            "/tmp/{}_file.md",
+            friendly_random_id::generate_friendly_random_id()
+        );
+        println!("🍍🍎🍏filename: {filename}");
+
+        // Write some content to this file.
+        let content = "This is a test.\nThis is only a test.";
+        std::fs::write(filename.clone(), content).unwrap();
+
+        let expected = file_utils::read_file_into_storage(Some(filename));
+        assert_eq2!(expected, content);
+
+        // Delete the file.
+        std::fs::remove_file(filename).unwrap();
+    }
+
+    #[test]
+    fn test_state_constructor_with_file() {
+        // Make up a file name.
+        let filename = format!(
+            "/tmp/{}_file.md",
+            friendly_random_id::generate_friendly_random_id()
+        );
+        let maybe_file_path = Some(filename.as_str());
+        println!("🍍🍎🍏filename: {filename}");
+
+        // Write some content to this file.
+        let content = "This is a test.\nThis is only a test.";
+        std::fs::write(filename.clone(), content).unwrap();
+
+        // Create a state.
+        let state = constructor::new(maybe_file_path);
+
+        // Check the state.
+        assert_eq2!(state.editor_buffers.len(), 1);
+        assert_eq2!(state.dialog_buffers.len(), 0);
+        assert!(
+            state
+                .editor_buffers
+                .contains_key(&FlexBoxId::from(Id::ComponentEditor))
+        );
+
+        let editor_buffer = state
+            .editor_buffers
+            .get(&FlexBoxId::from(Id::ComponentEditor))
+            .unwrap();
+
+        // Verify buffer metadata.
+        assert_eq2!(
+            editor_buffer.get_file_path(),
+            Some(&InlineString::from_str(&filename))
+        );
+        assert_eq2!(editor_buffer.get_maybe_file_extension(), Some("md"));
+
+        // Verify buffer content.
+        assert_eq2!(editor_buffer.get_lines().get_line_count().as_usize(), 2);
+        assert_eq2!(
+            editor_buffer
+                .get_lines()
+                .iter_lines()
+                .map(|line| line.content())
+                .collect::<InlineVec<&str>>()
+                .join("\n"),
+            content
+        );
+
+        // Delete the file.
+        std::fs::remove_file(filename).unwrap();
+    }
+
+    #[test]
+    fn test_state_constructor_empty() {
+        // Test constructor::new(None) and State::default().
+        let state_from_none = constructor::new(None);
+        let state_default = State::default();
+        assert_eq2!(state_from_none, state_default);
+
+        assert_eq2!(state_from_none.editor_buffers.len(), 1);
+        assert_eq2!(state_from_none.dialog_buffers.len(), 0);
+        assert!(
+            state_from_none
+                .editor_buffers
+                .contains_key(&FlexBoxId::from(Id::ComponentEditor))
+        );
+
+        let buffer = state_from_none
+            .editor_buffers
+            .get(&FlexBoxId::from(Id::ComponentEditor))
+            .unwrap();
+
+        assert_eq2!(buffer.get_file_path(), None);
+        assert_eq2!(buffer.get_maybe_file_extension(), None);
+        assert_eq2!(buffer.get_lines().get_line_count().as_usize(), 0);
+        assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn test_has_editor_buffers_trait() {
+        let mut state = State::default();
+        let editor_id = FlexBoxId::from(Id::ComponentEditor);
+        let non_existent_id = FlexBoxId::from(99);
+
+        // Test contains_editor_buffer.
+        assert!(state.contains_editor_buffer(editor_id));
+        assert!(!state.contains_editor_buffer(non_existent_id));
+
+        // Test get_mut_editor_buffer.
+        assert!(state.get_mut_editor_buffer(editor_id).is_some());
+        assert!(state.get_mut_editor_buffer(non_existent_id).is_none());
+
+        // Test mutating via get_mut_editor_buffer.
+        if let Some(buf) = state.get_mut_editor_buffer(editor_id) {
+            buf.set_file_path(InlineString::from_str("updated.rs"));
+        }
+        assert_eq2!(
+            state
+                .editor_buffers
+                .get(&editor_id)
+                .unwrap()
+                .get_file_path(),
+            Some(&InlineString::from_str("updated.rs"))
+        );
+
+        // Test insert_editor_buffer.
+        state.insert_editor_buffer(non_existent_id, EditorBuffer::new_empty(()));
+        assert!(state.contains_editor_buffer(non_existent_id));
+        assert_eq2!(state.editor_buffers.len(), 2);
+    }
+
+    #[test]
+    fn test_has_dialog_buffers_trait() {
+        let mut state = State::default();
+        let dialog_id = FlexBoxId::from(100);
+
+        // Initially no dialog buffer.
+        assert!(state.get_mut_dialog_buffer(dialog_id).is_none());
+
+        // Insert a dialog buffer and verify get_mut_dialog_buffer.
+        state
+            .dialog_buffers
+            .insert(dialog_id, DialogBuffer::new_empty());
+        assert!(state.get_mut_dialog_buffer(dialog_id).is_some());
+    }
+
+    #[test]
+    fn test_state_display_and_debug() {
+        let state = State::default();
+
+        let display_str = format!("{state}");
+        assert!(display_str.contains("State[editors=1, dialogs=0]"));
+        assert!(display_str.contains("editors=["));
+
+        let debug_str = format!("{state:?}");
+        assert!(debug_str.contains("State ["));
+        assert!(debug_str.contains("editor_buffers:"));
     }
 }

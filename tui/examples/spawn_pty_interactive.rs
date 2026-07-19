@@ -19,13 +19,16 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR, SGR_FG_BRIGHT_GREEN_STR,
-               SGR_FG_BRIGHT_RED_STR, SGR_FG_BRIGHT_YELLOW_STR, SGR_RESET_STR,
-               assert_terminal_is_interactive,
+use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,
+               SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR, SGR_FG_BRIGHT_YELLOW_STR,
+               SGR_RESET_STR, TuiAvailabilityChooseExt, assert_terminal_is_interactive,
+               choose,
                core::pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigOption},
-               height, ok, set_mimalloc_in_main, size, width};
+               ok,
+               readline_async::{HowToChoose, style::StyleSheet},
+               set_mimalloc_in_main, vp_height, vp_width};
 use tokio::time::{Duration, sleep};
 
 // ANSI color constants for terminal output.
@@ -46,7 +49,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .cli_args(["-u", "-i"]) // -u: unbuffered, -i: interactive
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(size(width(80) + height(24))),
+                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
         )
         .start()?;
 
@@ -91,7 +94,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("2 + 2".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Variables and strings.
@@ -99,7 +102,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("name = 'PTY Demo'".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Print variable{RESET}");
@@ -108,7 +111,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .try_send(PtyInputEvent::WriteLine(
             "print(f'Hello from {name}!')".into(),
         ))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Lists and loops.
@@ -116,14 +119,14 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("numbers = [1, 2, 3, 4, 5]".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: List comprehension{RESET}");
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("[x**2 for x in numbers]".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Functions.
@@ -131,26 +134,26 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("def greet(name):".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(100)).await;
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine(
             "    return f'Hello, {name}!'".into(),
         ))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(100)).await;
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine(String::new()))
-        .unwrap(); // Empty line to end function
+        .expect("conversion error"); // Empty line to end function
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Call the function{RESET}");
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("greet('PTY User')".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Error handling.
@@ -158,7 +161,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("1 / 0".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Import a module.
@@ -166,14 +169,14 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("import sys".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Check Python version{RESET}");
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("sys.version".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Exit Python.
@@ -184,7 +187,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
             ControlSequence::CtrlD,
             CursorKeyMode::default(),
         ))
-        .unwrap();
+        .expect("conversion error");
 
     // Wait for output task to complete.
     let final_output = output_handle.await.into_diagnostic()?;
@@ -210,7 +213,7 @@ async fn run_shell_demo() -> miette::Result<()> {
         .cli_args(["-i"]) // Interactive mode
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(size(width(80) + height(24))),
+                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
         )
         .start()?;
 
@@ -238,7 +241,7 @@ async fn run_shell_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("pwd".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: echo command{RESET}");
@@ -247,21 +250,21 @@ async fn run_shell_demo() -> miette::Result<()> {
         .try_send(PtyInputEvent::WriteLine(
             "echo 'Hello from PTY shell!'".into(),
         ))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: List files{RESET}");
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("ls -la | head -5".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: Environment variable{RESET}");
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("echo \"Home: $HOME\"".into()))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Interrupt a long-running command.
@@ -271,7 +274,7 @@ async fn run_shell_demo() -> miette::Result<()> {
         .try_send(PtyInputEvent::WriteLine(
             "sleep 10 && echo 'This should not print'".into(),
         ))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(500)).await;
 
     println!("{BLUE}📝 Sending: Ctrl-C to interrupt{RESET}");
@@ -281,7 +284,7 @@ async fn run_shell_demo() -> miette::Result<()> {
             ControlSequence::CtrlC,
             CursorKeyMode::default(),
         ))
-        .unwrap();
+        .expect("conversion error");
     sleep(Duration::from_millis(200)).await;
 
     // Exit shell.
@@ -289,7 +292,7 @@ async fn run_shell_demo() -> miette::Result<()> {
     session
         .tx_input_event
         .try_send(PtyInputEvent::WriteLine("exit".into()))
-        .unwrap();
+        .expect("conversion error");
 
     output_handle.await.into_diagnostic()?;
 
@@ -315,19 +318,52 @@ async fn main() -> miette::Result<()> {
     );
     println!("{CYAN}We'll demonstrate both Python REPL and shell interactions.{RESET}\n");
 
-    // Run Python REPL demo.
-    println!("{YELLOW}▶ Demo 1: Python REPL Interaction{RESET}");
-    println!(
-        "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"
-    );
-    run_python_repl_demo().await?;
+    // Ask user which demo to run.
+    let maybe_user_choice = {
+        let mut default_io_devices = DefaultIoDevices::default();
+        choose(
+            "🚀 Which PTY Demo would you like to run?",
+            &[
+                "1. Run Both Demos (Python REPL + Shell Interruption)",
+                "2. Demo 1: Python REPL Interaction",
+                "3. Demo 2: Shell Session with Command Interruption",
+                "4. Exit",
+            ],
+            None,
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .get_first_result()
+        .await?
+    };
 
-    // Run shell demo.
-    println!("\n{YELLOW}▶ Demo 2: Shell Session with Command Interruption{RESET}");
-    println!(
-        "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"
-    );
-    run_shell_demo().await?;
+    let Some(choice) = maybe_user_choice else {
+        println!("👋 Exiting.");
+        return ok!();
+    };
+
+    if choice.starts_with('4') {
+        println!("👋 Exiting.");
+        return ok!();
+    }
+
+    if choice.starts_with('1') || choice.starts_with('2') {
+        println!("\n{YELLOW}▶ Demo 1: Python REPL Interaction{RESET}");
+        println!(
+            "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"
+        );
+        run_python_repl_demo().await?;
+    }
+
+    if choice.starts_with('1') || choice.starts_with('3') {
+        println!("\n{YELLOW}▶ Demo 2: Shell Session with Command Interruption{RESET}");
+        println!(
+            "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"
+        );
+        run_shell_demo().await?;
+    }
 
     println!(
         "\n{GREEN}✨ Demo complete! The start() API successfully demonstrated:\n\

@@ -83,7 +83,7 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
                 clippy::unwrap_used,
                 reason = "Length is guaranteed to be > 1 by the match arm"
             )]
-            let first_item = my_iter.next().unwrap();
+            let first_item = my_iter.next().expect("conversion error");
 
             // First item must not be prefixed with a space.
             if first_item.starts_with(SPACE) {
@@ -119,7 +119,8 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         let input = "@tags: tag1, tag2, tag3";
-        let (input, output) = super::parse_csv_opt_eol(TAGS, input).unwrap();
+        let (input, output) =
+            super::parse_csv_opt_eol(TAGS, input).expect("conversion error");
         assert_eq2!(input, "");
         assert_eq2!(output, ["tag1", "tag2", "tag3"].into());
     }
@@ -148,7 +149,8 @@ mod test_parse_tags_opt_eol {
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
-            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3").unwrap(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3")
+                .expect("conversion error"),
             ("", ["tag1", "tag2", " tag3"].into()),
         );
     }
@@ -158,7 +160,8 @@ mod test_parse_tags_opt_eol {
         // Valid.
         {
             let input = "@tags: tag1, tag2, tag3\n";
-            let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
+            let (input, output) =
+                parse_csv_opt_eol(TAGS, input).expect("conversion error");
             assert_eq2!(input, "");
             assert_eq2!(output, ["tag1", "tag2", "tag3"].into());
         }
@@ -200,7 +203,8 @@ mod test_parse_tags_opt_eol {
 
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
-            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3\n").unwrap(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3\n")
+                .expect("conversion error"),
             ("", ["tag1", "tag2", " tag3"].into()),
         );
     }
@@ -208,7 +212,7 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_with_postfix_content() {
         let input = "@tags: \nfoo\nbar";
-        let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
+        let (input, output) = parse_csv_opt_eol(TAGS, input).expect("conversion error");
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, [].into());
     }

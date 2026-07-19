@@ -6,7 +6,9 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::PixelCharRenderer;
-use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES};
+use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES,
+            core::coordinates::bounds_check::cursor_bounds_check::CursorBoundsCheck,
+            vp_row};
 
 /// Trait for rendering content to [`ANSI`] escape sequences.
 ///
@@ -51,7 +53,7 @@ use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES};
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`choose()`]: crate::choose
-/// [`OfsBufVT100`]: crate::OfsBufVT100
+/// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 pub trait RenderToAnsi {
     /// Render this buffer to [`ANSI`] escape sequence bytes.
     ///
@@ -89,17 +91,27 @@ impl RenderToAnsi for OfsBufVT100 {
         let mut output = Vec::new();
         let mut renderer = PixelCharRenderer::new();
 
-        let height = self.ofs_buf.get_height().as_usize();
-        for row_idx in 0..height {
-            let Some(line) = self.ofs_buf.get_row(row_idx) else { continue; };
+        let end = self
+            .get_active_screen_buffer()
+            .get_viewport()
+            .get_height()
+            .eol_cursor_position();
+        let mut curr = vp_row(0);
+        while curr < end {
+            let Some(line) = self.get_active_screen_buffer().get_row(curr) else {
+                curr += 1;
+                continue;
+            };
             // Add line separator for all lines except the first
-            if row_idx > 0 {
+            if curr > vp_row(0) {
                 output.extend_from_slice(CRLF_BYTES);
             }
 
             // Render this line's pixels to ANSI bytes
             let ansi_line = renderer.render_line(line);
             output.extend_from_slice(ansi_line);
+
+            curr += 1;
         }
 
         // Emit reset at the end if any styling was active
@@ -115,11 +127,11 @@ impl RenderToAnsi for OfsBufVT100 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelChar, TuiStyle, height, width};
+    use crate::{PixelChar, TuiStyle, vp_height, vp_width};
 
     #[test]
     fn test_render_to_ansi_empty_buffer() {
-        let buffer = OfsBufVT100::new_empty(height(2) + width(3));
+        let buffer = OfsBufVT100::new_empty(vp_height(2) + vp_width(3));
         let ansi = buffer.render_to_ansi();
 
         // Empty buffer (all spacers) should still produce output (spaces + line separator
@@ -135,9 +147,9 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_single_line() {
-        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(vp_height(1) + vp_width(5));
 
-        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+        if let Some(first_line) = buffer.get_row_mut(0u16.into()) {
             first_line[0] = PixelChar::PlainText {
                 display_char: 'H',
                 style: TuiStyle::default(),
@@ -158,16 +170,16 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_multi_line() {
-        let mut buffer = OfsBufVT100::new_empty(height(2) + width(3));
+        let mut buffer = OfsBufVT100::new_empty(vp_height(2) + vp_width(3));
 
-        if buffer.ofs_buf.get_height().as_usize() >= 2 {
-            if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+        if buffer.get_height().as_usize() >= 2 {
+            if let Some(first_line) = buffer.get_row_mut(0u16.into()) {
                 first_line[0] = PixelChar::PlainText {
                     display_char: 'A',
                     style: TuiStyle::default(),
                 };
             }
-            if let Some(second_line) = buffer.ofs_buf.get_row_mut(1) {
+            if let Some(second_line) = buffer.get_row_mut(1u16.into()) {
                 second_line[0] = PixelChar::PlainText {
                     display_char: 'B',
                     style: TuiStyle::default(),
@@ -187,9 +199,9 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_with_spacers() {
-        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(vp_height(1) + vp_width(5));
 
-        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+        if let Some(first_line) = buffer.get_row_mut(0u16.into()) {
             first_line[0] = PixelChar::PlainText {
                 display_char: 'X',
                 style: TuiStyle::default(),
@@ -209,9 +221,9 @@ mod tests {
 
     #[test]
     fn test_render_to_ansi_with_void() {
-        let mut buffer = OfsBufVT100::new_empty(height(1) + width(5));
+        let mut buffer = OfsBufVT100::new_empty(vp_height(1) + vp_width(5));
 
-        if let Some(first_line) = buffer.ofs_buf.get_row_mut(0) {
+        if let Some(first_line) = buffer.get_row_mut(0u16.into()) {
             first_line[0] = PixelChar::PlainText {
                 display_char: 'Z',
                 style: TuiStyle::default(),

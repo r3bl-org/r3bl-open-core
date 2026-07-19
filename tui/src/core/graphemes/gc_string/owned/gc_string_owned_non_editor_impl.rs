@@ -16,16 +16,16 @@
 //! separation of concerns during the [`crate::ZeroCopyGapBuffer`] migration.
 
 use super::GCStringOwned;
-use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
-            byte_index, ch, pad_fmt, seg_index, usize};
+use crate::{ByteIndex, CCol, InlineString, SegIndex, VPCol, VPWidth, byte_index, c_col,
+            ch, pad_fmt, seg_index, usize};
 use std::ops::Add;
 
 /// Converts between different types of indices. This unifies the API so that different
 /// index types are all converted into [`SegIndex`] for use with this struct. Here's the
 /// list:
 /// - [`GCStringOwned`] + [`crate::ByteIndex`] = [Option]<[`SegIndex`]>
-/// - [`GCStringOwned`] + [`ColIndex`] = [Option]<[`SegIndex`]>
-/// - [`GCStringOwned`] + [`SegIndex`] = [Option]<[`ColIndex`]>
+/// - [`GCStringOwned`] + [`VPCol`] = [Option]<[`SegIndex`]>
+/// - [`GCStringOwned`] + [`SegIndex`] = [Option]<[`VPCol`]>
 ///
 /// # Why These Conversions Are Essential
 ///
@@ -35,13 +35,12 @@ use std::ops::Add;
 ///    offset or string slice operation), we need to find which grapheme cluster it
 ///    belongs to. This is crucial for ensuring we never split a multi-byte character.
 ///
-/// 2. **[`ColIndex`] → [`SegIndex`]**: When the user clicks at a screen position or we
-///    need to render at a specific column, we must find which grapheme cluster is at that
+/// 2. **[`VPCol`] → [`SegIndex`]**: When the user clicks at a screen position or we need
+///    to render at a specific column, we must find which grapheme cluster is at that
 ///    display position. This handles wide characters correctly.
 ///
-/// 3. **[`SegIndex`] → [`ColIndex`]**: When we have a logical character position and need
-///    to know where it appears on screen. This is used for cursor positioning and
-///    rendering.
+/// 3. **[`SegIndex`] → [`VPCol`]**: When we have a logical character position and need to
+///    know where it appears on screen. This is used for cursor positioning and rendering.
 ///
 /// # Examples
 ///
@@ -84,18 +83,18 @@ pub mod convert {
         }
     }
 
-    /// Converts a [`ColIndex`] to a [`SegIndex`].
+    /// Converts a [`VPCol`] to a [`SegIndex`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ColIndex`] (display column index) to a
+    /// Try and convert a [`GCStringOwned`] + [`VPCol`] (display column index) to a
     /// grapheme index [`SegIndex`].
-    impl Add<ColIndex> for &GCStringOwned {
+    impl Add<VPCol> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
         /// Finds the grapheme cluster segment (index) that can be displayed at the
         /// [`display_col_index`] of the terminal.
         ///
-        /// [`display_col_index`]: ColIndex
-        fn add(self, display_col_index: ColIndex) -> Self::Output {
+        /// [`display_col_index`]: VPCol
+        fn add(self, display_col_index: VPCol) -> Self::Output {
             self.segments
                 .iter()
                 .find(|seg| {
@@ -109,12 +108,12 @@ pub mod convert {
         }
     }
 
-    /// Converts a [`SegIndex`] to a [`ColIndex`].
+    /// Converts a [`SegIndex`] to a [`VPCol`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a [`ColIndex`] (display
+    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a [`VPCol`] (display
     /// column index).
     impl Add<SegIndex> for &GCStringOwned {
-        type Output = Option<ColIndex>;
+        type Output = Option<VPCol>;
 
         /// Finds the display column index that corresponds to the grapheme cluster
         /// segment at the [`seg_index`].
@@ -170,8 +169,8 @@ pub mod trunc_end {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
-        pub fn trunc_end_to_fit(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-            let mut avail_cols: ColWidth = arg_col_width.into();
+        pub fn trunc_end_to_fit(&self, arg_col_width: impl Into<VPWidth>) -> &str {
+            let mut avail_cols: VPWidth = arg_col_width.into();
             let mut string_end_byte_index = 0;
 
             for seg in self.seg_iter() {
@@ -213,8 +212,8 @@ pub mod trunc_end {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
-        pub fn trunc_end_by(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-            let mut countdown_col_count: ColWidth = arg_col_width.into();
+        pub fn trunc_end_by(&self, arg_col_width: impl Into<VPWidth>) -> &str {
+            let mut countdown_col_count: VPWidth = arg_col_width.into();
             let mut string_end_byte_index = byte_index(0);
 
             let rev_iter = self.segments.iter().rev();
@@ -268,8 +267,8 @@ pub mod trunc_start {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
-        pub fn trunc_start_by(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-            let mut skip_col_count: ColWidth = arg_col_width.into();
+        pub fn trunc_start_by(&self, arg_col_width: impl Into<VPWidth>) -> &str {
+            let mut skip_col_count: VPWidth = arg_col_width.into();
             let mut string_start_byte_index = 0;
 
             for segment in self.seg_iter() {
@@ -325,14 +324,14 @@ mod pad {
         pub fn pad_end_to_fit(
             &self,
             arg_pad_str: impl AsRef<str>,
-            arg_col_width: impl Into<ColWidth>,
+            arg_col_width: impl Into<VPWidth>,
         ) -> InlineString {
             let pad_str = arg_pad_str.as_ref();
-            let max_display_width: ColWidth = arg_col_width.into();
+            let max_display_width: VPWidth = arg_col_width.into();
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if pad_count.is_zero() {
+            if pad_count.is_empty() {
                 self_str.into()
             } else {
                 let mut acc = InlineString::from(self_str);
@@ -344,14 +343,14 @@ mod pad {
         pub fn pad_start_to_fit(
             &self,
             arg_pad_str: impl AsRef<str>,
-            arg_col_width: impl Into<ColWidth>,
+            arg_col_width: impl Into<VPWidth>,
         ) -> InlineString {
             let pad_str = arg_pad_str.as_ref();
-            let max_display_width: ColWidth = arg_col_width.into();
+            let max_display_width: VPWidth = arg_col_width.into();
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if pad_count.is_zero() {
+            if pad_count.is_empty() {
                 self_str.into()
             } else {
                 let mut acc = InlineString::new();
@@ -393,12 +392,12 @@ mod pad {
         pub fn try_get_postfix_padding_for(
             &self,
             arg_pad_str: impl AsRef<str>,
-            arg_col_width: impl Into<ColWidth>,
+            arg_col_width: impl Into<VPWidth>,
         ) -> Option<InlineString> {
             // Pad the line to the max cols w/ spaces. This removes any "ghost" carets
             // that were painted in a previous render.
             let pad_str = arg_pad_str.as_ref();
-            let max_display_width: ColWidth = arg_col_width.into();
+            let max_display_width: VPWidth = arg_col_width.into();
 
             if self.display_width < max_display_width {
                 let pad_count = max_display_width - self.display_width;
@@ -451,19 +450,19 @@ mod clip {
         /// ```
         pub fn clip(
             &self,
-            arg_start_at_col_index: impl Into<ColIndex>,
-            arg_col_width: impl Into<ColWidth>,
+            arg_start_at_col_index: impl Into<CCol>,
+            arg_col_width: impl Into<VPWidth>,
         ) -> &str {
-            let start_display_col_index: ColIndex = arg_start_at_col_index.into();
-            let max_display_col_count: ColWidth = arg_col_width.into();
+            let start_display_col_index: CCol = arg_start_at_col_index.into();
+            let max_display_col_count: VPWidth = arg_col_width.into();
 
             let string_start_byte_index = {
                 let mut it = 0;
                 let mut skip_col_count = start_display_col_index;
                 for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
-                    // Skip scroll_offset_col_index columns.
-                    if *skip_col_count == ch(0) {
+                    // Skip columns.
+                    if skip_col_count == c_col(0) {
                         // We are done skipping.
                         break;
                     }
@@ -481,8 +480,8 @@ mod clip {
                 let mut skip_col_count = start_display_col_index;
                 for seg in self.seg_iter() {
                     let seg_display_width = seg.display_width;
-                    // Skip scroll_offset_col_index columns (again).
-                    if *skip_col_count == ch(0) {
+                    // Skip columns (again).
+                    if skip_col_count == c_col(0) {
                         if avail_col_count < seg_display_width {
                             break;
                         }
@@ -505,7 +504,7 @@ mod clip {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, width};
+    use crate::{c_col, vp_col, vp_width};
 
     // Helper function to create test strings
     fn create_test_string(s: &str) -> GCStringOwned { GCStringOwned::from(s) }
@@ -553,14 +552,14 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // Each ASCII char is 1 column wide
-            assert_eq!(&gc_string + col(0), Some(seg_index(0))); // 'h'
-            assert_eq!(&gc_string + col(1), Some(seg_index(1))); // 'e'
-            assert_eq!(&gc_string + col(2), Some(seg_index(2))); // 'l'
-            assert_eq!(&gc_string + col(3), Some(seg_index(3))); // 'l'
-            assert_eq!(&gc_string + col(4), Some(seg_index(4))); // 'o'
+            assert_eq!(&gc_string + vp_col(0), Some(seg_index(0))); // 'h'
+            assert_eq!(&gc_string + vp_col(1), Some(seg_index(1))); // 'e'
+            assert_eq!(&gc_string + vp_col(2), Some(seg_index(2))); // 'l'
+            assert_eq!(&gc_string + vp_col(3), Some(seg_index(3))); // 'l'
+            assert_eq!(&gc_string + vp_col(4), Some(seg_index(4))); // 'o'
 
             // Out of bounds
-            assert_eq!(&gc_string + col(5), None);
+            assert_eq!(&gc_string + vp_col(5), None);
         }
 
         #[test]
@@ -568,26 +567,26 @@ mod tests {
             let gc_string = create_test_string("a😀b");
 
             // 'a' at column 0 (width 1)
-            assert_eq!(&gc_string + col(0), Some(seg_index(0)));
+            assert_eq!(&gc_string + vp_col(0), Some(seg_index(0)));
             // '😀' at columns 1-2 (width 2)
-            assert_eq!(&gc_string + col(1), Some(seg_index(1)));
-            assert_eq!(&gc_string + col(2), Some(seg_index(1)));
+            assert_eq!(&gc_string + vp_col(1), Some(seg_index(1)));
+            assert_eq!(&gc_string + vp_col(2), Some(seg_index(1)));
             // 'b' at column 3 (width 1)
-            assert_eq!(&gc_string + col(3), Some(seg_index(2)));
+            assert_eq!(&gc_string + vp_col(3), Some(seg_index(2)));
 
             // Out of bounds
-            assert_eq!(&gc_string + col(4), None);
+            assert_eq!(&gc_string + vp_col(4), None);
         }
 
         #[test]
         fn test_seg_index_to_col_index_ascii() {
             let gc_string = create_test_string("hello");
 
-            assert_eq!(&gc_string + seg_index(0), Some(col(0))); // 'h'
-            assert_eq!(&gc_string + seg_index(1), Some(col(1))); // 'e'
-            assert_eq!(&gc_string + seg_index(2), Some(col(2))); // 'l'
-            assert_eq!(&gc_string + seg_index(3), Some(col(3))); // 'l'
-            assert_eq!(&gc_string + seg_index(4), Some(col(4))); // 'o'
+            assert_eq!(&gc_string + seg_index(0), Some(vp_col(0))); // 'h'
+            assert_eq!(&gc_string + seg_index(1), Some(vp_col(1))); // 'e'
+            assert_eq!(&gc_string + seg_index(2), Some(vp_col(2))); // 'l'
+            assert_eq!(&gc_string + seg_index(3), Some(vp_col(3))); // 'l'
+            assert_eq!(&gc_string + seg_index(4), Some(vp_col(4))); // 'o'
 
             // Out of bounds
             assert_eq!(&gc_string + seg_index(5), None);
@@ -597,9 +596,9 @@ mod tests {
         fn test_seg_index_to_col_index_emoji() {
             let gc_string = create_test_string("a😀b");
 
-            assert_eq!(&gc_string + seg_index(0), Some(col(0))); // 'a' at col 0
-            assert_eq!(&gc_string + seg_index(1), Some(col(1))); // '😀' starts at col 1
-            assert_eq!(&gc_string + seg_index(2), Some(col(3))); // 'b' at col 3
+            assert_eq!(&gc_string + seg_index(0), Some(vp_col(0))); // 'a' at col 0
+            assert_eq!(&gc_string + seg_index(1), Some(vp_col(1))); // '😀' starts at col 1
+            assert_eq!(&gc_string + seg_index(2), Some(vp_col(3))); // 'b' at col 3
 
             // Out of bounds
             assert_eq!(&gc_string + seg_index(3), None);
@@ -611,7 +610,7 @@ mod tests {
 
             // All conversions should return None for empty string
             assert_eq!(&gc_string + byte_index(0), None);
-            assert_eq!(&gc_string + col(0), None);
+            assert_eq!(&gc_string + vp_col(0), None);
             assert_eq!(&gc_string + seg_index(0), None);
         }
 
@@ -628,12 +627,12 @@ mod tests {
             assert_eq!(&gc_string + byte_index(8), None); // Out of bounds
 
             // Both columns should map to the same segment
-            assert_eq!(&gc_string + col(0), Some(seg_index(0)));
-            assert_eq!(&gc_string + col(1), Some(seg_index(0)));
-            assert_eq!(&gc_string + col(2), None); // Out of bounds
+            assert_eq!(&gc_string + vp_col(0), Some(seg_index(0)));
+            assert_eq!(&gc_string + vp_col(1), Some(seg_index(0)));
+            assert_eq!(&gc_string + vp_col(2), None); // Out of bounds
 
             // Segment 0 should start at column 0
-            assert_eq!(&gc_string + seg_index(0), Some(col(0)));
+            assert_eq!(&gc_string + seg_index(0), Some(vp_col(0)));
             assert_eq!(&gc_string + seg_index(1), None); // Out of bounds
         }
     }
@@ -647,16 +646,16 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Truncate to fit within 5 columns
-            assert_eq!(gc_string.trunc_end_to_fit(width(5)), "hello");
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(5)), "hello");
 
             // Truncate to fit within 11 columns (exact fit)
-            assert_eq!(gc_string.trunc_end_to_fit(width(11)), "hello world");
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(11)), "hello world");
 
             // Truncate to fit within 15 columns (no truncation needed)
-            assert_eq!(gc_string.trunc_end_to_fit(width(15)), "hello world");
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(15)), "hello world");
 
             // Truncate to fit within 0 columns
-            assert_eq!(gc_string.trunc_end_to_fit(width(0)), "");
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(0)), "");
         }
 
         #[test]
@@ -664,10 +663,10 @@ mod tests {
             let gc_string = create_test_string("a😀b😎c");
             // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
 
-            assert_eq!(gc_string.trunc_end_to_fit(width(3)), "a😀"); // Stops at emoji boundary
-            assert_eq!(gc_string.trunc_end_to_fit(width(4)), "a😀b"); // Includes single char
-            assert_eq!(gc_string.trunc_end_to_fit(width(6)), "a😀b😎"); // Stops before final char
-            assert_eq!(gc_string.trunc_end_to_fit(width(7)), "a😀b😎c"); // Full string
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(3)), "a😀"); // Stops at emoji boundary
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(4)), "a😀b"); // Includes single char
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(6)), "a😀b😎"); // Stops before final char
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(7)), "a😀b😎c"); // Full string
         }
 
         #[test]
@@ -675,22 +674,22 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Remove 0 columns (no truncation) - special case
-            assert_eq!(gc_string.trunc_end_by(width(0)), "hello worl");
+            assert_eq!(gc_string.trunc_end_by(vp_width(0)), "hello worl");
 
             // Remove 1 column from end ('d')
-            assert_eq!(gc_string.trunc_end_by(width(1)), "hello worl");
+            assert_eq!(gc_string.trunc_end_by(vp_width(1)), "hello worl");
 
             // Remove 5 columns from end ("world")
-            assert_eq!(gc_string.trunc_end_by(width(5)), "hello ");
+            assert_eq!(gc_string.trunc_end_by(vp_width(5)), "hello ");
 
             // Remove 6 columns from end (" world")
-            assert_eq!(gc_string.trunc_end_by(width(6)), "hello");
+            assert_eq!(gc_string.trunc_end_by(vp_width(6)), "hello");
 
             // Remove all columns
-            assert_eq!(gc_string.trunc_end_by(width(11)), "");
+            assert_eq!(gc_string.trunc_end_by(vp_width(11)), "");
 
             // Remove more than available (should return empty)
-            assert_eq!(gc_string.trunc_end_by(width(15)), "");
+            assert_eq!(gc_string.trunc_end_by(vp_width(15)), "");
         }
 
         #[test]
@@ -699,24 +698,24 @@ mod tests {
             // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
 
             // Remove 1 column from end ('c')
-            assert_eq!(gc_string.trunc_end_by(width(1)), "a😀b😎");
+            assert_eq!(gc_string.trunc_end_by(vp_width(1)), "a😀b😎");
 
             // Remove 3 columns from end ('c' + '😎')
-            assert_eq!(gc_string.trunc_end_by(width(3)), "a😀b");
+            assert_eq!(gc_string.trunc_end_by(vp_width(3)), "a😀b");
 
             // Remove 4 columns from end
-            assert_eq!(gc_string.trunc_end_by(width(4)), "a😀");
+            assert_eq!(gc_string.trunc_end_by(vp_width(4)), "a😀");
 
             // Remove all columns
-            assert_eq!(gc_string.trunc_end_by(width(7)), "");
+            assert_eq!(gc_string.trunc_end_by(vp_width(7)), "");
         }
 
         #[test]
         fn test_trunc_end_empty_string() {
             let gc_string = create_test_string("");
 
-            assert_eq!(gc_string.trunc_end_to_fit(width(5)), "");
-            assert_eq!(gc_string.trunc_end_by(width(5)), "");
+            assert_eq!(gc_string.trunc_end_to_fit(vp_width(5)), "");
+            assert_eq!(gc_string.trunc_end_by(vp_width(5)), "");
         }
     }
 
@@ -729,19 +728,19 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Skip 0 columns (no truncation)
-            assert_eq!(gc_string.trunc_start_by(width(0)), "hello world");
+            assert_eq!(gc_string.trunc_start_by(vp_width(0)), "hello world");
 
             // Skip 5 columns from start
-            assert_eq!(gc_string.trunc_start_by(width(5)), " world");
+            assert_eq!(gc_string.trunc_start_by(vp_width(5)), " world");
 
             // Skip 6 columns from start
-            assert_eq!(gc_string.trunc_start_by(width(6)), "world");
+            assert_eq!(gc_string.trunc_start_by(vp_width(6)), "world");
 
             // Skip all columns
-            assert_eq!(gc_string.trunc_start_by(width(11)), "");
+            assert_eq!(gc_string.trunc_start_by(vp_width(11)), "");
 
             // Skip more than available
-            assert_eq!(gc_string.trunc_start_by(width(15)), "");
+            assert_eq!(gc_string.trunc_start_by(vp_width(15)), "");
         }
 
         #[test]
@@ -750,27 +749,27 @@ mod tests {
             // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
 
             // Skip 1 column ('a')
-            assert_eq!(gc_string.trunc_start_by(width(1)), "😀b😎c");
+            assert_eq!(gc_string.trunc_start_by(vp_width(1)), "😀b😎c");
 
             // Skip 3 columns ('a' + '😀')
-            assert_eq!(gc_string.trunc_start_by(width(3)), "b😎c");
+            assert_eq!(gc_string.trunc_start_by(vp_width(3)), "b😎c");
 
             // Skip 4 columns ('a' + '😀' + 'b')
-            assert_eq!(gc_string.trunc_start_by(width(4)), "😎c");
+            assert_eq!(gc_string.trunc_start_by(vp_width(4)), "😎c");
 
             // Skip 6 columns ('a' + '😀' + 'b' + '😎')
-            assert_eq!(gc_string.trunc_start_by(width(6)), "c");
+            assert_eq!(gc_string.trunc_start_by(vp_width(6)), "c");
 
             // Skip all columns
-            assert_eq!(gc_string.trunc_start_by(width(7)), "");
+            assert_eq!(gc_string.trunc_start_by(vp_width(7)), "");
         }
 
         #[test]
         fn test_trunc_start_empty_string() {
             let gc_string = create_test_string("");
 
-            assert_eq!(gc_string.trunc_start_by(width(0)), "");
-            assert_eq!(gc_string.trunc_start_by(width(5)), "");
+            assert_eq!(gc_string.trunc_start_by(vp_width(0)), "");
+            assert_eq!(gc_string.trunc_start_by(vp_width(5)), "");
         }
     }
 
@@ -783,7 +782,7 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // String is already 5 columns, no padding needed
-            let result = gc_string.pad_end_to_fit(" ", width(5));
+            let result = gc_string.pad_end_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "hello");
         }
 
@@ -792,11 +791,11 @@ mod tests {
             let gc_string = create_test_string("hi");
 
             // Pad to 5 columns with spaces
-            let result = gc_string.pad_end_to_fit(" ", width(5));
+            let result = gc_string.pad_end_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "hi   ");
 
             // Pad to 5 columns with dots
-            let result = gc_string.pad_end_to_fit(".", width(5));
+            let result = gc_string.pad_end_to_fit(".", vp_width(5));
             assert_eq!(result.as_str(), "hi...");
         }
 
@@ -805,7 +804,7 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // String is already 5 columns, no padding needed
-            let result = gc_string.pad_start_to_fit(" ", width(5));
+            let result = gc_string.pad_start_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "hello");
         }
 
@@ -814,11 +813,11 @@ mod tests {
             let gc_string = create_test_string("hi");
 
             // Pad to 5 columns with spaces
-            let result = gc_string.pad_start_to_fit(" ", width(5));
+            let result = gc_string.pad_start_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "   hi");
 
             // Pad to 5 columns with dots
-            let result = gc_string.pad_start_to_fit(".", width(5));
+            let result = gc_string.pad_start_to_fit(".", vp_width(5));
             assert_eq!(result.as_str(), "...hi");
         }
 
@@ -827,11 +826,11 @@ mod tests {
             let gc_string = create_test_string("😀"); // 2 columns wide
 
             // Pad end to 5 columns
-            let result = gc_string.pad_end_to_fit(" ", width(5));
+            let result = gc_string.pad_end_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "😀   ");
 
             // Pad start to 5 columns
-            let result = gc_string.pad_start_to_fit(" ", width(5));
+            let result = gc_string.pad_start_to_fit(" ", vp_width(5));
             assert_eq!(result.as_str(), "   😀");
         }
 
@@ -840,10 +839,16 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // String is already 5 columns, no padding needed
-            assert_eq!(gc_string.try_get_postfix_padding_for(" ", width(5)), None);
+            assert_eq!(
+                gc_string.try_get_postfix_padding_for(" ", vp_width(5)),
+                None
+            );
 
             // String is wider than requested width
-            assert_eq!(gc_string.try_get_postfix_padding_for(" ", width(3)), None);
+            assert_eq!(
+                gc_string.try_get_postfix_padding_for(" ", vp_width(3)),
+                None
+            );
         }
 
         #[test]
@@ -851,14 +856,14 @@ mod tests {
             let gc_string = create_test_string("hi");
 
             // Need 3 spaces to pad to 5 columns
-            let result = gc_string.try_get_postfix_padding_for(" ", width(5));
+            let result = gc_string.try_get_postfix_padding_for(" ", vp_width(5));
             assert!(result.is_some());
-            assert_eq!(result.unwrap().as_str(), "   ");
+            assert_eq!(result.expect("conversion error").as_str(), "   ");
 
             // Need 3 dots to pad to 5 columns
-            let result = gc_string.try_get_postfix_padding_for(".", width(5));
+            let result = gc_string.try_get_postfix_padding_for(".", vp_width(5));
             assert!(result.is_some());
-            assert_eq!(result.unwrap().as_str(), "...");
+            assert_eq!(result.expect("conversion error").as_str(), "...");
         }
 
         #[test]
@@ -866,15 +871,15 @@ mod tests {
             let gc_string = create_test_string("");
 
             // Pad empty string to 3 columns
-            let result = gc_string.pad_end_to_fit(" ", width(3));
+            let result = gc_string.pad_end_to_fit(" ", vp_width(3));
             assert_eq!(result.as_str(), "   ");
 
-            let result = gc_string.pad_start_to_fit(" ", width(3));
+            let result = gc_string.pad_start_to_fit(" ", vp_width(3));
             assert_eq!(result.as_str(), "   ");
 
-            let result = gc_string.try_get_postfix_padding_for(" ", width(3));
+            let result = gc_string.try_get_postfix_padding_for(" ", vp_width(3));
             assert!(result.is_some());
-            assert_eq!(result.unwrap().as_str(), "   ");
+            assert_eq!(result.expect("conversion error").as_str(), "   ");
         }
     }
 
@@ -887,13 +892,13 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Clip from start, take 5 columns
-            assert_eq!(gc_string.clip(col(0), width(5)), "hello");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(5)), "hello");
 
             // Clip from start, take all columns
-            assert_eq!(gc_string.clip(col(0), width(11)), "hello world");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(11)), "hello world");
 
             // Clip from start, take more than available
-            assert_eq!(gc_string.clip(col(0), width(15)), "hello world");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(15)), "hello world");
         }
 
         #[test]
@@ -901,13 +906,13 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Clip starting at column 6, take 5 columns
-            assert_eq!(gc_string.clip(col(6), width(5)), "world");
+            assert_eq!(gc_string.clip(c_col(6), vp_width(5)), "world");
 
             // Clip starting at column 3, take 4 columns
-            assert_eq!(gc_string.clip(col(3), width(4)), "lo w");
+            assert_eq!(gc_string.clip(c_col(3), vp_width(4)), "lo w");
 
             // Clip starting at column 6, take 3 columns
-            assert_eq!(gc_string.clip(col(6), width(3)), "wor");
+            assert_eq!(gc_string.clip(c_col(6), vp_width(3)), "wor");
         }
 
         #[test]
@@ -916,19 +921,19 @@ mod tests {
             // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
 
             // Clip from start, take 3 columns
-            assert_eq!(gc_string.clip(col(0), width(3)), "a😀");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(3)), "a😀");
 
             // Clip from column 1 (start of emoji), take 3 columns
-            assert_eq!(gc_string.clip(col(1), width(3)), "😀b");
+            assert_eq!(gc_string.clip(c_col(1), vp_width(3)), "😀b");
 
             // Clip from column 3, take 3 columns
-            assert_eq!(gc_string.clip(col(3), width(3)), "b😎");
+            assert_eq!(gc_string.clip(c_col(3), vp_width(3)), "b😎");
 
             // Clip from column 4 (middle of second emoji), take 2 columns
-            assert_eq!(gc_string.clip(col(4), width(2)), "😎");
+            assert_eq!(gc_string.clip(c_col(4), vp_width(2)), "😎");
 
             // Clip from column 6, take 2 columns (only 1 available)
-            assert_eq!(gc_string.clip(col(6), width(2)), "c");
+            assert_eq!(gc_string.clip(c_col(6), vp_width(2)), "c");
         }
 
         #[test]
@@ -936,8 +941,8 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // Clip with zero width should return empty string
-            assert_eq!(gc_string.clip(col(0), width(0)), "");
-            assert_eq!(gc_string.clip(col(2), width(0)), "");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(0)), "");
+            assert_eq!(gc_string.clip(c_col(2), vp_width(0)), "");
         }
 
         #[test]
@@ -945,18 +950,18 @@ mod tests {
             let gc_string = create_test_string("hello");
 
             // Start clipping beyond string end
-            assert_eq!(gc_string.clip(col(10), width(5)), "");
+            assert_eq!(gc_string.clip(c_col(10), vp_width(5)), "");
 
             // Start clipping at string end
-            assert_eq!(gc_string.clip(col(5), width(5)), "");
+            assert_eq!(gc_string.clip(c_col(5), vp_width(5)), "");
         }
 
         #[test]
         fn test_clip_empty_string() {
             let gc_string = create_test_string("");
 
-            assert_eq!(gc_string.clip(col(0), width(5)), "");
-            assert_eq!(gc_string.clip(col(3), width(2)), "");
+            assert_eq!(gc_string.clip(c_col(0), vp_width(5)), "");
+            assert_eq!(gc_string.clip(c_col(3), vp_width(2)), "");
         }
 
         #[test]
@@ -965,7 +970,7 @@ mod tests {
             // Complex emojis with varying widths
 
             // Should handle complex unicode correctly
-            let result = gc_string.clip(col(0), width(2));
+            let result = gc_string.clip(c_col(0), vp_width(2));
             assert_eq!(result, "🙏🏽");
         }
     }
@@ -979,20 +984,20 @@ mod tests {
             let gc_string = create_test_string("hello world");
 
             // Find segment at column 6
-            let seg_opt = &gc_string + col(6);
+            let seg_opt = &gc_string + vp_col(6);
             assert!(seg_opt.is_some());
-            let seg_idx = seg_opt.unwrap();
+            let seg_idx = seg_opt.expect("conversion error");
 
             // Convert back to column
             let col_opt = &gc_string + seg_idx;
             assert!(col_opt.is_some());
-            let col_idx = col_opt.unwrap();
+            let col_idx = col_opt.expect("conversion error");
 
             // Should be at column 6 (start of 'w' in "world")
-            assert_eq!(col_idx, col(6));
+            assert_eq!(col_idx, vp_col(6));
 
             // Clipping from that position should give expected result
-            assert_eq!(gc_string.clip(col_idx, width(5)), "world");
+            assert_eq!(gc_string.clip(c_col(col_idx.as_usize()), vp_width(5)), "world");
         }
 
         #[test]
@@ -1000,14 +1005,14 @@ mod tests {
             let gc_string = create_test_string("hi");
 
             // Pad to 10 columns
-            let padded = gc_string.pad_end_to_fit(" ", width(10));
+            let padded = gc_string.pad_end_to_fit(" ", vp_width(10));
             let padded_gc = create_test_string(padded.as_str());
 
             // Clip first 5 columns
-            assert_eq!(padded_gc.clip(col(0), width(5)), "hi   ");
+            assert_eq!(padded_gc.clip(c_col(0), vp_width(5)), "hi   ");
 
             // Clip last 5 columns
-            assert_eq!(padded_gc.clip(col(5), width(5)), "     ");
+            assert_eq!(padded_gc.clip(c_col(5), vp_width(5)), "     ");
         }
 
         #[test]
@@ -1015,16 +1020,16 @@ mod tests {
             let gc_string = create_test_string("hello world test");
 
             // Truncate to fit 10 columns
-            let truncated_str = gc_string.trunc_end_to_fit(width(10));
+            let truncated_str = gc_string.trunc_end_to_fit(vp_width(10));
             let truncated_gc = create_test_string(truncated_str);
 
             // Should be "hello worl"
             assert_eq!(truncated_str, "hello worl");
 
             // Test conversion on truncated string
-            assert_eq!(&truncated_gc + col(0), Some(seg_index(0))); // 'h'
-            assert_eq!(&truncated_gc + col(9), Some(seg_index(9))); // 'l'
-            assert_eq!(&truncated_gc + col(10), None); // Beyond end
+            assert_eq!(&truncated_gc + vp_col(0), Some(seg_index(0))); // 'h'
+            assert_eq!(&truncated_gc + vp_col(9), Some(seg_index(9))); // 'l'
+            assert_eq!(&truncated_gc + vp_col(10), None); // Beyond end
         }
     }
 }

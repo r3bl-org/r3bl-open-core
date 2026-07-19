@@ -205,7 +205,8 @@ mod tests {
         let input = "```bash\npip install foobar\n````";
         let lang = "bash";
         let code_lines = vec!["pip install foobar"];
-        let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
+        let (remainder, code_block_lines) =
+            parse_fenced_code_block(input).expect("conversion error");
         assert_eq2!(remainder, "`");
         assert_eq2!(
             code_block_lines,
@@ -316,7 +317,8 @@ mod tests {
             let code_lines = vec!["pip install foobar"];
             let input = ["```bash", "pip install foobar", "```", ""].join("\n");
             println!("{input:#?}");
-            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(&input).expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -329,7 +331,8 @@ mod tests {
             let lang = "bash";
             let code_lines = vec![];
             let input = ["```bash", "```", ""].join("\n");
-            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(&input).expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -342,7 +345,8 @@ mod tests {
             let lang = "bash";
             let code_lines = vec![""];
             let input = ["```bash", "", "```", ""].join("\n");
-            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(&input).expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -374,7 +378,8 @@ mod tests {
                 "",
             ]
             .join("\n");
-            let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(&input).expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -388,7 +393,8 @@ mod tests {
         let lang = None;
         let code_lines = vec!["pip install foobar"];
         let input = ["```", "pip install foobar", "```", ""].join("\n");
-        let (remainder, code_block_lines) = parse_fenced_code_block(&input).unwrap();
+        let (remainder, code_block_lines) =
+            parse_fenced_code_block(&input).expect("conversion error");
         assert_eq2!(remainder, "");
         assert_eq2!(
             code_block_lines,
@@ -403,7 +409,8 @@ mod tests {
             let lang = "python";
             let code_lines = vec!["import foo", "bar()"];
             let input = "```python\nimport foo\nbar()\n```\n\0\0\0";
-            let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(input).expect("conversion error");
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -416,7 +423,8 @@ mod tests {
             let lang = "bash";
             let code_lines = vec!["pip install foobar"];
             let input = "```bash\npip install foobar\n```\0\0\0\nNext line";
-            let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
+            let (remainder, code_block_lines) =
+                parse_fenced_code_block(input).expect("conversion error");
             assert_eq2!(remainder, "\0\0\0\nNext line");
             assert_eq2!(
                 code_block_lines,

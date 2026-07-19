@@ -85,10 +85,10 @@ mod tests {
 
     #[test]
     fn test_parse_header_tag() {
-        assert_eq2!(parse_heading_tag("# "), Ok(("", 1.into())));
-        assert_eq2!(parse_heading_tag("### "), Ok(("", 3.into())));
-        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
-        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
+        assert_eq2!(parse_heading_tag("# "), Ok(("", 1usize.into())));
+        assert_eq2!(parse_heading_tag("### "), Ok(("", 3usize.into())));
+        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1usize.into())));
+        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1usize.into())));
         assert_eq2!(
             parse_heading_tag(" "),
             Err(NomErr::Error(Error {
@@ -103,7 +103,7 @@ mod tests {
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq2!(parse_heading_tag("####### "), Ok(("", 7.into())));
+        assert_eq2!(parse_heading_tag("####### "), Ok(("", 7usize.into())));
     }
 
     #[test]
@@ -113,7 +113,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    level: 1usize.into(),
                     text: "h1",
                 }
             ))
@@ -123,7 +123,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 2.into(),
+                    level: 2usize.into(),
                     text: "h2",
                 }
             ))
@@ -133,7 +133,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 3.into(),
+                    level: 3usize.into(),
                     text: " h3",
                 }
             ))
@@ -143,7 +143,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 3.into(),
+                    level: 3usize.into(),
                     text: "h3 *foo* **bar**",
                 }
             ))
@@ -196,7 +196,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    level: 1usize.into(),
                     text: "test",
                 }
             ))
@@ -211,7 +211,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    level: 1usize.into(),
                     text: "test",
                 }
             ))
@@ -223,7 +223,7 @@ mod tests {
             Ok((
                 "\0\0\0",
                 HeadingData {
-                    level: 1.into(),
+                    level: 1usize.into(),
                     text: "test",
                 }
             ))

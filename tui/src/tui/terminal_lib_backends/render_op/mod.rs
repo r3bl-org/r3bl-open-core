@@ -81,7 +81,7 @@
 //!
 //! The [`RenderOpCommonExt`] trait provides factory methods for common operations,
 //! available on both IR and Output types. This avoids repetitive wrapping like
-//! `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))` in favor of
+//! `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos.into()))` in favor of
 //! `RenderOpIR::move_cursor(pos)`.
 //!
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture

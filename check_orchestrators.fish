@@ -389,6 +389,7 @@ function run_full_checks
     set -l result_check 0
     set -l result_build 0
     set -l result_clippy 0
+    set -l result_fmt 0
     set -l result_cargo_test 0
     set -l result_doctest 0
     set -l result_docs 0
@@ -403,20 +404,23 @@ function run_full_checks
     run_check_with_recovery check_clippy "clippy"
     set result_clippy $status
 
+    run_check_with_recovery check_cargo_fmt_changed "formatting"
+    set result_fmt $status
+
     run_check_with_recovery check_cargo_test "tests"
     set result_cargo_test $status
 
     run_check_with_recovery check_doctests "doctests"
     set result_doctest $status
 
-    # Format rustdoc comments on changed files before building docs.
-    run_rustdoc_fmt
-
     run_check_with_recovery check_docs_full "doc build"
     set result_docs $status
 
     run_check_with_recovery check_windows_build "windows build"
     set result_windows $status
+
+    run_check_with_recovery check_star_history "star-history"
+    set -l result_star_history $status
 
     # Check external URLs in changed files for link rot (non-recoverable).
     # Ensure lychee is installed before the check. This runs outside
@@ -435,14 +439,15 @@ function run_full_checks
 
     # Aggregate: return 2 if ANY recoverable error, then 1 if ANY failure, else 0
     if test $result_check -eq 2 || test $result_build -eq 2 || test $result_clippy -eq 2 || \
-       test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2 || \
-       test $result_windows -eq 2
+       test $result_fmt -eq 2 || test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || \
+       test $result_docs -eq 2 || test $result_windows -eq 2 || test $result_star_history -eq 2
         return 2
     end
 
     if test $result_check -ne 0 || test $result_build -ne 0 || test $result_clippy -ne 0 || \
-       test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0 || \
-       test $result_windows -ne 0 || test $result_lychee -ne 0
+       test $result_fmt -ne 0 || test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || \
+       test $result_docs -ne 0 || test $result_windows -ne 0 || test $result_lychee -ne 0 || \
+       test $result_star_history -ne 0
         return 1
     end
 

@@ -62,7 +62,7 @@ impl HasFocus {
             self.id_vec.push(id);
         } else {
             #[allow(clippy::unwrap_used, reason = "Vec is empty checked above")]
-            let it = self.id_vec.last_mut().unwrap();
+            let it = self.id_vec.last_mut().expect("conversion error");
             *it = id;
         }
     }
@@ -80,7 +80,7 @@ impl HasFocus {
             false
         } else {
             #[allow(clippy::unwrap_used, reason = "Vec is empty checked above")]
-            let it = self.id_vec.last().unwrap();
+            let it = self.id_vec.last().expect("conversion error");
             *it == id
         }
     }
@@ -192,16 +192,17 @@ mod has_focus_tests {
 
         let my_err_box = has_focus
             .try_set_modal_id(FlexBoxId::from(1))
-            .err()
-            .unwrap();
+            .expect_err("conversion error");
         assert_eq2!(my_err_box.is::<CommonError>(), true);
 
-        let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();
+        let my_err = my_err_box
+            .downcast_ref::<CommonError>()
+            .expect("conversion error");
         let CommonError {
             error_message: msg, ..
         } = my_err;
         assert_eq2!(
-            msg.as_ref().unwrap(),
+            msg.as_ref().expect("conversion error"),
             "Modal id can only be set if id is already set. id is not set."
         );
 

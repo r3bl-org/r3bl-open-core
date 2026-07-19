@@ -71,24 +71,24 @@
 //! ```text
 //! [`VT-100`] Wire Format    →    1-based Types    →    0-based Indices
 //! ──────────────────────         ──────────────        ───────────────
-//! ESC [5;10H                     TermRow(5)            RowIndex(4)
-//!                                TermCol(10)           ColIndex(9)
+//! ESC [5;10H                     TermRow(5)            VPRow(4)
+//!                                TermCol(10)           VPCol(9)
 //! ```
 //!
 //! Conversion flow:
 //! 1. [`extract_nth_single_non_zero()`] → [`NonZeroU16`] (>= 1)
 //! 2. [`TermRow::from_raw_non_zero_value()`] → 1-based coordinate
-//! 3. [`.to_zero_based()`] → 0-based buffer index ([`RowIndex`]/[`ColIndex`])
+//! 3. [`.to_zero_based()`] → 0-based buffer index ([`VPRow`]/[`VPCol`])
 //!
 //! [`.to_zero_based()`]: crate::TermRow::to_zero_based
-//! [`ColIndex`]: crate::ColIndex
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`RowIndex`]: crate::RowIndex
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
 //! [`test_cursor_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`VPCol`]: crate::VPCol
+//! [`VPRow`]: crate::VPRow
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_cursor_ops
 //! [module-level Architecture Overview]: super#architecture-overview
@@ -110,7 +110,7 @@ use vte::Params;
 /// **Implementation**: See [`OfsBufVT100::move_cursor_up`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OfsBufVT100::move_cursor_up`]: crate::OfsBufVT100::move_cursor_up
+/// [`OfsBufVT100::move_cursor_up`]: crate::core::ansi::OfsBufVT100::move_cursor_up
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn move_cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
@@ -128,7 +128,7 @@ pub fn move_cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// **Implementation**: See [`OfsBufVT100::move_cursor_down`] for detailed behavior.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-/// [`OfsBufVT100::move_cursor_down`]: crate::OfsBufVT100::move_cursor_down
+/// [`OfsBufVT100::move_cursor_down`]: crate::core::ansi::OfsBufVT100::move_cursor_down
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn move_cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
@@ -143,7 +143,7 @@ pub fn move_cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) 
 ///
 /// **Implementation**: See [`OfsBufVT100::move_cursor_right`] for detailed behavior.
 ///
-/// [`OfsBufVT100::move_cursor_right`]: crate::OfsBufVT100::move_cursor_right
+/// [`OfsBufVT100::move_cursor_right`]: crate::core::ansi::OfsBufVT100::move_cursor_right
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn move_cursor_right(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
@@ -158,7 +158,7 @@ pub fn move_cursor_right(performer: &mut AnsiToOfsBufPerformer, params: &Params)
 ///
 /// **Implementation**: See [`OfsBufVT100::move_cursor_left`] for detailed behavior.
 ///
-/// [`OfsBufVT100::move_cursor_left`]: crate::OfsBufVT100::move_cursor_left
+/// [`OfsBufVT100::move_cursor_left`]: crate::core::ansi::OfsBufVT100::move_cursor_left
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn move_cursor_left(performer: &mut AnsiToOfsBufPerformer, params: &Params) {

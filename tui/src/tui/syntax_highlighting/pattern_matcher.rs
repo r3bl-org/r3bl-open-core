@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ColIndex, GCStringOwned, col};
+use crate::{CCol, GCStringOwned, c_col};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -20,17 +20,17 @@ pub struct PatternMatcherStateMachine<'a> {
     pattern: &'a str,
     current_index: usize,
     is_finished: bool,
-    maybe_scr_ofs_col_index: Option<ColIndex>,
+    maybe_viewport_origin_col_index: Option<CCol>,
 }
 
 impl<'a> PatternMatcherStateMachine<'a> {
     #[must_use]
-    pub fn new(pattern: &'a str, scroll_offset_col_index: Option<ColIndex>) -> Self {
+    pub fn new(pattern: &'a str, vp_origin_col_index: Option<CCol>) -> Self {
         Self {
             pattern,
             current_index: 0,
             is_finished: false,
-            maybe_scr_ofs_col_index: scroll_offset_col_index,
+            maybe_viewport_origin_col_index: vp_origin_col_index,
         }
     }
 
@@ -42,11 +42,11 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
         // Skip the first "N" characters (these are display cols, so use the unicode
         // width).
-        if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index
-            && scroll_offset_col_index != col(0)
+        if let Some(vp_origin_col_index) = self.maybe_viewport_origin_col_index
+            && vp_origin_col_index != c_col(0)
         {
-            self.maybe_scr_ofs_col_index =
-                (scroll_offset_col_index - character_to_test_width).into();
+            self.maybe_viewport_origin_col_index =
+                Some(vp_origin_col_index - character_to_test_width);
             return CharacterMatchResult::Skip;
         }
 
@@ -84,7 +84,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, ch};
+    use crate::{assert_eq2, vp_width};
 
     #[test]
     fn test_with_emoji() {
@@ -119,18 +119,20 @@ mod tests {
             );
         }
 
-        let scroll_offset_col_index = *(GCStringOwned::width_char('😃')
+        let prefix_width = GCStringOwned::width_char('😃')
             + GCStringOwned::width_char('m')
             + GCStringOwned::width_char('o')
             + GCStringOwned::width_char('n')
             + GCStringOwned::width_char('k')
             + GCStringOwned::width_char('e')
-            + GCStringOwned::width_char('y'));
-        assert_eq2!(scroll_offset_col_index, ch(8));
+            + GCStringOwned::width_char('y');
+        assert_eq2!(prefix_width, vp_width(8));
+
+        let origin_col = c_col(0) + prefix_width;
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(
             my_pattern,
-            col(scroll_offset_col_index).into(),
+            Some(origin_col),
         );
         let mut result = String::new();
 
@@ -170,12 +172,12 @@ mod tests {
     ///   C01234567890
     /// ```
     #[test]
-    fn matches_occurrence_after_scroll_offset() {
+    fn matches_occurrence_after_vp_origin() {
         let my_line = "abcabcdabcd";
         let my_pattern = "abcd";
 
         let mut pattern_matcher =
-            PatternMatcherStateMachine::new(my_pattern, Some(col(4)));
+            PatternMatcherStateMachine::new(my_pattern, Some(c_col(4)));
 
         let mut result = String::new();
         let mut final_index = 0;

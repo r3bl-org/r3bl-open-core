@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{inline_string, ok};
-use crate::{InlineString, SCRIPT_MOD_DEBUG};
+use crate::{InlineString, SCRIPT_MOD_DEBUG, inline_string, ok};
 use miette::IntoDiagnostic;
 use std::{env, path::Path};
 use strum_macros::{Display, EnumString};
@@ -90,13 +89,13 @@ mod tests_environment {
 
     #[test]
     fn test_try_get_path_from_env() {
-        let path = try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).expect("conversion error");
         assert!(!path.is_empty());
     }
 
     #[test]
     fn test_try_get() {
-        let path = try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).expect("conversion error");
         assert!(!path.is_empty());
     }
 
@@ -109,14 +108,14 @@ mod tests_environment {
 
     #[test]
     fn test_get_path() {
-        let path = try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).expect("conversion error");
         assert!(!path.is_empty());
     }
 
     #[test]
     fn test_get_path_prefixed() {
         let prefix_path = "/usr/bin";
-        let path = try_get_path_prefixed(prefix_path).unwrap();
+        let path = try_get_path_prefixed(prefix_path).expect("conversion error");
         assert!(!path.is_empty());
         assert!(path.starts_with(prefix_path));
     }

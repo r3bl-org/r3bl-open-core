@@ -545,7 +545,7 @@ checksum = "9455f470ea0c7d50c3fe3d22389c3a482f38a9f5fbab1c8ee368121356c56718"
 dependencies = [
  "copypasta",
  "libc",
- "which",
+ "which 4.4.2",
  "x11-clipboard",
 ]
 
@@ -1066,6 +1066,20 @@ name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+
+[[package]]
+name = "hdrhistogram"
+version = "7.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f49d1053f4708f0af3cf9fc5bffc7e68a914a3c45becb231c80068c9c3f78bea"
+dependencies = [
+ "base64",
+ "byteorder",
+ "crossbeam-channel",
+ "flate2",
+ "nom",
+ "num-traits",
+]
 
 [[package]]
 name = "heck"
@@ -2254,7 +2268,9 @@ dependencies = [
  "pulldown-cmark-to-cmark",
  "r3bl_tui",
  "regex",
+ "rustc-hash",
  "serde",
+ "serde_json",
  "tempfile",
  "test-case",
  "tokio",
@@ -2276,6 +2292,7 @@ dependencies = [
  "r3bl_analytics_schema",
  "r3bl_tui",
  "reqwest",
+ "rustc-hash",
  "serde",
  "serde_json",
  "serial_test",
@@ -2284,6 +2301,20 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-core",
+]
+
+[[package]]
+name = "r3bl-rust-analyzer-mcp-server"
+version = "1.1.4"
+dependencies = [
+ "clap",
+ "miette",
+ "r3bl_tui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+ "which 6.0.3",
 ]
 
 [[package]]
@@ -2311,6 +2342,7 @@ dependencies = [
  "flate2",
  "futures-core",
  "futures-util",
+ "hdrhistogram",
  "is_ci",
  "kv",
  "miette",
@@ -3817,6 +3849,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "which"
+version = "6.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ee928febd44d98f2f459a4a79bd4d928591333a494a10a868418ac1b39cf1f"
+dependencies = [
+ "either",
+ "home",
+ "rustix 0.38.44",
+ "winsafe",
+]
+
+[[package]]
 name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4195,6 +4239,12 @@ checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "winsafe"
+version = "0.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d135d17ab770252ad95e9a872d365cf3090e3be864a34ab46f48555993efc904"
 
 [[package]]
 name = "wit-bindgen"

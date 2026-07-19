@@ -51,9 +51,9 @@
 //! - `CSI 1 K`: Clear from the beginning of the line to the cursor.
 //! - `CSI 2 K`: Clear the entire line.
 //!
-//! [`csi_dispatch`]: crate::AnsiToOfsBufPerformer#method.csi_dispatch
+//! [`csi_dispatch`]: crate::core::ansi::AnsiToOfsBufPerformer#method.csi_dispatch
 //! [`CSI`]: crate::CsiSequence
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 //! [module-level Architecture Overview]: super#architecture-overview
@@ -78,11 +78,11 @@ use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
 /// [`OfsBufVT100::erase_display_entire`] for the implementations of this shim.
 ///
 /// [`OfsBufVT100::erase_display_entire`]:
-///     crate::OfsBufVT100::erase_display_entire
+///     crate::core::ansi::OfsBufVT100::erase_display_entire
 /// [`OfsBufVT100::erase_display_from_cursor_to_end`]:
-///     crate::OfsBufVT100::erase_display_from_cursor_to_end
+///     crate::core::ansi::OfsBufVT100::erase_display_from_cursor_to_end
 /// [`OfsBufVT100::erase_display_from_start_to_cursor`]:
-///     crate::OfsBufVT100::erase_display_from_start_to_cursor
+///     crate::core::ansi::OfsBufVT100::erase_display_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn clear_canvas(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -129,11 +129,11 @@ pub fn clear_canvas(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [`OfsBufVT100::erase_line_from_start_to_cursor`], and
 /// [`OfsBufVT100::erase_line_entire`] for the implementations of this shim.
 ///
-/// [`OfsBufVT100::erase_line_entire`]: crate::OfsBufVT100::erase_line_entire
+/// [`OfsBufVT100::erase_line_entire`]: crate::core::ansi::OfsBufVT100::erase_line_entire
 /// [`OfsBufVT100::erase_line_from_cursor_to_end`]:
-///     crate::OfsBufVT100::erase_line_from_cursor_to_end
+///     crate::core::ansi::OfsBufVT100::erase_line_from_cursor_to_end
 /// [`OfsBufVT100::erase_line_from_start_to_cursor`]:
-///     crate::OfsBufVT100::erase_line_from_start_to_cursor
+///     crate::core::ansi::OfsBufVT100::erase_line_from_start_to_cursor
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn clear_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {

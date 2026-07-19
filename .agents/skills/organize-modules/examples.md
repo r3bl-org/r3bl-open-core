@@ -606,7 +606,7 @@ $ cargo test
 
 ### Key Insight
 
-The `doc` cfg flag doesn't override other conditions—it's just another flag you can check. Use
+The `doc` cfg flag doesn't override other conditions: it's just another flag you can check. Use
 `any()` to make it an **alternative path**:
 
 | Pattern | Meaning | Docs on macOS? |
@@ -621,7 +621,7 @@ module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`, `std::os
 you must restrict doc builds to Unix platforms where the dependencies exist:
 
 ```rust
-// Module uses Unix-only APIs — dependencies in Cargo.toml are cfg(unix).
+// Module uses Unix-only APIs: dependencies in Cargo.toml are cfg(unix).
 // Doc builds are restricted to Unix (macOS/Linux); Windows excludes this module.
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod input;

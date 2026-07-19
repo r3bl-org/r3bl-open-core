@@ -11,8 +11,8 @@ authors = [
     "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-build-infra"
-description = "Cargo subcommands that automate tedious parts of Rust development. cargo-rustdoc-fmt: format markdown tables and convert inline links to reference-style in rustdoc comments. Workspace-aware, git integration (changed/staged files), CI check mode. Modular library API for programmatic use."
-keywords = ["rustdoc", "markdown", "formatting", "cargo", "table"]
+description = "Developer tools and utilities for R3BL projects. cargo-rustdoc-fmt: format markdown tables and convert inline links to reference-style in rustdoc comments."
+keywords = ["rustdoc", "markdown", "formatting"]
 categories = ["development-tools", "command-line-utilities"]
 
 # https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
@@ -45,9 +45,11 @@ clap = { version = "4.5.51", features = ["derive"] }
 miette = { version = "7.6.0", features = ["fancy"] }
 regex = "1.12"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
 json5 = "1.3"
 walkdir = "2.5"
 unicode-width = "0.2"
+rustc-hash = "2.1.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

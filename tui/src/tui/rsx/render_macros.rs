@@ -18,7 +18,7 @@ macro_rules! render_component_in_current_box {
         );
 
         if let Some(component_ref) = maybe_component_ref {
-            let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
+            let surface_bounds = $arg_surface.bounds;
             let current_box = $arg_surface.current_box()?;
             component_ref.render(
                 $arg_global_data,
@@ -50,7 +50,7 @@ macro_rules! render_component_in_given_box {
         );
 
         if let Some(component_ref) = maybe_component_ref {
-            let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
+            let surface_bounds = $arg_surface.bounds;
             component_ref.render(
                 $arg_global_data,
                 $arg_box,

@@ -55,7 +55,7 @@
 //! │ Stage 4: Backend Converter Layer                │
 //! │ (Render OfsBuf to RenderOpOutput;               │
 //! │  handle diff calculation for selective redraw)  │
-//! │ - OfsBufPaint trait implementation              │
+//! │ - paint_impl module                                                 │
 //! │ - Converts PixelChars to styled text operations │
 //! └────────────────┬────────────────────────────────┘
 //!                  │
@@ -166,7 +166,6 @@
 //! [`direct_to_ansi_paint_render_op_impl`]:
 //!     mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
 //! [`OfsBuf`]: struct@ofs_buf::OfsBuf
-//! [`OfsBufPaint`]: trait@ofs_buf::OfsBufPaint
 //! [`paint_impl`]: mod@ofs_buf::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [`PixelChar`]: enum@ofs_buf::PixelChar

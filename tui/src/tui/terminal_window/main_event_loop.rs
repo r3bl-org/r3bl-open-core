@@ -5,14 +5,15 @@ use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
-            LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool,
-            OutputDevice, PaintMode, RenderOpCommon, RenderOpFlush, RenderOpIR, Size,
-            SufficientSize, TelemetryAtomHint, TerminalModeController,
-            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-            emit_stderr_redirection_disclaimer, glyphs, height, inline_string,
-            new_style, ok, render_pipeline, row,
+            LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool, OutputDevice,
+            PaintMode, PaintRenderOpImplCrossterm, RenderOpCommon, RenderOpFlush,
+            RenderOpIR, SufficientSize, TelemetryAtomHint, TerminalModeController,
+            TerminalWindowMainThreadSignal, TextColorizationPolicy, VPSize,
+            WideningCastToU8, WideningCastToU16, ZOrder, ch,
+            emit_stderr_redirection_disclaimer, glyphs, inline_string, new_style, ok,
+            render_pipeline,
             telemetry::{Telemetry, telemetry_default_constants},
-            telemetry_record, width};
+            telemetry_record, vp_col, vp_height, vp_row, vp_width};
 use smallvec::smallvec;
 use std::{fmt::{Debug, Display},
           marker::PhantomData};
@@ -28,7 +29,7 @@ use tokio::sync::mpsc;
 ///
 /// This function takes pre-initialized components (terminal size, input/output devices)
 /// and runs the actual async event loop. It handles all input events, dispatches them to
-/// the [`crate::App`] for processing, renders the app after each event, and manages all
+/// the [`App`] for processing, renders the app after each event, and manages all
 /// signals sent from the app to the main event loop.
 ///
 /// # Arguments
@@ -142,16 +143,18 @@ use tokio::sync::mpsc;
 /// - **[`Pin`]** is used because `T` is `!Unpin`. It bolts that crate to the floor of the
 ///   heap so it can never be moved to a different heap address.
 ///
-/// [`main_event_loop()`]: crate::TerminalWindow::main_event_loop()
+/// [`App`]: crate::tui::App
+/// [`main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop()
 /// [`Pin<Box<T>>`]: std::boxed::Box::pin
 /// [`Pin`]: std::pin::Pin
 /// [`select!`]: tokio::select
+/// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`Unpin`]: std::marker::Unpin
 pub fn main_event_loop_impl<S, AS>(
     app: BoxedSafeApp<S, AS>,
     exit_keys: Vec<InputEvent>,
     state: S,
-    initial_size: Size,
+    initial_size: VPSize,
     input_device: InputDevice,
     output_device: OutputDevice,
 ) -> MainEventLoopFuture<S, AS>
@@ -220,7 +223,7 @@ where
     #[allow(clippy::needless_pass_by_value)]
     fn initialize(
         state: S,
-        initial_size: Size,
+        initial_size: VPSize,
         output_device: OutputDevice,
         app: &mut BoxedSafeApp<S, AS>,
     ) -> CommonResult<Self> {
@@ -344,10 +347,8 @@ where
             );
 
             if let Some(ref mut ofs_buf) = self.global_data.maybe_saved_ofs_buf {
-                let mem_used = inline_string!(
-                    "mem used: {size}",
-                    size = ofs_buf.get_mem_size()
-                );
+                let mem_used =
+                    inline_string!("mem used: {size}", size = ofs_buf.get_mem_size());
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(
@@ -556,7 +557,7 @@ fn log_input_event_if_enabled(input_event: &InputEvent) {
 
 /// Handles terminal resize events.
 fn handle_resize_event<S, AS>(
-    new_size: Size,
+    new_size: VPSize,
     event_loop_state: &mut EventLoopState<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     output_device: &OutputDevice,
@@ -659,7 +660,7 @@ fn actually_process_input_event<S, AS>(
 /// 1. Terminal resize event.
 #[allow(clippy::implicit_hasher)]
 pub fn handle_resize<S, AS>(
-    new_size: Size,
+    new_size: VPSize,
     global_data_mut_ref: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
@@ -792,9 +793,10 @@ where
         let window_size = global_data_mut_ref.window_size;
 
         // Check to see if the window_size is large enough to render.
-        let render_result = match window_size
-            .fits_min_size(width(MinSize::Col as u8) + height(MinSize::Row as u8))
-        {
+        let render_result = match window_size.fits_min_size(
+            vp_width(MinSize::Col.as_u16_widening())
+                + vp_height(MinSize::Row.as_u16_widening()),
+        ) {
             SufficientSize::IsLargeEnough => {
                 app.app_render(global_data_mut_ref, component_registry_map, has_focus)
             }
@@ -807,7 +809,7 @@ where
 
         match render_result {
             Err(error) => {
-                let mut painter = crate::PaintRenderOpImplCrossterm {};
+                let mut painter = PaintRenderOpImplCrossterm {};
                 painter.flush(locked_output_device);
 
                 // Print debug message w/ error.
@@ -839,17 +841,20 @@ where
 }
 
 fn render_window_too_small_error<S, AS>(
-    window_size: Size,
+    window_size: VPSize,
     global_data: &mut GlobalData<S, AS>,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
     // Show warning message that window_size is too small.
+    let min_col = MinSize::Col.as_u8_widening();
+    let min_row = MinSize::Row.as_u8_widening();
+
     let msg = inline_string!(
         "Window size is too small. Minimum size is {} cols x {} rows",
-        MinSize::Col as u8,
-        MinSize::Row as u8
+        min_col,
+        min_row
     );
     let msg_gcs = GCStringOwned::from(msg);
     let trunc_msg = msg_gcs.trunc_end_to_fit(window_size);
@@ -857,11 +862,11 @@ fn render_window_too_small_error<S, AS>(
     let trunc_msg_gcs = GCStringOwned::from(trunc_msg);
     let trunc_msg_width = trunc_msg_gcs.display_width;
 
-    let row_pos = row({
+    let row_pos = vp_row({
         let it = window_size.row_height / ch(2);
         *it
     });
-    let col_pos = col({
+    let col_pos = vp_col({
         let it = (window_size.col_width - trunc_msg_width) / ch(2);
         *it
     });

@@ -3,15 +3,16 @@
 #[cfg(test)]
 pub mod mock_real_objects_for_dialog {
     use crate::{DefaultSize, DialogBuffer, DialogEngine, FlexBoxId, GlobalData,
-                HasDialogBuffers, OfsBufPool, OutputDevice, OutputDeviceExt,
-                RenderPipeline, Size, core::test_fixtures::StdoutMock,
+                HasDialogBuffers, HudData, OfsBufPool, OutputDevice, OutputDeviceExt,
+                RenderPipeline, VPSize, core::test_fixtures::StdoutMock,
                 editor::test_fixtures_editor::mock_real_objects_for_editor};
-    use std::{collections::HashMap, fmt::Debug};
+    use rustc_hash::FxHashMap;
+    use std::fmt::Debug;
     use tokio::sync::mpsc;
 
     #[must_use]
     pub fn make_global_data(
-        window_size: Option<Size>,
+        window_size: Option<VPSize>,
     ) -> (GlobalData<State, ()>, StdoutMock) {
         let (main_thread_channel_sender, _) =
             mpsc::channel::<_>(DefaultSize::MainThreadSignalChannelBufferSize.into());
@@ -29,8 +30,8 @@ pub mod mock_real_objects_for_dialog {
             main_thread_channel_sender,
             output_device,
             ofs_buf_pool,
-            hud_data: crate::HudData::default(),
-            memoized_text_widths: HashMap::new(),
+            hud_data: HudData::default(),
+            memoized_text_widths: FxHashMap::default(),
         };
 
         (global_data, stdout_mock)
@@ -38,7 +39,7 @@ pub mod mock_real_objects_for_dialog {
 
     #[derive(Clone, PartialEq, Default, Debug)]
     pub struct State {
-        pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
+        pub dialog_buffers: FxHashMap<FlexBoxId, DialogBuffer>,
     }
 
     impl HasDialogBuffers for State {
@@ -50,7 +51,7 @@ pub mod mock_real_objects_for_dialog {
     #[must_use]
     pub fn create_state() -> State {
         let dialog_buffers = {
-            let mut it = HashMap::new();
+            let mut it = FxHashMap::default();
             it.insert(FlexBoxId::from(0), DialogBuffer::new_empty());
             it
         };

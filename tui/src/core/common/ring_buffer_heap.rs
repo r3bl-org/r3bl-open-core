@@ -4,8 +4,8 @@
 //! version, take a look at [`super::RingBufferStack`].
 
 use super::RingBuffer;
-use crate::{Index, Length, len};
-use std::fmt::Debug;
+use crate::{CIndex, CLength, c_len};
+use std::{cmp::min, fmt::Debug};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RingBufferHeap<T, const N: usize> {
@@ -39,12 +39,8 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
         self.internal_storage.iter_mut().for_each(|x| *x = None);
     }
 
-    fn get(&self, arg_index: impl Into<Index>) -> Option<&T> {
-        let index = {
-            let it: Index = arg_index.into();
-            it.as_usize()
-        };
-
+    fn get(&self, arg_index: impl Into<CIndex>) -> Option<&T> {
+        let index = arg_index.into().as_usize();
         if index >= self.count {
             return None;
         }
@@ -54,7 +50,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
             .and_then(|item| item.as_ref())
     }
 
-    fn len(&self) -> Length { len(self.count) }
+    fn len(&self) -> CLength { c_len(self.count) }
 
     /// Inserts at head (ie, insert the newest item).
     fn add(&mut self, value: T) {
@@ -67,7 +63,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
             self.internal_storage[self.head] = Some(value);
         }
         self.head = (self.head + 1) % N;
-        self.count = std::cmp::min(self.count + 1, N); // Make sure count doesn't exceed
+        self.count = min(self.count + 1, N); // Make sure count doesn't exceed
         // capacity
     }
 
@@ -105,12 +101,8 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
     }
 
     // Delete the items from the given index to the end of the buffer.
-    fn truncate(&mut self, arg_index: impl Into<Index>) {
-        let index = {
-            let it: Index = arg_index.into();
-            it.as_usize()
-        };
-
+    fn truncate(&mut self, arg_index: impl Into<CIndex>) {
+        let index = arg_index.into().as_usize();
         if index >= self.count {
             return;
         }
@@ -133,12 +125,8 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
 
     fn as_slice_raw(&self) -> &[Option<T>] { &self.internal_storage }
 
-    fn get_mut(&mut self, arg_index: impl Into<Index>) -> Option<&mut T> {
-        let index = {
-            let it: Index = arg_index.into();
-            it.as_usize()
-        };
-
+    fn get_mut(&mut self, arg_index: impl Into<CIndex>) -> Option<&mut T> {
+        let index = arg_index.into().as_usize();
         if index >= self.count {
             return None;
         }
@@ -149,12 +137,8 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
             .and_then(|item| item.as_mut())
     }
 
-    fn set(&mut self, arg_index: impl Into<Index>, value: T) -> Option<()> {
-        let index = {
-            let it: Index = arg_index.into();
-            it.as_usize()
-        };
-
+    fn set(&mut self, arg_index: impl Into<CIndex>, value: T) -> Option<()> {
+        let index = arg_index.into().as_usize();
         if index >= self.count {
             return None;
         }
@@ -221,7 +205,7 @@ mod tests {
     fn test_empty_ring_buffer_heap() {
         let ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
-        assert_eq!(ring_buffer.len(), len(0));
+        assert_eq!(ring_buffer.len(), c_len(0));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 0);
@@ -241,20 +225,20 @@ mod tests {
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
             RingBufferHeap::new();
         ring_buffer.add("Hello".into());
-        assert_eq!(ring_buffer.len(), len(1));
+        assert_eq!(ring_buffer.len(), c_len(1));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 1);
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "Hello");
+        assert_eq!(iter.next().expect("conversion error"), "Hello");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "Hello");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "Hello");
         assert_eq!(ring_buffer.get(1), None);
         assert_eq!(ring_buffer.get(2), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "Hello");
-        assert_eq!(ring_buffer.last().unwrap(), "Hello");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "Hello");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "Hello");
     }
 
     #[test]
@@ -264,23 +248,23 @@ mod tests {
         ring_buffer.add("Hello".into());
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
-        assert_eq!(ring_buffer.len(), len(3));
+        assert_eq!(ring_buffer.len(), c_len(3));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 3);
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "Hello");
-        assert_eq!(iter.next().unwrap(), "World");
-        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().expect("conversion error"), "Hello");
+        assert_eq!(iter.next().expect("conversion error"), "World");
+        assert_eq!(iter.next().expect("conversion error"), "Rust");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "Hello");
-        assert_eq!(ring_buffer.get(1).unwrap(), "World");
-        assert_eq!(ring_buffer.get(2).unwrap(), "Rust");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "Hello");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "World");
+        assert_eq!(ring_buffer.get(2).expect("conversion error"), "Rust");
         assert_eq!(ring_buffer.get(3), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "Hello");
-        assert_eq!(ring_buffer.last().unwrap(), "Rust");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "Hello");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "Rust");
     }
 
     #[test]
@@ -291,22 +275,22 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.remove();
-        assert_eq!(ring_buffer.len(), len(2));
+        assert_eq!(ring_buffer.len(), c_len(2));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 2);
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "World");
-        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().expect("conversion error"), "World");
+        assert_eq!(iter.next().expect("conversion error"), "Rust");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "World");
-        assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "World");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "Rust");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "World");
-        assert_eq!(ring_buffer.last().unwrap(), "Rust");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "World");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "Rust");
     }
 
     #[test]
@@ -317,23 +301,23 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.add("R3BL".into());
-        assert_eq!(ring_buffer.len(), len(3));
+        assert_eq!(ring_buffer.len(), c_len(3));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 3);
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "World");
-        assert_eq!(iter.next().unwrap(), "Rust");
-        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next().expect("conversion error"), "World");
+        assert_eq!(iter.next().expect("conversion error"), "Rust");
+        assert_eq!(iter.next().expect("conversion error"), "R3BL");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "World");
-        assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
-        assert_eq!(ring_buffer.get(2).unwrap(), "R3BL");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "World");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "Rust");
+        assert_eq!(ring_buffer.get(2).expect("conversion error"), "R3BL");
         assert_eq!(ring_buffer.get(3), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "World");
-        assert_eq!(ring_buffer.last().unwrap(), "R3BL");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "World");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "R3BL");
     }
 
     #[test]
@@ -345,22 +329,22 @@ mod tests {
         ring_buffer.add("Rust".into());
         ring_buffer.add("R3BL".into());
         ring_buffer.remove();
-        assert_eq!(ring_buffer.len(), len(2));
+        assert_eq!(ring_buffer.len(), c_len(2));
         assert_eq!(ring_buffer.head, 1);
         assert_eq!(ring_buffer.tail, 2);
         assert_eq!(ring_buffer.count, 2);
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "Rust");
-        assert_eq!(iter.next().unwrap(), "R3BL");
+        assert_eq!(iter.next().expect("conversion error"), "Rust");
+        assert_eq!(iter.next().expect("conversion error"), "R3BL");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "Rust");
-        assert_eq!(ring_buffer.get(1).unwrap(), "R3BL");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "Rust");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "R3BL");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "Rust");
-        assert_eq!(ring_buffer.last().unwrap(), "R3BL");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "Rust");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "R3BL");
     }
 
     #[test]
@@ -371,7 +355,7 @@ mod tests {
         ring_buffer.add("World".into());
         ring_buffer.add("Rust".into());
         ring_buffer.clear();
-        assert_eq!(ring_buffer.len(), len(0));
+        assert_eq!(ring_buffer.len(), c_len(0));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 0);
@@ -396,8 +380,8 @@ mod tests {
         vec.push("Rust".into());
         vec.truncate(2);
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec.first().unwrap(), "Hello");
-        assert_eq!(vec.get(1).unwrap(), "World");
+        assert_eq!(vec.first().expect("conversion error"), "Hello");
+        assert_eq!(vec.get(1).expect("conversion error"), "World");
         assert_eq!(vec.get(2), None);
 
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
@@ -407,23 +391,23 @@ mod tests {
         ring_buffer.add("Rust".into());
         ring_buffer.truncate(2);
 
-        assert_eq!(ring_buffer.len(), len(2));
+        assert_eq!(ring_buffer.len(), c_len(2));
         assert_eq!(ring_buffer.head, 2);
         assert_eq!(ring_buffer.tail, 0);
         assert_eq!(ring_buffer.count, 2);
 
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "Hello");
-        assert_eq!(iter.next().unwrap(), "World");
+        assert_eq!(iter.next().expect("conversion error"), "Hello");
+        assert_eq!(iter.next().expect("conversion error"), "World");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "Hello");
-        assert_eq!(ring_buffer.get(1).unwrap(), "World");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "Hello");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "World");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "Hello");
-        assert_eq!(ring_buffer.last().unwrap(), "World");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "Hello");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "World");
     }
 
     #[test]
@@ -435,8 +419,8 @@ mod tests {
         vec.push("Rust".into());
         vec.truncate(2);
         assert_eq!(vec.len(), 2);
-        assert_eq!(vec.first().unwrap(), "Hello");
-        assert_eq!(vec.get(1).unwrap(), "World");
+        assert_eq!(vec.first().expect("conversion error"), "Hello");
+        assert_eq!(vec.get(1).expect("conversion error"), "World");
         assert_eq!(vec.get(2), None);
 
         let mut ring_buffer: RingBufferHeap<SmallStringBackingStore, 3> =
@@ -447,23 +431,23 @@ mod tests {
         ring_buffer.add("R3BL".into());
         ring_buffer.truncate(2);
 
-        assert_eq!(ring_buffer.len(), len(2));
+        assert_eq!(ring_buffer.len(), c_len(2));
         assert_eq!(ring_buffer.head, 0);
         assert_eq!(ring_buffer.tail, 1);
         assert_eq!(ring_buffer.count, 2);
 
-        assert_eq!(ring_buffer.get(0).unwrap(), "World");
-        assert_eq!(ring_buffer.get(1).unwrap(), "Rust");
+        assert_eq!(ring_buffer.get(0).expect("conversion error"), "World");
+        assert_eq!(ring_buffer.get(1).expect("conversion error"), "Rust");
         assert_eq!(ring_buffer.get(2), None);
         assert_eq!(ring_buffer.get(3), None);
 
         let mut iter = ring_buffer.iter();
-        assert_eq!(iter.next().unwrap(), "World");
-        assert_eq!(iter.next().unwrap(), "Rust");
+        assert_eq!(iter.next().expect("conversion error"), "World");
+        assert_eq!(iter.next().expect("conversion error"), "Rust");
         assert_eq!(iter.next(), None);
 
-        assert_eq!(ring_buffer.first().unwrap(), "World");
-        assert_eq!(ring_buffer.last().unwrap(), "Rust");
+        assert_eq!(ring_buffer.first().expect("conversion error"), "World");
+        assert_eq!(ring_buffer.last().expect("conversion error"), "Rust");
     }
 
     #[test]
@@ -566,7 +550,7 @@ mod tests {
         assert_eq!(buffer.set(10, 50), None);
 
         // Verify out of bounds didn't change anything.
-        assert_eq!(buffer.len(), len(3));
+        assert_eq!(buffer.len(), c_len(3));
     }
 
     #[test]
@@ -606,7 +590,7 @@ mod tests {
         // Remove head (newest item).
         let removed = buffer.remove_head();
         assert_eq!(removed, Some("Rust".into()));
-        assert_eq!(buffer.len(), len(2));
+        assert_eq!(buffer.len(), c_len(2));
 
         // Check remaining items.
         assert_eq!(buffer.get(0), Some(&"Hello".into()));
@@ -615,7 +599,7 @@ mod tests {
         // Remove another.
         let removed = buffer.remove_head();
         assert_eq!(removed, Some("World".into()));
-        assert_eq!(buffer.len(), len(1));
+        assert_eq!(buffer.len(), c_len(1));
 
         // Check final item.
         assert_eq!(buffer.get(0), Some(&"Hello".into()));
@@ -623,7 +607,7 @@ mod tests {
         // Empty the buffer.
         let removed = buffer.remove_head();
         assert_eq!(removed, Some("Hello".into()));
-        assert_eq!(buffer.len(), len(0));
+        assert_eq!(buffer.len(), c_len(0));
 
         // Try to remove from empty.
         let removed = buffer.remove_head();
@@ -639,7 +623,7 @@ mod tests {
         buffer.push(20);
         buffer.push(30);
 
-        assert_eq!(buffer.len(), len(3));
+        assert_eq!(buffer.len(), c_len(3));
         assert_eq!(buffer.get(0), Some(&10));
         assert_eq!(buffer.get(1), Some(&20));
         assert_eq!(buffer.get(2), Some(&30));
@@ -647,15 +631,15 @@ mod tests {
         // Test pop (alias for remove_head).
         let popped = buffer.pop();
         assert_eq!(popped, Some(30));
-        assert_eq!(buffer.len(), len(2));
+        assert_eq!(buffer.len(), c_len(2));
 
         let popped = buffer.pop();
         assert_eq!(popped, Some(20));
-        assert_eq!(buffer.len(), len(1));
+        assert_eq!(buffer.len(), c_len(1));
 
         let popped = buffer.pop();
         assert_eq!(popped, Some(10));
-        assert_eq!(buffer.len(), len(0));
+        assert_eq!(buffer.len(), c_len(0));
 
         // Pop from empty.
         let popped = buffer.pop();

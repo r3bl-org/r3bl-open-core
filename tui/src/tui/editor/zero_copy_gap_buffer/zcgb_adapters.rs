@@ -18,10 +18,10 @@
 //! [`From`]: std::convert::From
 //! [`GCStringOwned`]: crate::GCStringOwned
 
-use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
-            md_parser::md_parser_constants::NEW_LINE_CHAR};
 #[cfg(test)]
-use crate::{len, md_parser::md_parser_constants::NULL_CHAR};
+use crate::md_parser::md_parser_constants::NULL_CHAR;
+use crate::{GCStringOwned, ZeroCopyGapBuffer,
+            md_parser::md_parser_constants::NEW_LINE_CHAR};
 
 /// Converts a slice of [`GCStringOwned`] lines into a [`ZeroCopyGapBuffer`].
 ///
@@ -35,7 +35,7 @@ use crate::{len, md_parser::md_parser_constants::NULL_CHAR};
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
 #[must_use]
 pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
-    let mut buffer = ZeroCopyGapBuffer::new();
+    let mut buffer = ZeroCopyGapBuffer::default();
 
     for line in lines {
         // Add a new line to the buffer.
@@ -47,8 +47,11 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
         // Insert the text at the beginning of the line.
         if !text.is_empty() {
             // Use insert_at_grapheme which is the public API.
-            let _unused =
-                buffer.insert_text_at_grapheme(line_index, SegIndex::from(0), text);
+            let _unused = buffer.insert_text_at_grapheme(
+                crate::c_row(line_index),
+                crate::c_index(0),
+                text,
+            );
         }
     }
 
@@ -71,7 +74,7 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
 #[must_use]
 pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
-    let mut buffer = ZeroCopyGapBuffer::new();
+    let mut buffer = ZeroCopyGapBuffer::default();
 
     // Handle empty string case.
     if text.is_empty() {
@@ -83,9 +86,9 @@ pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 
     // If the text ends with a newline, split will create an empty string at the end.
     // We should process all lines in that case.
-    let total_lines = crate::len(lines.len());
+    let total_lines = crate::c_len(lines.len());
     let num_lines_to_process = if text.ends_with(NEW_LINE_CHAR) {
-        if total_lines.is_zero() {
+        if total_lines.is_empty() {
             0
         } else {
             total_lines.as_usize() - 1 // Skip the last empty element from split
@@ -100,8 +103,11 @@ pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 
         // Insert the text content if not empty.
         if !line_text.is_empty() {
-            let _unused =
-                buffer.insert_text_at_grapheme(line_index, SegIndex::from(0), line_text);
+            let _unused = buffer.insert_text_at_grapheme(
+                crate::c_row(line_index),
+                crate::c_index(0),
+                line_text,
+            );
         }
     }
 
@@ -121,9 +127,9 @@ impl From<&str> for ZeroCopyGapBuffer {
     /// ```
     /// # use r3bl_tui::ZeroCopyGapBuffer;
     /// let buffer: ZeroCopyGapBuffer = "# Hello\nWorld".into();
-    /// assert_eq!(buffer.line_count().as_usize(), 2);
+    /// assert_eq!(buffer.get_line_count().as_usize(), 2);
     /// ```
-    fn from(text: &str) -> Self { gap_buffer_from_str(text) }
+    fn from(text: &str) -> ZeroCopyGapBuffer { gap_buffer_from_str(text) }
 }
 
 impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
@@ -131,20 +137,20 @@ impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
     ///
     /// This is a more idiomatic Rust way to convert editor lines into a gap buffer,
     /// allowing usage like `ZeroCopyGapBuffer::from(&lines)` or `(&lines).into()`.
-    fn from(lines: &[GCStringOwned]) -> Self { gap_buffer_from_lines(lines) }
+    fn from(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer { gap_buffer_from_lines(lines) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RowIndex, assert_eq2};
+    use crate::{assert_eq2, c_height, c_row};
 
     #[test]
     fn test_convert_empty_lines() {
         let lines: Vec<GCStringOwned> = vec![];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), len(0));
+        assert_eq2!(buffer.get_line_count(), c_height(0));
         assert_eq2!(buffer.as_str(), "");
     }
 
@@ -153,11 +159,8 @@ mod tests {
         let lines = vec![GCStringOwned::from("Hello, world!")];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), len(1));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(0)),
-            Some("Hello, world!")
-        );
+        assert_eq2!(buffer.get_line_count(), c_height(1));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("Hello, world!"));
 
         // Check that the buffer has proper null padding.
         let full_str = buffer.as_str();
@@ -175,17 +178,11 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), len(4));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Title"));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some(""));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(2)),
-            Some("Some content")
-        );
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(3)),
-            Some("- List item")
-        );
+        assert_eq2!(buffer.get_line_count(), c_height(4));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("# Title"));
+        assert_eq2!(buffer.get_line_content(c_row(1)), Some(""));
+        assert_eq2!(buffer.get_line_content(c_row(2)), Some("Some content"));
+        assert_eq2!(buffer.get_line_content(c_row(3)), Some("- List item"));
     }
 
     #[test]
@@ -197,16 +194,10 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), len(3));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(0)),
-            Some("Hello 👋 世界")
-        );
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(1)),
-            Some("Émojis: 🦀💻🎉")
-        );
-        assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some("Café ☕"));
+        assert_eq2!(buffer.get_line_count(), c_height(3));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("Hello 👋 世界"));
+        assert_eq2!(buffer.get_line_content(c_row(1)), Some("Émojis: 🦀💻🎉"));
+        assert_eq2!(buffer.get_line_content(c_row(2)), Some("Café ☕"));
     }
 
     #[test]
@@ -220,18 +211,15 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), len(5));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("```rust"));
+        assert_eq2!(buffer.get_line_count(), c_height(5));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("```rust"));
+        assert_eq2!(buffer.get_line_content(c_row(1)), Some("fn main() {"));
         assert_eq2!(
-            buffer.get_line_content(RowIndex::from(1)),
-            Some("fn main() {")
-        );
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(2)),
+            buffer.get_line_content(c_row(2)),
             Some("    println!(\"Hello\");")
         );
-        assert_eq2!(buffer.get_line_content(RowIndex::from(3)), Some("}"));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(4)), Some("```"));
+        assert_eq2!(buffer.get_line_content(c_row(3)), Some("}"));
+        assert_eq2!(buffer.get_line_content(c_row(4)), Some("```"));
     }
 
     #[test]
@@ -239,7 +227,7 @@ mod tests {
         let text = "";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(0));
+        assert_eq2!(buffer.get_line_count(), c_height(0));
         assert_eq2!(buffer.as_str(), "");
     }
 
@@ -248,11 +236,8 @@ mod tests {
         let text = "Hello, world!";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(1));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(0)),
-            Some("Hello, world!")
-        );
+        assert_eq2!(buffer.get_line_count(), c_height(1));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("Hello, world!"));
     }
 
     #[test]
@@ -260,11 +245,8 @@ mod tests {
         let text = "Hello, world!\n";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(1));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(0)),
-            Some("Hello, world!")
-        );
+        assert_eq2!(buffer.get_line_count(), c_height(1));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("Hello, world!"));
     }
 
     #[test]
@@ -272,20 +254,11 @@ mod tests {
         let text = "# Heading\n\nParagraph text\nAnother line";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(4));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(0)),
-            Some("# Heading")
-        );
-        assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some(""));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(2)),
-            Some("Paragraph text")
-        );
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(3)),
-            Some("Another line")
-        );
+        assert_eq2!(buffer.get_line_count(), c_height(4));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("# Heading"));
+        assert_eq2!(buffer.get_line_content(c_row(1)), Some(""));
+        assert_eq2!(buffer.get_line_content(c_row(2)), Some("Paragraph text"));
+        assert_eq2!(buffer.get_line_content(c_row(3)), Some("Another line"));
     }
 
     #[test]
@@ -293,21 +266,15 @@ mod tests {
         let text = "# Title\n\n## Section 1\n\nSome content here.\n\n- Item 1\n- Item 2\n\n```rust\nfn main() {}\n```";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(12));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Title"));
+        assert_eq2!(buffer.get_line_count(), c_height(12));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("# Title"));
+        assert_eq2!(buffer.get_line_content(c_row(2)), Some("## Section 1"));
         assert_eq2!(
-            buffer.get_line_content(RowIndex::from(2)),
-            Some("## Section 1")
-        );
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(4)),
+            buffer.get_line_content(c_row(4)),
             Some("Some content here.")
         );
-        assert_eq2!(buffer.get_line_content(RowIndex::from(6)), Some("- Item 1"));
-        assert_eq2!(
-            buffer.get_line_content(RowIndex::from(10)),
-            Some("fn main() {}")
-        );
+        assert_eq2!(buffer.get_line_content(c_row(6)), Some("- Item 1"));
+        assert_eq2!(buffer.get_line_content(c_row(10)), Some("fn main() {}"));
 
         // Verify null padding is present.
         let full_str = buffer.as_str();
@@ -319,9 +286,9 @@ mod tests {
         let text = "Line 1\nLine 2\n\n";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), len(3));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("Line 1"));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some("Line 2"));
-        assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some(""));
+        assert_eq2!(buffer.get_line_count(), c_height(3));
+        assert_eq2!(buffer.get_line_content(c_row(0)), Some("Line 1"));
+        assert_eq2!(buffer.get_line_content(c_row(1)), Some("Line 2"));
+        assert_eq2!(buffer.get_line_content(c_row(2)), Some(""));
     }
 }

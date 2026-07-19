@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! # Pipeline Stage 5: Backend Executor (Crossterm Implementation)
 //!
 //! # You Are Here: **Stage 5** (Crossterm Executor)
@@ -42,89 +43,52 @@
 //! converting commands to [`ANSI`] escape sequences appropriate for the terminal.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
+//! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-// Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos,
-            RCP_RESTORE_CURSOR_BYTES, RenderOpCommon, RenderOpFlush, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, Size, TuiColor,
-            TuiStyle, impl_cli_text_inline::CliTextConvertOptions,
+use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, RCP_RESTORE_CURSOR_BYTES,
+            RenderOpCommon, RenderOpFlush, RenderOpOutput, RenderOpPaint,
+            RenderOpsLocalData, SCP_SAVE_CURSOR_BYTES, TuiColor, TuiStyle, VPCol,
+            VPHeight, VPPos, VPSize, impl_cli_text_inline::CliTextConvertOptions,
             sanitize_and_save_abs_pos,
-            tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
-use crossterm::{cursor::MoveTo,
-                style::{ResetColor, SetBackgroundColor, SetForegroundColor},
+            tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer, vp_col};
+use crossterm::{cursor::{MoveTo, MoveToColumn, MoveToNextLine, MoveToPreviousLine},
+                style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
 
-// Macro definitions MUST come before their first usage within the same file,
-// because macro_rules! macros have textual (top-down) visibility.
-#[macro_export]
-macro_rules! crossterm_op {
-    (
-        $arg_paint_mode:expr, // PaintMode - if Mock, skip the operation.
-        $arg_log_msg:expr, // Log message.
-        $op:expr,          // The crossterm operation to perform.
-        $success_msg:expr, // Success log message.
-        $error_msg:expr    // Error log message.
-    ) => {{
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+/// Executes a crossterm operation with optional mock support and debug logging.
+pub fn crossterm_op_with_mock<T>(
+    is_mock: bool,
+    log_msg: &str,
+    result: Result<T, impl std::fmt::Display>,
+    success_msg: &str,
+    error_msg: &str,
+) {
+    if !is_mock {
+        crossterm_op(log_msg, result, success_msg, error_msg);
+    }
+}
 
-        // Skip the operation in mock mode (consistent with flush_now! behavior).
-        if matches!($arg_paint_mode, $crate::PaintMode::Real) {
-            match $op {
-                Ok(_) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::info!(
-                            message = $success_msg,
-                            details = %$arg_log_msg
-                        );
-                    });
-                }
-                Err(err) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::error!(
-                            message = $error_msg,
-                            details = %$arg_log_msg,
-                            error = %err,
-                        );
-                    });
-                }
-            }
+pub fn crossterm_op<T>(
+    log_msg: &str,
+    result: Result<T, impl std::fmt::Display>,
+    success_msg: &str,
+    error_msg: &str,
+) {
+    use crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+    match result {
+        Ok(_) => {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::info!(message = success_msg, details = %log_msg);
+            });
         }
-    }};
-    (
-        $arg_log_msg:expr, // Log message.
-        $op:expr,          // The crossterm operation to perform.
-        $success_msg:expr, // Success log message.
-        $error_msg:expr    // Error log message.
-    ) => {{
-        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-
-        match $op {
-            Ok(_) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::info!(
-                        message = $success_msg,
-                        details = %$arg_log_msg
-                    );
-                });
-            }
-            Err(err) => {
-                DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::error!(
-                        message = $error_msg,
-                        details = %$arg_log_msg,
-                        error = %err,
-                    );
-                });
-            }
+        Err(err) => {
+            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                tracing::error!(message = error_msg, details = %log_msg, error = %err);
+            });
         }
-    }};
+    }
 }
 
 #[macro_export]
@@ -132,7 +96,7 @@ macro_rules! queue_terminal_command {
     ($writer: expr, $arg_log_msg: expr $(, $command: expr)* $(,)?) => {{
         use ::crossterm::QueueableCommand;
         $(
-            $crate::crossterm_op!(
+            $crate::crossterm_op(
                 $arg_log_msg,
                 QueueableCommand::queue($writer, $command),
                 "crossterm: ✅ Succeeded",
@@ -145,43 +109,11 @@ macro_rules! queue_terminal_command {
 #[macro_export]
 macro_rules! flush_now {
     ($writer: expr, $arg_log_msg: expr) => {{
-        $crate::crossterm_op!(
+        $crate::crossterm_op(
             $arg_log_msg,
             $writer.flush(),
             "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
-        );
-    }};
-}
-
-#[macro_export]
-macro_rules! disable_raw_mode_now {
-    (
-        $arg_paint_mode: expr,
-        $arg_log_msg: expr
-    ) => {{
-        $crate::crossterm_op!(
-            $arg_paint_mode,
-            $arg_log_msg,
-            crossterm::terminal::disable_raw_mode(),
-            "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
-        );
-    }};
-}
-
-#[macro_export]
-macro_rules! enable_raw_mode_now {
-    (
-        $arg_paint_mode: expr,
-        $arg_log_msg: expr
-    ) => {{
-        $crate::crossterm_op!(
-            $arg_paint_mode,
-            $arg_log_msg,
-            crossterm::terminal::enable_raw_mode(),
-            "crossterm: ✅ Succeeded",
-            "crossterm: ❌ Failed"
+            "crossterm: ❌ Failed",
         );
     }};
 }
@@ -189,7 +121,7 @@ macro_rules! enable_raw_mode_now {
 /// Struct representing the Crossterm implementation of [`RenderOpPaint`] trait.
 /// This empty struct is needed since the `RenderOpFlush` trait needs to be implemented.
 ///
-/// [`RenderOpPaint`]: crate::RenderOpPaint
+/// [`RenderOpPaint`]: RenderOpPaint
 #[derive(Debug)]
 pub struct PaintRenderOpImplCrossterm;
 
@@ -197,7 +129,7 @@ impl RenderOpPaint for PaintRenderOpImplCrossterm {
     fn paint(
         &mut self,
         render_op_output: &RenderOpOutput,
-        window_size: Size,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -252,7 +184,7 @@ impl PaintRenderOpImplCrossterm {
     pub fn paint_common(
         &mut self,
         command_ref: &RenderOpCommon,
-        window_size: Size,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -300,7 +232,7 @@ impl PaintRenderOpImplCrossterm {
             }
             RenderOpCommon::MoveCursorToColumn(col_index) => {
                 PaintRenderOpImplCrossterm::move_cursor_to_column(
-                    *col_index,
+                    vp_col(*col_index),
                     render_local_data,
                     locked_output_device,
                 );
@@ -343,9 +275,9 @@ impl PaintRenderOpImplCrossterm {
     }
 
     pub fn move_cursor_position_rel_to(
-        box_origin_pos: Pos,
-        content_rel_pos: Pos,
-        window_size: Size,
+        box_origin_pos: VPPos,
+        content_rel_pos: VPPos,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -359,12 +291,12 @@ impl PaintRenderOpImplCrossterm {
     }
 
     pub fn move_cursor_position_abs(
-        abs_pos: Pos,
-        window_size: Size,
+        abs_pos: VPPos,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
-        let Pos {
+        let VPPos {
             col_index,
             row_index,
         } = sanitize_and_save_abs_pos(abs_pos, window_size, render_local_data);
@@ -402,7 +334,7 @@ impl PaintRenderOpImplCrossterm {
     pub fn paint_text_with_attributes(
         text_arg: &str,
         maybe_style: Option<TuiStyle>,
-        window_size: Size,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
@@ -434,7 +366,7 @@ impl PaintRenderOpImplCrossterm {
         let cursor_pos_copy = {
             let mut copy = render_local_data.cursor_pos;
             let text_display_width = GCStringOwned::from(text_arg).width();
-            *copy.col_index += *text_display_width;
+            copy.col_index += text_display_width;
             copy
         };
 
@@ -451,7 +383,6 @@ impl PaintRenderOpImplCrossterm {
             // Handle background color.
             if let Some(tui_color_bg) = style.color_bg {
                 let color_bg: crossterm::style::Color = tui_color_bg.into();
-
                 queue_terminal_command!(
                     locked_output_device,
                     "ApplyColors -> SetBgColor",
@@ -462,7 +393,6 @@ impl PaintRenderOpImplCrossterm {
             // Handle foreground color.
             if let Some(tui_color_fg) = style.color_fg {
                 let color_fg: crossterm::style::Color = tui_color_fg.into();
-
                 queue_terminal_command!(
                     locked_output_device,
                     "ApplyColors -> SetFgColor",
@@ -480,19 +410,16 @@ impl PaintRenderOpImplCrossterm {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_column(
-        col_index: crate::ColIndex,
+        col_index: VPCol,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
-        use crossterm::cursor::MoveToColumn;
-
-        let col = col_index.as_u16();
+        let cols = col_index.as_u16();
         render_local_data.cursor_pos.col_index = col_index;
-
         queue_terminal_command!(
             locked_output_device,
             "MoveCursorToColumn",
-            MoveToColumn(col),
+            MoveToColumn(cols),
         );
     }
 
@@ -502,22 +429,18 @@ impl PaintRenderOpImplCrossterm {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_next_line(
-        row_height: crate::RowHeight,
+        row_height: VPHeight,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
-        use crate::col;
-        use crossterm::cursor::MoveToNextLine;
-
-        let n = row_height.as_u16();
-        // Add RowHeight to current RowIndex position
+        let rows = row_height.as_u16();
+        // Add VPHeight to current RowIndex position
         render_local_data.cursor_pos.row_index += row_height;
-        render_local_data.cursor_pos.col_index = col(0);
-
+        render_local_data.cursor_pos.col_index = vp_col(0);
         queue_terminal_command!(
             locked_output_device,
             "MoveCursorToNextLine",
-            MoveToNextLine(n),
+            MoveToNextLine(rows),
         );
     }
 
@@ -527,22 +450,19 @@ impl PaintRenderOpImplCrossterm {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     pub fn move_cursor_to_previous_line(
-        row_height: crate::RowHeight,
+        row_height: VPHeight,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
-        use crate::col;
-        use crossterm::cursor::MoveToPreviousLine;
-
-        let n = row_height.as_u16();
-        // Subtract RowHeight from current RowIndex position
+        let rows = row_height.as_u16();
+        // Subtract VPHeight from current RowIndex position
         render_local_data.cursor_pos.row_index -= row_height;
-        render_local_data.cursor_pos.col_index = col(0);
+        render_local_data.cursor_pos.col_index = vp_col(0);
 
         queue_terminal_command!(
             locked_output_device,
             "MoveCursorToPreviousLine",
-            MoveToPreviousLine(n),
+            MoveToPreviousLine(rows),
         );
     }
 
@@ -577,8 +497,6 @@ impl PaintRenderOpImplCrossterm {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub fn print_styled_text(text: &str, locked_output_device: LockedOutputDevice<'_>) {
-        use crossterm::style::Print;
-
         queue_terminal_command!(locked_output_device, "PrintStyledText", Print(text),);
     }
 
@@ -589,8 +507,8 @@ impl PaintRenderOpImplCrossterm {
     /// [`CSI`]: crate::CsiSequence
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     pub fn save_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
-        // crossterm doesn't have a direct SaveCursorPosition command,
-        // so we write the ANSI sequence directly.
+        // crossterm doesn't have a direct SaveCursorPosition command, so we write the
+        // ANSI sequence directly.
         if let Err(e) = locked_output_device.write_all(SCP_SAVE_CURSOR_BYTES) {
             eprintln!("Failed to write SaveCursorPosition ANSI sequence: {e}");
         }
@@ -604,8 +522,8 @@ impl PaintRenderOpImplCrossterm {
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`SaveCursorPosition`]: PaintRenderOpImplCrossterm::save_cursor_position
     pub fn restore_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
-        // crossterm doesn't have a direct RestoreCursorPosition command,
-        // so we write the ANSI sequence directly.
+        // crossterm doesn't have a direct RestoreCursorPosition command, so we write the
+        // ANSI sequence directly.
         if let Err(e) = locked_output_device.write_all(RCP_RESTORE_CURSOR_BYTES) {
             eprintln!("Failed to write RestoreCursorPosition ANSI sequence: {e}");
         }

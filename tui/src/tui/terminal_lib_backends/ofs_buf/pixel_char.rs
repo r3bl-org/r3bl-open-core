@@ -7,10 +7,11 @@
 //! It can be a void (invisible), spacer (empty but visible), or plain text
 //! with optional styling information.
 //!
-//! [`PixelChar`]: crate::PixelChar
+//! [`PixelChar`]: crate::tui::PixelChar
 
 use crate::{GetMemSize, TuiStyle, fg_magenta, ok};
-use std::fmt::{self, Debug};
+use std::{fmt::{self, Debug},
+          mem::size_of};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PixelChar {
@@ -35,7 +36,7 @@ pub const VOID_CHAR: char = '❯';
 impl GetMemSize for PixelChar {
     fn get_mem_size(&self) -> usize {
         // Since PixelChar is now Copy, its size is fixed.
-        std::mem::size_of::<PixelChar>()
+        size_of::<PixelChar>()
     }
 }
 
@@ -71,13 +72,13 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SPACER_GLYPH_CHAR, height, new_style,
+    use crate::{Flat2DArray, SPACER_GLYPH_CHAR, new_style,
                 tui::terminal_lib_backends::ofs_buf::OfsBuf, tui_color,
-                tui_style_attrib::Underline, tui_style_attribs, width};
+                tui_style_attrib::Underline, tui_style_attribs, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBuf {
-        let window_size = width(4) + height(2);
-        OfsBuf::new_empty(window_size)
+        let window_size = vp_width(4) + vp_height(2);
+        OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer))
     }
 
     #[test]
@@ -87,9 +88,9 @@ mod tests {
         assert!(matches!(default_char, PixelChar::Spacer));
 
         // Test that new buffer uses default.
-        let window_size = width(1) + height(1);
-        let ofs_buf = OfsBuf::new_empty(window_size);
-        assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
+        let window_size = vp_width(1) + vp_height(1);
+        let ofs_buf = OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
+        assert!(matches!(ofs_buf[0][0], PixelChar::Spacer));
     }
 
     #[test]
@@ -98,15 +99,15 @@ mod tests {
         let mut ofs_buf = create_test_buffer();
 
         // Test Spacer variant (default).
-        assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
+        assert!(matches!(ofs_buf[0][0], PixelChar::Spacer));
 
         // Test PlainText with no style.
-        ofs_buf.buffer[0][1] = PixelChar::PlainText {
+        ofs_buf[0][1] = PixelChar::PlainText {
             display_char: 'a',
             style: TuiStyle::default(),
         };
 
-        match &ofs_buf.buffer[0][1] {
+        match &ofs_buf[0][1] {
             PixelChar::PlainText {
                 display_char,
                 style,
@@ -118,12 +119,12 @@ mod tests {
         }
 
         // Test PlainText with style.
-        ofs_buf.buffer[0][2] = PixelChar::PlainText {
+        ofs_buf[0][2] = PixelChar::PlainText {
             display_char: 'b',
             style: new_style!(underline color_fg: {tui_color!(red)}),
         };
 
-        match &ofs_buf.buffer[0][2] {
+        match &ofs_buf[0][2] {
             PixelChar::PlainText {
                 display_char,
                 style,
@@ -136,16 +137,16 @@ mod tests {
         }
 
         // Test Void variant.
-        ofs_buf.buffer[1][0] = PixelChar::Void;
-        assert!(matches!(ofs_buf.buffer[1][0], PixelChar::Void));
+        ofs_buf[1][0] = PixelChar::Void;
+        assert!(matches!(ofs_buf[1][0], PixelChar::Void));
 
         // Test space character with no style.
-        ofs_buf.buffer[1][1] = PixelChar::PlainText {
+        ofs_buf[1][1] = PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
             style: TuiStyle::default(),
         };
 
-        match &ofs_buf.buffer[1][1] {
+        match &ofs_buf[1][1] {
             PixelChar::PlainText {
                 display_char,
                 style,
@@ -157,12 +158,12 @@ mod tests {
         }
 
         // Test space character with style.
-        ofs_buf.buffer[1][2] = PixelChar::PlainText {
+        ofs_buf[1][2] = PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
             style: new_style!(color_bg: {tui_color!(blue)}),
         };
 
-        match &ofs_buf.buffer[1][2] {
+        match &ofs_buf[1][2] {
             PixelChar::PlainText {
                 display_char,
                 style: actual_style,
@@ -196,7 +197,7 @@ mod tests {
         assert_eq!(void_size, spacer_size);
         assert_eq!(spacer_size, plain_size);
         assert_eq!(plain_size, styled_size);
-        assert_eq!(void_size, std::mem::size_of::<PixelChar>());
+        assert_eq!(void_size, size_of::<PixelChar>());
     }
 
     #[test]

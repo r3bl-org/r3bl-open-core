@@ -53,23 +53,32 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Wait for controlled process to start.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled process confirmed running!");
 
     // Wait for controlled process to be ready.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled is ready (input device created)");
 
     // Setup: Send "one two three"
     eprintln!("{GLYPH_WAITING} PTY Controller: Setting up line...");
-    context.writer
+    context
+        .writer
         .write_all(b"one two three")
         .expect("Failed to write text");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← Initial line: {result}");
     assert_eq!(result, "Line: one two three, Cursor: 13");
 
@@ -77,23 +86,33 @@ fn controller(mut context: PtyTestContext) {
     eprintln!("{GLYPH_WAITING} PTY Controller: Test 1 - Alt+B to start of 'three'...");
 
     // Alt+B is ESC b
-    context.writer.write_all(b"\x1bb").expect("Failed to write Alt+B");
+    context
+        .writer
+        .write_all(b"\x1bb")
+        .expect("Failed to write Alt+B");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Alt+B: {result}");
     assert_eq!(result, "Line: one two three, Cursor: 8");
 
     // Test 2: Another Alt+B to move to "one"
     eprintln!("{GLYPH_WAITING} PTY Controller: Test 2 - Alt+B to start of 'two'...");
-    context.writer.write_all(b"\x1bb").expect("Failed to write Alt+B");
+    context
+        .writer
+        .write_all(b"\x1bb")
+        .expect("Failed to write Alt+B");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Alt+B: {result}");
     assert_eq!(result, "Line: one two three, Cursor: 4");
 
@@ -101,12 +120,17 @@ fn controller(mut context: PtyTestContext) {
     eprintln!("{GLYPH_WAITING} PTY Controller: Test 3 - Alt+F to start of 'three'...");
 
     // Alt+F is ESC f
-    context.writer.write_all(b"\x1bf").expect("Failed to write Alt+F");
+    context
+        .writer
+        .write_all(b"\x1bf")
+        .expect("Failed to write Alt+F");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX) || line.contains("EOF")
+        });
     eprintln!("  ← After Alt+F: {result}");
     assert_eq!(result, "Line: one two three, Cursor: 8");
 

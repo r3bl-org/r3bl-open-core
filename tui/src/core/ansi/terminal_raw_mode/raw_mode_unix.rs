@@ -311,7 +311,7 @@ mod terminal_fd {
     /// [`stdin`]: std::io::stdin
     /// [`tcsetattr`]: termios::tcsetattr
     /// [`term.rs`]: mod@crate::term
-    /// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+    /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
     pub fn get() -> io::Result<TerminalFd> {
         if is_tty_stdin() == TtyStatus::IsTty {

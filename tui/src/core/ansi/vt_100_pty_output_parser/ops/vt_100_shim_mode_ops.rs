@@ -65,8 +65,9 @@ use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerforme
 #[allow(unused_imports, reason = "Allows flat link ref defs in rustdocs")]
 use crate::core::ansi::vt_100_pty_output_parser;
 use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorKeyMode, CursorVisibilityMode,
-            DEBUG_TUI_VT100_PARSER, MouseTrackingFormat, MouseTrackingMode,
-            RequestedScreenMode, URXVT_MOUSE_EXTENSION, UTF8_MOUSE_EXTENSION,
+            DEBUG_TUI_VT100_PARSER, LossyConvertToByte, MouseTrackingFormat,
+            MouseTrackingMode, RequestedScreenMode, URXVT_MOUSE_EXTENSION,
+            UTF8_MOUSE_EXTENSION, WideningCastToU16,
             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
@@ -110,8 +111,10 @@ pub fn set_mode(
     for mode in modes {
         match mode {
             PrivateModeType::CursorKeys => {
-                performer.ofs_buf_vt_100.terminal_mode.cursor_key_mode =
-                    CursorKeyMode::Application;
+                performer
+                    .ofs_buf_vt_100
+                    .get_terminal_mode_mut()
+                    .cursor_key_mode = CursorKeyMode::Application;
             }
             PrivateModeType::AutoWrap => {
                 performer
@@ -126,9 +129,7 @@ pub fn set_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(
-                        CursorVisibilityMode::Visible,
-                    );
+                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Visible);
             }
             PrivateModeType::X11MouseTracking
             | PrivateModeType::CellMotionMouseTracking
@@ -151,7 +152,7 @@ pub fn set_mode(
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}h: Suppressed/shimmed private mode",
-                        mode.as_u16()
+                        mode.as_u16_widening()
                     );
                 });
             }
@@ -159,7 +160,7 @@ pub fn set_mode(
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}h: Unimplemented/ignored private mode set",
-                        mode.as_u16()
+                        mode.as_u16_widening()
                     );
                 });
             }
@@ -206,8 +207,10 @@ pub fn reset_mode(
     for mode in modes {
         match mode {
             PrivateModeType::CursorKeys => {
-                performer.ofs_buf_vt_100.terminal_mode.cursor_key_mode =
-                    CursorKeyMode::Normal;
+                performer
+                    .ofs_buf_vt_100
+                    .get_terminal_mode_mut()
+                    .cursor_key_mode = CursorKeyMode::Normal;
             }
             PrivateModeType::AutoWrap => {
                 performer
@@ -222,9 +225,7 @@ pub fn reset_mode(
             PrivateModeType::ShowCursor => {
                 performer
                     .ofs_buf_vt_100
-                    .set_requested_cursor_visibility_mode(
-                        CursorVisibilityMode::Hidden,
-                    );
+                    .set_requested_cursor_visibility_mode(CursorVisibilityMode::Hidden);
             }
             PrivateModeType::X11MouseTracking
             | PrivateModeType::CellMotionMouseTracking
@@ -247,7 +248,7 @@ pub fn reset_mode(
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}l: Suppressed/shimmed private mode reset",
-                        mode.as_u16()
+                        mode.as_u16_widening()
                     );
                 });
             }
@@ -255,7 +256,7 @@ pub fn reset_mode(
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}l: Unimplemented/ignored private mode reset",
-                        mode.as_u16()
+                        mode.as_u16_widening()
                     );
                 });
             }
@@ -285,7 +286,8 @@ fn parse_private_modes<'a>(
     params: &'a Params,
     intermediates: &[u8],
 ) -> Option<impl Iterator<Item = PrivateModeType> + 'a> {
-    let is_private_mode = intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX as u8));
+    let is_private_mode =
+        intermediates.contains(&(CSI_PRIVATE_MODE_PREFIX.to_u8_lossy()));
     if is_private_mode {
         Some(params.iter().map(|sub_params| {
             let mode_num = sub_params.first().copied().unwrap_or(0);

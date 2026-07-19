@@ -57,11 +57,17 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Wait for controlled process to start.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled process confirmed running!");
 
     // Wait for controlled process to be ready.
-    context.child.wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY).unwrap();
+    context
+        .child
+        .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY)
+        .expect("conversion error");
     eprintln!("  ✅ Controlled is ready (input device created)");
 
     // Test Case 1: Ctrl+U with cursor at the end (deletes entire line)
@@ -70,24 +76,32 @@ fn controller(mut context: PtyTestContext) {
     );
 
     // Type "hello world" which naturally leaves cursor at end
-    context.writer
+    context
+        .writer
         .write_all(b"hello world")
         .expect("Failed to write text");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX)
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX)
+        });
     eprintln!("  ← Line with cursor at end: {result}");
     assert_eq!(result, "Line: hello world, Cursor: 11");
 
     // Ctrl+U at end should delete entire line
-    context.writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
+    context
+        .writer
+        .write_all(&[0x15])
+        .expect("Failed to write Ctrl+U");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX)
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX)
+        });
     eprintln!("  ← After Ctrl+U (cursor at end): {result}");
     assert_eq!(
         result, "Line: , Cursor: 0",
@@ -101,12 +115,17 @@ fn controller(mut context: PtyTestContext) {
 
     // Now line is empty and cursor is at position 0 Ctrl+U at position 0 should still
     // delete nothing
-    context.writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
+    context
+        .writer
+        .write_all(&[0x15])
+        .expect("Failed to write Ctrl+U");
     context.writer.flush().expect("Failed to flush");
 
-    let result = context.child.read_line_state(&mut context.buf_reader, |line| {
-        line.starts_with(MSG_LINE_PREFIX)
-    });
+    let result = context
+        .child
+        .read_line_state(&mut context.buf_reader, |line| {
+            line.starts_with(MSG_LINE_PREFIX)
+        });
     eprintln!("  ← After Ctrl+U on empty line: {result}");
     assert_eq!(
         result, "Line: , Cursor: 0",
@@ -117,4 +136,3 @@ fn controller(mut context: PtyTestContext) {
 
     readline_async_controller_exit(context);
 }
-

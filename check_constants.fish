@@ -56,27 +56,33 @@ set -g CHECK_LOG_FILE               $CHECK_PROJECT_ROOT/check.log
 set -g CHECK_BUILD_CONFIG_HASH_FILE $CHECK_PROJECT_ROOT/.build_config_toml_hash
 set -g CHECK_DURATION_FILE          $CHECK_PROJECT_ROOT/check_duration.txt
 
-# Use 2/3 of available cores for cargo operations (ceil to avoid rounding down too far).
-# Example: 28 cores → 19 jobs (leaves 9 cores free for interactive processes).
+# Single-instance mutex PID file for background full doc builds.
+# Coordinates execution between --watch-doc background tasks and --full/--doc runs.
+set -g CHECK_FULL_DOC_PID_FILE      $CHECK_PROJECT_ROOT/full_doc_build.pid
+
+# # Design & Architecture: Parallelism & Core Allocation
+# Targets 75% of P-core (Performance Core) threads for cargo operations (`cargo check`, `cargo build`, `cargo doc`).
 #
-# Why not all cores?
-#   Full parallelism (nproc) makes terminal input visibly laggy. Each rustdoc/rustc
-#   process spawns LLVM codegen threads internally, so N jobs can produce more than N
-#   busy threads. Combined with nice -n 10 (see ionice_wrapper in script_lib.fish),
-#   the remaining 1/3 of cores stay responsive for the terminal, IDE, and compositor.
+# Hybrid CPU Architecture Optimization (e.g. Intel i7-14700 with 16 P-threads + 12 E-threads):
+#   - Queries `detect_p_core_threads` and `detect_e_core_threads` (defined in script_lib.fish).
+#   - Caps jobs to 75% of P-threads (e.g. 16 P-threads * 0.75 = 12 jobs).
+#   - Prevents heavy cargo/rustdoc jobs from spilling onto slower E-cores, eliminating lock
+#     contention on /tmp/check-fish-roc/staging-full/doc/.lock.
+#   - Leaves all E-cores (12 threads) and remaining P-threads (4 threads) completely free for terminal,
+#     IDE, and UI responsiveness.
 #
-# Why not fewer?
-#   Cargo's compilation parallelism has diminishing returns, but the curve doesn't
-#   flatten until well past 2/3. Benchmarks showed ~60% speedup going from cargo's
-#   conservative default to explicit nproc; 2/3 of nproc retains most of that gain.
+# Non-Hybrid CPUs / Fallback:
+#   - Uses 75% of total logical cores (`nproc` / `hw.ncpu`).
 #
-# Auto-detect core count: nproc (Linux) or sysctl (macOS).
-switch (uname -s)
-    case Darwin
-        set -gx CARGO_BUILD_JOBS (math "ceil("(sysctl -n hw.ncpu)" * 2 / 3)")
-    case '*'
-        set -gx CARGO_BUILD_JOBS (math "ceil("(nproc)" * 2 / 3)")
+# # Rust Migration Requirement (cargo-monitor / build-infra):
+# In Rust implementation, map `CARGO_BUILD_JOBS` using `CpuTopology::detect()`:
+#   `pub fn optimal_build_jobs(&self) -> usize { (self.p_core_threads as f64 * 0.75).ceil() as usize }`
+if not set -q CARGO_BUILD_JOBS; or test -z "$CARGO_BUILD_JOBS"
+    set -l p_threads (detect_p_core_threads)
+    set -gx CARGO_BUILD_JOBS (math "ceil($p_threads * 0.75)")
 end
+
+
 
 # List of config files that affect build artifacts.
 # Changes to these files should trigger a clean rebuild to avoid stale artifact issues.

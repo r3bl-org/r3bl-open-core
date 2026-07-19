@@ -1,7 +1,6 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ByteIndex, ColIndex, ColWidth, Seg};
-use std::ops::Range;
+use crate::{ByteIndex, RangeExclusive, Seg, VPCol, VPWidth};
 
 /// Core segment content reference for zero-copy access to grapheme cluster segments.
 ///
@@ -24,11 +23,11 @@ impl SegContent<'_> {
 
     /// Gets the display width of this segment.
     #[must_use]
-    pub fn width(&self) -> ColWidth { self.seg.display_width }
+    pub fn width(&self) -> VPWidth { self.seg.display_width }
 
     /// Gets the starting column index of this segment.
     #[must_use]
-    pub fn start_col(&self) -> ColIndex { self.seg.start_display_col_index }
+    pub fn start_col(&self) -> VPCol { self.seg.start_display_col_index }
 
     /// Gets a reference to the underlying segment metadata.
     #[must_use]
@@ -36,7 +35,7 @@ impl SegContent<'_> {
 
     /// Gets the byte range of this segment within the original string.
     #[must_use]
-    pub fn byte_range(&self) -> Range<ByteIndex> {
+    pub fn byte_range(&self) -> RangeExclusive<ByteIndex> {
         self.seg.start_byte_index..self.seg.end_byte_index
     }
 }
@@ -44,7 +43,7 @@ impl SegContent<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{byte_index, col, seg_index, width};
+    use crate::{NarrowingCastToU16, byte_index, seg_index, vp_col, vp_len, vp_width};
 
     // Helper function to create a test segment.
     fn create_test_seg(
@@ -57,10 +56,10 @@ mod tests {
         Seg {
             start_byte_index: byte_index(start_byte),
             end_byte_index: byte_index(end_byte),
-            display_width: width(display_width),
-            seg_index: seg_index(segment_index),
-            bytes_size: crate::len(end_byte - start_byte),
-            start_display_col_index: col(start_col),
+            display_width: vp_width(display_width.as_u16_narrowing()),
+            seg_index: seg_index(segment_index.as_u16_narrowing()),
+            bytes_size: vp_len((end_byte - start_byte).as_u16_narrowing()),
+            start_display_col_index: vp_col(start_col.as_u16_narrowing()),
         }
     }
 
@@ -91,7 +90,7 @@ mod tests {
         let seg = create_test_seg(0, 4, 2, 0, 0); // Emoji is 4 bytes but 2 columns wide
         let seg_content = SegContent { content, seg };
 
-        assert_eq!(seg_content.width(), width(2));
+        assert_eq!(seg_content.width(), vp_width(2));
     }
 
     #[test]
@@ -100,7 +99,7 @@ mod tests {
         let seg = create_test_seg(1, 2, 1, 1, 5); // Character at column 5
         let seg_content = SegContent { content, seg };
 
-        assert_eq!(seg_content.start_col(), col(5));
+        assert_eq!(seg_content.start_col(), vp_col(5));
     }
 
     #[test]
@@ -112,7 +111,7 @@ mod tests {
         let seg_ref = seg_content.seg();
         assert_eq!(seg_ref.start_byte_index, byte_index(0));
         assert_eq!(seg_ref.end_byte_index, byte_index(4));
-        assert_eq!(seg_ref.display_width, width(4));
+        assert_eq!(seg_ref.display_width, vp_width(4));
     }
 
     #[test]
@@ -134,8 +133,8 @@ mod tests {
         let seg_content = SegContent { content, seg };
 
         assert_eq!(seg_content.as_str(), "😀");
-        assert_eq!(seg_content.width(), width(2));
-        assert_eq!(seg_content.start_col(), col(0));
+        assert_eq!(seg_content.width(), vp_width(2));
+        assert_eq!(seg_content.start_col(), vp_col(0));
 
         let range = seg_content.byte_range();
         assert_eq!(range.start, byte_index(0));
@@ -150,7 +149,7 @@ mod tests {
         let seg_content = SegContent { content, seg };
 
         assert_eq!(seg_content.as_str(), content);
-        assert_eq!(seg_content.width(), width(2));
+        assert_eq!(seg_content.width(), vp_width(2));
 
         let range = seg_content.byte_range();
         assert_eq!(range.start, byte_index(0));
@@ -164,8 +163,8 @@ mod tests {
         let seg_content = SegContent { content, seg };
 
         assert_eq!(seg_content.as_str(), content);
-        assert_eq!(seg_content.width(), width(0));
-        assert_eq!(seg_content.start_col(), col(10));
+        assert_eq!(seg_content.width(), vp_width(0));
+        assert_eq!(seg_content.start_col(), vp_col(10));
 
         let range = seg_content.byte_range();
         assert_eq!(range.start, byte_index(5));

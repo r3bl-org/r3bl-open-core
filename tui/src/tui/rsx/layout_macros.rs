@@ -21,7 +21,7 @@ macro_rules! box_start {
         styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
         $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-      $arg_surface.box_start($crate::box_props! {
+      $arg_surface.box_start($crate::FlexBoxProps {
             id:                     $arg_id,
             dir:                    $arg_dir,
             requested_size_percent: $arg_requested_size_percent,

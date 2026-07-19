@@ -112,7 +112,7 @@ mod tests_try_parse_and_highlight {
         let _guard = set_color_override();
         throws!({
             let gap_buffer = {
-                let mut buffer = ZeroCopyGapBuffer::new();
+                let mut buffer = ZeroCopyGapBuffer::default();
                 buffer.push_line("Hello");
                 buffer.push_line("World");
                 buffer
@@ -718,9 +718,12 @@ impl StyleUSSpanLine {
 }
 
 impl From<TuiStyledTexts> for StyleUSSpanLine {
-    fn from(styled_texts: TuiStyledTexts) -> Self {
+    /// More info on
+    /// [`into_iter`].
+    ///
+    /// [`into_iter`]: https://users.rust-lang.org/t/move-value-from-an-iterator/46172
+    fn from(styled_texts: TuiStyledTexts) -> StyleUSSpanLine {
         let mut it = StyleUSSpanLine::default();
-        // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
         for styled_text in styled_texts.inner {
             let style = styled_text.get_style();
             let text = styled_text.get_text();
@@ -773,7 +776,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
-                actual.first().unwrap(),
+                actual.first().expect("conversion error"),
                 &StyleUSSpan::new(
                     style + get_checkbox_unchecked_style(),
                     UNCHECKED_OUTPUT,
@@ -796,7 +799,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
-                actual.first().unwrap(),
+                actual.first().expect("conversion error"),
                 &StyleUSSpan::new(style + get_checkbox_checked_style(), CHECKED_OUTPUT,)
             );
 
@@ -819,7 +822,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 6);
 
             // "!["
-            let actual = actual.first().unwrap();
+            let actual = actual.first().expect("conversion error");
             let actual_style_color_fg =
                 actual.style.color_fg.unwrap_or(tui_color!(white));
             assert_eq2!(
@@ -856,7 +859,7 @@ mod tests_style_us_span_lines_from {
 
             // "["
             {
-                let actual = actual.first().unwrap();
+                let actual = actual.first().expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -875,7 +878,7 @@ mod tests_style_us_span_lines_from {
 
             // "Foobar"
             {
-                let actual = actual.get(1).unwrap();
+                let actual = actual.get(1).expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -893,7 +896,7 @@ mod tests_style_us_span_lines_from {
 
             // "]"
             {
-                let actual = actual.get(2).unwrap();
+                let actual = actual.get(2).expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -912,7 +915,7 @@ mod tests_style_us_span_lines_from {
 
             // "("
             {
-                let actual = actual.get(3).unwrap();
+                let actual = actual.get(3).expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -931,7 +934,7 @@ mod tests_style_us_span_lines_from {
 
             // "https://r3bl.com"
             {
-                let actual = actual.get(4).unwrap();
+                let actual = actual.get(4).expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -950,7 +953,7 @@ mod tests_style_us_span_lines_from {
 
             // ")"
             {
-                let actual = actual.get(5).unwrap();
+                let actual = actual.get(5).expect("conversion error");
                 let actual_style_color_fg =
                     actual.style.color_fg.unwrap_or(tui_color!(white));
                 assert_eq2!(
@@ -1398,7 +1401,10 @@ mod tests_style_us_span_lines_from {
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg
             // color.
             assert!(spans_in_line[0].style.attribs.dim.is_some());
-            assert_eq2!(spans_in_line[0].style.color_bg.unwrap(), tui_color!(red));
+            assert_eq2!(
+                spans_in_line[0].style.color_bg.expect("conversion error"),
+                tui_color!(red)
+            );
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
             assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
 
@@ -1406,7 +1412,10 @@ mod tests_style_us_span_lines_from {
             // color wheel.
             for span in &spans_in_line[1..=6] {
                 assert!(span.style.attribs.dim.is_none());
-                assert_eq2!(span.style.color_bg.unwrap(), tui_color!(red));
+                assert_eq2!(
+                    span.style.color_bg.expect("conversion error"),
+                    tui_color!(red)
+                );
                 assert_eq2!(span.style.color_fg.is_some(), true);
             }
         }

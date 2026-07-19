@@ -12,13 +12,14 @@ fn test_backoff_exponential_doubling() {
         max_delay: Some(Duration::from_secs(10)),
     };
 
-    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy).unwrap();
+    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy)
+        .expect("conversion error");
     assert_eq!(d1, Duration::from_millis(200));
 
-    let d2 = advance_backoff_delay(d1, &policy).unwrap();
+    let d2 = advance_backoff_delay(d1, &policy).expect("conversion error");
     assert_eq!(d2, Duration::from_millis(400));
 
-    let d3 = advance_backoff_delay(d2, &policy).unwrap();
+    let d3 = advance_backoff_delay(d2, &policy).expect("conversion error");
     assert_eq!(d3, Duration::from_millis(800));
 }
 
@@ -31,13 +32,14 @@ fn test_backoff_max_delay_capping() {
         max_delay: Some(Duration::from_millis(300)),
     };
 
-    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy).unwrap();
+    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy)
+        .expect("conversion error");
     assert_eq!(d1, Duration::from_millis(200));
 
-    let d2 = advance_backoff_delay(d1, &policy).unwrap();
+    let d2 = advance_backoff_delay(d1, &policy).expect("conversion error");
     assert_eq!(d2, Duration::from_millis(300));
 
-    let d3 = advance_backoff_delay(d2, &policy).unwrap();
+    let d3 = advance_backoff_delay(d2, &policy).expect("conversion error");
     assert_eq!(d3, Duration::from_millis(300));
 }
 
@@ -50,13 +52,14 @@ fn test_backoff_constant_delay() {
         max_delay: None,
     };
 
-    let d1 = advance_backoff_delay(Duration::from_millis(50), &policy).unwrap();
+    let d1 = advance_backoff_delay(Duration::from_millis(50), &policy)
+        .expect("conversion error");
     assert_eq!(d1, Duration::from_millis(50));
 
-    let d2 = advance_backoff_delay(d1, &policy).unwrap();
+    let d2 = advance_backoff_delay(d1, &policy).expect("conversion error");
     assert_eq!(d2, Duration::from_millis(50));
 
-    let d3 = advance_backoff_delay(d2, &policy).unwrap();
+    let d3 = advance_backoff_delay(d2, &policy).expect("conversion error");
     assert_eq!(d3, Duration::from_millis(50));
 }
 
@@ -69,12 +72,13 @@ fn test_backoff_unbounded_growth() {
         max_delay: None,
     };
 
-    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy).unwrap();
+    let d1 = advance_backoff_delay(Duration::from_millis(100), &policy)
+        .expect("conversion error");
     assert_eq!(d1, Duration::from_millis(300));
 
-    let d2 = advance_backoff_delay(d1, &policy).unwrap();
+    let d2 = advance_backoff_delay(d1, &policy).expect("conversion error");
     assert_eq!(d2, Duration::from_millis(900));
 
-    let d3 = advance_backoff_delay(d2, &policy).unwrap();
+    let d3 = advance_backoff_delay(d2, &policy).expect("conversion error");
     assert_eq!(d3, Duration::from_millis(2700));
 }

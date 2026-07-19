@@ -48,13 +48,13 @@ impl AnalyticsRecord {
 ///
 /// ```
 /// use r3bl_analytics_schema::analytics_data::{AnalyticsEventNoTimestamp, AnalyticsEvent};
-/// 
+///
 /// let event_no_timestamp = AnalyticsEventNoTimestamp {
 ///     proxy_user_id: String::new(),
 ///     proxy_machine_id: "happy_panda_12".to_string(),
 ///     action: "edi file save".to_string(),
 /// };
-/// 
+///
 /// let event: AnalyticsEvent = event_no_timestamp.into();
 /// ```
 #[rustfmt::skip]
@@ -72,7 +72,7 @@ pub struct AnalyticsEventNoTimestamp {
 /// user and machine identifiers along with action details and timing.
 ///
 /// # Privacy
-/// 
+///
 /// The `proxy_user_id` field is currently unused (empty string) to maintain user
 /// privacy. The `proxy_machine_id` is a generated, non-personal identifier.
 ///
@@ -81,7 +81,7 @@ pub struct AnalyticsEventNoTimestamp {
 /// ```
 /// use r3bl_analytics_schema::analytics_data::AnalyticsEvent;
 /// use std::time::{SystemTime, UNIX_EPOCH};
-/// 
+///
 /// let event = AnalyticsEvent {
 ///     proxy_user_id: String::new(),
 ///     proxy_machine_id: "happy_panda_12".to_string(),
@@ -150,7 +150,7 @@ impl AnalyticsEvent {
 
 /// Converts [`AnalyticsEventNoTimestamp`] to [`AnalyticsEvent`].
 impl From<AnalyticsEventNoTimestamp> for AnalyticsEvent {
-    fn from(incoming: AnalyticsEventNoTimestamp) -> Self {
+    fn from(incoming: AnalyticsEventNoTimestamp) -> AnalyticsEvent {
         let result_timestamp_ms = SystemTime::now().duration_since(UNIX_EPOCH);
 
         let timestamp_ms = match result_timestamp_ms {
@@ -175,6 +175,7 @@ impl From<AnalyticsEventNoTimestamp> for AnalyticsEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DEFAULT_TINY_VEC_SIZE;
 
     #[test]
     fn test_analytics_record_default() {
@@ -354,7 +355,7 @@ mod tests {
         let mut record = AnalyticsRecord::default();
 
         // Add events up to the inline capacity.
-        for i in 0..crate::DEFAULT_TINY_VEC_SIZE {
+        for i in 0..DEFAULT_TINY_VEC_SIZE {
             let event = AnalyticsEventNoTimestamp {
                 proxy_user_id: String::new(),
                 proxy_machine_id: format!("machine_{i}"),
@@ -363,7 +364,7 @@ mod tests {
             record.events.push(event.into());
         }
 
-        assert_eq!(record.events.len(), crate::DEFAULT_TINY_VEC_SIZE);
+        assert_eq!(record.events.len(), DEFAULT_TINY_VEC_SIZE);
 
         // Verify we can still access all events.
         for (i, event) in record.events.iter().enumerate() {

@@ -3,19 +3,19 @@
 use super::{AppSignal, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
-               DialogComponent, DialogEngineConfigOptions, DialogEngineMode, EditMode,
+               DialogComponent, DialogEngineConfig, DialogEngineMode, EditMode,
                EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
                FlexBox, FlexBoxId, GCStringOwned, GlobalData, HasEditorBuffers,
                HasFocus, InlineString, InputEvent, ItemsOwned, Key, KeyPress,
                LayoutDirection, LayoutManagement, LengthOps, LineMode, ModifierKeysMask,
                PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
-               RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
+               RenderPipeline, SPACER_GLYPH, Surface, SurfaceProps, SurfaceRender,
                SyntaxHighlightMode, TerminalWindowMainThreadSignal, TuiStylesheet,
-               ZOrder, box_end, box_start, col, get_tui_style, glyphs, height,
+               VPSize, ZOrder, box_end, box_start, c_col, get_tui_style, glyphs,
                inline_string, new_style, ok, render_component_in_current_box,
                render_component_in_given_box, render_tui_styled_texts_into, req_size_pc,
-               row, send_signal, surface, throws_with_return, tui_color,
-               tui_styled_text, tui_styled_texts, tui_stylesheet, width};
+               send_signal, surface, throws_with_return, tui_color, tui_styled_text,
+               tui_styled_texts, tui_stylesheet, vp_col, vp_height, vp_row, vp_width};
 use tokio::sync::mpsc::Sender;
 
 /// Constants for the ids.
@@ -141,11 +141,11 @@ mod app_main_impl_app_trait {
             let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(0),
+                pos: vp_col(0) + vp_row(0),
                 size: {
                     let col_count = window_size.col_width;
                     let row_count = window_size.row_height -
-                                height(2) /* Bottom row for for status bar & HUD. */;
+                                vp_height(2) /* Bottom row for for status bar & HUD. */;
                     col_count + row_count
                 },
             })?;
@@ -208,7 +208,7 @@ mod modal_dialogs {
                 // 2. [Action::AutocompleteDialogComponentInitializeFocused]
                 || {
                     let mut it = DialogBuffer::new_empty();
-                    it.editor_buffer = EditorBuffer::new_empty(None, None);
+                    it.editor_buffer = EditorBuffer::new_empty(());
                     it
                 },
             );
@@ -332,8 +332,8 @@ mod modal_dialogs {
             let mut it = DialogBuffer::new_empty();
             it.title = title;
 
-            let start_display_col_index = col(0);
-            let max_display_col_count = width(100);
+            let start_display_col_index = c_col(0);
+            let max_display_col_count = vp_width(100);
 
             let text_gcs = GCStringOwned::from(&text);
 
@@ -603,7 +603,7 @@ mod populate_component_registry {
 
         let result_stylesheet = stylesheet::create_stylesheet();
 
-        let dialog_options = DialogEngineConfigOptions {
+        let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalSimple,
             maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
             maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
@@ -691,7 +691,7 @@ mod populate_component_registry {
 
         let result_stylesheet = stylesheet::create_stylesheet();
 
-        let dialog_options = DialogEngineConfigOptions {
+        let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalAutocomplete,
             maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder },
             maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle },
@@ -776,7 +776,7 @@ mod hud {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: VPSize, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -786,13 +786,14 @@ mod hud {
             },
         };
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.index_from_end(vp_height(1))); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(
@@ -811,7 +812,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: VPSize) {
         let color_bg = tui_color!(hex "#076DEB");
         let color_fg = tui_color!(hex "#E9C940");
         let styled_texts = tui_styled_texts! {
@@ -862,13 +863,14 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.convert_to_index()); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(

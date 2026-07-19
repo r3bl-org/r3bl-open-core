@@ -16,7 +16,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`RenderOpCommon`]: crate::render_op::RenderOpCommon
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 //! [`ResetColor`]: crate::render_op::RenderOpCommon::ResetColor
 //! [`SetBgColor`]: crate::render_op::RenderOpCommon::SetBgColor
 //! [`SetFgColor`]: crate::render_op::RenderOpCommon::SetFgColor

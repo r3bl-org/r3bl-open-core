@@ -158,7 +158,7 @@ pub mod monitor_user_input_and_send_to_child {
     /// leverages the type system to make it simpler to reason about what to do with
     /// the user input.
     impl From<miette::Result<ReadlineEvent>> for ControlFlow {
-        fn from(result_readline_event: miette::Result<ReadlineEvent>) -> Self {
+        fn from(result_readline_event: miette::Result<ReadlineEvent>) -> ControlFlow {
             match result_readline_event {
                 Ok(readline_event) => match readline_event {
                     Line(input) => {

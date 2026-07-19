@@ -212,16 +212,16 @@ Range 10..150:
 
 ```rust
 // Length 0 (empty array)
-let length = len(0);
-let index = idx(0);
+let length = vp_len(0);
+let index = vp_idx(0);
 index.overflows(length) // → Overflows! Can't access empty array
 
 // Maximum valid index
-let length = len(10);
-let index = idx(9);  // Last valid index
+let length = vp_len(10);
+let index = vp_idx(9);  // Last valid index
 index.overflows(length) // → Within
 
-let index = idx(10);  // At length
+let index = vp_idx(10);  // At length
 index.overflows(length) // → Overflows!
 ```
 
@@ -229,13 +229,13 @@ index.overflows(length) // → Overflows!
 
 ```rust
 // Empty text (length 0)
-let length = len(0);
-let cursor = idx(0);
+let length = vp_len(0);
+let cursor = vp_idx(0);
 length.check_cursor_position_bounds(cursor) // → Within! Cursor at start of empty text
 
 // Cursor at end
-let length = len(5);
-let cursor = idx(5);  // After last character
+let length = vp_len(5);
+let cursor = vp_idx(5);  // After last character
 length.check_cursor_position_bounds(cursor) // → Within! Valid cursor position
 ```
 
@@ -243,21 +243,21 @@ length.check_cursor_position_bounds(cursor) // → Within! Valid cursor position
 
 ```rust
 // Zero-sized viewport
-let viewport_size = len(0);
+let viewport_size = vp_len(0);
 // Nothing is visible!
 
 // Item exactly at viewport start
-let index = idx(10);
-let viewport_start = idx(10);
-let viewport_size = len(20);
+let index = vp_idx(10);
+let viewport_start = vp_idx(10);
+let viewport_size = vp_len(20);
 index.check_viewport_bounds(viewport_start, viewport_size) // → true (10 is visible)
 
 // Item exactly at viewport end
-let index = idx(29);  // Last visible
-index.check_viewport_bounds(idx(10), len(20)) // → true
+let index = vp_idx(29);  // Last visible
+index.check_viewport_bounds(vp_idx(10), vp_len(20)) // → true
 
-let index = idx(30);  // First non-visible
-index.check_viewport_bounds(idx(10), len(20)) // → false
+let index = vp_idx(30);  // First non-visible
+index.check_viewport_bounds(vp_idx(10), vp_len(20)) // → false
 ```
 
 ---
@@ -293,12 +293,12 @@ index.check_viewport_bounds(idx(10), len(20)) // → false
 
 **Golden Rules:**
 
-1. **Always use Index types for indices** (row(), col(), idx())
-2. **Always use Length types for lengths** (width(), height(), len())
+1. **Always use Index types for indices** (row(), col(), vp_idx())
+2. **Always use Length types for lengths** (width(), height(), vp_len())
 3. **Use the right trait for the right scenario** (see decision tree)
 4. **Remember the laws:**
    - Array: `index < length`
    - Cursor: `index <= length`
    - Viewport: `start <= index < start + size`
 
-When in doubt, consult `tui/src/core/units/bounds_check/mod.rs` for comprehensive documentation!
+When in doubt, consult `tui/src/core/coordinates/bounds_check/mod.rs` for comprehensive documentation!

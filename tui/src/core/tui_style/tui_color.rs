@@ -371,13 +371,13 @@ mod convenience_conversions {
     use super::*;
 
     impl From<ANSIBasicColor> for TuiColor {
-        fn from(basic_color: ANSIBasicColor) -> Self {
+        fn from(basic_color: ANSIBasicColor) -> TuiColor {
             TuiColor::Ansi(AnsiValue::new(basic_color.palette_index()))
         }
     }
 
     impl From<RgbValue> for TuiColor {
-        fn from(rgb_value: RgbValue) -> Self { TuiColor::Rgb(rgb_value) }
+        fn from(rgb_value: RgbValue) -> TuiColor { TuiColor::Rgb(rgb_value) }
     }
 
     impl From<AnsiValue> for TuiColor {
@@ -388,7 +388,7 @@ mod convenience_conversions {
         /// 256-color palette indices.
         ///
         /// [`SGR`]: crate::SgrCode
-        fn from(ansi_value: AnsiValue) -> Self {
+        fn from(ansi_value: AnsiValue) -> TuiColor {
             match ansi_value.index {
                 // Standard foreground colors (30-37) → palette indices 9-15, 0
                 30 | 40 => TuiColor::Ansi(AnsiValue::new(0)), // black
@@ -422,7 +422,7 @@ mod basic_color_conversions {
     use super::*;
 
     impl From<ANSIBasicColor> for RgbValue {
-        fn from(basic: ANSIBasicColor) -> Self {
+        fn from(basic: ANSIBasicColor) -> RgbValue {
             match basic {
                 ANSIBasicColor::Black => RgbValue {
                     red: 0,
@@ -518,21 +518,21 @@ mod convert_between_variants {
     use super::*;
 
     impl From<RgbValue> for AnsiValue {
-        fn from(rgb_value: RgbValue) -> Self {
+        fn from(rgb_value: RgbValue) -> AnsiValue {
             let ansi_value = convert_rgb_into_ansi256(rgb_value);
             Self::new(ansi_value.index)
         }
     }
 
     impl From<AnsiValue> for RgbValue {
-        fn from(ansi_value: AnsiValue) -> Self {
+        fn from(ansi_value: AnsiValue) -> RgbValue {
             let rgb_color = ansi_value.as_rgb();
             Self::from_u8(rgb_color.red, rgb_color.green, rgb_color.blue)
         }
     }
 
     impl From<TuiColor> for RgbValue {
-        fn from(tui_color: TuiColor) -> Self {
+        fn from(tui_color: TuiColor) -> RgbValue {
             match tui_color {
                 TuiColor::Rgb(rgb) => rgb,
                 TuiColor::Ansi(ansi) => ansi.as_rgb(),
@@ -620,7 +620,7 @@ mod tests {
         }
         {
             let tui_color = tui_color!(ansi 42);
-            let expected_color = TuiColor::Ansi(42.into());
+            let expected_color = TuiColor::Ansi(42u16.into());
             assert_eq!(tui_color, expected_color);
         }
         {

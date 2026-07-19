@@ -112,7 +112,7 @@ impl TerminalWindow {
     ///
     /// See [interactive terminal application entry points].
     ///
-    /// [`App`]: crate::App
+    /// [`App`]: crate::tui::App
     /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
@@ -129,7 +129,7 @@ impl TerminalWindow {
             TerminalInteractiveStatus::NotAvailable(reason) => {
                 TuiAvailability::NotAvailable(reason)
             }
-            
+
             TerminalInteractiveStatus::Available => {
                 let init = || -> miette::Result<MainEventLoopFuture<S, AS>> {
                     let initial_size = get_size()?;

@@ -6,7 +6,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{ColWidth, RowHeight, TermPos, terminal_io::KeyState};
+use crate::{TermPos, VPWidth, VPHeight, terminal_io::KeyState};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///
@@ -114,11 +114,11 @@ pub enum VT100InputEventIR {
     /// counts (1-based), not indices. A terminal with 80 columns has 80 total
     /// columns to display text.
     ///
-    /// [`col_width`]: crate::ColWidth
-    /// [`row_height`]: crate::RowHeight
+    /// [`col_width`]: crate::VPWidth
+    /// [`row_height`]: crate::VPHeight
     Resize {
-        col_width: ColWidth,
-        row_height: RowHeight,
+        col_width: VPWidth,
+        row_height: VPHeight,
     },
     /// Terminal focus event (gained or lost).
     Focus(VT100FocusStateIR),

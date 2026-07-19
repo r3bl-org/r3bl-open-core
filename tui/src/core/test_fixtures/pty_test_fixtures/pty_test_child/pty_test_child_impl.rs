@@ -163,7 +163,7 @@ impl PtyTestChild {
     /// [`ControlledChild::wait()`]: portable_pty::Child::wait
     /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`fd`]: https://man7.org/linux/man-pages/open.2.html
+    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
     /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
     /// [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
     /// [`PtyPair`]: crate::PtyPair
@@ -296,7 +296,7 @@ impl PtyTestChild {
     ///     let mut context: PtyTestContext = todo!();
     ///
     ///     // Send a key press to the child process.
-    ///     writeln!(context.writer, "a").unwrap();
+    ///     writeln!(context.writer, "a").expect("conversion error");
     ///
     ///     // Block until the child reports its line state contains "a".
     ///     let state = context.child.read_line_state(&mut context.buf_reader, |line| {
@@ -317,7 +317,7 @@ impl PtyTestChild {
     pub fn read_line_state<R: BufRead>(
         &self,
         buf_reader: &mut R,
-        predicate_fn: impl Fn(&str) -> bool,
+        mut predicate_fn: impl FnMut(&str) -> bool,
     ) -> String {
         loop {
             let mut line = String::new();
@@ -375,7 +375,7 @@ impl PtyTestChild {
         &self,
         buf_reader: &mut R,
         marker: &str,
-        line_filter: impl Fn(&str) -> bool,
+        mut line_filter_fn: impl FnMut(&str) -> bool,
     ) -> ReadLinesResult {
         let mut lines = Vec::new();
         let mut found_marker = false;
@@ -403,7 +403,7 @@ impl PtyTestChild {
                         break;
                     }
 
-                    if !trimmed.is_empty() && line_filter(&trimmed) {
+                    if !trimmed.is_empty() && line_filter_fn(&trimmed) {
                         lines.push(trimmed);
                     }
                 }

@@ -194,7 +194,10 @@ pub enum ThreadState<W: RRTWorker> {
     /// [software interrupt handle]: crate::RRTSoftwareInterrupt
     /// [sources]: mio::event::Source
     /// [worker]: crate::RRTWorker
-    Running(InterruptHandle<W::Interrupt>, tokio::sync::broadcast::Sender<W::Input>),
+    Running(
+        InterruptHandle<W::Interrupt>,
+        tokio::sync::broadcast::Sender<W::Input>,
+    ),
 
     /// # Current State
     ///
@@ -297,7 +300,8 @@ pub enum ThreadState<W: RRTWorker> {
 pub enum ThreadStateStatus {
     /// The state is stable ([`ThreadState::Running`] or [`ThreadState::Stopped`]).
     Stable,
-    /// The state is transient ([`ThreadState::Starting`], [`ThreadState::Stopping`], or [`ThreadState::Restarting`]).
+    /// The state is transient ([`ThreadState::Starting`], [`ThreadState::Stopping`], or
+    /// [`ThreadState::Restarting`]).
     Transient,
 }
 
@@ -320,7 +324,9 @@ impl<W: RRTWorker> ThreadState<W> {
     #[must_use]
     pub const fn status(&self) -> ThreadStateStatus {
         match self {
-            ThreadState::Running(_, _) | ThreadState::Stopped => ThreadStateStatus::Stable,
+            ThreadState::Running(_, _) | ThreadState::Stopped => {
+                ThreadStateStatus::Stable
+            }
             _ => ThreadStateStatus::Transient,
         }
     }

@@ -37,6 +37,7 @@
     "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
     "hoovercj.vscode-settings-cycler", // Settings Cycler.
     "alefragnani.bookmarks", // Bookmarks.
+    "esbenp.prettier-vscode", // Prettier.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [

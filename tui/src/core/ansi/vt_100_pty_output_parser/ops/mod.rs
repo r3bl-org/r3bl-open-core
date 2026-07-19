@@ -13,8 +13,7 @@
 //!   [`OfsBuf`] calls
 //! - Operations contain minimal logic, primarily focused on parameter parsing and
 //!   delegation
-//! - All actual terminal buffer logic is implemented in dedicated [`OfsBuf`]
-//!   methods
+//! - All actual terminal buffer logic is implemented in dedicated [`OfsBuf`] methods
 //! - This design ensures a clear separation between [`ANSI`] protocol handling and buffer
 //!   operations
 //!
@@ -57,8 +56,7 @@
 //!    [`OfsBuf`] method calls
 //! 3. **Minimal Risk**: Code simplicity means minimal risk of bugs
 //! 4. **Comprehensive Coverage**: Testing is handled by two complementary layers:
-//!    - **Unit Tests**: The underlying [`OfsBuf`] methods have comprehensive
-//!      unit tests
+//!    - **Unit Tests**: The underlying [`OfsBuf`] methods have comprehensive unit tests
 //!    - **Integration Tests**: The [`VT-100`] conformance tests verify the complete
 //!      [`ANSI`] processing pipeline
 //!
@@ -123,7 +121,7 @@
 //! | [`vt_100_shim_terminal_ops`] | [`vt_100_impl_terminal_ops`] | [`vt_100_test_terminal_ops`] |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`ops_impl_ofs_buf`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
@@ -175,6 +173,7 @@ pub mod vt_100_shim_char_ops;
 pub mod vt_100_shim_clear_ops;
 pub mod vt_100_shim_control_ops;
 pub mod vt_100_shim_cursor_ops;
+pub mod vt_100_shim_da_ops;
 pub mod vt_100_shim_dsr_ops;
 pub mod vt_100_shim_line_ops;
 pub mod vt_100_shim_margin_ops;
@@ -183,12 +182,12 @@ pub mod vt_100_shim_osc_ops;
 pub mod vt_100_shim_scroll_ops;
 pub mod vt_100_shim_sgr_ops;
 pub mod vt_100_shim_terminal_ops;
-pub mod vt_100_shim_da_ops;
 
 // Re-export all operations for easier access.
 pub use vt_100_shim_char_ops::*;
 pub use vt_100_shim_control_ops::*;
 pub use vt_100_shim_cursor_ops::*;
+pub use vt_100_shim_da_ops::*;
 pub use vt_100_shim_dsr_ops::*;
 pub use vt_100_shim_line_ops::*;
 pub use vt_100_shim_margin_ops::*;
@@ -197,4 +196,3 @@ pub use vt_100_shim_osc_ops::*;
 pub use vt_100_shim_scroll_ops::*;
 pub use vt_100_shim_sgr_ops::*;
 pub use vt_100_shim_terminal_ops::*;
-pub use vt_100_shim_da_ops::*;

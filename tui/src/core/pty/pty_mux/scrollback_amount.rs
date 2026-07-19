@@ -1,8 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayOverflowResult, ScrollbackBuffer};
+use crate::{ArrayBoundsCheck, CRow, CanvasToViewportExt, IndexOps, LengthOps,
+            NumericConversions, NumericValue, StorageCoordinate, VPHeight, VPLength,
+            VPRow, Viewport, ViewportToCanvasExt};
 use std::{fmt::Debug,
-          ops::{Deref, DerefMut}};
+          ops::{Add, AddAssign, Deref, DerefMut, Sub, SubAssign}};
 
 /// Represents a vertical scroll amount backed by a [`usize`] value.
 ///
@@ -11,268 +13,354 @@ use std::{fmt::Debug,
 ///
 /// # Why [`usize`]?
 ///
-/// Unlike [`RowIndex`] and [`RowHeight`] which are backed by [`u16`] because terminal
+/// Unlike [`VPRow`] and [`VPHeight`] which are backed by [`u16`] because terminal
 /// screens never exceed 65,535 rows, this struct is backed by [`usize`] to safely track
 /// history in scrollback buffers which can commonly hold 100,000+ lines.
 ///
 /// ## Examples
 ///
 /// ```rust
-/// use r3bl_tui::{ScrollbackAmount, ArrayOverflowResult};
+/// use r3bl_tui::{ScrollbackAmount, ArrayOverflowResult, ArrayBoundsCheck};
 ///
 /// // Create from usize.
 /// let amount_to_scroll: usize = 10;
 /// let offset: ScrollbackAmount = amount_to_scroll.into();
 ///
 /// // Type-safe addition with saturating bounds.
-/// let new_offset = offset.saturating_add(5.into());
+/// let new_offset = offset.saturating_add(5u16.into());
 /// assert_eq!(*new_offset, 15);
 ///
 /// // Type-safe bounds checking.
-/// let history_len = 10;
+/// let history_len = 10usize;
 /// assert_eq!(new_offset.overflows(history_len), ArrayOverflowResult::Overflowed);
-/// assert_eq!(offset.overflows(15), ArrayOverflowResult::Within);
+/// assert_eq!(offset.overflows(15usize), ArrayOverflowResult::Within);
 /// ```
 ///
 /// [`ChUnit`]: crate::ChUnit
 /// [`OutputRenderer`]: super::OutputRenderer
-/// [`RowHeight`]: crate::RowHeight
-/// [`RowIndex`]: crate::RowIndex
-/// [`u16`]: crate::ChUnitPrimitiveType
+/// [`VPHeight`]: crate::VPHeight
+/// [`VPRow`]: crate::VPRow
 /// [Mental Model & Visual Layout]: super::OutputRenderer::render_from_active_buffer
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug)]
 pub struct ScrollbackAmount {
     inner: usize,
 }
 
-mod impl_scrollback_amount {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<usize> for ScrollbackAmount {
-        fn from(inner: usize) -> Self { Self { inner } }
-    }
-
-    impl Deref for ScrollbackAmount {
-        type Target = usize;
-
-        fn deref(&self) -> &Self::Target { &self.inner }
-    }
-
-    impl DerefMut for ScrollbackAmount {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
-    }
-
-    impl ScrollbackAmount {
-        #[must_use]
-        pub fn saturating_add(self, rhs: ScrollbackAmount) -> Self {
-            Self {
-                inner: self.inner.saturating_add(rhs.inner),
-            }
-        }
-
-        #[must_use]
-        pub fn saturating_sub(self, rhs: ScrollbackAmount) -> Self {
-            Self {
-                inner: self.inner.saturating_sub(rhs.inner),
-            }
-        }
-
-        #[must_use]
-        pub fn overflows(&self, length: usize) -> ArrayOverflowResult {
-            if self.inner >= length {
-                ArrayOverflowResult::Overflowed
-            } else {
-                ArrayOverflowResult::Within
-            }
-        }
-
-        #[must_use]
-        pub fn clamp_to_max(&self, max_length: usize) -> Self {
-            Self {
-                inner: self.inner.min(max_length),
-            }
-        }
-    }
+#[must_use]
+pub fn scrollback_amount(amount: usize) -> ScrollbackAmount {
+    ScrollbackAmount { inner: amount }
 }
 
-/// Represents the mapped destination of a physical screen row in the multiplexer
-/// viewport.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ViewportRowMapping {
-    /// The screen row maps to a line in the scrollback history buffer. The value is the
-    /// index within the history buffer.
-    History(usize),
-
-    /// The screen row maps to a line in the live active buffer. The value is the index
-    /// within the active buffer.
-    Live(usize),
-}
-
-impl ViewportRowMapping {
-    /// Calculates how a physical screen row index maps to the corresponding index in
-    /// either the history buffer or the live active buffer, based on the scroll amount.
+/// Coordinate mapping to and from Viewport <-> [`Canvas`] coordinates, taking into
+/// account the vertical scrollback amount.
+///
+/// [`Canvas`]: mod@crate::core::coordinates::canvas
+impl ScrollbackAmount {
+    /// Translates a row index in **Viewport Coordinates (Viewport-Relative)** to an
+    /// absolute row index in **[`Canvas`] Coordinates (Canvas-Absolute)**, taking into
+    /// account this vertical scrollback amount.
     ///
-    /// When scrolling backwards (aka up), the new text enters the viewport from the top
-    /// (not the bottom) of the screen. So, when the user scrolls up by `N` lines
-    /// (`scrollback_amt = N`), the physical terminal screen is split horizontally into
-    /// two zones as shown below:
-    /// 1. `0..N` -> history zone
-    /// 2. `N..M` -> live zone
+    /// **Stage 1: Live Bottom View (`scrollback_amt` = 0)**
+    ///
+    /// When `scrollback_amt` is 0, Viewport row 0 maps directly to the line
+    /// immediately following `history_len`. See [`ViewportToCanvasExt::to_canvas`] for
+    /// a visual diagram of how rows are laid out in the canvas.
+    ///
+    /// **Stage 2: Scrolled Back View (`scrollback_amt` = 2)**
+    ///
+    /// When `scrollback_amt` is greater than 0, the target lookup address shifts UP
+    /// into history by `scrollback_amt` lines.
     ///
     /// ```text
-    /// How the viewport is split into zones (in the "physical" display/screen)
+    ///    Canvas Storage Buffer                                   Row Address Calculation
+    ///   ┌─────────────────────────────────────────────────────┐
+    ///  0│ (History Line 0)                                    │  ← Canvas Row 0
+    ///  1│ (History Line 1)                                    │
+    ///  2│ (History Line 2) ◄─── Target (Canvas Row 2)         │  ▲
+    ///  3│ (History Line 3)      ▲                             │  │ history_len = 4
+    ///   ├───────────────────────┼─────────────────────────────┤  ▼
+    ///  4│ Viewport Row 0        │  Shift UP into history by   │  ▲
+    ///  5│ Viewport Row 1        │  scrollback_amt = 2         │  │
+    ///  6│ Viewport Row 2        │  from relative_row_index 0  │  │ Viewport Height = 4
+    ///  7│ Viewport Row 3        │                             │  ▼
+    ///   └───────────────────────┴─────────────────────────────┘  ← Viewport Bottom
     ///
-    /// 0 ╭───────────────────────╮
-    /// 1 │ History Zone          │ ◄─ row_idx < N (maps to ViewportRowMapping::History)
-    /// . │                       │
-    /// . │                       │
-    /// N ├───────────────────────┤
-    /// . │ Live Zone             │ ◄─ row_idx >= N (maps to ViewportRowMapping::Live)
-    /// . │                       │
-    /// . │                       │
-    /// M ╰───────────────────────╯
-    ///
-    /// Legend: N = scrollback_amt, M = pty_max_rows
+    ///   Target Canvas Row = history_len (4) - scrollback_amt (2) + relative_row_index (0)
+    ///                      = CRow(2)
     /// ```
     ///
-    /// - The top rows (`0..N`) are filled with lines from the history buffer.
-    /// - The bottom rows are filled with lines from the live active buffer.
+    /// [`Canvas`]: mod@crate::core::coordinates::canvas
+    /// [`CRow`]: crate::CRow
+    /// [`Viewport`]: crate::Viewport
+    /// [`ViewportToCanvasExt::to_canvas`]: crate::ViewportToCanvasExt::to_canvas
+    /// [`VPRow`]: crate::VPRow
     #[must_use]
-    pub fn calculate(
-        scrollback_amt: ScrollbackAmount,
-        scrollback_buffer: &ScrollbackBuffer,
-        row_idx: usize,
-    ) -> Self {
-        let history_len = scrollback_buffer.lines.len();
+    pub fn to_c_row(&self, viewport: &Viewport, relative_row_index: VPRow) -> CRow {
+        let history_len = viewport.get_history_len();
+        let safe_scrollback_amt = self.clamp_to_max(history_len);
+        let mut vp_copy = *viewport;
+        vp_copy.set_origin_pos(|pos| pos.row_index -= *safe_scrollback_amt);
+        vp_copy.to_canvas(relative_row_index)
+    }
 
-        // Clamp the scroll amount to the actual history length to prevent underflow
-        // panics. This handles race conditions where the terminal state gets out of sync
-        // with its data (e.g., the user scrolls up 1000 lines, then a background process
-        // clears the terminal history down to 0 lines, but the scroll state hasn't been
-        // reset yet).
-        let safe_scrollback_amt = scrollback_amt.clamp_to_max(history_len).inner;
+    /// Translates an absolute row index in **[`Canvas`] Coordinates (Canvas-Absolute)**
+    /// to a relative row index in **Viewport Coordinates (Viewport-Relative)**,
+    /// taking into account this vertical scrollback amount.
+    ///
+    /// This is the inverse of [`Self::to_c_row`]. See [`Self::to_c_row`]
+    /// for a visual diagram of the scrolled viewport layout.
+    ///
+    /// Returns `Some(VPRow)` if the canvas row falls within the scrolled
+    /// viewport view, or `None` if it is outside the visible window.
+    ///
+    /// [`Canvas`]: mod@crate::core::coordinates::canvas
+    /// [`CRow`]: crate::CRow
+    /// [`Viewport`]: crate::Viewport
+    /// [`VPRow`]: crate::VPRow
+    #[must_use]
+    pub fn to_viewport_row(&self, viewport: &Viewport, c_row_idx: CRow) -> Option<VPRow> {
+        let history_len = viewport.get_history_len();
+        let safe_scrollback_amt = self.clamp_to_max(history_len);
+        let mut vp_copy = *viewport;
+        vp_copy.set_origin_pos(|pos| pos.row_index -= *safe_scrollback_amt);
+        vp_copy.to_viewport(c_row_idx)
+    }
+}
 
-        if row_idx < safe_scrollback_amt {
-            // 1. Find the "base index" in history (the absolute oldest visible line). If
-            //    history has 100 lines and we scroll up by 3, the base index is 97.
-            // 2. Add the current physical `row_idx` to step forward through history.
-            ViewportRowMapping::History(history_len - safe_scrollback_amt + row_idx)
-        } else {
-            // Since the top `safe_scroll_amt` rows of the physical screen are stolen by
-            // the history zone, the live zone is shifted down. We subtract that offset to
-            // re-align the physical row back to index 0 of the live buffer.
-            ViewportRowMapping::Live(row_idx - safe_scrollback_amt)
+/// Addition and subtraction operations for [`ScrollbackAmount`] with saturating bounds.
+impl ScrollbackAmount {
+    #[must_use]
+    pub fn saturating_add(self, rhs: ScrollbackAmount) -> Self {
+        Self {
+            inner: self.inner.saturating_add(rhs.inner),
+        }
+    }
+
+    #[must_use]
+    pub fn saturating_sub(self, rhs: ScrollbackAmount) -> Self {
+        Self {
+            inner: self.inner.saturating_sub(rhs.inner),
+        }
+    }
+
+    #[must_use]
+    pub fn clamp_to_max(&self, max_length: impl Into<ScrollbackAmount>) -> Self {
+        *self.min(&max_length.into())
+    }
+
+    #[must_use]
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        self.inner
+            .checked_add(rhs.inner)
+            .map(|inner| Self { inner })
+    }
+
+    #[must_use]
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        self.inner
+            .checked_sub(rhs.inner)
+            .map(|inner| Self { inner })
+    }
+}
+
+impl From<usize> for ScrollbackAmount {
+    fn from(inner: usize) -> ScrollbackAmount { ScrollbackAmount { inner } }
+}
+
+impl From<u16> for ScrollbackAmount {
+    fn from(inner: u16) -> ScrollbackAmount {
+        ScrollbackAmount {
+            inner: usize::from(inner),
         }
     }
 }
+
+impl From<VPHeight> for ScrollbackAmount {
+    fn from(height: VPHeight) -> ScrollbackAmount {
+        ScrollbackAmount {
+            inner: height.as_usize(),
+        }
+    }
+}
+
+impl From<VPLength> for ScrollbackAmount {
+    fn from(length: VPLength) -> ScrollbackAmount {
+        ScrollbackAmount {
+            inner: length.as_usize(),
+        }
+    }
+}
+
+impl Deref for ScrollbackAmount {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target { &self.inner }
+}
+
+impl DerefMut for ScrollbackAmount {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
+}
+
+impl Add for ScrollbackAmount {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output { self.saturating_add(rhs) }
+}
+
+impl Sub for ScrollbackAmount {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output { self.saturating_sub(rhs) }
+}
+
+impl AddAssign for ScrollbackAmount {
+    fn add_assign(&mut self, rhs: Self) { *self = *self + rhs; }
+}
+
+impl SubAssign for ScrollbackAmount {
+    fn sub_assign(&mut self, rhs: Self) { *self = *self - rhs; }
+}
+
+impl NumericConversions for ScrollbackAmount {
+    fn as_usize(&self) -> usize { self.inner }
+}
+
+impl IndexOps for ScrollbackAmount {
+    type LengthType = ScrollbackAmount;
+
+    fn convert_to_length(&self) -> Self::LengthType {
+        ScrollbackAmount {
+            inner: self.inner.saturating_add(1),
+        }
+    }
+}
+
+impl LengthOps for ScrollbackAmount {
+    type IndexType = ScrollbackAmount;
+
+    fn convert_to_index(&self) -> Self::IndexType {
+        ScrollbackAmount {
+            inner: self.inner.saturating_sub(1),
+        }
+    }
+}
+
+impl NumericValue for ScrollbackAmount {}
+
+impl StorageCoordinate for ScrollbackAmount {}
+
+impl ArrayBoundsCheck<ScrollbackAmount> for ScrollbackAmount {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelCharLine, ScrollbackBuffer, ScrollbackBufferLimit};
+    use crate::{ArrayOverflowResult, VPSize, Viewport, c_row, vp_height, vp_row,
+                vp_width};
+
+    fn create_test_viewport() -> Viewport {
+        Viewport::from((
+            crate::c_pos(0, 5),
+            VPSize::new((vp_width(80), vp_height(24))),
+        ))
+    }
 
     #[test]
-    fn test_map_viewport_row_with_scrolling() {
-        // history_len = 100, scrollback_amt = 3
-        let scrollback_amt: ScrollbackAmount = 3.into();
+    fn test_scrollback_amount_constructors_and_deref() {
+        let amount1 = scrollback_amount(10);
+        assert_eq!(*amount1, 10);
 
-        let mut scrollback_buffer: ScrollbackBuffer =
-            ScrollbackBufferLimit::Unlimited.into();
-        for _ in 0..100 {
-            scrollback_buffer.push_and_enforce_limit(PixelCharLine::new_empty(0_u16));
-        }
+        let mut amount2: ScrollbackAmount = 5u16.into();
+        assert_eq!(*amount2, 5);
 
-        // The first 3 rows of the screen (0, 1, 2) map to the last 3 rows of history.
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 0),
-            ViewportRowMapping::History(97)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 1),
-            ViewportRowMapping::History(98)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 2),
-            ViewportRowMapping::History(99)
-        );
+        *amount2 = 15;
+        assert_eq!(*amount2, 15);
+    }
 
-        // Row 3 onwards maps to the live active buffer.
+    #[test]
+    fn test_saturating_add_and_sub() {
+        let a = scrollback_amount(10);
+        let b = scrollback_amount(5);
+
+        assert_eq!(*a.saturating_add(b), 15);
+        assert_eq!(*a.saturating_sub(b), 5);
+        assert_eq!(*b.saturating_sub(a), 0);
+    }
+
+    #[test]
+    fn test_overflows_and_clamp() {
+        let amount = scrollback_amount(10);
+
+        assert_eq!(amount.overflows(10u16), ArrayOverflowResult::Overflowed);
+        assert_eq!(amount.overflows(15u16), ArrayOverflowResult::Within);
+
+        assert_eq!(*amount.clamp_to_max(5u16), 5);
+        assert_eq!(*amount.clamp_to_max(15u16), 10);
+    }
+
+    #[test]
+    fn test_to_canvas_row_and_to_viewport_row() {
+        let vp = create_test_viewport(); // history_len = 5, height = 24
+
+        // Live view (scrollback_amt = 0)
+        let live = scrollback_amount(0);
+        assert_eq!(live.to_c_row(&vp, vp_row(0)), c_row(5));
+        assert_eq!(live.to_viewport_row(&vp, c_row(5)), Some(vp_row(0)));
+        assert_eq!(live.to_viewport_row(&vp, c_row(4)), None);
+
+        // Scrolled view (scrollback_amt = 2)
+        let scrolled = scrollback_amount(2);
+        assert_eq!(scrolled.to_c_row(&vp, vp_row(0)), c_row(3));
+        assert_eq!(scrolled.to_viewport_row(&vp, c_row(3)), Some(vp_row(0)));
+        assert_eq!(scrolled.to_viewport_row(&vp, c_row(2)), None);
+
+        // Clamped scrollback (scrollback_amt = 10 > history_len of 5)
+        let over_scrolled = scrollback_amount(10);
+        assert_eq!(over_scrolled.to_c_row(&vp, vp_row(0)), c_row(0));
         assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 3),
-            ViewportRowMapping::Live(0)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 4),
-            ViewportRowMapping::Live(1)
+            over_scrolled.to_viewport_row(&vp, c_row(0)),
+            Some(vp_row(0))
         );
     }
 
     #[test]
-    fn test_map_viewport_row_no_scrolling() {
-        let scrollback_amt: ScrollbackAmount = 0.into();
+    fn test_checked_add_and_sub() {
+        let a = scrollback_amount(10);
+        let b = scrollback_amount(5);
 
-        let mut scrollback_buffer: ScrollbackBuffer =
-            ScrollbackBufferLimit::Unlimited.into();
-        for _ in 0..100 {
-            scrollback_buffer.push_and_enforce_limit(PixelCharLine::new_empty(0_u16));
-        }
-
-        // All rows map directly to the live buffer.
+        assert_eq!(a.checked_add(b), Some(scrollback_amount(15)));
+        assert_eq!(a.checked_sub(b), Some(scrollback_amount(5)));
+        assert_eq!(b.checked_sub(a), None);
         assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 0),
-            ViewportRowMapping::Live(0)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 10),
-            ViewportRowMapping::Live(10)
+            scrollback_amount(usize::MAX).checked_add(scrollback_amount(1)),
+            None
         );
     }
 
     #[test]
-    fn test_map_viewport_row_scroll_exceeds_history() {
-        // scrollback_amt = 10, but history_len = 5
-        let scrollback_amt: ScrollbackAmount = 10.into();
+    fn test_operators_and_assign() {
+        let mut a = scrollback_amount(10);
+        let b = scrollback_amount(5);
 
-        let mut scrollback_buffer: ScrollbackBuffer =
-            ScrollbackBufferLimit::Unlimited.into();
-        for _ in 0..5 {
-            scrollback_buffer.push_and_enforce_limit(PixelCharLine::new_empty(0_u16));
-        }
+        assert_eq!(a + b, scrollback_amount(15));
+        assert_eq!(a - b, scrollback_amount(5));
 
-        // Even though scrollback_amt is 10, it's clamped to history_len (5).
-        // The first 5 rows (0..4) should map to history (0..4).
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 0),
-            ViewportRowMapping::History(0)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 4),
-            ViewportRowMapping::History(4)
-        );
+        a += b;
+        assert_eq!(a, scrollback_amount(15));
 
-        // Row 5 onwards should map to live buffer, starting from 0.
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 5),
-            ViewportRowMapping::Live(0)
-        );
+        a -= scrollback_amount(10);
+        assert_eq!(a, scrollback_amount(5));
     }
 
     #[test]
-    fn test_map_viewport_row_empty_history() {
-        // scrollback_amt = 10, but history_len = 0
-        let scrollback_amt: ScrollbackAmount = 10.into();
+    fn test_numeric_value_and_index_length_ops() {
+        use crate::{IndexOps, LengthOps, NumericValue};
 
-        let scrollback_buffer: ScrollbackBuffer = ScrollbackBufferLimit::Unlimited.into();
+        let zero = scrollback_amount(0);
+        let non_zero = scrollback_amount(10);
 
-        // Clamped to 0. All rows map to Live.
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 0),
-            ViewportRowMapping::Live(0)
-        );
-        assert_eq!(
-            ViewportRowMapping::calculate(scrollback_amt, &scrollback_buffer, 5),
-            ViewportRowMapping::Live(5)
-        );
+        assert!(zero.is_zero());
+        assert!(!non_zero.is_zero());
+
+        assert_eq!(non_zero.convert_to_length(), scrollback_amount(11));
+        assert_eq!(non_zero.convert_to_index(), scrollback_amount(9));
     }
 }

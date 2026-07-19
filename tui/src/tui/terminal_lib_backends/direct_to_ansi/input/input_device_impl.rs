@@ -74,7 +74,7 @@ pub mod global_input_resource {
     ///
     /// let subscriber_guard = SINGLETON.try_subscribe()?;
     /// let running = matches!(
-    ///     *SINGLETON.shared_state.lock().unwrap(),
+    ///     *SINGLETON.shared_state.lock().expect("conversion error"),
     ///     crate::ThreadState::Running { .. }
     /// );
     /// let count = SINGLETON.get_receiver_count();
@@ -111,7 +111,7 @@ pub mod global_input_resource {
 mod tests {
     use super::super::{paste_state_machine::PasteCollectionState,
                        protocol_conversion::convert_input_event};
-    use crate::{ByteOffset, InputEvent,
+    use crate::{InputEvent, byte_offset,
                 core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                            VT100KeyCodeIR,
                                                            VT100KeyModifiersIR,
@@ -128,7 +128,7 @@ mod tests {
         // Test 1: Parse UTF-8 text (simplest case).
         let buffer: &[u8] = b"A";
         if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(buffer) {
-            assert_eq!(bytes_consumed, ByteOffset(1));
+            assert_eq!(bytes_consumed, byte_offset(1));
             if let Some(canonical_event) = convert_input_event(vt100_event) {
                 assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
             } else {
@@ -147,7 +147,7 @@ mod tests {
         let csi_buffer: [u8; 3] = [0x1B, 0x5B, 0x41];
         if let Some((vt100_event, bytes_consumed)) = parse_keyboard_sequence(&csi_buffer)
         {
-            assert_eq!(bytes_consumed, ByteOffset(3));
+            assert_eq!(bytes_consumed, byte_offset(3));
             if let Some(canonical_event) = convert_input_event(vt100_event) {
                 assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
             } else {

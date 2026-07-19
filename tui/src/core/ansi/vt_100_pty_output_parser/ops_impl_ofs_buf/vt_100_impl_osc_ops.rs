@@ -21,10 +21,10 @@
 //! architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`handle_hyperlink`]: crate::OfsBufVT100::handle_hyperlink
-//! [`handle_title_and_icon`]: crate::OfsBufVT100::handle_title_and_icon
+//! [`handle_hyperlink`]: crate::core::ansi::OfsBufVT100::handle_hyperlink
+//! [`handle_title_and_icon`]: crate::core::ansi::OfsBufVT100::handle_title_and_icon
 //! [`OSC`]: crate::osc_codes::OscSequence
-//! [`print_char()`]: crate::OfsBufVT100::print_char
+//! [`print_char()`]: crate::core::ansi::OfsBufVT100::print_char
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_pty_output_parser::ops::osc_ops`]:
 //!     crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_osc_ops
@@ -43,7 +43,7 @@ impl OfsBufVT100 {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_title_and_icon(&mut self, title: &str) {
-        self.parser_global_state
+        self.get_parser_global_state_mut()
             .pending_osc_events
             .push(OscEvent::SetTitleAndTab(title.to_string()));
     }
@@ -55,7 +55,7 @@ impl OfsBufVT100 {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {
-        self.parser_global_state
+        self.get_parser_global_state_mut()
             .pending_osc_events
             .push(OscEvent::Hyperlink {
                 uri: uri.to_string(),
@@ -67,10 +67,10 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_osc_ops {
     use super::*;
-    use crate::{OfsBufVT100, height, width};
+    use crate::{OfsBufVT100, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        let size = width(10) + height(6);
+        let size = vp_width(10) + vp_height(6);
         OfsBufVT100::new_empty(size)
     }
 
@@ -79,14 +79,25 @@ mod tests_osc_ops {
         let mut buffer = create_test_buffer();
 
         // Initially no pending OSC events.
-        assert!(buffer.parser_global_state.pending_osc_events.is_empty());
+        assert!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .is_empty()
+        );
 
         buffer.handle_title_and_icon("My Window Title");
 
         // Should have one SetTitleAndTab event.
-        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .len(),
+            1
+        );
         if let OscEvent::SetTitleAndTab(title) =
-            &buffer.parser_global_state.pending_osc_events[0]
+            &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(title, "My Window Title");
         } else {
@@ -101,9 +112,15 @@ mod tests_osc_ops {
         buffer.handle_hyperlink("https://example.com");
 
         // Should have one Hyperlink event.
-        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .len(),
+            1
+        );
         if let OscEvent::Hyperlink { uri, text } =
-            &buffer.parser_global_state.pending_osc_events[0]
+            &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(uri, "https://example.com");
             assert_eq!(text, ""); // Text is handled separately
@@ -121,19 +138,25 @@ mod tests_osc_ops {
         buffer.handle_title_and_icon("Title 2");
 
         // Should have three events queued.
-        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 3);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .len(),
+            3
+        );
 
         // Check order is preserved.
         assert!(matches!(
-            buffer.parser_global_state.pending_osc_events[0],
+            buffer.get_parser_global_state_mut().pending_osc_events[0],
             OscEvent::SetTitleAndTab(_)
         ));
         assert!(matches!(
-            buffer.parser_global_state.pending_osc_events[1],
+            buffer.get_parser_global_state_mut().pending_osc_events[1],
             OscEvent::Hyperlink { .. }
         ));
         assert!(matches!(
-            buffer.parser_global_state.pending_osc_events[2],
+            buffer.get_parser_global_state_mut().pending_osc_events[2],
             OscEvent::SetTitleAndTab(_)
         ));
     }
@@ -144,9 +167,15 @@ mod tests_osc_ops {
 
         buffer.handle_title_and_icon("");
 
-        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .len(),
+            1
+        );
         if let OscEvent::SetTitleAndTab(title) =
-            &buffer.parser_global_state.pending_osc_events[0]
+            &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(title, "");
         } else {
@@ -160,9 +189,15 @@ mod tests_osc_ops {
 
         buffer.handle_hyperlink("");
 
-        assert_eq!(buffer.parser_global_state.pending_osc_events.len(), 1);
+        assert_eq!(
+            buffer
+                .get_parser_global_state_mut()
+                .pending_osc_events
+                .len(),
+            1
+        );
         if let OscEvent::Hyperlink { uri, text } =
-            &buffer.parser_global_state.pending_osc_events[0]
+            &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(uri, "");
             assert_eq!(text, "");

@@ -16,9 +16,9 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{ChannelCapacity, LineStateControlSignal, MSG_CONTROLLED_READY,
-            MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext, Readline,
-            Size, generate_pty_test, height, width};
+use crate::{ChannelCapacity, InputDevice, LineStateControlSignal, MSG_CONTROLLED_READY,
+            MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
+            PtyTestMode, Readline, generate_pty_test, vp_height, vp_width};
 use std::io::Write;
 use tokio::{sync::broadcast, time::Duration};
 
@@ -31,7 +31,7 @@ mod test_pty_readline {
         test_fn: test_pty_readline,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Raw,
+        mode: PtyTestMode::Raw,
     }
 
     fn controller(context: PtyTestContext) {
@@ -44,14 +44,14 @@ mod test_pty_readline {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         // Give readline time to start its event loop.
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         // Send "abc" followed by Enter (\r in raw mode).
-        writer.write_all(b"abc\r").unwrap();
-        writer.flush().unwrap();
+        writer.write_all(b"abc\r").expect("conversion error");
+        writer.flush().expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
             line.contains("ReadlineEvent:")
@@ -72,16 +72,16 @@ mod test_pty_readline {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             println!("{MSG_CONTROLLED_STARTING}");
             let output_device = OutputDevice::new_stdout();
-            let input_device = crate::InputDevice::new();
+            let input_device = InputDevice::new();
             let (shutdown_sender, _) = broadcast::channel::<()>(1);
-            let test_size = Size::new((width(100), height(100)));
+            let test_size = vp_width(100) + vp_height(100);
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let (mut readline, _shared_writer) = Readline::try_new(
                 "> ".into(),
@@ -91,13 +91,13 @@ mod test_pty_readline {
                 ChannelCapacity::Minimal,
                 test_size,
             )
-            .unwrap();
+            .expect("conversion error");
 
             let result = readline.readline().await;
             println!("ReadlineEvent: {result:?}");
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }
@@ -111,7 +111,7 @@ mod test_pty_pause_resume {
         test_fn: test_pty_pause_resume,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Cooked,
+        mode: PtyTestMode::Cooked,
     }
 
     fn controller(context: PtyTestContext) {
@@ -124,7 +124,7 @@ mod test_pty_pause_resume {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
             line.contains("IsPaused: Paused") || line.contains("IsPaused: NotPaused")
@@ -151,16 +151,16 @@ mod test_pty_pause_resume {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             println!("{MSG_CONTROLLED_STARTING}");
             let output_device = OutputDevice::new_stdout();
-            let input_device = crate::InputDevice::new();
+            let input_device = InputDevice::new();
             let (shutdown_sender, _) = broadcast::channel::<()>(1);
-            let test_size = Size::new((width(100), height(100)));
+            let test_size = vp_width(100) + vp_height(100);
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let (readline, shared_writer) = Readline::try_new(
                 "> ".into(),
@@ -170,13 +170,13 @@ mod test_pty_pause_resume {
                 ChannelCapacity::Minimal,
                 test_size,
             )
-            .unwrap();
+            .expect("conversion error");
 
             shared_writer
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Pause)
                 .await
-                .unwrap();
+                .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
@@ -186,14 +186,14 @@ mod test_pty_pause_resume {
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Resume)
                 .await
-                .unwrap();
+                .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
             println!("IsPaused: {is_paused:?}");
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }
@@ -207,7 +207,7 @@ mod test_pty_pause_resume_with_output {
         test_fn: test_pty_pause_resume_with_output,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Cooked,
+        mode: PtyTestMode::Cooked,
     }
 
     fn controller(context: PtyTestContext) {
@@ -220,10 +220,11 @@ mod test_pty_pause_resume_with_output {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
-            line.contains("PauseBuffer: [\"abc\"]") || line.contains("IsPaused: NotPaused")
+            line.contains("PauseBuffer: [\"abc\"]")
+                || line.contains("IsPaused: NotPaused")
         });
 
         assert!(
@@ -250,16 +251,16 @@ mod test_pty_pause_resume_with_output {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             println!("{MSG_CONTROLLED_STARTING}");
             let output_device = OutputDevice::new_stdout();
-            let input_device = crate::InputDevice::new();
+            let input_device = InputDevice::new();
             let (shutdown_sender, _) = broadcast::channel::<()>(1);
-            let test_size = Size::new((width(100), height(100)));
+            let test_size = vp_width(100) + vp_height(100);
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let (readline, shared_writer) = Readline::try_new(
                 "> ".into(),
@@ -269,20 +270,20 @@ mod test_pty_pause_resume_with_output {
                 ChannelCapacity::Minimal,
                 test_size,
             )
-            .unwrap();
+            .expect("conversion error");
 
             shared_writer
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Pause)
                 .await
-                .unwrap();
+                .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             shared_writer
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Line("abc".into()))
                 .await
-                .unwrap();
+                .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             let pause_buffer = readline.safe_is_paused_buffer.read(Clone::clone);
@@ -292,14 +293,14 @@ mod test_pty_pause_resume_with_output {
                 .line_state_control_channel_sender
                 .send(LineStateControlSignal::Resume)
                 .await
-                .unwrap();
+                .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
             println!("IsPaused: {is_paused:?}");
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }

@@ -16,7 +16,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`StdinEvent::Error`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::channel_types::StdinEvent::Error
 
-use crate::{Continuation, PtyTestContext, PtyTestMode, RRTEvent, RRTWorker, generate_pty_test,
+use crate::{Continuation, PtyTestContext, PtyTestMode, RRTEvent, RRTWorker,
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::{PollerEvent,
                                                                                 StdinEvent},
                                                                 mio_poller::MioPollWorker}};
@@ -60,9 +61,11 @@ fn controlled() {
     println!("{POLL_ERROR_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    let (mut worker, _waker) =
-        MioPollWorker::create_and_register_os_sources((), tokio::sync::broadcast::channel(1).1)
-            .unwrap();
+    let (mut worker, _waker) = MioPollWorker::create_and_register_os_sources(
+        (),
+        tokio::sync::broadcast::channel(1).1,
+    )
+    .expect("conversion error");
 
     let (sender, mut receiver) =
         tokio::sync::broadcast::channel::<RRTEvent<PollerEvent>>(16);
@@ -74,7 +77,7 @@ fn controlled() {
 
     assert_eq!(result, Continuation::Restart);
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Worker(PollerEvent::Stdin(StdinEvent::Error)) => {}
         other => panic!("Expected StdinEvent::Error, got {other:?}"),
     }

@@ -27,23 +27,24 @@
 //! helpers - the coordinator manages global state to avoid race conditions.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
+//! [`ColorSupport::Truecolor`]: ColorSupport::Truecolor
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
-//! [`OfsBufVT100`]: crate::OfsBufVT100
-//! [`StdoutMock`]: crate::StdoutMock
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
+//! [`StdoutMock`]: StdoutMock
 
-use crate::{OfsBufVT100, OutputDevice, RenderOpOutput, RenderOpPaint,
-            RenderOpsLocalData, Size, col, height, pos, render_op::RenderOpCommon, row,
-            terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
-            test_fixtures::output_device_fixtures::OutputDeviceExt, width};
+use crate::{InlineString, NarrowingCastToU16, OfsBufVT100, OutputDevice, RenderOpOutput,
+            RenderOpPaint, RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, RgbValue,
+            TuiColor, TuiStyle, TuiStyleAttribs, VPSize, render_op::RenderOpCommon,
+            test_fixtures::output_device_fixtures::OutputDeviceExt, vp_col, vp_height,
+            vp_pos, vp_row, vp_width};
 
 /// Standard buffer size for rendered tests (matches typical terminal).
-pub fn rendered_test_buffer_size() -> Size { Size::new((width(80), height(24))) }
+pub fn rendered_test_buffer_size() -> VPSize { vp_width(80) + vp_height(24) }
 
 /// Creates initial test state with cursor at origin.
 pub fn create_rendered_test_state() -> RenderOpsLocalData {
     RenderOpsLocalData {
-        cursor_pos: pos(row(0) + col(0)),
+        cursor_pos: vp_pos(0, 0),
         fg_color: None,
         bg_color: None,
     }
@@ -60,9 +61,9 @@ pub fn create_rendered_test_state() -> RenderOpsLocalData {
 /// 5. Returns the buffer for assertions
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OfsBufVT100`]: crate::OfsBufVT100
-/// [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
-/// [`StdoutMock`]: crate::StdoutMock
+/// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
+/// [`RenderOpPaintImplDirectToAnsi`]: RenderOpPaintImplDirectToAnsi
+/// [`StdoutMock`]: StdoutMock
 pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OfsBufVT100 {
     let buffer_size = rendered_test_buffer_size();
     execute_and_render_to_buffer_with_size(ops, buffer_size)
@@ -77,11 +78,11 @@ pub fn execute_and_render_to_buffer(ops: Vec<RenderOpOutput>) -> OfsBufVT100 {
 /// Do not call `set_override`/`clear_override` here - the coordinator manages
 /// global state to avoid race conditions when tests run in parallel.
 ///
-/// [`ColorSupport::Truecolor`]: crate::ColorSupport::Truecolor
+/// [`ColorSupport::Truecolor`]: ColorSupport::Truecolor
 /// [`global_color_support::set_override`]: crate::global_color_support::set_override
 pub fn execute_and_render_to_buffer_with_size(
     ops: Vec<RenderOpOutput>,
-    buffer_size: Size,
+    buffer_size: VPSize,
 ) -> OfsBufVT100 {
     // Step 1: Create mock output device.
     let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -116,22 +117,22 @@ pub fn execute_ops_and_render(ops: Vec<RenderOpOutput>) -> OfsBufVT100 {
 
 /// Helper to create a cursor move operation.
 pub fn move_cursor_abs(row_idx: usize, col_idx: usize) -> RenderOpOutput {
-    RenderOpOutput::Common(RenderOpCommon::MoveCursorPositionAbs(pos(
-        row(row_idx) + col(col_idx)
-    )))
+    RenderOpOutput::Common(RenderOpCommon::MoveCursorPositionAbs(
+        vp_row(row_idx.as_u16_narrowing()) + vp_col(col_idx.as_u16_narrowing()),
+    ))
 }
 
 /// Helper to create a text paint operation.
-pub fn paint_text(text: &str, style: Option<crate::TuiStyle>) -> RenderOpOutput {
+pub fn paint_text(text: &str, style: Option<TuiStyle>) -> RenderOpOutput {
     RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
-        crate::InlineString::from(text),
+        InlineString::from(text),
         style,
     )
 }
 
 /// Helper to create a text paint operation with foreground color.
-pub fn paint_text_with_fg(text: &str, fg_color: crate::TuiColor) -> RenderOpOutput {
-    let style = crate::TuiStyle {
+pub fn paint_text_with_fg(text: &str, fg_color: TuiColor) -> RenderOpOutput {
+    let style = TuiStyle {
         color_fg: Some(fg_color),
         ..Default::default()
     };
@@ -139,8 +140,8 @@ pub fn paint_text_with_fg(text: &str, fg_color: crate::TuiColor) -> RenderOpOutp
 }
 
 /// Helper to create a text paint operation with background color.
-pub fn paint_text_with_bg(text: &str, bg_color: crate::TuiColor) -> RenderOpOutput {
-    let style = crate::TuiStyle {
+pub fn paint_text_with_bg(text: &str, bg_color: TuiColor) -> RenderOpOutput {
+    let style = TuiStyle {
         color_bg: Some(bg_color),
         ..Default::default()
     };
@@ -150,10 +151,10 @@ pub fn paint_text_with_bg(text: &str, bg_color: crate::TuiColor) -> RenderOpOutp
 /// Helper to create a text paint operation with both fg and bg colors.
 pub fn paint_text_with_colors(
     text: &str,
-    fg_color: crate::TuiColor,
-    bg_color: crate::TuiColor,
+    fg_color: TuiColor,
+    bg_color: TuiColor,
 ) -> RenderOpOutput {
-    let style = crate::TuiStyle {
+    let style = TuiStyle {
         color_fg: Some(fg_color),
         color_bg: Some(bg_color),
         ..Default::default()
@@ -163,8 +164,8 @@ pub fn paint_text_with_colors(
 
 /// Helper to create a text paint operation with bold attribute.
 pub fn paint_text_bold(text: &str) -> RenderOpOutput {
-    let style = crate::TuiStyle {
-        attribs: crate::TuiStyleAttribs {
+    let style = TuiStyle {
+        attribs: TuiStyleAttribs {
             bold: Some(crate::tui_style_attrib::Bold),
             ..Default::default()
         },
@@ -175,8 +176,8 @@ pub fn paint_text_bold(text: &str) -> RenderOpOutput {
 
 /// Helper to create a text paint operation with RGB foreground color.
 pub fn paint_text_with_rgb_fg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput {
-    let style = crate::TuiStyle {
-        color_fg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(r, g, b))),
+    let style = TuiStyle {
+        color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b))),
         ..Default::default()
     };
     paint_text(text, Some(style))
@@ -184,8 +185,8 @@ pub fn paint_text_with_rgb_fg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput
 
 /// Helper to create a text paint operation with RGB background color.
 pub fn paint_text_with_rgb_bg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput {
-    let style = crate::TuiStyle {
-        color_bg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(r, g, b))),
+    let style = TuiStyle {
+        color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b))),
         ..Default::default()
     };
     paint_text(text, Some(style))
@@ -197,13 +198,9 @@ pub fn paint_text_with_rgb_colors(
     fg: (u8, u8, u8),
     bg: (u8, u8, u8),
 ) -> RenderOpOutput {
-    let style = crate::TuiStyle {
-        color_fg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(
-            fg.0, fg.1, fg.2,
-        ))),
-        color_bg: Some(crate::TuiColor::Rgb(crate::RgbValue::from_u8(
-            bg.0, bg.1, bg.2,
-        ))),
+    let style = TuiStyle {
+        color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(fg.0, fg.1, fg.2))),
+        color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(bg.0, bg.1, bg.2))),
         ..Default::default()
     };
     paint_text(text, Some(style))

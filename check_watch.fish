@@ -470,23 +470,28 @@ function run_checks_for_type
             end
 
             # Step 2: Full build (FORKED - runs in background while user continues editing)
-            # Uses run_full_doc_build_task from script_lib.fish which handles:
-            # - Building full docs
+            # Uses run_full_doc_build_task from check_docs.fish which handles:
+            # - Building full docs with dep-doc caching
             # - Syncing to serving (deps are always valid)
             # - Catch-up check for changes during full build
             # - Patching with quick docs if changes detected
             # - Desktop notifications
+            # - Single-instance mutual exclusion via explicit PID file
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔀 Forking full build to background..."
 
             fish -c "
                 cd $PWD
                 source script_lib.fish
+                source check_constants.fish
+                source check_docs.fish
                 run_full_doc_build_task \
-                    $CHECK_TARGET_DIR_DOC_STAGING_FULL \
-                    $CHECK_TARGET_DIR_DOC_STAGING_QUICK \
-                    $CHECK_TARGET_DIR \
-                    $CHECK_LOG_FILE \
-                    $NOTIFICATION_EXPIRE_MS
+                    '$CHECK_TARGET_DIR_DOC_STAGING_FULL' \
+                    '$CHECK_TARGET_DIR_DOC_STAGING_QUICK' \
+                    '$CHECK_TARGET_DIR' \
+                    '$CHECK_LOG_FILE' \
+                    '$CHECK_FULL_DOC_PID_FILE' \
+                    '$NOTIFICATION_EXPIRE_MS' \
+                    '$WORKSPACE_NAME'
             " &
 
             # Return immediately - quick build done, full build running in background

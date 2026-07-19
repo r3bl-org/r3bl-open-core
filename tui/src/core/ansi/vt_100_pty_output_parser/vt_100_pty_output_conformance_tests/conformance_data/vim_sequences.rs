@@ -17,9 +17,10 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, EraseDisplayMode, EscSequence, LengthOps, SgrCode,
-            core::ansi::vt_100_pty_output_parser::CsiSequence, height, term_col,
-            term_row};
+use crate::{ANSIBasicColor, EraseDisplayMode, EscSequence, LengthOps,
+            NarrowingCastToU16, SgrCode, WideningCastToUsize,
+            core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_row,
+            vp_height};
 use std::num::NonZeroU16;
 
 /// Vim status line pattern with mode indicator.
@@ -108,7 +109,7 @@ pub fn vim_visual_selection(
 
         // Fill the selected area (simplified - would normally preserve existing text)
         let selection_width = col_end - col_start + 1;
-        sequence.push_str(&" ".repeat(selection_width as usize));
+        sequence.push_str(&" ".repeat(selection_width.as_usize_widening()));
     }
 
     // Reset styling.
@@ -260,7 +261,9 @@ pub fn vim_completion_menu(completions: &[&str], start_row: NonZeroU16) -> Strin
 
     // Display each completion option.
     for (i, completion) in completions.iter().enumerate() {
-        let row_offset = height(i).clamp_to_max(u16::MAX).as_u16();
+        let row_offset = vp_height(i.as_u16_narrowing())
+            .clamp_to_max(u16::MAX)
+            .as_u16();
         let row_nz = NonZeroU16::new(start_row.get() + row_offset)
             .expect("start_row + row_offset is always >= 1");
         sequence.push_str(

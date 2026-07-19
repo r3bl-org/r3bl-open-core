@@ -66,29 +66,28 @@
 //!
 //! [`.chunks_exact(width)`]: slice::chunks_exact
 //! [`compositor`]: crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
-//! [`Flat1DSimd`]: crate::Flat1DSimd
-//! [`Flat2DArray`]: crate::Flat2DArray
+//! [`Flat1DSimd`]: crate::core::Flat1DSimd
+//! [`Flat2DArray`]: crate::core::Flat2DArray
 //! [`InlineVec`]: crate::InlineVec
 //! [`PixelCharLine`]: crate::PixelCharLine
-//! [CPU Cache & Hardware Prefetching]: crate::Flat2DArray#the-cpu-cache--hardware-prefetching
-//! [How SIMD Vectorization Works]: crate::Flat2DArray#how-simd-vectorization-works
+//! [CPU Cache & Hardware Prefetching]: crate::core::Flat2DArray#the-cpu-cache--hardware-prefetching
+//! [How SIMD Vectorization Works]: crate::core::Flat2DArray#how-simd-vectorization-works
 //! [Rule of Thumb for 1D vs 2D Memory Iteration]:
-//!     crate::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
+//!     crate::core::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
 
 extern crate test;
 
-use crate::{ColWidth, Flat2DArray, PixelChar, PixelCharLines, RowHeight, RowIndex, Size};
+use crate::{CHeight, CRow, CSize, CWidth, Flat2DArray, GetMemSize, PixelChar};
+use std::mem::size_of;
 use test::{Bencher, black_box};
 
 const WIDTH: usize = 200;
 const HEIGHT: usize = 100;
 
+#[allow(clippy::needless_range_loop)]
 #[bench]
 fn group_1_clear_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
-    let mut grid = PixelCharLines::new_empty(Size::from((
-        ColWidth::from(WIDTH),
-        RowHeight::from(HEIGHT),
-    )));
+    let mut grid = vec![vec![PixelChar::Spacer; WIDTH]; HEIGHT];
     b.iter(|| {
         for row in 0..HEIGHT {
             for col in 0..WIDTH {
@@ -101,7 +100,7 @@ fn group_1_clear_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
 #[bench]
 fn group_1_clear_screen_pixelchar_using_flat_array_simd(b: &mut Bencher) {
     let mut grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {
@@ -111,16 +110,11 @@ fn group_1_clear_screen_pixelchar_using_flat_array_simd(b: &mut Bencher) {
 
 #[bench]
 fn group_2_scroll_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
-    let mut grid = PixelCharLines::new_empty(Size::from((
-        ColWidth::from(WIDTH),
-        RowHeight::from(HEIGHT),
-    )));
+    let mut grid = vec![vec![PixelChar::Spacer; WIDTH]; HEIGHT];
     b.iter(|| {
         for row in 0..HEIGHT - 1 {
             let (first, second) = grid.split_at_mut(row + 1);
-            first[row]
-                .pixel_chars
-                .clone_from_slice(&second[0].pixel_chars);
+            first[row].clone_from_slice(&second[0]);
         }
     });
 }
@@ -128,23 +122,19 @@ fn group_2_scroll_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
 #[bench]
 fn group_2_scroll_screen_pixelchar_using_flat_array_simd(b: &mut Bencher) {
     let mut grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {
-        grid.as_simd_mut().copy_within_rows(
-            RowIndex::from(1)..RowIndex::from(HEIGHT),
-            RowIndex::from(0),
-        );
+        grid.as_simd_mut()
+            .copy_within_rows(CRow::from(1usize)..CRow::from(HEIGHT), CRow::from(0usize));
     });
 }
 
+#[allow(clippy::needless_range_loop)]
 #[bench]
 fn group_3_read_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
-    let grid = PixelCharLines::new_empty(Size::from((
-        ColWidth::from(WIDTH),
-        RowHeight::from(HEIGHT),
-    )));
+    let grid = vec![vec![PixelChar::Spacer; WIDTH]; HEIGHT];
     b.iter(|| {
         for row in 0..HEIGHT {
             for col in 0..WIDTH {
@@ -157,7 +147,7 @@ fn group_3_read_screen_pixelchar_using_legacy_nested_vec(b: &mut Bencher) {
 #[bench]
 fn group_3_read_screen_pixelchar_using_flat_array_simd(b: &mut Bencher) {
     let grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {
@@ -169,21 +159,24 @@ fn group_3_read_screen_pixelchar_using_flat_array_simd(b: &mut Bencher) {
 
 #[bench]
 fn group_4_memory_size_legacy_nested_vec(b: &mut Bencher) {
-    use crate::GetMemSize;
-    let grid = PixelCharLines::new_empty(Size::from((
-        ColWidth::from(WIDTH),
-        RowHeight::from(HEIGHT),
-    )));
+    let grid = vec![vec![PixelChar::Spacer; WIDTH]; HEIGHT];
     b.iter(|| {
-        black_box(grid.get_mem_size());
+        let total: usize = grid
+            .iter()
+            .map(|row| {
+                row.iter().map(GetMemSize::get_mem_size).sum::<usize>()
+                    + (row.len() * size_of::<PixelChar>())
+            })
+            .sum::<usize>()
+            + (grid.len() * size_of::<Vec<PixelChar>>());
+        black_box(total);
     });
 }
 
 #[bench]
 fn group_4_memory_size_flat_array(b: &mut Bencher) {
-    use crate::GetMemSize;
     let grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {
@@ -194,7 +187,7 @@ fn group_4_memory_size_flat_array(b: &mut Bencher) {
 #[bench]
 fn group_5_2d_traversal_using_modulo_math(b: &mut Bencher) {
     let grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {
@@ -210,7 +203,7 @@ fn group_5_2d_traversal_using_modulo_math(b: &mut Bencher) {
 #[bench]
 fn group_5_2d_traversal_using_chunks_exact(b: &mut Bencher) {
     let grid = Flat2DArray::<PixelChar>::new_empty(
-        Size::from((ColWidth::from(WIDTH), RowHeight::from(HEIGHT))),
+        CSize::from((CWidth::from(WIDTH), CHeight::from(HEIGHT))),
         PixelChar::Spacer,
     );
     b.iter(|| {

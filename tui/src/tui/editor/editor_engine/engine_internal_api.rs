@@ -5,8 +5,8 @@
 //! API.
 
 use super::{DeleteSelectionWith, SelectMode, caret_mut, content_mut};
-use crate::{EditorArgsMut, EditorBuffer, EditorEngine, GapBufferLine, clipboard_support,
-            clipboard_support::ClipboardService};
+use crate::{ClipboardService, EditorArgsMut, EditorBuffer, EditorEngine, GapBufferLine,
+            copy_to_clipboard};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     caret_mut::up(buffer, engine, sel_mod);
@@ -56,11 +56,11 @@ pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
 #[must_use]
 pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<GapBufferLine<'_>> {
-    buffer.line_at_caret_scr_adj()
+    buffer.get_line_at_c_caret()
 }
 
-pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
-    content_mut::insert_chunk_at_caret(args, chunk);
+pub fn insert_into_single_line_at_caret(args: EditorArgsMut<'_>, text: &str) {
+    content_mut::insert_into_single_line_at_caret(args, text);
 }
 
 /// Inserts multiple lines of text at the caret position in a single batch operation.
@@ -82,16 +82,17 @@ pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 ///
 /// # Example
 ///
-/// Instead of calling `insert_str_at_caret()` and `insert_new_line_at_caret()` in a loop
-/// (which validates after each call), use this function to insert all lines in a single
-/// batch operation with a single validation pass at the end.
+/// Instead of calling `insert_into_single_line_at_caret()` and
+/// `insert_new_line_at_caret()` in a loop (which validates after each call), use this
+/// function to insert all lines in a single batch operation with a single validation pass
+/// at the end.
 ///
 /// # Arguments
 /// * `args` - Mutable references to the editor engine and buffer
 /// * `lines` - Vector of string slices to insert, with newlines automatically added
 ///   between them
-pub fn insert_str_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
-    content_mut::insert_lines_batch_at_caret(args, lines);
+pub fn insert_multiple_lines_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
+    content_mut::insert_multiple_lines_at_caret(args, lines);
 }
 
 pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
@@ -118,20 +119,21 @@ pub fn copy_editor_selection_to_clipboard(
     buffer: &EditorBuffer,
     clipboard: &mut impl ClipboardService,
 ) {
-    clipboard_support::copy_to_clipboard(buffer, clipboard);
+    copy_to_clipboard(buffer, clipboard);
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, SelectMode,
-                assert_eq2, caret_raw,
-                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
+    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer,
+                FileExtensionToken, SelectMode, assert_eq2, c_caret, c_col, c_len,
+                c_row, clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
-                editor_engine::engine_internal_api, len, row};
+                editor_engine::engine_internal_api};
 
     #[test]
     fn test_select_all() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let _engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add some content.
@@ -145,16 +147,17 @@ mod tests {
         engine_internal_api::select_all(&mut buffer, SelectMode::Enabled);
 
         // Check that all lines are selected.
-        let selection_list = buffer.get_selection_list();
+        let selection_list = buffer.get_selection_container();
         assert_eq2!(selection_list.len(), 3);
-        assert!(selection_list.get(row(0)).is_some());
-        assert!(selection_list.get(row(1)).is_some());
-        assert!(selection_list.get(row(2)).is_some());
+        assert!(selection_list.get(c_row(0)).is_some());
+        assert!(selection_list.get(c_row(1)).is_some());
+        assert!(selection_list.get(c_row(2)).is_some());
     }
 
     #[test]
     fn test_clear_selection() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let _engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add some content and select all.
@@ -162,18 +165,19 @@ mod tests {
         engine_internal_api::select_all(&mut buffer, SelectMode::Enabled);
 
         // Verify selection exists.
-        assert_eq2!(buffer.get_selection_list().len(), 2);
+        assert_eq2!(buffer.get_selection_container().len(), 2);
 
         // Clear selection
         engine_internal_api::clear_selection(&mut buffer);
 
         // Verify selection is cleared.
-        assert_eq2!(buffer.get_selection_list().len(), 0);
+        assert_eq2!(buffer.get_selection_container().len(), 0);
     }
 
     #[test]
     fn test_delete_selected() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add some content.
@@ -185,7 +189,7 @@ mod tests {
 
         // Select line 2
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(0) + row(1));
+        *buffer_mut.inner.c_caret = c_caret(c_col(0) + c_row(1));
         drop(buffer_mut);
 
         engine_internal_api::select_all(&mut buffer, SelectMode::Enabled);
@@ -198,12 +202,13 @@ mod tests {
         );
 
         // Should have no lines left after deleting all.
-        assert_eq2!(buffer.get_lines().len(), len(0));
+        assert_eq2!(buffer.get_lines().get_c_len(), c_len(0));
     }
 
     #[test]
     fn test_copy_editor_selection_to_clipboard() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut test_clipboard = TestClipboard::default();
 
         // Add some content.
@@ -228,7 +233,8 @@ mod tests {
 
     #[test]
     fn test_delete_selected_with_partial_selection() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add some content.
@@ -236,7 +242,7 @@ mod tests {
 
         // Move caret to position (5, 0) - after "hello"
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(5) + row(0));
+        *buffer_mut.inner.c_caret = c_caret(c_col(5) + c_row(0));
         drop(buffer_mut);
 
         // Select from current position to end of line.
@@ -250,20 +256,27 @@ mod tests {
         );
 
         // Should have "hello" on first line and "second line" on second.
-        assert_eq2!(buffer.get_lines().len(), len(2));
+        assert_eq2!(buffer.get_lines().get_c_len(), c_len(2));
         assert_eq2!(
-            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            buffer
+                .get_lines()
+                .get_line_content(c_row(0))
+                .expect("conversion error"),
             "hello"
         );
         assert_eq2!(
-            buffer.get_lines().get_line_content(row(1)).unwrap(),
+            buffer
+                .get_lines()
+                .get_line_content(c_row(1))
+                .expect("conversion error"),
             "second line"
         );
     }
 
     #[test]
     fn test_navigation_with_selection() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add content
@@ -275,7 +288,7 @@ mod tests {
 
         // Start at beginning.
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(0) + row(0));
+        *buffer_mut.inner.c_caret = c_caret(c_col(0) + c_row(0));
         drop(buffer_mut);
 
         // Select right 5 characters.
@@ -284,23 +297,24 @@ mod tests {
         }
 
         // Should have selected "first".
-        let selection_list = buffer.get_selection_list();
+        let selection_list = buffer.get_selection_container();
         assert_eq2!(selection_list.len(), 1);
-        assert!(selection_list.get(row(0)).is_some());
+        assert!(selection_list.get(c_row(0)).is_some());
 
         // Move down with selection.
         engine_internal_api::down(&mut buffer, &mut engine, SelectMode::Enabled);
 
         // Should now have selection on two lines.
-        let selection_list = buffer.get_selection_list();
+        let selection_list = buffer.get_selection_container();
         assert_eq2!(selection_list.len(), 2);
-        assert!(selection_list.get(row(0)).is_some());
-        assert!(selection_list.get(row(1)).is_some());
+        assert!(selection_list.get(c_row(0)).is_some());
+        assert!(selection_list.get(c_row(1)).is_some());
     }
 
     #[test]
     fn test_line_at_caret_to_string() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add content
@@ -308,20 +322,21 @@ mod tests {
 
         // Test at first line.
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap().content(), "first line");
+        assert_eq2!(line.expect("conversion error").content(), "first line");
 
         // Move to second line.
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(0) + row(1));
+        *buffer_mut.inner.c_caret = c_caret(c_col(0) + c_row(1));
         drop(buffer_mut);
 
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap().content(), "second line");
+        assert_eq2!(line.expect("conversion error").content(), "second line");
     }
 
     #[test]
     fn test_page_navigation() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add many lines
@@ -330,27 +345,28 @@ mod tests {
 
         // Start at top
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(0) + row(0));
+        *buffer_mut.inner.c_caret = c_caret(c_col(0) + c_row(0));
         drop(buffer_mut);
 
         // Page down
         engine_internal_api::page_down(&mut buffer, &mut engine, SelectMode::Disabled);
 
         // Should have moved down (exact amount depends on viewport height)
-        let caret_pos = buffer.get_caret_scr_adj();
-        assert!(caret_pos.row_index > row(0));
+        let caret_pos = buffer.get_c_caret();
+        assert!(caret_pos.row_index > c_row(0));
 
         // Page up
         engine_internal_api::page_up(&mut buffer, &mut engine, SelectMode::Disabled);
 
         // Should be back near the top.
-        let caret_pos = buffer.get_caret_scr_adj();
-        assert_eq2!(caret_pos.row_index, row(0));
+        let caret_pos = buffer.get_c_caret();
+        assert_eq2!(caret_pos.row_index, c_row(0));
     }
 
     #[test]
     fn test_home_end_navigation() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Add content
@@ -358,15 +374,15 @@ mod tests {
 
         // Move to middle of line.
         let buffer_mut = buffer.get_mut(engine.viewport());
-        *buffer_mut.inner.caret_raw = caret_raw(col(7) + row(0));
+        *buffer_mut.inner.c_caret = c_caret(c_col(7) + c_row(0));
         drop(buffer_mut);
 
         // Test home
         engine_internal_api::home(&mut buffer, &mut engine, SelectMode::Disabled);
-        assert_eq2!(buffer.get_caret_scr_adj().col_index, col(0));
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(0));
 
         // Test end
         engine_internal_api::end(&mut buffer, &mut engine, SelectMode::Disabled);
-        assert_eq2!(buffer.get_caret_scr_adj().col_index, col(13)); // Length of "Hello, World!"
+        assert_eq2!(buffer.get_c_caret().col_index, c_col(13)); // Length of "Hello, World!"
     }
 }

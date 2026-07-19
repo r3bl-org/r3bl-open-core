@@ -23,8 +23,8 @@
 //! This module uses the [`bounds_check`] system for type-safe cursor positioning:
 //!
 //! - [`SegIndex`]: 0-based grapheme cursor position within the line
-//! - [`ColIndex`]: 0-based terminal column position
-//! - [`ColWidth`]: Display width for terminal cursor movement
+//! - [`VPCol`]: 0-based terminal column position
+//! - [`VPWidth`]: Display width for terminal cursor movement
 //!
 //! The [`CursorBoundsCheck`] trait is used (not [`ArrayBoundsCheck`]) because text
 //! cursors can validly be positioned at the end-of-line (index == length), unlike
@@ -37,13 +37,13 @@
 //! suppressed. See [`LineStateLiveness`] and [`LineState::set_paused`].
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+//! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
 //! [`bounds_check`]: crate::bounds_check
-//! [`ColIndex`]: crate::ColIndex
-//! [`ColWidth`]: crate::ColWidth
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 //! [`Readline`]: crate::Readline
 //! [`SegIndex`]: crate::SegIndex
+//! [`VPCol`]: crate::VPCol
+//! [`VPWidth`]: crate::VPWidth
 
 #![rustfmt::skip]
 
