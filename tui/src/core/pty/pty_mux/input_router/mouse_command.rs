@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::MOUSE_SCROLL_BY_AMOUNT;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, DEBUG_TUI_PTY_MUX,
-            MouseInput, MouseInputKind, MouseTrackingFormat, MouseTrackingMode,
-            OfsBufVT100, PtyInputEvent, RowHeight, RowIndex, ScrollbackAmount, TermCol,
-            TermRow, mouse_x10, mouse_sgr};
+use crate::{ActiveScreenBuffer, DEBUG_TUI_PTY_MUX, KeyState, MouseInput, MouseInputKind,
+            MouseTrackingFormat, MouseTrackingMode, OfsBufVT100, PtyInputEvent,
+            RangeBoundsResult, ScrollbackAmount, VPCol, VPRow, VPWidth, mouse_sgr,
+            mouse_x10};
 
 /// Represents the explicit command to take for a mouse event.
 #[derive(Debug)]
@@ -14,6 +14,12 @@ pub enum MouseCommand {
 
     /// Scroll the virtual terminal viewport history down (intercepted).
     ScrollHistoryForward(ScrollbackAmount),
+
+    /// Pan the virtual terminal viewport horizontally to the left (intercepted).
+    PanHistoryLeft(VPWidth),
+
+    /// Pan the virtual terminal viewport horizontally to the right (intercepted).
+    PanHistoryRight(VPWidth),
 
     /// Forward the mouse event to the child process as an [`SGR`] sequence.
     ///
@@ -37,85 +43,129 @@ impl From<(&MouseInput, &OfsBufVT100)> for MouseCommand {
     ///   implementation note for exact details on how the byte sequence payload is
     ///   formatted based on the app's requested protocols.
     ///
-    /// [`Disabled`]: crate::MouseTrackingMode::Disabled
-    /// [`Enabled`]: crate::MouseTrackingMode::Enabled
-    /// [`mouse.format`]: crate::MouseTrackingMode
-    /// [`mouse.mode`]: crate::TerminalModeState::mouse_tracking
-    /// [`MouseTrackingFormat`]: crate::MouseTrackingFormat
-    /// [`SGR`]: crate::SgrCode
+    /// [`Disabled`]: MouseTrackingMode::Disabled
+    /// [`Enabled`]: MouseTrackingMode::Enabled
+    /// [`mouse.format`]: MouseTrackingMode
+    /// [`mouse.mode`]: TerminalModeState::mouse_tracking
+    /// [`MouseTrackingFormat`]: MouseTrackingFormat
+    /// [`SGR`]: SgrCode
     /// [virtual terminal tab]:
-    ///     pty_mux#virtual-terminal-architecture-the-virtual-tab-mental-model
-    fn from(args: (&MouseInput, &OfsBufVT100)) -> Self {
+    ///     pty_mux#virtual-terminal-architecture
+    fn from(args: (&MouseInput, &OfsBufVT100)) -> MouseCommand {
         let (mouse_input, active_buffer) = args;
-        match active_buffer.terminal_mode.mouse_tracking_mode {
+        match active_buffer.get_terminal_mode().mouse_tracking_mode {
             MouseTrackingMode::Disabled => {
-                // If mouse tracking is disabled and we're in the primary screen,
-                // intercept scroll wheel events to scroll the buffer.
-                if active_buffer.is_in_primary_screen() {
-                    match mouse_input.kind {
-                        MouseInputKind::ScrollUp => {
-                            MouseCommand::ScrollHistoryBack(MOUSE_SCROLL_BY_AMOUNT.into())
-                        }
-                        MouseInputKind::ScrollDown => MouseCommand::ScrollHistoryForward(
-                            MOUSE_SCROLL_BY_AMOUNT.into(),
-                        ),
-                        _ => {
-                            DEBUG_TUI_PTY_MUX.then(|| {
-                                tracing::debug!("Ignoring mouse event: {:?}", mouse_input.kind);
-                            });
-                            MouseCommand::Ignore
-                        }
-                    }
-                } else {
-                    MouseCommand::Ignore
-                }
+                Self::handle_disabled_mouse_tracking(mouse_input, active_buffer)
             }
             MouseTrackingMode::Enabled => {
-                let mouse_col: ColIndex = mouse_input.pos.col_index;
-                let mouse_row: RowIndex = mouse_input.pos.row_index;
+                Self::handle_enabled_mouse_tracking(mouse_input, active_buffer)
+            }
+        }
+    }
+}
 
-                let pty_height: RowHeight = active_buffer.ofs_buf.get_window_size().row_height;
-                if mouse_row.overflows(pty_height) == ArrayOverflowResult::Overflowed {
-                    return MouseCommand::Ignore;
+impl MouseCommand {
+    fn handle_disabled_mouse_tracking(
+        mouse_input: &MouseInput,
+        active_buffer: &OfsBufVT100,
+    ) -> Self {
+        // If mouse tracking is disabled and we're in the primary screen,
+        // intercept scroll wheel events to scroll the buffer.
+        if active_buffer.get_terminal_mode().active_screen_buffer
+            == ActiveScreenBuffer::Primary
+        {
+            match mouse_input.kind {
+                MouseInputKind::ScrollUp => {
+                    if mouse_input
+                        .maybe_modifier_keys
+                        .is_some_and(|m| m.shift_key_state == KeyState::Pressed)
+                    {
+                        MouseCommand::PanHistoryLeft(MOUSE_SCROLL_BY_AMOUNT.into())
+                    } else {
+                        MouseCommand::ScrollHistoryBack(MOUSE_SCROLL_BY_AMOUNT.into())
+                    }
                 }
-
-                let term_col: TermCol = mouse_col.into();
-                let term_row: TermRow = mouse_row.into();
-
-                let mouse_tracking_format =
-                    active_buffer.terminal_mode.mouse_tracking_format;
-                let generated_bytes: Option<Vec<u8>> = match mouse_tracking_format {
-                    MouseTrackingFormat::X10 => {
-                        mouse_x10::generate(mouse_input, term_col, term_row)
+                MouseInputKind::ScrollDown => {
+                    if mouse_input
+                        .maybe_modifier_keys
+                        .is_some_and(|m| m.shift_key_state == KeyState::Pressed)
+                    {
+                        MouseCommand::PanHistoryRight(MOUSE_SCROLL_BY_AMOUNT.into())
+                    } else {
+                        MouseCommand::ScrollHistoryForward(MOUSE_SCROLL_BY_AMOUNT.into())
                     }
-                    MouseTrackingFormat::Sgr => {
-                        mouse_sgr::generate(mouse_input, term_col, term_row)
-                    }
-                };
-
-                if let Some(bytes) = generated_bytes {
+                }
+                MouseInputKind::ScrollLeft => {
+                    MouseCommand::PanHistoryLeft(MOUSE_SCROLL_BY_AMOUNT.into())
+                }
+                MouseInputKind::ScrollRight => {
+                    MouseCommand::PanHistoryRight(MOUSE_SCROLL_BY_AMOUNT.into())
+                }
+                _ => {
                     DEBUG_TUI_PTY_MUX.then(|| {
-                        tracing::debug!(
-                            "Forwarding mouse event ({:?}) as format {:?} bytes: {:?}",
-                            mouse_input.kind,
-                            mouse_tracking_format,
-                            String::from_utf8_lossy(&bytes)
-                        );
-                    });
-                    MouseCommand::ForwardToProcess(PtyInputEvent::Write(bytes))
-                } else {
-                    DEBUG_TUI_PTY_MUX.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::error! {
-                            message = "MouseCommand::from",
-                            status = "Unsupported mouse event for format",
-                            format = ?mouse_tracking_format,
-                            mouse_event = ?mouse_input,
-                        };
+                        tracing::debug!("Ignoring mouse event: {:?}", mouse_input.kind);
                     });
                     MouseCommand::Ignore
                 }
             }
+        } else {
+            MouseCommand::Ignore
+        }
+    }
+
+    fn handle_enabled_mouse_tracking(
+        mouse_input: &MouseInput,
+        active_buffer: &OfsBufVT100,
+    ) -> Self {
+        let mouse_col: VPCol = mouse_input.pos.col_index;
+        let mouse_row: VPRow = mouse_input.pos.row_index;
+
+        let viewport = active_buffer.get_active_screen_buffer().get_viewport();
+        if viewport.contains_row(mouse_row) != RangeBoundsResult::Within
+            || viewport.contains_col(mouse_col) != RangeBoundsResult::Within
+        {
+            return MouseCommand::Ignore;
+        }
+
+        let mouse_tracking_format =
+            active_buffer.get_terminal_mode().mouse_tracking_format;
+
+        let generated_bytes: Option<Vec<u8>> = {
+            let mouse_col = mouse_col.into();
+            let mouse_row = mouse_row.into();
+            match mouse_tracking_format {
+                MouseTrackingFormat::X10 => {
+                    mouse_x10::generate(mouse_input, mouse_col, mouse_row)
+                }
+                MouseTrackingFormat::Sgr => {
+                    mouse_sgr::generate(mouse_input, mouse_col, mouse_row)
+                }
+            }
+        };
+
+        if let Some(bytes) = generated_bytes {
+            DEBUG_TUI_PTY_MUX.then(|| {
+                tracing::debug!(
+                    "Forwarding mouse event ({:?}) as format {:?} bytes: {:?}",
+                    mouse_input.kind,
+                    mouse_tracking_format,
+                    String::from_utf8_lossy(&bytes)
+                );
+            });
+
+            MouseCommand::ForwardToProcess(PtyInputEvent::Write(bytes))
+        } else {
+            DEBUG_TUI_PTY_MUX.then(|| {
+                // % is Display, ? is Debug.
+                tracing::error! {
+                    message = "MouseCommand::from",
+                    status = "Unsupported mouse event for format",
+                    format = ?mouse_tracking_format,
+                    mouse_event = ?mouse_input,
+                };
+            });
+
+            MouseCommand::Ignore
         }
     }
 }

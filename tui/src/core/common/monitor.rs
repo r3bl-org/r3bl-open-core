@@ -192,7 +192,7 @@ impl<S> Monitor<S> {
     #[allow(clippy::elidable_lifetime_names)]
     pub fn lock<'this>(&'this self) -> MutexGuard<'this, S> {
         #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
-        self.state.lock().unwrap()
+        self.state.lock().expect("conversion error")
     }
 
     /// Locks the internal mutex guarding the state, returning the raw
@@ -258,7 +258,7 @@ impl<S> Monitor<S> {
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub fn wait<'this>(&'this self, guard: MutexGuard<'this, S>) -> MutexGuard<'this, S> {
         #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
-        self.condvar.wait(guard).unwrap()
+        self.condvar.wait(guard).expect("conversion error")
     }
 
     /// Blocks the current thread on the internal condition variable until the
@@ -294,7 +294,7 @@ impl<S> Monitor<S> {
         #[allow(clippy::unwrap_used, reason = "Mutex poisoning is unrecoverable")]
         self.condvar
             .wait_while(guard, |state| !condition(state))
-            .unwrap()
+            .expect("conversion error")
     }
 
     /// Unblocks one thread that is currently blocked on this monitor's condition
@@ -515,7 +515,7 @@ mod tests {
             monitor.notify_one();
         }
 
-        let result = join_handle.join().unwrap();
+        let result = join_handle.join().expect("conversion error");
         assert_eq!(result, 1);
     }
 
@@ -563,7 +563,7 @@ mod tests {
         // Collect results from all threads.
         let mut results = Vec::new();
         for handle in join_handles {
-            results.push(handle.join().unwrap());
+            results.push(handle.join().expect("conversion error"));
         }
 
         // Verify that every thread woke up and processed the notification.

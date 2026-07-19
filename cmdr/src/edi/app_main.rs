@@ -3,19 +3,20 @@
 use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
-               DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfigOptions,
+               DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfig,
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
                KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
                PerformPositioningAndSizing, RenderOpCommon, RenderOpIRVec,
-               RenderPipeline, Size, Surface, SurfaceProps, SurfaceRender,
+               RenderPipeline, Surface, SurfaceProps, SurfaceRender,
                SyntaxHighlightMode, TerminalWindowMainThreadSignal,
-               TextColorizationPolicy, TuiStyledTexts, ZOrder, box_end, box_start, col,
-               fg_green, fg_magenta, fg_red, glyphs, height, inline_string, new_style,
-               render_component_in_current_box, render_component_in_given_box,
-               render_tui_styled_texts_into, req_size_pc, row, surface, tui_color,
-               tui_styled_text, tui_stylesheet};
+               TextColorizationPolicy, TuiStyledTexts, VPSize, ZOrder, box_end,
+               box_start, fg_green, fg_magenta, fg_red, glyphs, inline_string,
+               new_style, render_component_in_current_box,
+               render_component_in_given_box, render_tui_styled_texts_into, req_size_pc,
+               surface, tui_color, tui_styled_text, tui_stylesheet, vp_col, vp_height,
+               vp_row};
 use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
@@ -182,8 +183,7 @@ mod app_main_impl_app_trait {
                         .get_mut(&FlexBoxId::from(Id::ComponentEditor));
 
                     if let Some(editor_buffer) = maybe_editor_buffer {
-                        let maybe_file_path =
-                            editor_buffer.content.maybe_file_path.clone();
+                        let maybe_file_path = editor_buffer.get_file_path().cloned();
                         let content = editor_buffer.get_as_string_with_newlines();
 
                         match maybe_file_path {
@@ -251,11 +251,11 @@ mod app_main_impl_app_trait {
             let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
-                pos: row(0) + col(0),
+                pos: vp_col(0) + vp_row(0),
                 size: {
                     let window_size = global_data.window_size;
                     // Bottom row is reserved for status bar.
-                    let row_height = window_size.row_height - height(1);
+                    let row_height = window_size.row_height - vp_height(1);
                     window_size.col_width + row_height
                 },
             })?;
@@ -343,7 +343,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
     ) {
         let result_stylesheet = stylesheet::create_stylesheet();
 
-        let dialog_options = DialogEngineConfigOptions {
+        let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalSimple,
             maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogBorder },
             maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogTitle },
@@ -393,16 +393,13 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
                             if let Some(editor_buffer) = maybe_editor_buffer {
                                 // Set the file path.
-                                editor_buffer.content.maybe_file_path =
-                                    Some(user_input_file_path.into());
+                                editor_buffer.set_file_path(user_input_file_path);
 
                                 // Set the file extension.
-
-                                editor_buffer.content.maybe_file_extension = {
-                                    let one = Some(user_input_file_path);
-                                    let two = file_utils::get_file_extension(one);
-                                    Some(two)
-                                };
+                                let file_ext = file_utils::get_file_extension(Some(
+                                    user_input_file_path,
+                                ));
+                                editor_buffer.set_file_extension(file_ext);
 
                                 // Fire a signal to save the file.
                                 send_signal!(
@@ -625,7 +622,7 @@ mod status_bar {
     use r3bl_tui::LengthOps;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: VPSize) {
         let separator_style = new_style!(dim color_fg: {tui_color!(dark_gray)});
 
         let app_text = "edi 🦜 ✶early access✶";
@@ -668,7 +665,7 @@ mod status_bar {
         let display_width = styled_texts.display_width();
         let col_center = *(size.col_width - display_width) / 2;
         let row_bottom = size.row_height.convert_to_index();
-        let center = col(col_center) + row_bottom;
+        let center = vp_col(col_center) + vp_row(row_bottom);
 
         let mut render_ops = RenderOpIRVec::new();
         render_ops += RenderOpCommon::MoveCursorPositionAbs(center);

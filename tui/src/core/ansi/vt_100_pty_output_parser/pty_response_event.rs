@@ -2,7 +2,7 @@
 
 #[allow(unused_imports, reason = "Used for shorter rustdoc link ref defs")]
 use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
-use crate::{TermCol, TermRow, DaSequence, DsrSequence};
+use crate::{DaSequence, DsrSequence, TermCol, TermRow};
 use std::fmt::{self, Display};
 
 /// Represents a query written by the child process (running in a [`PTY`] controlled end)
@@ -32,8 +32,8 @@ use std::fmt::{self, Display};
 /// (like [`DsrSequence`] or [`DaSequence`]) for formatting.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`AnsiToOfsBufPerformer::csi_dispatch()`]: crate::AnsiToOfsBufPerformer
-/// [`apply_ansi_bytes()`]: crate::OfsBufVT100::apply_ansi_bytes
+/// [`AnsiToOfsBufPerformer::csi_dispatch()`]: crate::core::ansi::AnsiToOfsBufPerformer
+/// [`apply_ansi_bytes()`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 /// [`DA`]: crate::DaSequence
 /// [`DaSequence`]: crate::DaSequence
 /// [`DSR`]: crate::DsrSequence

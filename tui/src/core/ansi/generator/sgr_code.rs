@@ -68,16 +68,14 @@
 //! [`Crossterm backend`]: crate::crossterm_backend
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-use crate::{generate_impl_display_for_fast_stringify, ok};
-use crate::{
-    ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR, SGR_DIM_STR,
-    SGR_HIDDEN_STR, SGR_INVERT_STR, SGR_ITALIC_STR, SGR_OVERLINE_STR, SGR_RAPID_BLINK_STR,
-    SGR_RESET_BLINK_STR, SGR_RESET_BOLD_DIM_STR, SGR_RESET_HIDDEN_STR, SGR_RESET_INVERT_STR,
-    SGR_RESET_ITALIC_STR, SGR_RESET_STRIKETHROUGH_STR, SGR_RESET_STR,
-    SGR_RESET_UNDERLINE_STR, SGR_SET_GRAPHICS, SGR_SLOW_BLINK_STR, SGR_STRIKETHROUGH_STR,
-    SGR_UNDERLINE_STR,
-};
-use std::fmt::Result;
+use crate::{ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR,
+            SGR_DIM_STR, SGR_HIDDEN_STR, SGR_INVERT_STR, SGR_ITALIC_STR,
+            SGR_OVERLINE_STR, SGR_RAPID_BLINK_STR, SGR_RESET_BLINK_STR,
+            SGR_RESET_BOLD_DIM_STR, SGR_RESET_HIDDEN_STR, SGR_RESET_INVERT_STR,
+            SGR_RESET_ITALIC_STR, SGR_RESET_STR, SGR_RESET_STRIKETHROUGH_STR,
+            SGR_RESET_UNDERLINE_STR, SGR_SET_GRAPHICS, SGR_SLOW_BLINK_STR,
+            SGR_STRIKETHROUGH_STR, SGR_UNDERLINE_STR, WideningCastToUsize,
+            generate_impl_display_for_fast_stringify, ok};
 
 /// Select Graphic Rendition ([`SGR`], [`SGR` spec]) codes for [`ANSI`] text styling.
 ///
@@ -153,7 +151,7 @@ const U8_STRINGS: [&str; 256] = [
 /// [`SGR`]: crate::SgrCode
 impl FastStringify for SgrCode {
     #[allow(clippy::too_many_lines)]
-    fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {
+    fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> std::fmt::Result {
         match *self {
             SgrCode::Reset => {
                 buf.push_str(SGR_RESET_STR);
@@ -278,36 +276,36 @@ impl FastStringify for SgrCode {
             SgrCode::ForegroundAnsi256(ansi_value) => {
                 buf.push_str(CSI_START);
                 buf.push_str("38;5;");
-                buf.push_str(U8_STRINGS[ansi_value.index as usize]);
+                buf.push_str(U8_STRINGS[ansi_value.index.as_usize_widening()]);
                 buf.push(SGR_SET_GRAPHICS);
                 ok!()
             }
             SgrCode::BackgroundAnsi256(ansi_value) => {
                 buf.push_str(CSI_START);
                 buf.push_str("48;5;");
-                buf.push_str(U8_STRINGS[ansi_value.index as usize]);
+                buf.push_str(U8_STRINGS[ansi_value.index.as_usize_widening()]);
                 buf.push(SGR_SET_GRAPHICS);
                 ok!()
             }
             SgrCode::ForegroundRGB(r, g, b) => {
                 buf.push_str(CSI_START);
                 buf.push_str("38;2;");
-                buf.push_str(U8_STRINGS[r as usize]);
+                buf.push_str(U8_STRINGS[r.as_usize_widening()]);
                 buf.push(';');
-                buf.push_str(U8_STRINGS[g as usize]);
+                buf.push_str(U8_STRINGS[g.as_usize_widening()]);
                 buf.push(';');
-                buf.push_str(U8_STRINGS[b as usize]);
+                buf.push_str(U8_STRINGS[b.as_usize_widening()]);
                 buf.push(SGR_SET_GRAPHICS);
                 ok!()
             }
             SgrCode::BackgroundRGB(r, g, b) => {
                 buf.push_str(CSI_START);
                 buf.push_str("48;2;");
-                buf.push_str(U8_STRINGS[r as usize]);
+                buf.push_str(U8_STRINGS[r.as_usize_widening()]);
                 buf.push(';');
-                buf.push_str(U8_STRINGS[g as usize]);
+                buf.push_str(U8_STRINGS[g.as_usize_widening()]);
                 buf.push(';');
-                buf.push_str(U8_STRINGS[b as usize]);
+                buf.push_str(U8_STRINGS[b.as_usize_widening()]);
                 buf.push(SGR_SET_GRAPHICS);
                 ok!()
             }
@@ -551,7 +549,8 @@ mod tests {
     fn test_sgr_reset_bytes_matches_enum() {
         // Ensure the constant matches what SgrCode::Reset produces
         let reset_from_enum = SgrCode::Reset.to_string();
-        let reset_from_const = std::str::from_utf8(SGR_RESET_BYTES).unwrap();
+        let reset_from_const =
+            std::str::from_utf8(SGR_RESET_BYTES).expect("conversion error");
         assert_eq!(
             reset_from_enum, reset_from_const,
             "SGR_RESET_BYTES constant must match SgrCode::Reset output"
@@ -567,7 +566,7 @@ mod tests {
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-    use crate::{AnsiValue, BufTextStorage, FastStringify, SgrCode};
+    use crate::{AnsiValue, BufTextStorage, FastStringify, SgrCode, WideningCastToUsize};
     use std::fmt::Write;
     use test::Bencher;
 
@@ -579,7 +578,7 @@ mod benchmarks {
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for code in &codes {
-                code.write_to_buf(&mut buf).unwrap();
+                code.write_to_buf(&mut buf).expect("conversion error");
             }
             test::black_box(buf);
         });
@@ -593,7 +592,7 @@ mod benchmarks {
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for code in &codes {
-                code.write_to_buf(&mut buf).unwrap();
+                code.write_to_buf(&mut buf).expect("conversion error");
             }
             test::black_box(buf);
         });
@@ -614,7 +613,7 @@ mod benchmarks {
             let mut buf = BufTextStorage::new();
             for _ in 0..100 {
                 for code in &codes {
-                    code.write_to_buf(&mut buf).unwrap();
+                    code.write_to_buf(&mut buf).expect("conversion error");
                 }
             }
             test::black_box(buf);
@@ -635,7 +634,7 @@ mod benchmarks {
             let mut buf = BufTextStorage::new();
             for _ in 0..1000 {
                 for code in &codes {
-                    code.write_to_buf(&mut buf).unwrap();
+                    code.write_to_buf(&mut buf).expect("conversion error");
                 }
             }
             test::black_box(buf);
@@ -648,7 +647,7 @@ mod benchmarks {
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for i in 0..=255u8 {
-                write!(buf, "\x1b[38:5:{i}m").unwrap();
+                write!(buf, "\x1b[38:5:{i}m").expect("conversion error");
             }
             test::black_box(buf);
         });
@@ -686,7 +685,7 @@ mod benchmarks {
             let mut buf = BufTextStorage::new();
             for i in 0..=255u8 {
                 buf.push_str("\x1b[38:5:");
-                buf.push_str(U8_STRINGS[i as usize]);
+                buf.push_str(U8_STRINGS[i.as_usize_widening()]);
                 buf.push('m');
             }
             test::black_box(buf);

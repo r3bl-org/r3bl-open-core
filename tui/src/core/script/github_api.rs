@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::ok;
-use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
 
 mod constants {
@@ -44,7 +43,12 @@ pub async fn try_get_latest_release_tag_from_github(
 
     let tag_name = match response[constants::TAG_NAME].as_str() {
         Some(tag_name) => tag_name.trim_start_matches(constants::VERSION_PREFIX),
-        None => miette::bail!("Failed to get tag name from JSON: {:?}", response),
+        None => {
+            return Err(miette::miette!(
+                "Failed to get tag name from JSON: {:?}",
+                response
+            ));
+        }
     };
 
     ok!(tag_name.to_owned())

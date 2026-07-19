@@ -2,37 +2,16 @@
 
 use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
             LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
-use crate::{CommonResult, InlineVec, Pos, ReqSizePc, Size, TuiStyle, TuiStylesheet,
-            height, throws, unwrap_or_err, width};
+use crate::{CommonResult, InlineVec, ReqSizePc, TuiStyle, TuiStylesheet, VPBoundingBox,
+            VPPos, VPSize, throws, unwrap_or_err, vp_col, vp_height, vp_row, vp_width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
-    pub origin_pos: Pos,
-    pub box_size: Size,
+    pub bounds: VPBoundingBox,
     pub stack_of_boxes: Vec<FlexBox>,
     pub stylesheet: TuiStylesheet,
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct SurfaceBounds {
-    pub origin_pos: Pos,
-    pub box_size: Size,
-}
-
-mod impl_surface_bounds {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<&Surface> for SurfaceBounds {
-        fn from(surface: &Surface) -> Self {
-            Self {
-                origin_pos: surface.origin_pos,
-                box_size: surface.box_size,
-            }
-        }
-    }
 }
 
 #[macro_export]
@@ -40,7 +19,7 @@ macro_rules! surface {
     (
         stylesheet: $arg_stylesheet : expr
     ) => {
-        $crate::Surface {
+        Surface {
             stylesheet: $arg_stylesheet,
             ..Default::default()
         }
@@ -48,12 +27,14 @@ macro_rules! surface {
 
     (
         origin_pos: $arg_origin_pos : expr,
-        box_size:   $arg_box_size   : expr,
+        bounds_size: $arg_bounds_size : expr,
         stylesheet: $arg_stylesheet : expr
     ) => {
-        $crate::Surface {
-            origin_pos: $arg_origin_pos,
-            box_size: $arg_box_size,
+        Surface {
+            bounds: VPBoundingBox {
+                origin_pos: $arg_origin_pos,
+                bounds_size: $arg_bounds_size,
+            },
             stylesheet: $arg_stylesheet,
             ..Default::default()
         }
@@ -76,8 +57,10 @@ impl LayoutManagement for Surface {
                     ),
                 )?;
             }
-            self.origin_pos = pos;
-            self.box_size = size;
+            self.bounds = VPBoundingBox {
+                origin_pos: pos,
+                bounds_size: size,
+            };
         });
     }
 
@@ -168,17 +151,19 @@ impl PerformPositioningAndSizing for Surface {
     /// This updates the [`FlexBox::insertion_pos_for_next_box`] of the current
     /// [`FlexBox`].
     ///
-    /// Returns the [Pos] where the next [`FlexBox`] can be added to the stack of boxes.
+    /// Returns the [`VPPos`] where the next [`FlexBox`] can be added to the stack
+    /// of boxes.
     ///
     /// Must be called *before* the new [`FlexBox`] is added to the stack of boxes
     /// otherwise [`LayoutErrorType::ErrorCalculatingNextBoxPos`] error is returned.
     ///
-    /// [column]: crate::ColIndex
-    /// [row]: crate::RowIndex
+    /// [`VPPos`]: crate::VPPos
+    /// [column]: crate::VPCol
+    /// [row]: crate::VPRow
     fn update_insertion_pos_for_next_box(
         &mut self,
-        allocated_size: Size,
-    ) -> CommonResult<Pos> {
+        allocated_size: VPSize,
+    ) -> CommonResult<VPPos> {
         let current_box = self.current_box()?;
         let current_insertion_pos = current_box.insertion_pos_for_next_box;
 
@@ -197,22 +182,25 @@ impl PerformPositioningAndSizing for Surface {
                 new_pos.row_index + current_insertion_pos.col_index
             }
             LayoutDirection::Horizontal => {
-                current_insertion_pos.row_index + new_pos.col_index
+                new_pos.col_index + current_insertion_pos.row_index
             }
         };
 
         // Update the insertion_pos_for_next_box of the current layout.
-        current_box.insertion_pos_for_next_box = new_pos.into();
+        current_box.insertion_pos_for_next_box = Some(new_pos);
 
         Ok(new_pos)
     }
 
-    /// 🍀 Handle non-root box to add to stack of boxes. [Pos] and [Size] will be
-    /// calculated. `insertion_pos_for_next_box` will also be updated.
+    /// 🍀 Handle non-root box to add to stack of boxes. [`VPPos`] and [`VPSize`] will
+    /// be calculated. [`insertion_pos_for_next_box`] will also be updated.
+    ///
+    /// [`insertion_pos_for_next_box`]: FlexBox::insertion_pos_for_next_box
+    /// [`VPPos`]: crate::VPPos
     fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
         throws!({
             let container_box = self.current_box()?;
-            let container_bounds = container_box.bounds_size;
+            let container_bounds = container_box.bounds.bounds_size;
 
             let maybe_cascaded_style: Option<TuiStyle> =
                 cascade_styles(container_box, &flex_box_props);
@@ -225,7 +213,7 @@ impl PerformPositioningAndSizing for Surface {
             let requested_size_allocation = {
                 let width_val = width_pc.apply_to(*container_bounds.col_width);
                 let height_val = height_pc.apply_to(*container_bounds.row_height);
-                width(width_val) + height(height_val)
+                vp_width(width_val) + vp_height(height_val)
             };
 
             let origin_pos = unwrap_or_err! {
@@ -254,14 +242,14 @@ impl PerformPositioningAndSizing for Surface {
             } = flex_box_props.requested_size_percent;
 
             let bounds_size = {
-                let width_val = width_pc.apply_to(*self.box_size.col_width);
-                let height_val = height_pc.apply_to(*self.box_size.row_height);
-                width(width_val) + height(height_val)
+                let width_val = width_pc.apply_to(*self.bounds.bounds_size.col_width);
+                let height_val = height_pc.apply_to(*self.bounds.bounds_size.row_height);
+                vp_width(width_val) + vp_height(height_val)
             };
 
             self.stack_of_boxes.push(make_root_box_with_style(
                 flex_box_props,
-                self.origin_pos,
+                self.bounds.origin_pos,
                 bounds_size,
             ));
         });
@@ -284,27 +272,28 @@ fn make_non_root_box_with_style(
             },
         maybe_styles: _,
     }: FlexBoxProps,
-    origin_pos: Pos,
-    container_bounds: Size,
+    origin_pos: VPPos,
+    container_bounds: VPSize,
     maybe_cascaded_style: Option<TuiStyle>,
 ) -> FlexBox {
     let bounds_size = {
         let width_val = width_pc.apply_to(*container_bounds.col_width);
         let height_val = height_pc.apply_to(*container_bounds.row_height);
-        width(width_val) + height(height_val)
+        vp_width(width_val) + vp_height(height_val)
     };
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
-    let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
+    let style_adjusted_bounds =
         adjust_with_style(maybe_cascaded_style, origin_pos, bounds_size);
 
     FlexBox {
         id,
         dir,
-        origin_pos,
-        bounds_size,
-        style_adjusted_origin_pos,
-        style_adjusted_bounds_size,
+        bounds: VPBoundingBox {
+            origin_pos,
+            bounds_size,
+        },
+        style_adjusted_bounds,
         requested_size_percent: ReqSizePc {
             width_pc,
             height_pc,
@@ -321,22 +310,23 @@ fn make_root_box_with_style(
         requested_size_percent,
         maybe_styles,
     }: FlexBoxProps,
-    origin_pos: Pos,
-    bounds_size: Size,
+    origin_pos: VPPos,
+    bounds_size: VPSize,
 ) -> FlexBox {
     let computed_style = TuiStylesheet::compute(&maybe_styles);
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
-    let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
+    let style_adjusted_bounds =
         adjust_with_style(computed_style, origin_pos, bounds_size);
 
     FlexBox {
         id,
         dir,
-        origin_pos,
-        bounds_size,
-        style_adjusted_origin_pos,
-        style_adjusted_bounds_size,
+        bounds: VPBoundingBox {
+            origin_pos,
+            bounds_size,
+        },
+        style_adjusted_bounds,
         requested_size_percent,
         maybe_computed_style: computed_style,
         insertion_pos_for_next_box: Some(origin_pos),
@@ -346,20 +336,23 @@ fn make_root_box_with_style(
 /// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
     maybe_computed_style: Option<TuiStyle>,
-    origin_pos: Pos,
-    bounds_size: Size,
-) -> (Pos, Size) {
+    origin_pos: VPPos,
+    bounds_size: VPSize,
+) -> VPBoundingBox {
     let mut style_adjusted_origin_pos = origin_pos;
     let mut style_adjusted_bounds_size = bounds_size;
 
     if let Some(style) = maybe_computed_style
         && let Some(padding) = style.padding
     {
-        style_adjusted_origin_pos += padding;
+        style_adjusted_origin_pos += vp_row(padding) + vp_col(padding);
         style_adjusted_bounds_size -= padding * 2;
     }
 
-    (style_adjusted_origin_pos, style_adjusted_bounds_size)
+    VPBoundingBox {
+        origin_pos: style_adjusted_origin_pos,
+        bounds_size: style_adjusted_bounds_size,
+    }
 }
 
 fn cascade_styles(
@@ -387,9 +380,9 @@ fn cascade_styles(
 mod test_surface_2_col_complex {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, TuiStylesheet, assert_eq2,
-                box_end, box_start, ch, col, console_log, get_tui_styles, height,
-                new_style, req_size_pc, row, throws, throws_with_return, tui_color,
-                tui_stylesheet, width};
+                box_end, box_start, ch, console_log, get_tui_styles, new_style,
+                req_size_pc, throws, throws_with_return, tui_color, tui_stylesheet,
+                vp_col, vp_height, vp_row, vp_width};
 
     #[test]
     fn test_surface_2_col_complex() -> CommonResult {
@@ -400,8 +393,8 @@ mod test_surface_2_col_complex {
             };
 
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(0),
-                size: width(500) + height(500),
+                pos: vp_col(0) + vp_row(0),
+                size: vp_width(500) + vp_height(500),
             })?;
 
             create_main_container(&mut surface)?;
@@ -414,18 +407,27 @@ mod test_surface_2_col_complex {
     fn create_main_container(surface: &mut Surface) -> CommonResult {
         fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let layout_item = surface.stack_of_boxes.first().unwrap();
+                let layout_item =
+                    surface.stack_of_boxes.first().expect("conversion error");
                 assert_eq2!(layout_item.id, FlexBoxId::from(0));
                 assert_eq2!(layout_item.dir, LayoutDirection::Horizontal);
 
-                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
-                assert_eq2!(layout_item.bounds_size, width(500) + height(500));
-
-                assert_eq2!(layout_item.style_adjusted_origin_pos, col(1) + row(1)); // due to `padding: 1`
+                assert_eq2!(layout_item.bounds.origin_pos, vp_col(0) + vp_row(0));
                 assert_eq2!(
-                    layout_item.style_adjusted_bounds_size,
-                    width(498) + height(498)
-                ); // due to `padding: 1`
+                    layout_item.bounds.bounds_size,
+                    vp_width(500) + vp_height(500)
+                );
+
+                // due to `padding: 1`
+                assert_eq2!(
+                    layout_item.style_adjusted_bounds.origin_pos,
+                    vp_col(1) + vp_row(1)
+                );
+                // due to `padding: 1`
+                assert_eq2!(
+                    layout_item.style_adjusted_bounds.bounds_size,
+                    vp_width(498) + vp_height(498)
+                );
 
                 assert_eq2!(
                     layout_item.requested_size_percent,
@@ -434,12 +436,15 @@ mod test_surface_2_col_complex {
 
                 assert_eq2!(
                     layout_item.insertion_pos_for_next_box,
-                    Some(col(0) + row(0))
+                    Some(vp_col(0) + vp_row(0))
                 );
 
                 assert!(layout_item.get_computed_style().is_some());
                 assert_eq2!(
-                    layout_item.get_computed_style().unwrap().padding,
+                    layout_item
+                        .get_computed_style()
+                        .expect("conversion error")
+                        .padding,
                     Some(ch(1))
                 );
             });
@@ -466,20 +471,29 @@ mod test_surface_2_col_complex {
     fn create_left_col(surface: &mut Surface) -> CommonResult {
         fn make_left_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let layout_item = surface.stack_of_boxes.last().unwrap();
+                let layout_item =
+                    surface.stack_of_boxes.last().expect("conversion error");
                 assert_eq2!(layout_item.id, FlexBoxId::from(1));
                 assert_eq2!(layout_item.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
-                assert_eq2!(layout_item.bounds_size, width(250) + height(500));
+                assert_eq2!(layout_item.bounds.origin_pos, vp_col(0) + vp_row(0));
+                assert_eq2!(
+                    layout_item.bounds.bounds_size,
+                    vp_width(250) + vp_height(500)
+                );
 
                 console_log!(layout_item);
 
-                assert_eq2!(layout_item.style_adjusted_origin_pos, col(3) + row(3)); // Take padding into account.
+                // Take padding into account.
                 assert_eq2!(
-                    layout_item.style_adjusted_bounds_size,
-                    width(244) + height(494)
-                ); // Take padding into account.
+                    layout_item.style_adjusted_bounds.origin_pos,
+                    vp_col(3) + vp_row(3)
+                );
+                // Take padding into account.
+                assert_eq2!(
+                    layout_item.style_adjusted_bounds.bounds_size,
+                    vp_width(244) + vp_height(494)
+                );
 
                 assert_eq2!(
                     layout_item.requested_size_percent,
@@ -512,18 +526,27 @@ mod test_surface_2_col_complex {
     fn create_right_col(surface: &mut Surface) -> CommonResult {
         fn make_right_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let current_box = surface.stack_of_boxes.last().unwrap();
+                let current_box =
+                    surface.stack_of_boxes.last().expect("conversion error");
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
                 assert_eq2!(current_box.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(current_box.origin_pos, col(250) + row(0));
-                assert_eq2!(current_box.bounds_size, width(250) + height(500));
-
-                assert_eq2!(current_box.style_adjusted_origin_pos, col(254) + row(4)); // Take padding into account.
+                assert_eq2!(current_box.bounds.origin_pos, vp_col(250) + vp_row(0));
                 assert_eq2!(
-                    current_box.style_adjusted_bounds_size,
-                    width(242) + height(492)
-                ); // Take padding into account.
+                    current_box.bounds.bounds_size,
+                    vp_width(250) + vp_height(500)
+                );
+
+                // Take padding into account.
+                assert_eq2!(
+                    current_box.style_adjusted_bounds.origin_pos,
+                    vp_col(254) + vp_row(4)
+                );
+                // Take padding into account.
+                assert_eq2!(
+                    current_box.style_adjusted_bounds.bounds_size,
+                    vp_width(242) + vp_height(492)
+                );
 
                 assert_eq2!(
                     current_box.requested_size_percent,
@@ -582,8 +605,9 @@ mod test_surface_2_col_complex {
 mod test_surface_2_col_simple {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, TuiStylesheet, assert_eq2,
-                box_end, box_start, col, get_tui_styles, height, new_style, req_size_pc,
-                row, throws, throws_with_return, tui_color, tui_stylesheet, width};
+                box_end, box_start, get_tui_styles, new_style, req_size_pc, throws,
+                throws_with_return, tui_color, tui_stylesheet, vp_col, vp_height,
+                vp_row, vp_width};
 
     #[test]
     fn test_surface_2_col_simple() -> CommonResult {
@@ -594,8 +618,8 @@ mod test_surface_2_col_simple {
             };
 
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(0),
-                size: width(500) + height(500),
+                pos: vp_row(0) + vp_col(0),
+                size: vp_width(500) + vp_height(500),
             })?;
 
             create_main_container(&mut surface)?;
@@ -608,18 +632,23 @@ mod test_surface_2_col_simple {
     fn create_main_container(surface: &mut Surface) -> CommonResult {
         fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let layout_item = surface.stack_of_boxes.first().unwrap();
+                let layout_item =
+                    surface.stack_of_boxes.first().expect("conversion error");
                 assert_eq2!(layout_item.id, FlexBoxId::from(0));
                 assert_eq2!(layout_item.dir, LayoutDirection::Horizontal);
-                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
-                assert_eq2!(layout_item.bounds_size, width(500) + height(500)); // due to `padding: 1`
+                assert_eq2!(layout_item.bounds.origin_pos, vp_col(0) + vp_row(0));
+                // due to `padding: 1`
+                assert_eq2!(
+                    layout_item.bounds.bounds_size,
+                    vp_width(500) + vp_height(500)
+                );
                 assert_eq2!(
                     layout_item.requested_size_percent,
                     req_size_pc!(width:100, height:100)
                 );
                 assert_eq2!(
                     layout_item.insertion_pos_for_next_box,
-                    Some(col(0) + row(0))
+                    Some(vp_col(0) + vp_row(0))
                 );
                 assert_eq2!(layout_item.get_computed_style(), None);
             });
@@ -646,18 +675,27 @@ mod test_surface_2_col_simple {
     fn create_left_col(surface: &mut Surface) -> CommonResult {
         fn make_left_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let layout_item = surface.stack_of_boxes.last().unwrap();
+                let layout_item =
+                    surface.stack_of_boxes.last().expect("conversion error");
                 assert_eq2!(layout_item.id, FlexBoxId::from(1));
                 assert_eq2!(layout_item.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(layout_item.origin_pos, col(0) + row(0));
-                assert_eq2!(layout_item.bounds_size, width(250) + height(500));
-
-                assert_eq2!(layout_item.style_adjusted_origin_pos, col(2) + row(2)); // Take padding into account.
+                assert_eq2!(layout_item.bounds.origin_pos, vp_col(0) + vp_row(0));
                 assert_eq2!(
-                    layout_item.style_adjusted_bounds_size,
-                    width(246) + height(496)
-                ); // Take padding into account.
+                    layout_item.bounds.bounds_size,
+                    vp_width(250) + vp_height(500)
+                );
+
+                // Take padding into account.
+                assert_eq2!(
+                    layout_item.style_adjusted_bounds.origin_pos,
+                    vp_col(2) + vp_row(2)
+                );
+                // Take padding into account.
+                assert_eq2!(
+                    layout_item.style_adjusted_bounds.bounds_size,
+                    vp_width(246) + vp_height(496)
+                );
 
                 assert_eq2!(
                     layout_item.requested_size_percent,
@@ -690,18 +728,27 @@ mod test_surface_2_col_simple {
     fn create_right_col(surface: &mut Surface) -> CommonResult {
         fn make_right_col_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let current_box = surface.stack_of_boxes.last().unwrap();
+                let current_box =
+                    surface.stack_of_boxes.last().expect("conversion error");
                 assert_eq2!(current_box.id, FlexBoxId::from(2));
                 assert_eq2!(current_box.dir, LayoutDirection::Vertical);
 
-                assert_eq2!(current_box.origin_pos, col(250) + row(0));
-                assert_eq2!(current_box.bounds_size, width(250) + height(500));
-
-                assert_eq2!(current_box.style_adjusted_origin_pos, col(253) + row(3)); // Take padding into account.
+                assert_eq2!(current_box.bounds.origin_pos, vp_col(250) + vp_row(0));
                 assert_eq2!(
-                    current_box.style_adjusted_bounds_size,
-                    width(244) + height(494)
-                ); // Take padding into account.
+                    current_box.bounds.bounds_size,
+                    vp_width(250) + vp_height(500)
+                );
+
+                // Take padding into account.
+                assert_eq2!(
+                    current_box.style_adjusted_bounds.origin_pos,
+                    vp_col(253) + vp_row(3)
+                );
+                // Take padding into account.
+                assert_eq2!(
+                    current_box.style_adjusted_bounds.bounds_size,
+                    vp_width(244) + vp_height(494)
+                );
 
                 assert_eq2!(
                     current_box.requested_size_percent,
@@ -754,33 +801,33 @@ mod test_surface_2_col_simple {
 #[cfg(test)]
 mod test_surface_offset_origin {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
-                LayoutManagement, Surface, SurfaceProps, assert_eq2, col, height,
-                req_size_pc, row, throws, width};
+                LayoutManagement, Surface, SurfaceProps, assert_eq2, req_size_pc,
+                throws, vp_col, vp_height, vp_row, vp_width};
 
     #[test]
     fn test_surface_horizontal_non_zero_origin() -> CommonResult {
         fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let container = surface.stack_of_boxes.first().unwrap();
-                assert_eq2!(container.origin_pos, col(0) + row(5));
+                let container = surface.stack_of_boxes.first().expect("conversion error");
+                assert_eq2!(container.bounds.origin_pos, vp_col(0) + vp_row(5));
                 assert_eq2!(container.dir, LayoutDirection::Horizontal);
             });
         }
 
         fn make_child1_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let child = surface.stack_of_boxes.last().unwrap();
+                let child = surface.stack_of_boxes.last().expect("conversion error");
                 // First child starts at the container's insertion start = (0, 5).
-                assert_eq2!(child.origin_pos, col(0) + row(5));
+                assert_eq2!(child.bounds.origin_pos, vp_col(0) + vp_row(5));
             });
         }
 
         fn make_child2_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let child = surface.stack_of_boxes.last().unwrap();
+                let child = surface.stack_of_boxes.last().expect("conversion error");
                 // Second child row must equal the container's row (5), NOT 0.
-                // Before the fix this was `col(50) + row(0)`.
-                assert_eq2!(child.origin_pos, col(50) + row(5));
+                // Before the fix this was `vp_col(50) + vp_row(0)`.
+                assert_eq2!(child.bounds.origin_pos, vp_col(50) + vp_row(5));
             });
         }
 
@@ -789,8 +836,8 @@ mod test_surface_offset_origin {
 
             // Surface starts at row 5 – the existing tests all start at (0, 0).
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(5),
-                size: width(100) + height(40),
+                pos: vp_col(0) + vp_row(5),
+                size: vp_width(100) + vp_height(40),
             })?;
 
             // Horizontal container – no padding, fills the surface.
@@ -831,25 +878,26 @@ mod test_surface_offset_origin {
     fn test_surface_vertical_non_zero_origin() -> CommonResult {
         fn make_container_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let container = surface.stack_of_boxes.first().unwrap();
-                assert_eq2!(container.origin_pos, col(5) + row(0));
+                let container = surface.stack_of_boxes.first().expect("conversion error");
+                assert_eq2!(container.bounds.origin_pos, vp_col(5) + vp_row(0));
                 assert_eq2!(container.dir, LayoutDirection::Vertical);
             });
         }
 
         fn make_child1_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let child = surface.stack_of_boxes.last().unwrap();
-                assert_eq2!(child.origin_pos, col(5) + row(0));
+                let child = surface.stack_of_boxes.last().expect("conversion error");
+                assert_eq2!(child.bounds.origin_pos, vp_col(5) + vp_row(0));
             });
         }
 
         fn make_child2_assertions(surface: &Surface) -> CommonResult {
             throws!({
-                let child = surface.stack_of_boxes.last().unwrap();
+                let child = surface.stack_of_boxes.last().expect("conversion error");
                 // Second child column must equal the container's column (5), NOT 0.
-                // Before the fix for Vertical this would have been `col(0) + row(20)`.
-                assert_eq2!(child.origin_pos, col(5) + row(20));
+                // Before the fix for Vertical this would have been `vp_col(0) +
+                // vp_row(20)`.
+                assert_eq2!(child.bounds.origin_pos, vp_col(5) + vp_row(20));
             });
         }
 
@@ -857,8 +905,8 @@ mod test_surface_offset_origin {
             let mut surface = Surface::default();
 
             surface.surface_start(SurfaceProps {
-                pos: col(5) + row(0),
-                size: width(100) + height(40),
+                pos: vp_col(5) + vp_row(0),
+                size: vp_width(100) + vp_height(40),
             })?;
 
             // Vertical container - no padding, fills the surface.

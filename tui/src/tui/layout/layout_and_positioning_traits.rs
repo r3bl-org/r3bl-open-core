@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlexBox, FlexBoxProps, SurfaceProps};
-use crate::{CommonResult, Pos, Size};
+use crate::{CommonResult, VPSize, VPPos};
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {
@@ -43,8 +43,8 @@ pub trait PerformPositioningAndSizing {
     /// position is undefined.
     fn update_insertion_pos_for_next_box(
         &mut self,
-        allocated_size: Size,
-    ) -> CommonResult<Pos>;
+        allocated_size: VPSize,
+    ) -> CommonResult<VPPos>;
 
     /// Gets the [`FlexBox`] at the "top" of the `stack`.
     ///
@@ -55,7 +55,7 @@ pub trait PerformPositioningAndSizing {
 
     fn no_boxes_added(&self) -> bool;
 
-    /// Add the first [`FlexBox`] to the [`crate::Surface`].
+    /// Add the first [`FlexBox`] to the [`Surface`].
     /// 1. This one is explicitly sized.
     /// 2. there can be only one.
     ///
@@ -63,6 +63,8 @@ pub trait PerformPositioningAndSizing {
     ///
     /// Returns an error if the box properties are invalid or if adding the root box
     /// fails.
+    ///
+    /// [`Surface`]: crate::tui::Surface
     fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult;
 
     /// Add non-root [`FlexBox`].

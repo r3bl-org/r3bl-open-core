@@ -2,90 +2,127 @@
 
 # r3bl-open-core
 
+<!--
 <img
 src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true"
 height="256px">
+-->
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
 <!-- prettier-ignore-start -->
-```
-██████╗ ██████╗ ██████╗ ██╗         ████████╗██╗   ██╗██╗
-██╔══██╗╚════██╗██╔══██╗██║         ╚══██╔══╝██║   ██║██║
-██████╔╝ █████╔╝██████╔╝██║            ██║   ██║   ██║██║
-██╔══██╗ ╚═══██╗██╔══██╗██║            ██║   ██║   ██║██║
-██║  ██║██████╔╝██████╔╝███████╗       ██║   ╚██████╔╝██║
-╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝       ╚═╝    ╚═════╝ ╚═╝
+```text
+██████╗  ██████╗  ██████╗
+██╔══██╗██╔═══██╗██╔════╝
+██████╔╝██║   ██║██║
+██╔══██╗██║   ██║██║
+██║  ██║╚██████╔╝╚██████╗
+╚═╝  ╚═╝ ╚═════╝  ╚═════╝
 ```
 <!-- prettier-ignore-end -->
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
-**Table of contents:**
-
+- [r3bl-open-core](#r3bl-open-core)
 - [Why R3BL TUI?](#why-r3bl-tui)
-  - [The Problem with Existing Solutions](#the-problem-with-existing-solutions)
-  - [The R3BL Solution: Web and Desktop App Inspired Terminal Apps](#the-r3bl-solution-web-and-desktop-app-inspired-terminal-apps)
-  - [Built-from-Scratch Primitives](#built-from-scratch-primitives)
-  - [Advanced Rendering & Styling](#advanced-rendering--styling)
-  - [Rich Component Ecosystem](#rich-component-ecosystem)
+    - [The Problem with Existing Solutions](#the-problem-with-existing-solutions)
+    - [The R3BL Solution: Web and Desktop App Inspired Terminal Apps](#the-r3bl-solution-web-and-desktop-app-inspired-terminal-apps)
+    - [Built-from-Scratch Primitives](#built-from-scratch-primitives)
+    - [Advanced Rendering & Styling](#advanced-rendering--styling)
+    - [Rich Component Ecosystem](#rich-component-ecosystem)
 - [Welcome to the monorepo and workspace](#welcome-to-the-monorepo-and-workspace)
 - [This workspace contains crates for building TUI, CLI, TTY apps](#this-workspace-contains-crates-for-building-tui-cli-tty-apps)
-  - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-  - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
-  - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
-  - [Terminal multiplexer](#terminal-multiplexer)
+    - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
+    - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
+    - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
+    - [Terminal multiplexer](#terminal-multiplexer)
 - [Power via composition](#power-via-composition)
-  - [Main library crate](#main-library-crate)
-  - [Main binary crate](#main-binary-crate)
+    - [Main library crate](#main-library-crate)
+    - [Main binary crate](#main-binary-crate)
+- [Interactive git workflows made easy.](#interactive-git-workflows-made-easy)
+- [Beautiful Markdown editor with advanced rendering and editing features.](#beautiful-markdown-editor-with-advanced-rendering-and-editing-features)
 - [Project Task Organization](#project-task-organization)
-  - [Task Management Files](#task-management-files)
-  - [Task File Format](#task-file-format)
-  - [Task Workflow Commands](#task-workflow-commands)
-  - [Workflow Connection](#workflow-connection)
-  - [Development Tools Integration](#development-tools-integration)
+    - [Task Management Files](#task-management-files)
+    - [Task File Format](#task-file-format)
+- [Implementation Plan](#implementation-plan)
+- [Step 0: Do Something [STATUS]](#step-0-do-something-status)
+    - [Step 0.0: Do Subtask [STATUS]](#step-00-do-subtask-status)
+    - [Step 0.1: Do Another Subtask [STATUS]](#step-01-do-another-subtask-status)
+- [Step 1: Do Something Else [STATUS]](#step-1-do-something-else-status)
+    - [Task Workflow Commands](#task-workflow-commands)
+    - [Workflow Connection](#workflow-connection)
+    - [Development Tools Integration](#development-tools-integration)
 - [Documentation and Planning](#documentation-and-planning)
-  - [Documentation Philosophy](#documentation-philosophy)
-  - [Release and Contribution Guides](#release-and-contribution-guides)
-  - [Technical Design Documents](#technical-design-documents)
+    - [Documentation Philosophy](#documentation-philosophy)
+    - [Release and Contribution Guides](#release-and-contribution-guides)
+    - [Technical Design Documents](#technical-design-documents)
 - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Quick Start](#quick-start)
-  - [Automated Setup (Recommended)](#automated-setup-recommended)
-  - [Manual Setup](#manual-setup)
+    - [Automated Setup (Recommended)](#automated-setup-recommended)
+- [Run the bootstrap script](#run-the-bootstrap-script)
+    - [Manual Setup](#manual-setup)
+- [Install `fish` and `fzf` (via package manager)](#install-fish-and-fzf-via-package-manager)
+- [Ubuntu/Debian: sudo apt install fish fzf](#ubuntudebian-sudo-apt-install-fish-fzf)
+- [macOS: brew install fish fzf](#macos-brew-install-fish-fzf)
+- [Or run `./bootstrap.sh` for automatic detection](#or-run-bootstrapsh-for-automatic-detection)
+- [Install Rust development tools (after OS dependencies)](#install-rust-development-tools-after-os-dependencies)
 - [IDE Setup and Extensions](#ide-setup-and-extensions)
-  - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
-  - [AI (LLM) Coding Agent Integration (Optional)](#ai-llm-coding-agent-integration-optional)
+    - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
+- [Install extensions (works with both VSCode and VSCode Insiders)](#install-extensions-works-with-both-vscode-and-vscode-insiders)
+    - [AI (LLM) Coding Agent Integration (Optional)](#ai-llm-coding-agent-integration-optional)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
-  - [Key Commands](#key-commands)
-  - [Cargo Target Directory Isolation for IDE/Tool Performance](#cargo-target-directory-isolation-for-idetool-performance)
-    - [The Problem: Cargo Lock Contention](#the-problem-cargo-lock-contention)
-    - [The Solution: Separate Build Artifacts](#the-solution-separate-build-artifacts)
-    - [Configuration by Tool](#configuration-by-tool)
-    - [Benefits](#benefits)
-    - [Example Workflow Setup](#example-workflow-setup)
+    - [Key Commands](#key-commands)
+    - [Cargo Target Directory Isolation for IDE/Tool Performance](#cargo-target-directory-isolation-for-idetool-performance)
+        - [The Problem: Cargo Lock Contention](#the-problem-cargo-lock-contention)
+        - [The Solution: Separate Build Artifacts](#the-solution-separate-build-artifacts)
+        - [Configuration by Tool](#configuration-by-tool)
+        - [Benefits](#benefits)
+        - [Example Workflow Setup](#example-workflow-setup)
+- [Terminal 2: File watcher with automatic tests](#terminal-2-file-watcher-with-automatic-tests)
+- [Terminal 3: Run AI (LLM) coding agent](#terminal-3-run-ai-llm-coding-agent)
+- [Terminal 4: Run bacon](#terminal-4-run-bacon)
+- [Result: All four run in parallel, zero blocking](#result-all-four-run-in-parallel-zero-blocking)
     - [Disk Space Management](#disk-space-management)
+- [Clean individual tool builds](#clean-individual-tool-builds)
+- [Full cleanup (nuclear option)](#full-cleanup-nuclear-option)
     - [Troubleshooting](#troubleshooting)
+- [VSCode: Check .vscode/settings.json](#vscode-check-vscodesettingsjson)
+- [Test with explicit path](#test-with-explicit-path)
     - [Incremental Compilation Management](#incremental-compilation-management)
-  - [Bacon Development Tools](#bacon-development-tools)
-  - [Automated Development Monitoring](#automated-development-monitoring)
-    - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
+- [Rebuild cleanly](#rebuild-cleanly)
+    - [Bacon Development Tools](#bacon-development-tools)
+    - [Automated Development Monitoring](#automated-development-monitoring)
+        - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
+- [Start watch mode](#start-watch-mode)
+- [Or run checks once (manual mode)](#or-run-checks-once-manual-mode)
     - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
-  - [Tmux Development Dashboard](#tmux-development-dashboard)
-  - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
-  - [Rust Toolchain Management](#rust-toolchain-management)
-    - [Why mkdir for Locking?](#why-mkdir-for-locking)
+    - [Tmux Development Dashboard](#tmux-development-dashboard)
+- [Reconnect to existing session from another terminal](#reconnect-to-existing-session-from-another-terminal)
+- [Kill the session when done](#kill-the-session-when-done)
+    - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
+- [Or run directly:](#or-run-directly)
+    - [Rust Toolchain Management](#rust-toolchain-management)
+        - [Why mkdir for Locking?](#why-mkdir-for-locking)
+- [Only ONE process succeeds; all others fail](#only-one-process-succeeds-all-others-fail)
     - [1. `rust-toolchain-update.fish` - Smart Validated Toolchain Updates](#1-rust-toolchain-updatefish---smart-validated-toolchain-updates)
+- [Or directly](#or-directly)
     - [2. `rust-toolchain-sync-to-toml.fish` - Sync to Existing Config](#2-rust-toolchain-sync-to-tomlfish---sync-to-existing-config)
+- [Or directly](#or-directly-1)
+- [But you need to stay on nightly-2025-09-05 for testing a specific feature](#but-you-need-to-stay-on-nightly-2025-09-05-for-testing-a-specific-feature)
+- [Now rust-analyzer works for 09-05](#now-rust-analyzer-works-for-09-05)
     - [3. `rust-toolchain-validate.fish` - Unified Toolchain Validation](#3-rust-toolchain-validatefish---unified-toolchain-validation)
+- [Complete mode: Full build+test validation (~5-10 minutes)](#complete-mode-full-buildtest-validation-~5-10-minutes)
+- [View detailed help](#view-detailed-help)
     - [4. `remove_toolchains.sh` - Testing Utility](#4-remove_toolchainssh---testing-utility)
+- [Or](#or)
     - [Log File Output](#log-file-output)
+- [Or review after completion](#or-review-after-completion)
     - [Comprehensive Toolchain Management System](#comprehensive-toolchain-management-system)
-  - [Unified Script Architecture](#unified-script-architecture)
+    - [Unified Script Architecture](#unified-script-architecture)
 - [Star History](#star-history)
 - [Archive](#archive)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 ## Why R3BL TUI?
 
@@ -202,9 +239,9 @@ ergonomic, and useful experiences for it.
   various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
 - Here are some examples of the types of "app"s we plan to build (for which this
   infrastructure acts as the open source engine):
-  1. Multi user text editors w/ syntax highlighting.
-  2. Integrations w/ github issues.
-  3. Integrations w/ calendar, email, contacts APIs.
+    1. Multi user text editors w/ syntax highlighting.
+    2. Integrations w/ github issues.
+    3. Integrations w/ calendar, email, contacts APIs.
 
 ## Welcome to the monorepo and workspace
 
@@ -345,6 +382,22 @@ giti --version
 edi --version
 ```
 
+### Build infrastructure and developer tooling crate
+
+The [`r3bl-build-infra`](https://github.com/r3bl-org/r3bl-open-core/tree/main/build-infra)
+crate provides developer productivity tools:
+
+- `cargo-rustdoc-fmt`: Formats markdown tables and converts inline links to
+  reference-style links in rustdoc comments.
+
+You can install this binary with:
+
+```bash
+cargo install r3bl-build-infra
+# Or from local source within this workspace:
+fish run.fish install-build-infra
+```
+
 ## Project Task Organization
 
 This project uses a task management system for organizing day-to-day development work
@@ -354,14 +407,14 @@ using detailed task files with implementation plans in the `./task/` directory.
 
 - **[`./task/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/task)** - Directory
   containing detailed task management files:
-  - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently in
-    progress
-  - **`pending/`**: Tasks queued for later work
-  - **`done/`**: Completed task files moved from root after all steps are marked
-    `[COMPLETE]`
-  - **`archive/`**: Abandoned tasks retained for historical reference
-  - **`AGENTS.md`**: Rules and format specifications for creating and maintaining task
-    files
+    - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently
+      in progress
+    - **`pending/`**: Tasks queued for later work
+    - **`done/`**: Completed task files moved from root after all steps are marked
+      `[COMPLETE]`
+    - **`archive/`**: Abandoned tasks retained for historical reference
+    - **`AGENTS.md`**: Rules and format specifications for creating and maintaining task
+      files
 
 ### Task File Format
 
@@ -411,7 +464,7 @@ More detailed steps...
 ### Task Workflow Commands
 
 The `/r3bl-task` slash command (defined in
-[`.agents/commands/r3bl-task.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/commands/r3bl-task.md))
+[`AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md#task-tracking-system))
 manages the task lifecycle:
 
 **Create a new task:**
@@ -451,9 +504,10 @@ The task organization workflow connects strategic planning with tactical executi
   design documents
 - **Planning to Active Work**: Complex features are documented in `docs/` first.
 - **Tactical Execution**:
-  1. Complex tasks get detailed planning → `/r3bl-task create` → `./task/task_*.md`
-  2. Work progresses through hierarchical steps with `/r3bl-task update` marking progress
-  3. Completion → Task moved to `./task/done/` via `/r3bl-task update`
+    1. Complex tasks get detailed planning → `/r3bl-task create` → `./task/task_*.md`
+    2. Work progresses through hierarchical steps with `/r3bl-task update` marking
+       progress
+    3. Completion → Task moved to `./task/done/` via `/r3bl-task update`
 
 This approach (docs → ./task/) ensures strategic planning, tactical planning, and detailed
 execution are well-organized and connected.
@@ -511,11 +565,11 @@ comprehensive documentation for this project, including:
   Step-by-step guide for releasing new versions
 - [`contributing_guides/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/contributing_guides) -
   Detailed contribution guidelines including:
-  - Branch naming conventions (`BRANCH.md`)
-  - Commit message standards (`COMMIT_MESSAGE.md`)
-  - Issue creation guidelines (`ISSUE.md`)
-  - Pull request procedures (`PULL_REQUEST.md`)
-  - Code style guide (`STYLE_GUIDE.md`)
+    - Branch naming conventions (`BRANCH.md`)
+    - Commit message standards (`COMMIT_MESSAGE.md`)
+    - Issue creation guidelines (`ISSUE.md`)
+    - Pull request procedures (`PULL_REQUEST.md`)
+    - Code style guide (`STYLE_GUIDE.md`)
 
 ### Technical Design Documents
 
@@ -564,8 +618,10 @@ script handles **OS-level setup** with a clean main function structure and will:
 - **Development Shell**: Install `Fish` shell and `fzf` for interactive development
 - **File Watching**: Install file watchers (`inotifywait` on Linux, `fswatch` on macOS)
 - **Development Utilities**: Install `htop`, `screen`, `tmux` for system monitoring
-- **Node.js Ecosystem**: Install `Node.js` and `npm` for web tooling
-- **AI (LLM) Integration**: Use `Gemini CLI`, `Claude Code`, or any AI (LLM) coding agent
+- **Node.js Ecosystem**: Install `Node.js` and `npm` (for Markdown formatting via Prettier
+  and local documentation serving)
+- **AI (LLM) Integration (Optional)**: If you choose to use an AI coding agent, the repo
+  supports `Antigravity CLI` (`agy`), or any tool of your choice
 - **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all
   Rust-specific `cargo` tooling
 
@@ -581,9 +637,9 @@ If you prefer manual installation or are on Windows:
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Install `fish` and `fzf` (via package manager)
-# Ubuntu/Debian: sudo apt install fish fzf
-# macOS: brew install fish fzf
+# Install `fish`, `fzf`, `nodejs`, and `npm` (via package manager)
+# Ubuntu/Debian: sudo apt install fish fzf nodejs npm
+# macOS: brew install fish fzf node
 # Or run `./bootstrap.sh` for automatic detection
 
 # Install Rust development tools (after OS dependencies)
@@ -598,19 +654,21 @@ fish run.fish install-cargo-tools
 - **`cargo-binstall`**: Fast binary installer (installed first as foundation)
 - **Core Development Tools**: `bacon`, `flamegraph`, `inferno`
 - **Workspace Management**: `cargo-workspaces`, `cargo-cache`, `cargo-update`
-- **Code Quality**: `cargo-deny`, `cargo-unmaintained`, `cargo-expand`, `cargo-readme`
-- **Language Server**: `rust-analyzer` component
+- **Code Quality & Link Checking**: `cargo-deny`, `cargo-unmaintained`, `cargo-expand`,
+  `cargo-readme`, `lychee`
+- **Language Server Components**: `rust-analyzer` component, `rust-src`
 
 **From local source (via `cargo install --path`):**
 
-- **cmdr**: `edi`, `giti`, `rc` binaries (calls `install-cmdr`)
-- **build-infra**: `cargo-rustdoc-fmt` (calls `install-build-infra`)
+- **cmdr**: `edi`, `giti`, `rc` binaries (calls `run.fish install-cmdr`)
+- **build-infra**: `cargo-rustdoc-fmt` (calls `run.fish install-build-infra`)
+- **rust-analyzer-mcp-server**: `rust-analyzer-mcp-server` MCP binary (calls `run.fish install-rust-analyzer-mcp-server`)
 
 **Features:**
 
 - **Smart Installation**: Uses `cargo-binstall` for speed with fallback to
   `cargo install --locked`
-- **Local Source Rebuild**: Always rebuilds `cmdr` and `build-infra` from source with
+- **Local Source Rebuild**: Always rebuilds `cmdr`, `build-infra`, and `rust-analyzer-mcp-server` from source with
   current toolchain
 - **Shared Utilities**: Leverages utility functions from `script_lib.fish` for consistency
 
@@ -686,7 +744,7 @@ fast & efficient, and only consume your local compute and energy resources:
 - [`run.fish`](#unified-script-architecture): Orchestrates workspace-wide commands.
 - [`bacon`](#bacon-development-tools): Provides real-time background feedback.
 - [`bootstrap.sh`](#automated-setup-recommended): Automated OS-level and toolchain setup.
-- **`cargo-rustdoc-fmt`**: Custom rustdoc formatter, located in the
+- **`cargo-rustdoc-fmt`**: Custom rustdoc formatter located in the
   [`build-infra/`](build-infra/README.md) folder.
 - [R3BL VSCode extensions](#r3bl-vscode-extensions): Enhancements for the developer's
   environment (Themes, Copyright management, etc).
@@ -709,10 +767,17 @@ that you can:
 
 **How it works:**
 
-If you use an AI (LLM) coding agent (like `Gemini CLI`, `Claude Code`, or others), point
-it to the instructions in
+Using an AI coding agent is completely optional. If you do choose to use an AI (LLM)
+coding agent or harness (such as `Antigravity CLI` (`agy`), or any tool of your choice),
+point it to the instructions in
 [`AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md). This file
 contains our design philosophy, coding standards, and crate-specific guidance.
+
+To equip your AI coding agent with AST-aware code navigation, compiler diagnostics, and
+automated quick-fixes via `rust-analyzer`, connect it to our
+[`r3bl-rust-analyzer-mcp-server`](rust-analyzer-mcp-server/)
+([crates.io](https://crates.io/crates/r3bl-rust-analyzer-mcp-server)) Model Context
+Protocol (MCP) server.
 
 **Available Skills (`.agents/skills/`):**
 
@@ -768,64 +833,6 @@ all available commands:
 fish run.fish
 ```
 
-You should see output that looks like this:
-
-```text
-Usage: fish run.fish <command> [args]
-
-Workspace-wide commands:
-    all                  Run all major checks
-    build                Build entire workspace
-    build-full           Full build with clean and update
-    clean                Clean entire workspace
-    test                 Test entire workspace
-    check                Check all workspaces
-    clippy               Run clippy on all workspaces
-    clippy-pedantic      Run clippy with pedantic lints
-    docs                 Generate docs for all
-    serve-docs           Serve documentation
-    rustfmt              Format all code
-    rustdoc-fmt          Format rustdoc comments
-    install-cargo-tools  Install all dev tools (crates.io + local source)
-    upgrade-deps         Upgrade dependencies
-    update-cargo-tools   Update all tools (crates.io + rebuild local source)
-    audit-deps           Security audit
-    unmaintained-deps    Check for unmaintained deps
-    toolchain-update     Update Rust to month-old nightly
-    toolchain-sync       Sync environment to rust-toolchain.toml
-    toolchain-validate   Quick toolchain validation (components only)
-    toolchain-validate-complete  Complete toolchain validation (full build+test)
-    toolchain-remove     Remove ALL toolchains (testing)
-
-Watch commands:
-    test-watch [pattern]  Watch files, run specific test
-    clippy-watch          Watch files, run clippy
-    check-watch           Watch files, run cargo check
-    check-full-watch      Watch files, run all checks (tests, doctests, docs)
-    check-full-watch-test Watch files, run tests and doctests
-    check-full-watch-doc  Watch files, run doc build only
-
-TUI-specific commands:
-    run-examples [--release] [--no-log]  Run TUI examples
-    run-examples-flamegraph-svg  Generate SVG flamegraph
-    run-examples-flamegraph-fold [--benchmark]  Generate perf-folded (use --benchmark for reproducible profiling)
-    bench                Run benchmarks
-
-Local source package commands:
-    install-cmdr         Install cmdr binaries (edi, giti, rc) from source
-    install-build-infra  Install build-infra tools (cargo-rustdoc-fmt) from source
-
-cmdr-specific commands:
-    run-binaries         Run edi, giti, or rc
-
-Development Session Commands:
-    dev-dashboard        Start 2-pane tmux development dashboard
-
-Other commands:
-    log                  Monitor /tmp/r3bl_tui/log.txt
-    help                 Show this help
-```
-
 ### Key Commands
 
 | Command                                                    | Description                                                                             |
@@ -871,8 +878,8 @@ When you have multiple `cargo` instances running:
 - **VSCode rust-analyzer**: Runs `cargo check` continuously in background
 - **File watcher** (`check.fish`, `bacon`): Triggers `cargo` tests, doc builds, etc. on
   every file save
-- **Terminal**: You run manual `cargo` commands, or use an AI (LLM) coding agent (like
-  `Gemini CLI`)
+- **Terminal**: You run manual `cargo` commands, or optionally use an AI (LLM) coding
+  agent (such as `Antigravity CLI` (`agy`), etc.)
 
 All these access the same `target/` directory:
 
@@ -894,7 +901,7 @@ Configure each tool to use its own target directory. Rust supports this via the
 ```
 target/
 ├── vscode/      # VSCode rust-analyzer builds
-├── agents/      # AI (LLM) coding agent builds (`Gemini CLI`, etc.)
+├── agents/      # Optional AI (LLM) coding agent builds
 ├── check/       # check.fish file watcher builds
 └── cli/         # Terminal manual builds (optional)
 ```
@@ -920,7 +927,7 @@ In VSCode, you can add the following to `.vscode/settings.json`:
 
 ```json
 {
-  "rust-analyzer.cargo.targetDir": true
+    "rust-analyzer.cargo.targetDir": true
 }
 ```
 
@@ -945,8 +952,8 @@ CARGO_TARGET_DIR=target/vscode code .
 # Terminal 2: File watcher with automatic tests
 check.fish --watch-test # Runs with: CARGO_TARGET_DIR=target/check
 
-# Terminal 3: Run AI (LLM) coding agent
-CARGO_TARGET_DIR=target/agents gemini
+# Terminal 3: Optional AI (LLM) coding agent (e.g. agy, or your tool of choice)
+CARGO_TARGET_DIR=target/agents <agent-command>
 
 # Terminal 4: Run bacon
 CARGO_TARGET_DIR=target/bacon bacon doc --headless
@@ -1168,7 +1175,8 @@ Press Ctrl+C to stop
 **Event handling:** While checks run (30+ seconds), the Linux kernel buffers new file
 change events. When checks complete, buffered events trigger immediately if debounce
 allows. This ensures no changes are lost but may cause cascading re-runs if you save
-multiple times during test execution. Adjust `DEBOUNCE_WINDOW_SECS` in the script if needed.
+multiple times during test execution. Adjust `DEBOUNCE_WINDOW_SECS` in the script if
+needed.
 
 **Usage:**
 
@@ -1184,6 +1192,7 @@ multiple times during test execution. Adjust `DEBOUNCE_WINDOW_SECS` in the scrip
 ./check.fish --check      # Fast typecheck only (cargo check)
 ./check.fish --build      # Compile only (cargo build)
 ./check.fish --clippy     # Lint only (cargo clippy --all-targets)
+./check.fish --fmt        # Format changed files (cargo fmt + cargo-rustdoc-fmt)
 ./check.fish --test       # Tests + doctests only
 ./check.fish --doc        # Docs only (quick, no deps)
 ./check.fish --full       # ALL checks + ICE escalation to toolchain update
@@ -1431,32 +1440,32 @@ fish run.fish toolchain-update
 - **Smart search**: Tests nightly toolchains starting from 45 days ago, moving forward
   day-by-day until finding a stable one (up to today)
 - **ICE validation**: Runs comprehensive validation suite on each candidate:
-  - `cargo clippy --all-targets`
-  - `cargo build`
-  - `cargo test --all-targets`
-  - `cargo test --doc`
-  - `cargo doc --workspace --no-deps`
+    - `cargo clippy --all-targets`
+    - `cargo build`
+    - `cargo test --all-targets`
+    - `cargo test --doc`
+    - `cargo doc --workspace --no-deps`
 - **Toolchain vs code errors**: Distinguishes between:
-  - ❌ **ICE errors** (compiler crashes) → rejects toolchain, tries next day
-  - ✅ **Code errors** (compilation/test failures) → accepts toolchain (validates compiler
-    works, not your code)
+    - ❌ **ICE errors** (compiler crashes) → rejects toolchain, tries next day
+    - ✅ **Code errors** (compilation/test failures) → accepts toolchain (validates
+      compiler works, not your code)
 - **First stable wins**: Stops at the first toolchain without ICE errors (usually finds
   stable toolchain in first attempt)
 - **Updates** `rust-toolchain.toml` to use the validated stable nightly
 - Installs the target toolchain with `rust-analyzer` component (required by IDEs and
   `cargo`)
 - **Desktop notifications** (via `notify-send`):
-  - 🎉 Success notification when stable toolchain found (normal urgency)
-  - 🚨 Critical alert if no stable toolchain found in entire 45-day window (extremely
-    rare)
+    - 🎉 Success notification when stable toolchain found (normal urgency)
+    - 🚨 Critical alert if no stable toolchain found in entire 45-day window (extremely
+      rare)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
-  - All stable toolchains (`stable-*`)
-  - The newly validated nightly
+    - All stable toolchains (`stable-*`)
+    - The newly validated nightly
 - **Final verification with fresh build**:
-  - Removes ICE failure files (`rustc-ice-*.txt`) generated during validation
-  - Cleans all caches: `cargo` cache, build artifacts
-  - Runs full verification: tests, doctests, and documentation build
-  - Ensures new toolchain works perfectly from scratch
+    - Removes ICE failure files (`rustc-ice-*.txt`) generated during validation
+    - Cleans all caches: `cargo` cache, build artifacts
+    - Runs full verification: tests, doctests, and documentation build
+    - Ensures new toolchain works perfectly from scratch
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-update.log`
 
 **When to use:**
@@ -1516,8 +1525,8 @@ fish run.fish toolchain-sync
 - Installs `rust-analyzer` and `rust-src` components automatically (required by IDEs and
   `cargo`)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
-  - All stable toolchains (`stable-*`)
-  - The target toolchain from the TOML
+    - All stable toolchains (`stable-*`)
+    - The target toolchain from the TOML
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-sync-to-toml.log`
 
 **When to use:**
@@ -1782,13 +1791,7 @@ exactly one place with clear ownership.
 
 ## Star History
 
-<a href="https://star-history.com/#r3bl-org/r3bl-open-core&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date" />
- </picture>
-</a>
+![Star History](./.github/assets/star-history.svg)
 
 ## Archive
 

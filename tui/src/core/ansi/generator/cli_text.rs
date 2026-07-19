@@ -1,13 +1,14 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
-            InlineString, InlineVec, PixelChar, PixelCharRenderer, SgrCode, TuiColor,
-            TuiStyle, TuiStyleAttribs, UNICODE_REPLACEMENT_CHAR,
-            generate_impl_display_for_fast_stringify,
-            impl_cli_text_inline::CliTextConvertOptions,
-            inline_string, ok, tui_color,
-            tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
-use std::fmt::Result;
+use crate::{
+    generate_impl_display_for_fast_stringify, impl_cli_text_inline::CliTextConvertOptions,
+    inline_string, ok, tui_color,
+    tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline},
+    BufTextStorage, CCol, FastStringify, GCStringOwned, InlineString, InlineVec,
+    PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
+    UNICODE_REPLACEMENT_CHAR, VPWidth, c_col,
+};
+// use std::fmt::Result;
 use strum_macros::EnumCount;
 
 /// Please don't create this struct directly, use [`cli_text_inline`], [`cli_text_line!`],
@@ -179,23 +180,23 @@ pub mod impl_cli_text_inline {
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct CliTextConvertOptions {
-        pub start: ColIndex,
-        pub width: Option<ColWidth>,
+        pub start: CCol,
+        pub width: Option<VPWidth>,
     }
 
     impl Default for CliTextConvertOptions {
         fn default() -> Self {
             Self {
-                start: 0.into(),
+                start: c_col(0),
                 width: None, // Full text from start
             }
         }
     }
 
-    impl From<ColWidth> for CliTextConvertOptions {
-        fn from(col_width: ColWidth) -> Self {
-            Self {
-                start: 0.into(),
+    impl From<VPWidth> for CliTextConvertOptions {
+        fn from(col_width: VPWidth) -> CliTextConvertOptions {
+            CliTextConvertOptions {
+                start: c_col(0),
                 width: Some(col_width),
             }
         }
@@ -285,8 +286,8 @@ pub mod impl_cli_text_inline {
         /// the text on the screen.
         /// - To convert the entire text, just pass in
         ///   [`CliTextConvertOptions::default()`].
-        /// - To clip the text to a certain display width, pass in the [`ColWidth`] via
-        ///   the [`width`] field.
+        /// - To clip the text to a certain display width, pass in the [`VPWidth`] via the
+        ///   [`width`] field.
         /// - Uses (start, width) semantics where:
         ///   - `start`: 0-based display column index of the first column to include
         ///   - `width`: Display width in columns to include, or None for "to end of text"
@@ -439,7 +440,7 @@ pub fn fg_dark_gray(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(236.into())),
+        color_fg: Some(TuiColor::Ansi(236u16.into())),
         color_bg: None,
     }
 }
@@ -450,7 +451,7 @@ pub fn fg_black(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(0.into())),
+        color_fg: Some(TuiColor::Ansi(0u16.into())),
         color_bg: None,
     }
 }
@@ -461,7 +462,7 @@ pub fn fg_yellow(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(226.into())),
+        color_fg: Some(TuiColor::Ansi(226u16.into())),
         color_bg: None,
     }
 }
@@ -472,7 +473,7 @@ pub fn fg_green(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(34.into())),
+        color_fg: Some(TuiColor::Ansi(34u16.into())),
         color_bg: None,
     }
 }
@@ -483,7 +484,7 @@ pub fn fg_blue(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(27.into())),
+        color_fg: Some(TuiColor::Ansi(27u16.into())),
         color_bg: None,
     }
 }
@@ -494,7 +495,7 @@ pub fn fg_red(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(196.into())),
+        color_fg: Some(TuiColor::Ansi(196u16.into())),
         color_bg: None,
     }
 }
@@ -505,7 +506,7 @@ pub fn fg_white(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(231.into())),
+        color_fg: Some(TuiColor::Ansi(231u16.into())),
         color_bg: None,
     }
 }
@@ -516,7 +517,7 @@ pub fn fg_cyan(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(51.into())),
+        color_fg: Some(TuiColor::Ansi(51u16.into())),
         color_bg: None,
     }
 }
@@ -527,7 +528,7 @@ pub fn fg_magenta(text: impl AsRef<str>) -> CliTextInline {
     CliTextInline {
         text: text.as_ref().into(),
         attribs: TuiStyleAttribs::default(),
-        color_fg: Some(TuiColor::Ansi(201.into())),
+        color_fg: Some(TuiColor::Ansi(201u16.into())),
         color_bg: None,
     }
 }
@@ -785,19 +786,19 @@ impl CliTextInline {
 
     #[must_use]
     pub fn bg_cyan(mut self) -> Self {
-        self.color_bg = Some(TuiColor::Ansi(51.into()));
+        self.color_bg = Some(TuiColor::Ansi(51u16.into()));
         self
     }
 
     #[must_use]
     pub fn bg_yellow(mut self) -> Self {
-        self.color_bg = Some(TuiColor::Ansi(226.into()));
+        self.color_bg = Some(TuiColor::Ansi(226u16.into()));
         self
     }
 
     #[must_use]
     pub fn bg_green(mut self) -> Self {
-        self.color_bg = Some(TuiColor::Ansi(34.into()));
+        self.color_bg = Some(TuiColor::Ansi(34u16.into()));
         self
     }
 
@@ -809,7 +810,7 @@ impl CliTextInline {
 
     #[must_use]
     pub fn bg_dark_gray(mut self) -> Self {
-        self.color_bg = Some(TuiColor::Ansi(236.into()));
+        self.color_bg = Some(TuiColor::Ansi(236u16.into()));
         self
     }
 
@@ -848,7 +849,7 @@ pub enum CliStyle {
 }
 
 impl FastStringify for CliStyle {
-    fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
+    fn write_to_buf(&self, buf: &mut BufTextStorage) -> std::fmt::Result {
         use crate::core::ansi::{ColorSupport, TransformColor, global_color_support};
 
         // Helper function to convert color to appropriate
@@ -912,7 +913,7 @@ impl FastStringify for CliStyle {
 generate_impl_display_for_fast_stringify!(CliStyle);
 
 impl FastStringify for CliTextInline {
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
         // Convert to PixelChar array using the unified representation
         let pixels = self.convert(CliTextConvertOptions::default());
 
@@ -936,9 +937,11 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 #[cfg(test)]
 mod tests {
     use super::{dim, impl_cli_text_inline::CliTextConvertOptions};
-    use crate::{CliTextInline, ColIndex, ColorSupport, InlineVec, PixelChar, TuiColor,
-                TuiStyle, TuiStyleAttribs, global_color_support, ok, tui_color,
-                tui_style::tui_style_attrib::Bold, tui_style_attribs, width};
+    use crate::{
+        tui_style::tui_style_attrib::Bold, tui_style_attribs, vp_width, c_col,
+        CliTextInline, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle,
+        TuiStyleAttribs, global_color_support, ok, tui_color,
+    };
     use pretty_assertions::assert_eq;
     use serial_test::serial;
 
@@ -1007,7 +1010,7 @@ mod tests {
         let eg_2 = CliTextInline {
             text: "World".into(),
             attribs: TuiStyleAttribs::from(Bold),
-            color_fg: Some(TuiColor::Ansi(150.into())),
+            color_fg: Some(TuiColor::Ansi(150u16.into())),
             color_bg: Some(TuiColor::Rgb((1, 1, 1).into())),
         };
 
@@ -1040,7 +1043,7 @@ mod tests {
         let eg_2 = CliTextInline {
             text: "World".into(),
             attribs: TuiStyleAttribs::from(Bold),
-            color_fg: Some(TuiColor::Ansi(150.into())),
+            color_fg: Some(TuiColor::Ansi(150u16.into())),
             color_bg: Some(TuiColor::Rgb((1, 1, 1).into())),
         };
 
@@ -1075,7 +1078,7 @@ mod tests {
         let eg_2 = CliTextInline {
             text: "World".into(),
             attribs: TuiStyleAttribs::from(Bold),
-            color_fg: Some(TuiColor::Ansi(150.into())),
+            color_fg: Some(TuiColor::Ansi(150u16.into())),
             color_bg: Some(TuiColor::Rgb((1, 1, 1).into())),
         };
 
@@ -1093,34 +1096,34 @@ mod tests {
     #[test]
     fn test_ast_convert_options_struct() {
         let options1 = CliTextConvertOptions {
-            start: ColIndex::new(5),
-            width: Some(width(6)),
+            start: c_col(5),
+            width: Some(vp_width(6)),
         };
-        assert_eq!(options1.start, ColIndex::new(5));
-        assert_eq!(options1.width, Some(width(6)));
+        assert_eq!(options1.start, c_col(5));
+        assert_eq!(options1.width, Some(vp_width(6)));
 
         let options2 = CliTextConvertOptions {
-            start: ColIndex::new(0),
+            start: c_col(0),
             width: None,
         };
-        assert_eq!(options2.start, ColIndex::new(0));
+        assert_eq!(options2.start, c_col(0));
         assert_eq!(options2.width, None);
     }
 
     #[serial]
     #[test]
     fn test_from_col_width_for_ast_convert_options() {
-        let col_width = width(20);
+        let col_width = vp_width(20);
         let options: CliTextConvertOptions = col_width.into();
-        assert_eq!(options.start, ColIndex::new(0));
-        // ColWidth 20 should result in width(20).
-        assert_eq!(options.width, Some(width(20)));
+        assert_eq!(options.start, c_col(0));
+        // ColWidth 20 should result in vp_width(20).
+        assert_eq!(options.width, Some(vp_width(20)));
 
-        let col_width_zero = width(0);
+        let col_width_zero = vp_width(0);
         let options_zero: CliTextConvertOptions = col_width_zero.into();
-        assert_eq!(options_zero.start, ColIndex::new(0));
-        // ColWidth(0) converts to width(0).
-        assert_eq!(options_zero.width, Some(width(0)));
+        assert_eq!(options_zero.start, c_col(0));
+        // ColWidth(0) converts to vp_width(0).
+        assert_eq!(options_zero.width, Some(vp_width(0)));
     }
 
     #[serial]
@@ -1128,7 +1131,7 @@ mod tests {
     fn test_ast_convert_method() {
         let tui_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
-            color_fg: Some(TuiColor::Ansi(196.into())), // Red.
+            color_fg: Some(TuiColor::Ansi(196u16.into())), // Red.
             ..Default::default()
         };
         let styled_text = CliTextInline {
@@ -1140,7 +1143,7 @@ mod tests {
 
         // Test case 1: Using From<ColWidth>.
         {
-            let col_width = width(5);
+            let col_width = vp_width(5);
             let res: InlineVec<PixelChar> = styled_text.convert(col_width);
             assert_eq!(res.len(), 5); // "Hello"
             assert_eq!(
@@ -1204,7 +1207,7 @@ mod tests {
         // Test case 3: Convert partial text (start specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(6),
+                start: c_col(6),
                 width: None,
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
@@ -1228,8 +1231,8 @@ mod tests {
         // Test case 4: Convert partial text (end specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(5)),
+                start: c_col(0),
+                width: Some(vp_width(5)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert_eq!(res.len(), 5); // "Hello"
@@ -1252,8 +1255,8 @@ mod tests {
         // Test case 5: Convert partial text (start and end specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(2),
-                width: Some(width(7)),
+                start: c_col(2),
+                width: Some(vp_width(7)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert_eq!(res.len(), 7); // "llo Wor"
@@ -1316,7 +1319,7 @@ mod tests {
         // Test case 8: Out of bounds (start beyond text length).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(20),
+                start: c_col(20),
                 width: None,
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
@@ -1326,8 +1329,8 @@ mod tests {
         // Test case 9: Out of bounds with width (start beyond text).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(15),
-                width: Some(width(5)),
+                start: c_col(15),
+                width: Some(vp_width(5)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert!(res.is_empty());
@@ -1336,8 +1339,8 @@ mod tests {
         // Test case 10: Width exceeds remaining text.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(8),
-                width: Some(width(10)), // Only 3 chars available ("rld")
+                start: c_col(8),
+                width: Some(vp_width(10)), // Only 3 chars available ("rld")
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert_eq!(res.len(), 3); // "rld" - clamps to available chars
@@ -1346,8 +1349,8 @@ mod tests {
         // Test case 10.1: Width exactly matches remaining text.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(8),
-                width: Some(width(3)), // Exactly "rld"
+                start: c_col(8),
+                width: Some(vp_width(3)), // Exactly "rld"
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert_eq!(res.len(), 3); // "rld"
@@ -1370,8 +1373,8 @@ mod tests {
         // Test case 11: Single character range.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(6),
-                width: Some(width(1)),
+                start: c_col(6),
+                width: Some(vp_width(1)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             assert_eq!(res.len(), 1); // "W"
@@ -1396,8 +1399,8 @@ mod tests {
             };
             // Start at column 2 (beginning of "好"), take 4 columns ("好世")
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(2),
-                width: Some(width(4)),
+                start: c_col(2),
+                width: Some(vp_width(4)),
             };
             let res: InlineVec<PixelChar> = unicode_text.convert(opt);
             assert_eq!(res.len(), 2); // "好世"
@@ -1420,8 +1423,8 @@ mod tests {
         // Test case 13: Width zero (single char at start).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(0)),
+                start: c_col(0),
+                width: Some(vp_width(0)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             // start=0, width=0 -> should return 0 chars
@@ -1431,8 +1434,8 @@ mod tests {
         // Test case 14: Width one (single char at start).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(1)),
+                start: c_col(0),
+                width: Some(vp_width(1)),
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
             // start=0, width=1 -> should return first char "H"
@@ -1462,7 +1465,7 @@ mod tests {
     fn test_ast_clip() {
         let tui_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
-            color_fg: Some(TuiColor::Ansi(196.into())), // Red.
+            color_fg: Some(TuiColor::Ansi(196u16.into())), // Red.
             ..Default::default()
         };
 
@@ -1475,7 +1478,7 @@ mod tests {
 
         // Test case 1: Using From<ColWidth>.
         {
-            let col_width = width(4);
+            let col_width = vp_width(4);
             let clipped_text = styled_text.clip(col_width);
             assert_eq!(clipped_text.text, "Hell");
             assert_eq!(clipped_text.attribs, styled_text.attribs);
@@ -1495,7 +1498,7 @@ mod tests {
         // Test case 3: Clip partial text (start specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(6),
+                start: c_col(6),
                 width: None,
             };
             let clipped_text = styled_text.clip(opt);
@@ -1508,8 +1511,8 @@ mod tests {
         // Test case 4: Clip partial text (end specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(5)),
+                start: c_col(0),
+                width: Some(vp_width(5)),
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "Hello");
@@ -1521,8 +1524,8 @@ mod tests {
         // Test case 5: Clip partial text (start and end specified).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(2),
-                width: Some(width(7)),
+                start: c_col(2),
+                width: Some(vp_width(7)),
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "llo Wor");
@@ -1564,7 +1567,7 @@ mod tests {
         // Test case 8: Out of bounds (start beyond text length).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(20),
+                start: c_col(20),
                 width: None,
             };
             let clipped_text = styled_text.clip(opt);
@@ -1577,8 +1580,8 @@ mod tests {
         // Test case 9: Out of bounds with width (start beyond text).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(15),
-                width: Some(width(5)),
+                start: c_col(15),
+                width: Some(vp_width(5)),
             };
             let clipped_text = styled_text.clip(opt);
             assert!(clipped_text.text.is_empty());
@@ -1590,8 +1593,8 @@ mod tests {
         // Test case 10: Width exceeds remaining text.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(8),
-                width: Some(width(10)), // Only 3 chars available ("rld")
+                start: c_col(8),
+                width: Some(vp_width(10)), // Only 3 chars available ("rld")
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "rld"); // Clamps to available chars
@@ -1603,8 +1606,8 @@ mod tests {
         // Test case 10.1: Width exactly matches remaining text.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(8),
-                width: Some(width(3)), // Exactly "rld"
+                start: c_col(8),
+                width: Some(vp_width(3)), // Exactly "rld"
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "rld");
@@ -1616,8 +1619,8 @@ mod tests {
         // Test case 11: Single character range.
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(6),
-                width: Some(width(1)),
+                start: c_col(6),
+                width: Some(vp_width(1)),
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "W");
@@ -1635,8 +1638,8 @@ mod tests {
                 color_bg: tui_style.color_bg,
             };
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(1),
-                width: Some(width(2)),
+                start: c_col(1),
+                width: Some(vp_width(2)),
             };
             let clipped_text = unicode_text.clip(opt);
             assert_eq!(clipped_text.text, "好世");
@@ -1648,8 +1651,8 @@ mod tests {
         // Test case 13: Width zero (empty).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(0)),
+                start: c_col(0),
+                width: Some(vp_width(0)),
             };
             let clipped_text = styled_text.clip(opt);
             assert!(clipped_text.text.is_empty()); // start=0, width=0 -> empty
@@ -1661,8 +1664,8 @@ mod tests {
         // Test case 14: Width one (single char).
         {
             let opt = CliTextConvertOptions {
-                start: ColIndex::new(0),
-                width: Some(width(1)),
+                start: c_col(0),
+                width: Some(vp_width(1)),
             };
             let clipped_text = styled_text.clip(opt);
             assert_eq!(clipped_text.text, "H"); // start=0, width=1 -> "H"
@@ -1724,8 +1727,8 @@ mod bench_tests {
         CliTextInline {
             text: "Hello, World!".into(),
             attribs: TuiStyleAttribs::default(),
-            color_fg: Some(TuiColor::Ansi(196.into())),
-            color_bg: Some(TuiColor::Ansi(236.into())),
+            color_fg: Some(TuiColor::Ansi(196u16.into())),
+            color_bg: Some(TuiColor::Ansi(236u16.into())),
         }
     }
 
@@ -1743,7 +1746,7 @@ mod bench_tests {
             text: "Hello, World! This is a longer text with more content.".into(),
             attribs: TuiStyleAttribs::from(Bold) + Italic + Underline,
             color_fg: Some(TuiColor::Rgb((255, 128, 0).into())),
-            color_bg: Some(TuiColor::Ansi(236.into())),
+            color_bg: Some(TuiColor::Ansi(236u16.into())),
         }
     }
 
@@ -1753,7 +1756,7 @@ mod bench_tests {
                    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
                 .into(),
             attribs: TuiStyleAttribs::from(Bold),
-            color_fg: Some(TuiColor::Ansi(34.into())),
+            color_fg: Some(TuiColor::Ansi(34u16.into())),
             color_bg: None,
         }
     }
@@ -1834,7 +1837,7 @@ mod bench_tests {
             let mut result = String::new();
             for ast in &texts {
                 use std::fmt::Write;
-                write!(result, "{ast}").unwrap();
+                write!(result, "{ast}").expect("conversion error");
             }
             result
         });

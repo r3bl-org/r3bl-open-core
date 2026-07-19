@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::ok;
-use crate::InlineString;
+use crate::{InlineString, ok};
 use std::{io::{self, Write},
           str::from_utf8};
 use tokio::sync::{broadcast, mpsc};
@@ -178,7 +177,9 @@ mod tests {
     fn test_write() {
         let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
-        shared_writer.write_all(b"Hello, World!").unwrap();
+        shared_writer
+            .write_all(b"Hello, World!")
+            .expect("conversion error");
         assert_eq!(shared_writer.buffer, "Hello, World!");
     }
 
@@ -188,11 +189,13 @@ mod tests {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
 
-        shared_writer.write_all(b"Hello, World!").unwrap();
-        shared_writer.flush().unwrap();
+        shared_writer
+            .write_all(b"Hello, World!")
+            .expect("conversion error");
+        shared_writer.flush().expect("conversion error");
         assert_eq!(shared_writer.buffer, "");
 
-        let it = line_receiver.recv().await.unwrap();
+        let it = line_receiver.recv().await.expect("conversion error");
         if let LineStateControlSignal::Line(bytes) = it {
             assert_eq!(bytes, "Hello, World!");
         } else {
@@ -205,11 +208,13 @@ mod tests {
     async fn test_writeln_no_flush() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
-        shared_writer.write_all(b"Hello, World!\n").unwrap();
+        shared_writer
+            .write_all(b"Hello, World!\n")
+            .expect("conversion error");
 
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-        let it = line_receiver.recv().await.unwrap();
+        let it = line_receiver.recv().await.expect("conversion error");
         if let LineStateControlSignal::Line(bytes) = it {
             assert_eq!(bytes, "Hello, World!\n");
         } else {
@@ -227,12 +232,16 @@ mod tests {
         let mut cloned_writer = shared_writer.clone();
         assert!(cloned_writer.silent_error);
 
-        cloned_writer.write_all(b"Hello, World!\n").unwrap();
+        cloned_writer
+            .write_all(b"Hello, World!\n")
+            .expect("conversion error");
         assert!(cloned_writer.buffer.is_empty());
 
         // Will not produce error.
         line_receiver.close();
-        cloned_writer.write_all(b"Hello, World!\n").unwrap();
+        cloned_writer
+            .write_all(b"Hello, World!\n")
+            .expect("conversion error");
 
         // Will produce error.
         assert!(shared_writer.write_all(b"error\n").is_err());

@@ -47,14 +47,14 @@
 //! This selective redraw optimization significantly improves rendering performance by
 //! avoiding unnecessary terminal updates for unchanged regions.
 //!
-//! [`OfsBuf`]: crate::OfsBuf
-//! [`paint_impl`]: crate::ofs_buf::paint_impl
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`OfsBuf`]: crate::tui::OfsBuf
+//! [`paint_impl`]: crate::terminal_lib_backends::ofs_buf::paint_impl
+//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::PixelChar;
-use crate::{List, Pos};
-use std::ops::Deref;
+use crate::{List, VPPos, ok};
+use std::{fmt::Debug, ops::Deref};
 
 /// This is a wrapper type so the [`std::fmt::Debug`] can be implemented for it, that
 /// won't conflict with [List]'s implementation of the trait.
@@ -63,7 +63,16 @@ pub struct PixelCharDiffChunks {
     pub inner: List<DiffChunk>,
 }
 
-pub type DiffChunk = (Pos, PixelChar);
+impl Debug for PixelCharDiffChunks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (pos, pixel_char) in self.iter() {
+            writeln!(f, "\t{pos:?}: {pixel_char:?}")?;
+        }
+        ok!()
+    }
+}
+
+pub type DiffChunk = (VPPos, PixelChar);
 
 impl Deref for PixelCharDiffChunks {
     type Target = List<DiffChunk>;
@@ -72,13 +81,15 @@ impl Deref for PixelCharDiffChunks {
 }
 
 impl From<List<DiffChunk>> for PixelCharDiffChunks {
-    fn from(list: List<DiffChunk>) -> Self { Self { inner: list } }
+    fn from(list: List<DiffChunk>) -> PixelCharDiffChunks {
+        PixelCharDiffChunks { inner: list }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TuiStyle, col, row};
+    use crate::{TuiStyle, vp_col, vp_row};
 
     fn create_test_pixel_char() -> PixelChar {
         PixelChar::PlainText {
@@ -90,27 +101,27 @@ mod tests {
     #[test]
     fn test_pixel_char_diff_chunks_creation() {
         let chunks = PixelCharDiffChunks::default();
-        assert!(chunks.inner.is_empty());
+        assert!(chunks.is_empty());
     }
 
     #[test]
     fn test_pixel_char_diff_chunks_from_list() {
         let mut list = List::new();
-        let pos = row(0) + col(0);
+        let pos = vp_row(0) + vp_col(0);
         let pixel_char = create_test_pixel_char();
         list.push((pos, pixel_char));
 
         let chunks = PixelCharDiffChunks::from(list.clone());
-        assert_eq!(chunks.inner.len(), 1);
-        assert_eq!(chunks.inner[0].0, pos);
-        assert_eq!(chunks.inner[0].1, pixel_char);
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].0, pos);
+        assert_eq!(chunks[0].1, pixel_char);
     }
 
     #[test]
     fn test_pixel_char_diff_chunks_deref() {
         let mut list = List::new();
-        let pos1 = row(0) + col(0);
-        let pos2 = row(1) + col(1);
+        let pos1 = vp_row(0) + vp_col(0);
+        let pos2 = vp_row(1) + vp_col(1);
         let pixel_char = create_test_pixel_char();
 
         list.push((pos1, pixel_char));
@@ -128,7 +139,7 @@ mod tests {
     fn test_pixel_char_diff_chunks_equality() {
         let mut list1 = List::new();
         let mut list2 = List::new();
-        let pos = row(0) + col(0);
+        let pos = vp_row(0) + vp_col(0);
         let pixel_char = create_test_pixel_char();
 
         list1.push((pos, pixel_char));
@@ -143,7 +154,7 @@ mod tests {
     #[test]
     fn test_pixel_char_diff_chunks_clone() {
         let mut list = List::new();
-        let pos = row(2) + col(3);
+        let pos = vp_row(2) + vp_col(3);
         let pixel_char = create_test_pixel_char();
         list.push((pos, pixel_char));
 

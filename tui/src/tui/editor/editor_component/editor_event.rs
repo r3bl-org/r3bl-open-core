@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorBuffer,
-            EditorEngine, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-            SelectMode, Size, SpecialKey, clipboard_support::ClipboardService,
+use crate::{ClipboardService, DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut,
+            EditorBuffer, EditorEngine, InputEvent, Key, KeyPress, KeyState,
+            ModifierKeysMask, SelectMode, SpecialKey, VPSize,
             editor_engine::engine_internal_api, fg_green, inline_string,
             md_parser::md_parser_constants::NEW_LINE_CHAR, validate_scroll_on_resize};
 use std::fmt::Debug;
@@ -33,7 +33,7 @@ pub enum EditorEvent {
     PageDown,
     PageUp,
     MoveCaret(CaretDirection),
-    Resize(Size),
+    Resize(VPSize),
     Select(SelectionAction),
     Copy,
     /// Pastes text from the system clipboard (triggered by Ctrl+V).
@@ -292,7 +292,7 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
     ) {
-        if editor_buffer.get_selection_list().is_empty() {
+        if editor_buffer.get_selection_container().is_empty() {
             return;
         }
 
@@ -354,16 +354,16 @@ impl EditorEvent {
         if normalized_text.contains(NEW_LINE_CHAR) {
             let lines: Vec<&str> = normalized_text.split(NEW_LINE_CHAR).collect();
 
-            // For multi-line operations, use the batched insert to avoid multiple.
-            // validations
-            engine_internal_api::insert_str_batch_at_caret(
-                EditorArgsMut { engine, buffer },
+            // For multi-line operations, use the batched insert to avoid multiple
+            // validations.
+            engine_internal_api::insert_multiple_lines_at_caret(
+                EditorArgsMut::new(buffer, engine),
                 &lines,
             );
         } else {
             // Single line - insert directly.
-            engine_internal_api::insert_str_at_caret(
-                EditorArgsMut { engine, buffer },
+            engine_internal_api::insert_into_single_line_at_caret(
+                EditorArgsMut::new(buffer, engine),
                 &normalized_text,
             );
         }
@@ -404,22 +404,21 @@ impl EditorEvent {
 
             EditorEvent::InsertChar(character) => {
                 Self::delete_text_if_selected(engine, buffer);
-                engine_internal_api::insert_str_at_caret(
-                    EditorArgsMut { engine, buffer },
+                engine_internal_api::insert_into_single_line_at_caret(
+                    EditorArgsMut::new(buffer, engine),
                     &String::from(character),
                 );
             }
 
             EditorEvent::InsertNewLine => {
                 Self::delete_text_if_selected(engine, buffer);
-                engine_internal_api::insert_new_line_at_caret(EditorArgsMut {
-                    engine,
-                    buffer,
-                });
+                engine_internal_api::insert_new_line_at_caret(EditorArgsMut::new(
+                    buffer, engine,
+                ));
             }
 
             EditorEvent::Delete => {
-                if buffer.get_selection_list().is_empty() {
+                if buffer.get_selection_container().is_empty() {
                     engine_internal_api::delete_at_caret(buffer, engine);
                 } else {
                     engine_internal_api::delete_selected(
@@ -431,7 +430,7 @@ impl EditorEvent {
             }
 
             EditorEvent::Backspace => {
-                if buffer.get_selection_list().is_empty() {
+                if buffer.get_selection_container().is_empty() {
                     engine_internal_api::backspace_at_caret(buffer, engine);
                 } else {
                     engine_internal_api::delete_selected(
@@ -458,7 +457,7 @@ impl EditorEvent {
             },
 
             EditorEvent::Resize(_) => {
-                validate_scroll_on_resize(EditorArgsMut { engine, buffer });
+                validate_scroll_on_resize(EditorArgsMut::new(buffer, engine));
             }
 
             EditorEvent::Home => {
@@ -577,17 +576,18 @@ impl EditorEvent {
 
 #[cfg(test)]
 mod tests {
-    use crate::{CaretDirection, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-                EditorEngine, EditorEngineConfig, EditorEvent, LineMode,
-                SelectionAction, assert_eq2, caret_scr_adj,
-                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEngine,
+                EditorEngineConfig, EditorEvent, FileExtensionToken, LineMode,
+                SelectionAction, assert_eq2, c_caret, c_col, c_row, c_sel_line,
+                clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
-                editor_engine::engine_internal_api, row};
+                editor_engine::engine_internal_api};
 
     #[test]
     fn test_multiline_true() {
         // multiline true.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -616,7 +616,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(2)));
 
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -628,13 +628,14 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(1) + c_row(1)));
     }
 
     #[test]
     fn test_multiline_false() {
         // multiline false.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::SingleLine,
@@ -661,7 +662,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(6) + c_row(0)));
 
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -673,24 +674,24 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
+        assert_eq2!(buffer.get_c_caret(), c_caret(c_col(6) + c_row(0)));
         let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(maybe_line_str.unwrap().content(), "abcaba");
+        assert_eq2!(
+            maybe_line_str.expect("conversion error").content(),
+            "abcaba"
+        );
     }
 
     #[allow(clippy::too_many_lines)]
     #[test]
     fn test_text_selection() {
-        use crate::{InlineVec, RowIndex, SelectionRange};
+        use crate::{InlineVec, SelectionLine};
         use smallvec::smallvec;
 
-        type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
+        type SelectionList = InlineVec<SelectionLine>;
 
-        fn csa(col_index: usize, row_index: usize) -> CaretScrAdj {
-            caret_scr_adj(col(col_index) + row(row_index))
-        }
-
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Buffer has two lines.
@@ -712,11 +713,11 @@ mod tests {
 
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (csa(0, 0), csa(12, 0)).into())
+                c_sel_line(c_row(0), c_col(0)..c_col(12))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -727,9 +728,20 @@ mod tests {
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::MoveCaret(CaretDirection::Right); 5], /* Move caret
-                                                                         * to right for
-                                                                         * 5 times */
+                vec![EditorEvent::MoveCaret(CaretDirection::Down)], /* Move caret to
+                                                                     * down
+                                                                     * line */
+                &mut TestClipboard::default(),
+            );
+            // Current Caret Position : [row : 1, col : 12]
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Left); 8], /* Move caret
+                                                                        * to
+                                                                        * left for 8
+                                                                        * times */
                 &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 4]
@@ -745,11 +757,11 @@ mod tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (csa(0, 1), csa(4, 1)).into())
+                c_sel_line(c_row(1), c_col(0)..c_col(4))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -767,11 +779,11 @@ mod tests {
 
             // Selection Map : {{1, SelectionRange {start: 1, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (csa(1, 1), csa(4, 1)).into())
+                c_sel_line(c_row(1), c_col(1)..c_col(4))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -789,11 +801,11 @@ mod tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (csa(0, 1), csa(4, 1)).into())
+                c_sel_line(c_row(1), c_col(0)..c_col(4))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -813,12 +825,12 @@ mod tests {
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1,
             // SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (csa(0, 0), csa(12, 0)).into()),
-                (row(1), (csa(0, 1), csa(4, 1)).into())
+                c_sel_line(c_row(0), c_col(0)..c_col(12)),
+                c_sel_line(c_row(1), c_col(0)..c_col(4))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -836,11 +848,11 @@ mod tests {
 
             // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
             let selection_list: SelectionList = smallvec! {
-                (row(1), (csa(0, 1), csa(4, 1)).into())
+                c_sel_line(c_row(1), c_col(0)..c_col(4))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -859,8 +871,8 @@ mod tests {
             // Selection Map : {}
             let selection_list: SelectionList = smallvec![];
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -878,12 +890,12 @@ mod tests {
             // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1,
             // SelectionRange {start: 0, end: 1}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (csa(1, 0), csa(12, 0)).into()),
-                (row(1), (csa(0, 1), csa(1, 1)).into())
+                c_sel_line(c_row(0), c_col(1)..c_col(12)),
+                c_sel_line(c_row(1), c_col(0)..c_col(1))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -908,12 +920,12 @@ mod tests {
             // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange
             // {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (csa(2, 0), csa(12, 0)).into()),
-                (row(1), (csa(0, 1), csa(2, 1)).into())
+                c_sel_line(c_row(0), c_col(2)..c_col(12)),
+                c_sel_line(c_row(1), c_col(0)..c_col(2))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -932,12 +944,12 @@ mod tests {
             // Selection Map : {{0, SelectionRange {start: 0, end: 12}},{1, SelectionRange
             // {start: 0, end: 2}}}
             let selection_list: SelectionList = smallvec! {
-                (row(0), (csa(0, 0), csa(12, 0)).into()),
-                (row(1), (csa(0, 1), csa(12, 1)).into())
+                c_sel_line(c_row(0), c_col(0)..c_col(12)),
+                c_sel_line(c_row(1), c_col(0)..c_col(12))
             };
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
 
@@ -956,8 +968,8 @@ mod tests {
             // Selection Map : {}
             let selection_list: SelectionList = smallvec![];
             assert_eq2!(
-                buffer.get_selection_list().get_ordered_list(),
-                &selection_list
+                buffer.get_selection_container().as_slice(),
+                selection_list.as_slice()
             );
         }
     }

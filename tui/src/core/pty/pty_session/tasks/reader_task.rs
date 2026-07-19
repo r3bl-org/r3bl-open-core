@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CaptureFlag, ControllerReader, OscBuffer,
-            PtyOutputEvent, PtySessionConfig, READ_BUFFER_SIZE, ok};
+use crate::{CaptureFlag, ControllerReader, OscBuffer, PtyOutputEvent, PtySessionConfig,
+            READ_BUFFER_SIZE, ok};
 use std::io::Read;
 use tokio::sync::mpsc::Sender;
 

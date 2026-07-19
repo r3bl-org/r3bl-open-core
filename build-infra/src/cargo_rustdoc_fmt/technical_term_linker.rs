@@ -10,6 +10,7 @@
 //! 3. Adds or corrects link target definitions at the bottom of the block
 
 use crate::cargo_rustdoc_fmt::technical_term_dictionary::TechnicalTermDictionary;
+use rustc_hash::FxHashMap;
 use std::collections::BTreeSet;
 
 /// Returns the linked form of a term for use in doc comment text.
@@ -66,8 +67,7 @@ pub fn link_known_terms(text: &str, registry: &TechnicalTermDictionary) -> Strin
     // rustfmt split across two lines - we must keep the multi-line format
     // for idempotency (otherwise single-line → rustfmt splits → single-line
     // on next run → infinite cycle).
-    let mut ref_def_map: std::collections::HashMap<String, (String, String)> =
-        std::collections::HashMap::new();
+    let mut ref_def_map: FxHashMap<String, (String, String)> = FxHashMap::default();
     for line in &existing_refs {
         if let Some((term, target)) = parse_ref_def(line) {
             ref_def_map.insert(term, (target, line.clone()));

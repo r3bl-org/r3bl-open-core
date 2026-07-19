@@ -21,8 +21,8 @@
 //! that needs to be migrated during the [`crate::ZeroCopyGapBuffer`] transition.
 
 use super::{GCStringOwned, SegStringOwned};
-use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_index,
-            seg_length, usize, width};
+use crate::{InlineString, InlineVecStr, NarrowingCastToU16, RangeExt, Seg, VPCol,
+            VPWidth, ch, join, seg_index, seg_length, usize, vp_width};
 
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
@@ -31,7 +31,7 @@ use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_i
 /// `ZeroCopyGapBuffer` migration (Phase 4.3). Its functionality should be migrated to
 /// `LineMetadata` methods for cursor validation and string slicing.
 pub mod at_display_col_index {
-    use super::{ColIndex, GCStringOwned, Seg, SegStringOwned, ch, seg_index};
+    use super::{GCStringOwned, Seg, SegStringOwned, VPCol, ch, seg_index};
 
     impl GCStringOwned {
         /// If the given `display_col_index` falls in the middle of a grapheme cluster,
@@ -63,9 +63,9 @@ pub mod at_display_col_index {
         /// ```
         pub fn check_is_in_middle_of_grapheme(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<Seg> {
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let seg_index_at_col = (self + col)?;
             let seg = self.get(seg_index_at_col)?;
             if col != seg.start_display_col_index {
@@ -104,10 +104,10 @@ pub mod at_display_col_index {
         /// ```
         pub fn get_string_at(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<SegStringOwned> {
             // Convert display_col_index to seg_index.
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let seg_index_at_col = (self + col)?;
 
             // Get the segment at seg_index.
@@ -150,9 +150,9 @@ pub mod at_display_col_index {
         /// ```
         pub fn get_string_at_right_of(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<SegStringOwned> {
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let seg_index_at_col = (self + col)?;
             let seg = self.get(seg_index_at_col)?;
             (seg.seg_index < self.get_max_seg_index()).then(|| {
@@ -193,9 +193,9 @@ pub mod at_display_col_index {
         /// ```
         pub fn get_string_at_left_of(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<SegStringOwned> {
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let seg_index_at_col = (self + col)?;
             let seg = self.get(seg_index_at_col)?;
             (seg.seg_index > seg_index(0)).then(|| {
@@ -250,7 +250,7 @@ pub mod mutate {
 
     impl GCStringOwned {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns
-        /// a new ([`InlineString`], [`ColWidth`]) tuple:
+        /// a new ([`InlineString`], [`VPWidth`]) tuple:
         /// 1. The new [`InlineString`] produced containing the inserted chunk.
         /// 2. The unicode width / display width of the inserted `chunk`.
         ///
@@ -280,9 +280,9 @@ pub mod mutate {
         /// ```
         pub fn insert_chunk_at_col(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
             arg_chunk: impl AsRef<str>,
-        ) -> (InlineString, ColWidth) {
+        ) -> (InlineString, VPWidth) {
             let chunk = arg_chunk.as_ref();
 
             // Create an array-vec of &str from self.vec_segment, using self.iter().
@@ -294,7 +294,7 @@ pub mod mutate {
             );
 
             // Get seg_index at display_col_index.
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let seg_index_at_col = self + col;
 
             match seg_index_at_col {
@@ -341,7 +341,7 @@ pub mod mutate {
         /// ```
         pub fn delete_char_at_col(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<InlineString> {
             // There is no segment present (Deref trait makes `len()` apply to
             // `vec_segment`).
@@ -350,22 +350,22 @@ pub mod mutate {
             }
 
             // There is only one segment present.
-            if self.len() == seg_length(1) {
+            if self.len() == seg_length(1u16) {
                 return Some("".into());
             }
 
             // There are more than 1 segments present.
 
             // Get seg_index at display_col_index.
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let split_seg_index = (self + col)?;
-            let split_seg_index = usize(*split_seg_index);
 
             let mut vec_left = InlineVecStr::with_capacity(self.len().as_usize());
-            let mut str_left_display_width = width(0);
+            let mut str_left_display_width = vp_width(0);
             {
-                for seg_index in 0..split_seg_index {
-                    let seg = *self.segments.get(seg_index)?;
+                let left_range = seg_index(0)..split_seg_index;
+                for seg_idx in left_range.as_index_iter() {
+                    let seg = *self.segments.get(seg_idx.as_usize())?;
                     let string = seg.get_str(&self.string);
                     vec_left.push(string);
                     str_left_display_width += seg.display_width;
@@ -373,12 +373,14 @@ pub mod mutate {
             }
 
             let mut vec_right = InlineVecStr::with_capacity(self.len().as_usize());
-            let mut str_right_display_width = width(0);
+            let mut str_right_display_width = vp_width(0);
             {
-                // Drop one segment.
-                let max_seg_index = self.len();
-                for seg_index in (split_seg_index + 1)..max_seg_index.as_usize() {
-                    let seg = *self.segments.get(seg_index)?;
+                let max_seg_len = self.len();
+                let right_range =
+                    seg_index((split_seg_index.as_usize() + 1).as_u16_narrowing())
+                        ..seg_index((max_seg_len.as_usize()).as_u16_narrowing());
+                for seg_idx in right_range.as_index_iter() {
+                    let seg = *self.segments.get(seg_idx.as_usize())?;
                     let string = seg.get_str(&self.string);
                     vec_right.push(string);
                     str_right_display_width += seg.display_width;
@@ -425,29 +427,31 @@ pub mod mutate {
         /// ```
         pub fn split_at_display_col(
             &self,
-            arg_col_index: impl Into<ColIndex>,
+            arg_col_index: impl Into<VPCol>,
         ) -> Option<(InlineString, InlineString)> {
             // Get seg_index at display_col_index.
-            let col: ColIndex = arg_col_index.into();
+            let col: VPCol = arg_col_index.into();
             let split_seg_index = (self + col)?;
-            let split_seg_index = usize(*split_seg_index);
 
             let mut acc_left = InlineVecStr::with_capacity(self.len().as_usize());
-            let mut str_left_display_width = width(0);
+            let mut str_left_display_width = vp_width(0);
             {
-                for seg_index in 0..split_seg_index {
-                    let seg = *self.segments.get(seg_index)?;
+                let left_range = seg_index(0u16)..split_seg_index;
+                for seg_idx in left_range.as_index_iter() {
+                    let seg = *self.segments.get(seg_idx.as_usize())?;
                     acc_left.push(seg.get_str(&self.string));
                     str_left_display_width += seg.display_width;
                 }
             }
 
             let mut acc_right = InlineVecStr::with_capacity(self.len().as_usize());
-            let mut str_right_unicode_width = width(0);
+            let mut str_right_unicode_width = vp_width(0);
             {
-                let max_seg_index = self.len();
-                for seg_idx in split_seg_index..max_seg_index.as_usize() {
-                    let seg = *self.segments.get(seg_idx)?;
+                let max_seg_len = self.len();
+                let seg_range = split_seg_index
+                    ..seg_index((max_seg_len.as_usize()).as_u16_narrowing());
+                for seg_idx in seg_range.as_index_iter() {
+                    let seg = *self.segments.get(seg_idx.as_usize())?;
                     acc_right.push(seg.get_str(&self.string));
                     str_right_unicode_width += seg.display_width;
                 }

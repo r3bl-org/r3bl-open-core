@@ -65,7 +65,7 @@ pub static ROLLING_LOG_FILE_WRITER_GUARD: LazyLock<
 pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
     // Can only init this once per process.
     if ROLLING_LOG_FILE_WRITER_GUARD.read(Option::is_some) {
-        miette::bail!("Rolling file appender already created");
+        return Err(miette::miette!("Rolling file appender already created"));
     }
 
     let path = PathBuf::from(&path_str);
@@ -93,8 +93,7 @@ pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
         tracing_appender::non_blocking(rolling_file_appender);
 
     // Save the guard so the background thread lives for the process lifetime.
-    ROLLING_LOG_FILE_WRITER_GUARD
-        .write(|slot| *slot = Some(guard));
+    ROLLING_LOG_FILE_WRITER_GUARD.write(|slot| *slot = Some(guard));
 
     Ok(non_blocking_rolling_file_appender)
 }

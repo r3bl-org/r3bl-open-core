@@ -112,7 +112,7 @@ pub fn try_initialize_logging_global(
 /// fn test_logging_setup() {
 ///     try_initialize_logging_thread_local(
 ///        DisplayPreference::Stdout
-///     ).unwrap();
+///     ).expect("conversion error");
 ///     tracing::info!("This is an info message");
 /// }
 /// ```
@@ -158,8 +158,7 @@ pub fn try_fallback_file_log(file_path: Option<&Path>, message: &str) {
     }
 }
 
-// XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
-// options.
+// XMARK: Elegant Constructor DSL.
 
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
 ///
@@ -173,14 +172,23 @@ pub fn try_fallback_file_log(file_path: Option<&Path>, message: &str) {
 /// [`try_initialize_logging_global`] and [`try_initialize_logging_thread_local`] to
 /// accept multiple types of inputs via [`impl Into<TracingConfig>`].
 ///
+/// # Architecture: Constructor DSL Tokens vs Storage Types
+///
+/// 1. **Constructor DSL Tokens / Inputs** ([`tracing::Level`], [`DisplayPreference`],
+///    [`WriterConfig`]):
+///    - Modular configuration types that can be passed individually or composed via `+`.
+///
+/// 2. **Canonical Storage Struct** ([`TracingConfig`]):
+///    - Aggregates resolved logging parameters used to initialize the tracing subscriber.
+///
 /// [`impl Into<TracingConfig>`]: TracingConfig
 mod impl_elegant_constructor_dsl_pattern {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl From<tracing::Level> for TracingConfig {
-        fn from(level: tracing::Level) -> Self {
-            Self {
+        fn from(level: tracing::Level) -> TracingConfig {
+            TracingConfig {
                 level_filter: level.into(),
                 writer_config: WriterConfig::File(DEFAULT_LOG_FILE_NAME.to_string()),
             }
@@ -188,8 +196,8 @@ mod impl_elegant_constructor_dsl_pattern {
     }
 
     impl From<tracing_core::LevelFilter> for TracingConfig {
-        fn from(level_filter: tracing_core::LevelFilter) -> Self {
-            Self {
+        fn from(level_filter: tracing_core::LevelFilter) -> TracingConfig {
+            TracingConfig {
                 level_filter,
                 writer_config: WriterConfig::File(DEFAULT_LOG_FILE_NAME.to_string()),
             }
@@ -197,8 +205,8 @@ mod impl_elegant_constructor_dsl_pattern {
     }
 
     impl From<DisplayPreference> for TracingConfig {
-        fn from(preferred_display: DisplayPreference) -> Self {
-            Self {
+        fn from(preferred_display: DisplayPreference) -> TracingConfig {
+            TracingConfig {
                 level_filter: tracing_core::LevelFilter::DEBUG,
                 writer_config: WriterConfig::Display(preferred_display),
             }
@@ -206,8 +214,8 @@ mod impl_elegant_constructor_dsl_pattern {
     }
 
     impl From<WriterConfig> for TracingConfig {
-        fn from(writer_config: WriterConfig) -> Self {
-            Self {
+        fn from(writer_config: WriterConfig) -> TracingConfig {
+            TracingConfig {
                 level_filter: tracing_core::LevelFilter::DEBUG,
                 writer_config,
             }

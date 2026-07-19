@@ -33,8 +33,7 @@
 //!
 //! [`sled`]: https://github.com/spacejam/sled
 
-use crate::{inline_string, ok};
-use crate::fg_cyan;
+use crate::{fg_cyan, inline_string, ok};
 use kv::{Config, Json, Store};
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
@@ -297,7 +296,7 @@ pub fn iterate_bucket<
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
     bucket: &KVBucket<'_, KeyT, ValueT>,
-    mut fn_to_apply: impl FnMut(KeyT, ValueT),
+    mut fn_mut: impl FnMut(KeyT, ValueT),
 ) {
     for item in /* keep only the Ok variants */ bucket.iter().flatten() {
         let Ok(key) = item.key::<KeyT>().into_diagnostic() else {
@@ -307,7 +306,7 @@ pub fn iterate_bucket<
             continue;
         };
         let Json(value) = encoded_value; /* decode the value */
-        fn_to_apply(key, value);
+        fn_mut(key, value);
     }
 }
 
@@ -349,8 +348,9 @@ use kv_error::KvErrorCouldNot;
 mod kv_tests {
     use super::*;
     use crate::try_create_temp_dir;
+    use rustc_hash::FxHashMap;
     use serial_test::serial;
-    use std::{collections::HashMap, path::Path};
+    use std::path::Path;
     use tracing::instrument;
 
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
@@ -396,7 +396,7 @@ mod kv_tests {
         );
 
         // Enumerate contents of bucket.
-        let mut map = HashMap::new();
+        let mut map = FxHashMap::default();
         for result_item in bucket.iter() {
             let item = result_item
                 .into_diagnostic()
@@ -476,17 +476,25 @@ mod kv_tests {
                 let mut iter = e.chain();
                 // First.
                 assert_eq!(
-                    iter.next().map(ToString::to_string).unwrap(),
+                    iter.next()
+                        .map(ToString::to_string)
+                        .expect("conversion error"),
                     "🔼 Could not load key/value pair from bucket"
                 );
 
                 // Second.
-                let second = iter.next().map(ToString::to_string).unwrap();
+                let second = iter
+                    .next()
+                    .map(ToString::to_string)
+                    .expect("conversion error");
                 assert!(second.contains("Error in Sled: Collection"));
                 assert!(second.contains("does not exist"));
 
                 // Third.
-                let third = iter.next().map(ToString::to_string).unwrap();
+                let third = iter
+                    .next()
+                    .map(ToString::to_string)
+                    .expect("conversion error");
                 assert!(third.contains("Collection"));
                 assert!(third.contains("does not exist"));
             }

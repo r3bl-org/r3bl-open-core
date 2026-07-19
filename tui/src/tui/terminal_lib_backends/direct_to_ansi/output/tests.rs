@@ -10,12 +10,15 @@
 
 #[cfg(test)]
 mod cursor_positioning_tests {
-    use crate::{CsiSequence, TermCol, col, row, term_col, term_row, term_row_delta,
-                vt_100_pty_output_conformance_tests::nz};
+    use crate::{CsiSequence, TermCol, ansi_output, term_col, term_row, term_row_delta,
+                vp_col, vp_row, vt_100_pty_output_conformance_tests::nz};
 
     #[test]
     fn test_cursor_position_absolute() {
-        let seq = crate::ansi_output::cursor_movement::cursor_position(row(5), col(10));
+        let seq = ansi_output::cursor_movement::cursor_position(
+            vp_row(5).into(),
+            vp_col(10).into(),
+        );
         // row 5 (0-based) = 6 (1-based), col 10 (0-based) = 11 (1-based)
         assert_eq!(
             seq,
@@ -29,7 +32,10 @@ mod cursor_positioning_tests {
 
     #[test]
     fn test_cursor_position_origin() {
-        let seq = crate::ansi_output::cursor_movement::cursor_position(row(0), col(0));
+        let seq = ansi_output::cursor_movement::cursor_position(
+            vp_row(0).into(),
+            vp_col(0).into(),
+        );
         assert_eq!(
             seq,
             CsiSequence::CursorPosition {
@@ -42,7 +48,7 @@ mod cursor_positioning_tests {
 
     #[test]
     fn test_cursor_to_column() {
-        let seq = crate::ansi_output::cursor_movement::cursor_to_column(col(15));
+        let seq = ansi_output::cursor_movement::cursor_to_column(vp_col(15).into());
         assert_eq!(
             seq,
             CsiSequence::CursorHorizontalAbsolute(TermCol::from_raw_non_zero_value(nz(
@@ -54,25 +60,27 @@ mod cursor_positioning_tests {
 
     #[test]
     fn test_cursor_next_line() {
-        let seq = crate::ansi_output::cursor_movement::cursor_next_line(
-            term_row_delta(3).unwrap(),
+        let seq = ansi_output::cursor_movement::cursor_next_line(
+            term_row_delta(3).expect("conversion error"),
         );
         // SAFETY: 3 is non-zero
         assert_eq!(
             seq,
-            CsiSequence::CursorNextLine(term_row_delta(3).unwrap()).to_string()
+            CsiSequence::CursorNextLine(term_row_delta(3).expect("conversion error"))
+                .to_string()
         );
     }
 
     #[test]
     fn test_cursor_previous_line() {
-        let seq = crate::ansi_output::cursor_movement::cursor_previous_line(
-            term_row_delta(2).unwrap(),
+        let seq = ansi_output::cursor_movement::cursor_previous_line(
+            term_row_delta(2).expect("conversion error"),
         );
         // SAFETY: 2 is non-zero
         assert_eq!(
             seq,
-            CsiSequence::CursorPrevLine(term_row_delta(2).unwrap()).to_string()
+            CsiSequence::CursorPrevLine(term_row_delta(2).expect("conversion error"))
+                .to_string()
         );
     }
 }

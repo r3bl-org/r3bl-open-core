@@ -12,7 +12,7 @@
     reason = "For short import statements in link ref defs"
 )]
 use crate::core::common::fast_strings;
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter};
 
 /// High-performance string building for complex types that avoids formatter overhead.
 ///
@@ -39,10 +39,10 @@ use std::fmt::{Display, Formatter, Result};
 /// # use r3bl_tui::{
 /// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
 /// # };
-/// # use std::fmt::{Result, Write};
+/// # use std::fmt::{Write};
 /// # struct MyType { value: i32 }
 /// impl FastStringify for MyType {
-///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
 ///         acc.push_str("MyType { value: ");
 ///         write!(acc, "{}", self.value)?;  // Use write! only when formatting needed
 ///         acc.push_str(" }");
@@ -75,7 +75,7 @@ pub trait FastStringify: Display {
     ///
     /// [`push_str`]: String::push_str
     /// [`write!`]: std::write
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result;
 
     /// Writes the buffer to formatter. Call from [`Display::fmt`] after [`write_to_buf`].
     ///
@@ -84,7 +84,7 @@ pub trait FastStringify: Display {
     ///
     /// [`Display::fmt`]: Display::fmt
     /// [`write_to_buf`]: FastStringify::write_to_buf
-    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {
+    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(acc)
     }
 }
@@ -175,11 +175,11 @@ pub type BufTextStorage = String;
 /// # use r3bl_tui::{
 /// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
 /// # };
-/// # use std::fmt::{Result, Write};
+/// # use std::fmt::{Write};
 /// struct MyType { value: i32 }
 ///
 /// impl FastStringify for MyType {
-///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
 ///         acc.push_str("MyType { value: ");
 ///         write!(acc, "{}", self.value)?;
 ///         acc.push_str(" }");
@@ -220,7 +220,7 @@ mod tests {
     }
 
     impl FastStringify for SimpleType {
-        fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+        fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
             acc.push_str("SimpleType { value: ");
             write!(acc, "{}", self.value)?;
             acc.push_str(" }");
@@ -240,7 +240,7 @@ mod tests {
     struct EmptyType;
 
     impl FastStringify for EmptyType {
-        fn write_to_buf(&self, _acc: &mut BufTextStorage) -> Result { ok!() }
+        fn write_to_buf(&self, _acc: &mut BufTextStorage) -> std::fmt::Result { ok!() }
     }
 
     generate_impl_display_for_fast_stringify!(EmptyType);

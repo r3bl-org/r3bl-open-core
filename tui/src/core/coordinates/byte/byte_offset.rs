@@ -3,7 +3,10 @@
 //! Relative byte displacement from a reference point - see [`ByteOffset`] type.
 
 use super::ByteIndex;
-use crate::{ChUnit, Index, Length, RowIndex, byte_index};
+use crate::{ArrayBoundsCheck, ChUnit, VPIndex, VPLength, VPRow,
+            bounds_check::{IndexOps, LengthOps, NumericConversions, NumericValue,
+                           StorageCoordinate},
+            byte_index, usize};
 use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 
 /// Represents a byte offset within a line or buffer segment.
@@ -13,7 +16,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 /// This distinction is crucial for maintaining semantic correctness in operations.
 ///
 /// > This newtype struct does not use [`ChUnit`] like other unit types because
-/// > offsets are inherently [`usize`].
+/// > offsets are inherently [`prim@usize`].
 ///
 /// # Type System Disambiguation
 ///
@@ -55,7 +58,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 ///
 /// [`LengthOps`]: crate::LengthOps
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
-pub struct ByteOffset(pub usize);
+pub struct ByteOffset(usize);
 
 impl ByteOffset {
     #[must_use]
@@ -73,7 +76,7 @@ impl ByteOffset {
     /// - **Output**: Index N-1 of the last consumed byte
     ///
     /// This matches the relationship between Rust's range ends and indices:
-    /// - Range `0..N` processes indices 0 through N-1
+    /// - Range `[0..N)` processes indices 0 through N-1
     /// - `ByteOffset::from(N)` represents N bytes consumed at indices 0 through N-1
     ///
     /// # Use Cases
@@ -142,28 +145,50 @@ impl DerefMut for ByteOffset {
 }
 
 impl From<usize> for ByteOffset {
-    fn from(it: usize) -> Self { Self(it) }
+    fn from(it: usize) -> ByteOffset { ByteOffset(it) }
 }
 
 impl From<ChUnit> for ByteOffset {
-    fn from(it: ChUnit) -> Self { Self(crate::usize(it)) }
+    fn from(it: ChUnit) -> ByteOffset { ByteOffset(usize(it)) }
 }
 
-impl From<ByteOffset> for Index {
-    fn from(it: ByteOffset) -> Self { Self::from(it.0) }
+impl From<ByteOffset> for VPIndex {
+    fn from(it: ByteOffset) -> VPIndex { VPIndex::from(it.0) }
 }
 
-impl From<ByteOffset> for RowIndex {
-    fn from(it: ByteOffset) -> Self { RowIndex::from(Index::from(it)) }
+impl From<ByteOffset> for VPRow {
+    fn from(it: ByteOffset) -> VPRow { VPRow::from(VPIndex::from(it)) }
 }
 
 impl From<ByteIndex> for ByteOffset {
-    fn from(it: ByteIndex) -> Self { Self(it.as_usize()) }
+    fn from(it: ByteIndex) -> ByteOffset { ByteOffset(it.as_usize()) }
 }
 
-impl From<Length> for ByteOffset {
-    fn from(it: Length) -> Self { Self(it.as_usize()) }
+impl From<VPLength> for ByteOffset {
+    fn from(it: VPLength) -> ByteOffset { ByteOffset(it.as_usize()) }
 }
+
+impl NumericConversions for ByteOffset {
+    fn as_usize(&self) -> usize { self.0 }
+}
+
+impl NumericValue for ByteOffset {}
+
+impl StorageCoordinate for ByteOffset {}
+
+impl IndexOps for ByteOffset {
+    type LengthType = ByteOffset;
+    fn convert_to_length(&self) -> Self::LengthType {
+        ByteOffset(self.0.saturating_add(1))
+    }
+}
+
+impl LengthOps for ByteOffset {
+    type IndexType = ByteOffset;
+    fn convert_to_index(&self) -> Self::IndexType { ByteOffset(self.0.saturating_sub(1)) }
+}
+
+impl ArrayBoundsCheck<ByteOffset> for ByteOffset {}
 
 /// Arithmetic operations between [`ByteIndex`] and [`ByteOffset`].
 impl Add<ByteOffset> for ByteIndex {
@@ -174,7 +199,7 @@ impl Add<ByteOffset> for ByteIndex {
     /// This represents moving forward from an absolute position by a relative distance.
     /// Semantically: `absolute_position + offset = new_absolute_position`
     fn add(self, rhs: ByteOffset) -> Self::Output {
-        byte_index(self.as_usize() + rhs.as_usize())
+        byte_index(self.as_usize().saturating_add(*rhs))
     }
 }
 
@@ -198,7 +223,9 @@ impl AddAssign<ByteOffset> for ByteIndex {
     /// position += displacement;  // position advances by 50 bytes
     /// assert_eq!(position, byte_index(150));
     /// ```
-    fn add_assign(&mut self, offset: ByteOffset) { self.0 += offset.as_usize(); }
+    fn add_assign(&mut self, offset: ByteOffset) {
+        *self = byte_index(self.as_usize().saturating_add(*offset));
+    }
 }
 
 impl Sub<ByteOffset> for ByteIndex {
@@ -209,7 +236,7 @@ impl Sub<ByteOffset> for ByteIndex {
     /// This represents moving backward from an absolute position by a relative distance.
     /// Semantically: `absolute_position - offset = new_absolute_position`
     fn sub(self, rhs: ByteOffset) -> Self::Output {
-        ByteIndex::from(self.as_usize().saturating_sub(rhs.as_usize()))
+        byte_index(self.as_usize().saturating_sub(*rhs))
     }
 }
 
@@ -221,7 +248,7 @@ impl Sub<ByteIndex> for ByteIndex {
     /// This represents finding the offset/distance from one position to another.
     /// Semantically: `position - position = distance`
     fn sub(self, rhs: ByteIndex) -> Self::Output {
-        ByteOffset::from(self.as_usize().saturating_sub(rhs.as_usize()))
+        ByteOffset(self.as_usize().saturating_sub(*rhs))
     }
 }
 
@@ -233,7 +260,7 @@ impl Add<ByteOffset> for ByteOffset {
     /// This represents combining two relative distances.
     /// Semantically: `offset + offset = combined_offset`
     fn add(self, rhs: ByteOffset) -> Self::Output {
-        ByteOffset::from(self.as_usize() + rhs.as_usize())
+        ByteOffset(self.0.saturating_add(*rhs))
     }
 }
 
@@ -245,7 +272,7 @@ impl Sub<ByteOffset> for ByteOffset {
     /// This represents finding the difference between two relative distances.
     /// Semantically: `offset - offset = offset_difference`
     fn sub(self, rhs: ByteOffset) -> Self::Output {
-        ByteOffset::from(self.as_usize().saturating_sub(rhs.as_usize()))
+        ByteOffset(self.0.saturating_sub(*rhs))
     }
 }
 
@@ -292,14 +319,14 @@ mod tests {
     #[test]
     fn test_byte_offset_to_index() {
         let offset = byte_offset(42);
-        let index: Index = offset.into();
+        let index: VPIndex = offset.into();
         assert_eq!(index.as_usize(), 42);
     }
 
     #[test]
     fn test_byte_offset_to_row_index() {
         let offset = byte_offset(42);
-        let row_index: RowIndex = offset.into();
+        let row_index: VPRow = offset.into();
         assert_eq!(row_index.as_usize(), 42);
     }
 
@@ -321,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_offset_sub_saturating() {
+    fn test_offset_sub_narrowing() {
         let offset1 = byte_offset(5);
         let offset2 = byte_offset(10);
         let result = offset1 - offset2;
@@ -346,7 +373,7 @@ mod tests {
     }
 
     #[test]
-    fn test_index_sub_offset_saturating() {
+    fn test_index_sub_offset_narrowing() {
         let index = byte_index(20);
         let offset = byte_offset(50);
         let result = index - offset;
@@ -362,7 +389,7 @@ mod tests {
     }
 
     #[test]
-    fn test_index_sub_index_gives_offset_saturating() {
+    fn test_index_sub_index_gives_offset_narrowing() {
         let index1 = byte_index(30);
         let index2 = byte_index(50);
         let offset: ByteOffset = index1 - index2;
@@ -440,7 +467,7 @@ mod tests {
     #[test]
     fn test_from_index_conversion() {
         let offset = byte_offset(42);
-        let index: Index = offset.into();
+        let index: VPIndex = offset.into();
         assert_eq!(index.as_usize(), 42);
     }
 

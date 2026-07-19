@@ -63,14 +63,14 @@
 //! use r3bl_tui::{VMIN_RAW_MODE, VTIME_RAW_MODE};
 //!
 //! // Get current terminal settings
-//! let mut termios = termios::tcgetattr(&stdin()).unwrap();
+//! let mut termios = termios::tcgetattr(&stdin()).expect("conversion error");
 //!
 //! // Configure for raw mode: byte-by-byte, no timeout
 //! termios.special_codes[SpecialCodeIndex::VMIN] = VMIN_RAW_MODE;
 //! termios.special_codes[SpecialCodeIndex::VTIME] = VTIME_RAW_MODE;
 //!
 //! // Apply settings
-//! termios::tcsetattr(&stdin(), termios::OptionalActions::Now, &termios).unwrap();
+//! termios::tcsetattr(&stdin(), termios::OptionalActions::Now, &termios).expect("conversion error");
 //! # }
 //! ```
 //!

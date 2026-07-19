@@ -1,46 +1,35 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{EditorBuffer, EditorContent, cur_index::CurIndex, history::EditorHistory};
-use crate::{CachedMemorySize, CaretRaw, GetMemSize, InlineString, MemoizedMemorySize,
-            MemorySize, RingBufferHeap, ScrOfs, TinyInlineString, get_mem_size};
-
-/// The version history is stored on the heap, as a ring buffer.
-pub type HistoryBuffer = RingBufferHeap<EditorContent, MAX_UNDO_REDO_SIZE>;
-
-/// This is the absolute maximum number of undo/redo steps that will ever be stored.
-pub const MAX_UNDO_REDO_SIZE: usize = 16;
+use super::{EditorBuffer, EditorContent};
+use crate::{CCaret, CPos, CachedMemorySize, GetMemSize, InlineString,
+            MemoizedMemorySize, MemorySize, TinyInlineString};
+use std::mem::size_of;
 
 impl GetMemSize for EditorContent {
     fn get_mem_size(&self) -> usize {
         self.lines.get_mem_size()
-            + std::mem::size_of::<CaretRaw>()
-            + std::mem::size_of::<ScrOfs>()
-            + std::mem::size_of::<Option<TinyInlineString>>()
-            + std::mem::size_of::<Option<InlineString>>()
-            + self.sel_list.get_mem_size()
-    }
-}
-
-impl GetMemSize for EditorHistory {
-    fn get_mem_size(&self) -> usize {
-        let versions_size = get_mem_size::ring_buffer_size(&self.versions);
-        let cur_index_field_size = std::mem::size_of::<CurIndex>();
-        versions_size + cur_index_field_size
+            + size_of::<CCaret>()
+            + size_of::<CPos>()
+            + size_of::<Option<TinyInlineString>>()
+            + size_of::<Option<InlineString>>()
+            + self.selection.get_mem_size()
     }
 }
 
 /// Memory size caching for performance optimization.
 impl GetMemSize for EditorBuffer {
     fn get_mem_size(&self) -> usize {
-        self.content.get_mem_size() + self.history.get_mem_size()
+        self.get_content().get_mem_size() + self.get_history().get_mem_size()
     }
 }
 
 impl CachedMemorySize for EditorBuffer {
-    fn memory_size_cache(&self) -> &MemoizedMemorySize { &self.memory_size_calc_cache }
+    fn memory_size_cache(&self) -> &MemoizedMemorySize {
+        self.get_memory_size_calc_cache()
+    }
 
     fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
-        &mut self.memory_size_calc_cache
+        self.get_memory_size_calc_cache_mut()
     }
 }
 

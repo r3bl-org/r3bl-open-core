@@ -29,10 +29,10 @@
 //! [`ZeroCopyGapBuffer`] is used directly as a concrete type:
 //!
 //! ```rust
-//! use r3bl_tui::{ZeroCopyGapBuffer, row};
-//! let mut buffer = ZeroCopyGapBuffer::new();
+//! use r3bl_tui::{ZeroCopyGapBuffer, c_row};
+//! let mut buffer = ZeroCopyGapBuffer::default();
 //! buffer.push_line("Hello World");
-//! let content = buffer.get_line_content(row(0));
+//! let content = buffer.get_line_content(c_row(0));
 //! ```
 //!
 //! All operations are available as inherent methods on [`ZeroCopyGapBuffer`] - no trait
@@ -171,7 +171,6 @@
 //! - **`add_100_lines`**: 1,615.61 ns - Batch creation of 100 lines (~16 ns/line)
 //! - **`remove_line_middle`**: 72.32 ns - Removing a line from the middle of buffer
 //! - **`extend_line_capacity`**: 12.24 ns - Growing a line by 256 bytes
-//! - **`can_insert_check`**: 0.32 ns - Checking if text fits in current capacity
 //!
 //! ## Text Insertion Operations
 //!
@@ -234,10 +233,7 @@
 //! 3. **Scalable Line Management**: Adding 100 lines takes only ~16 ns per line,
 //!    demonstrating good scalability for large documents.
 //!
-//! 4. **Fast Capacity Checks**: The 0.32 ns `can_insert` check enables efficient capacity
-//!    planning without performance impact.
-//!
-//! 5. **Predictable Growth Cost**: Line extension (12.24 ns) and content that triggers
+//! 4. **Predictable Growth Cost**: Line extension (12.24 ns) and content that triggers
 //!    growth (408.11 ns) show well-bounded performance even during reallocation.
 //!
 //! 6. **Massive Append Optimization Gains**: The end-of-line append optimization shows

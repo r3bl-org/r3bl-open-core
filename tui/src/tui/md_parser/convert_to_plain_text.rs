@@ -3,15 +3,18 @@
 //! This module is responsible for converting all the [`MdLineFragment`] into plain text
 //! w/out any formatting.
 
-use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement, MdLineFragment, ParseList, PrettyPrintDebug, convert_usize_to_ascii_str_slice, get_hashes, get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index, md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
+use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
+            MdLineFragment, ParseList, PrettyPrintDebug,
+            convert_usize_to_ascii_str_slice, get_hashes, get_horiz_lines, get_spaces,
+            inline_string, join, join_fmt, join_with_index,
+            md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
                                              LEFT_IMAGE, LEFT_PARENTHESIS,
                                              LIST_SPACE_DISPLAY,
                                              LIST_SPACE_END_DISPLAY_FIRST_LINE,
                                              LIST_SPACE_END_DISPLAY_REST_LINE,
                                              NEW_LINE, PERIOD, RIGHT_BRACKET,
                                              RIGHT_IMAGE, RIGHT_PARENTHESIS, SPACE,
-                                             STAR, UNCHECKED, UNDERSCORE}
-};
+                                             STAR, UNCHECKED, UNDERSCORE}};
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> InlineString {

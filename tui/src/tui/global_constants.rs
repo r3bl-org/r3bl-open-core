@@ -2,6 +2,7 @@
 
 // cspell:words errno
 
+use crate::{WideningCastToU16, WideningCastToU64, WideningCastToUsize};
 use std::time::Duration;
 use strum_macros::AsRefStr;
 
@@ -15,6 +16,26 @@ pub enum MinSize {
     Col = 65,
     /// Minimum number of rows (height) required for the terminal.
     Row = 11,
+}
+
+impl WideningCastToU16 for MinSize {
+    fn as_u16_widening(self) -> u16 {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as u16
+        }
+    }
+}
+
+impl crate::WideningCastToU8 for MinSize {
+    fn as_u8_widening(self) -> u8 {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as u8
+        }
+    }
 }
 
 /// Default buffer sizes used throughout the TUI system.
@@ -39,10 +60,20 @@ pub enum DefaultSize {
     PtyChannelBufferSize = 10_000,
 }
 
+impl WideningCastToUsize for DefaultSize {
+    fn as_usize_widening(self) -> usize {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as usize
+        }
+    }
+}
+
 /// Converts `DefaultSize` enum variants to their corresponding usize values.
 impl From<DefaultSize> for usize {
     #[allow(clippy::cast_possible_truncation)]
-    fn from(default_size: DefaultSize) -> Self { default_size as usize }
+    fn from(default_size: DefaultSize) -> usize { default_size.as_usize_widening() }
 }
 
 /// Default timing constants used for telemetry and performance monitoring.
@@ -60,11 +91,20 @@ pub enum DefaultTiming {
     TelemetryRateLimitTimeThresholdMicros = 16_000,
 }
 
+impl WideningCastToU64 for DefaultTiming {
+    fn as_u64_widening(self) -> u64 {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as u64
+        }
+    }
+}
+
 /// Converts `DefaultTiming` enum variants to Duration objects.
 impl From<DefaultTiming> for Duration {
-    #[allow(clippy::cast_possible_truncation)]
-    fn from(default_timing: DefaultTiming) -> Self {
-        Duration::from_micros(default_timing as u64)
+    fn from(default_timing: DefaultTiming) -> Duration {
+        Duration::from_micros(default_timing.as_u64_widening())
     }
 }
 

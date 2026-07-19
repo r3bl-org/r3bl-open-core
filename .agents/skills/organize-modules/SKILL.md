@@ -174,12 +174,12 @@ pub use input::*;
 
 **Key insight:** `rustdoc` runs the Rust compiler internally. When you write
 `#[cfg(all(target_os = "linux", any(test, doc)))]`, the `target_os = "linux"` check still excludes
-macOS/Windows **even during doc builds**. The `doc` cfg flag doesn't override other conditions—it's
+macOS/Windows **even during doc builds**. The `doc` cfg flag doesn't override other conditions: it's
 just another flag you can check.
 
 **The fix:** Use `any(doc, ...)` to make `doc` an alternative path:
 - `any(doc, all(target_os = "linux", test))` means: "docs on any platform OR tests on Linux"
-- `all(target_os = "linux", any(test, doc))` means: "Linux AND (tests OR docs)" — **still requires
+- `all(target_os = "linux", any(test, doc))` means: "Linux AND (tests OR docs)": **still requires
   Linux!**
 
 **When you see broken doc links for platform-specific modules:**
@@ -203,7 +203,7 @@ When the module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`,
 `std::os::fd::AsRawFd`), restrict doc builds to Unix:
 
 ```rust
-// Module uses Unix-only APIs — restrict doc builds to Unix platforms
+// Module uses Unix-only APIs: restrict doc builds to Unix platforms
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod input;
 #[cfg(all(target_os = "linux", not(any(test, doc))))]
@@ -223,7 +223,7 @@ pub use input::*;
 
 **Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in `Cargo.toml`.
 
-**Apply at all levels** — If the module is nested, both parent and child need the visibility
+**Apply at all levels**: If the module is nested, both parent and child need the visibility
 change. Also update any re-exports:
 
 ```rust
@@ -415,15 +415,15 @@ pub use constants::*;  // Items public
 mod constants;  // No conflict! This is in a different scope
 ```
 
-**⚠️ Warning: Re-export Collisions**
+**⚠️ Warning: Re-export Collisions with `pub mod`**
 
 While private module names don't collide, their **public contents** (including public submodules) will collide if they share the same name and are pulled into the same parent namespace via glob re-exports (`pub use module::*;`).
 
-If multiple modules in the same hierarchy have submodules with identical names (e.g., several `integration_tests` modules), glob re-exporting them into a single parent module will cause **ambiguous re-export** errors.
+If multiple modules in the same hierarchy have submodules with identical names (e.g., several `pub mod integration_tests;`), glob re-exporting them into a single parent module will cause **ambiguous re-export** errors, because the module names leak into the public API.
 
-To avoid this:
-- Use unique, descriptive names for submodules that are intended to be public for docs/tests (e.g., `log_integration_tests`, `rrt_integration_tests`).
-- Avoid generic names like `integration_tests` or `tests` for modules that will be re-exported through a flat API.
+**How to solve test module collisions:**
+1. **The Default:** Make test modules private (`mod integration_tests;`). They do not need to be `pub` for `cargo test` to find them. This perfectly encapsulates the module, preventing namespace pollution and collisions.
+2. **The Rustdoc Exception:** If you *must* link to a test module in your documentation using intra-doc links, it must be `pub mod`. In this case, you **must** use a uniquely prefixed name (e.g., `pub mod vt_100_parser_integration_tests;` instead of `integration_tests`) to prevent it from colliding with other public test modules in the global namespace.
 
 ### 4. Encapsulation
 

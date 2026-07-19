@@ -10,7 +10,9 @@
 
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
-use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol, TermColDelta, TermRow, TermRowDelta, convert_u16_to_ascii_str_slice, core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
+use crate::{BufTextStorage, CsiCount, FastStringify, TermCol, TermColDelta, TermRow,
+            TermRowDelta, WideningCastToU16, convert_u16_to_ascii_str_slice,
+            core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
                                      CPL_CURSOR_PREV_LINE, CSI_PARAM_SEPARATOR,
                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,
                                      CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN,
@@ -24,10 +26,10 @@ use crate::{BufTextStorage, CsiCount, FastStringify, NumericConversions, TermCol
                                      RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR,
                                      SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE,
                                      SU_SCROLL_UP, VPA_VERTICAL_POSITION},
-                         generator::DsrRequestType}, generate_impl_display_for_fast_stringify, ok,
-            };
+                         generator::DsrRequestType},
+            generate_impl_display_for_fast_stringify, ok};
 use smallvec::SmallVec;
-use std::fmt::{Formatter, Result};
+use std::fmt::Formatter;
 
 /// Builder for [`CSI`] (Control Sequence Introducer) sequences. Similar to `SgrCode` but
 /// for cursor movement and other [`CSI`] commands.
@@ -262,7 +264,7 @@ pub const MAX_CHAINED_PRIVATE_MODES: usize = 4;
 
 impl FastStringify for CsiSequence {
     #[allow(clippy::too_many_lines)]
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
         acc.push_str(CSI_START);
         match self {
             CsiSequence::CursorUp(delta) => {
@@ -294,11 +296,11 @@ impl FastStringify for CsiSequence {
                 acc.push(HVP_CURSOR_POSITION);
             }
             CsiSequence::EraseDisplay(mode) => {
-                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16_widening()));
                 acc.push(ED_ERASE_DISPLAY);
             }
             CsiSequence::EraseLine(mode) => {
-                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16_widening()));
                 acc.push(EL_ERASE_LINE);
             }
             CsiSequence::SaveCursor => {
@@ -347,7 +349,7 @@ impl FastStringify for CsiSequence {
                     if idx > 0 {
                         acc.push(CSI_PARAM_SEPARATOR);
                     }
-                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16_widening()));
                 }
                 acc.push(SM_SET_PRIVATE_MODE);
             }
@@ -357,7 +359,7 @@ impl FastStringify for CsiSequence {
                     if idx > 0 {
                         acc.push(CSI_PARAM_SEPARATOR);
                     }
-                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16()));
+                    acc.push_str(convert_u16_to_ascii_str_slice!(mode.as_u16_widening()));
                 }
                 acc.push(RM_RESET_PRIVATE_MODE);
             }
@@ -389,7 +391,11 @@ impl FastStringify for CsiSequence {
         ok!()
     }
 
-    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {
+    fn write_buf_to_fmt(
+        &self,
+        acc: &BufTextStorage,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         f.write_str(&acc.clone())
     }
 }

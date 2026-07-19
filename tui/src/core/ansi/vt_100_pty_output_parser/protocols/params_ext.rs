@@ -5,7 +5,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
+use crate::{TermCol, TermRow, VPCol, VPIndex, VPRow};
 use std::{cmp::max, num::NonZeroU16};
 
 /// Extension trait for [`vte::Params`] providing [`VT-100`]-compliant parameter
@@ -203,8 +203,8 @@ use std::{cmp::max, num::NonZeroU16};
 /// ## Available Parsers
 ///
 /// - [`parse_cursor_position()`] - Convert [`VT-100`] cursor position parameters
-///   (`[`[`ESC`]`] [ 5 ; 10 H`) to 0-based buffer coordinates ([`RowIndex(4)`],
-///   [`ColIndex(9)`])
+///   (`[`[`ESC`]`] [ 5 ; 10 H`) to 0-based buffer coordinates ([`VPRow(4)`],
+///   [`VPCol(9)`])
 ///
 /// ## Design Rationale
 ///
@@ -217,7 +217,6 @@ use std::{cmp::max, num::NonZeroU16};
 /// 3. **Composability** - Parsers can be used independently or combined
 /// 4. **Testability** - Each parser can be tested in isolation
 ///
-/// [`ColIndex(9)`]: crate::ColIndex
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 /// [`ESC`]: crate::EscSequence
 /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
@@ -227,7 +226,8 @@ use std::{cmp::max, num::NonZeroU16};
 /// [`parse_cursor_position()`]: parse_cursor_position
 /// [`Parser`]: vte::Parser
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`RowIndex(4)`]: crate::RowIndex
+/// [`VPCol(9)`]: crate::VPCol
+/// [`VPRow(4)`]: crate::VPRow
 /// [`VT-100` Parameter Structure]: #vt-100-parameter-structure
 /// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -262,7 +262,7 @@ pub trait ParamsExt {
     /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
     /// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16;
+    fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<VPIndex>) -> NonZeroU16;
 
     /// Extracts the nth parameter (0-based) without default transformation.
     ///
@@ -294,7 +294,7 @@ pub trait ParamsExt {
     /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`VTE`]: mod@vte
-    fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<u16>;
+    fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<VPIndex>) -> Option<u16>;
 
     /// Extracts all (variable number of) sub-parameters at position n as a slice.
     ///
@@ -325,7 +325,7 @@ pub trait ParamsExt {
     /// [`VT-100` Parameter Structure section]: ParamsExt#vt100-parameter-structure
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [Working Example section]: ParamsExt#working-example
-    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
+    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<VPIndex>) -> Option<&[u16]>;
 }
 
 /// Implements the [`ParamsExt`] trait for the [`vte`] crate's [`vte::Params`] type,
@@ -336,14 +336,10 @@ pub trait ParamsExt {
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`vte`]: https://docs.rs/vte
 impl ParamsExt for vte::Params {
-    fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16 {
-        let nth_pos: Index = arg_nth_pos.into();
-        let value = match self
-            .iter()
-            .nth(nth_pos.as_usize())
-            .and_then(|params_at_nth_pos| params_at_nth_pos.first())
-            .copied()
-        {
+    fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<VPIndex>) -> NonZeroU16 {
+        let nth_pos: VPIndex = arg_nth_pos.into();
+        let raw_val = self.extract_nth_single_opt_raw(nth_pos);
+        let value = match raw_val {
             Some(it) => max(1, it),
             None => 1,
         };
@@ -353,16 +349,15 @@ impl ParamsExt for vte::Params {
         unsafe { NonZeroU16::new_unchecked(value) }
     }
 
-    fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<u16> {
-        let nth_pos: Index = arg_nth_pos.into();
-        self.iter()
-            .nth(nth_pos.as_usize())
-            .and_then(|params_at_nth_pos| params_at_nth_pos.first())
-            .copied()
+    fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<VPIndex>) -> Option<u16> {
+        let nth_pos: VPIndex = arg_nth_pos.into();
+        let params_at_nth_pos = self.iter().nth(nth_pos.as_usize())?;
+        let first = params_at_nth_pos.first()?;
+        Some(*first)
     }
 
-    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]> {
-        let nth_pos: Index = arg_nth_pos.into();
+    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<VPIndex>) -> Option<&[u16]> {
+        let nth_pos: VPIndex = arg_nth_pos.into();
         self.iter().nth(nth_pos.as_usize())
     }
 }
@@ -389,14 +384,14 @@ impl ParamsExt for vte::Params {
 ///
 /// # Returns
 ///
-/// 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
+/// 0-based [`VPRow`]/[`VPCol`] ready for buffer operations.
 ///
-/// [`ColIndex`]: crate::ColIndex
-/// [`RowIndex`]: crate::RowIndex
+/// [`VPCol`]: crate::VPCol
+/// [`VPRow`]: crate::VPRow
 /// [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
-pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
+pub fn parse_cursor_position(params: &vte::Params) -> (VPRow, VPCol) {
     // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
     let row_param_nz = params.extract_nth_single_non_zero(0);
     let col_param_nz = params.extract_nth_single_non_zero(1);

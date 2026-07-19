@@ -10,10 +10,40 @@ pub struct RenderArgs<'a> {
     pub has_focus: &'a mut HasFocus,
 }
 
+mod impl_render_args {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl<'a> RenderArgs<'a> {
+        pub fn new(
+            engine: &'a mut EditorEngine,
+            buffer: &'a EditorBuffer,
+            has_focus: &'a mut HasFocus,
+        ) -> Self {
+            Self {
+                engine,
+                buffer,
+                has_focus,
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct EditorArgsMut<'a> {
-    pub engine: &'a mut EditorEngine,
     pub buffer: &'a mut EditorBuffer,
+    pub engine: &'a mut EditorEngine,
+}
+
+mod impl_editor_args_mut {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl<'a> EditorArgsMut<'a> {
+        pub fn new(buffer: &'a mut EditorBuffer, engine: &'a mut EditorEngine) -> Self {
+            Self { buffer, engine }
+        }
+    }
 }
 
 /// [`DialogEngine`] args struct that holds references.
@@ -30,4 +60,29 @@ where
     pub global_data: &'a mut GlobalData<S, AS>,
     pub engine: &'a mut DialogEngine,
     pub has_focus: &'a mut HasFocus,
+}
+
+mod impl_dialog_engine_args {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl<'a, S, AS> DialogEngineArgs<'a, S, AS>
+    where
+        S: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
+    {
+        pub fn new(
+            self_id: FlexBoxId,
+            global_data: &'a mut GlobalData<S, AS>,
+            engine: &'a mut DialogEngine,
+            has_focus: &'a mut HasFocus,
+        ) -> Self {
+            Self {
+                self_id,
+                global_data,
+                engine,
+                has_focus,
+            }
+        }
+    }
 }

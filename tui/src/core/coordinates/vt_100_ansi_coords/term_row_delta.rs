@@ -39,7 +39,8 @@
 //! [`TermRow`]: super::TermRow
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::NumericConversions;
+use super::ZeroCoordinateError;
+use crate::{NumericConversions, WideningCastToUsize};
 use std::{fmt::{Display, Formatter},
           num::NonZeroU16};
 
@@ -75,8 +76,7 @@ use std::{fmt::{Display, Formatter},
 pub struct TermRowDelta(NonZeroU16);
 
 impl NumericConversions for TermRowDelta {
-    fn as_usize(&self) -> usize { self.0.get() as usize }
-    fn as_u16(&self) -> u16 { self.0.get() }
+    fn as_usize(&self) -> usize { self.0.get().as_usize_widening() }
 }
 
 impl Display for TermRowDelta {
@@ -88,8 +88,8 @@ impl Display for TermRowDelta {
 impl TermRowDelta {
     /// A delta of 1 row - the most common cursor movement amount.
     ///
-    /// Use this constant instead of `TermRowDelta::new(1).unwrap()` to avoid
-    /// panic documentation requirements and make intent clear.
+    /// Use this constant instead of `TermRowDelta::new(1).expect("conversion error")` to
+    /// avoid panic documentation requirements and make intent clear.
     pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Creates a new row delta from a raw value.
@@ -129,10 +129,25 @@ impl TermRowDelta {
     /// Gets the raw [`u16`] value (guaranteed to be `>= 1`).
     #[must_use]
     pub const fn get(self) -> u16 { self.0.get() }
+
+    /// Gets the raw [`u16`] value.
+    #[must_use]
+    pub const fn as_u16(self) -> u16 { self.0.get() }
 }
 
 impl From<NonZeroU16> for TermRowDelta {
-    fn from(value: NonZeroU16) -> Self { Self::from_non_zero(value) }
+    fn from(value: NonZeroU16) -> TermRowDelta { TermRowDelta::from_non_zero(value) }
+}
+
+impl TryFrom<u16> for TermRowDelta {
+    type Error = ZeroCoordinateError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        let Some(delta) = Self::new(value) else {
+            return Err(ZeroCoordinateError);
+        };
+        Ok(delta)
+    }
 }
 
 /// Creates a [`TermRowDelta`] from a raw value.
@@ -164,43 +179,43 @@ mod tests {
 
     #[test]
     fn test_new_non_zero_returns_some() {
-        let delta = TermRowDelta::new(3).unwrap();
+        let delta = TermRowDelta::new(3).expect("conversion error");
         assert_eq!(delta.get(), 3);
 
-        let delta2 = term_row_delta(5).unwrap();
+        let delta2 = term_row_delta(5).expect("conversion error");
         assert_eq!(delta2.get(), 5);
     }
 
     #[test]
     fn test_from_non_zero() {
-        let nz = NonZeroU16::new(7).unwrap();
+        let nz = NonZeroU16::new(7).expect("conversion error");
         let delta = TermRowDelta::from_non_zero(nz);
         assert_eq!(delta.get(), 7);
     }
 
     #[test]
     fn test_from_trait() {
-        let nz = NonZeroU16::new(10).unwrap();
+        let nz = NonZeroU16::new(10).expect("conversion error");
         let delta: TermRowDelta = nz.into();
         assert_eq!(delta.get(), 10);
     }
 
     #[test]
     fn test_display() {
-        let delta = TermRowDelta::new(3).unwrap();
+        let delta = TermRowDelta::new(3).expect("conversion error");
         assert_eq!(format!("{delta}"), "TermRowDelta(3)");
     }
 
     #[test]
     fn test_numeric_conversions() {
-        let delta = TermRowDelta::new(100).unwrap();
+        let delta = TermRowDelta::new(100).expect("conversion error");
         assert_eq!(delta.as_usize(), 100_usize);
         assert_eq!(delta.as_u16(), 100_u16);
     }
 
     #[test]
     fn test_value_returns_non_zero_u16() {
-        let delta = TermRowDelta::new(5).unwrap();
+        let delta = TermRowDelta::new(5).expect("conversion error");
         let nz: NonZeroU16 = delta.value();
         assert_eq!(nz.get(), 5);
     }

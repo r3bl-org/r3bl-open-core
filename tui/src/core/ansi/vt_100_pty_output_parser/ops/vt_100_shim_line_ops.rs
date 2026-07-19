@@ -71,7 +71,7 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-//! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
+//! [`extract_nth_single_non_zero()`]: ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`test_line_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -80,9 +80,9 @@
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-use std::debug_assert_matches;
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::ParamsExt;
+use crate::{ParamsExt, VPPos};
+use std::debug_assert_matches;
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
@@ -94,17 +94,23 @@ use crate::ParamsExt;
 /// See [`OfsBufVT100::insert_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
-/// [`OfsBufVT100::insert_lines_at`]: crate::OfsBufVT100::insert_lines_at
+/// [`OfsBufVT100::insert_lines_at`]: crate::core::ansi::OfsBufVT100::insert_lines_at
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf_vt_100.get_cursor_pos().row_index;
-    let result = performer.ofs_buf_vt_100.insert_lines_at(at, how_many);
+    let at: VPPos = performer
+        .ofs_buf_vt_100
+        .get_active_screen_buffer()
+        .get_cursor_pos();
+    let result = performer
+        .ofs_buf_vt_100
+        .insert_lines_at(at.row_index, how_many);
     debug_assert_matches!(
         result,
         Ok(()),
-        "Failed to insert {how_many:?} lines at row {at:?}",
+        "Failed to insert {how_many:?} lines at row {:?}",
+        at.row_index,
     );
 }
 
@@ -119,16 +125,22 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// See [`OfsBufVT100::delete_lines_at`] for detailed behavior and scroll region
 /// handling.
 ///
-/// [`OfsBufVT100::delete_lines_at`]: crate::OfsBufVT100::delete_lines_at
+/// [`OfsBufVT100::delete_lines_at`]: crate::core::ansi::OfsBufVT100::delete_lines_at
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let at = performer.ofs_buf_vt_100.get_cursor_pos().row_index;
-    let result = performer.ofs_buf_vt_100.delete_lines_at(at, how_many);
+    let at: VPPos = performer
+        .ofs_buf_vt_100
+        .get_active_screen_buffer()
+        .get_cursor_pos();
+    let result = performer
+        .ofs_buf_vt_100
+        .delete_lines_at(at.row_index, how_many);
     debug_assert_matches!(
         result,
         Ok(()),
-        "Failed to delete {how_many:?} lines at row {at:?}",
+        "Failed to delete {how_many:?} lines at row {:?}",
+        at.row_index,
     );
 }

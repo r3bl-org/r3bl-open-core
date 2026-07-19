@@ -59,7 +59,6 @@
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-
 use crate::{AnsiToOfsBufPerformer, DEBUG_TUI_VT100_PARSER};
 
 /// Handles Device Attributes ([`DA`]) query responses `CSI c` or `CSI 0 c` received FROM
@@ -70,7 +69,7 @@ use crate::{AnsiToOfsBufPerformer, DEBUG_TUI_VT100_PARSER};
 /// [`DA`]: crate::DaSequence
 /// [`DaSequence`]: crate::DaSequence
 /// [`OfsBufVT100::handle_device_attributes_request()`]:
-///     crate::OfsBufVT100::handle_device_attributes_request
+///     crate::core::ansi::OfsBufVT100::handle_device_attributes_request
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub fn device_attributes(
     performer: &mut AnsiToOfsBufPerformer,

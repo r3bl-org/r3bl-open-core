@@ -92,11 +92,13 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{Ansi256GradientIndex, ChUnit, ColorWheelConfig, ColorWheelDirection,
-            ColorWheelSpeed, Colorize, FastStringify, GCStringOwned,
-            GradientGenerationPolicy, GradientKind, GradientLengthKind, Lolcat,
-            LolcatBuilder, RgbValue, Seed, TextColorizationPolicy, TuiColor, TuiStyle,
-            TuiStyledText, TuiStyledTexts, ch, cli_text_inline,
+use crate::{Ansi256GradientIndex, ArrayBoundsCheck, ArrayOverflowResult,
+            ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed, Colorize,
+            FastStringify, GCStringOwned, GradientGenerationPolicy, GradientKind,
+            GradientLengthKind, Lolcat, LolcatBuilder, NarrowingCastToU8,
+            NarrowingCastToUsize, NumericValue, RgbValue, Seed, TextColorizationPolicy,
+            TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts, VPIndex, VPLength,
+            WideningCastToU8, cli_text_inline,
             color_wheel::{color_wheel_config::{defaults::{Defaults,
                                                           get_default_gradient_stops},
                                                sizing::VecSteps},
@@ -104,7 +106,7 @@ use crate::{Ansi256GradientIndex, ChUnit, ColorWheelConfig, ColorWheelDirection,
             generate_random_truecolor_gradient, generate_truecolor_gradient,
             get_gradient_array_for,
             glyphs::SPACER_GLYPH as SPACER,
-            tui_color, tui_styled_text, u8, usize};
+            tui_color, tui_styled_text, vp_idx, vp_len};
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 use std::{collections::hash_map::DefaultHasher,
@@ -425,9 +427,9 @@ pub struct ColorWheel {
     pub configs: VecConfigs,
     pub gradient_kind: GradientKind,
     pub gradient_length_kind: GradientLengthKind,
-    pub index: ChUnit,
+    pub index: VPIndex,
     pub index_direction: ColorWheelDirection,
-    pub counter: ChUnit,
+    pub counter: VPLength,
 }
 
 impl Default for ColorWheel {
@@ -435,10 +437,11 @@ impl Default for ColorWheel {
         let mut acc = VecConfigs::new();
 
         let config_1 = {
+            let steps = Defaults::Steps.as_u8_widening();
             ColorWheelConfig::Rgb(
                 get_default_gradient_stops(),
                 ColorWheelSpeed::Medium,
-                Defaults::Steps as u8,
+                steps,
             )
         };
 
@@ -476,9 +479,9 @@ impl ColorWheel {
             configs,
             gradient_kind: GradientKind::NotCalculatedYet,
             gradient_length_kind: GradientLengthKind::NotCalculatedYet,
-            index: ch(0),
+            index: vp_idx(0),
             index_direction: ColorWheelDirection::Forward,
-            counter: ch(0),
+            counter: vp_len(0),
         }
     }
 
@@ -486,13 +489,13 @@ impl ColorWheel {
     /// color wheel is a lolcat, then the seed * 1000 is returned. If the gradient has
     /// not been computed yet, then 0 is returned.
     #[must_use]
-    pub fn get_index(&self) -> ChUnit {
+    pub fn get_index(&self) -> VPIndex {
         match self.gradient_kind {
             GradientKind::ColorWheel(_) => self.index,
             GradientKind::Lolcat(lolcat) => lolcat_helper::convert_lolcat_seed_to_index(
                 lolcat.color_wheel_control.seed,
             ),
-            GradientKind::NotCalculatedYet => ch(0),
+            GradientKind::NotCalculatedYet => vp_idx(0),
         }
     }
 
@@ -594,7 +597,7 @@ impl ColorWheel {
             color_wheel_navigation::update_index_with_direction(
                 &mut self.index,
                 &mut self.index_direction,
-                gradient.len(),
+                vp_len(gradient.len()),
             );
         }
 
@@ -612,9 +615,10 @@ impl ColorWheel {
             return;
         }
 
-        // Not a lolcat so reset the index and direction.
-        self.index = ch(0);
+        // Not a lolcat so reset the index, direction, and counter.
+        self.index = vp_idx(0);
         self.index_direction = ColorWheelDirection::Forward;
+        self.counter = vp_len(0);
     }
 
     /// Simplified version of [`ColorWheel::colorize_into_string`] with some defaults.
@@ -886,7 +890,7 @@ impl ColorWheel {
     ) {
         match gradient_generation_policy {
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength => {
-                let steps = u8(*us.len());
+                let steps = us.len().as_u8_narrowing();
 
                 // Generate a new gradient if one doesn't exist.
                 if let GradientLengthKind::NotCalculatedYet = self.get_gradient_len() {
@@ -896,7 +900,7 @@ impl ColorWheel {
 
                 // Re-use gradient if possible.
                 if let GradientLengthKind::ColorWheel(length) = self.get_gradient_len()
-                    && u8(ch(length)) != steps
+                    && length != vp_len(steps)
                 {
                     self.generate_color_wheel(Some(steps));
                 }
@@ -973,29 +977,29 @@ mod color_wheel_navigation {
     /// Determine if the color wheel index should be updated based on speed settings.
     pub fn should_update_index(
         config: &ColorWheelConfig,
-        counter: ChUnit,
-    ) -> (bool, ChUnit) {
+        counter: VPLength,
+    ) -> (bool, VPLength) {
         let speed_threshold = match config {
             ColorWheelConfig::Rgb(_, ColorWheelSpeed::Fast, _)
             | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast)
             | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Fast) => {
-                ColorWheelSpeed::Fast as u8
+                ColorWheelSpeed::Fast.as_u8_widening()
             }
             ColorWheelConfig::Rgb(_, ColorWheelSpeed::Medium, _)
             | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Medium)
             | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Medium) => {
-                ColorWheelSpeed::Medium as u8
+                ColorWheelSpeed::Medium.as_u8_widening()
             }
             ColorWheelConfig::Rgb(_, ColorWheelSpeed::Slow, _)
             | ColorWheelConfig::RgbRandom(ColorWheelSpeed::Slow)
             | ColorWheelConfig::Ansi256(_, ColorWheelSpeed::Slow) => {
-                ColorWheelSpeed::Slow as u8
+                ColorWheelSpeed::Slow.as_u8_widening()
             }
             _ => return (false, counter),
         };
 
-        if counter == ch(speed_threshold) {
-            (true, ch(1)) // Reset counter and update index
+        if counter == vp_len(speed_threshold) {
+            (true, vp_len(1)) // Reset counter and update index
         } else {
             (false, counter + 1) // Increment counter, don't update index
         }
@@ -1003,22 +1007,16 @@ mod color_wheel_navigation {
 
     /// Updates the color wheel index and handles direction changes.
     pub fn update_index_with_direction(
-        index: &mut ChUnit,
+        index: &mut VPIndex,
         direction: &mut ColorWheelDirection,
-        gradient_len: usize,
+        gradient_length: VPLength,
     ) -> Option<TuiColor> {
-        use crate::{ArrayBoundsCheck, ArrayOverflowResult,
-                    core::coordinates::{idx, len}};
-
         match *direction {
             ColorWheelDirection::Forward => {
                 *index += 1;
 
                 // Hit the end of the gradient, reverse direction.
-                let current_idx = idx(usize(*index));
-                let gradient_length = len(gradient_len);
-                if current_idx.overflows(gradient_length)
-                    == ArrayOverflowResult::Overflowed
+                if (*index).overflows(gradient_length) == ArrayOverflowResult::Overflowed
                 {
                     // We've reached the end, reverse direction
                     *direction = ColorWheelDirection::Reverse;
@@ -1029,9 +1027,7 @@ mod color_wheel_navigation {
                 *index -= 1;
 
                 // Hit the start of the gradient, forward direction.
-                let current_idx = idx(usize(*index));
-                let zero_idx = idx(0);
-                if current_idx == zero_idx {
+                if (*index).is_zero() {
                     *direction = ColorWheelDirection::Forward;
                 }
             }
@@ -1040,44 +1036,48 @@ mod color_wheel_navigation {
     }
 
     /// Gets color at the current index from the gradient.
-    pub fn get_color_at_index(gradient: &VecSteps, index: ChUnit) -> Option<TuiColor> {
-        gradient.get(usize(index)).copied()
+    pub fn get_color_at_index(gradient: &VecSteps, index: VPIndex) -> Option<TuiColor> {
+        gradient.get(index.as_usize()).copied()
     }
 }
 
-/// Helper module for lolcat-specific operations.
+/// Helper module for lolcat gradient operations.
 mod lolcat_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Handles lolcat color generation and seed advancement.
+    /// Generates next color for lolcat mode and advances seed.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
         let new_color = color_wheel_helpers::get_color_tuple(&lolcat.color_wheel_control);
-        lolcat.color_wheel_control.seed +=
-            Seed::from(lolcat.color_wheel_control.color_change_speed);
+        lolcat.next_color();
         tui_color!(new_color.0, new_color.1, new_color.2)
     }
 
-    /// Converts lolcat seed to [`ChUnit`] for indexing.
+    /// Converts lolcat seed to [`VPIndex`] for indexing.
     ///
-    /// This function converts a Seed value to a `ChUnit` for use as an index.
+    /// This function converts a Seed value to a `VPIndex` for use as an index.
     /// The implementation has been simplified to use integer operations where possible,
     /// which improves performance and reduces floating point precision issues.
-    pub fn convert_lolcat_seed_to_index(seed: Seed) -> ChUnit {
+    pub fn convert_lolcat_seed_to_index(seed: Seed) -> VPIndex {
         // Early return for invalid seed values.
         if !(*seed).is_finite() || *seed < 0.0 {
-            return ch(0);
+            return vp_idx(0);
         }
 
         // Convert seed to integer directly, using multiplication by 1000
         // to preserve precision of small fractional values.
-        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        // XMARK: Intentional numeric casting using as (f64 to usize after rounding).
+        #[allow(
+            clippy::cast_sign_loss,
+            clippy::cast_possible_truncation,
+            clippy::as_conversions
+        )]
         let seed_int = (*seed * 1000.0).round() as u64;
 
         // Convert to usize safely.
-        let converted_seed = usize::try_from(seed_int).unwrap_or(0);
+        let converted_seed = seed_int.as_usize_narrowing();
 
-        ch(converted_seed)
+        vp_idx(converted_seed)
     }
 }
 
@@ -1101,7 +1101,7 @@ mod gradient_generation_helper {
                 }
                 // 3. Otherwise use the default.
                 else {
-                    Defaults::Steps as u8
+                    Defaults::Steps.as_u8_widening()
                 }
             }
         }
@@ -1120,15 +1120,16 @@ mod gradient_generation_helper {
 
     /// Sets the gradient and length based on the generated gradient.
     pub fn set_gradient_and_length(color_wheel: &mut ColorWheel, gradient: VecSteps) {
-        color_wheel.gradient_length_kind = GradientLengthKind::ColorWheel(gradient.len());
+        color_wheel.gradient_length_kind =
+            GradientLengthKind::ColorWheel(vp_len(gradient.len()));
         color_wheel.gradient_kind = GradientKind::ColorWheel(gradient);
-        color_wheel.index = ch(0);
+        color_wheel.index = vp_idx(0);
     }
 
     /// Sets up lolcat gradient configuration.
     pub fn set_lolcat_gradient(color_wheel: &mut ColorWheel, builder: &LolcatBuilder) {
         color_wheel.gradient_kind = GradientKind::Lolcat(builder.build());
-        color_wheel.index = ch(0);
+        color_wheel.index = vp_idx(0);
         color_wheel.gradient_length_kind = GradientLengthKind::Lolcat(builder.seed);
     }
 }
@@ -1178,40 +1179,186 @@ mod tests_color_wheel_rgb {
         let seed_zero = Seed(0.0);
         assert_eq2!(
             lolcat_helper::convert_lolcat_seed_to_index(seed_zero),
-            ch(0)
+            vp_idx(0)
+        );
+
+        // Test with negative zero seed (should return 0).
+        let seed_neg_zero = Seed(-0.0);
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_neg_zero),
+            vp_idx(0)
         );
 
         // Test with positive seed.
         let seed_positive = Seed(1.5);
         assert_eq2!(
             lolcat_helper::convert_lolcat_seed_to_index(seed_positive),
-            ch(1500)
+            vp_idx(1500)
         );
 
         // Test with small positive seed.
         let seed_small = Seed(0.001);
         assert_eq2!(
             lolcat_helper::convert_lolcat_seed_to_index(seed_small),
-            ch(1)
+            vp_idx(1)
+        );
+
+        // Test rounding: 0.0016 * 1000 = 1.6 -> rounds to 2
+        let seed_round_up = Seed(0.0016);
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_round_up),
+            vp_idx(2)
+        );
+
+        // Test rounding: 0.0014 * 1000 = 1.4 -> rounds to 1
+        let seed_round_down = Seed(0.0014);
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_round_down),
+            vp_idx(1)
         );
 
         // Test with negative seed (should return 0).
         let seed_negative = Seed(-1.0);
         assert_eq2!(
             lolcat_helper::convert_lolcat_seed_to_index(seed_negative),
-            ch(0)
+            vp_idx(0)
         );
 
         // Test with NaN seed (should return 0).
         let seed_nan = Seed(f64::NAN);
-        assert_eq2!(lolcat_helper::convert_lolcat_seed_to_index(seed_nan), ch(0));
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_nan),
+            vp_idx(0)
+        );
+
+        // Test with infinite seed (should return 0).
+        let seed_inf = Seed(f64::INFINITY);
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_inf),
+            vp_idx(0)
+        );
+
+        let seed_neg_inf = Seed(f64::NEG_INFINITY);
+        assert_eq2!(
+            lolcat_helper::convert_lolcat_seed_to_index(seed_neg_inf),
+            vp_idx(0)
+        );
 
         // Test with very large seed.
         let seed_large = Seed(1_000_000.0);
         assert_eq2!(
             lolcat_helper::convert_lolcat_seed_to_index(seed_large),
-            ch(1_000_000_000)
+            vp_idx(1_000_000_000)
         );
+    }
+
+    #[test]
+    fn test_should_update_index() {
+        let fast_config = ColorWheelConfig::Rgb(
+            smallvec::smallvec!["#000000".into(), "#ffffff".into()],
+            ColorWheelSpeed::Fast,
+            10,
+        );
+
+        // Fast speed (threshold 2):
+        // 1st tick (counter 0) -> no update, counter becomes 1
+        let (should_update, counter) =
+            color_wheel_navigation::should_update_index(&fast_config, vp_len(0));
+        assert_eq2!(should_update, false);
+        assert_eq2!(counter, vp_len(1));
+
+        // 2nd tick (counter 1) -> no update, counter becomes 2
+        let (should_update, counter) =
+            color_wheel_navigation::should_update_index(&fast_config, vp_len(1));
+        assert_eq2!(should_update, false);
+        assert_eq2!(counter, vp_len(2));
+
+        // 3rd tick (threshold reached) -> update, counter resets to 1
+        let (should_update, counter) =
+            color_wheel_navigation::should_update_index(&fast_config, vp_len(2));
+        assert_eq2!(should_update, true);
+        assert_eq2!(counter, vp_len(1));
+
+        let medium_config = ColorWheelConfig::Rgb(
+            smallvec::smallvec!["#000000".into(), "#ffffff".into()],
+            ColorWheelSpeed::Medium,
+            10,
+        );
+
+        // Medium speed (threshold 5):
+        let (should_update, counter) =
+            color_wheel_navigation::should_update_index(&medium_config, vp_len(4));
+        assert_eq2!(should_update, false);
+        assert_eq2!(counter, vp_len(5));
+
+        let (should_update, counter) =
+            color_wheel_navigation::should_update_index(&medium_config, vp_len(5));
+        assert_eq2!(should_update, true);
+        assert_eq2!(counter, vp_len(1));
+    }
+
+    #[test]
+    fn test_update_index_with_direction() {
+        let mut index = vp_idx(0);
+        let mut direction = ColorWheelDirection::Forward;
+        let gradient_len = vp_len(3); // Valid indices: 0, 1, 2
+
+        // Forward: 0 -> 1
+        color_wheel_navigation::update_index_with_direction(
+            &mut index,
+            &mut direction,
+            gradient_len,
+        );
+        assert_eq2!(index, vp_idx(1));
+        assert_eq2!(direction, ColorWheelDirection::Forward);
+
+        // Forward: 1 -> 2
+        color_wheel_navigation::update_index_with_direction(
+            &mut index,
+            &mut direction,
+            gradient_len,
+        );
+        assert_eq2!(index, vp_idx(2));
+        assert_eq2!(direction, ColorWheelDirection::Forward);
+
+        // Forward: 2 -> 3 (overflows length 3) -> reverses direction, index becomes 1 (3
+        // - 2)
+        color_wheel_navigation::update_index_with_direction(
+            &mut index,
+            &mut direction,
+            gradient_len,
+        );
+        assert_eq2!(index, vp_idx(1));
+        assert_eq2!(direction, ColorWheelDirection::Reverse);
+
+        // Reverse: 1 -> 0 (reaches zero) -> direction flips to Forward
+        color_wheel_navigation::update_index_with_direction(
+            &mut index,
+            &mut direction,
+            gradient_len,
+        );
+        assert_eq2!(index, vp_idx(0));
+        assert_eq2!(direction, ColorWheelDirection::Forward);
+
+        // Forward again: 0 -> 1
+        color_wheel_navigation::update_index_with_direction(
+            &mut index,
+            &mut direction,
+            gradient_len,
+        );
+        assert_eq2!(index, vp_idx(1));
+        assert_eq2!(direction, ColorWheelDirection::Forward);
+    }
+
+    #[test]
+    fn test_color_wheel_reset_index() {
+        let mut color_wheel = test_helper::create_color_wheel_rgb();
+        color_wheel.index = vp_idx(5);
+        color_wheel.index_direction = ColorWheelDirection::Reverse;
+
+        color_wheel.reset_index();
+        assert_eq2!(color_wheel.get_index(), vp_idx(0));
+        assert_eq2!(color_wheel.index_direction, ColorWheelDirection::Forward);
     }
 
     mod test_helper {
@@ -1267,7 +1414,7 @@ mod tests_color_wheel_rgb {
                 ColorWheelConfig::Rgb(
                     get_default_gradient_stops(),
                     ColorWheelSpeed::Medium,
-                    Defaults::Steps as u8,
+                    Defaults::Steps.as_u8_widening(),
                 ),
             );
             global_color_support::clear_override();
@@ -1333,32 +1480,32 @@ mod tests_color_wheel_rgb {
         // Call to next() should return the start_color.
         assert_eq2!(
             // 1st call to next(), index is 0
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(0, 0, 0)
         );
         assert_eq2!(
             // 2nd call to next(), index is 0
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(0, 0, 0)
         );
         assert_eq2!(
             // 3rd call to next(), index is 1
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(26, 26, 26)
         );
         assert_eq2!(
             // # 4th call to next(), index is 1
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(26, 26, 26)
         );
         assert_eq2!(
             // # 5th call to next(), index is 2
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(51, 51, 51)
         );
         assert_eq2!(
             // # 6th call to next(), index is 2
-            color_wheel.next_color().unwrap(),
+            color_wheel.next_color().expect("conversion error"),
             tui_color!(51, 51, 51)
         );
 
@@ -1368,10 +1515,16 @@ mod tests_color_wheel_rgb {
         }
 
         // Next call to next() which is the 20th call should return the end_color.
-        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(230, 230, 230));
+        assert_eq2!(
+            color_wheel.next_color().expect("conversion error"),
+            tui_color!(230, 230, 230)
+        );
 
         // Next call to next() should return the end_color - 1.
-        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(204, 204, 204));
+        assert_eq2!(
+            color_wheel.next_color().expect("conversion error"),
+            tui_color!(204, 204, 204)
+        );
 
         // Reverse color wheel to index = 0.
         for _ in 0..16 {
@@ -1379,10 +1532,16 @@ mod tests_color_wheel_rgb {
         }
 
         // Next call to next() should return the start_color.
-        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(0, 0, 0));
+        assert_eq2!(
+            color_wheel.next_color().expect("conversion error"),
+            tui_color!(0, 0, 0)
+        );
 
         // Next call to next() should advance the index again to 1.
-        assert_eq2!(color_wheel.next_color().unwrap(), tui_color!(26, 26, 26));
+        assert_eq2!(
+            color_wheel.next_color().expect("conversion error"),
+            tui_color!(26, 26, 26)
+        );
 
         global_color_support::clear_override();
     }

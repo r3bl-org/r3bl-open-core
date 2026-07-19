@@ -44,7 +44,7 @@
 //! For terminal multiplexer architecture, see the [`pty_mux`] module.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OfsBufVT100::apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`Perform`]: vte::Perform
 //! [`pty_mux`]: mod@crate::core::pty_mux
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -55,8 +55,6 @@
 
 // Attach.
 pub mod ansi_parser_public_api;
-pub mod canvas;
-pub mod hidden_screen_state;
 pub mod ofs_buf_vt_100;
 pub mod parser_state;
 pub mod performer;
@@ -64,23 +62,23 @@ pub mod protocols;
 pub mod pty_response_event;
 mod modes;
 
+// `VT-100` conformance tests module
+pub mod vt_100_pty_output_conformance_tests;
+
+// Re-export for tests and docs.
 #[cfg(any(test, doc))]
 pub mod ops;
 #[cfg(not(any(test, doc)))]
 mod ops;
-
 #[cfg(any(test, doc))]
 pub mod ops_impl_ofs_buf;
 #[cfg(not(any(test, doc)))]
 mod ops_impl_ofs_buf;
-
-// `VT-100` conformance tests module
-pub mod vt_100_pty_output_conformance_tests;
+#[cfg(any(test, doc))]
+pub mod test_fixtures_ofs_buf_vt_100;
 
 // Re-export public API.
 pub use ansi_parser_public_api::*;
-pub use canvas::*;
-pub use hidden_screen_state::*;
 pub use modes::*;
 pub use ofs_buf_vt_100::*;
 pub use ops::*;
@@ -88,3 +86,8 @@ pub use ops_impl_ofs_buf::*;
 pub use parser_state::*;
 pub use protocols::*;
 pub use pty_response_event::*;
+
+// Test fixtures for `OfsBufVT100`.
+#[cfg(any(test, doc))]
+#[allow(unused_imports)]
+pub use test_fixtures_ofs_buf_vt_100::*;

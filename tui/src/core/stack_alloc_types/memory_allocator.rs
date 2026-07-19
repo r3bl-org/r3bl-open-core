@@ -28,8 +28,8 @@ macro_rules! set_mimalloc_in_main {
 ///
 /// # Panics
 ///
-/// This macro calls `.unwrap()` on thread creation and join operations, which will panic
-/// if:
+/// This macro calls `.expect("conversion error")` on thread creation and join operations,
+/// which will panic if:
 /// - Thread spawning fails (e.g., insufficient system resources)
 /// - The spawned thread panics
 ///
@@ -47,7 +47,7 @@ macro_rules! set_mimalloc_in_main {
 ///     run_with_safe_stack!(main_impl())
 /// }
 ///
-/// // Note: tokio::main also uses .unwrap() internally, so the lint suppression
+/// // Note: tokio::main also uses .expect("conversion error") internally, so the lint suppression
 /// // is needed regardless of this macro's implementation.
 /// #[tokio::main]
 /// #[allow(clippy::unwrap_in_result)]
@@ -65,9 +65,9 @@ macro_rules! run_with_safe_stack {
             let handle = std::thread::Builder::new()
                 .stack_size(8 * 1024 * 1024) // 8MB stack
                 .spawn(|| $main_fn)
-                .unwrap();
+                .expect("conversion error");
 
-            handle.join().unwrap()
+            handle.join().expect("conversion error")
         }
 
         #[cfg(not(target_os = "windows"))]

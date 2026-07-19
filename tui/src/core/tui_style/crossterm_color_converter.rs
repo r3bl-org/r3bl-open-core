@@ -21,7 +21,7 @@ use crossterm::style::Color;
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 impl From<TuiColor> for crossterm::style::Color {
-    fn from(color: TuiColor) -> Self {
+    fn from(color: TuiColor) -> crossterm::style::Color {
         let color_support = global_color_support::detect();
         let degraded_color = degrade_color(color, color_support);
 
@@ -69,27 +69,27 @@ impl From<TuiColor> for crossterm::style::Color {
 
 /// Converts from [`crossterm::style::Color`] to [`TuiColor`].
 impl From<crossterm::style::Color> for TuiColor {
-    fn from(crossterm_color: crossterm::style::Color) -> Self {
+    fn from(crossterm_color: crossterm::style::Color) -> TuiColor {
         match crossterm_color {
             Color::Rgb { r, g, b } => TuiColor::Rgb((r, g, b).into()),
             Color::AnsiValue(val) => TuiColor::Ansi(val.into()),
             // Map standard crossterm colors to ANSI basic colors (0-15)
-            Color::Black | Color::Reset => TuiColor::Ansi(0.into()),
-            Color::Red => TuiColor::Ansi(1.into()),
-            Color::Green => TuiColor::Ansi(2.into()),
-            Color::Yellow => TuiColor::Ansi(3.into()),
-            Color::Blue => TuiColor::Ansi(4.into()),
-            Color::Magenta => TuiColor::Ansi(5.into()),
-            Color::Cyan => TuiColor::Ansi(6.into()),
-            Color::White => TuiColor::Ansi(7.into()),
-            Color::DarkGrey => TuiColor::Ansi(8.into()),
-            Color::DarkRed => TuiColor::Ansi(9.into()),
-            Color::DarkGreen => TuiColor::Ansi(10.into()),
-            Color::DarkYellow => TuiColor::Ansi(11.into()),
-            Color::DarkBlue => TuiColor::Ansi(12.into()),
-            Color::DarkMagenta => TuiColor::Ansi(13.into()),
-            Color::DarkCyan => TuiColor::Ansi(14.into()),
-            Color::Grey => TuiColor::Ansi(15.into()),
+            Color::Black | Color::Reset => TuiColor::Ansi(0u16.into()),
+            Color::Red => TuiColor::Ansi(1u16.into()),
+            Color::Green => TuiColor::Ansi(2u16.into()),
+            Color::Yellow => TuiColor::Ansi(3u16.into()),
+            Color::Blue => TuiColor::Ansi(4u16.into()),
+            Color::Magenta => TuiColor::Ansi(5u16.into()),
+            Color::Cyan => TuiColor::Ansi(6u16.into()),
+            Color::White => TuiColor::Ansi(7u16.into()),
+            Color::DarkGrey => TuiColor::Ansi(8u16.into()),
+            Color::DarkRed => TuiColor::Ansi(9u16.into()),
+            Color::DarkGreen => TuiColor::Ansi(10u16.into()),
+            Color::DarkYellow => TuiColor::Ansi(11u16.into()),
+            Color::DarkBlue => TuiColor::Ansi(12u16.into()),
+            Color::DarkMagenta => TuiColor::Ansi(13u16.into()),
+            Color::DarkCyan => TuiColor::Ansi(14u16.into()),
+            Color::Grey => TuiColor::Ansi(15u16.into()),
         }
     }
 }

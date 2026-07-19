@@ -19,7 +19,7 @@
 //! - Buffer state is correct for content that **isn't** cleared
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`performer.rs`]: crate::core::ansi::vt_100_pty_output_parser::performer
 //! [`screen_operations`]: super::screen_operations
 

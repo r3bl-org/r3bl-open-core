@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ColIndex, CsiSequence, NumericConversions, TermRow};
+use super::ZeroCoordinateError;
+use crate::{CsiSequence, NumericConversions, TermRow, VPCol, WideningCastToUsize};
 use std::{fmt::{Display, Formatter},
           num::NonZeroU16,
           ops::Add};
@@ -16,7 +17,7 @@ use std::{fmt::{Display, Formatter},
 /// `TermCol` values:
 /// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data ([`ANSI`]
 ///   parameters)
-/// - [`from_zero_based()`] - Convert from 0-based [`ColIndex`] to 1-based terminal
+/// - [`from_zero_based()`] - Convert from 0-based [`VPCol`] to 1-based terminal
 ///   coordinate
 /// - [`term_col()`] - Convenience helper (primarily for tests)
 ///
@@ -24,24 +25,29 @@ use std::{fmt::{Display, Formatter},
 ///
 /// `TermCol` represents **1-based terminal coordinates** used in [`ANSI`] escape
 /// sequences. This is distinct from:
-/// - [`ColIndex`] - 0-based buffer/array positions
+/// - [`VPCol`] - 0-based viewport column index positions
 ///
 /// # Example
 ///
 /// ```rust
-/// use r3bl_tui::{TermCol, ColIndex, term_col};
+/// use r3bl_tui::{TermCol, VPCol, vp_col, term_col};
 /// use std::num::NonZeroU16;
 ///
 /// // Create from ANSI parameter
-/// let from_ansi = TermCol::from_raw_non_zero_value(NonZeroU16::new(10).unwrap());
+/// let from_ansi = TermCol::from_raw_non_zero_value(NonZeroU16::new(10).expect("conversion error"));
 ///
 /// // Convert from buffer index (0-based → 1-based)
-/// let from_buffer = TermCol::from_zero_based(ColIndex::from(9));
+/// let from_buffer = TermCol::from_zero_based(vp_col(9));
 /// assert_eq!(from_ansi, from_buffer); // Both represent column 10
 ///
 /// // Convert to buffer index (1-based → 0-based)
-/// let buffer_idx = from_ansi.to_zero_based();
-/// assert_eq!(buffer_idx, ColIndex::from(9));
+/// let buffer_idx: VPCol = from_ansi.to_zero_based();
+/// assert_eq!(buffer_idx, vp_col(9));
+///
+/// // Bi-directional From / Into conversions
+/// let from_into: TermCol = vp_col(9).into();
+/// let back_into: VPCol = from_into.into();
+/// assert_eq!(back_into, vp_col(9));
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -53,8 +59,7 @@ use std::{fmt::{Display, Formatter},
 pub struct TermCol(NonZeroU16);
 
 impl NumericConversions for TermCol {
-    fn as_usize(&self) -> usize { self.0.get() as usize }
-    fn as_u16(&self) -> u16 { self.0.get() }
+    fn as_usize(&self) -> usize { self.0.get().as_usize_widening() }
 }
 
 impl Display for TermCol {
@@ -109,28 +114,42 @@ impl TermCol {
     #[must_use]
     pub const fn as_u16(self) -> u16 { self.0.get() }
 
-    /// Converts from 0-based [`ColIndex`] to 1-based terminal coordinate.
+    /// Converts from 0-based [`VPCol`] to 1-based terminal coordinate.
     #[must_use]
-    pub fn from_zero_based(index: ColIndex) -> Self {
-        let nz_value = index.as_u16() + 1;
-        // SAFETY: 0-based `ColIndex` + 1 is always >= 1
+    pub fn from_zero_based(index: VPCol) -> Self {
+        let nz_value = index.as_u16().saturating_add(1);
+        // SAFETY: 0-based `VPCol` + 1 is always >= 1
         debug_assert!(nz_value >= 1);
         Self::from_raw_non_zero_value(unsafe { NonZeroU16::new_unchecked(nz_value) })
     }
 
-    /// Converts to 0-based [`ColIndex`] for buffer operations.
+    /// Converts to 0-based [`VPCol`] for buffer operations.
     #[must_use]
-    pub fn to_zero_based(&self) -> ColIndex {
-        ColIndex::from(self.as_u16().saturating_sub(1))
-    }
+    pub fn to_zero_based(&self) -> VPCol { VPCol::from(self.as_u16().saturating_sub(1)) }
 }
 
-impl From<ColIndex> for TermCol {
-    /// Converts from 0-based [`ColIndex`] to 1-based [`TermCol`].
+impl From<VPCol> for TermCol {
+    /// Converts from 0-based [`VPCol`] to 1-based [`TermCol`].
     ///
     /// This is always safe because the conversion adds 1, guaranteeing a non-zero
     /// value.
-    fn from(value: ColIndex) -> Self { Self::from_zero_based(value) }
+    fn from(value: VPCol) -> TermCol { TermCol::from_zero_based(value) }
+}
+
+impl From<TermCol> for VPCol {
+    /// Converts from 1-based [`TermCol`] to 0-based [`VPCol`].
+    fn from(value: TermCol) -> VPCol { value.to_zero_based() }
+}
+
+impl TryFrom<u16> for TermCol {
+    type Error = ZeroCoordinateError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        let Some(non_zero) = NonZeroU16::new(value) else {
+            return Err(ZeroCoordinateError);
+        };
+        Ok(Self::from_raw_non_zero_value(non_zero))
+    }
 }
 
 /// Add [`TermRow`] to [`TermCol`] to create a cursor position.
@@ -141,8 +160,8 @@ impl From<ColIndex> for TermCol {
 /// use r3bl_tui::{TermCol, TermRow, term_col, term_row, CsiSequence};
 /// use std::num::NonZeroU16;
 ///
-/// let col = term_col(NonZeroU16::new(20).unwrap());
-/// let row = term_row(NonZeroU16::new(10).unwrap());
+/// let col = term_col(NonZeroU16::new(20).expect("conversion error"));
+/// let row = term_row(NonZeroU16::new(10).expect("conversion error"));
 /// let cursor_pos = col + row;
 /// ```
 ///
@@ -167,7 +186,7 @@ pub const fn term_col(value: NonZeroU16) -> TermCol {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{term_row, vt_100_pty_output_conformance_tests::nz};
+    use crate::{VPCol, term_row, vp_col, vt_100_pty_output_conformance_tests::nz};
     use std::hash::{DefaultHasher, Hash, Hasher};
 
     #[test]
@@ -204,20 +223,41 @@ mod tests {
     fn test_term_col_to_zero_based() {
         let col = term_col(nz(10)); // 1-based: col 10
         let index = col.to_zero_based(); // 0-based: index 9
-        assert_eq!(index, ColIndex::from(9));
+        assert_eq!(index, vp_col(9));
     }
 
     #[test]
     fn test_term_col_from_zero_based() {
-        let index = ColIndex::from(19); // 0-based: index 19
+        let index = vp_col(19); // 0-based: index 19
         let col = TermCol::from_zero_based(index); // 1-based: col 20
         assert_eq!(col.as_u16(), 20);
     }
 
     #[test]
-    fn test_term_col_from_col_index() {
-        let index = ColIndex::from(14); // 0-based: index 14
+    fn test_term_col_from_vp_col() {
+        let index = vp_col(14); // 0-based: index 14
         let col = TermCol::from(index); // 1-based: col 15
+        assert_eq!(col.as_u16(), 15);
+    }
+
+    #[test]
+    fn test_vp_col_from_term_col() {
+        let col = term_col(nz(15));
+        let index = VPCol::from(col);
+        assert_eq!(index, vp_col(14));
+    }
+
+    #[test]
+    fn test_term_col_into_vp_col() {
+        let col = term_col(nz(15));
+        let index: VPCol = col.into();
+        assert_eq!(index, vp_col(14));
+    }
+
+    #[test]
+    fn test_vp_col_into_term_col() {
+        let index = vp_col(14);
+        let col: TermCol = index.into();
         assert_eq!(col.as_u16(), 15);
     }
 
@@ -245,12 +285,12 @@ mod tests {
     fn test_term_col_minimum_value() {
         let col = term_col(nz(1));
         assert_eq!(col.as_u16(), 1);
-        assert_eq!(col.to_zero_based(), ColIndex::from(0));
+        assert_eq!(col.to_zero_based(), vp_col(0));
     }
 
     #[test]
     fn test_term_col_from_zero_index() {
-        let index = ColIndex::from(0);
+        let index = vp_col(0);
         let col = TermCol::from_zero_based(index);
         assert_eq!(col.as_u16(), 1);
     }
@@ -259,12 +299,12 @@ mod tests {
     fn test_term_col_maximum_value() {
         let col = term_col(nz(65535));
         assert_eq!(col.as_u16(), 65535);
-        assert_eq!(col.to_zero_based(), ColIndex::from(65534));
+        assert_eq!(col.to_zero_based(), vp_col(65534));
     }
 
     #[test]
     fn test_term_col_from_max_index() {
-        let index = ColIndex::from(65534);
+        let index = vp_col(65534);
         let col = TermCol::from_zero_based(index);
         assert_eq!(col.as_u16(), 65535);
     }
@@ -303,10 +343,10 @@ mod tests {
     fn test_col_conversion_preserves_off_by_one_semantics() {
         // Terminal (1) should map to buffer [0]
         let term_col_1 = term_col(nz(1));
-        assert_eq!(term_col_1.to_zero_based(), ColIndex::from(0));
+        assert_eq!(term_col_1.to_zero_based(), vp_col(0));
 
         // Buffer [0] should map to terminal (1)
-        let col_idx_0 = ColIndex::from(0);
+        let col_idx_0 = vp_col(0);
         assert_eq!(TermCol::from_zero_based(col_idx_0).as_u16(), 1);
     }
 
@@ -314,14 +354,14 @@ mod tests {
     fn test_col_typical_terminal_coordinates() {
         // Test typical terminal size (80 columns)
         let col_80 = term_col(nz(80));
-        assert_eq!(col_80.to_zero_based(), ColIndex::from(79));
+        assert_eq!(col_80.to_zero_based(), vp_col(79));
     }
 
     #[test]
     fn test_col_large_terminal_coordinates() {
         // Test large terminal (200 columns)
         let col_200 = term_col(nz(200));
-        assert_eq!(col_200.to_zero_based(), ColIndex::from(199));
+        assert_eq!(col_200.to_zero_based(), vp_col(199));
     }
 
     // ========================================================================

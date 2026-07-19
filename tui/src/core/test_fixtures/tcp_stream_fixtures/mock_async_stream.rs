@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::ok;
-use std::{io::Result,
+use std::{cmp::min,
+          io::Result,
           pin::Pin,
           task::{Context, Poll}};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -47,7 +48,7 @@ impl AsyncRead for MockAsyncStream {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
         let data = self.expected_buffer.as_slice();
-        let len = std::cmp::min(data.len(), buf.remaining());
+        let len = min(data.len(), buf.remaining());
         buf.put_slice(&data[..len]);
         self.expected_buffer.drain(..len);
         Poll::Ready(ok!())

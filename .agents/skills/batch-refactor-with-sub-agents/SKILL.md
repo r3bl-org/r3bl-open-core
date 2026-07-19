@@ -3,13 +3,22 @@ name: batch-refactor-with-sub-agents
 description: Use a sub-agent (like `generalist`) to perform repetitive code transformations across multiple files in a single turn.
 ---
 
-## When to Use
-- Renaming symbols or updating function signatures across many files.
+## When to Use Sub-Agents
+- Renaming symbols or updating function signatures across many files (but not the entire repository).
 - Migrating code from one pattern to another (e.g., manual error handling to a common helper).
 - Replacing literals with centralized constants across the codebase.
-- Performing any repetitive "find-and-replace" task that would otherwise require many sequential `replace` calls.
+- Performing repetitive tasks that require *semantic understanding* and cannot be solved with a simple string replace.
 
-## Procedure
+## When to Use Custom Rust Scripts (Priority for Massive Refactors)
+For massive, repository-wide bulk refactoring (typically **6+ files**, e.g., renaming a string or trait across 100+ files), you MUST NOT use `sed`, `awk`, `perl`, `python`, `bash`, or `fish` (which are strictly prohibited). Furthermore, spawning sub-agents for a simple find-and-replace across 6+ files is inefficient.
+Instead:
+1. Write a custom, disposable Rust script. Save this script in `tmpfs` (e.g., `/tmp/`).
+2. Implement a `--dry-run` CLI argument to test the script before making destructive changes.
+3. Use `std::fs` to read files, apply string replacements (`replace()`), and write back (only if not a dry-run).
+4. Compile it natively with `rustc` and execute it.
+5. Run `cargo check` to verify.
+
+## Procedure for Sub-Agents
 1.  **Define the transformation**: Identify the exact "before" and "after" patterns. Create a representative code snippet for the sub-agent to follow.
 2.  **Locate targets**: Use `grep_search` to find all absolute file paths and line numbers that need modification.
 3.  **Draft a precise prompt**: Call the `generalist` (or similar) tool with a prompt that includes:

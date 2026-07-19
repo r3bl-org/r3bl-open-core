@@ -43,7 +43,11 @@ pub trait App {
     ///
     /// [`global_data.main_thread_channel_sender`]:
     ///     crate::GlobalData::main_thread_channel_sender
-    fn app_start_background_services(&mut self, _global_data: &mut GlobalData<Self::S, Self::AS>) {}
+    fn app_start_background_services(
+        &mut self,
+        _global_data: &mut GlobalData<Self::S, Self::AS>,
+    ) {
+    }
 
     /// At a high level:
     /// - Use the `input_event` to dispatch an action to the store if needed.

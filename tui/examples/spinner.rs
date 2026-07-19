@@ -15,7 +15,7 @@ use tokio::{spawn,
 macro_rules! println_with_flush {
     ($($tt:tt)*) => {
         println!($($tt)*);
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
     };
 }
 

@@ -103,10 +103,10 @@ use strum::EnumCount;
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 ///
 /// [`RenderOpIR`]: crate::RenderOpIR
-/// [`RenderOpIRVec`]: crate::RenderOpIRVec
+/// [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 /// [`RenderPipeline`]: crate::RenderPipeline
-/// [`ZOrder::get_render_order`]: crate::ZOrder::get_render_order
-/// [`ZOrder`]: crate::ZOrder
+/// [`ZOrder::get_render_order`]: crate::tui::ZOrder::get_render_order
+/// [`ZOrder`]: crate::tui::ZOrder
 #[macro_export]
 macro_rules! render_pipeline {
     // No args. Returns a new default pipeline.
@@ -128,7 +128,7 @@ macro_rules! render_pipeline {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-        let mut render_ops = $crate::RenderOpIRVec::default();
+        let mut render_ops = $crate::tui::RenderOpIRVec::default();
         /* Start a repetition. */
         $(
             /* Each repeat will contain the following statement, with $arg_render_op replaced. */
@@ -147,7 +147,7 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $($arg_render_op: expr),+
     ) => {
-        let mut render_ops = $crate::RenderOpIRVec::default();
+        let mut render_ops = $crate::tui::RenderOpIRVec::default();
         $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
         render_ops  += ($arg_render_op);
@@ -161,7 +161,7 @@ macro_rules! render_pipeline {
         @join_and_drop
         $($arg_other_pipeline: expr),+
     ) => {{
-        let mut pipeline = $crate::render_pipeline!();
+        let mut pipeline = render_pipeline!();
         $(
         /* Each repeat will contain the following statement, with $arg_other_pipeline replaced. */
         pipeline.join_into($arg_other_pipeline);
@@ -176,7 +176,7 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $arg_styled_texts: expr
       ) => {
-        let mut render_ops = $crate::RenderOpIRVec::default();
+        let mut render_ops = $crate::tui::RenderOpIRVec::default();
         $crate::render_tui_styled_texts_into(&$arg_styled_texts, &mut render_ops);
         $arg_pipeline.push($arg_z_order, render_ops);
       };

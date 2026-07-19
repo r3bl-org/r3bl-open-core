@@ -43,6 +43,21 @@ pub mod process_isolated_tests;
 pub mod my_module_integration_tests;
 ```
 
+### 5. Memory Size "Tripwire" Tests
+When writing tests that assert the byte size of a struct (`std::mem::size_of`), you MUST gate the test or the assertion block with `#[cfg(target_pointer_width = "64")]` to ensure it only runs on 64-bit architectures. Struct sizes vary between 32-bit and 64-bit platforms due to pointer sizes.
+
+```rust
+#[test]
+fn test_my_struct_size() {
+    // TRIPWIRE: If you add or remove a field, this test will fail.
+    // This reminds you to update the `GetMemSize` implementation.
+    #[cfg(target_pointer_width = "64")]
+    {
+        assert_eq!(std::mem::size_of::<MyStruct>(), 184);
+    }
+}
+```
+
 ## Related Skills
 - `organize-modules`: Use for general module structure and re-exports.
 - `write-documentation`: Use for formatting "Run with:" blocks and intra-doc links.

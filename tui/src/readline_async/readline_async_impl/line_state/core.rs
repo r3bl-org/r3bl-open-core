@@ -2,8 +2,8 @@
 
 // cspell:words testx
 
-use crate::{ColIndex, ColWidth, GCStringOwned, MemoizedLenMap, SegIndex, Size,
-            StringLength, col, ok, width};
+use crate::{GCStringOwned, MemoizedLenMap, SegIndex, StringLength, VPCol, VPSize,
+            VPWidth, ok, vp_col, vp_width};
 use std::io::{self, Write};
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -24,7 +24,7 @@ pub struct LineState {
     pub line_cursor_grapheme: SegIndex,
 
     /// Column of grapheme in line (0-based terminal column).
-    pub current_column: ColIndex,
+    pub current_column: VPCol,
 
     /// Buffer for holding partial grapheme clusters as they come in.
     pub cluster_buffer: String,
@@ -45,11 +45,11 @@ pub struct LineState {
     pub should_print_line_on_control_c: bool,
 
     /// Length of last incomplete line (for cursor restoration).
-    pub last_line_length: ColWidth,
+    pub last_line_length: VPWidth,
     pub last_line_completed: bool,
 
     /// Terminal dimensions: `col_width` (columns) and `row_height` (rows).
-    pub term_size: Size,
+    pub term_size: VPSize,
 
     /// This is the only place where this information is stored. Since pause and resume
     /// ultimately only affect this struct.
@@ -77,7 +77,7 @@ pub struct LineState {
 ///
 /// [`NotPaused`]: LineStateLiveness::NotPaused
 /// [`Paused`]: LineStateLiveness::Paused
-/// [`Spinner`]: crate::Spinner
+/// [`Spinner`]: crate::readline_async::Spinner
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
     /// Input is ignored and rendering is suppressed.
@@ -121,21 +121,21 @@ macro_rules! early_return_if_paused {
 impl LineState {
     /// Creates a new `LineState` with the given prompt and terminal size.
     #[must_use]
-    pub fn new(prompt: String, term_size: Size) -> Self {
-        let mut memoized_len_map = MemoizedLenMap::new();
+    pub fn new(prompt: String, term_size: VPSize) -> Self {
+        let mut memoized_len_map = MemoizedLenMap::default();
         let current_column =
             StringLength::StripAnsi.calculate(prompt.as_str(), &mut memoized_len_map);
         Self {
             prompt,
             last_line_completed: true,
             term_size,
-            current_column: col(current_column),
+            current_column: vp_col(current_column),
             should_print_line_on_enter: true,
             should_print_line_on_control_c: false,
             line: GCStringOwned::new(""),
-            line_cursor_grapheme: 0.into(),
+            line_cursor_grapheme: 0u16.into(),
             cluster_buffer: String::new(),
-            last_line_length: width(0),
+            last_line_length: vp_width(0),
             is_paused: LineStateLiveness::NotPaused,
             memoized_len_map,
         }
@@ -146,7 +146,7 @@ impl LineState {
     ///   is rendered from them, and things like the [`crate::Spinner`] can be active.
     /// - Handling user input while the [`crate::Readline::readline`] is awaiting user
     ///   input (which is equivalent to awaiting
-    ///   [`crate::ReadlineAsyncContext::read_line`]).
+    ///   [`crate::readline_async::ReadlineAsyncContext::read_line`]).
     ///
     /// This should not be called directly. Instead, use the mechanism provided by the
     /// following:
@@ -176,14 +176,13 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::{LineState, LineStateLiveness};
-    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, Size, StdMutex,
-                core::test_fixtures::StdoutMock, height, seg_index, width};
+    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex,
+                core::test_fixtures::StdoutMock, seg_index, vp_height, vp_width};
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_pause_resume_state() {
-        let mut line =
-            LineState::new(String::new(), Size::new((width(100), height(100))));
+        let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
         let (history, _) = History::new();
@@ -194,7 +193,8 @@ mod tests {
 
         // Pause the line state.
         safe_output_terminal.write(|term| {
-            line.set_paused(LineStateLiveness::Paused, term).unwrap();
+            line.set_paused(LineStateLiveness::Paused, term)
+                .expect("conversion error");
         });
 
         // Try to send input while paused - should be ignored.
@@ -213,7 +213,8 @@ mod tests {
 
         // Resume the line state.
         safe_output_terminal.write(|term| {
-            line.set_paused(LineStateLiveness::NotPaused, term).unwrap();
+            line.set_paused(LineStateLiveness::NotPaused, term)
+                .expect("conversion error");
         });
 
         // Now input should work.

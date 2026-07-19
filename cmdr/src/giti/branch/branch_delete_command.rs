@@ -8,10 +8,10 @@ use crate::{AnalyticsAction, common,
             report_analytics};
 use r3bl_tui::{BranchExists, CliTextInline, CommandRunResult, CommonResult,
                DefaultIoDevices, InlineString, InlineVec, ItemsOwned,
-               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line, height,
+               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line,
                inline_vec,
                readline_async::{HowToChoose, StyleSheet},
-               try_delete_branches, try_get_local_branches};
+               try_delete_branches, try_get_local_branches, vp_height};
 use smallvec::smallvec;
 
 /// The main function for `giti branch delete` command.
@@ -150,7 +150,7 @@ mod user_interaction {
             choose(
                 header_with_instructions,
                 branch_options,
-                Some(height(20)),
+                Some(vp_height(20)),
                 None,
                 HowToChoose::Multiple,
                 StyleSheet::default(),
@@ -237,7 +237,7 @@ mod user_interaction {
             choose(
                 header_with_instructions,
                 confirmation_options,
-                Some(height(20)),
+                Some(vp_height(20)),
                 None,
                 HowToChoose::Single,
                 StyleSheet::default(),

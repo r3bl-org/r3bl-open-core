@@ -716,12 +716,12 @@ async fn test_display_tree() -> miette::Result<()> {
     // Limit to TEST_ITEM_LIMIT items for deterministic testing
     file_walker::display_tree(path, &mut shared_writer, false, Some(TEST_ITEM_LIMIT))
         .await
-        .unwrap();
+        .expect("conversion error");
 
     assert_eq!(shared_writer.buffer.len(), 0);
 
     drop(shared_writer);
-    let output_lines = collector_task.await.unwrap();
+    let output_lines = collector_task.await.expect("conversion error");
 
     // Verify we got the expected number of items (or fewer if filesystem is smaller)
     assert!(!output_lines.is_empty());

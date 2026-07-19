@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::OfsBuf;
-use crate::{RingBuffer, RingBufferStack, Size};
+use crate::{Flat2DArray, PixelChar, RingBuffer, RingBufferStack, VPSize};
 
 const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 
@@ -12,15 +12,18 @@ const OFFSCREEN_BUFFER_POOL_SIZE: usize = 3;
 #[derive(Debug)]
 pub struct OfsBufPool {
     pub pool: RingBufferStack<OfsBuf, OFFSCREEN_BUFFER_POOL_SIZE>,
-    pub window_size: Size,
+    pub window_size: VPSize,
 }
 
 impl OfsBufPool {
     #[must_use]
-    pub fn new(window_size: Size) -> Self {
+    pub fn new(window_size: VPSize) -> Self {
         let mut pool = RingBufferStack::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            pool.add(OfsBuf::new_empty(window_size));
+            pool.add(OfsBuf::new(Flat2DArray::new_empty(
+                window_size,
+                PixelChar::Spacer,
+            )));
         }
 
         Self { pool, window_size }
@@ -29,7 +32,10 @@ impl OfsBufPool {
     /// Gets a buffer from the pool. If the pool is empty, a new buffer is created.
     pub fn take(&mut self) -> Option<OfsBuf> {
         if self.pool.is_empty() {
-            Some(OfsBuf::new_empty(self.window_size))
+            Some(OfsBuf::new(Flat2DArray::new_empty(
+                self.window_size,
+                PixelChar::Spacer,
+            )))
         } else {
             self.pool.pop()
         }
@@ -49,7 +55,7 @@ impl OfsBufPool {
 
     /// Resize the buffers in the pool. This will drop all buffers in the pool and create
     /// new ones with the new size.
-    pub fn resize(&mut self, new_window_size: Size) {
+    pub fn resize(&mut self, new_window_size: VPSize) {
         if self.window_size != new_window_size {
             self.window_size = new_window_size;
             self.rebuild_pool();
@@ -59,7 +65,10 @@ impl OfsBufPool {
     fn rebuild_pool(&mut self) {
         self.pool.clear();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            self.pool.push(OfsBuf::new_empty(self.window_size));
+            self.pool.push(OfsBuf::new(Flat2DArray::new_empty(
+                self.window_size,
+                PixelChar::Spacer,
+            )));
         }
     }
 
@@ -74,11 +83,11 @@ impl OfsBufPool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{height, width};
+    use crate::{vp_height, vp_width};
 
     #[test]
     fn test_ofs_buf_pool_new() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert_eq!(pool.window_size, window_size);
@@ -86,45 +95,45 @@ mod tests {
 
     #[test]
     fn test_ofs_buf_pool_take_give_back() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
 
-        let buffer = pool.take().unwrap();
+        let buffer = pool.take().expect("conversion error");
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE - 1);
 
         pool.give_back(buffer);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
 
-        let _unused: OfsBuf = pool.take().unwrap();
+        let _unused: OfsBuf = pool.take().expect("conversion error");
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE - 1);
     }
 
     #[test]
     fn test_ofs_buf_pool_resize() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert_eq!(pool.window_size, window_size);
-        let item = pool.take().unwrap();
+        let item = pool.take().expect("conversion error");
         assert_eq!(item.get_window_size(), window_size);
 
-        let new_window_size = width(20) + height(10);
+        let new_window_size = vp_width(20) + vp_height(10);
         pool.resize(new_window_size);
         assert_eq!(pool.window_size, new_window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
-        let item = pool.take().unwrap();
+        let item = pool.take().expect("conversion error");
         assert_eq!(item.get_window_size(), new_window_size);
     }
 
     #[test]
     fn test_ofs_buf_pool_is_empty() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let mut pool = OfsBufPool::new(window_size);
         assert_eq!(pool.len(), OFFSCREEN_BUFFER_POOL_SIZE);
         assert!(!pool.is_empty());
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            pool.take().unwrap();
+            pool.take().expect("conversion error");
         }
         assert_eq!(pool.len(), 0);
         assert!(pool.is_empty());
@@ -132,19 +141,19 @@ mod tests {
 
     #[test]
     fn test_ofs_buf_pool_give_back_when_full() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let mut pool = OfsBufPool::new(window_size);
 
         // Take all buffers from the pool.
         let mut taken_buffers = Vec::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            taken_buffers.push(pool.take().unwrap());
+            taken_buffers.push(pool.take().expect("conversion error"));
         }
         assert_eq!(pool.len(), 0);
         assert!(pool.is_empty());
 
         // Give back one buffer to fill the pool.
-        pool.give_back(taken_buffers.pop().unwrap());
+        pool.give_back(taken_buffers.pop().expect("conversion error"));
         assert_eq!(pool.len(), 1);
 
         // Give back the rest of the buffers. The first one should be dropped.
@@ -156,12 +165,12 @@ mod tests {
 
     #[test]
     fn test_ofs_buf_pool_take_returns_some_when_empty() {
-        let window_size = width(10) + height(5);
+        let window_size = vp_width(10) + vp_height(5);
         let mut pool = OfsBufPool::new(window_size);
 
         // Take all buffers from the pool.
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            pool.take().unwrap();
+            pool.take().expect("conversion error");
         }
 
         // The pool is now empty.

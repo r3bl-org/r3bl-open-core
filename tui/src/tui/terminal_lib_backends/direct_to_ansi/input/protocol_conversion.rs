@@ -45,8 +45,8 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-            MouseInput, MouseInputKind, Pos, SpecialKey,
+use crate::{Button, FocusEvent, FunctionKey, InputEvent, Key, KeyPress, KeyState,
+            ModifierKeysMask, MouseInput, MouseInputKind, SpecialKey, VPSize,
             core::ansi::vt_100_terminal_input_parser::{VT100FocusStateIR,
                                                        VT100InputEventIR,
                                                        VT100KeyCodeIR,
@@ -62,14 +62,15 @@ use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKey
 /// - **Mouse**: [`VT100InputEventIR::Mouse`] → [`InputEvent::Mouse`]
 ///   - Converts button types: [`VT100MouseButtonIR::Left`] → [`Button::Left`]
 ///   - Converts actions: [`VT100MouseActionIR::Press`] → [`MouseInputKind::MouseDown`]
-///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`Pos`]
+///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`VPPos`]
 /// - **Resize**: [`VT100InputEventIR::Resize`] → [`InputEvent::Resize`]
 /// - **Focus**: [`VT100InputEventIR::Focus`] → [`InputEvent::Focus`]
 /// - **Paste**: Should never be called (handled by state machine in `next()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
 ///
-/// [`TermPos`]: crate::TermPos
+/// [`TermPos`]: crate::core::TermPos
+/// [`VPPos`]: crate::VPPos
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
 pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent> {
@@ -134,15 +135,8 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
                 None
             };
 
-            // Convert TermPos to Pos (convert from 1-based to 0-based)
-            // TermCol and TermRow have built-in conversion to 0-based indices
-            let canonical_pos = Pos {
-                col_index: pos.col.to_zero_based(),
-                row_index: pos.row.to_zero_based(),
-            };
-
             let mouse_input = MouseInput {
-                pos: canonical_pos,
+                pos: pos.into(),
                 kind,
                 maybe_modifier_keys,
             };
@@ -151,7 +145,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
         VT100InputEventIR::Resize {
             col_width,
             row_height,
-        } => Some(InputEvent::Resize(crate::Size {
+        } => Some(InputEvent::Resize(VPSize {
             col_width,
             row_height,
         })),
@@ -192,7 +186,7 @@ fn convert_key_code_to_keypress(
     let key = match code {
         VT100KeyCodeIR::Char(ch) => Key::Character(ch),
         VT100KeyCodeIR::Function(n) => {
-            use crate::FunctionKey;
+            use FunctionKey;
             match n {
                 1 => Key::FunctionKey(FunctionKey::F1),
                 2 => Key::FunctionKey(FunctionKey::F2),
@@ -246,7 +240,7 @@ fn convert_key_code_to_keypress(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColWidth, FunctionKey, RowHeight, TermPos, col, row};
+    use crate::{FunctionKey, NarrowingCastToU16, TermPos, VPWidth, VPHeight};
 
     // MARK: Keyboard conversion tests
 
@@ -674,9 +668,9 @@ mod tests {
     fn test_convert_mouse_position_conversion() {
         // Test 1-based TermPos → 0-based Pos conversion
         let test_cases = vec![
-            (TermPos::from_one_based(1, 1), col(0) + row(0)),
-            (TermPos::from_one_based(5, 10), col(4) + row(9)),
-            (TermPos::from_one_based(80, 24), col(79) + row(23)),
+            (TermPos::from_one_based(1, 1), crate::vp_pos(0, 0)),
+            (TermPos::from_one_based(5, 10), crate::vp_pos(4, 9)),
+            (TermPos::from_one_based(80, 24), crate::vp_pos(79, 23)),
         ];
 
         for (term_pos, expected_pos) in test_cases {
@@ -718,7 +712,7 @@ mod tests {
         match convert_input_event(vt100_event) {
             Some(InputEvent::Mouse(mouse_input)) => {
                 assert!(mouse_input.maybe_modifier_keys.is_some());
-                let mask = mouse_input.maybe_modifier_keys.unwrap();
+                let mask = mouse_input.maybe_modifier_keys.expect("conversion error");
                 assert_eq!(mask.shift_key_state, KeyState::Pressed);
                 assert_eq!(mask.ctrl_key_state, KeyState::NotPressed);
                 assert_eq!(mask.alt_key_state, KeyState::NotPressed);
@@ -757,20 +751,20 @@ mod tests {
 
         for (cols, rows) in test_cases {
             let vt100_event = VT100InputEventIR::Resize {
-                col_width: ColWidth::from(cols),
-                row_height: RowHeight::from(rows),
+                col_width: VPWidth::from((cols).as_u16_narrowing()),
+                row_height: VPHeight::from((rows).as_u16_narrowing()),
             };
 
             match convert_input_event(vt100_event) {
                 Some(InputEvent::Resize(size)) => {
                     assert_eq!(
                         size.col_width,
-                        ColWidth::from(cols),
+                        VPWidth::from((cols).as_u16_narrowing()),
                         "Column width mismatch for cols={cols}"
                     );
                     assert_eq!(
                         size.row_height,
-                        RowHeight::from(rows),
+                        VPHeight::from((rows).as_u16_narrowing()),
                         "Row height mismatch for rows={rows}"
                     );
                 }

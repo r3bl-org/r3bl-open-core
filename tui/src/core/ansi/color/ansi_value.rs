@@ -9,7 +9,7 @@
 
 use super::{RgbValue,
             convert::{ansi_constants::ANSI_COLOR_PALETTE, convert_rgb_into_grayscale}};
-use crate::TransformColor;
+use crate::{NarrowingCastToU8, TransformColor, WideningCastToUsize};
 
 /// Represents a color in the [`ANSI`] 256-color palette format.
 ///
@@ -23,43 +23,41 @@ pub struct AnsiValue {
 }
 
 impl From<u8> for AnsiValue {
-    fn from(index: u8) -> Self { Self { index } }
+    fn from(index: u8) -> AnsiValue { AnsiValue { index } }
 }
 
 impl From<u16> for AnsiValue {
-    fn from(value: u16) -> Self {
+    fn from(value: u16) -> AnsiValue {
         debug_assert!(
             value <= 255,
             "AnsiValue must represent a valid 256-color palette index (0-255), got {value}"
         );
-        #[allow(clippy::cast_possible_truncation)]
-        let index = value as u8;
-        Self { index }
+        let index = value.as_u8_narrowing();
+        AnsiValue { index }
     }
 }
 
 impl From<i32> for AnsiValue {
-    fn from(value: i32) -> Self {
+    fn from(value: i32) -> AnsiValue {
         debug_assert!(
             (0..=255).contains(&value),
             "AnsiValue must represent a valid 256-color palette index (0-255), got {value}"
         );
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let index = value as u8;
-        Self { index }
+        let index = value.as_u8_narrowing();
+        AnsiValue { index }
     }
 }
 
 impl TransformColor for AnsiValue {
     fn as_grayscale(&self) -> AnsiValue {
-        let index = self.index as usize;
+        let index = self.index.as_usize_widening();
         let rgb = ANSI_COLOR_PALETTE[index];
         let rgb = RgbValue::from(rgb);
         AnsiValue::from(convert_rgb_into_grayscale(rgb))
     }
 
     fn as_rgb(&self) -> RgbValue {
-        let index = self.index as usize;
+        let index = self.index.as_usize_widening();
         ANSI_COLOR_PALETTE[index].into()
     }
 

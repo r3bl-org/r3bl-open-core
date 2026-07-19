@@ -10,9 +10,10 @@
 
 use super::constants::{DEFAULT_WIDTH, ERR_MSG_BOTH_NOT_INTERACTIVE,
                        ERR_MSG_STDIN_NOT_INTERACTIVE, ERR_MSG_STDOUT_NOT_INTERACTIVE};
-use crate::{AtomicU8Ext as _, ColWidth, IntoErr, Size,
+use crate::{AtomicU8Ext as _, IntoErr,
             TTYResult::{IsInteractive, IsNotInteractive},
-            TtyStatus, height, is_tty_stderr, is_tty_stdin, is_tty_stdout, width};
+            TtyStatus, VPSize, VPWidth, is_tty_stderr, is_tty_stdin, is_tty_stdout,
+            vp_height, vp_width};
 use miette::IntoDiagnostic;
 use std::{io::Write, sync::atomic::AtomicU8};
 
@@ -117,7 +118,9 @@ impl TerminalNotInteractiveReason {
 }
 
 impl IntoErr for TerminalNotInteractiveReason {
-    fn into_err<T>(self) -> miette::Result<T> { miette::bail!("{}", self.as_err_msg()) }
+    fn into_err<T>(self) -> miette::Result<T> {
+        Err(miette::miette!("{}", self.as_err_msg()))
+    }
 }
 
 /// Tracks whether [`emit_stderr_redirection_disclaimer()`] has already run.
@@ -125,7 +128,7 @@ impl IntoErr for TerminalNotInteractiveReason {
 static DISCLAIMER_ALREADY_EMITTED: AtomicU8 = AtomicU8::new(0);
 
 #[must_use]
-pub fn get_terminal_width_no_default() -> Option<ColWidth> {
+pub fn get_terminal_width_no_default() -> Option<VPWidth> {
     match get_size() {
         Ok(size) => Some(size.col_width),
         Err(_) => None,
@@ -134,10 +137,10 @@ pub fn get_terminal_width_no_default() -> Option<ColWidth> {
 
 /// Gets the terminal width. If there is a problem, return `DEFAULT_WIDTH`.
 #[must_use]
-pub fn get_terminal_width() -> ColWidth {
+pub fn get_terminal_width() -> VPWidth {
     match get_size() {
         Ok(size) => size.col_width,
-        Err(_) => width(DEFAULT_WIDTH),
+        Err(_) => vp_width(DEFAULT_WIDTH),
     }
 }
 
@@ -154,14 +157,14 @@ pub fn get_terminal_width() -> ColWidth {
 /// - The terminal size cannot be determined.
 /// - The terminal is not available or not a [`TTY`].
 ///
-/// [`Crossterm backend`]: crate::TerminalLibBackend::Crossterm
+/// [`Crossterm backend`]: crate::tui::TerminalLibBackend::Crossterm
 /// [`crossterm`]: crossterm
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`rustix`]: rustix
 /// [`tcgetwinsize`]: fn@rustix::termios::tcgetwinsize
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-pub fn get_size() -> miette::Result<Size> {
+pub fn get_size() -> miette::Result<VPSize> {
     #[cfg(unix)]
     {
         use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
@@ -169,19 +172,19 @@ pub fn get_size() -> miette::Result<Size> {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
-                Ok(width(columns) + height(rows))
+                Ok(vp_width(columns) + vp_height(rows))
             }
             TerminalLibBackend::DirectToAnsi => {
                 let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
                     .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
-                Ok(width(winsize.ws_col) + height(winsize.ws_row))
+                Ok(vp_width(winsize.ws_col) + vp_height(winsize.ws_row))
             }
         }
     }
     #[cfg(not(unix))]
     {
         let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
-        Ok(width(columns) + height(rows))
+        Ok(vp_width(columns) + vp_height(rows))
     }
 }
 
@@ -228,8 +231,8 @@ pub fn is_input_interactive() -> TTYResult {
 /// [`DisplayPreference::Stderr`]: crate::DisplayPreference::Stderr
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
 /// [`PTYMux`]: crate::pty_mux::PTYMux
-/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
-/// [`Spinner`]: crate::Spinner
+/// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
+/// [`Spinner`]: crate::readline_async::Spinner
 /// [`stderr`]: std::io::stderr
 /// [`stdout`]: std::io::stdout
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)

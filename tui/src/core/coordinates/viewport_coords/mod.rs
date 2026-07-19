@@ -1,0 +1,69 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+//! 0-based viewport coordinates for internal application logic.
+//!
+//! This module provides coordinate types used for:
+//! - Indexing into [`OfsBuf`] and [`ZeroCopyGapBuffer`]
+//! - Internal TUI framework logic
+//! - Crossterm terminal operations (0-based, converts to [`u16`])
+//!
+//! All types in this module use 0-based indexing and wrap [`ChUnit`] ([`u16`]).
+//!
+//! # Core Types
+//!
+//! **Generic coordinate types**:
+//! - [`VPIndex`]: Generic 0-based position type in viewport space
+//! - [`VPLength`]: Generic 1-based size/count type in viewport space
+//!
+//! **Concrete index types (0-based positions)**:
+//! - [`VPCol`]: Column position (0-based)
+//! - [`VPRow`]: Row position (0-based)
+//!
+//! **Concrete dimension types (1-based sizes)**:
+//! - [`VPWidth`]: Column width/count (1-based)
+//! - [`VPHeight`]: Row height/count (1-based)
+//!
+//! **Composite types**:
+//! - [`VPPos`]: Position combining row and column indices
+//! - [`VPSize`]: Dimension combining width and height
+//! - [`VPCaret`], [`CCaret`]: Cursor position with scroll adjustment semantics
+//!
+//! # Macros
+//!
+//! This module includes declarative macros for generating boilerplate implementations:
+//! - [`generate_index_type_impl!`]: For index types (0-based)
+//! - [`generate_length_type_impl!`]: For length/dimension types (1-based)
+//!
+//! [`ChUnit`]: crate::ChUnit
+//! [`generate_index_type_impl!`]: crate::generate_index_type_impl
+//! [`generate_length_type_impl!`]: crate::generate_length_type_impl
+//! [`OfsBuf`]: crate::tui::OfsBuf
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+
+#![rustfmt::skip]
+
+// Attach source files.
+pub mod bounding_box;
+pub mod caret;
+pub mod col_index;
+pub mod col_width;
+pub mod index;
+pub mod index_and_length_impl_macros;
+pub mod length;
+pub mod pos;
+pub mod row_height;
+pub mod row_index;
+pub mod size;
+
+// Re-export types and constructors.
+pub use bounding_box::*;
+pub use caret::*;
+pub use col_index::*;
+pub use col_width::*;
+pub use index::*;
+pub use length::*;
+pub use pos::*;
+pub use row_height::*;
+pub use row_index::*;
+pub use size::*;
+

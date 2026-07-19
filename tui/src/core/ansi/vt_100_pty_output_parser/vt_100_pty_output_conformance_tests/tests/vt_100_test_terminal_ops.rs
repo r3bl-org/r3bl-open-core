@@ -11,7 +11,9 @@
 //! [`ESC`]: crate::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{PixelCharLine, CharacterSet, ColIndex, EscSequence, Pos, RowIndex, TuiStyle, ch};
+use crate::{CharacterSet, EscSequence, PixelChar, PixelCharLine, TuiStyle, VPPos,
+            test_fixture_growable_buffer_for_conformance_tests::TestGrowableBufferExt,
+            vp_col, vp_row, vp_width};
 
 /// Tests for RIS (Reset to Initial State) operations.
 pub mod reset_initial_state {
@@ -22,15 +24,14 @@ pub mod reset_initial_state {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Move cursor to non-origin position
-        ofs_buf_vt_100.set_cursor_pos(
-            Pos::new((RowIndex::new(ch(5)), ColIndex::new(ch(3)))));
+        ofs_buf_vt_100.set_cursor_pos(vp_row(5) + vp_col(3));
 
         // Send RIS sequence
         let ris_sequence = format!("{}", EscSequence::ResetTerminal);
         let _result = ofs_buf_vt_100.apply_ansi_bytes(ris_sequence.as_bytes());
 
         // Cursor should be reset to origin
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), Pos::default());
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), VPPos::default());
     }
 
     #[test]
@@ -38,7 +39,7 @@ pub mod reset_initial_state {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set non-default style (simplified for test)
-        ofs_buf_vt_100.parser_global_state.current_style = TuiStyle::default();
+        ofs_buf_vt_100.get_parser_global_state_mut().current_style = TuiStyle::default();
 
         // Send RIS sequence
         let ris_sequence = format!("{}", EscSequence::ResetTerminal);
@@ -46,7 +47,7 @@ pub mod reset_initial_state {
 
         // Style should be reset to default
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.current_style,
+            ofs_buf_vt_100.get_parser_global_state_mut().current_style,
             TuiStyle::default()
         );
     }
@@ -56,7 +57,8 @@ pub mod reset_initial_state {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Set DEC graphics character set
-        ofs_buf_vt_100.parser_global_state.character_set = CharacterSet::DECGraphics;
+        ofs_buf_vt_100.get_parser_global_state_mut().character_set =
+            CharacterSet::DECGraphics;
 
         // Send RIS sequence
         let ris_sequence = format!("{}", EscSequence::ResetTerminal);
@@ -64,7 +66,7 @@ pub mod reset_initial_state {
 
         // Character set should be reset to ASCII
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
     }
@@ -74,31 +76,37 @@ pub mod reset_initial_state {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Move cursor away from origin
-        ofs_buf_vt_100.set_cursor_pos(
-            Pos::new((RowIndex::new(ch(3)), ColIndex::new(ch(5)))));
+        ofs_buf_vt_100.set_cursor_pos(vp_row(3) + vp_col(5));
 
         // Send RIS sequence
         let ris_sequence = format!("{}", EscSequence::ResetTerminal);
         let _result = ofs_buf_vt_100.apply_ansi_bytes(ris_sequence.as_bytes());
 
         // Verify basic reset occurred
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), Pos::default());
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), VPPos::default());
     }
 
     #[test]
     fn test_ris_clears_scrollback() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
-        
-        // Add a line to the scrollback buffer
-        ofs_buf_vt_100.scrollback_buffer.push_and_enforce_limit(PixelCharLine::new_empty(0));
-        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 1);
+
+        ofs_buf_vt_100
+            .primary_buffer_mut()
+            .get_lines_mut()
+            .push_back(PixelCharLine::new_empty(vp_width(0), PixelChar::Spacer));
+        // Update viewport_row_offset
+        ofs_buf_vt_100
+            .primary_buffer_mut()
+            .get_viewport_mut()
+            .increment_history_len();
+        assert_eq!(ofs_buf_vt_100.get_primary_buffer().get_lines().len(), 11);
 
         // Send RIS sequence
         let ris_sequence = format!("{}", EscSequence::ResetTerminal);
         let _result = ofs_buf_vt_100.apply_ansi_bytes(ris_sequence.as_bytes());
 
-        // Verify scrollback was cleared
-        assert_eq!(ofs_buf_vt_100.scrollback_buffer.lines.len(), 0);
+        // Verify scrollback was cleared, leaving viewport
+        assert_eq!(ofs_buf_vt_100.get_primary_buffer().get_lines().len(), 10);
     }
 }
 
@@ -111,7 +119,8 @@ pub mod character_set_selection {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Start with DEC graphics
-        ofs_buf_vt_100.parser_global_state.character_set = CharacterSet::DECGraphics;
+        ofs_buf_vt_100.get_parser_global_state_mut().character_set =
+            CharacterSet::DECGraphics;
 
         // Select ASCII character set (ESC ( B)
         let ascii_sequence = format!("{}", EscSequence::SelectAscii);
@@ -119,7 +128,7 @@ pub mod character_set_selection {
 
         // Character set should be ASCII
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
     }
@@ -129,7 +138,7 @@ pub mod character_set_selection {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Start with ASCII
-        ofs_buf_vt_100.parser_global_state.character_set = CharacterSet::Ascii;
+        ofs_buf_vt_100.get_parser_global_state_mut().character_set = CharacterSet::Ascii;
 
         // Select DEC graphics character set (ESC ( 0)
         let graphics_sequence = format!("{}", EscSequence::SelectDECGraphics);
@@ -137,7 +146,7 @@ pub mod character_set_selection {
 
         // Character set should be DEC graphics
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::DECGraphics
         );
     }
@@ -148,21 +157,22 @@ pub mod character_set_selection {
 
         // Verify default character set
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
 
         // Switch to DEC graphics
-        ofs_buf_vt_100.parser_global_state.character_set = CharacterSet::DECGraphics;
+        ofs_buf_vt_100.get_parser_global_state_mut().character_set =
+            CharacterSet::DECGraphics;
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::DECGraphics
         );
 
         // Switch back to ASCII
-        ofs_buf_vt_100.parser_global_state.character_set = CharacterSet::Ascii;
+        ofs_buf_vt_100.get_parser_global_state_mut().character_set = CharacterSet::Ascii;
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
     }

@@ -15,21 +15,23 @@
 //!   tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_char_ops
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{CsiCount, OfsBufVT100, PixelChar, TermCol, TuiStyle,
-            core::ansi::vt_100_pty_output_parser::CsiSequence};
+            core::ansi::vt_100_pty_output_parser::CsiSequence, vp_row};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
 fn create_alphabet_buffer() -> OfsBufVT100 {
     let mut buf = create_test_ofs_buf_10r_by_10c();
     let alphabet = "ABCDEFGHIJ";
     for (i, ch) in alphabet.chars().enumerate() {
-        buf.ofs_buf.get_row_mut(0).unwrap()[i] = PixelChar::PlainText {
+        buf.primary_buffer_mut()
+            .get_row_mut(vp_row(0))
+            .expect("conversion error")[i] = PixelChar::PlainText {
             display_char: ch,
             style: TuiStyle::default(),
         };
@@ -65,7 +67,8 @@ pub mod delete_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(3)),
         ); // Move to column 3 (1-based)
-        let delete_chars = CsiSequence::DeleteChar(CsiCount::new(3).unwrap());
+        let delete_chars =
+            CsiSequence::DeleteChar(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{delete_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -82,7 +85,8 @@ pub mod delete_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(9)),
         ); // Move to column 9 (1-based)
-        let delete_chars = CsiSequence::DeleteChar(CsiCount::new(5).unwrap());
+        let delete_chars =
+            CsiSequence::DeleteChar(CsiCount::new(5).expect("conversion error"));
         let sequence = format!("{move_cursor}{delete_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -137,7 +141,8 @@ pub mod insert_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(3)),
         ); // Move to column 3 (1-based)
-        let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
+        let insert_chars =
+            CsiSequence::InsertChar(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{insert_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -154,7 +159,8 @@ pub mod insert_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(9)),
         ); // Move to column 9 (1-based)
-        let insert_chars = CsiSequence::InsertChar(CsiCount::new(3).unwrap());
+        let insert_chars =
+            CsiSequence::InsertChar(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{insert_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -209,7 +215,8 @@ pub mod erase_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(3)),
         ); // Move to column 3 (1-based)
-        let erase_chars = CsiSequence::EraseChar(CsiCount::new(3).unwrap());
+        let erase_chars =
+            CsiSequence::EraseChar(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{erase_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -225,7 +232,8 @@ pub mod erase_char {
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(
             TermCol::from_raw_non_zero_value(nz(9)),
         ); // Move to column 9 (1-based)
-        let erase_chars = CsiSequence::EraseChar(CsiCount::new(5).unwrap());
+        let erase_chars =
+            CsiSequence::EraseChar(CsiCount::new(5).expect("conversion error"));
         let sequence = format!("{move_cursor}{erase_chars}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 

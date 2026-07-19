@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{GCStringOwned, u16};
+use rustc_hash::FxHashMap;
 use sha2::{Digest, Sha256};
-use std::{collections::{HashMap, hash_map::Entry},
+use std::{collections::hash_map::Entry,
           fmt::{Display, Formatter},
           str::FromStr};
 
@@ -19,10 +20,10 @@ use std::{collections::{HashMap, hash_map::Entry},
 ///
 /// # Example
 /// ```
-/// use std::collections::HashMap;
+/// use rustc_hash::FxHashMap;
 /// use r3bl_tui::StringLength;
 /// let input = "\u{1b}[31mfoo\u{1b}[0m";
-/// let mut memoized_len_map = HashMap::new();
+/// let mut memoized_len_map = FxHashMap::default();
 ///
 /// let length = StringLength::StripAnsi.calculate(input, &mut memoized_len_map);
 /// assert_eq!(length, 3);
@@ -35,7 +36,7 @@ pub enum StringLength {
     Unicode,
 }
 
-pub type MemoizedLenMap = HashMap<String, u16>;
+pub type MemoizedLenMap = FxHashMap<String, u16>;
 
 impl StringLength {
     /// If the input can't be found in the memoized map, calculate the length and store
@@ -140,7 +141,7 @@ mod tests {
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {
         let input = "\u{1b}[31mfoo\u{1b}[0m";
-        let memoized_len_map = &mut MemoizedLenMap::new();
+        let memoized_len_map = &mut MemoizedLenMap::default();
 
         assert!(!memoized_len_map.contains_key(input));
 
@@ -162,7 +163,7 @@ mod tests {
     #[test]
     fn test_unicode_string_len_no_cache() {
         let input = "foo";
-        let memoized_len_map = &mut MemoizedLenMap::new();
+        let memoized_len_map = &mut MemoizedLenMap::default();
 
         assert!(!memoized_len_map.contains_key(input));
 

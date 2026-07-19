@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ModifierKeysMask, try_convert_key_modifiers};
-use crate::{Pos, col, row};
+use crate::{VPPos, vp_col, vp_row};
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 
 /// Represents a mouse input event in the terminal.
@@ -13,10 +13,10 @@ use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 /// # Example
 ///
 /// ```rust
-/// use r3bl_tui::{MouseInput, MouseInputKind, Button, Pos, col, row};
+/// use r3bl_tui::{vp_col, vp_row, Button, MouseInput, MouseInputKind, VPPos};
 ///
 /// let mouse_click = MouseInput {
-///     pos: col(10) + row(5),
+///     pos: (vp_col(10) + vp_row(5)).into(),
 ///     kind: MouseInputKind::MouseDown(Button::Left),
 ///     maybe_modifier_keys: None,
 /// };
@@ -24,7 +24,7 @@ use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub struct MouseInput {
     /// The position in the terminal where the mouse event occurred.
-    pub pos: Pos,
+    pub pos: VPPos,
     /// The specific type of mouse event (click, move, scroll, etc.).
     pub kind: MouseInputKind,
     /// Optional modifier keys (Ctrl, Alt, Shift) held during the event.
@@ -95,8 +95,8 @@ pub enum Button {
 }
 
 impl From<MouseEvent> for MouseInput {
-    fn from(mouse_event: MouseEvent) -> Self {
-        let pos = col(mouse_event.column) + row(mouse_event.row);
+    fn from(mouse_event: MouseEvent) -> MouseInput {
+        let pos = vp_col(mouse_event.column) + vp_row(mouse_event.row);
         let maybe_modifier_keys = try_convert_key_modifiers(&mouse_event.modifiers);
         let kind: MouseInputKind = mouse_event.kind.into();
         MouseInput {
@@ -108,7 +108,7 @@ impl From<MouseEvent> for MouseInput {
 }
 
 impl From<MouseEventKind> for MouseInputKind {
-    fn from(mouse_event_kind: MouseEventKind) -> Self {
+    fn from(mouse_event_kind: MouseEventKind) -> MouseInputKind {
         match mouse_event_kind {
             MouseEventKind::Down(button) => MouseInputKind::MouseDown(button.into()),
             MouseEventKind::Up(button) => MouseInputKind::MouseUp(button.into()),
@@ -123,7 +123,7 @@ impl From<MouseEventKind> for MouseInputKind {
 }
 
 impl From<MouseButton> for Button {
-    fn from(mouse_button: MouseButton) -> Self {
+    fn from(mouse_button: MouseButton) -> Button {
         match mouse_button {
             MouseButton::Left => Button::Left,
             MouseButton::Right => Button::Right,

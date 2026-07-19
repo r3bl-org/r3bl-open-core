@@ -1,7 +1,9 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, Seg, SegContent, SegIndex,
-            SegLength};
+use crate::{
+    CCol, ChUnit, ContainsWideSegment, Seg, SegContent, SegIndex, SegLength, VPCol,
+    VPWidth,
+};
 use std::fmt::Display;
 
 /// Single-line grapheme-aware string trait providing core operations
@@ -41,7 +43,7 @@ pub trait GraphemeString {
     fn segments(&self) -> &[Seg];
 
     /// Gets the total display width of the string
-    fn display_width(&self) -> ColWidth;
+    fn display_width(&self) -> VPWidth;
 
     /// Gets the number of grapheme cluster segments
     fn segment_count(&self) -> SegLength;
@@ -55,18 +57,18 @@ pub trait GraphemeString {
     fn get_seg(&self, index: SegIndex) -> Option<Seg>;
 
     /// Checks if a column position falls in the middle of a grapheme cluster
-    fn check_is_in_middle_of_grapheme(&self, col: ColIndex) -> Option<Seg>;
+    fn check_is_in_middle_of_grapheme(&self, col: VPCol) -> Option<Seg>;
 
     // Zero-copy segment content access.
 
     /// Gets segment content at a specific column position
-    fn get_seg_at(&self, col: ColIndex) -> Option<SegContent<'_>>;
+    fn get_seg_at(&self, col: VPCol) -> Option<SegContent<'_>>;
 
     /// Gets segment content to the right of a column position
-    fn get_seg_right_of(&self, col: ColIndex) -> Option<SegContent<'_>>;
+    fn get_seg_right_of(&self, col: VPCol) -> Option<SegContent<'_>>;
 
     /// Gets segment content to the left of a column position
-    fn get_seg_left_of(&self, col: ColIndex) -> Option<SegContent<'_>>;
+    fn get_seg_left_of(&self, col: VPCol) -> Option<SegContent<'_>>;
 
     /// Gets the last segment content
     fn get_seg_at_end(&self) -> Option<SegContent<'_>>;
@@ -74,16 +76,16 @@ pub trait GraphemeString {
     // String operations using associated type.
 
     /// Clips the string to a range defined by start column and width
-    fn clip(&self, start_col: ColIndex, width: ColWidth) -> Self::StringSlice<'_>;
+    fn clip(&self, start_col: CCol, width: VPWidth) -> Self::StringSlice<'_>;
 
     /// Truncates from the end to fit within the given width
-    fn trunc_end_to_fit(&self, width: ColWidth) -> Self::StringSlice<'_>;
+    fn trunc_end_to_fit(&self, width: VPWidth) -> Self::StringSlice<'_>;
 
     /// Truncates from the end by the given width
-    fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_>;
+    fn trunc_end_by(&self, width: VPWidth) -> Self::StringSlice<'_>;
 
     /// Truncates from the start by the given width
-    fn trunc_start_by(&self, width: ColWidth) -> Self::StringSlice<'_>;
+    fn trunc_start_by(&self, width: VPWidth) -> Self::StringSlice<'_>;
 
     // Iterator
 
@@ -99,7 +101,7 @@ pub trait GraphemeString {
     fn last(&self) -> Option<Seg>;
 
     /// Checks if the string contains wide segments (width > 1)
-    fn contains_wide_segments(&self) -> ContainsWideSegments;
+    fn contains_wide_segment(&self) -> ContainsWideSegment;
 }
 
 /// Mutation operations for single-line strings using associated types
@@ -109,20 +111,19 @@ pub trait GraphemeStringMut: GraphemeString {
     type MutResult;
 
     /// Inserts text at a specific column position
-    fn insert_text(&mut self, col: ColIndex, text: &str) -> Option<Self::MutResult>;
+    fn insert_text(&mut self, col: VPCol, text: &str) -> Option<Self::MutResult>;
 
     /// Deletes a range of text between two column positions
-    fn delete_range(&mut self, start: ColIndex, end: ColIndex)
-    -> Option<Self::MutResult>;
+    fn delete_range(&mut self, start: VPCol, end: VPCol) -> Option<Self::MutResult>;
 
     /// Replaces a range of text with new text
     fn replace_range(
         &mut self,
-        start: ColIndex,
-        end: ColIndex,
+        start: VPCol,
+        end: VPCol,
         text: &str,
     ) -> Option<Self::MutResult>;
 
     /// Truncates the string at a specific column position
-    fn truncate(&mut self, col: ColIndex) -> Option<Self::MutResult>;
+    fn truncate(&mut self, col: VPCol) -> Option<Self::MutResult>;
 }

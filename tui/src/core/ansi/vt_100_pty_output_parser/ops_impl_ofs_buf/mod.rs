@@ -44,7 +44,7 @@
 //! - [`vt_100_impl_scroll_ops`] - Scrolling operations
 //! - [`vt_100_impl_sgr_ops`] - Select Graphic Rendition operations (styling)
 //! - [`vt_100_impl_terminal_ops`] - Terminal state operations (reset, clear, charset)
-//! - [`vt_100_impl_ansi_scroll_helper`] - [`ANSI`] scroll region helper utilities
+//! - [`vt_100_impl_ansi_panning`] - [`ANSI`] scroll region helper utilities
 //!
 //! # Testing Approach
 //!
@@ -111,7 +111,7 @@
 //! [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 //! [`OfsBufVT100`]: crate::core::ansi::vt_100_pty_output_parser::OfsBufVT100
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_impl_ansi_scroll_helper`]: vt_100_impl_ansi_scroll_helper
+//! [`vt_100_impl_ansi_panning`]: vt_100_impl_ansi_panning
 //! [`vt_100_impl_char_ops`]: vt_100_impl_char_ops
 //! [`vt_100_impl_control_ops`]: vt_100_impl_control_ops
 //! [`vt_100_impl_cursor_ops`]: vt_100_impl_cursor_ops
@@ -140,9 +140,9 @@ pub const TAB_STOP_WIDTH: usize = 8;
 // the parser shim layer. Making them conditionally public allows rustdoc links
 // to work while keeping them private in release builds.
 #[cfg(any(test, doc))]
-pub mod vt_100_impl_ansi_scroll_helper;
+pub mod vt_100_impl_ansi_panning;
 #[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_ansi_scroll_helper;
+pub(super) mod vt_100_impl_ansi_panning;
 
 #[cfg(any(test, doc))]
 pub mod vt_100_impl_char_ops;

@@ -13,16 +13,16 @@
 //!   tests)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_line_ops
 //! [`vt_100_impl_line_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_line_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CsiCount, col,
+use crate::{CsiCount,
             core::ansi::vt_100_pty_output_parser::{CsiSequence,
                                                    ansi_parser_public_api::AnsiToOfsBufPerformer},
-            row, term_col, term_row};
+            term_col, term_row, vp_col, vp_row};
 
 /// Tests for Insert Line (IL) operations.
 pub mod insert_line {
@@ -53,7 +53,8 @@ pub mod insert_line {
 
         // Move cursor to row 1 (0-based) and insert three lines
         let move_cursor = term_row(nz(2)) + term_col(nz(1)); // Move to row 2, col 1 (1-based)
-        let insert_lines = CsiSequence::InsertLine(CsiCount::new(3).unwrap());
+        let insert_lines =
+            CsiSequence::InsertLine(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{insert_lines}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -108,15 +109,17 @@ pub mod insert_line {
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
         performer
             .ofs_buf_vt_100
-            .parser_global_state
+            .get_parser_global_state_mut()
             .scroll_region_top = Some(term_row(nz(2)));
         performer
             .ofs_buf_vt_100
-            .parser_global_state
+            .get_parser_global_state_mut()
             .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 0 (outside margins)
-        performer.ofs_buf_vt_100.set_cursor_pos(row(0) + col(0));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(0) + vp_col(0));
 
         // Try to insert line: ESC[L (should be ignored)
         let insert_line_sequence = format!("{}", CsiSequence::InsertLine(CsiCount::ONE));
@@ -164,7 +167,8 @@ pub mod delete_line {
             row: term_row(nz(2)),
             col: term_col(nz(1)),
         };
-        let delete_lines = CsiSequence::DeleteLine(CsiCount::new(3).unwrap());
+        let delete_lines =
+            CsiSequence::DeleteLine(CsiCount::new(3).expect("conversion error"));
         let sequence = format!("{move_cursor}{delete_lines}");
         let _result = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
@@ -219,15 +223,17 @@ pub mod delete_line {
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
         performer
             .ofs_buf_vt_100
-            .parser_global_state
+            .get_parser_global_state_mut()
             .scroll_region_top = Some(term_row(nz(2)));
         performer
             .ofs_buf_vt_100
-            .parser_global_state
+            .get_parser_global_state_mut()
             .scroll_region_bottom = Some(term_row(nz(4)));
 
         // Move cursor to row 4 (outside margins)
-        performer.ofs_buf_vt_100.set_cursor_pos(row(4) + col(0));
+        performer
+            .ofs_buf_vt_100
+            .set_cursor_pos(vp_row(4) + vp_col(0));
 
         // Try to delete line: ESC[M (should be ignored)
         let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(CsiCount::ONE));

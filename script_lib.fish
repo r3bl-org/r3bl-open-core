@@ -2,6 +2,186 @@
 # This file contains utility functions that shared between all the `run` scripts
 # in various sub folders in this workspace.
 
+# Cross-platform check if a process is alive.
+# Uses kill -0 which works on both Linux and macOS (doesn't actually send a signal).
+# Returns: 0 if alive, 1 if not alive or invalid PID
+function is_process_alive
+    set -l pid $argv[1]
+    test -n "$pid" && kill -0 $pid 2>/dev/null
+end
+
+# ============================================================================
+# Hybrid CPU Core Topology & Parallelism Optimization
+# ============================================================================
+#
+# # Design & Architecture:
+# Modern x86_64 (Intel 12th+ Gen, AMD Zen 4/4c) and ARM64 (Apple Silicon) CPUs use hybrid
+# architectures combining high-performance Performance Cores (P-cores) with high-efficiency
+# Efficiency Cores (E-cores).
+#
+# In heavy Rust compilation workloads (`cargo check`, `cargo build`, `cargo doc`):
+# 1. Spawning jobs indiscriminately across all logical cores (`nproc`) causes heavy `rustc`
+#    and `rustdoc` processes to land on lower-clocked E-cores with smaller caches.
+# 2. In `rustdoc` (which generates thousands of HTML files and updates shared indexes like
+#    `search-index.js`), worker processes acquire an `flock` on `.lock`. When an E-core worker
+#    holds the lock, fast P-core threads stall waiting for the lock, multiplying build times.
+# 3. Allocating jobs to 75% of P-core threads ensures all build workers run on high-clock P-cores
+#    while leaving all E-cores and remaining P-threads 100% free for the terminal, IDE, and UI.
+#
+# # Algorithm:
+# - Linux: Inspects sysfs max CPU frequencies (`/sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq`).
+#   If max frequencies across cores differ by > 500 MHz (500,000 kHz), the CPU is classified as hybrid.
+#   Cores with max frequency > `(max + min) / 2` are classified as P-cores; cores <= threshold are E-cores.
+#   Fallback: If not a hybrid CPU or sysfs cpufreq is unavailable (containers/VMs), P-core count = `nproc`, E-core count = 0.
+# - macOS: Queries Darwin `sysctl -n hw.perflevel0.logicalcpu` (P-threads) and `hw.perflevel1.logicalcpu` (E-threads).
+#   Fallback: If perflevel keys don't exist (Intel Macs), P-core count = `sysctl -n hw.ncpu`, E-core count = 0.
+#
+# # Rust Migration Note (cargo-monitor / build-infra):
+# When porting this infrastructure to Rust:
+# Query `/sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq` on Linux or `libc::sysctlbyname`
+# for `hw.perflevel0.logicalcpu` / `hw.perflevel1.logicalcpu` on macOS to populate a `CpuTopology` struct
+#
+# ============================================================================
+# Documentation Synchronization Architecture
+# ============================================================================
+#
+# All documentation sync operations from staging target directories to serving
+# directories use `rsync -a` (archive mode).
+# This preserves file permissions, timestamps, and recursively syncs generated HTML.
+# Standard `rsync` does not support Copy-on-Write (`--reflink=auto`), which is a GNU `cp` flag.
+
+# Detects the number of logical threads belonging to P-cores (Performance Cores).
+#
+# Returns: Number of logical P-core threads (or total logical cores if non-hybrid).
+function detect_p_core_threads
+    switch (uname -s)
+        case Darwin
+            if sysctl -n hw.perflevel0.logicalcpu >/dev/null 2>&1
+                sysctl -n hw.perflevel0.logicalcpu
+            else
+                sysctl -n hw.ncpu
+            end
+        case '*'
+            set -l freq_files /sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq
+            if test -f "$freq_files[1]"
+                set -l freqs (cat $freq_files 2>/dev/null | sort -n)
+                if test (count $freqs) -gt 0
+                    set -l min_freq $freqs[1]
+                    set -l max_freq $freqs[-1]
+                    # If frequency difference > 500 MHz (500000 kHz), it's a hybrid CPU
+                    if test (math "$max_freq - $min_freq") -gt 500000
+                        set -l threshold (math "($max_freq + $min_freq) / 2")
+                        set -l p_count 0
+                        for f in $freq_files
+                            set -l f_val (cat $f 2>/dev/null)
+                            if test $f_val -gt $threshold
+                                set p_count (math $p_count + 1)
+                            end
+                        end
+                        if test $p_count -gt 0
+                            echo $p_count
+                            return 0
+                        end
+                    end
+                end
+            end
+            nproc
+    end
+end
+
+# Detects the number of logical threads belonging to E-cores (Efficiency Cores).
+#
+# Returns: Number of logical E-core threads (or 0 if non-hybrid CPU).
+function detect_e_core_threads
+    switch (uname -s)
+        case Darwin
+            if sysctl -n hw.perflevel1.logicalcpu >/dev/null 2>&1
+                sysctl -n hw.perflevel1.logicalcpu
+            else
+                echo 0
+            end
+        case '*'
+            set -l freq_files /sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq
+            if test -f "$freq_files[1]"
+                set -l freqs (cat $freq_files 2>/dev/null | sort -n)
+                if test (count $freqs) -gt 0
+                    set -l min_freq $freqs[1]
+                    set -l max_freq $freqs[-1]
+                    # If frequency difference > 500 MHz (500000 kHz), it's a hybrid CPU
+                    if test (math "$max_freq - $min_freq") -gt 500000
+                        set -l threshold (math "($max_freq + $min_freq) / 2")
+                        set -l e_count 0
+                        for f in $freq_files
+                            set -l f_val (cat $f 2>/dev/null)
+                            if test $f_val -le $threshold
+                                set e_count (math $e_count + 1)
+                            end
+                        end
+                        echo $e_count
+                        return 0
+                    end
+                end
+            end
+            echo 0
+    end
+end
+
+# Returns a comma-separated list of CPU IDs belonging to P-cores (Performance Cores).
+# Example: "0,1,2,3,4,5,6,7" on hybrid CPU, or "0,1,2,3...19" on non-hybrid/uniform CPU.
+#
+# Design & Architecture:
+# - On Linux:
+#   - Hybrid CPU (max vs min frequency delta > 500 MHz): identifies cores with max frequency
+#     above the mid-point threshold and returns their comma-separated IDs (e.g. "0,1,2,3,4,5,6,7").
+#   - Non-Hybrid CPU (all cores are P-cores / uniform): returns all logical CPU IDs 0..(N-1).
+#   - Fallback (VMs/containers without cpufreq sysfs): returns all logical CPU IDs 0..(N-1).
+# - On macOS (Darwin):
+#   - Returns "" (Darwin has no taskset utility; CPU thread scheduling is managed by OS QoS).
+#
+# Rust Migration Note (cargo-monitor / build-infra):
+# Map this to `CpuTopology::p_core_cpu_ids(&self) -> Vec<usize>`. On Linux, parse sysfs cpufreq
+# or fallback to `0..num_cpus`. Use `nix::sched::sched_setaffinity` with `CpuSet` instead of taskset CLI.
+function get_p_core_cpu_ids
+    if test (uname -s) != "Darwin"
+        set -l freq_files /sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq
+        if test -f "$freq_files[1]"
+            set -l freqs (cat $freq_files 2>/dev/null | sort -n)
+            if test (count $freqs) -gt 0
+                set -l min_freq $freqs[1]
+                set -l max_freq $freqs[-1]
+                # If frequency difference > 500 MHz (500000 kHz), it's a hybrid CPU
+                if test (math "$max_freq - $min_freq") -gt 500000
+                    set -l threshold (math "($max_freq + $min_freq) / 2")
+                    set -l p_cpus
+                    for f in $freq_files
+                        set -l f_val (cat $f 2>/dev/null)
+                        if test $f_val -gt $threshold
+                            set -l cpu_num (string match -r "cpu([0-9]+)" $f)[2]
+                            set -a p_cpus $cpu_num
+                        end
+                    end
+                    if test (count $p_cpus) -gt 0
+                        string join "," $p_cpus
+                        return 0
+                    end
+                end
+            end
+        end
+
+        # Non-hybrid CPU or fallback: all cores are P-cores / uniform cores.
+        # Return all available CPU IDs: 0,1,2,...,(nproc - 1)
+        set -l total_cores (nproc 2>/dev/null)
+        if test -n "$total_cores" -a "$total_cores" -gt 0
+            seq -s, 0 (math "$total_cores - 1")
+            return 0
+        end
+    end
+    echo ""
+end
+
+
+
+
 # Cross-platform file watcher that monitors filesystem changes and runs commands.
 #
 # This function provides a unified interface for file watching across macOS (fswatch)
@@ -929,33 +1109,40 @@ end
 #   the scheduler to prefer interactive processes over build processes whenever
 #   they compete for the same core.
 #
-# Why ionice -c2 -n0?
-#   Gives cargo the highest I/O priority within the best-effort class (no sudo
-#   needed). This helps when reading source files from disk. Note: builds target
-#   tmpfs ($CHECK_TARGET_DIR), so most write I/O bypasses the block layer
-#   entirely — ionice mainly affects source file reads from the SSD.
+# Priority and CPU Affinity Wrapper Function for Cargo/Rust Build Tools
+#
+# Hard CPU Affinity (Linux):
+# - On hybrid CPUs (Intel 12th+ Gen, AMD Zen 4/4c), queries get_p_core_cpu_ids to find P-core logical CPUs.
+# - Uses `taskset -c <p_cpu_ids>` to hard-lock cargo, rustc, rustdoc, and all child LLVM codegen threads
+#   exclusively to P-cores, preventing the Linux kernel scheduler from dispatching jobs onto lower-clocked E-cores.
+# - Combined with `nice -n 10` (lower CPU scheduling priority) and `ionice -c2 -n0` (best-effort high I/O priority).
+#
+# QoS Scheduler Routing (macOS):
+# - Uses `nice -n 10` to balance CPU scheduling.
 #
 # Parameters:
 #   $argv: The command and its arguments to run
-#
-# Features:
-# - Cross-platform: nice on all platforms, ionice added on Linux only
-# - Transparent: Command output and exit codes pass through unchanged
 #
 # Usage:
 #   ionice_wrapper cargo test --all-targets
 #   ionice_wrapper cargo doc --no-deps
 function ionice_wrapper
-    if command -v ionice >/dev/null 2>&1
-        # Linux: Lower CPU priority (nice 10) + higher I/O priority (ionice -c2 -n0).
-        # nice ensures interactive processes (terminal, IDE) win CPU scheduling.
-        # ionice ensures cargo still gets fast disk reads for source files.
-        nice -n 10 ionice -c2 -n0 $argv
-    else
-        # macOS/other: nice is POSIX (available on macOS), ionice is not.
-        # Still lower CPU priority so interactive processes win scheduling.
-        nice -n 10 $argv
+    set -l p_cpus (get_p_core_cpu_ids)
+    set -l cmd
+
+    if test -n "$p_cpus"; and command -v taskset >/dev/null 2>&1
+        set -a cmd taskset -c $p_cpus
     end
+
+    set -a cmd nice -n 10
+
+    if command -v ionice >/dev/null 2>&1
+        # Linux: Hard P-core CPU affinity (taskset) + lower CPU priority (nice 10) + higher I/O priority (ionice -c2 -n0).
+        set -a cmd ionice -c2 -n0
+    end
+
+    set -a cmd $argv
+    $cmd
 end
 
 # ============================================================================
@@ -1596,7 +1783,7 @@ end
 # the watch loop and catch-up detection.
 #
 # Rust migration: This would be a const Vec<&str> or similar.
-set -g SRC_DIRS cmdr/src analytics_schema/src tui/src
+set -g SRC_DIRS cmdr/src analytics_schema/src tui/src build-infra/src
 
 # Checks if source files changed since a given epoch timestamp.
 #
@@ -1632,192 +1819,6 @@ function has_source_changes_since
     test (count $changed) -gt 0
 end
 
-# ============================================================================
-# Centralized cargo doc Runner & Dep-doc Caching
-# ============================================================================
-#
-# ARCHITECTURE NOTE (for future Rust rewrite):
-# run_cargo_doc is the single source of truth for invoking `cargo doc`.
-# All doc build paths (--doc, --quick-doc, --full, --watch-doc) route through
-# here. Custom CSS is applied via RUSTDOCFLAGS env var with an absolute path
-# (not .cargo/config.toml) because rustdoc resolves --extend-css relative to
-# each crate's source directory - which fails for dependency crates outside
-# the workspace root.
-#
-# Dep-doc caching: Hash of Cargo.lock + rust-toolchain.toml, stored in the
-# FULL staging directory (tmpfs at $CHECK_TARGET_DIR_DOC_STAGING_FULL).
-# By storing it in the staging directory, it survives when the serving directory
-# is wiped by check_config_changed (which reacts to any Cargo.toml change).
-# The cache only invalidates when dependencies (Cargo.lock) or the toolchain
-# change. It self-heals on reboot (tmpfs wiped) or cargo clean (dir gone).
-#
-# DEP_DOCS_WERE_CACHED global variable pattern: check_docs_full sets this so
-# callers (check.fish --doc and --full cases) know which sync mode to use.
-# Exit codes don't work here because check_docs_full's exit code flows through
-# run_check_with_recovery (maps codes to 0=success, 1=failure, 2=recoverable)
-# and run_full_checks (aggregates 7 check results into a single code). A global
-# variable sidesteps this cleanly. Rust rewrite should use a proper return type.
-#
-# Used by: check_docs_quick, check_docs_full, build_and_sync_quick_docs,
-#          build_and_sync_full_docs
-# ============================================================================
-
-# Central cargo doc runner with custom CSS support.
-#
-# Always sets RUSTDOCFLAGS with absolute path for monospace font CSS.
-# Accepts optional --timeout=SECS for builds that need time limits.
-# All other arguments pass through to `cargo doc`.
-function run_cargo_doc
-    set -lx RUSTDOCFLAGS "--extend-css $PWD/docs/rustdoc/custom.css"
-
-    set -l timeout_secs 0
-    set -l cargo_args
-    for arg in $argv
-        if string match -q -- '--timeout=*' $arg
-            set timeout_secs (string replace -- '--timeout=' '' $arg)
-        else
-            set -a cargo_args $arg
-        end
-    end
-
-    if test "$timeout_secs" -gt 0
-        ionice_wrapper timeout --foreground $timeout_secs cargo doc $cargo_args
-    else
-        ionice_wrapper cargo doc $cargo_args
-    end
-end
-
-# Check if dependency docs are still valid (no dep changes since last full build).
-#
-# CACHE INVALIDATION:
-# Hash is based on Cargo.lock + rust-toolchain.toml. These two files capture
-# all scenarios that require rebuilding dependency docs:
-#   - Cargo.lock: dependency version changes, additions, removals
-#   - rust-toolchain.toml: toolchain changes (doc format can differ between nightlies)
-#
-# Hash file lives in the staging dir (e.g. $CHECK_TARGET_DIR_DOC_STAGING_FULL/),
-# so it survives when the serving dir ($CHECK_TARGET_DIR) is wiped by
-# check_config_changed.
-#
-# Parameters:
-#   $argv[1]: staging_dir (e.g., $CHECK_TARGET_DIR_DOC_STAGING_FULL)
-#
-# Returns: 0 if dep docs are current, 1 if they need rebuilding.
-function dep_docs_are_current
-    set -l staging_dir $argv[1]
-    set -l hash_file $staging_dir/.dep-docs-hash
-    if not test -f $hash_file
-        return 1
-    end
-    set -l current_hash (cat Cargo.lock rust-toolchain.toml 2>/dev/null | md5sum | cut -d' ' -f1)
-    set -l stored_hash (cat $hash_file)
-    test "$current_hash" = "$stored_hash"
-end
-
-# Update dep docs hash after successful full build.
-#
-# Parameters:
-#   $argv[1]: staging_dir (e.g., $CHECK_TARGET_DIR_DOC_STAGING_FULL)
-function update_dep_docs_hash
-    set -l staging_dir $argv[1]
-    cat Cargo.lock rust-toolchain.toml 2>/dev/null | md5sum | cut -d' ' -f1 > $staging_dir/.dep-docs-hash
-end
-
-# Builds quick docs (workspace-wide) and syncs to serving directory.
-#
-# PURPOSE:
-# Provides fast feedback (~5-7s) when a user modifies documentation. This is
-# the first build that runs after a file change, giving the user immediate
-# visual feedback on their doc changes.
-#
-# TRADE-OFF: SPEED VS LINK CORRECTNESS
-# This build uses `cargo doc --workspace --no-deps` which is fast but produces
-# no external crate links. For example:
-#   - Broken: href="crossterm" (relative path that doesn't exist)
-#   - Correct: href="../crossterm/index.html" (only from full build)
-#
-# This is acceptable because:
-# 1. Every quick build automatically forks a full build
-# 2. The full build will fix all links when it completes
-# 3. User gets fast feedback on their doc content changes
-# 4. Links become correct after ~90s (full build duration)
-#
-# STAGING DIRECTORY:
-# We build into a staging directory, then rsync to serving. This prevents
-# users from seeing incomplete/broken docs during the build process.
-#
-# Parameters:
-#   $argv[1]: Staging directory (e.g., $CHECK_TARGET_DIR_DOC_STAGING_QUICK)
-#   $argv[2]: Serving directory (e.g., $CHECK_TARGET_DIR/doc)
-#
-# Returns: 0 on success, non-zero on failure
-#
-# Usage:
-#   build_and_sync_quick_docs $CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_TARGET_DIR
-#
-# Rust migration: Use std::process::Command to run cargo doc, then use the
-# `fs_extra` or `walkdir` crate for the sync operation.
-function build_and_sync_quick_docs
-    set -l staging_dir $argv[1]
-    set -l serving_dir $argv[2]
-
-    set -lx CARGO_TARGET_DIR $staging_dir
-    # Fast mode: --workspace --no-deps (~5-7s)
-    # No external crate links - full build will fix them soon
-    run_cargo_doc --workspace --no-deps > /dev/null 2>&1
-    set -l result $status
-
-    if test $result -eq 0
-        mkdir -p "$serving_dir/doc"
-        rsync -a "$staging_dir/doc/" "$serving_dir/doc/"
-    end
-
-    return $result
-end
-
-
-# Builds full docs (with dep-doc caching) and syncs to serving directory.
-# Used by --watch-doc's forked background process for correct cross-crate links.
-#
-# Dep-doc caching: Checks hash of Cargo.lock + rust-toolchain.toml. If unchanged,
-# builds only workspace crates (--no-deps).
-#
-# Sync behavior: This function always performs a full rsync from staging to
-# serving. This is crucial because even if the cache is hit (meaning dependency
-# artifacts are already in the staging directory), the serving directory may
-# have been wiped by check_config_changed. The rsync ensures all docs (including
-# dependencies) are restored from the staging cache to the serving directory.
-#
-# Does NOT use the DEP_DOCS_WERE_CACHED global (unlike check_docs_full) because
-# this function handles its own sync internally - rsync -a without --delete is
-# safe regardless of whether deps were rebuilt or cached.
-function build_and_sync_full_docs
-    set -l staging_dir $argv[1]
-    set -l serving_dir $argv[2]
-
-    set -lx CARGO_TARGET_DIR $staging_dir
-    if dep_docs_are_current $staging_dir
-        run_cargo_doc --no-deps > /dev/null 2>&1
-    else
-        run_cargo_doc > /dev/null 2>&1
-    end
-    set -l result $status
-
-    if test $result -eq 0
-        # Ensure serving doc directory exists
-        mkdir -p "$serving_dir/doc"
-        # Sync with -a (archive mode preserves permissions, timestamps)
-        # Note: We don't use --delete here because the quick build patch
-        # that follows will overlay our crates' docs anyway
-        rsync -a "$staging_dir/doc/" "$serving_dir/doc/"
-        # Update hash only when deps were actually rebuilt
-        if not dep_docs_are_current $staging_dir
-            update_dep_docs_hash $staging_dir
-        end
-    end
-
-    return $result
-end
 
 # Waits for file changes using platform-appropriate file watcher.
 #
@@ -1857,10 +1858,10 @@ function wait_for_file_changes
     if command -v inotifywait >/dev/null 2>&1
         # Linux: inotifywait has built-in timeout support
         if test $timeout_secs -eq 0
-            inotifywait -q -r -e modify,create,delete,move \
+            inotifywait -q -r -e modify,create,delete,move,attrib \
                 --format '%w%f' $watch_targets >/dev/null 2>&1
         else
-            inotifywait -q -r -t $timeout_secs -e modify,create,delete,move \
+            inotifywait -q -r -t $timeout_secs -e modify,create,delete,move,attrib \
                 --format '%w%f' $watch_targets >/dev/null 2>&1
         end
         return $status
@@ -1920,127 +1921,6 @@ function wait_for_file_changes
     end
 end
 
-# Runs the full doc build workflow as a background task.
-#
-# PURPOSE:
-# This is the main orchestrator for full builds. It runs in a forked background
-# process and handles the complete lifecycle:
-# 1. Build full docs (with all dependencies)
-# 2. Sync to serving directory
-# 3. Check for changes that occurred during the ~90s build ("blind spot")
-# 4. If changes: run catch-up quick build, then fork another full build
-# 5. Send desktop notifications at each stage
-#
-# EVENTUAL CONSISTENCY ALGORITHM:
-# ===============================
-# This function implements the "eventual consistency" model:
-#
-#   run_full_doc_build_task:
-#       1. Record start time
-#       2. Run full build (~90s)
-#       3. Sync to serving (links now correct)
-#       4. Check: did files change during build?
-#          - NO:  Done! Docs are current and links are correct.
-#          - YES: Run quick build (fast feedback, ~5-7s)
-#                 Fork ANOTHER full build (recursive call)
-#                 This new full build will eventually fix links.
-#
-# The recursion terminates when a full build completes without any file
-# changes during its execution. At that point:
-# - All docs reflect the latest source code
-# - All cross-crate links are correct
-#
-# WHY QUICK BUILD FOR CATCH-UP (NOT FULL)?
-# ========================================
-# When changes are detected after a full build, we run a quick build first
-# because the user wants fast feedback. Yes, this temporarily breaks links,
-# but:
-# 1. The user sees their changes immediately (~5-7s)
-# 2. We immediately fork another full build to fix links
-# 3. Links become correct again after ~90s
-#
-# The alternative (waiting for another full build) would mean the user waits
-# ~90s to see their changes, which defeats the purpose of watch mode.
-#
-# FORKING MODEL:
-# ==============
-# This function is designed to be called via `fish -c "..." &` which creates
-# a completely independent background process. The parent (watch loop) returns
-# immediately and goes back to watching for file changes.
-#
-# When catch-up detects changes, it forks ANOTHER instance of this function,
-# creating a chain: full → (changes) → quick + fork full → (changes) → ...
-#
-# Parameters:
-#   $argv[1]: Full build staging directory
-#   $argv[2]: Quick build staging directory
-#   $argv[3]: Serving directory (where browser loads from)
-#   $argv[4]: Log file path
-#   $argv[5]: Notification expire time in milliseconds
-#
-# Usage (typically called via fish -c from parent process):
-#   fish -c "
-#       cd $PWD
-#       source script_lib.fish
-#       run_full_doc_build_task \\
-#           $CHECK_TARGET_DIR_DOC_STAGING_FULL \\
-#           $CHECK_TARGET_DIR_DOC_STAGING_QUICK \\
-#           $CHECK_TARGET_DIR \\
-#           $CHECK_LOG_FILE \\
-#           $NOTIFICATION_EXPIRE_MS
-#   " &
-#
-# Rust migration: Use tokio::spawn or std::thread::spawn. Consider using
-# channels (mpsc) for communication instead of forking. The recursive
-# forking could become a loop with proper async/await.
-function run_full_doc_build_task
-    set -l staging_full $argv[1]
-    set -l staging_quick $argv[2]
-    set -l serving_dir $argv[3]
-    set -l log_file $argv[4]
-    set -l notify_expire_ms $argv[5]
-
-    # Capture build start time for catch-up detection
-    set -l full_build_start (date +%s)
-
-    log_and_print $log_file "["(timestamp)"] [bg] 🔨 Full build starting (with deps)..."
-
-    # Build full docs
-    if build_and_sync_full_docs $staging_full $serving_dir
-        log_and_print $log_file "["(timestamp)"] [bg] ✅ Full build done, synced to serving"
-
-        # Catch-up check: did source files change during our ~90s build?
-        if has_source_changes_since $full_build_start
-            log_and_print $log_file "["(timestamp)"] [bg] ⚡ Changes during build, running catch-up..."
-
-            # Run quick build for fast feedback (broken links OK - full build will fix)
-            if build_and_sync_quick_docs $staging_quick $serving_dir
-                log_and_print $log_file "["(timestamp)"] [bg] ✅ Quick catch-up complete!"
-                log_and_print $log_file "["(timestamp)"] [bg] 🔀 Forking another full build to fix links..."
-
-                # Fork another full build to eventually fix the broken links
-                # This creates a cycle: quick build → full build → (if changes) → quick → full...
-                # Eventually, no changes occur during a build, and we reach consistent state.
-                fish -c "
-                    cd $PWD
-                    source script_lib.fish
-                    run_full_doc_build_task $staging_full $staging_quick $serving_dir $log_file $notify_expire_ms
-                " &
-
-                send_system_notification "Watch ($WORKSPACE_NAME): Quick Docs Ready ⚡" "Workspace ready (no ext crate links) - full build starting..." "success" $notify_expire_ms
-            else
-                log_and_print $log_file "["(timestamp)"] [bg] ⚠️ Quick catch-up failed (full docs still available)"
-                send_system_notification "Watch ($WORKSPACE_NAME): Full Docs Ready ✅" "Full build done, but latest edits have errors ❌" "normal" $notify_expire_ms
-            end
-        else
-            # No changes during build - full docs are already up to date
-            send_system_notification "Watch ($WORKSPACE_NAME): Full Docs Built ✅" "All documentation including dependencies built" "success" $notify_expire_ms
-        end
-    else
-        log_and_print $log_file "["(timestamp)"] [bg] ❌ Full build failed!"
-        send_system_notification "Watch ($WORKSPACE_NAME): Full Doc Build Failed ❌" "cargo doc failed" "critical" $notify_expire_ms
-    end
-end
 
 # ============================================================================
 # Shared Toolchain Script Functions

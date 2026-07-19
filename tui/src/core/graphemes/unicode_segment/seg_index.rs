@@ -1,133 +1,41 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::seg_length::{SegLength, seg_length};
-use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericConversions, NumericValue,
-            ch};
-use std::ops::{Add, Deref, DerefMut, Sub, SubAssign};
+use crate::{ChUnit, IndexOps, VPIndex, generate_index_type_impl};
+use std::fmt::{Display, Formatter};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
-#[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
-pub struct SegIndex(pub ChUnit);
+#[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
+pub struct SegIndex(ChUnit);
+generate_index_type_impl!(
+    SegIndex,   // Add impl for this type
+    SegLength,  // Use this associated type
+    seg_index,  // Make this constructor fn
+    seg_length  // Use this constructor fn
+);
 
-impl std::fmt::Display for SegIndex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for SegIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_usize())
     }
 }
 
-/// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
-impl ArrayBoundsCheck<SegLength> for SegIndex {}
-
-pub fn seg_index(arg_seg_index: impl Into<SegIndex>) -> SegIndex { arg_seg_index.into() }
-
-mod seg_index_impl_block {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl SegIndex {
-        /// Converts the segment index to a length, by adding 1.
-        #[must_use]
-        pub fn convert_to_seg_length(&self) -> SegLength {
-            let index = self.0;
-            let length = index + 1;
-            seg_length(length)
-        }
-
-        #[must_use]
-        pub fn as_usize(&self) -> usize { self.0.as_usize() }
-    }
-
-    impl Deref for SegIndex {
-        type Target = ChUnit;
-        fn deref(&self) -> &Self::Target { &self.0 }
-    }
-
-    impl DerefMut for SegIndex {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-    }
+impl SegIndex {
+    /// Converts the segment index to a length, by adding 1.
+    #[must_use]
+    pub fn convert_to_seg_length(&self) -> SegLength { IndexOps::convert_to_length(self) }
 }
 
-mod conversions {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<usize> for SegIndex {
-        fn from(it: usize) -> Self { Self(ch(it)) }
-    }
-
-    impl From<ChUnit> for SegIndex {
-        fn from(it: ChUnit) -> Self { Self(it) }
-    }
-
-    impl From<u16> for SegIndex {
-        fn from(it: u16) -> Self { Self(ch(it)) }
-    }
-
-    impl From<i32> for SegIndex {
-        fn from(it: i32) -> Self { Self(ch(it)) }
-    }
-
-    impl From<SegLength> for SegIndex {
-        fn from(other: SegLength) -> Self { other.convert_to_seg_index() }
-    }
-
-    impl From<Index> for SegIndex {
-        fn from(it: Index) -> Self { Self(ch(it.as_usize())) }
-    }
-
-    impl From<SegIndex> for Index {
-        fn from(it: SegIndex) -> Self { Index::from(it.as_usize()) }
-    }
+impl From<SegLength> for SegIndex {
+    fn from(other: SegLength) -> SegIndex { other.convert_to_seg_index() }
 }
 
-// Implement arithmetic operations for SegIndex.
-mod arithmetic {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Add for SegIndex {
-        type Output = SegIndex;
-
-        fn add(self, rhs: SegIndex) -> Self::Output {
-            SegIndex::from(self.as_usize() + rhs.as_usize())
-        }
-    }
-
-    impl Sub for SegIndex {
-        type Output = SegIndex;
-
-        fn sub(self, rhs: SegIndex) -> Self::Output {
-            SegIndex::from(self.as_usize().saturating_sub(rhs.as_usize()))
-        }
-    }
-
-    impl SubAssign for SegIndex {
-        fn sub_assign(&mut self, rhs: SegIndex) { *self = *self - rhs; }
-    }
-
-    impl Sub<SegLength> for SegIndex {
-        type Output = SegIndex;
-
-        fn sub(self, rhs: SegLength) -> Self::Output {
-            SegIndex::from(self.as_usize().saturating_sub(rhs.as_usize()))
-        }
-    }
-
-    impl SubAssign<SegLength> for SegIndex {
-        fn sub_assign(&mut self, rhs: SegLength) { *self = *self - rhs; }
-    }
+impl From<VPIndex> for SegIndex {
+    fn from(it: VPIndex) -> SegIndex { SegIndex(*it) }
 }
 
-// Implement bounds checking traits for SegIndex.
-impl NumericConversions for SegIndex {
-    fn as_usize(&self) -> usize { self.0.as_usize() }
-    fn as_u16(&self) -> u16 { self.0.as_u16() }
-}
-
-impl NumericValue for SegIndex {}
-
-impl IndexOps for SegIndex {
-    type LengthType = SegLength;
+impl From<SegIndex> for VPIndex {
+    fn from(it: SegIndex) -> VPIndex { VPIndex::from(*it) }
 }
 
 #[cfg(test)]
@@ -138,7 +46,7 @@ mod tests {
     fn seg_index_conversions() {
         let index = seg_index(0);
         let length = index.convert_to_seg_length();
-        assert_eq!(length, seg_length(1));
+        assert_eq!(length, seg_length(1u16));
         let index = length.convert_to_seg_index();
         assert_eq!(index, seg_index(0));
     }
@@ -197,13 +105,13 @@ mod tests {
     #[test]
     fn seg_index_sub_length() {
         let index = seg_index(10);
-        let length = seg_length(3);
+        let length = seg_length(3u16);
         let result = index - length;
         assert_eq!(result.as_usize(), 7);
 
         // Test saturating subtraction with length.
         let small_index = seg_index(3);
-        let large_length = seg_length(10);
+        let large_length = seg_length(10u16);
         let result = small_index - large_length;
         assert_eq!(result.as_usize(), 0);
     }
@@ -211,7 +119,7 @@ mod tests {
     #[test]
     fn seg_index_sub_assign_length() {
         let mut index = seg_index(10);
-        let length = seg_length(3);
+        let length = seg_length(3u16);
         index -= length;
         assert_eq!(index.as_usize(), 7);
     }
@@ -224,7 +132,7 @@ mod tests {
         let start = seg_index(2);
         let end = seg_index(5);
         let range: Range<SegIndex> = start..end;
-        let length = seg_length(10);
+        let length = seg_length(10u16);
 
         // Test that RangeBoundsExt works with SegIndex now that Add is implemented
         assert_eq!(

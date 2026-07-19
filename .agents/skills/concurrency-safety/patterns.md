@@ -11,7 +11,7 @@ In Rust, it is easy to accidentally hold a `MutexGuard` across a long-running or
 
 ```rust
 // ✅ GOOD: Scoped access for simple state
-fn update_cache(cache: &ScopedMutex<HashMap<String, String>>) {
+fn update_cache(cache: &ScopedMutex<FxHashMap<String, String>>) {
     cache.write(|map| {
         map.insert("key".to_string(), "value".to_string());
     }); // Lock released immediately when closure returns.

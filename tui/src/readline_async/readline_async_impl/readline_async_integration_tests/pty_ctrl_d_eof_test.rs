@@ -52,14 +52,14 @@ fn controller(mut context: PtyTestContext) {
     context
         .child
         .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_STARTING)
-        .unwrap();
+        .expect("conversion error");
     eprintln!("  ✅ Controlled process confirmed running!");
 
     // Wait for controlled process to be ready.
     context
         .child
         .wait_for_ready(&mut context.buf_reader, MSG_CONTROLLED_READY)
-        .unwrap();
+        .expect("conversion error");
     eprintln!("  ✅ Controlled is ready (input device created)");
 
     // Test: Ctrl+D on empty line → EOF

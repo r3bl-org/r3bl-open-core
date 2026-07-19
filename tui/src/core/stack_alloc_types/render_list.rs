@@ -124,7 +124,7 @@ impl<T> AddAssign<Vec<T>> for RenderList<T> {
 }
 
 impl<'a> From<InlineVecStr<'a>> for RenderList<&'a str> {
-    fn from(other: InlineVecStr<'a>) -> Self {
+    fn from(other: InlineVecStr<'a>) -> RenderList<&'a str> {
         let mut it = RenderList::with_capacity(other.len());
         it.extend(other);
         it
@@ -132,7 +132,7 @@ impl<'a> From<InlineVecStr<'a>> for RenderList<&'a str> {
 }
 
 impl<T> From<Vec<T>> for RenderList<T> {
-    fn from(other: Vec<T>) -> Self {
+    fn from(other: Vec<T>) -> RenderList<T> {
         let mut it = RenderList::with_capacity(other.len());
         it.extend(other);
         it
@@ -152,8 +152,8 @@ impl<T> From<&[T]> for RenderList<T>
 where
     T: Clone,
 {
-    fn from(slice: &[T]) -> Self {
-        let mut it = Self::with_capacity(slice.len());
+    fn from(slice: &[T]) -> RenderList<T> {
+        let mut it = RenderList::with_capacity(slice.len());
         for item in slice {
             it.push(item.clone());
         }
@@ -165,8 +165,8 @@ impl<T, const N: usize> From<[T; N]> for RenderList<T>
 where
     T: Clone,
 {
-    fn from(array: [T; N]) -> Self {
-        let mut it = Self::with_capacity(N);
+    fn from(array: [T; N]) -> RenderList<T> {
+        let mut it = RenderList::with_capacity(N);
         for item in array {
             it.push(item);
         }

@@ -6,7 +6,8 @@
 
 use super::{AnsiValue, convert::convert_rgb_into_ansi256};
 use crate::{TransformColor,
-            common::{CommonError, CommonErrorType, CommonResult}};
+            common::{CommonError, CommonErrorType, CommonResult, LossyConvertToByte},
+            tui_style::hex_color_parser::parse_hex_color};
 
 /// Represents a color in RGB (24-bit truecolor) format.
 ///
@@ -19,21 +20,22 @@ pub struct RgbValue {
 }
 
 impl From<(u8, u8, u8)> for RgbValue {
-    fn from((red, green, blue): (u8, u8, u8)) -> Self { Self::from_u8(red, green, blue) }
+    fn from((red, green, blue): (u8, u8, u8)) -> RgbValue {
+        RgbValue::from_u8(red, green, blue)
+    }
 }
 
 impl From<u32> for RgbValue {
-    fn from(value: u32) -> Self {
-        use crate::common::LossyConvertToByte;
+    fn from(value: u32) -> RgbValue {
         let red = ((value >> 16) & 0xFF).to_u8_lossy();
         let green = ((value >> 8) & 0xFF).to_u8_lossy();
         let blue = (value & 0xFF).to_u8_lossy();
-        Self { red, green, blue }
+        RgbValue { red, green, blue }
     }
 }
 
 impl Default for RgbValue {
-    fn default() -> Self { Self::from_u8(255, 255, 255) }
+    fn default() -> RgbValue { RgbValue::from_u8(255, 255, 255) }
 }
 
 impl RgbValue {
@@ -42,7 +44,6 @@ impl RgbValue {
 
     #[must_use]
     pub fn from_f32(red: f32, green: f32, blue: f32) -> Self {
-        use crate::common::LossyConvertToByte;
         Self {
             red: (red * 255.0).to_u8_lossy(),
             green: (green * 255.0).to_u8_lossy(),
@@ -58,7 +59,6 @@ impl RgbValue {
     ///
     /// [`CommonResult`]: crate::common::CommonResult
     pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
-        use crate::tui_style::hex_color_parser::parse_hex_color;
         match parse_hex_color(input) {
             Ok((_, color)) => Ok(color),
             Err(_) => CommonError::new_error_result_with_only_type(
@@ -72,7 +72,6 @@ impl RgbValue {
     /// This function will panic if the input string is not a valid hex color format.
     #[must_use]
     pub fn from_hex(input: &str) -> RgbValue {
-        use crate::tui_style::hex_color_parser::parse_hex_color;
         #[allow(clippy::match_wild_err_arm)]
         match parse_hex_color(input) {
             Ok((_, color)) => color,
@@ -108,7 +107,8 @@ mod tests {
         // Valid.
         {
             let hex_color = "#ff0000";
-            let value = RgbValue::try_from_hex_color(hex_color).unwrap();
+            let value =
+                RgbValue::try_from_hex_color(hex_color).expect("conversion error");
             assert_eq2!((value.red, value.green, value.blue), (255, 0, 0));
         }
 

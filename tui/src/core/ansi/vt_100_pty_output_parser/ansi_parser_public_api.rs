@@ -12,10 +12,10 @@
 //! [`OfsBuf`]'s display content, cursor position, and text styles accordingly.
 //!
 //! ```rust
-//! use r3bl_tui::{*, height, width};
+//! use r3bl_tui::{*, vp_height, vp_width};
 //!
 //! // Entry point: Process ANSI sequences from PTY output
-//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(24) + width(80));
+//! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(vp_height(24) + vp_width(80));
 //! let pty_output = format!("{}Red text{}",
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),
 //!     SgrCode::Reset
@@ -121,12 +121,12 @@
 //! that don't need parameters.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`apply_ansi_bytes`]: crate::OfsBufVT100::apply_ansi_bytes
+//! [`apply_ansi_bytes`]: OfsBufVT100::apply_ansi_bytes
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`CSI`]: crate::CsiSequence
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -139,8 +139,8 @@ use std::mem::take;
 ///
 /// This performer is created by [`OfsBufVT100::apply_ansi_bytes`] and passed to the
 /// [`VTE`] [`Parser`] implementation. It provides direct access to persistent terminal
-/// state stored in the buffer's [`OfsBufVT100::parser_global_state`] field. All state is
-/// stored directly in the buffer and persisted between performer instances.
+/// state stored in the buffer's [`OfsBufVT100::get_parser_global_state`] field. All state
+/// is stored directly in the buffer and persisted between performer instances.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Parser`]: vte::Parser
@@ -158,10 +158,11 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
     /// Creates a new performer for the given `ofs_buf_vt_100`.
     ///
     /// This creates a performer instance that provides direct access to persistent
-    /// terminal state stored in the buffer's [`parser_global_state`] field. All terminal
-    /// state is maintained in the buffer and persists between performer instances.
+    /// terminal state stored in the buffer's [`get_parser_global_state`] field. All
+    /// terminal state is maintained in the buffer and persists between performer
+    /// instances.
     ///
-    /// [`parser_global_state`]: OfsBufVT100::parser_global_state
+    /// [`get_parser_global_state`]: OfsBufVT100::get_parser_global_state
     pub fn new(ofs_buf_vt_100: &'a mut OfsBufVT100) -> Self { Self { ofs_buf_vt_100 } }
 
     /// Handles the core parsing loop where each byte is fed to the [`VTE parser`], which
@@ -219,9 +220,10 @@ impl OfsBufVT100 {
     /// # Example
     ///
     /// ```
-    /// use r3bl_tui::{OfsBufVT100, Size, height, width, SgrCode, ANSIBasicColor};
+    /// use r3bl_tui::{ANSIBasicColor, OfsBufVT100, SgrCode, VPSize, vp_height, vp_width};
     ///
-    /// let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(height(10) + width(10));
+    /// let mut ofs_buf_vt_100 =
+    ///     OfsBufVT100::new_empty(VPSize::from((vp_width(10), vp_height(10))));
     /// let red_text = format!("Hello{a}Red Text{b}",
     ///     a = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
     ///     b = SgrCode::Reset);
@@ -236,21 +238,22 @@ impl OfsBufVT100 {
     /// - Style attributes (`bold`, `fg_color`, etc.) are [`SGR`] (Select Graphic
     ///   Rendition) attributes that apply to characters being written. These styles get
     ///   baked into the [`PixelChar`] objects in the buffer and stored in the buffer's
-    ///   [`parser_global_state`] field for persistence.
+    ///   [`get_parser_global_state`] field for persistence.
     /// - Cursor position is read from and written directly to the buffer's [`cursor_pos`]
     ///   field during processing - no copying or synchronization is needed.
-    /// - All persistent state lives in the [`OfsBuf`], accessed directly by the
-    ///   performer through mutable references.
+    /// - All persistent state lives in the [`OfsBuf`], accessed directly by the performer
+    ///   through mutable references.
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`cursor_pos`]: crate::OfsBuf::get_cursor_pos
-    /// [`DSR response events`]: crate::PtyResponseEvent
-    /// [`OfsBuf`]: crate::OfsBuf
+    /// [`cursor_pos`]: crate::tui::OfsBuf::get_cursor_pos
+    /// [`DSR response events`]: PtyResponseEvent
+    /// [`get_parser_global_state`]: OfsBufVT100::get_parser_global_state
+    /// [`OfsBuf::get_cursor_pos`]: crate::tui::OfsBuf::get_cursor_pos
+    /// [`OfsBuf`]: crate::tui::OfsBuf
     /// [`OSC events`]: crate::core::osc::OscEvent
-    /// [`parser_global_state`]: OfsBufVT100::parser_global_state
-    /// [`PixelChar`]: crate::PixelChar
+    /// [`PixelChar`]: crate::tui::PixelChar
     /// [`Process`]: crate::pty_mux::Process
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`SGR`]: crate::SgrCode
@@ -268,13 +271,13 @@ impl OfsBufVT100 {
         let osc_events = take(
             &mut performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .pending_osc_events,
         );
         let pending_dsr_requests = take(
             &mut performer
                 .ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .pending_pty_response_events,
         );
 
@@ -289,18 +292,18 @@ mod tests {
         core::osc::osc_codes::OscSequence,
         ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
         DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus},
-        SgrCode, col,
+        NarrowingCastToU16, SgrCode,
         ofs_buf::test_fixtures_ofs_buf::{
             assert_empty_at, assert_plain_char_at, assert_plain_text_at,
             assert_styled_char_at,
-        },
-        row, term_col, term_col_delta, term_row, term_row_delta,
+        }, term_col, term_col_delta, term_row, term_row_delta, vp_col, vp_row,
         vt_100_pty_output_conformance_tests::{
             nz,
             conformance_data::cursor_sequences::move_left,
             test_fixtures_vt_100_ansi_conformance::create_test_ofs_buf_10r_by_10c,
             test_sequence_generators::csi_builders::csi_seq_cursor_pos,
-        }
+        },
+        PendingWrap,
     };
 
     #[test]
@@ -334,7 +337,7 @@ mod tests {
         // Verify cursor position is updated correctly.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(TEXT.len()),
+            vp_row(0) + vp_col(TEXT.len().as_u16_narrowing()),
             "cursor should be at end of text"
         );
     }
@@ -380,7 +383,8 @@ mod tests {
                 col,
                 expected_char,
                 |style_from_buf| {
-                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into()
+                    style_from_buf.color_fg.expect("conversion error")
+                        == ANSIBasicColor::Red.into()
                 },
                 "red foreground",
             );
@@ -389,7 +393,7 @@ mod tests {
         // Verify cursor position is updated correctly.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(TEXT.len()),
+            vp_row(0) + vp_col(TEXT.len().as_u16_narrowing()),
             "cursor should be at end of text"
         );
     }
@@ -420,8 +424,9 @@ mod tests {
         let (osc_events, dsr_responses) = ofs_buf_vt_100.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
             // SAFETY: 2 and 1 are non-zero
-            right_2 = CsiSequence::CursorForward(term_col_delta(2).unwrap()),
-            up_1 = CsiSequence::CursorUp(term_row_delta(1).unwrap()),
+            right_2 =
+                CsiSequence::CursorForward(term_col_delta(2).expect("conversion error")),
+            up_1 = CsiSequence::CursorUp(term_row_delta(1).expect("conversion error")),
         ));
 
         // Should not produce any OSC events.
@@ -431,7 +436,7 @@ mod tests {
         // Verify cursor position after all operations.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(5),
+            vp_row(0) + vp_col(5),
             "cursor should be at (0,5) after writing 'D'"
         );
 
@@ -646,7 +651,7 @@ mod tests {
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`ESC`]: crate::EscSequence
-    /// [`OfsBuf`]: crate::OfsBuf
+    /// [`OfsBuf`]: crate::tui::OfsBuf
     #[test]
     fn test_public_api_csi_position_change() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
@@ -669,12 +674,12 @@ mod tests {
         // Cursor clamps at (7,9) because of deferred wrap.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(7) + col(9),
+            vp_row(7) + vp_col(9),
             "cursor should be clamped at (7,9) after 'End'"
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes,
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::Yes,
             "pending wrap should be set"
         );
     }
@@ -685,10 +690,10 @@ mod tests {
 
         // 1. Fill the line up to right margin -> creates pending wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(9));
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::Yes
         );
 
         // 2. Perform a cursor movement (e.g. Move Left 1) -> clears pending wrap.
@@ -697,17 +702,17 @@ mod tests {
 
         // 3. Verify wrap was cleared and cursor moved properly.
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::No
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::No
         );
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(8));
 
         // 4. Print 'A'. It should overwrite '8' and not wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("A");
         assert_plain_char_at(&ofs_buf_vt_100, 0, 8, 'A');
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::No
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::No
         );
     }
 
@@ -717,10 +722,10 @@ mod tests {
 
         // 1. Fill the line up to right margin -> creates pending wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("0123456789");
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(9));
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::Yes
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::Yes
         );
 
         // 2. Apply a CR (\r) -> clears pending wrap.
@@ -728,10 +733,10 @@ mod tests {
 
         // 3. Verify wrap was cleared and cursor moved to column 0.
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.pending_wrap,
-            crate::PendingWrap::No
+            ofs_buf_vt_100.get_parser_global_state().pending_wrap,
+            PendingWrap::No
         );
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(0));
     }
 
     #[test]
@@ -739,8 +744,8 @@ mod tests {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // CSI c
-        let (_, responses) = ofs_buf_vt_100
-            .apply_ansi_bytes(format!("{CSI_START}{DA_DEVICE_ATTRIBUTES}"));
+        let (_, responses) =
+            ofs_buf_vt_100.apply_ansi_bytes(format!("{CSI_START}{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses.len(), 1);
         assert_eq!(responses[0], PtyResponseEvent::PrimaryDeviceAttributes);
 

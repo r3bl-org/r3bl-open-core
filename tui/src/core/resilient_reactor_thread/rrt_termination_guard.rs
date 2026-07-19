@@ -21,8 +21,8 @@ pub struct TerminationGuard<W: RRTWorker> {
 }
 
 impl<W: RRTWorker> From<Arc<ThreadLifecycleMonitor<W>>> for TerminationGuard<W> {
-    fn from(shared_state: Arc<ThreadLifecycleMonitor<W>>) -> Self {
-        Self { shared_state }
+    fn from(shared_state: Arc<ThreadLifecycleMonitor<W>>) -> TerminationGuard<W> {
+        TerminationGuard { shared_state }
     }
 }
 

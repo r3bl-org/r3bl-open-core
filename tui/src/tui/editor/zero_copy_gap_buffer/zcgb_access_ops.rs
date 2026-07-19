@@ -105,11 +105,10 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt,
-            RangeValidityStatus, RowIndex, byte_index,
-            core::coordinates::bounds_check::{NumericValue, RangeBoundsExt}};
-use std::{ops::Range,
-          str::{from_utf8, from_utf8_unchecked}};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt, CRow, LengthOps,
+            RangeExclusive, RangeValidityStatus, byte_index,
+            core::coordinates::bounds_check::RangeBoundsExt};
+use std::str::{from_utf8, from_utf8_unchecked};
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice.
@@ -162,9 +161,9 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
-    pub fn get_line_slice(&self, line_range: Range<RowIndex>) -> Option<&str> {
+    pub fn get_line_slice(&self, line_range: RangeExclusive<CRow>) -> Option<&str> {
         // Check bounds using type-safe range validation.
-        if line_range.check_range_is_valid_for_length(self.line_count())
+        if line_range.check_range_is_valid_for_length(self.get_line_count())
             != RangeValidityStatus::Valid
         {
             return None;
@@ -179,7 +178,7 @@ impl ZeroCopyGapBuffer {
         let start_offset = *start_info.buffer_start;
 
         // Calculate end offset using type-safe bounds checking.
-        let end_offset = if line_range.end.overflows(self.line_count())
+        let end_offset = if line_range.end.overflows(self.get_line_count())
             == ArrayOverflowResult::Overflowed
         {
             self.buffer.len()
@@ -209,8 +208,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// This is useful for debugging and testing
     #[must_use]
-    pub fn get_line_raw(&self, arg_line_index: impl Into<RowIndex>) -> Option<&[u8]> {
-        let line_index: RowIndex = arg_line_index.into();
+    pub fn get_line_raw(&self, arg_line_index: impl Into<CRow>) -> Option<&[u8]> {
+        let line_index: CRow = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
         let start = *line_info.buffer_start;
         let end = start + line_info.capacity.as_usize();
@@ -238,15 +237,12 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
-    pub fn get_line_with_newline(
-        &self,
-        arg_line_index: impl Into<RowIndex>,
-    ) -> Option<&str> {
-        let line_index: RowIndex = arg_line_index.into();
+    pub fn get_line_with_newline(&self, arg_line_index: impl Into<CRow>) -> Option<&str> {
+        let line_index: CRow = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
-        let end = if line_info.content_byte_len.is_zero() {
+        let end = if line_info.content_byte_len.is_empty() {
             content_range.start + byte_index(1) // Just the newline for empty lines.
         } else {
             content_range.end + byte_index(1) // +1 for newline.
@@ -268,7 +264,7 @@ impl ZeroCopyGapBuffer {
             if let Err(e) = from_utf8(&self.buffer[range.clone().to_usize_range()]) {
                 panic!(
                     "Line {} with newline contains invalid UTF-8 at byte {}: {}",
-                    line_index.as_usize(),
+                    usize::from(line_index),
                     e.valid_up_to(),
                     e
                 );
@@ -287,8 +283,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// This method provides convenient access to line content without metadata.
     #[must_use]
-    pub fn get_line_content(&self, arg_row_index: impl Into<RowIndex>) -> Option<&str> {
-        let row_index: RowIndex = arg_row_index.into();
+    pub fn get_line_content(&self, arg_row_index: impl Into<CRow>) -> Option<&str> {
+        let row_index: CRow = arg_row_index.into();
         self.get_line(row_index).map(|line| line.content())
     }
 }
@@ -296,17 +292,17 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::{super::INITIAL_LINE_SIZE, *};
-    use crate::{LINE_FEED_BYTE, NULL_BYTE, len, row};
+    use crate::{LINE_FEED_BYTE, NULL_BYTE, byte_len, c_row};
 
     #[test]
     fn test_as_str_empty() {
-        let buffer = ZeroCopyGapBuffer::new();
+        let buffer = ZeroCopyGapBuffer::default();
         assert_eq!(buffer.as_str(), "");
     }
 
     #[test]
     fn test_as_str_with_lines() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer.add_line();
 
@@ -317,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         let bytes = buffer.as_bytes();
@@ -328,56 +324,62 @@ mod tests {
 
     #[test]
     fn test_get_line_content_empty() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "");
     }
 
     #[test]
     fn test_get_line_content_out_of_bounds() {
-        let buffer = ZeroCopyGapBuffer::new();
-        assert!(buffer.get_line_content(row(0)).is_none());
-        assert!(buffer.get_line_content(row(10)).is_none());
+        let buffer = ZeroCopyGapBuffer::default();
+        assert!(buffer.get_line_content(c_row(0)).is_none());
+        assert!(buffer.get_line_content(c_row(10)).is_none());
     }
 
     #[test]
     fn test_get_line_slice() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for _ in 0..5 {
             buffer.add_line();
         }
 
         // Get middle lines.
-        let slice = buffer.get_line_slice(row(1)..row(4)).unwrap();
+        let slice = buffer
+            .get_line_slice(c_row(1)..c_row(4))
+            .expect("conversion error");
         assert_eq!(slice.len(), 3 * INITIAL_LINE_SIZE);
 
         // Get all lines
-        let slice = buffer.get_line_slice(row(0)..row(5)).unwrap();
+        let slice = buffer
+            .get_line_slice(c_row(0)..c_row(5))
+            .expect("conversion error");
         assert_eq!(slice.len(), 5 * INITIAL_LINE_SIZE);
 
         // Empty range
-        let slice = buffer.get_line_slice(row(2)..row(2)).unwrap();
+        let slice = buffer
+            .get_line_slice(c_row(2)..c_row(2))
+            .expect("conversion error");
         assert_eq!(slice, "");
     }
 
     #[test]
     fn test_get_line_slice_out_of_bounds() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer.add_line();
 
-        assert!(buffer.get_line_slice(row(0)..row(3)).is_none()); // end > line_count
-        assert!(buffer.get_line_slice(row(3)..row(4)).is_none()); // start >= line_count
+        assert!(buffer.get_line_slice(c_row(0)..c_row(3)).is_none()); // end > line_count
+        assert!(buffer.get_line_slice(c_row(3)..c_row(4)).is_none()); // start >= line_count
     }
 
     #[test]
     fn test_get_line_raw() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
-        let raw = buffer.get_line_raw(row(0)).unwrap();
+        let raw = buffer.get_line_raw(c_row(0)).expect("conversion error");
         assert_eq!(raw.len(), INITIAL_LINE_SIZE);
         assert_eq!(raw[0], LINE_FEED_BYTE);
         assert!(raw[1..].iter().all(|&b| b == NULL_BYTE));
@@ -385,10 +387,10 @@ mod tests {
 
     #[test]
     fn test_is_valid_utf8() {
-        let buffer = ZeroCopyGapBuffer::new();
+        let buffer = ZeroCopyGapBuffer::default();
         assert!(buffer.is_valid_utf8());
 
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         assert!(buffer.is_valid_utf8());
     }
@@ -397,12 +399,12 @@ mod tests {
     #[cfg(debug_assertions)]
     #[should_panic(expected = "ZeroCopyGapBuffer contains invalid UTF-8")]
     fn test_invalid_utf8_panic() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Get the line info first.
         let offset = {
-            let line_info = buffer.get_line_info(0).unwrap();
+            let line_info = buffer.get_line_info(0).expect("conversion error");
             *line_info.buffer_start
         };
 
@@ -414,7 +416,7 @@ mod tests {
 
         // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
-            line_info.content_byte_len = len(2);
+            line_info.content_byte_len = byte_len(2);
         }
 
         // This should panic in debug mode.
@@ -425,11 +427,14 @@ mod tests {
     #[cfg(debug_assertions)]
     #[should_panic(expected = "Line 0 contains invalid UTF-8")]
     fn test_get_line_content_invalid_utf8() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Get the line info first.
-        let offset = *buffer.get_line_info(0).unwrap().buffer_start;
+        let offset = *buffer
+            .get_line_info(0)
+            .expect("conversion error")
+            .buffer_start;
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing.
         // Insert invalid UTF-8 sequence.
@@ -439,31 +444,33 @@ mod tests {
 
         // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
-            line_info.content_byte_len = crate::len(2);
+            line_info.content_byte_len = byte_len(2);
         }
 
         // This should panic in debug mode.
-        let _ = buffer.get_line_content(row(0));
+        let _ = buffer.get_line_content(c_row(0));
     }
 
     #[test]
     fn test_get_line_with_newline() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Empty line should just have newline.
-        let content = buffer.get_line_with_newline(row(0)).unwrap();
+        let content = buffer
+            .get_line_with_newline(c_row(0))
+            .expect("conversion error");
         assert_eq!(content, "\n");
 
         // Out of bounds
-        assert!(buffer.get_line_with_newline(row(1)).is_none());
+        assert!(buffer.get_line_with_newline(c_row(1)).is_none());
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{row, seg_index};
+    use crate::{c_index, c_row};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -471,7 +478,7 @@ mod benches {
 
     #[bench]
     fn bench_as_str_small_buffer(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for _ in 0..10 {
             buffer.add_line();
         }
@@ -484,16 +491,16 @@ mod benches {
 
     #[bench]
     fn bench_as_str_large_buffer(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for i in 0..100 {
             buffer.add_line();
             buffer
                 .insert_text_at_grapheme(
-                    row(i),
-                    seg_index(0),
+                    c_row(i),
+                    c_index(0),
                     "This is a test line with some content",
                 )
-                .unwrap();
+                .expect("conversion error");
         }
 
         b.iter(|| {
@@ -504,58 +511,62 @@ mod benches {
 
     #[bench]
     fn bench_get_line_content(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
+            .expect("conversion error");
 
         b.iter(|| {
-            let content = buffer.get_line_content(black_box(row(0))).unwrap();
+            let content = buffer
+                .get_line_content(black_box(c_row(0)))
+                .expect("conversion error");
             black_box(content.len());
         });
     }
 
     #[bench]
     fn bench_get_line_slice_10_lines(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for i in 0..20 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(row(i), seg_index(0), &format!("Line {i}"))
-                .unwrap();
+                .insert_text_at_grapheme(c_row(i), c_index(0), &format!("Line {i}"))
+                .expect("conversion error");
         }
 
         b.iter(|| {
             let slice = buffer
-                .get_line_slice(black_box(row(5))..black_box(row(15)))
-                .unwrap();
+                .get_line_slice(black_box(c_row(5))..black_box(c_row(15)))
+                .expect("conversion error");
             black_box(slice.len());
         });
     }
 
     #[bench]
     fn bench_get_line_with_newline(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Test line")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Test line")
+            .expect("conversion error");
 
         b.iter(|| {
-            let content = buffer.get_line_with_newline(black_box(row(0))).unwrap();
+            let content = buffer
+                .get_line_with_newline(black_box(c_row(0)))
+                .expect("conversion error");
             black_box(content.len());
         });
     }
 
     #[bench]
     fn bench_is_valid_utf8(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for i in 0..50 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(row(i), seg_index(0), "Hello 😀 World")
-                .unwrap();
+                .insert_text_at_grapheme(c_row(i), c_index(0), "Hello 😀 World")
+                .expect("conversion error");
         }
 
         b.iter(|| {
@@ -566,7 +577,7 @@ mod benches {
 
     #[bench]
     fn bench_as_bytes(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         for _ in 0..10 {
             buffer.add_line();
         }

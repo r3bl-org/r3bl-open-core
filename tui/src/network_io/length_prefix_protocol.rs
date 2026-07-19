@@ -3,7 +3,8 @@
 //! This module is standalone, you can use it any project that needs to communicate
 //! between a client and a server using a length-prefix, binary payload, protocol.
 
-use crate::{compress, json_serde, ok, protocol_types::LengthPrefixType};
+use crate::{NarrowingCastToUsize, compress, json_serde, ok,
+            protocol_types::LengthPrefixType};
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -55,12 +56,11 @@ pub mod handshake {
         .await;
 
         match result {
-            Ok(Err(handshake_err)) => {
-                miette::bail!("Handshake failed due to: {}", handshake_err.root_cause())
-            }
-            Err(_elapsed_err) => {
-                miette::bail!("Handshake timed out")
-            }
+            Ok(Err(handshake_err)) => Err(miette::miette!(
+                "Handshake failed due to: {}",
+                handshake_err.root_cause()
+            )),
+            Err(_elapsed_err) => Err(miette::miette!("Handshake timed out")),
             _ => {
                 ok!()
             }
@@ -90,7 +90,7 @@ pub mod handshake {
         // Read the magic number back from the server.
         let received_magic_number = read_half.read_u64().await.into_diagnostic()?;
         if received_magic_number != protocol_constants::MAGIC_NUMBER {
-            miette::bail!("Invalid protocol magic number")
+            return Err(miette::miette!("Invalid protocol magic number"));
         }
 
         ok!()
@@ -118,14 +118,12 @@ pub mod handshake {
         match result {
             Ok(handshake_result) => match handshake_result {
                 Ok(()) => ok!(),
-                Err(handshake_err) => {
-                    miette::bail!(
-                        "Handshake failed due to: {}",
-                        handshake_err.root_cause()
-                    )
-                }
+                Err(handshake_err) => Err(miette::miette!(
+                    "Handshake failed due to: {}",
+                    handshake_err.root_cause()
+                )),
             },
-            Err(_elapsed_err) => miette::bail!("Handshake timed out"),
+            Err(_elapsed_err) => Err(miette::miette!("Handshake timed out")),
         }
     }
 
@@ -137,13 +135,13 @@ pub mod handshake {
         // Read and validate the magic number.
         let received_magic_number = read_half.read_u64().await.into_diagnostic()?;
         if received_magic_number != protocol_constants::MAGIC_NUMBER {
-            miette::bail!("Invalid protocol magic number")
+            return Err(miette::miette!("Invalid protocol magic number"));
         }
 
         // Read and validate the protocol version.
         let received_protocol_version = read_half.read_u64().await.into_diagnostic()?;
         if received_protocol_version != protocol_constants::PROTOCOL_VERSION {
-            miette::bail!("Invalid protocol version")
+            return Err(miette::miette!("Invalid protocol version"));
         }
 
         // Write the magic number back to the client.
@@ -214,8 +212,10 @@ pub mod byte_io {
 
         // Write the length prefix number of bytes.
         let payload_size = payload_buffer.len();
+        let payload_size_u64 =
+            LengthPrefixType::try_from(payload_size).into_diagnostic()?;
         buf_writer
-            .write_u64(payload_size as LengthPrefixType)
+            .write_u64(payload_size_u64)
             .await
             .into_diagnostic()?;
 
@@ -255,15 +255,12 @@ pub mod byte_io {
         // Ensure that the payload size is within the expected range.
         if size_of_payload > protocol_constants::MAX_PAYLOAD_SIZE {
             // Adjust this threshold as needed.
-            miette::bail!("Payload size is too large")
+            return Err(miette::miette!("Payload size is too large"));
         }
 
         // Read the payload.
 
-        // This an intentional cast to `usize` because the payload size is a
-        // `LengthPrefixType`, which is a `u64`.
-        #[allow(clippy::cast_possible_truncation)]
-        let size_of_payload = size_of_payload as usize;
+        let size_of_payload = size_of_payload.as_usize_narrowing();
 
         let mut payload_buffer = vec![0; size_of_payload];
         buf_reader
@@ -299,12 +296,12 @@ mod tests_byte_io {
         for sent_payload in get_all_client_messages() {
             byte_io::try_write(&mut BufWriter::new(&mut client_write), &sent_payload)
                 .await
-                .unwrap();
+                .expect("conversion error");
 
             let received_payload: String =
                 byte_io::try_read(&mut BufReader::new(&mut server_read))
                     .await
-                    .unwrap();
+                    .expect("conversion error");
 
             assert_eq!(received_payload, sent_payload);
         }

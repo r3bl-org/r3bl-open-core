@@ -2,9 +2,9 @@
 
 #[allow(unused_imports, reason = "Allows short link ref defs in rustdocs")]
 use crate::core::pty::pty_mux;
-use crate::{KeyPress, LengthOps as _, ModifierKeysMask, OfsBufVT100,
+use crate::{ActiveScreenBuffer, KeyPress, ModifierKeysMask, OfsBufVT100,
             PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR, PtyInputEvent, ScrollbackAmount,
-            SpecialKey, key_press};
+            SpecialKey, key_press, vp_height};
 
 /// Represents the explicit command to take for a keyboard event.
 #[derive(Debug)]
@@ -70,7 +70,7 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
     /// # The Decision Matrix
     ///
     /// The decision to intercept or forward is based entirely on the state of the active
-    /// [`OfsBufVT100`] virtual tab:
+    /// [`OfsBufVT100`] virtual terminal:
     ///
     /// - **Primary Screen Buffer (e.g., `bash`, `ls`)**: The child process is doing
     ///   normal line-by-line output and expects the terminal emulator to handle
@@ -92,12 +92,14 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
     /// [`ScrollHistoryForward`]: KeyboardCommand::ScrollHistoryForward
     /// [raw or cooked mode]: crate::raw_mode::RawMode
     /// [virtual terminal tab]:
-    ///     pty_mux#virtual-terminal-architecture-the-virtual-tab-mental-model
-    fn from(args: (KeyPress, &OfsBufVT100)) -> Self {
+    ///     pty_mux#virtual-terminal-architecture
+    fn from(args: (KeyPress, &OfsBufVT100)) -> KeyboardCommand {
         let (key_press, active_buffer) = args;
 
-        let is_in_primary_screen = active_buffer.is_in_primary_screen();
-        let row_height = active_buffer.ofs_buf.get_window_size().row_height;
+        let row_height = active_buffer
+            .get_active_screen_buffer()
+            .get_viewport()
+            .get_height();
 
         let kp_shift_page_up = key_press!(
             @special ModifierKeysMask::new().with_shift(), SpecialKey::PageUp
@@ -106,9 +108,13 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
             @special ModifierKeysMask::new().with_shift(), SpecialKey::PageDown
         );
 
-        if is_in_primary_screen {
-            let amount = (row_height / PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR).clamp_to_min(1);
-            let scrollback_amount = (amount.as_usize()).into();
+        if active_buffer.get_terminal_mode().active_screen_buffer
+            == ActiveScreenBuffer::Primary
+        {
+            let scrollback_amount: ScrollbackAmount = (row_height
+                / PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR)
+                .max(vp_height(1))
+                .into();
 
             if key_press == kp_shift_page_up {
                 return KeyboardCommand::ScrollHistoryBack(scrollback_amount);

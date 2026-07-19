@@ -48,7 +48,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
-//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput

@@ -109,32 +109,35 @@
 //! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
 //! [`CSI`]: crate::CsiSequence
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
-//! [`OfsBufVT100`]: crate::OfsBufVT100
+//! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`PaintRenderOpImplCrossterm`]: crate::crossterm_backend::PaintRenderOpImplCrossterm
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`RenderOpOutput`]: RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]:
 //!     crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`rustix`]: https://docs.rs/rustix
-//! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]:
 //!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`TerminalLibBackend::Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+//! [`TerminalLibBackend::DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 
 use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OfsBufVT100,
-            OutputDevice, PtyPair, PtyTestChild, RenderOpOutput, RenderOpPaint,
-            RenderOpsLocalData, Size, TuiStyle, TuiStyleAttribs, col,
+            OutputDevice, PixelChar, PtyPair, PtyTestChild, RenderOpOutput,
+            RenderOpPaint, RenderOpsLocalData, TuiStyle, TuiStyleAttribs,
             core::ansi::terminal_raw_mode,
-            global_color_support, height, ok, pos,
+            global_color_support, ok,
             render_op::RenderOpCommon,
-            retry_until_success_test, row, spawn_controlled_in_pty,
+            retry_until_success_test, spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_color, tui_style_attrib, width};
-use std::{fmt::Write as _,
+            tui_color, tui_style_attrib, vp_col, vp_height, vp_row, vp_width};
+use std::{cmp::min,
+          fmt::Write as _,
           io::{Read, Write}};
 
 /// Test window size for output compatibility tests.
@@ -207,7 +210,7 @@ fn run_single_test_attempt() -> Result<(), String> {
     eprintln!("  Captured {} bytes", crossterm_bytes.len());
 
     // Create OfsBufs and apply the captured ANSI bytes.
-    let buffer_size = height(TEST_HEIGHT) + width(TEST_WIDTH);
+    let buffer_size = vp_height(TEST_HEIGHT) + vp_width(TEST_WIDTH);
     let mut buffer_direct = OfsBufVT100::new_empty(buffer_size);
     let mut buffer_crossterm = OfsBufVT100::new_empty(buffer_size);
 
@@ -227,10 +230,9 @@ fn run_single_test_attempt() -> Result<(), String> {
         if let Some(diff) = buffer_direct.diff(&buffer_crossterm) {
             let _ = writeln!(msg, "  {} positions differ:", diff.len());
             for (i, (pos, _pixel_char)) in diff.iter().enumerate().take(10) {
-                let direct_pc =
-                    &buffer_direct[pos.row_index.as_usize()][pos.col_index.as_usize()];
+                let direct_pc = buffer_direct.get_char(*pos).unwrap_or(PixelChar::Spacer);
                 let crossterm_pc =
-                    &buffer_crossterm[pos.row_index.as_usize()][pos.col_index.as_usize()];
+                    buffer_crossterm.get_char(*pos).unwrap_or(PixelChar::Spacer);
                 let _ = writeln!(
                     msg,
                     "    [{i}] {pos:?}:\n\tDirectToAnsi: {direct_pc:?}\n\tCrossterm:    {crossterm_pc:?}"
@@ -246,12 +248,12 @@ fn run_single_test_attempt() -> Result<(), String> {
         let _ = writeln!(
             msg,
             "    DirectToAnsi: {:?}",
-            &direct_bytes[..std::cmp::min(200, direct_bytes.len())]
+            &direct_bytes[..min(200, direct_bytes.len())]
         );
         let _ = writeln!(
             msg,
             "    Crossterm:    {:?}",
-            &crossterm_bytes[..std::cmp::min(200, crossterm_bytes.len())]
+            &crossterm_bytes[..min(200, crossterm_bytes.len())]
         );
 
         Err(msg)
@@ -357,7 +359,7 @@ pub mod controlled_crossterm {
     /// Panics if stdout flush fails.
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
-        println!("{}", crate::MSG_CONTROLLED_READY);
+        println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("Failed to flush");
 
         // 2. Enable raw mode using Crossterm's raw mode.
@@ -366,13 +368,13 @@ pub mod controlled_crossterm {
         // 3. Set color support to Truecolor for consistent output.
         global_color_support::set_override(ColorSupport::Truecolor);
 
-        let window_size = Size::new((width(TEST_WIDTH), height(TEST_HEIGHT)));
+        let window_size = vp_width(TEST_WIDTH) + vp_height(TEST_HEIGHT);
         let output_device = OutputDevice::new_stdout();
         let ops = generate_test_render_ops::all();
 
         // 4. Execute render ops.
         let mut state = RenderOpsLocalData {
-            cursor_pos: pos(row(0) + col(0)),
+            cursor_pos: (vp_row(0) + vp_col(0)),
             fg_color: None,
             bg_color: None,
         };
@@ -380,18 +382,13 @@ pub mod controlled_crossterm {
 
         for op in &ops {
             output_device.write(|writer| {
-                painter.paint(
-                    op,
-                    window_size,
-                    &mut state,
-                    writer,
-                );
+                painter.paint(op, window_size, &mut state, writer);
             });
         }
 
         // 5. Flush to ensure all bytes are written.
         output_device.write(|writer| {
-            writer.flush().unwrap();
+            writer.flush().expect("conversion error");
         });
 
         // 6. Send completion signal.
@@ -423,22 +420,22 @@ pub mod controlled_direct_to_ansi {
     /// [`rustix`]: https://docs.rs/rustix
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
-        println!("{}", crate::MSG_CONTROLLED_READY);
+        println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("Failed to flush");
 
         // 2. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
         drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
 
         // 3. Set color support to Truecolor for consistent output.
-        global_color_support::set_override(crate::ColorSupport::Truecolor);
+        global_color_support::set_override(ColorSupport::Truecolor);
 
-        let window_size = Size::new((width(TEST_WIDTH), height(TEST_HEIGHT)));
+        let window_size = vp_width(TEST_WIDTH) + vp_height(TEST_HEIGHT);
         let output_device = OutputDevice::new_stdout();
         let ops = generate_test_render_ops::all();
 
         // 4. Execute render ops.
         let mut state = RenderOpsLocalData {
-            cursor_pos: pos(row(0) + col(0)),
+            cursor_pos: (vp_row(0) + vp_col(0)),
             fg_color: None,
             bg_color: None,
         };
@@ -446,18 +443,13 @@ pub mod controlled_direct_to_ansi {
 
         for op in &ops {
             output_device.write(|writer| {
-                painter.paint(
-                    op,
-                    window_size,
-                    &mut state,
-                    writer,
-                );
+                painter.paint(op, window_size, &mut state, writer);
             });
         }
 
         // 5. Flush to ensure all bytes are written.
         output_device.write(|writer| {
-            writer.flush().unwrap();
+            writer.flush().expect("conversion error");
         });
 
         // 6. Send completion signal.
@@ -488,7 +480,7 @@ pub mod generate_test_render_ops {
         // Start with a clean slate.
         ops.push(RenderOpOutput::Common(RenderOpCommon::ClearScreen));
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(0) + vp_col(0)),
         ));
 
         // Test 1: Plain text at origin.
@@ -501,7 +493,7 @@ pub mod generate_test_render_ops {
 
         // Test 2: Plain text at position.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10)),
         ));
         ops.push(
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -512,7 +504,7 @@ pub mod generate_test_render_ops {
 
         // Test 3: Cursor absolute move + text.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(10) + col(20))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(10) + vp_col(20)),
         ));
         ops.push(
             RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
@@ -523,7 +515,7 @@ pub mod generate_test_render_ops {
 
         // Test 4: Foreground color red.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(1) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(1) + vp_col(0)),
         ));
         let red_style = TuiStyle {
             color_fg: Some(tui_color!(red)),
@@ -538,7 +530,7 @@ pub mod generate_test_render_ops {
 
         // Test 5: Background color blue.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(2) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(2) + vp_col(0)),
         ));
         let blue_bg_style = TuiStyle {
             color_bg: Some(tui_color!(blue)),
@@ -553,7 +545,7 @@ pub mod generate_test_render_ops {
 
         // Test 6: RGB foreground color (orange).
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(3) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(3) + vp_col(0)),
         ));
         let orange_style = TuiStyle {
             color_fg: Some(tui_color!(255, 128, 0)),
@@ -568,7 +560,7 @@ pub mod generate_test_render_ops {
 
         // Test 7: Bold text.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(4) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(4) + vp_col(0)),
         ));
         let bold_style = TuiStyle {
             attribs: TuiStyleAttribs::from(tui_style_attrib::Bold),
@@ -583,7 +575,7 @@ pub mod generate_test_render_ops {
 
         // Test 8: Italic text.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(6) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(6) + vp_col(0)),
         ));
         let italic_style = TuiStyle {
             attribs: TuiStyleAttribs::from(tui_style_attrib::Italic),
@@ -598,7 +590,7 @@ pub mod generate_test_render_ops {
 
         // Test 9: Underline text.
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(7) + col(0))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(7) + vp_col(0)),
         ));
         let underline_style = TuiStyle {
             attribs: TuiStyleAttribs::from(tui_style_attrib::Underline),
@@ -613,7 +605,7 @@ pub mod generate_test_render_ops {
 
         // Test 10: Styled colored text (green on black, bold + underline).
         ops.push(RenderOpOutput::Common(
-            RenderOpCommon::MoveCursorPositionAbs(pos(row(8) + col(5))),
+            RenderOpCommon::MoveCursorPositionAbs(vp_row(8) + vp_col(5)),
         ));
         let styled_style = TuiStyle {
             color_fg: Some(tui_color!(green)),

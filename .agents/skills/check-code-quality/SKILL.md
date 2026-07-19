@@ -37,6 +37,7 @@ For granular control, use individual commands:
 | `./check.fish --check` | `cargo check` (fast typecheck) |
 | `./check.fish --build` | `cargo build` (compile production) |
 | `./check.fish --clippy` | `cargo clippy --all-targets` (linting) |
+| `./check.fish --fmt` | `cargo fmt` + `cargo rustdoc-fmt` on git-changed files |
 | `./check.fish --test` | `cargo test` + doctests |
 | `./check.fish --doc` | `cargo doc --no-deps` (quick docs) |
 | `./check.fish --quick-doc` | `cargo doc --no-deps` (fastest, no staging/sync) |
@@ -68,7 +69,7 @@ Ensures production code builds successfully.
 
 Invoke the `write-documentation` skill to format rustdoc comments using `cargo rustdoc-fmt`.
 
-This formats markdown tables and converts inline links to reference-style.
+This formats markdown tables, converts inline links to reference-style, and ensures dashes, en dashes, or em dashes (`-`, `–`, or `—`) are not used to connect sentences/clauses (prefer separate sentences or colons/semicolons).
 
 ### 4. Generate Documentation
 
@@ -114,7 +115,15 @@ If lychee reports 404s, fix the URL by finding the new location. See the task fi
 
 Invoke the `remove-crate-prefix` skill to ensure the codebase follows the strict "Clean Imports over Inline Absolute Paths" rule before finalizing quality checks.
 
-### 7. Linting
+### 7. Git Diff Audit (Surgical Precision)
+
+```bash
+git diff
+```
+
+Inspect `git diff` on all modified files to audit line-by-line that only intended modifications were made and zero collateral formatting, lost comments, or doc section drift occurred.
+
+### 8. Linting
 
 ```bash
 ./check.fish --clippy
@@ -190,7 +199,9 @@ A task, phase, or sub-phase is not complete until a manual review has been perfo
 This is the final verification before marking a task as done.
 
 - **Type-Safe Errors**: Did you use custom error types (enums/structs with \`thiserror\` and \`miette\`) instead of raw \`String\` for \`Result\` errors?
+- **No `.and_then()`**: Did you avoid using `.and_then()` for Option/Result combinators, preferring idiomatic `?` operator early returns instead?
 - **Technical Precision**: are terms like "parameter", "argument", "declaration", and "definition" used accurately in documentation and comments? See the [Terminology Precision] guide.
+- **No Connecting Dashes/En Dashes/Em Dashes**: Are dashes, en dashes, or em dashes (`-`, `–`, or `—`) avoided when connecting sentences or clauses in doc comments? (Prefer separate sentences, colons, or semicolons).
 - **Mandatory Checkbox List:** You MUST automatically add a "Mandatory manual review" 
 
 [Terminology Precision]: ../write-documentation/terminology-precision.md  step with a checkbox list of all modified files to the end of every task, phase, 

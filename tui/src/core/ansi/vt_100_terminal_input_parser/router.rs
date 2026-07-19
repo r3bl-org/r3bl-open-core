@@ -220,7 +220,7 @@ use crate::{ByteOffset, byte_offset,
 /// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html
 /// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
 /// [`terminal_events`]: mod@super::terminal_events
-/// [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`utf8`]: mod@super::utf8
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -293,7 +293,7 @@ mod tests_csi_routing {
             code: VT100KeyCodeIR::Up,
             modifiers: VT100KeyModifiersIR::default(),
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse Up Arrow");
 
@@ -309,7 +309,7 @@ mod tests_csi_routing {
             action: VT100MouseActionIR::Press,
             modifiers: VT100KeyModifiersIR::default(),
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse mouse event");
 
@@ -337,7 +337,7 @@ mod tests_csi_routing {
     fn terminal_event_focus() {
         // Focus gained.
         let focus_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
-        let buffer = generate_keyboard_sequence(&focus_gained).unwrap();
+        let buffer = generate_keyboard_sequence(&focus_gained).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse focus gained");
 
@@ -346,7 +346,7 @@ mod tests_csi_routing {
 
         // Focus lost.
         let focus_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
-        let buffer = generate_keyboard_sequence(&focus_lost).unwrap();
+        let buffer = generate_keyboard_sequence(&focus_lost).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse focus lost");
 
@@ -358,7 +358,7 @@ mod tests_csi_routing {
     fn terminal_event_paste() {
         // Bracketed paste start.
         let paste_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
-        let buffer = generate_keyboard_sequence(&paste_start).unwrap();
+        let buffer = generate_keyboard_sequence(&paste_start).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse paste start");
 
@@ -367,7 +367,7 @@ mod tests_csi_routing {
 
         // Bracketed paste end.
         let paste_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
-        let buffer = generate_keyboard_sequence(&paste_end).unwrap();
+        let buffer = generate_keyboard_sequence(&paste_end).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse paste end");
 
@@ -394,7 +394,7 @@ mod tests_non_csi_input {
             code: VT100KeyCodeIR::Escape,
             modifiers: VT100KeyModifiersIR::default(),
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse ESC key");
 
@@ -422,7 +422,7 @@ mod tests_non_csi_input {
                 ..Default::default()
             },
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse Alt+b");
 
@@ -440,7 +440,7 @@ mod tests_non_csi_input {
                 ..Default::default()
             },
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse Ctrl+A");
 
@@ -455,7 +455,7 @@ mod tests_non_csi_input {
             code: VT100KeyCodeIR::Char('H'),
             modifiers: VT100KeyModifiersIR::default(),
         };
-        let buffer = generate_keyboard_sequence(&expected).unwrap();
+        let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let (event, consumed) =
             try_parse_input_event(&buffer, false).expect("Should parse 'H'");
 

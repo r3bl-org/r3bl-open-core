@@ -12,6 +12,8 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
+use crate::WideningCastToUsize;
+
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Ansi256GradientIndex {
@@ -34,11 +36,33 @@ pub enum Ansi256GradientIndex {
 }
 
 impl From<u8> for Ansi256GradientIndex {
-    fn from(value: u8) -> Self {
-        use Ansi256GradientIndex::GrayscaleMediumGrayToWhite;
+    fn from(value: u8) -> Ansi256GradientIndex {
         match value {
-            0..=14 => unsafe { std::mem::transmute::<u8, Ansi256GradientIndex>(value) },
-            _ => GrayscaleMediumGrayToWhite, // Default fallback.
+            1 => Self::DarkRedToDarkMagenta,
+            2 => Self::RedToBrightPink,
+            3 => Self::OrangeToNeonPink,
+            4 => Self::LightYellowToWhite,
+            5 => Self::MediumGreenToMediumBlue,
+            6 => Self::GreenToBlue,
+            7 => Self::LightGreenToLightBlue,
+            8 => Self::LightLimeToLightMint,
+            9 => Self::RustToPurple,
+            10 => Self::OrangeToPink,
+            11 => Self::LightOrangeToLightPurple,
+            12 => Self::DarkOliveGreenToDarkLavender,
+            13 => Self::OliveGreenToLightLavender,
+            14 => Self::BackgroundDarkGreenToDarkBlue,
+            _ => Self::GrayscaleMediumGrayToWhite, // 0 and default fallback.
+        }
+    }
+}
+
+impl WideningCastToUsize for Ansi256GradientIndex {
+    fn as_usize_widening(self) -> usize {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as usize
         }
     }
 }
@@ -85,7 +109,7 @@ pub static ANSI_256_GRADIENTS: [ANSIColorArray; 15] = [
 pub fn get_gradient_array_for(
     ansi_256_gradient_index: Ansi256GradientIndex,
 ) -> &'static [u8] {
-    ANSI_256_GRADIENTS[ansi_256_gradient_index as usize].0
+    ANSI_256_GRADIENTS[ansi_256_gradient_index.as_usize_widening()].0
 }
 
 #[cfg(test)]
@@ -99,5 +123,21 @@ mod ansi_256_gradients_test {
             let gradient_index = Ansi256GradientIndex::from(index.to_u8_lossy());
             assert_eq2!(gradient.0, get_gradient_array_for(gradient_index));
         }
+    }
+
+    #[test]
+    fn test_from_u8_fallback() {
+        assert_eq2!(
+            Ansi256GradientIndex::from(0),
+            Ansi256GradientIndex::GrayscaleMediumGrayToWhite
+        );
+        assert_eq2!(
+            Ansi256GradientIndex::from(15),
+            Ansi256GradientIndex::GrayscaleMediumGrayToWhite
+        );
+        assert_eq2!(
+            Ansi256GradientIndex::from(255),
+            Ansi256GradientIndex::GrayscaleMediumGrayToWhite
+        );
     }
 }

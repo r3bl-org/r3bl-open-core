@@ -14,7 +14,9 @@
 
 //! # Why R3BL?
 //!
-//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
+//! <img
+//! src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true"
+//! height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -64,8 +66,8 @@
 //!   - [What It Does](#what-it-does)
 //!   - [Git Integration](#git-integration)
 //!   - [CI Integration](#ci-integration)
-//!   - [Architecture](#architecture)
-//!   - [Implementation Notes](#implementation-notes)
+//! - [Architecture](#architecture)
+//! - [Implementation Notes](#implementation-notes)
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
@@ -75,11 +77,11 @@
 //! # Introduction
 //!
 //! Build tools and utilities designed for R3BL projects, but usable in any Rust project.
+//! This crate provides `cargo-rustdoc-fmt`: a cargo subcommand that formats markdown
+//! tables and converts inline links to reference-style links in rustdoc comments.
 //!
-//! Please read the
-//! main [README.md] of
-//! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
-//! context in which this crate is meant to exist.
+//! Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
+//! a better understanding of the context in which this crate is meant to exist.
 //!
 //! # cargo-rustdoc-fmt
 //!
@@ -107,12 +109,12 @@
 //! Or from source (in a workspace containing this crate):
 //!
 //! ```bash
-//! cargo install --path build-infra
+//! cargo install --path build-infra --force
 //! ```
 //!
 //! ## Usage Examples
 //!
-//! **Format git-changed files** (default - auto-detects staged/unstaged changes):
+//! **Format git-changed files** (default: auto-detects staged and unstaged changes):
 //! ```bash
 //! cargo rustdoc-fmt
 //! ```
@@ -159,7 +161,7 @@
 //!
 //! ## What It Does
 //!
-//! ### Table Formatting
+//! **Table Formatting**
 //!
 //! Markdown tables in rustdoc comments are reformatted with consistent column widths.
 //!
@@ -177,10 +179,10 @@
 //! //! | Short | Very Long Text |
 //! ```
 //!
-//! ### Link Conversion
+//! **Link Conversion**
 //!
-//! Inline markdown links are converted to reference-style links using the link text
-//! as the reference identifier, reducing visual clutter in documentation.
+//! Inline markdown links are converted to reference-style links using the link text as
+//! the reference identifier, reducing visual clutter in documentation.
 //!
 //! **Before:**
 //! ```rust
@@ -200,7 +202,7 @@
 //! When run without arguments, `cargo-rustdoc-fmt` intelligently determines which files
 //! to format:
 //!
-//! 1. **If there are staged/unstaged changes**: Formats only those changed files
+//! 1. **If there are staged or unstaged changes**: Formats only those changed files
 //! 2. **If working tree is clean**: Formats files from the most recent commit
 //! 3. **If not in a git repository**: Formats the entire workspace
 //!
@@ -225,49 +227,47 @@
 //!
 //! ## Architecture
 //!
-//! The project follows a multi-tool design pattern (similar to the `cmdr/` crate).
-//! Currently implements `cargo-rustdoc-fmt`, with support for adding additional
-//! build tools in the future without refactoring.
+//! This crate provides the `cargo-rustdoc-fmt` binary.
 //!
 //! **Module structure:**
-//! - `src/lib.rs` - Library root
-//! - `src/bin/cargo-rustdoc-fmt.rs` - Binary entry point
-//! - `src/cargo_rustdoc_fmt/` - Tool implementation
-//!   - `cli_arg.rs` - CLI argument parsing
-//!   - `extractor.rs` - Extract rustdoc blocks from source
-//!   - `table_formatter.rs` - Format markdown tables
-//!   - `link_converter.rs` - Convert inline to reference-style links
-//!   - `processor.rs` - Orchestrate file processing
-//!   - `ir_event_types` - Type definitions
-//!   - `ui_str.rs` - User-facing messages
-//! - `src/common/` - Shared utilities
-//!   - `git_utils.rs` - Git integration
-//!   - `workspace_utils.rs` - Workspace discovery and file finding
+//! - `src/lib.rs`: Library root
+//! - `src/bin/cargo-rustdoc-fmt.rs`: Binary entry point for `cargo-rustdoc-fmt`
+//! - `src/cargo_rustdoc_fmt/`: `cargo-rustdoc-fmt` tool implementation
+//!   - `cli_arg.rs`: CLI argument parsing
+//!   - `extractor.rs`: Extract rustdoc blocks from source
+//!   - `table_formatter.rs`: Format markdown tables
+//!   - `link_converter.rs`: Convert inline to reference-style links
+//!   - `processor.rs`: Orchestrate file processing
+//!   - `ir_event_types/`: Intermediate representation type definitions
+//!   - `ui_str.rs`: User-facing UI and status strings
+//! - `src/common/`: Shared utilities
+//!   - `cargo_fmt_runner.rs`: Cargo fmt integration
+//!   - `workspace_utils.rs`: Workspace discovery and file finding
 //!
 //! ## Implementation Notes
 //!
 //! Currently uses `pulldown-cmark` for markdown parsing. This will be migrated to
-//! `r3bl_tui::md_parser` once table support is added to that parser, achieving full
-//! R3BL infrastructure dogfooding.
+//! `r3bl_tui::md_parser` once table support is added to that parser, achieving full R3BL
+//! infrastructure dogfooding.
 //!
 //! # Changelog
 //!
-//! Please check out the
-//! [changelog] to
-//! see how the crate has evolved over time.
+//! Please check out the [changelog] to see how the crate has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
 //!
 //! To learn how we built this crate, please take a look at the following resources.
-//! - If you like consuming video content, here's our [YT channel].
-//!   Please consider [subscribing].
+//! - If you like consuming video content, here's our [YT channel]. Please consider
+//!   [subscribing].
 //! - If you like consuming written content, here's our developer [site].
 //!
-//! [changelog]: https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-build-infra
+//! [changelog]:
+//!     https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-build-infra
 //! [crates.io]: https://crates.io/crates/r3bl-build-infra
 //! [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
 //! [site]: https://developerlife.com/
-//! [subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+//! [subscribing]:
+//!     https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
 //! [YT channel]: https://www.youtube.com/@developerlifecom
 
 // Attach all modules.
@@ -275,4 +275,5 @@ pub mod cargo_rustdoc_fmt;
 pub mod common;
 
 // Re-export commonly used items.
+pub use cargo_rustdoc_fmt::*;
 pub use common::*;

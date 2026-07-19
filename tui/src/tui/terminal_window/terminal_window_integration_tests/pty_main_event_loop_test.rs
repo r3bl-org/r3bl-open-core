@@ -7,15 +7,16 @@
 //! controlled process runs [`main_event_loop_impl`] with a minimal [`App`] that
 //! counts Up-arrow presses and exits on 'x'.
 //!
-//! [`App`]: crate::App
+//! [`App`]: crate::tui::App
 //! [`main_event_loop_impl`]: crate::main_event_loop_impl
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{App, CommonResult, ComponentRegistryMap, EventPropagation, GlobalData,
             HasFocus, InputDevice, InputEvent, Key, KeyPress, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
-            TerminalWindowMainThreadSignal, generate_pty_test, height, key_press,
-            main_event_loop_impl, ok, send_signal, throws_with_return, width};
+            TerminalWindowMainThreadSignal, generate_pty_test, key_press,
+            main_event_loop_impl, ok, send_signal, throws_with_return, vp_height,
+            vp_width};
 use std::{fmt::{Debug, Display, Formatter},
           io::Write};
 
@@ -36,20 +37,20 @@ fn controller(context: PtyTestContext) {
 
     child
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-        .unwrap();
+        .expect("conversion error");
 
     // Give the event loop time to start and render.
     std::thread::sleep(std::time::Duration::from_millis(200));
 
     // Send Up, Up, 'x' (exit key).
-    writer.write_all(b"\x1b[A").unwrap(); // Up arrow
-    writer.flush().unwrap();
+    writer.write_all(b"\x1b[A").expect("conversion error"); // Up arrow
+    writer.flush().expect("conversion error");
     std::thread::sleep(std::time::Duration::from_millis(50));
-    writer.write_all(b"\x1b[A").unwrap(); // Up arrow
-    writer.flush().unwrap();
+    writer.write_all(b"\x1b[A").expect("conversion error"); // Up arrow
+    writer.flush().expect("conversion error");
     std::thread::sleep(std::time::Duration::from_millis(50));
-    writer.write_all(b"x").unwrap(); // Exit
-    writer.flush().unwrap();
+    writer.write_all(b"x").expect("conversion error"); // Exit
+    writer.flush().expect("conversion error");
 
     let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
         line.contains("Counter:") || line.contains("EventLoopResult:")
@@ -77,19 +78,19 @@ fn controller(context: PtyTestContext) {
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 fn controlled() {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {
         println!("{MSG_CONTROLLED_STARTING}");
 
         let app = Box::<AppMainTest>::default();
         let exit_keys = vec![InputEvent::Keyboard(key_press! { @char 'x' })];
-        let initial_size = width(65) + height(11);
+        let initial_size = vp_width(65) + vp_height(11);
         let input_device = InputDevice::new();
         let output_device = OutputDevice::new_stdout();
         let state = State::default();
 
         println!("{MSG_CONTROLLED_READY}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
 
         let result = main_event_loop_impl(
             app,
@@ -112,7 +113,7 @@ fn controlled() {
         }
 
         println!("{MSG_SUCCESS}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
     });
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 
-# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity rustmcp
+# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
 
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
@@ -127,6 +127,8 @@ function main
             install-cmdr
         case install-build-infra
             install-build-infra
+        case install-rust-analyzer-mcp-server
+            install-rust-analyzer-mcp-server
         case test-cmdr-install-on-all-linux-distros
             test-cmdr-install-on-all-linux-distros
             # Unified commands
@@ -192,6 +194,7 @@ function print-help
         echo (set_color cyan --bold)"Local source package commands:"(set_color normal)
         echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc) from source"
         echo "    "(set_color green)"install-build-infra"(set_color normal)"  Install build-infra tools (cargo-rustdoc-fmt) from source"
+        echo "    "(set_color green)"install-rust-analyzer-mcp-server"(set_color normal)" Install rust-analyzer MCP server from source"
         echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, or rc"
@@ -230,14 +233,14 @@ end
 # This comprehensive installer sets up:
 # 1. cargo-binstall for fast binary installation
 # 2. Cargo tools for Rust development (bacon, flamegraph, etc.)
-# 3. Wild linker with .cargo/config.toml generation
-# 4. Language servers (rust-refactor)
+# 3. Local source packages (cmdr, build-infra, rust-analyzer-mcp-server)
+# 4. Language servers and components (rust-analyzer, rust-src)
+# 5. Cross-compilation target (x86_64-pc-windows-gnu)
 #
 # Features:
 # - Cross-platform support (macOS, Linux)
 # - Uses cargo-binstall for faster installations with fallback to cargo install --locked
 # - Idempotent - safe to run multiple times
-# - Generates optimized .cargo/config.toml with Wild linker support
 # - Uses shared utility functions from script_lib.fish
 #
 # Prerequisites:
@@ -254,12 +257,16 @@ end
 # - cargo-unmaintained: Check for unmaintained dependencies
 # - cargo-expand: Show macro expansions
 # - cargo-readme: Generate README from doc comments
+# - cargo-warloc: Count lines of code
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
-# - wild: Fast linker (wild-linker package)
-# - rust-analyzer: Language server
+# - cmdr: CLI apps (edi, giti, rc)
+# - rust-analyzer: Language server component
+# - rust-src: Rust standard library source component
 # - x86_64-pc-windows-gnu: Cross-compilation target for Windows verification
+# - cargo-rustdoc-fmt: Rustdoc comment formatter (from build-infra)
+# - rust-analyzer-mcp-server: MCP server for rust-analyzer (from rust-analyzer-mcp-server)
 #
 # Usage:
 #   fish run.fish install-cargo-tools
@@ -287,21 +294,12 @@ function install-cargo-tools
         install_cargo_tool $tool
     end
 
-    # Install git-based Refactoring Engine (Dex)
-    install_if_missing "rustmcp" "cargo install --path vendored-crates/rust-mcp"
-
-    # Configure Gemini MCP servers if Gemini is installed
-    if command -v gemini >/dev/null
-        echo ""
-        echo (set_color cyan --bold)"Configuring Gemini MCP servers..."(set_color normal)
-        gemini mcp add rust-refactor ~/.cargo/bin/rustmcp
-    end
-
-    # Install local source packages (cmdr and build-infra)
+    # Install local source packages (cmdr, build-infra, rust-analyzer-mcp-server)
     echo ""
     echo (set_color cyan --bold)"Installing local source packages..."(set_color normal)
     install-build-infra
     install-cmdr
+    install-rust-analyzer-mcp-server
 
     # Rust components
     if not rustup component list --installed | grep -q rust-analyzer
@@ -681,13 +679,13 @@ end
 #
 # This function checks for and installs updates to all cargo-installed binaries
 # using cargo-update (cargo install-update), and also rebuilds local source
-# packages (cmdr, build-infra) from source.
+# packages (cmdr, build-infra, rust-analyzer-mcp-server) from source.
 #
 # Features:
 # - Automatic update process (uses --all flag for crates.io tools)
 # - Updates all installed cargo tools in one command
 # - Only updates tools that have newer versions available
-# - Rebuilds local source packages (cmdr, build-infra) with current toolchain
+# - Rebuilds local source packages (cmdr, build-infra, rust-analyzer-mcp-server) with current toolchain
 # - Provides clear feedback on update status
 # - Safe to run regularly (idempotent)
 #
@@ -695,12 +693,12 @@ end
 # - bacon: Background rust code checker
 # - flamegraph & inferno: Performance profiling
 # - cargo-deny: Security auditing
-# - wild-linker: Fast linker
 # - And all other cargo-installed tools
 #
 # Local source packages rebuilt:
 # - cmdr: edi, giti, rc binaries
 # - build-infra: cargo-rustdoc-fmt
+# - rust-analyzer-mcp-server: rust-analyzer-mcp-server
 #
 # Prerequisites:
 # - cargo-update must be installed (installed via install-cargo-tools)
@@ -738,17 +736,13 @@ function update-cargo-tools
         echo (set_color yellow)"⚠️  Some crates.io updates may have failed. Continuing with local packages..."(set_color normal)
     end
 
-    # Update vendored tools
-    echo ""
-    echo (set_color cyan --bold)"Updating vendored tools..."(set_color normal)
-    cargo install --path vendored-crates/rust-mcp --force
-
     # Rebuild local source packages
-    # This ensures cmdr and build-infra are compiled with the current toolchain
+    # This ensures cmdr, build-infra, and rust-analyzer-mcp-server are compiled with the current toolchain
     echo ""
     echo (set_color cyan --bold)"Rebuilding local source packages..."(set_color normal)
     install-build-infra
     install-cmdr
+    install-rust-analyzer-mcp-server
 
     echo ""
     echo (set_color green)"✓ Cargo tools update complete!"(set_color normal)
@@ -1036,6 +1030,32 @@ function install-build-infra
         echo (set_color green)"✓ build-infra tools installed successfully"(set_color normal)
     else
         echo (set_color red)"⚠️  Failed to install build-infra tools"(set_color normal)
+        cd $original_dir
+        return 1
+    end
+
+    cd $original_dir
+end
+
+# Installs rust-analyzer-mcp-server from source.
+#
+# This function installs the r3bl-rust-analyzer-mcp-server (rust-analyzer-mcp-server binary)
+# from source using `cargo install --path . --force`.
+#
+# Tools installed:
+# - rust-analyzer-mcp-server: MCP server for rust-analyzer
+#
+# Usage:
+#   fish run.fish install-rust-analyzer-mcp-server
+function install-rust-analyzer-mcp-server
+    set original_dir $PWD
+    cd rust-analyzer-mcp-server
+
+    echo (set_color cyan --bold)"Installing rust-analyzer-mcp-server from source..."(set_color normal)
+    if cargo install --path . --force
+        echo (set_color green)"✓ rust-analyzer-mcp-server installed successfully"(set_color normal)
+    else
+        echo (set_color red)"⚠️  Failed to install rust-analyzer-mcp-server"(set_color normal)
         cd $original_dir
         return 1
     end

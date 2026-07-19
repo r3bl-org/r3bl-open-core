@@ -1,9 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlexBoxId, LayoutDirection};
-use crate::{InlineVec, Pos, ReqSizePc, Size, TuiStyle};
+use crate::{InlineVec, ReqSizePc, TuiStyle, VPPos, VPSize};
 
-/// Properties that are needed to create a [`crate::FlexBox`].
+/// Properties that are needed to create a [`FlexBox`].
+///
+/// [`FlexBox`]: crate::tui::FlexBox
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
     pub id: FlexBoxId,
@@ -12,17 +14,19 @@ pub struct FlexBoxProps {
     pub maybe_styles: Option<InlineVec<TuiStyle>>,
 }
 
-/// Properties that are needed to create a [`crate::Surface`].
+/// Properties that are needed to create a [`Surface`].
+///
+/// [`Surface`]: crate::tui::Surface
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
-    pub pos: Pos,
-    pub size: Size,
+    pub pos: VPPos,
+    pub size: VPSize,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, col, height, ok, req_size_pc, row, width};
+    use crate::{CommonResult, VPPos, ok, req_size_pc, vp_height, vp_pos, vp_width};
     use smallvec::smallvec;
 
     #[test]
@@ -48,7 +52,7 @@ mod tests {
             props.requested_size_percent,
             req_size_pc!(width: 50, height: 50)
         );
-        assert_eq!(props.maybe_styles.unwrap().len(), 1);
+        assert_eq!(props.maybe_styles.expect("conversion error").len(), 1);
 
         ok!()
     }
@@ -56,17 +60,17 @@ mod tests {
     #[test]
     fn test_surface_props_default() {
         let props = SurfaceProps::default();
-        assert_eq!(props.pos, Pos::default());
-        assert_eq!(props.size, Size::default());
+        assert_eq!(props.pos, VPPos::default());
+        assert_eq!(props.size, VPSize::default());
     }
 
     #[test]
     fn test_surface_props_custom() {
         let props = SurfaceProps {
-            pos: col(10) + row(20),
-            size: width(30) + height(40),
+            pos: vp_pos(10, 20),
+            size: vp_width(30) + vp_height(40),
         };
-        assert_eq!(props.pos, col(10) + row(20));
-        assert_eq!(props.size, width(30) + height(40));
+        assert_eq!(props.pos, vp_pos(10, 20));
+        assert_eq!(props.size, vp_width(30) + vp_height(40));
     }
 }

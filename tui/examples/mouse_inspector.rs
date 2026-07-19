@@ -44,20 +44,26 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{InputDevice, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
-               MouseInput, MouseInputKind, OutputDevice, PaintMode, Pos, RowIndex,
-               TermCol, TermRow, TerminalModeController, assert_terminal_is_interactive,
-               col, ok, row, set_mimalloc_in_main};
+use r3bl_tui::{DefaultIoDevices, InputDevice, InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, MouseInput, MouseInputKind, NarrowingCastToU16,
+               OutputDevice, PaintMode, TermCol, TermRow, TerminalModeController,
+               TuiAvailabilityChooseExt, VPPos, ansi_output,
+               assert_terminal_is_interactive, choose, ok,
+               readline_async::{HowToChoose, style::StyleSheet},
+               set_mimalloc_in_main, vp_col, vp_row};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
 fn clear_screen_and_home(output: &OutputDevice) {
     output.write(|out| {
-        let _unused = out
-            .write_all(r3bl_tui::ansi_output::screen_clearing::clear_screen().as_bytes());
+        let _unused =
+            out.write_all(ansi_output::screen_clearing::clear_screen().as_bytes());
         let _unused = out.write_all(
-            r3bl_tui::ansi_output::cursor_movement::cursor_position(row(0), col(0))
-                .as_bytes(),
+            ansi_output::cursor_movement::cursor_position(
+                vp_row(0).into(),
+                vp_col(0).into(),
+            )
+            .as_bytes(),
         );
         let _unused = out.flush();
     });
@@ -69,9 +75,9 @@ fn cursor_to(output: &OutputDevice, term_row: u16, term_col: u16) {
         // Convert 1-based terminal coords to 0-based indices for
         // output.
         let _unused = out.write_all(
-            r3bl_tui::ansi_output::cursor_movement::cursor_position(
-                row(term_row.saturating_sub(1) as usize),
-                col(term_col.saturating_sub(1) as usize),
+            ansi_output::cursor_movement::cursor_position(
+                vp_row(term_row.saturating_sub(1)).into(),
+                vp_col(term_col.saturating_sub(1)).into(),
             )
             .as_bytes(),
         );
@@ -101,7 +107,7 @@ const MAX_CLICK_MARKS: usize = 50;
 /// Application state for the mouse inspector
 struct MouseInspector {
     /// Visual markers where user clicked
-    click_marks: Vec<Pos>,
+    click_marks: Vec<VPPos>,
     /// Recent mouse events (newest first)
     event_history: VecDeque<MouseEvent>,
     /// Most recent mouse event
@@ -113,7 +119,7 @@ struct MouseInspector {
 /// Simplified mouse event for display purposes
 #[derive(Clone, Debug)]
 struct MouseEvent {
-    pos: Pos,
+    pos: VPPos,
     kind: MouseInputKind,
     ctrl: bool,
     shift: bool,
@@ -229,6 +235,39 @@ async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
     assert_terminal_is_interactive();
 
+    println!("🖱️ Interactive Mouse Event Inspector - Visualize & Debug Mouse Input");
+    println!("📋 Features:");
+    println!("   • Click anywhere to place marks and view (col, row) coordinates");
+    println!("   • Drag and move to inspect motion events");
+    println!("   • Scroll wheel (Up/Down/Left/Right) inspection");
+    println!("   • Modifier keys (Ctrl/Alt/Shift) combination tracking");
+    println!("   • Press 'c' to clear canvas, 'q' or Ctrl+C to quit");
+    println!();
+
+    // Ask user for confirmation before taking over screen.
+    let maybe_user_choice = {
+        let mut default_io_devices = DefaultIoDevices::default();
+        choose(
+            "🚀 Ready to launch the Mouse Event Inspector?",
+            &["Yes, launch Mouse Inspector", "No, exit"],
+            None,
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .get_first_result()
+        .await?
+    };
+
+    match maybe_user_choice {
+        Some(ref choice) if choice.starts_with("Yes") => {}
+        _ => {
+            println!("👋 Exiting without running inspector.");
+            return ok!();
+        }
+    }
+
     // Setup terminal
 
     let mut output_device = OutputDevice::new_stdout();
@@ -287,20 +326,20 @@ async fn run_inspector(
 #[allow(clippy::too_many_lines)] // UI rendering naturally requires many lines
 fn render(inspector: &MouseInspector, output: &OutputDevice) {
     // Canvas area for click marks (rows 4-18, using 0-based row indices)
-    let canvas_start_row = row(4);
-    let canvas_end_row = row(18);
+    let canvas_start_row = vp_row(4);
+    let canvas_end_row = vp_row(18);
 
     // Clear screen
     clear_screen_and_home(output);
 
     // Draw title and instructions
-    cursor_to(output, TermRow::from(row(0)).as_u16(), 1);
+    cursor_to(output, TermRow::from(vp_row(0)).as_u16(), 1);
     print_text(output, "┌──── Mouse Event Inspector ─────┐");
 
-    cursor_to(output, TermRow::from(row(1)).as_u16(), 1);
+    cursor_to(output, TermRow::from(vp_row(1)).as_u16(), 1);
     print_text(output, "│ Click, drag, scroll anywhere!  │");
 
-    cursor_to(output, TermRow::from(row(2)).as_u16(), 1);
+    cursor_to(output, TermRow::from(vp_row(2)).as_u16(), 1);
     print_text(output, "└────────────────────────────────┘");
 
     // Draw canvas border
@@ -323,11 +362,11 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
     print_text(output, "└────────────────────────────────┘");
 
     // Display latest event (row 20+)
-    cursor_to(output, TermRow::from(row(20)).as_u16(), 1);
+    cursor_to(output, TermRow::from(vp_row(20)).as_u16(), 1);
     print_text(output, "┌─ Latest Event ─────────────────┐");
 
     if let Some(evt) = &inspector.latest_event {
-        cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(21)).as_u16(), 1);
         print_text(
             output,
             &format!(
@@ -337,7 +376,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
             ),
         );
 
-        cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(22)).as_u16(), 1);
         let kind_str = match evt.kind {
             MouseInputKind::MouseDown(btn) => format!("MouseDown({btn:?})"),
             MouseInputKind::MouseUp(btn) => format!("MouseUp({btn:?})"),
@@ -350,25 +389,25 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
         };
         print_text(output, &format!("│ Kind:     {kind_str:<21}│"));
 
-        cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(23)).as_u16(), 1);
         print_text(output, &format!("│ Mods:     {:<21}│", evt.modifiers_str()));
     } else {
-        cursor_to(output, TermRow::from(row(21)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(21)).as_u16(), 1);
         print_text(output, "│ No events yet                  │");
-        cursor_to(output, TermRow::from(row(22)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(22)).as_u16(), 1);
         print_text(output, "│                                │");
-        cursor_to(output, TermRow::from(row(23)).as_u16(), 1);
+        cursor_to(output, TermRow::from(vp_row(23)).as_u16(), 1);
         print_text(output, "│                                │");
     }
 
-    cursor_to(output, TermRow::from(row(24)).as_u16(), 1);
+    cursor_to(output, TermRow::from(vp_row(24)).as_u16(), 1);
     print_text(output, "└────────────────────────────────┘");
 
     // Event history (row 26+)
-    let history_start_row = row(26);
-    let history_first_item_row = row(27);
-    let history_end_row = row(37);
-    let instructions_row = row(39);
+    let history_start_row = vp_row(26);
+    let history_first_item_row = vp_row(27);
+    let history_end_row = vp_row(37);
+    let instructions_row = vp_row(39);
 
     cursor_to(output, TermRow::from(history_start_row).as_u16(), 1);
     print_text(
@@ -377,7 +416,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
     );
 
     for (i, evt) in inspector.event_history.iter().take(10).enumerate() {
-        let row_idx = RowIndex::from(history_first_item_row.as_usize() + i);
+        let row_idx = history_first_item_row + vp_row(i.as_u16_narrowing());
         cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
 
         let mods = if evt.ctrl || evt.shift || evt.alt {
@@ -409,7 +448,7 @@ fn render(inspector: &MouseInspector, output: &OutputDevice) {
 
     // Fill remaining history lines with empty bordered lines
     for i in inspector.event_history.len()..10 {
-        let row_idx = RowIndex::from(history_first_item_row.as_usize() + i);
+        let row_idx = history_first_item_row + vp_row(i.as_u16_narrowing());
         cursor_to(output, TermRow::from(row_idx).as_u16(), 1);
         print_text(
             output,

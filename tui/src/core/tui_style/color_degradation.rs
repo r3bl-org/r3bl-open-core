@@ -112,7 +112,7 @@ pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
                 ColorSupport::Truecolor | ColorSupport::Ansi256 => TuiColor::Ansi(ansi),
 
                 // Terminal has no color support
-                ColorSupport::NoColor => TuiColor::Ansi(0.into()),
+                ColorSupport::NoColor => TuiColor::Ansi(0u16.into()),
 
                 // Convert to grayscale
                 ColorSupport::Grayscale => {
@@ -140,7 +140,7 @@ pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
                 }
 
                 // Terminal has no color support
-                ColorSupport::NoColor => TuiColor::Ansi(0.into()),
+                ColorSupport::NoColor => TuiColor::Ansi(0u16.into()),
 
                 // Convert to grayscale
                 ColorSupport::Grayscale => {
@@ -172,7 +172,7 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
         ColorSupport::Truecolor | ColorSupport::Ansi256 => TuiColor::Ansi(index.into()),
 
         // Terminal has no color support - reset to terminal default
-        ColorSupport::NoColor => TuiColor::Ansi(0.into()),
+        ColorSupport::NoColor => TuiColor::Ansi(0u16.into()),
 
         // Convert to grayscale for low-color terminals
         ColorSupport::Grayscale => {
@@ -264,21 +264,21 @@ mod tests {
     #[serial]
     fn test_basic_color_no_degradation_on_truecolor() {
         let _override = ColorSupportOverride::new(ColorSupport::Truecolor);
-        let black = TuiColor::Ansi(0.into());
-        let red = TuiColor::Ansi(1.into());
-        let white = TuiColor::Ansi(7.into());
+        let black = TuiColor::Ansi(0u16.into());
+        let red = TuiColor::Ansi(1u16.into());
+        let white = TuiColor::Ansi(7u16.into());
 
         assert_eq!(
             degrade_color(black, ColorSupport::Truecolor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(red, ColorSupport::Truecolor),
-            TuiColor::Ansi(1.into())
+            TuiColor::Ansi(1u16.into())
         );
         assert_eq!(
             degrade_color(white, ColorSupport::Truecolor),
-            TuiColor::Ansi(7.into())
+            TuiColor::Ansi(7u16.into())
         );
     }
 
@@ -286,16 +286,16 @@ mod tests {
     #[serial]
     fn test_basic_color_no_degradation_on_ansi256() {
         let _override = ColorSupportOverride::new(ColorSupport::Ansi256);
-        let black = TuiColor::Ansi(0.into());
-        let bright_red = TuiColor::Ansi(9.into());
+        let black = TuiColor::Ansi(0u16.into());
+        let bright_red = TuiColor::Ansi(9u16.into());
 
         assert_eq!(
             degrade_color(black, ColorSupport::Ansi256),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(bright_red, ColorSupport::Ansi256),
-            TuiColor::Ansi(9.into())
+            TuiColor::Ansi(9u16.into())
         );
     }
 
@@ -303,27 +303,27 @@ mod tests {
     #[serial]
     fn test_basic_color_to_nocolor() {
         let _override = ColorSupportOverride::new(ColorSupport::NoColor);
-        let black = TuiColor::Ansi(0.into());
-        let red = TuiColor::Ansi(1.into());
-        let white = TuiColor::Ansi(7.into());
-        let any_color = TuiColor::Ansi(15.into());
+        let black = TuiColor::Ansi(0u16.into());
+        let red = TuiColor::Ansi(1u16.into());
+        let white = TuiColor::Ansi(7u16.into());
+        let any_color = TuiColor::Ansi(15u16.into());
 
         // All basic colors should degrade to black (index 0) on NoColor
         assert_eq!(
             degrade_color(black, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(red, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(white, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(any_color, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
     }
 
@@ -331,9 +331,9 @@ mod tests {
     #[serial]
     fn test_basic_color_to_grayscale() {
         let _override = ColorSupportOverride::new(ColorSupport::Grayscale);
-        let black = TuiColor::Ansi(0.into());
-        let red = TuiColor::Ansi(1.into());
-        let white = TuiColor::Ansi(7.into());
+        let black = TuiColor::Ansi(0u16.into());
+        let red = TuiColor::Ansi(1u16.into());
+        let white = TuiColor::Ansi(7u16.into());
 
         let degraded_black = degrade_color(black, ColorSupport::Grayscale);
         let degraded_red = degrade_color(red, ColorSupport::Grayscale);
@@ -356,11 +356,11 @@ mod tests {
     #[serial]
     fn test_extended_color_no_degradation_on_ansi256() {
         let _override = ColorSupportOverride::new(ColorSupport::Ansi256);
-        let color_196 = TuiColor::Ansi(196.into()); // Bright red from palette
+        let color_196 = TuiColor::Ansi(196u16.into()); // Bright red from palette
 
         assert_eq!(
             degrade_color(color_196, ColorSupport::Ansi256),
-            TuiColor::Ansi(196.into())
+            TuiColor::Ansi(196u16.into())
         );
     }
 
@@ -368,11 +368,11 @@ mod tests {
     #[serial]
     fn test_extended_color_no_degradation_on_truecolor() {
         let _override = ColorSupportOverride::new(ColorSupport::Truecolor);
-        let color_196 = TuiColor::Ansi(196.into());
+        let color_196 = TuiColor::Ansi(196u16.into());
 
         assert_eq!(
             degrade_color(color_196, ColorSupport::Truecolor),
-            TuiColor::Ansi(196.into())
+            TuiColor::Ansi(196u16.into())
         );
     }
 
@@ -380,17 +380,17 @@ mod tests {
     #[serial]
     fn test_extended_color_to_nocolor() {
         let _override = ColorSupportOverride::new(ColorSupport::NoColor);
-        let color_196 = TuiColor::Ansi(196.into());
-        let color_255 = TuiColor::Ansi(255.into());
+        let color_196 = TuiColor::Ansi(196u16.into());
+        let color_255 = TuiColor::Ansi(255u16.into());
 
         // Extended colors should degrade to black
         assert_eq!(
             degrade_color(color_196, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(color_255, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
     }
 
@@ -398,7 +398,7 @@ mod tests {
     #[serial]
     fn test_extended_color_to_grayscale() {
         let _override = ColorSupportOverride::new(ColorSupport::Grayscale);
-        let color_196 = TuiColor::Ansi(196.into()); // Bright red
+        let color_196 = TuiColor::Ansi(196u16.into()); // Bright red
 
         let degraded = degrade_color(color_196, ColorSupport::Grayscale);
 
@@ -450,11 +450,11 @@ mod tests {
         // Both should degrade to black
         assert_eq!(
             degrade_color(red_rgb, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
         assert_eq!(
             degrade_color(green_rgb, ColorSupport::NoColor),
-            TuiColor::Ansi(0.into())
+            TuiColor::Ansi(0u16.into())
         );
     }
 

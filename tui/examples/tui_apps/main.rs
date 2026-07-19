@@ -18,9 +18,9 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, IntoErr, Size, TuiAvailability,
-               assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
-               fg_slate_gray, get_size, inline_string,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, IntoErr, TuiAvailability,
+               VPSize, assert_terminal_is_interactive, fg_color, fg_frozen_blue,
+               fg_pink, fg_slate_gray, get_size, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -236,7 +236,7 @@ enum AutoCompleteCommand {
     Exit,
 }
 
-fn generate_help_msg(window_size: Size) -> String {
+fn generate_help_msg(window_size: VPSize) -> String {
     use AutoCompleteCommand::{Commander, Editor, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
 

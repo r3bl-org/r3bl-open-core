@@ -4,7 +4,7 @@
 //! - <https://tintin.mudhalla.net/info/256color/>
 //! - <https://talyian.github.io/ansicolors/>
 
-use crate::{AnsiValue, RgbValue};
+use crate::{AnsiValue, RgbValue, WideningCastToI32, WideningCastToU32};
 use std::cmp::Ordering::Less;
 
 #[must_use]
@@ -87,7 +87,11 @@ mod color_utils {
         // Gamma correction.
         let gray_srgb = linear_to_srgb(gray_linear);
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::as_conversions
+        )]
         let gray_value = (gray_srgb * SCALE) as u8;
         (gray_value, gray_value, gray_value)
     }
@@ -218,10 +222,14 @@ mod cube_mapping {
             0.715_152_1_f32.mul_add(green_squared, 0.072_175_f32 * blue_squared),
         );
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let it = number.sqrt() as u8;
-
-        it
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::as_conversions
+        )]
+        {
+            number.sqrt() as u8
+        }
     }
 
     /// Calculates relative "diff" between two colors.
@@ -245,10 +253,10 @@ mod cube_mapping {
             blue: other_blue,
         } = other;
 
-        let red_sum = i32::from(this_red) + i32::from(other_red);
-        let red = i32::from(this_red) - i32::from(other_red);
-        let green = i32::from(this_green) - i32::from(other_green);
-        let blue = i32::from(this_blue) - i32::from(other_blue);
+        let red_sum = this_red.as_i32_widening() + other_red.as_i32_widening();
+        let red = this_red.as_i32_widening() - other_red.as_i32_widening();
+        let green = this_green.as_i32_widening() - other_green.as_i32_widening();
+        let blue = this_blue.as_i32_widening() - other_blue.as_i32_widening();
 
         let red_factor = 1024 + red_sum;
         let green_factor = 2048;
@@ -258,10 +266,10 @@ mod cube_mapping {
             + green_factor * green * green
             + blue_factor * blue * blue;
 
-        #[allow(clippy::cast_sign_loss)]
-        let it = distance as u32;
-
-        it
+        #[allow(clippy::cast_sign_loss, clippy::as_conversions)]
+        {
+            distance as u32
+        }
     }
 }
 
@@ -270,7 +278,7 @@ mod convert_between_rgb_and_u32 {
     use super::*;
 
     impl From<RgbValue> for u32 {
-        fn from(rgb: RgbValue) -> Self {
+        fn from(rgb: RgbValue) -> u32 {
             let RgbValue {
                 red: r,
                 green: g,
@@ -283,7 +291,7 @@ mod convert_between_rgb_and_u32 {
             // - **`Blue (b)`**: bits `0-7` (no shift)
             // Since these bit ranges **`don't overlap`**, `addition` (`+`) and `bitwise
             // OR` (`|`) produce the same result
-            (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)
+            (r.as_u32_widening() << 16) | (g.as_u32_widening() << 8) | b.as_u32_widening()
         }
     }
 }

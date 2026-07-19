@@ -923,7 +923,7 @@
 //! [`InterruptHandle`]: InterruptHandle
 //! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
-//! [`io_uring`]: https://kernel.dk/io_uring.pdf
+//! [`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
 //! [`IORING_OP_ASYNC_CANCEL`]:
 //!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html

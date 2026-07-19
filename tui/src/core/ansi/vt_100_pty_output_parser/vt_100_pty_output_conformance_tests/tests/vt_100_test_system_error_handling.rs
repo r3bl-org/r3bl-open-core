@@ -39,8 +39,8 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{col, core::ansi::vt_100_pty_output_parser::CsiSequence, row, term_col,
-            term_row};
+use crate::{core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_row,
+            vp_col, vp_row};
 
 /// Tests for malformed [`CSI`] sequence handling.
 ///
@@ -71,12 +71,12 @@ pub mod malformed_csi_sequences {
 
             // Cursor should remain within valid bounds
             assert!(
-                ofs_buf_vt_100.get_cursor_pos().row_index < row(10),
+                ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10),
                 "Cursor row out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
             assert!(
-                ofs_buf_vt_100.get_cursor_pos().col_index < col(10),
+                ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10),
                 "Cursor column out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
@@ -102,7 +102,7 @@ pub mod malformed_csi_sequences {
 
             // Parser should handle gracefully - no crash expected
             // Style state should remain valid
-            let style = &ofs_buf_vt_100.parser_global_state.current_style;
+            let style = &ofs_buf_vt_100.get_parser_global_state().current_style;
             // Basic validity check - style object should be accessible
             let _ = &style.attribs;
         }
@@ -139,8 +139,8 @@ pub mod malformed_csi_sequences {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(excessive_params);
 
         // Should not crash and cursor should remain in bounds
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
     }
 
     #[test]
@@ -275,8 +275,8 @@ pub mod invalid_character_handling {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(mixed_sequence);
 
         // Should handle mixture gracefully
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
     }
 
     #[test]
@@ -296,8 +296,8 @@ pub mod invalid_character_handling {
         }
 
         // Should maintain stability under stress
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
 
         // Should still accept valid input
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("FINAL");
@@ -328,32 +328,32 @@ pub mod boundary_edge_cases {
                 "\x1b[0A", // Raw ANSI: CSI 0 A
                 term_row(nz(3)),
                 term_col(nz(3)),
-                row(1),
-                col(2),
+                vp_row(1),
+                vp_col(2),
             ),
             (
                 "Cursor down by 0",
                 "\x1b[0B", // Raw ANSI: CSI 0 B
                 term_row(nz(3)),
                 term_col(nz(3)),
-                row(3),
-                col(2),
+                vp_row(3),
+                vp_col(2),
             ),
             (
                 "Cursor forward by 0",
                 "\x1b[0C", // Raw ANSI: CSI 0 C
                 term_row(nz(3)),
                 term_col(nz(3)),
-                row(2),
-                col(3),
+                vp_row(2),
+                vp_col(3),
             ),
             (
                 "Cursor backward by 0",
                 "\x1b[0D", // Raw ANSI: CSI 0 D
                 term_row(nz(3)),
                 term_col(nz(3)),
-                row(2),
-                col(1),
+                vp_row(2),
+                vp_col(1),
             ),
         ];
 
@@ -379,12 +379,22 @@ pub mod boundary_edge_cases {
             let _unused = ofs_buf_vt_100.apply_ansi_bytes(movement_cmd_bytes);
 
             // Per `VT-100` spec: parameter 0 is treated as 1 (minimum movement)
+            assert!(
+                ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10),
+                "Row should be within buffer height (10) for {description}"
+            );
+            assert!(
+                ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10),
+                "Column should be within buffer width (10) for {description}"
+            );
             assert_eq!(
-                ofs_buf_vt_100.get_cursor_pos().row_index, expected_row,
+                ofs_buf_vt_100.get_cursor_pos().row_index,
+                expected_row,
                 "VT-100 spec: {description} should move by 1 (row)"
             );
             assert_eq!(
-                ofs_buf_vt_100.get_cursor_pos().col_index, expected_col,
+                ofs_buf_vt_100.get_cursor_pos().col_index,
+                expected_col,
                 "VT-100 spec: {description} should move by 1 (col)"
             );
         }
@@ -405,8 +415,8 @@ pub mod boundary_edge_cases {
             let _unused = ofs_buf_vt_100.apply_ansi_bytes(sequence);
 
             // Should clamp to valid ranges
-            assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-            assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+            assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+            assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
         }
     }
 
@@ -440,19 +450,19 @@ pub mod boundary_edge_cases {
         ];
 
         for sequence in beyond_bounds {
-            let _unused = ofs_buf_vt_100.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf_vt_100.apply_ansi_bytes(&sequence);
 
             // Positions should be clamped to buffer bounds
             assert!(
-                ofs_buf_vt_100.get_cursor_pos().row_index <= row(9), /* 0-based, so max is 9
-                                                                * for 10-row buffer */
-                "Row not clamped properly: {:?}",
+                ofs_buf_vt_100.get_cursor_pos().row_index <= vp_row(9), /* 0-based, so
+                                                                         * max is 9 */
+                "Row should be within buffer bounds for {sequence:?}: {:?}",
                 ofs_buf_vt_100.get_cursor_pos()
             );
             assert!(
-                ofs_buf_vt_100.get_cursor_pos().col_index <= col(9), /* 0-based, so max is 9
-                                                                * for 10-col buffer */
-                "Column not clamped properly: {:?}",
+                ofs_buf_vt_100.get_cursor_pos().col_index <= vp_col(9), /* 0-based, so
+                                                                         * max is 9 */
+                "Column should be within buffer bounds for {sequence:?}: {:?}",
                 ofs_buf_vt_100.get_cursor_pos()
             );
         }
@@ -486,8 +496,8 @@ pub mod parser_resilience {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes("Final test");
 
         // Parser should be in a valid state
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
     }
 
     #[test]
@@ -511,8 +521,8 @@ pub mod parser_resilience {
         }
 
         // Should eventually process complete sequence
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
     }
 
     #[test]
@@ -534,8 +544,8 @@ pub mod parser_resilience {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(adversarial_input);
 
         // State should remain consistent
-        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < row(10));
-        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < col(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().row_index < vp_row(10));
+        assert!(ofs_buf_vt_100.get_cursor_pos().col_index < vp_col(10));
 
         // Should still respond to valid commands
         let move_sequence = format!(
@@ -547,8 +557,8 @@ pub mod parser_resilience {
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
 
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2)); // 0-based
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, vp_row(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(2)); // 0-based
     }
 }
 
@@ -588,8 +598,8 @@ pub mod vte_parser_limit_exceeded {
             }
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(initial_pos);
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(4));
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(4));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, vp_row(4));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(4));
 
         // Send CSI sequence with many parameters (exceeds VTE's internal limit)
         // VTE will collect up to its limit, set ignore=true, and call csi_dispatch()
@@ -601,12 +611,12 @@ pub mod vte_parser_limit_exceeded {
         // Cursor should NOT have moved - sequence was discarded
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().row_index,
-            row(4),
+            vp_row(4),
             "Cursor should not move when CSI sequence exceeds parameter limit"
         );
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().col_index,
-            col(4),
+            vp_col(4),
             "Cursor should not move when CSI sequence exceeds parameter limit"
         );
 
@@ -621,12 +631,12 @@ pub mod vte_parser_limit_exceeded {
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(valid_move);
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().row_index,
-            row(1),
+            vp_row(1),
             "Parser should recover and process valid sequences"
         );
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().col_index,
-            col(1),
+            vp_col(1),
             "Parser should recover and process valid sequences"
         );
     }
@@ -644,8 +654,8 @@ pub mod vte_parser_limit_exceeded {
             }
         );
         let _unused = ofs_buf_vt_100.apply_ansi_bytes(initial_pos);
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(2));
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, vp_row(2));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(2));
 
         // Send CSI sequence with too many intermediate bytes (>2)
         // Format: ESC [ intermediates... final_char
@@ -657,12 +667,12 @@ pub mod vte_parser_limit_exceeded {
         // Cursor should NOT have moved - sequence was discarded
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().row_index,
-            row(2),
+            vp_row(2),
             "Cursor should not move when CSI has too many intermediates"
         );
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().col_index,
-            col(2),
+            vp_col(2),
             "Cursor should not move when CSI has too many intermediates"
         );
     }
@@ -673,7 +683,7 @@ pub mod vte_parser_limit_exceeded {
 
         // Get initial character set state (should be ASCII by default)
         let initial_charset = matches!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
 
@@ -685,7 +695,7 @@ pub mod vte_parser_limit_exceeded {
 
         // Character set should NOT have changed - sequence was discarded
         let charset_after = matches!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
         assert_eq!(
@@ -713,7 +723,7 @@ pub mod vte_parser_limit_exceeded {
 
         // Cursor should have advanced for the printable text
         assert!(
-            ofs_buf_vt_100.get_cursor_pos().col_index >= col(4),
+            ofs_buf_vt_100.get_cursor_pos().col_index >= vp_col(4),
             "Parser should continue working after ignored DCS"
         );
     }
@@ -738,12 +748,12 @@ pub mod vte_parser_limit_exceeded {
         // Parser should have recovered and processed the valid cursor position
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().row_index,
-            row(6),
+            vp_row(6),
             "Parser should recover and process valid sequences after ignored one"
         );
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().col_index,
-            col(2),
+            vp_col(2),
             "Parser should recover and process valid sequences after ignored one"
         );
     }
@@ -775,12 +785,12 @@ pub mod vte_parser_limit_exceeded {
         // (TEXT would have moved cursor but then final position overrides)
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().row_index,
-            row(4),
+            vp_row(4),
             "Only valid sequences should execute, ignored ones discarded"
         );
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos().col_index,
-            col(4),
+            vp_col(4),
             "Only valid sequences should execute, ignored ones discarded"
         );
     }
@@ -828,12 +838,12 @@ pub mod vte_parser_limit_exceeded {
             if description.contains("Cursor") || description.contains("CUP") {
                 assert_eq!(
                     ofs_buf_vt_100.get_cursor_pos().row_index,
-                    row(4),
+                    vp_row(4),
                     "{description} should be ignored when params exceed limit"
                 );
                 assert_eq!(
                     ofs_buf_vt_100.get_cursor_pos().col_index,
-                    col(4),
+                    vp_col(4),
                     "{description} should be ignored when params exceed limit"
                 );
             }

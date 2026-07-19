@@ -25,6 +25,9 @@ function parse_arguments
         case --clippy
             echo "clippy"
             return 0
+        case --fmt
+            echo "fmt"
+            return 0
         case --full
             echo "full"
             return 0
@@ -48,6 +51,9 @@ function parse_arguments
             return 0
         case --test
             echo "test"
+            return 0
+        case --star-history
+            echo "star-history"
             return 0
         case '*'
             echo "❌ Unknown argument: $argv[1]" >&2
@@ -77,6 +83,7 @@ function show_help
     echo "  ./check.fish --check      Run typecheck only (cargo check)"
     echo "  ./check.fish --build      Run build only (cargo build)"
     echo "  ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)"
+    echo "  ./check.fish --fmt        Run formatting on changed files (cargo fmt + cargo-rustdoc-fmt)"
     echo "  ./check.fish --test       Run tests only (cargo test + doctests)"
     echo "  ./check.fish --doc        Build documentation only (full, with deps, dep-doc caching)"
     echo "  ./check.fish --quick-doc  Build docs (quick, --no-deps, staging + sync)"
@@ -84,6 +91,7 @@ function show_help
     echo "  ./check.fish --watch      Watch mode: run default checks on changes"
     echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
     echo "  ./check.fish --watch-doc  Watch mode: run doc build (full with deps)"
+    echo "  ./check.fish --star-history Re-generate star history SVG chart"
     echo "  ./check.fish --help       Show this help message"
     echo "  ./check.fish --kill       Kill any running watch instances and cleanup"
     echo ""
@@ -117,6 +125,7 @@ function show_help
     echo "  --check       Runs typecheck only: cargo check (fast compile check)"
     echo "  --build       Runs build only: cargo build (compile production code)"
     echo "  --clippy      Runs clippy only: cargo clippy --all-targets (lint warnings)"
+    echo "  --fmt         Formats changed files: cargo fmt + cargo-rustdoc-fmt"
     echo "  --test        Runs tests only: cargo test + doctests"
     echo "  --doc         Builds documentation only (full, with deps, dep-doc caching)"
     echo "  --quick-doc   Builds docs (quick, --no-deps, staging + sync)"

@@ -3,7 +3,8 @@
 use super::HasFocus;
 use crate::{BoxedSafeComponent, CommonResult, ContainsResult, EventPropagation,
             FlexBoxId, GlobalData, InputEvent};
-use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
+use rustc_hash::FxHashMap;
+use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 pub struct ComponentRegistry<S, AS>
@@ -14,7 +15,7 @@ where
     _phantom: PhantomData<(S, AS)>,
 }
 
-pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, BoxedSafeComponent<S, A>>;
+pub type ComponentRegistryMap<S, A> = FxHashMap<FlexBoxId, BoxedSafeComponent<S, A>>;
 
 impl<S, AS> ComponentRegistry<S, AS>
 where

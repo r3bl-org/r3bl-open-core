@@ -58,7 +58,7 @@ pub use common::*;
 pub use ansi::{csi, dsr, esc, generic, input_sequences, raw_mode_constants, sgr, utf8};
 
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use coordinates::{bounds_check, buffer_coords, byte, percent_spec, primitives,
+pub use coordinates::{bounds_check, viewport_coords, byte, percent_spec, primitives,
                       vt_100_ansi_coords};
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use graphemes::{gc_string, traits, unicode_segment, word_boundaries};

@@ -1,16 +1,16 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ColWidth,
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, VPWidth,
             DEVELOPMENT_MODE, EventLoopResult, Header, InlineString, InputDevice,
             InputEvent, IntoErr, ItemsOwned, Key, KeyPress, KeyState,
-            LineStateControlSignal, ModifierKeysMask, OutputDevice, RowHeight,
-            SelectComponent, SharedWriter, SpecialKey, State, StyleSheet,
-            TerminalInteractiveStatus, TuiAvailability, ch,
-            check_is_terminal_interactive, enter_event_loop_async, fg_green, get_size,
-            inline_string, tui::md_parser::md_parser_constants::SPACE_CHAR, usize};
+            LineStateControlSignal, ModifierKeysMask, OutputDevice, SelectComponent,
+            SharedWriter, SpecialKey, State, StyleSheet, TerminalInteractiveStatus,
+            TuiAvailability, VPHeight, ch, check_is_terminal_interactive,
+            enter_event_loop_async, fg_green, get_size, inline_string,
+            tui::md_parser::md_parser_constants::SPACE_CHAR, usize};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
-use std::{future::Future, pin::Pin};
+use std::{cmp::min, future::Future, pin::Pin};
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
@@ -118,8 +118,8 @@ pub type ChooseFuture<'a> =
 pub fn choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
-    maybe_max_height: Option<RowHeight>,
-    maybe_max_width: Option<ColWidth>,
+    maybe_max_height: Option<VPHeight>,
+    maybe_max_width: Option<VPWidth>,
     how: HowToChoose,
     stylesheet: StyleSheet,
     io: (
@@ -171,7 +171,7 @@ pub fn choose<'a>(
                             if row_height == 0 {
                                 DEFAULT_HEIGHT
                             } else {
-                                std::cmp::min(row_height, from.len())
+                                min(row_height, from.len())
                             }
                         }
                     }
@@ -421,7 +421,7 @@ mod keypress_handler_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
+    pub fn handle_resize_event(state: &mut State, size: crate::VPSize) -> EventLoopResult {
         DEVELOPMENT_MODE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {

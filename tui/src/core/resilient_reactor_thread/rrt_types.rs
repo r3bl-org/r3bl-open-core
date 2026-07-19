@@ -70,8 +70,8 @@ pub enum SubscribeError {
     /// [`RRTWorker::create_and_register_os_sources()`] failed to acquire OS resources.
     ///
     /// The inner [`miette::Report`] preserves the full error chain from the worker
-    /// implementation (e.g., [`PollCreationError`], [`SoftwareInterruptCreationError`]). Access it
-    /// via pattern matching.
+    /// implementation (e.g., [`PollCreationError`], [`SoftwareInterruptCreationError`]).
+    /// Access it via pattern matching.
     ///
     /// [`PollCreationError`]: crate::terminal_lib_backends::PollCreationError
     /// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources

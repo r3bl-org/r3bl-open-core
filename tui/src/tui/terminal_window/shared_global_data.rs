@@ -1,12 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, MemoizedLenMap,
-            OfsBuf, OfsBufPool, OutputDevice, RenderPipeline, Size,
-            SpinnerStyle, TelemetryHudReport, core::glyphs, ok, spinner_impl,
+use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, MemoizedLenMap, OfsBuf,
+            OfsBufPool, OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport,
+            VPSize, core::glyphs, ok, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
-use std::{collections::HashMap,
-          fmt::{Debug, Formatter}};
+use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc::Sender;
 
 /// This is a global data structure that holds state for the entire application
@@ -16,8 +15,8 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    /// The [Size] of the terminal window.
-    pub window_size: Size,
+    /// The [`VPSize`] of the terminal window.
+    pub window_size: VPSize,
 
     /// The last rendered [`OfsBuf`].
     pub maybe_saved_ofs_buf: Option<OfsBuf>,
@@ -31,7 +30,7 @@ where
     /// The terminal's output device (anything that implements [`SafeRawTerminal`] which
     /// can be [`stdout`] or [`SharedWriter`], etc.).
     ///
-    /// [`SafeRawTerminal`]: crate::SafeRawTerminal
+    /// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
     /// [`SharedWriter`]: crate::SharedWriter
     /// [`stdout`]: std::io::stdout
     pub output_device: OutputDevice,
@@ -147,7 +146,7 @@ where
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,
-        initial_size: Size,
+        initial_size: VPSize,
         output_device: OutputDevice,
         ofs_buf_pool: OfsBufPool,
     ) -> CommonResult<GlobalData<S, AS>>
@@ -155,14 +154,14 @@ where
         AS: Debug + Default + Clone + Sync + Send,
     {
         let mut it = GlobalData {
-            window_size: Size::default(),
+            window_size: VPSize::default(),
             maybe_saved_ofs_buf: Option::default(),
             state,
             main_thread_channel_sender,
             output_device,
             ofs_buf_pool,
             hud_data: HudData::default(),
-            memoized_text_widths: HashMap::new(),
+            memoized_text_widths: MemoizedLenMap::default(),
             pipeline: RenderPipeline::default(),
         };
 
@@ -171,7 +170,7 @@ where
         Ok(it)
     }
 
-    pub fn set_size(&mut self, new_size: Size) {
+    pub fn set_size(&mut self, new_size: VPSize) {
         self.window_size = new_size;
         DEBUG_TUI_MOD.then(|| {
             // % is Display, ? is Debug.
@@ -182,5 +181,5 @@ where
         });
     }
 
-    pub fn get_size(&self) -> Size { self.window_size }
+    pub fn get_size(&self) -> VPSize { self.window_size }
 }

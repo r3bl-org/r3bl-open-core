@@ -2,12 +2,11 @@
 
 use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TuiAvailabilityChooseExt,
                TuiColor, TuiStyle, assert_terminal_is_interactive, choose,
-               cli_text_inline, cli_text_line, cli_text_lines, get_size, height,
-               inline_vec,
+               cli_text_inline, cli_text_line, cli_text_lines, get_size, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},
-               set_mimalloc_in_main, throws, tui_color, usize, width};
+               set_mimalloc_in_main, throws, tui_color, vp_height, vp_width};
 
 const MULTI_LINE_HEADER: &str = "Multi line header";
 const SINGLE_LINE_HEADER: &str = "Single line header";
@@ -40,8 +39,8 @@ async fn main() -> miette::Result<()> {
         });
 
         // Get display size.
-        let max_width_col_count = usize(*size.col_width);
-        let max_height_row_count: usize = 5;
+        let max_width_col_count = **size.col_width;
+        let max_height_row_count: u16 = 5;
 
         // Create styles.
         let default_style = StyleSheet::default();
@@ -63,10 +62,10 @@ async fn main() -> miette::Result<()> {
                     SINGLE_SELECT_2_ITEMS_VPH_5,
                 ],
                 // height of the tuify component.
-                Some(height(6)),
+                Some(vp_height(6)),
                 // width of the tuify component.
                 // 0 means it will use the full terminal width.
-                Some(width(0)),
+                Some(vp_width(0)),
                 HowToChoose::Single,
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),
@@ -164,7 +163,7 @@ async fn multi_line_header() -> miette::Result<()> {
             "item 12 of 13",
             "item 13 of 13",
         ],
-        Some(height(6)),
+        Some(vp_height(6)),
         None,
         HowToChoose::Multiple,
         StyleSheet::default(),
@@ -184,7 +183,7 @@ async fn multi_line_header() -> miette::Result<()> {
     ok!()
 }
 
-async fn single_line_header(max_width_col_count: usize) -> miette::Result<()> {
+async fn single_line_header(max_width_col_count: u16) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
     let maybe_user_choice = choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
@@ -203,8 +202,8 @@ async fn single_line_header(max_width_col_count: usize) -> miette::Result<()> {
             "item 12 of 13",
             "item 13 of 13",
         ],
-        Some(height(5)),
-        Some(width(max_width_col_count)),
+        Some(vp_height(5)),
+        Some(vp_width(max_width_col_count)),
         HowToChoose::Multiple,
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
@@ -249,7 +248,7 @@ async fn multiple_select_single_item() -> miette::Result<()> {
     let maybe_user_choice = choose(
         instructions,
         list,
-        Some(height(6)),
+        Some(vp_height(6)),
         None,
         HowToChoose::Multiple,
         StyleSheet::default(),
@@ -271,8 +270,8 @@ async fn multiple_select_single_item() -> miette::Result<()> {
 
 /// 13 items & viewport height = 5.
 async fn multiple_select_13_items_vph_5(
-    max_height_row_count: usize,
-    max_width_col_count: usize,
+    max_height_row_count: u16,
+    max_width_col_count: u16,
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
@@ -303,8 +302,8 @@ async fn multiple_select_13_items_vph_5(
             "item 12 of 13",
             "item 13 of 13",
         ],
-        Some(height(max_height_row_count)),
-        Some(width(max_width_col_count)),
+        Some(vp_height(max_height_row_count)),
+        Some(vp_width(max_width_col_count)),
         HowToChoose::Multiple,
         style,
         default_io_devices.as_mut_tuple(),
@@ -333,8 +332,8 @@ async fn multiple_select_13_items_vph_5(
 
 /// 2 items & viewport height = 5.
 async fn multiple_select_2_items_vph_5(
-    max_height_row_count: usize,
-    max_width_col_count: usize,
+    max_height_row_count: u16,
+    max_width_col_count: u16,
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
@@ -352,8 +351,8 @@ async fn multiple_select_2_items_vph_5(
     let maybe_user_choice = choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
-        Some(height(max_height_row_count)),
-        Some(width(max_width_col_count)),
+        Some(vp_height(max_height_row_count)),
+        Some(vp_width(max_width_col_count)),
         HowToChoose::Multiple,
         style,
         default_io_devices.as_mut_tuple(),
@@ -382,8 +381,8 @@ async fn multiple_select_2_items_vph_5(
 
 /// 13 items & viewport height = 5.
 async fn single_select_13_items_vph_5(
-    max_height_row_count: usize,
-    max_width_col_count: usize,
+    max_height_row_count: u16,
+    max_width_col_count: u16,
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
@@ -404,8 +403,8 @@ async fn single_select_13_items_vph_5(
             "item 12 of 13",
             "item 13 of 13",
         ],
-        Some(height(max_height_row_count)),
-        Some(width(max_width_col_count)),
+        Some(vp_height(max_height_row_count)),
+        Some(vp_width(max_width_col_count)),
         HowToChoose::Single,
         style,
         default_io_devices.as_mut_tuple(),
@@ -434,8 +433,8 @@ async fn single_select_13_items_vph_5(
 
 /// 2 items & viewport height = 5.
 async fn single_select_2_items_vph_5(
-    max_height_row_count: usize,
-    max_width_col_count: usize,
+    max_height_row_count: u16,
+    max_width_col_count: u16,
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = single_select_instruction();
@@ -452,8 +451,8 @@ async fn single_select_2_items_vph_5(
     let maybe_user_choice = choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
-        Some(height(max_height_row_count)),
-        Some(width(max_width_col_count)),
+        Some(vp_height(max_height_row_count)),
+        Some(vp_width(max_width_col_count)),
         HowToChoose::Single,
         style,
         default_io_devices.as_mut_tuple(),

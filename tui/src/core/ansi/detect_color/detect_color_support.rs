@@ -301,7 +301,7 @@ pub mod global_hyperlink_support {
     /// This allows applications to force enable/disable hyperlink support.
     /// regardless of terminal detection.
     pub fn set_override(hyperlink_support: HyperlinkSupport) {
-        let value = hyperlink_support as i8;
+        let value = i8::from(hyperlink_support);
         HYPERLINK_SUPPORT_GLOBAL.store(value, Ordering::Release);
     }
 
@@ -328,7 +328,7 @@ pub mod global_hyperlink_support {
 
     /// Sets the cached hyperlink support result.
     fn set_cached(hyperlink_support: HyperlinkSupport) {
-        let value = hyperlink_support as i8;
+        let value = i8::from(hyperlink_support);
         HYPERLINK_SUPPORT_CACHED.store(value, Ordering::Release);
     }
 
@@ -568,7 +568,7 @@ mod convert_between_hyperlink_and_i8 {
 
     impl From<super::HyperlinkSupport> for i8 {
         #[rustfmt::skip]
-        fn from(hyperlink_support: super::HyperlinkSupport) -> Self {
+        fn from(hyperlink_support: super::HyperlinkSupport) -> i8 {
             match hyperlink_support {
                 super::HyperlinkSupport::NotSupported => 0,
                 super::HyperlinkSupport::Supported => 1,
@@ -597,7 +597,7 @@ mod convert_between_color_and_i8 {
 
     impl From<super::ColorSupport> for i8 {
         #[rustfmt::skip]
-        fn from(value: super::ColorSupport) -> Self {
+        fn from(value: super::ColorSupport) -> i8 {
             match value {
                 super::ColorSupport::Ansi256   => 1,
                 super::ColorSupport::Truecolor => 2,

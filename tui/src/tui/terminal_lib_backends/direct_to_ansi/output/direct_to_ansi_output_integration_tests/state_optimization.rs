@@ -17,7 +17,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::test_helpers::*;
-use crate::{col, pos, render_op::RenderOpCommon, row, tui_color};
+use crate::{ansi_output, render_op::RenderOpCommon, tui_color, vp_col, vp_row};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {
@@ -25,7 +25,7 @@ fn test_duplicate_cursor_position_updates_state() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let target_pos = pos(row(5) + col(10));
+    let target_pos = vp_row(5) + vp_col(10);
 
     // First move generates ANSI output and updates state
     let op1 = RenderOpCommon::MoveCursorPositionAbs(target_pos);
@@ -35,7 +35,10 @@ fn test_duplicate_cursor_position_updates_state() {
     assert_eq!(state.cursor_pos, target_pos);
     assert_eq!(
         output1,
-        crate::ansi_output::cursor_movement::cursor_position(row(5), col(10))
+        ansi_output::cursor_movement::cursor_position(
+            vp_row(5).into(),
+            vp_col(10).into()
+        )
     );
 
     // Clear buffer for second operation
@@ -113,11 +116,11 @@ fn test_mixed_operations_with_state_tracking() {
         // First: set red foreground
         RenderOpCommon::SetFgColor(tui_color!(red)),
         // Second: move cursor
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10)),
         // Third: set SAME red (optimization may skip, but state updates)
         RenderOpCommon::SetFgColor(tui_color!(red)),
         // Fourth: move to SAME position (state updates)
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10)),
         // Fifth: change to blue
         RenderOpCommon::SetFgColor(tui_color!(blue)),
     ];
@@ -126,17 +129,17 @@ fn test_mixed_operations_with_state_tracking() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Verify output contains the main sequences
-    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(red))));
+    assert!(output.contains(&ansi_output::color_ops::fg_color(tui_color!(red))));
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(5),
-            col(10)
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(5).into(),
+            vp_col(10).into()
         ))
     );
-    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(blue))));
+    assert!(output.contains(&ansi_output::color_ops::fg_color(tui_color!(blue))));
 
     // Verify color optimization works (duplicate red doesn't appear twice)
-    let expected_red = crate::ansi_output::color_ops::fg_color(tui_color!(red));
+    let expected_red = ansi_output::color_ops::fg_color(tui_color!(red));
     let red_count = output.matches(&expected_red).count();
     assert_eq!(
         red_count, 1,
@@ -145,7 +148,7 @@ fn test_mixed_operations_with_state_tracking() {
 
     // Final state should be correct regardless of optimization
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
-    assert_eq!(state.cursor_pos, pos(row(5) + col(10)));
+    assert_eq!(state.cursor_pos, vp_row(5) + vp_col(10));
 }
 
 #[test]
@@ -167,10 +170,7 @@ fn test_color_change_resets_optimization_cache() {
     let output2 = execute_and_capture(op2, &mut state, &output_device2, &stdout_mock2);
 
     // Should generate output (color changed)
-    assert_eq!(
-        output2,
-        crate::ansi_output::color_ops::fg_color(tui_color!(blue))
-    );
+    assert_eq!(output2, ansi_output::color_ops::fg_color(tui_color!(blue)));
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
 
     // New device for third operation
@@ -188,7 +188,7 @@ fn test_color_change_resets_optimization_cache() {
 fn test_cursor_position_state_tracks_changes() {
     // Test that cursor position state is correctly tracked through multiple moves
     let mut state = create_test_state();
-    let target_pos = pos(row(8) + col(12));
+    let target_pos = vp_row(8) + vp_col(12);
 
     // First move
     let (device1, mock1) = create_mock_output();
@@ -198,7 +198,7 @@ fn test_cursor_position_state_tracks_changes() {
 
     // Second move to different position
     let (device2, mock2) = create_mock_output();
-    let new_pos = pos(row(10) + col(15));
+    let new_pos = vp_col(15) + vp_row(10);
     let op2 = RenderOpCommon::MoveCursorPositionAbs(new_pos);
     let _unused = execute_and_capture(op2, &mut state, &device2, &mock2);
     assert_eq!(state.cursor_pos, new_pos);
@@ -236,7 +236,7 @@ fn test_reset_color_clears_optimization_state() {
     let output_reset =
         execute_and_capture(reset, &mut state, &output_device2, &stdout_mock2);
 
-    assert_eq!(output_reset, crate::ansi_output::color_ops::reset_color());
+    assert_eq!(output_reset, ansi_output::color_ops::reset_color());
     assert!(state.fg_color.is_none());
     assert!(state.bg_color.is_none());
 
@@ -251,7 +251,7 @@ fn test_reset_color_clears_optimization_state() {
     // Should generate output because reset cleared the cache
     assert_eq!(
         output_red2,
-        crate::ansi_output::color_ops::fg_color(tui_color!(red))
+        ansi_output::color_ops::fg_color(tui_color!(red))
     );
 }
 
@@ -265,14 +265,14 @@ fn test_complex_optimization_workflow() {
         // Initial setup
         RenderOpCommon::SetFgColor(tui_color!(red)),
         RenderOpCommon::SetBgColor(tui_color!(blue)),
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(0) + vp_col(0)),
         // Redundant operations (will be skipped)
         RenderOpCommon::SetFgColor(tui_color!(red)),
         RenderOpCommon::SetBgColor(tui_color!(blue)),
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(0) + vp_col(0)),
         // New operations
         RenderOpCommon::SetFgColor(tui_color!(green)),
-        RenderOpCommon::MoveCursorPositionAbs(pos(row(1) + col(5))),
+        RenderOpCommon::MoveCursorPositionAbs(vp_row(1) + vp_col(5)),
         RenderOpCommon::ClearCurrentLine,
     ];
 
@@ -282,23 +282,23 @@ fn test_complex_optimization_workflow() {
     // Verify final state
     assert_eq!(state.fg_color, Some(tui_color!(green)));
     assert_eq!(state.bg_color, Some(tui_color!(blue)));
-    assert_eq!(state.cursor_pos, pos(row(1) + col(5)));
+    assert_eq!(state.cursor_pos, vp_row(1) + vp_col(5));
 
     // Verify output contains necessary sequences but optimized
-    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(red))));
-    assert!(output.contains(&crate::ansi_output::color_ops::bg_color(tui_color!(blue))));
+    assert!(output.contains(&ansi_output::color_ops::fg_color(tui_color!(red))));
+    assert!(output.contains(&ansi_output::color_ops::bg_color(tui_color!(blue))));
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(0),
-            col(0)
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(0).into(),
+            vp_col(0).into()
         ))
     );
-    assert!(output.contains(&crate::ansi_output::color_ops::fg_color(tui_color!(green))));
+    assert!(output.contains(&ansi_output::color_ops::fg_color(tui_color!(green))));
     assert!(
-        output.contains(&crate::ansi_output::cursor_movement::cursor_position(
-            row(1),
-            col(5)
+        output.contains(&ansi_output::cursor_movement::cursor_position(
+            vp_row(1).into(),
+            vp_col(5).into()
         ))
     );
-    assert!(output.contains(crate::ansi_output::screen_clearing::clear_current_line()));
+    assert!(output.contains(ansi_output::screen_clearing::clear_current_line()));
 }

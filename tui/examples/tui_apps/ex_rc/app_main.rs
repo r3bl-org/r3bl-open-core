@@ -11,13 +11,13 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement, LengthOps,
                LolcatBuilder, ModifierKeysMask, PerformPositioningAndSizing,
                RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, SPACER_GLYPH,
-               Size, Surface, SurfaceProps, SurfaceRender,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
-               TuiStylesheet, ZOrder, box_end, box_start, col, glyphs, height,
-               inline_string, new_style, ok, render_component_in_current_box,
-               render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
-               throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-               tui_stylesheet};
+               Surface, SurfaceProps, SurfaceRender, TerminalWindowMainThreadSignal,
+               TextColorizationPolicy, TuiStyledTexts, TuiStylesheet, VPSize, ZOrder,
+               box_end, box_start, c_index, glyphs, inline_string, new_style, ok,
+               render_component_in_current_box, render_tui_styled_texts_into,
+               req_size_pc, send_signal, surface, throws_with_return, tui_color,
+               tui_styled_text, tui_styled_texts, tui_stylesheet, vp_col, vp_height,
+               vp_row};
 use smallvec::smallvec;
 use std::fmt::Debug;
 use tokio::{sync::mpsc::Sender, time::Duration};
@@ -270,11 +270,11 @@ mod app_main_impl_app_trait {
             let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(0),
+                pos: vp_col(0) + vp_row(0),
                 size: {
                     let col_count = window_size.col_width;
                     let row_count = window_size.row_height -
-                                height(2) /* Bottom row for for status bar & HUD. */;
+                                vp_height(2) /* Bottom row for for status bar & HUD. */;
                     col_count + row_count
                 },
             })?;
@@ -436,7 +436,7 @@ mod hud {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: VPSize, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -446,12 +446,12 @@ mod hud {
             },
         };
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.index_from_end(vp_height(1))); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops += RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx);
+        render_ops += RenderOpCommon::MoveCursorPositionAbs(vp_col(0) + row_idx);
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(
@@ -473,7 +473,7 @@ mod status_bar {
     pub fn render_status_bar(
         app: &mut AppMain,
         pipeline: &mut RenderPipeline,
-        size: Size,
+        size: VPSize,
         state: &State,
     ) {
         let color_bg = tui_color!(hex "#076DEB");
@@ -504,7 +504,7 @@ mod status_bar {
             @text: "Ctrl + q"
         };
 
-        if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
+        if state.current_slide_index < c_index(FILE_CONTENT_ARRAY.len() - 1) {
             styled_texts += tui_styled_text! {
                 @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ┊ "
@@ -519,7 +519,7 @@ mod status_bar {
             };
         }
 
-        if state.current_slide_index > 0 {
+        if state.current_slide_index > c_index(0) {
             styled_texts += tui_styled_text! {
                 @style: new_style!(dim bold color_fg: {color_fg} color_bg: {color_bg}),
                 @text: " ┊ "
@@ -535,12 +535,12 @@ mod status_bar {
         }
 
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.convert_to_index()); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops += RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx);
+        render_ops += RenderOpCommon::MoveCursorPositionAbs(vp_col(0) + row_idx);
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(

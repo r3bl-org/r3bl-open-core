@@ -1,13 +1,14 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, Size, ok, queue_commands, throws};
+use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, VPSize, ok,
+            queue_commands, throws};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
 
 pub trait CalculateResizeHint {
-    fn set_size(&mut self, new_size: Size);
+    fn set_size(&mut self, new_size: VPSize);
     fn get_resize_hint(&self) -> Option<ResizeHint>;
-    fn set_resize_hint(&mut self, new_size: Size);
+    fn set_resize_hint(&mut self, new_size: VPSize);
     fn clear_resize_hint(&mut self);
 }
 
@@ -28,20 +29,20 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// Returns an error if the viewport allocation fails.
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
-            let viewport_height =
+            let vp_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             // Allocate space. This is required so that the commands to move the cursor up
             // and down shown below will work.
-            for _ in 0..*viewport_height {
+            for _ in 0..*vp_height {
                 println!();
             }
 
             // Move the cursor back up.
             queue_commands! {
                 self.get_output_device(),
-                MoveToPreviousLine(*viewport_height),
+                MoveToPreviousLine(*vp_height),
             };
         });
     }
@@ -59,7 +60,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                 );
             });
 
-            let viewport_height = match state.get_resize_hint() {
+            let vp_height = match state.get_resize_hint() {
                 // Resize happened.
                 Some(
                     ResizeHint::GotBigger | ResizeHint::NoChange | ResizeHint::GotSmaller,
@@ -74,7 +75,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
             };
 
             // Clear the viewport.
-            for _ in 0..*viewport_height {
+            for _ in 0..*vp_height {
                 queue_commands! {
                     self.get_output_device(),
                     Clear(ClearType::FromCursorDown),
@@ -85,7 +86,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
             // Move the cursor back up.
             queue_commands! {
                 self.get_output_device(),
-                MoveToPreviousLine(*viewport_height),
+                MoveToPreviousLine(*vp_height),
             };
 
             // Clear resize hint.
@@ -98,12 +99,12 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// Returns an error if clearing the viewport fails.
     fn clear_viewport(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
-            let viewport_height =
+            let vp_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             // Clear the viewport.
-            for _ in 0..*viewport_height {
+            for _ in 0..*vp_height {
                 queue_commands! {
                     self.get_output_device(),
                     Clear(ClearType::CurrentLine),
@@ -114,7 +115,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
             // Move the cursor back up.
             queue_commands! {
                 self.get_output_device(),
-                MoveToPreviousLine(*viewport_height),
+                MoveToPreviousLine(*vp_height),
             };
         });
     }

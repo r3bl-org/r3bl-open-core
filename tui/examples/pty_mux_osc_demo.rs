@@ -8,8 +8,12 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive,
-               core::pty_mux::PTYMux, ok, set_mimalloc_in_main};
+use r3bl_tui::{DefaultIoDevices, IntoErr, TuiAvailability, TuiAvailabilityChooseExt,
+               assert_terminal_is_interactive, choose,
+               core::pty_mux::PTYMux,
+               ok,
+               readline_async::{HowToChoose, style::StyleSheet},
+               set_mimalloc_in_main};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -21,7 +25,7 @@ async fn main() -> miette::Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Create and run the multiplexer.
+    // Create the multiplexer.
     let mux = match PTYMux::builder()
         .add_process("bash", "bash", vec![])
         .add_process(
@@ -58,7 +62,30 @@ async fn main() -> miette::Result<()> {
     println!("Process 2 (F2) will demonstrate dynamic title changes");
     println!("Press Ctrl+Q to exit");
     println!();
-    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+
+    // Ask user for confirmation before taking over screen.
+    let maybe_user_choice = {
+        let mut default_io_devices = DefaultIoDevices::default();
+        choose(
+            "🚀 Ready to launch the PTY Mux OSC Demo?",
+            &["Yes, launch OSC Demo", "No, exit"],
+            None,
+            None,
+            HowToChoose::Single,
+            StyleSheet::default(),
+            default_io_devices.as_mut_tuple(),
+        )
+        .get_first_result()
+        .await?
+    };
+
+    match maybe_user_choice {
+        Some(ref choice) if choice.starts_with("Yes") => {}
+        _ => {
+            println!("👋 Exiting without running demo.");
+            return ok!();
+        }
+    }
 
     mux.run().await?;
 

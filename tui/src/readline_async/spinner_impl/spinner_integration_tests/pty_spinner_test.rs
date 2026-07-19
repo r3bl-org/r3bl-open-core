@@ -17,8 +17,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{DefaultIoDevices, MSG_CONTROLLED_READY, MSG_LINE_PREFIX, MSG_SUCCESS,
-            PtyTestContext, SharedWriter, Spinner, SpinnerColor, SpinnerStyle,
-            SpinnerTemplate, TuiAvailability, generate_pty_test};
+            PtyTestContext, PtyTestMode, SharedWriter, Spinner, SpinnerColor,
+            SpinnerStyle, SpinnerTemplate, TuiAvailability, generate_pty_test};
 use std::{io::Write, time::Duration};
 
 const QUANTUM: Duration = Duration::from_millis(100);
@@ -33,7 +33,7 @@ mod test_pty_spinner_color {
         test_fn: test_pty_spinner_color,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Cooked,
+        mode: PtyTestMode::Cooked,
     }
 
     fn controller(context: PtyTestContext) {
@@ -46,7 +46,7 @@ mod test_pty_spinner_color {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
             line.contains("⠁ message") || line.contains("final message")
@@ -70,13 +70,13 @@ mod test_pty_spinner_color {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
             let io = DefaultIoDevices::default();
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let res_maybe_spinner = Spinner::try_start(
                 "message",
@@ -105,7 +105,7 @@ mod test_pty_spinner_color {
             }
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }
@@ -119,7 +119,7 @@ mod test_pty_spinner_no_color {
         test_fn: test_pty_spinner_no_color,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Cooked,
+        mode: PtyTestMode::Cooked,
     }
 
     fn controller(context: PtyTestContext) {
@@ -132,7 +132,7 @@ mod test_pty_spinner_no_color {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
             line.contains("⠁ message") || line.contains("final message")
@@ -156,13 +156,13 @@ mod test_pty_spinner_no_color {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
             let io = DefaultIoDevices::default();
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let res_maybe_spinner = Spinner::try_start(
                 "message",
@@ -191,7 +191,7 @@ mod test_pty_spinner_no_color {
             }
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }
@@ -205,7 +205,7 @@ mod test_pty_spinner_message_update {
         test_fn: test_pty_spinner_message_update,
         controller: controller,
         controlled: controlled,
-        mode: crate::PtyTestMode::Cooked,
+        mode: PtyTestMode::Cooked,
     }
 
     fn controller(context: PtyTestContext) {
@@ -218,7 +218,7 @@ mod test_pty_spinner_message_update {
 
         child
             .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-            .unwrap();
+            .expect("conversion error");
 
         let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
             line.contains("message") || line.contains("final message")
@@ -243,13 +243,13 @@ mod test_pty_spinner_message_update {
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
     fn controlled() {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
             let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
             let io = DefaultIoDevices::default();
 
             println!("{MSG_CONTROLLED_READY}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
 
             let res_maybe_spinner = Spinner::try_start(
                 "message",
@@ -280,7 +280,7 @@ mod test_pty_spinner_message_update {
             }
 
             println!("{MSG_SUCCESS}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         });
     }
 }

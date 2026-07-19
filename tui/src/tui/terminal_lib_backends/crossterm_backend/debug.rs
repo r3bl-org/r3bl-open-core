@@ -9,13 +9,17 @@ use crate::{RenderOpCommon,
                              ResetColor, RestoreCursorPosition, SaveCursorPosition,
                              SetBgColor, SetFgColor},
             RenderOpDebugFormat, TuiStyle};
-use std::fmt::{Formatter, Result};
+use std::fmt::Formatter;
 
 #[derive(Debug)]
 pub struct CrosstermDebugFormatRenderOp;
 
 impl RenderOpDebugFormat for CrosstermDebugFormatRenderOp {
-    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
+    fn fmt_debug(
+        &self,
+        this: &RenderOpCommon,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         match this {
             Noop => f.write_str("Noop"),
 
@@ -74,7 +78,7 @@ pub fn format_output_paint_text(
     f: &mut Formatter<'_>,
     text: &str,
     maybe_style: Option<TuiStyle>,
-) -> Result {
+) -> std::fmt::Result {
     f.write_str("Compositor..PrintText...")?;
     f.write_str("(")?;
     write!(f, "{}", text.len())?;

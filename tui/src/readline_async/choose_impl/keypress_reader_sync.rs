@@ -40,7 +40,7 @@ impl KeyPressReader for TestVecKeyPressReader {
             clippy::unwrap_used,
             reason = "Index is guaranteed to be Some by the match block above"
         )]
-        let index = self.index.unwrap();
+        let index = self.index.expect("conversion error");
 
         Some(self.key_press_vec[index].clone())
     }

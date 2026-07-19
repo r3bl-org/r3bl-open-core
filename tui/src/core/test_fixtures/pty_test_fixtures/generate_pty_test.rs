@@ -220,7 +220,7 @@
 /// [`mode: PtyTestMode::Cooked`]: PtyTestMode::Cooked
 /// [`mode: PtyTestMode::Raw`]: PtyTestMode::Raw
 /// [`MSG_CONTROLLED_READY`]: crate::pty_test_fixtures::MSG_CONTROLLED_READY
-/// [`OfsBuf`]: crate::OfsBuf
+/// [`OfsBuf`]: crate::tui::OfsBuf
 /// [`println!()`]: std::println
 /// [`pty_pair.controller().try_clone_reader()`]:
 ///     portable_pty::MasterPty::try_clone_reader
@@ -262,7 +262,7 @@ macro_rules! generate_pty_test {
         controlled: $controlled_ident:ident,
         mode: $mode:expr $(,)?
     ) => {
-        $crate::generate_pty_test! {
+        generate_pty_test! {
             @impl
             $(#[$meta])*
             test_name: $test_name,
@@ -280,7 +280,7 @@ macro_rules! generate_pty_test {
         controlled: $controlled_expr:expr,
         mode: $mode:expr $(,)?
     ) => {
-        $crate::generate_pty_test! {
+        generate_pty_test! {
             @impl
             $(#[$meta])*
             test_name: $test_name,

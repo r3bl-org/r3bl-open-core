@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::Continuation;
-use crate::core::resilient_reactor_thread::{
-    RRTEvent, RRTSoftwareInterrupt, RRTWorker, RestartPolicy, RRT,
-};
+use crate::{Continuation,
+            core::resilient_reactor_thread::{RRT, RRTEvent, RRTSoftwareInterrupt,
+                                             RRTWorker, RestartPolicy}};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Debug)]
@@ -85,7 +84,9 @@ async fn test_smart_sender_retry_and_config() {
     let mut rx = rrt.sender.subscribe();
 
     // 1. Subscribe and spawn the worker
-    let _guard = rrt.try_subscribe("test_config_value".to_string()).unwrap();
+    let _guard = rrt
+        .try_subscribe("test_config_value".to_string())
+        .expect("conversion error");
 
     let input_sender = rrt.get_input_sender();
 
@@ -93,7 +94,10 @@ async fn test_smart_sender_retry_and_config() {
     assert_eq!(CREATE_CALL_COUNTER.load(Ordering::SeqCst), 1);
 
     // 3. Send normal message
-    input_sender.send("hello".to_string()).await.unwrap();
+    input_sender
+        .send("hello".to_string())
+        .await
+        .expect("conversion error");
 
     // Wait for the output to confirm worker is healthy
     if let Ok(RRTEvent::Worker(msg)) = rx.recv().await {
@@ -103,7 +107,10 @@ async fn test_smart_sender_retry_and_config() {
     }
 
     // 4. Send "crash" command
-    input_sender.send("crash".to_string()).await.unwrap();
+    input_sender
+        .send("crash".to_string())
+        .await
+        .expect("conversion error");
 
     // Sleep for 50ms to ensure the worker thread has processed "crash" and entered the
     // 200ms `Restarting` delay period before we try to send the next message.
@@ -114,7 +121,10 @@ async fn test_smart_sender_retry_and_config() {
     // seamlessly suspend and wait for the new worker to spawn, then deliver it to the
     // new tokio channel!
     let send_result = input_sender.send("hello after crash".to_string()).await;
-    assert!(send_result.is_ok(), "Smart sender should successfully retry");
+    assert!(
+        send_result.is_ok(),
+        "Smart sender should successfully retry"
+    );
 
     // 6. Verify worker was re-created
     assert_eq!(CREATE_CALL_COUNTER.load(Ordering::SeqCst), 2);
@@ -127,5 +137,8 @@ async fn test_smart_sender_retry_and_config() {
     }
 
     // 8. Clean up
-    input_sender.send("stop".to_string()).await.unwrap();
+    input_sender
+        .send("stop".to_string())
+        .await
+        .expect("conversion error");
 }

@@ -37,7 +37,7 @@ mod seed {
     }
 
     impl From<f64> for Seed {
-        fn from(f: f64) -> Self { Self(f) }
+        fn from(f: f64) -> Seed { Seed(f) }
     }
 
     impl AddAssign<SeedDelta> for Seed {
@@ -66,7 +66,7 @@ mod spread {
     }
 
     impl From<f64> for Spread {
-        fn from(f: f64) -> Self { Self(f) }
+        fn from(f: f64) -> Spread { Spread(f) }
     }
 }
 
@@ -87,7 +87,7 @@ mod frequency {
     }
 
     impl From<f64> for Frequency {
-        fn from(f: f64) -> Self { Self(f) }
+        fn from(f: f64) -> Frequency { Frequency(f) }
     }
 }
 
@@ -108,7 +108,7 @@ mod seed_delta {
     }
 
     impl From<f64> for SeedDelta {
-        fn from(f: f64) -> Self { Self(f) }
+        fn from(f: f64) -> SeedDelta { SeedDelta(f) }
     }
 }
 

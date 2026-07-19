@@ -4,6 +4,9 @@
 //!
 //! This codebase is heavily optimized for zero-allocation rendering and formatting.
 //! Depending on the specific use case, we use one of three core approaches for building
+
+#![rustfmt::skip]
+
 // Attach sources.
 pub mod common_atomic;
 pub mod common_enums;
@@ -25,6 +28,7 @@ pub mod scoped_mutex;
 pub mod string_repeat_cache;
 pub mod telemetry;
 pub mod time_duration;
+pub mod primitive_casting;
 
 // Re-export.
 pub use common_atomic::*;
@@ -47,3 +51,4 @@ pub use scoped_mutex::*;
 pub use string_repeat_cache::*;
 pub use telemetry::*;
 pub use time_duration::*;
+pub use primitive_casting::*;

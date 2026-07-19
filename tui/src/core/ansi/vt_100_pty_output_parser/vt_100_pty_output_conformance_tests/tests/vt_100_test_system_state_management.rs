@@ -11,9 +11,10 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CharacterSet, PixelChar, ANSIBasicColor, AutoWrapMode, EraseDisplayMode, SgrCode, col,
+use crate::{ANSIBasicColor, AutoWrapMode, CharacterSet, EraseDisplayMode, PixelChar,
+            SgrCode,
             core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType},
-            row, term_col, term_row};
+            term_col, term_row, vp_col, vp_row};
 
 /// Tests for cursor save/restore with active [`SGR`] styling attributes.
 ///
@@ -70,11 +71,11 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Position should be restored
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(4)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(2) + vp_col(4)); // 0-based
 
         // Attributes should remain as they were changed (not restored)
         // Current style should be green foreground from the change above
-        let current_style = ofs_buf_vt_100.parser_global_state.current_style;
+        let current_style = ofs_buf_vt_100.get_parser_global_state_mut().current_style;
         assert_eq!(current_style.color_fg, Some(ANSIBasicColor::Green.into()));
     }
 
@@ -114,7 +115,7 @@ pub mod cursor_save_restore_with_attributes {
         let restore_sequence = format!("{}", CsiSequence::RestoreCursor);
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(1) + col(2)); // 0-based position 1
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(1) + vp_col(2)); // 0-based position 1
     }
 
     #[test]
@@ -156,13 +157,16 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(1) + col(3)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(1) + vp_col(3)); // 0-based
 
         // Write text to verify current attributes are maintained
         let _result = ofs_buf_vt_100.apply_ansi_bytes("Test");
 
         // Should be written with the complex styling (red on yellow, underlined)
-        let char_at_restore_pos = &ofs_buf_vt_100.ofs_buf.get_row(1).unwrap()[3];
+        let char_at_restore_pos = &ofs_buf_vt_100
+            .primary_buffer_mut()
+            .get_row(1.into())
+            .expect("conversion error")[3];
         if let PixelChar::PlainText { style, .. } = char_at_restore_pos {
             assert_eq!(style.color_fg, Some(ANSIBasicColor::Red.into()));
             assert_eq!(style.color_bg, Some(ANSIBasicColor::Yellow.into()));
@@ -187,7 +191,7 @@ pub mod character_set_state_management {
 
         // Verify DEC Graphics mode is active
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
 
@@ -205,7 +209,7 @@ pub mod character_set_state_management {
 
         // Character set should persist
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
 
@@ -213,7 +217,10 @@ pub mod character_set_state_management {
         let _result = ofs_buf_vt_100.apply_ansi_bytes("q"); // Should become horizontal line
 
         // Verify the character was translated
-        let char_at_cursor = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap()[0];
+        let char_at_cursor = &ofs_buf_vt_100
+            .primary_buffer_mut()
+            .get_row(0.into())
+            .expect("conversion error")[0];
         if let PixelChar::PlainText { display_char, .. } = char_at_cursor {
             assert_eq!(*display_char, '─'); // DEC Graphics 'q' → horizontal line
         } else {
@@ -227,7 +234,7 @@ pub mod character_set_state_management {
 
         // Start in ASCII mode (default)
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
 
@@ -243,11 +250,11 @@ pub mod character_set_state_management {
 
         // Both states should be active
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            ofs_buf_vt_100.get_parser_global_state_mut().auto_wrap_mode,
             AutoWrapMode::Disabled
         );
 
@@ -262,11 +269,11 @@ pub mod character_set_state_management {
 
         // Auto-wrap should change but character set should persist
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            ofs_buf_vt_100.get_parser_global_state_mut().auto_wrap_mode,
             AutoWrapMode::Enabled
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
 
@@ -275,7 +282,7 @@ pub mod character_set_state_management {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(ascii_mode);
 
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
     }
@@ -338,15 +345,19 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Should restore to original absolute position (5,6)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(5)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(4) + vp_col(5)); // 0-based
 
         // Verify scroll region changed
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.scroll_region_top,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_top,
             Some(term_row(nz(2)))
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.scroll_region_bottom,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_bottom,
             Some(term_row(nz(8)))
         );
     }
@@ -381,9 +392,16 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(reset_margins);
 
         // Verify scroll region reset
-        assert_eq!(ofs_buf_vt_100.parser_global_state.scroll_region_top, None);
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.scroll_region_bottom,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_top,
+            None
+        );
+        assert_eq!(
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_bottom,
             None
         );
 
@@ -402,7 +420,7 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Should restore to saved position (6,3)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(5) + col(2)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(5) + vp_col(2)); // 0-based
     }
 }
 
@@ -463,19 +481,21 @@ pub mod complex_state_combinations {
         let _result = ofs_buf_vt_100.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(4) + col(3)); // 0-based
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(4) + vp_col(3)); // 0-based
 
         // Verify other states changed (not restored)
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.scroll_region_top,
+            ofs_buf_vt_100
+                .get_parser_global_state_mut()
+                .scroll_region_top,
             Some(term_row(nz(1)))
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::Ascii
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            ofs_buf_vt_100.get_parser_global_state_mut().auto_wrap_mode,
             AutoWrapMode::Enabled
         );
     }
@@ -511,18 +531,18 @@ pub mod complex_state_combinations {
 
         // States should persist through buffer operations
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state_mut().character_set,
             CharacterSet::DECGraphics
         );
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.auto_wrap_mode,
+            ofs_buf_vt_100.get_parser_global_state_mut().auto_wrap_mode,
             AutoWrapMode::Disabled
         );
 
         // Current style should still have bold
         assert!(
             ofs_buf_vt_100
-                .parser_global_state
+                .get_parser_global_state_mut()
                 .current_style
                 .attribs
                 .bold

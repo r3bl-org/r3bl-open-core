@@ -1,25 +1,23 @@
 # cspell:words incompat
 
-# Parallel frontend compiler (requires nightly, see rust-toolchain.toml).
-# `-Z threads=8` enables multi-threaded compilation for ~20-30% faster builds.
+# Compiler and Linker Speedups:
+# 1. Parallel frontend compiler (`-Z threads=8`)
+# 2. fast `rust-lld` linker on Linux (`link-arg=-fuse-ld=lld)
+# Requires nightly toolchain (see rust-toolchain.toml).
 # Tracking issue: https://github.com/rust-lang/rust/issues/113349
+[target.'cfg(target_os = "linux")']
+rustflags = ["-Z", "threads=8", "-C", "link-arg=-fuse-ld=lld"]
+
 [build]
-rustflags = ["-Z", "threads=8"]
-
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only
-
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only
+# Store build artifacts in tmpfs for maximum compile performance
+target-dir = "/tmp/roc/target"
 
 [profile.dev]
-incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which should not happen due to rust-toolchain-update.fish
+# Only disable to avoid rustc dep graph ICE on nightly which should not
+# happen due to rust-toolchain-update.fish
+incremental = true
 
 [profile.test]
-incremental = true  # Only disable to avoid rustc dep graph ICE on nightly which should not happen due to rust-toolchain-update.fish
-
-# TODO: remove this workaround when this is done `task/fix-future-incompat-warnings-2.md`
-# Suppress cargo's future-incompat report for `$crate::macro!()` in macro bodies.
-# The underlying lint is intentionally allowed in tui/src/lib.rs (see comment there).
-[future-incompat-report]
-frequency = "never"
+# Only disable to avoid rustc dep graph ICE on nightly which should not
+# happen due to rust-toolchain-update.fish
+incremental = true

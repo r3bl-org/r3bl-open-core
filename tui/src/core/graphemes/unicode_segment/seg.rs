@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::SegIndex;
-use crate::{ByteIndex, ColIndex, ColWidth, Length, usize};
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+use crate::{ByteIndex, VPCol, VPLength, VPWidth, usize};
+use std::fmt::{Debug, Display, Formatter};
 
 /// A vector-like container for grapheme segments.
 pub type SegmentArray = Vec<Seg>;
@@ -11,7 +11,7 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
 /// handling. Each [`Seg`] contains all the information needed to convert between
-/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
+/// [`ByteIndex`], [`SegIndex`], and [`VPCol`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For [`UTF-8`] encoded text, a grapheme can be a single byte or up to 4 bytes.
@@ -56,10 +56,10 @@ pub type SegmentArray = Vec<Seg>;
 ///   segment. These are used when converting from `ByteIndex` to `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
 ///   sequence of grapheme clusters.
-/// - `start_display_col_index`: The [`ColIndex`] where this segment begins on screen.
-///   Combined with `display_width`, this defines the `ColIndex` range.
+/// - `start_display_col_index`: The [`VPCol`] where this segment begins on screen.
+///   Combined with `display_width`, this defines the `VPCol` range.
 /// - `display_width`: The number of terminal columns this segment occupies (as
-///   [`ColWidth`]).
+///   [`VPWidth`]).
 /// - `bytes_size`: The size in bytes (for convenience, equals `end_byte_index` -
 ///   `start_byte_index`).
 ///
@@ -80,15 +80,15 @@ pub type SegmentArray = Vec<Seg>;
 /// ## Example
 ///
 /// ```
-/// use r3bl_tui::{GCStringOwned, ch, col, width, seg_index, byte_index};
+/// use r3bl_tui::{byte_index, ch, seg_index, vp_col, vp_width, GCStringOwned};
 /// let u_str: GCStringOwned = "📦🙏🏽".into();
 /// if let Some(segment) = u_str.segments.first() {
 ///     assert_eq!(segment.start_byte_index, byte_index(0));
 ///     assert_eq!(segment.end_byte_index, byte_index(4));
-///     assert_eq!(segment.display_width, width(2));
+///     assert_eq!(segment.display_width, vp_width(2));
 ///     assert_eq!(segment.seg_index, seg_index(0));
 ///     assert_eq!(segment.bytes_size.as_usize(), 4);
-///     assert_eq!(segment.start_display_col_index, col(0));
+///     assert_eq!(segment.start_display_col_index, vp_col(0));
 /// }
 /// ```
 ///
@@ -110,7 +110,7 @@ pub struct Seg {
     /// Display width of the grapheme cluster calculated using
     /// [`unicode_width::UnicodeWidthChar`]. The display width (aka `unicode_width`) may
     /// not be the same as the byte size [`Self::bytes_size`].
-    pub display_width: ColWidth,
+    pub display_width: VPWidth,
 
     /// The index of this entry in the [`crate::GCStringOwned::segments`].
     pub seg_index: SegIndex,
@@ -118,14 +118,14 @@ pub struct Seg {
     /// The number of bytes this grapheme cluster occupies in the original string slice.
     /// The display width, aka [`Self::display_width`], may not be the same as the byte
     /// size.
-    pub bytes_size: Length,
+    pub bytes_size: VPLength,
 
-    /// Display col index [`ColIndex`] (in the original string slice) at which this
+    /// Display col index [`VPCol`] (in the original string slice) at which this
     /// grapheme cluster starts. The "offset" in the name means that this is relative
     /// to the start of the original string slice.
-    /// - It is used to determine whether a given display col index [`ColIndex`] is
-    ///   within the bounds of this grapheme cluster or not.
-    pub start_display_col_index: ColIndex,
+    /// - It is used to determine whether a given display col index [`VPCol`] is within
+    ///   the bounds of this grapheme cluster or not.
+    pub start_display_col_index: VPCol,
 }
 
 /// Pretty print for [`crate::Seg`] that is compact and easier to read. The default
@@ -134,7 +134,7 @@ impl Debug for Seg {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Seg[{s_i:>2}] ┆ ■□ byte: [{b_b:>2}, {b_e:>2}] size: {b_s} ┆ disp ⮼ col({d_i:>2}) ← width({d_w:>2}) →",
+            "Seg[{s_i:>2}] ┆ ■□ byte: [{b_b:>2}, {b_e:>2}] size: {b_s} ┆ disp ⮼ vp_col({d_i:>2}) ← vp_width({d_w:>2}) →",
             s_i = **self.seg_index,
             b_b = *self.start_byte_index,
             b_e = *self.end_byte_index,
@@ -146,7 +146,7 @@ impl Debug for Seg {
 }
 
 impl Display for Seg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Seg[{}]", **self.seg_index)
     }
 }
@@ -164,7 +164,7 @@ impl Seg {
 
 #[cfg(test)]
 mod tests {
-    use crate::{GCStringOwned, byte_index, col, seg_index, width};
+    use crate::{GCStringOwned, byte_index, seg_index, vp_col, vp_width};
 
     #[test]
     fn test_single_grapheme_cluster() {
@@ -172,10 +172,10 @@ mod tests {
         if let Some(segment) = grapheme_string.segments.first() {
             assert_eq!(segment.start_byte_index, byte_index(0));
             assert_eq!(segment.end_byte_index, byte_index(4));
-            assert_eq!(segment.display_width, width(2));
+            assert_eq!(segment.display_width, vp_width(2));
             assert_eq!(segment.seg_index, seg_index(0));
             assert_eq!(segment.bytes_size.as_usize(), 4);
-            assert_eq!(segment.start_display_col_index, col(0));
+            assert_eq!(segment.start_display_col_index, vp_col(0));
             assert_eq!(segment.get_str(&grapheme_string), "📦");
         }
     }
@@ -188,19 +188,19 @@ mod tests {
         let segment1 = &grapheme_string.segments[0];
         assert_eq!(segment1.start_byte_index, byte_index(0));
         assert_eq!(segment1.end_byte_index, byte_index(4));
-        assert_eq!(segment1.display_width, width(2));
+        assert_eq!(segment1.display_width, vp_width(2));
         assert_eq!(segment1.seg_index, seg_index(0));
         assert_eq!(segment1.bytes_size.as_usize(), 4);
-        assert_eq!(segment1.start_display_col_index, col(0));
+        assert_eq!(segment1.start_display_col_index, vp_col(0));
         assert_eq!(segment1.get_str(&grapheme_string), "📦");
 
         let segment2 = &grapheme_string.segments[1];
         assert_eq!(segment2.start_byte_index, byte_index(4));
         assert_eq!(segment2.end_byte_index, byte_index(12));
-        assert_eq!(segment2.display_width, width(2));
+        assert_eq!(segment2.display_width, vp_width(2));
         assert_eq!(segment2.seg_index, seg_index(1));
         assert_eq!(segment2.bytes_size.as_usize(), 8);
-        assert_eq!(segment2.start_display_col_index, col(2));
+        assert_eq!(segment2.start_display_col_index, vp_col(2));
         assert_eq!(segment2.get_str(&grapheme_string), "🙏🏽");
     }
 
@@ -211,10 +211,10 @@ mod tests {
         if let Some(segment) = grapheme_string.segments.first() {
             assert_eq!(segment.start_byte_index, byte_index(0));
             assert_eq!(segment.end_byte_index, byte_index(3));
-            assert_eq!(segment.display_width, width(1));
+            assert_eq!(segment.display_width, vp_width(1));
             assert_eq!(segment.seg_index, seg_index(0));
             assert_eq!(segment.bytes_size.as_usize(), 3);
-            assert_eq!(segment.start_display_col_index, col(0));
+            assert_eq!(segment.start_display_col_index, vp_col(0));
             assert_eq!(segment.get_str(&grapheme_string), "á");
         }
     }

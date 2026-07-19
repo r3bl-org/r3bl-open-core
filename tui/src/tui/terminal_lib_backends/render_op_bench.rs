@@ -59,8 +59,8 @@
 #[cfg(test)]
 mod render_op_benchmarks {
     extern crate test;
-    use crate::{AnsiValue, InlineString, Pos, RenderOpCommon, RenderOpIR, RgbValue,
-                TuiColor, TuiStyle, ch};
+    use crate::{AnsiValue, InlineString, RenderOpCommon, RenderOpIR, RgbValue, TuiColor,
+                TuiStyle, vp_col, vp_pos, vp_row};
     use smallvec::SmallVec;
     use test::Bencher;
 
@@ -73,10 +73,9 @@ mod render_op_benchmarks {
         vec![
             RenderOpIR::Common(RenderOpCommon::ClearScreen),
             RenderOpIR::Common(RenderOpCommon::ResetColor),
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
-                row_index: ch(10).into(),
-                col_index: ch(20).into(),
-            })),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+                vp_col(20) + vp_row(10),
+            )),
             RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
                 RgbValue::from_u8(255, 128, 64),
             ))),
@@ -92,14 +91,8 @@ mod render_op_benchmarks {
                 }),
             ),
             RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
-                Pos {
-                    row_index: ch(5).into(),
-                    col_index: ch(10).into(),
-                },
-                Pos {
-                    row_index: ch(2).into(),
-                    col_index: ch(3).into(),
-                },
+                vp_pos(10, 5),
+                vp_row(2) + vp_col(3),
             )),
             RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(TuiStyle {
                 color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(100, 100, 100))),
@@ -326,10 +319,7 @@ mod render_op_benchmarks {
         b.iter(|| {
             let mut ops = RenderOpsSmallVec::new();
             ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
-                Pos {
-                    row_index: ch(5).into(),
-                    col_index: ch(10).into(),
-                },
+                vp_col(10) + vp_row(5),
             )));
             ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
             ops.push(RenderOpIR::Common(RenderOpCommon::SetFgColor(
@@ -351,10 +341,9 @@ mod render_op_benchmarks {
     fn bench_vec_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let ops = vec![
-                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
-                    row_index: ch(5).into(),
-                    col_index: ch(10).into(),
-                })),
+                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+                    vp_col(10) + vp_row(5),
+                )),
                 RenderOpIR::Common(RenderOpCommon::ResetColor),
                 RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
                     RgbValue::from_u8(255, 255, 255),
@@ -376,10 +365,9 @@ mod render_op_benchmarks {
     fn bench_vec_with_capacity_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let ops = vec![
-                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
-                    row_index: ch(5).into(),
-                    col_index: ch(10).into(),
-                })),
+                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+                    vp_col(10) + vp_row(5),
+                )),
                 RenderOpIR::Common(RenderOpCommon::ResetColor),
                 RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
                     RgbValue::from_u8(255, 255, 255),

@@ -28,15 +28,16 @@ use std::sync::{LockResult, MutexGuard, atomic::AtomicU8};
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[derive(Debug)]
 pub struct ThreadLifecycleMonitor<W: RRTWorker> {
-    /// The definitive lifecycle state of the dedicated thread. By combining the typestate
-    /// pattern and a state machine, this robust mechanism eliminates race conditions by
-    /// making them unrepresentable in the type system.
+    /// The definitive lifecycle state of the dedicated thread. By combining the
+    /// typestate pattern and a state machine, this robust mechanism eliminates race
+    /// conditions by making them unrepresentable in the type system.
     pub state_monitor: Monitor<ThreadState<W>>,
 
     /// Per-thread-generation counter. Incremented each time a new thread is spawned.
     ///
-    /// This counter is shared between the [`RRT`] singleton and all [`SubscriberGuard`]s.
-    /// No [`Mutex`] needed - atomic operations are sufficient for a single counter.
+    /// This counter is shared between the [`RRT`] singleton and all
+    /// [`SubscriberGuard`]s. No [`Mutex`] needed - atomic operations are sufficient
+    /// for a single counter.
     ///
     /// [`Mutex`]: std::sync::Mutex
     /// [`RRT`]: crate::resilient_reactor_thread::RRT

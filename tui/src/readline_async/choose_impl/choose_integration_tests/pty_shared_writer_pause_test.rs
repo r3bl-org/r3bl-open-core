@@ -61,7 +61,7 @@ fn controller(context: PtyTestContext) {
     // Wait for the controlled process to be ready.
     child
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-        .unwrap();
+        .expect("conversion error");
 
     // Give choose() time to render and start its event loop.
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -76,9 +76,9 @@ fn controller(context: PtyTestContext) {
             code,
             modifiers: VT100KeyModifiersIR::default(),
         })
-        .unwrap();
-        writer.write_all(&bytes).unwrap();
-        writer.flush().unwrap();
+        .expect("conversion error");
+        writer.write_all(&bytes).expect("conversion error");
+        writer.flush().expect("conversion error");
     }
 
     // Read signal lines printed by the controlled process. Use `contains`
@@ -96,14 +96,22 @@ fn controller(context: PtyTestContext) {
         "No signals received from controlled process"
     );
     assert!(
-        result.lines.first().unwrap().contains("Pause"),
+        result
+            .lines
+            .first()
+            .expect("conversion error")
+            .contains("Pause"),
         "First signal should be Pause, got: {}",
-        result.lines.first().unwrap()
+        result.lines.first().expect("conversion error")
     );
     assert!(
-        result.lines.last().unwrap().contains("Resume"),
+        result
+            .lines
+            .last()
+            .expect("conversion error")
+            .contains("Resume"),
         "Last signal should be Resume, got: {}",
-        result.lines.last().unwrap()
+        result.lines.last().expect("conversion error")
     );
 
     child.drain_and_wait(buf_reader, pty_pair);
@@ -117,14 +125,14 @@ fn controller(context: PtyTestContext) {
 /// [`SharedWriter`]: crate::SharedWriter
 /// [`stdout`]: std::io::stdout
 fn controlled() {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {
         let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
         let mut io = DefaultIoDevices::default();
 
         // Signal readiness to the controller.
         println!("{MSG_CONTROLLED_READY}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
 
         // Run choose() with real I/O devices and the SharedWriter under test.
         let _unused = choose(
@@ -147,9 +155,9 @@ fn controlled() {
         line_receiver.close();
         while let Some(signal) = line_receiver.recv().await {
             println!("{MSG_LINE_PREFIX}{signal:?}");
-            std::io::stdout().flush().unwrap();
+            std::io::stdout().flush().expect("conversion error");
         }
         println!("{MSG_SUCCESS}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
     });
 }

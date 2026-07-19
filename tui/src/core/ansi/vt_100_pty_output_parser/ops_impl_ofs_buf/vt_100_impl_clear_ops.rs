@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
-            OfsBufVT100, PixelChar, RangeBoundsExt as _, RangeExt as _,
-            glyphs::SPACER_GLYPH_CHAR, height, ok, row, width};
+            NarrowingCastToU16, OfsBufVT100, PixelChar, RangeBoundsExt as _,
+            RangeExt as _, VPHeight, VPRow, glyphs::SPACER_GLYPH_CHAR, ok, vp_height,
+            vp_width};
 use std::cmp::min;
 
 impl OfsBufVT100 {
@@ -17,16 +18,11 @@ impl OfsBufVT100 {
     /// underline, bold, italic, or foreground color.
     ///
     /// For example, if a shell (like [`fish`]) happens to leave the terminal in an
-    /// underlined state right before issuing a [`clear`] command, the cleared screen must
-    /// be filled with plain spaces (with the correct background color), not underlined
-    /// spaces. This method guarantees that behavior by returning a [`PixelChar`] with a
-    /// clean text style that retains only the active [`color_bg`].
+    /// underlined or bold state, clear operations should not create long stretches of
+    /// underlined spaces.
     ///
-    /// [`BCE`]: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
-    /// [`clear`]: https://en.wikipedia.org/wiki/Clear_(Unix)
-    /// [`color_bg`]: crate::TuiStyle::color_bg
+    /// [`BCE`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-BCE
     /// [`fish`]: https://fishshell.com/
-    /// [`PixelChar`]: crate::PixelChar
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
     #[must_use]
@@ -34,7 +30,7 @@ impl OfsBufVT100 {
         PixelChar::PlainText {
             display_char: SPACER_GLYPH_CHAR,
             style: self
-                .parser_global_state
+                .get_parser_global_state()
                 .current_style
                 .retain_bg_color_only(),
         }
@@ -70,13 +66,12 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_cursor_to_end(&mut self) -> miette::Result<()> {
-        let cursor_row = self.get_cursor_pos().row_index;
-        let cursor_col = self.get_cursor_pos().col_index;
+        let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
+        let cursor_col = self.get_active_screen_buffer().get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let row_idx_usize = cursor_row.as_usize();
-        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
-            let row_width = width(row.len() /* 1-based */);
+        if let Some(row) = self.get_active_screen_buffer_mut().get_row_mut(cursor_row) {
+            let row_width = vp_width((row.len()).as_u16_narrowing() /* 1-based */);
             if cursor_col.overflows(row_width) == ArrayOverflowResult::Within {
                 row[(cursor_col..).as_usize_range()].fill(empty_char);
             }
@@ -113,13 +108,12 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_from_start_to_cursor(&mut self) -> miette::Result<()> {
-        let cursor_row = self.get_cursor_pos().row_index;
-        let cursor_col = self.get_cursor_pos().col_index;
+        let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
+        let cursor_col = self.get_active_screen_buffer().get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let row_idx_usize = cursor_row.as_usize();
-        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
-            let row_width = width(row.len() /* 1-based */);
+        if let Some(row) = self.get_active_screen_buffer_mut().get_row_mut(cursor_row) {
+            let row_width = vp_width((row.len()).as_u16_narrowing() /* 1-based */);
             let end_col = min(cursor_col.convert_to_length(), row_width);
             row[(..end_col).as_usize_range()].fill(empty_char);
         }
@@ -154,11 +148,10 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails (though bounded safely).
     pub fn erase_line_entire(&mut self) -> miette::Result<()> {
-        let cursor_row = self.get_cursor_pos().row_index;
+        let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let row_idx_usize = cursor_row.as_usize();
-        if let Some(row) = self.ofs_buf.get_row_mut(row_idx_usize) {
+        if let Some(row) = self.get_active_screen_buffer_mut().get_row_mut(cursor_row) {
             row.fill(empty_char);
         }
 
@@ -204,20 +197,16 @@ impl OfsBufVT100 {
     pub fn erase_display_from_cursor_to_end(&mut self) -> miette::Result<()> {
         self.erase_line_from_cursor_to_end()?;
 
-        let cursor_row = self.get_cursor_pos().row_index;
+        let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height =
-            height(self.ofs_buf.get_height().as_usize() /* 1-based */);
+        let active_buf = self.get_active_screen_buffer_mut();
+        let buffer_height: VPHeight = active_buf.get_viewport().get_height();
         let start_row = cursor_row + 1;
         let end_row = buffer_height.eol_cursor_position();
         let range_to_clear = (start_row..end_row).clamp_range_to(buffer_height);
 
-        for row_idx in range_to_clear.as_usize_range() {
-            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
-                row.fill(empty_char);
-            }
-        }
+        active_buf.fill_row_range(range_to_clear, empty_char);
 
         ok!()
     }
@@ -260,20 +249,17 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the operation fails.
     pub fn erase_display_from_start_to_cursor(&mut self) -> miette::Result<()> {
-        let cursor_row = self.get_cursor_pos().row_index;
+        self.erase_line_from_start_to_cursor()?;
+
+        let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
-        let buffer_height =
-            height(self.ofs_buf.get_height().as_usize() /* 1-based */);
-        let range_to_clear = (row(0)..cursor_row).clamp_range_to(buffer_height);
+        let active_buf = self.get_active_screen_buffer_mut();
+        let buffer_height = *active_buf.get_viewport().get_height();
+        let clear_range =
+            (VPRow::from(0)..cursor_row).clamp_range_to(vp_height(buffer_height));
 
-        for row_idx in range_to_clear.as_usize_range() {
-            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
-                row.fill(empty_char);
-            }
-        }
-
-        self.erase_line_from_start_to_cursor()?;
+        active_buf.fill_row_range(clear_range, empty_char);
 
         ok!()
     }
@@ -316,42 +302,52 @@ impl OfsBufVT100 {
     /// Returns an error if the operation fails.
     pub fn erase_display_entire(&mut self) -> miette::Result<()> {
         let empty_char = self.create_empty_pixel_char();
-        let height = self.ofs_buf.get_height().as_usize();
-        for row_idx in 0..height {
-            if let Some(row) = self.ofs_buf.get_row_mut(row_idx) {
-                row.fill(empty_char);
-            }
-        }
-
+        self.get_active_screen_buffer_mut()
+            .clear_viewport_with(empty_char);
         ok!()
     }
 
     /// Clears the entire scrollback buffer (for `ED 3` - Erase in Display).
     ///
-    /// This is typically used by `clear` or `reset` commands in terminal emulators
-    /// to delete the history of lines that have scrolled off the top of the screen.
+    /// This is typically used by `clear` or `reset` commands in terminal emulators to
+    /// delete the history of lines that have scrolled off the top of the screen.
+    ///
+    /// # Design Decision for compatibility
+    ///
+    /// This blindly clears the *primary buffer's* scrollback, even if the terminal is
+    /// currently in the alternate screen mode. As per standard [`xterm`] / `VTE` /
+    /// `WezTerm` behavior, `ED 3` is a global operation that always clears the primary
+    /// screen's scrollback buffer, even if the alternate screen is currently active.
+    ///
+    /// For more context on this behavior:
+    /// - [Search `CSI Ps J` -> `Ps = 3` Xterm Control Sequences][1]
+    /// - [WezTerm `ClearScrollback` documentation][2]
     ///
     /// # Errors
     ///
     /// Returns an error if the operation fails.
+    ///
+    /// [1]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+    /// [2]: https://wezterm.org/config/lua/keyassignment/ClearScrollback.html
+    /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
     pub fn erase_display_scrollback(&mut self) -> miette::Result<()> {
-        self.scrollback_buffer.clear();
-
+        self.primary_buffer_mut().clear_scrollback();
         ok!()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{OfsBufVT100, PixelChar, TuiStyle, col, height, row, width};
+    use crate::{OfsBufVT100, PixelChar, TuiStyle, TuiStyleAttribs, vp_height, vp_pos,
+                vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
-        let mut buf = OfsBufVT100::new_empty(height(3) + width(4));
+        let mut buf = OfsBufVT100::new_empty(vp_height(3) + vp_width(4));
         let style = TuiStyle {
             id: None,
             ..Default::default()
         };
-        buf.parser_global_state.current_style = style;
+        buf.get_parser_global_state_mut().current_style = style;
 
         let char_x = PixelChar::PlainText {
             display_char: 'x',
@@ -361,12 +357,14 @@ mod tests {
         // Fill buffer with 'x'
         for r in 0..3 {
             for c in 0..4 {
-                buf.ofs_buf.get_row_mut(r).unwrap()[c] = char_x;
+                buf.primary_buffer_mut()
+                    .get_row_mut(r.into())
+                    .expect("conversion error")[c] = char_x;
             }
         }
 
         // Set cursor to middle
-        buf.ofs_buf.set_cursor_pos(row(1) + col(2));
+        buf.primary_buffer_mut().set_cursor_pos(vp_pos(2, 1));
         buf
     }
 
@@ -383,34 +381,97 @@ mod tests {
     #[test]
     fn test_erase_line_from_cursor_to_end() {
         let mut buf = create_test_buffer();
-        buf.erase_line_from_cursor_to_end().unwrap();
+        buf.erase_line_from_cursor_to_end()
+            .expect("conversion error");
 
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], 'x');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[3], ' ');
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[1],
+            'x',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[2],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[3],
+            ' ',
+        );
     }
 
     #[test]
     fn test_erase_line_from_start_to_cursor() {
         let mut buf = create_test_buffer();
-        buf.erase_line_from_start_to_cursor().unwrap();
+        buf.erase_line_from_start_to_cursor()
+            .expect("conversion error");
 
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[0], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[3], 'x');
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[0],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[1],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[2],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[3],
+            'x',
+        );
     }
 
     #[test]
     fn test_erase_display_from_cursor_to_end() {
         let mut buf = create_test_buffer();
-        buf.erase_display_from_cursor_to_end().unwrap();
+        buf.erase_display_from_cursor_to_end()
+            .expect("conversion error");
 
-        assert_char_eq(&buf.ofs_buf.get_row_mut(0).unwrap()[3], 'x');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[1], 'x');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(1).unwrap()[2], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(2).unwrap()[0], ' ');
-        assert_char_eq(&buf.ofs_buf.get_row_mut(2).unwrap()[3], ' ');
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(0u16.into())
+                .expect("conversion error")[3],
+            'x',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[1],
+            'x',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(1u16.into())
+                .expect("conversion error")[2],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(2u16.into())
+                .expect("conversion error")[0],
+            ' ',
+        );
+        assert_char_eq(
+            &buf.primary_buffer_mut()
+                .get_row_mut(2u16.into())
+                .expect("conversion error")[3],
+            ' ',
+        );
     }
 
     #[test]
@@ -424,14 +485,14 @@ mod tests {
         let active_style = TuiStyle {
             color_bg: Some(tui_color!(red)),
             color_fg: Some(tui_color!(blue)),
-            attribs: crate::TuiStyleAttribs {
+            attribs: TuiStyleAttribs {
                 bold: Some(tui_style_attrib::Bold),
                 underline: Some(tui_style_attrib::Underline),
                 ..Default::default()
             },
             ..Default::default()
         };
-        buf.parser_global_state.current_style = active_style;
+        buf.get_parser_global_state_mut().current_style = active_style;
 
         let empty_char = buf.create_empty_pixel_char();
 
@@ -457,22 +518,88 @@ mod tests {
 
     #[test]
     fn test_erase_display_scrollback() {
-        use crate::{GetMemSize, PixelCharLine, width};
+        use crate::{GetMemSize, PixelCharLine,
+                    test_fixture_growable_buffer_for_conformance_tests::TestGrowableBufferExt,
+                    test_fixture_viewport::TestViewportExt, vp_width};
 
         let mut buf = create_test_buffer();
+        let initial_len = buf.primary_buffer_mut().get_lines().len();
 
         // Add some lines to the scrollback
-        buf.scrollback_buffer
-            .push_and_enforce_limit(PixelCharLine::new_empty(width(10)));
-        buf.scrollback_buffer
-            .push_and_enforce_limit(PixelCharLine::new_empty(width(10)));
-        assert_eq!(buf.scrollback_buffer.lines.len(), 2);
-        assert!(buf.scrollback_buffer.get_mem_size() > 0);
+        buf.primary_buffer_mut()
+            .get_lines_mut()
+            .push_front(PixelCharLine::new_empty(vp_width(10), PixelChar::Spacer));
+        buf.primary_buffer_mut()
+            .get_lines_mut()
+            .push_front(PixelCharLine::new_empty(vp_width(10), PixelChar::Spacer));
+        buf.primary_buffer_mut()
+            .get_viewport_mut()
+            .set_history_len(2);
+
+        assert_eq!(buf.primary_buffer_mut().get_lines().len(), initial_len + 2);
+        assert!(buf.primary_buffer_mut().get_mem_size() > 0);
 
         // Clear the scrollback
-        buf.erase_display_scrollback().unwrap();
+        buf.erase_display_scrollback().expect("conversion error");
 
-        assert_eq!(buf.scrollback_buffer.lines.len(), 0);
-        assert_eq!(buf.scrollback_buffer.cached_mem_size, 0);
+        assert_eq!(buf.primary_buffer_mut().get_lines().len(), initial_len);
+    }
+
+    #[test]
+    fn test_erase_line_from_cursor_to_end_and_start_to_cursor() -> miette::Result<()> {
+        use crate::{vp_col, vp_row};
+
+        let mut buf = create_test_buffer();
+        buf.set_cursor_pos(vp_col(2) + vp_row(0));
+
+        // Fill line 0 with 'X'
+        if let Some(r) = buf.get_active_screen_buffer_mut().get_row_mut(vp_row(0)) {
+            r.fill(PixelChar::PlainText {
+                display_char: 'X',
+                style: TuiStyle::default(),
+            });
+        }
+
+        // Erase from cursor (col 2) to end of line
+        buf.erase_line_from_cursor_to_end()?;
+        let r0 = buf.get_active_screen_buffer().get_row(vp_row(0)).unwrap();
+        assert_eq!(
+            r0[0],
+            PixelChar::PlainText {
+                display_char: 'X',
+                style: TuiStyle::default()
+            }
+        );
+        assert_eq!(
+            r0[1],
+            PixelChar::PlainText {
+                display_char: 'X',
+                style: TuiStyle::default()
+            }
+        );
+        assert_eq!(r0[2], buf.create_empty_pixel_char());
+
+        // Fill line 1 with 'Y' and erase from start to cursor (col 2)
+        buf.set_cursor_pos(vp_col(2) + vp_row(1));
+        if let Some(r) = buf.get_active_screen_buffer_mut().get_row_mut(vp_row(1)) {
+            r.fill(PixelChar::PlainText {
+                display_char: 'Y',
+                style: TuiStyle::default(),
+            });
+        }
+        buf.erase_line_from_start_to_cursor()?;
+        let r1 = buf.get_active_screen_buffer().get_row(vp_row(1)).unwrap();
+        assert_eq!(r1[0], buf.create_empty_pixel_char());
+        assert_eq!(r1[1], buf.create_empty_pixel_char());
+        assert_eq!(r1[2], buf.create_empty_pixel_char());
+        assert_eq!(
+            r1[3],
+            PixelChar::PlainText {
+                display_char: 'Y',
+                style: TuiStyle::default()
+            }
+        );
+
+        Ok(())
     }
 }

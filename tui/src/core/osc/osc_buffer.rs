@@ -6,6 +6,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::{osc_codes, osc_event::OscEvent};
+use crate::LossyConvertToByte;
 
 /// Buffer for accumulating and parsing [`OSC`] (Operating System Command) sequences.
 ///
@@ -119,8 +120,7 @@ impl OscBuffer {
             1 => {
                 // Clamp progress to valid u8 range (0-100).
                 let clamped = progress.clamp(0.0, 100.0);
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-                let percentage = clamped as u8;
+                let percentage = clamped.to_u8_lossy();
                 Some(OscEvent::ProgressUpdate(percentage))
             }
             2 => Some(OscEvent::BuildError),

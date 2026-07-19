@@ -36,20 +36,41 @@ _Meta Task: Prepare v0.8.0 Release_
 
 - [x] [LF scroll-up test fix](done/pr-462-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/462
-- [x] [DA1 Responses timeout fix](done/pr-455-fix.md) -
+- [x] [DA1 responses timeout fix](done/pr-455-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/455
-- [x] [VT100 Pending Wrap fix](done/pr-456-fix.md) -
+- [x] [VT100 pending wrap fix](done/pr-456-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/456
-- [x] [Mouse Event Forwarding](done/pr-458-fix.md) -
+- [x] [add mouse event forwarding](done/pr-458-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/458
 - [x] [DECCKM Cursor Key Mode tracking & state refactor](https://github.com/r3bl-org/r3bl-open-core/pull/470)
-- [x] [Scrollback Buffer for PTY](done/pr-459-fix.md) -
+- [x] [add scrollback buffer for PTY](done/pr-459-fix.md) -
       https://github.com/r3bl-org/r3bl-open-core/pull/459
-- [ ] OfsBufVT100 Canvas and Viewport Refactor
+- [x] OfsBufVT100 Canvas and Viewport Refactor
     - [x] [OfsBuf backing store change to Flat2DArray](done/ofsbuf_flat2darray_backing_store.md)
     - [x] [Script for YT Video on Flat2DArray and SIMD](done/yt_script_flat2darray_plan.md)
-    - [ ] [OfsBuf Growable, Canvas and Viewport](ofsbuf_trait_growable_impl.md)
-- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/472
+    - [x] Canvas and Viewport Refactor
+        - [x] [OfsBuf Growable, Canvas and Viewport, pan normal mode apps](done/ofsbuf_trait_growable_impl.md)
+        - [x] [clean up units](done/refactor-units.md)
+        - [x] [clean up Canvas & Viewport API](done/cleanup_viewport.md)
+        - [x] [clean up coordinate types](done/rename-buffer-coords.md)
+        - [x] [update editor](done/modernize-editor-using-new-units.md)
+            - [x] [use viewport bounds](done/viewport_bounds_check.md)
+            - [x] [use method overloading](done/use_method_overloading.md)
+            - [x] [update editor to use viewport](done/migrate-scroll-offset-to-vp-origin.md)
+            - [x] [use anchor and line for selection model](done/migrate-selection-to-anchor-and-line-selection.md)
+            - [x] [modernize buffer_struct.rs](done/buffer-struct-modernize.md)
+            - [x] [unify viewport coords constructors](done/unify-viewport-coords-constructors.md)
+            - [x] [fix calling macro in macro](done/fix-future-incompat-warnings-2.md)
+            - [x] [fix star-history outage](done/star-history-replace.md)
+            - [x] fix rust-analyzer mcp server:
+                - [x] [investigate and remove broken rust mcp server](done/fix-rust-analyzer-mcp-server.md)
+                - [x] [rewrite native rust-analyzer-mcp-server in build-infra](done/create-build-infra-rust-analyzer-mcp-server.md)
+                - [x] [publish new rust-analyzer mcp server repo & crate](done/publish-new-mcp-server-crate.md)
+                - [x] [write TWiR article - when not to use tokio](done/write-twir-article-for-no-tokio-stdio-mcp-server.md)
+    - [ ] [Enable mouse in editor](editor-mouse-enable.md)
+    - [ ] [Update Layout Engine](modernize-layout-engine.md)
+    - [ ] [rasterize editor component rendering](rasterize-editor-component-rendering.md)
+- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/473
 - [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/466
@@ -57,6 +78,9 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/464
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/465
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/469
+- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/476
+- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/479
+- [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/480
 - [ ] [wire up bracketed paste in pty_mux](pty-mux-bracketed-paste.md)
       https://github.com/r3bl-org/r3bl-open-core/pull/471
 - [ ] [fix fish shell issues in pty_mux module](task/fix-fish-in-pty-mux.md)

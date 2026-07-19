@@ -4,10 +4,10 @@ use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, ui_str},
             prefix_single_select_instruction_header};
 use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, DefaultIoDevices,
                RepoStatus, TuiAvailabilityChooseExt, choose, cli_text_inline,
-               cli_text_line, height, inline_vec,
+               cli_text_line, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_checkout_existing_local_branch, try_get_current_branch_name,
-               try_get_local_branches, try_is_working_directory_clean};
+               try_get_local_branches, try_is_working_directory_clean, vp_height};
 
 /// The main function for `giti branch checkout` command.
 ///
@@ -157,7 +157,7 @@ mod user_interaction {
         let maybe_user_choice = choose(
             header_with_instructions,
             branch_info.other_branches,
-            Some(height(20)),
+            Some(vp_height(20)),
             None,
             HowToChoose::Single,
             StyleSheet::default(),

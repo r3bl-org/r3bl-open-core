@@ -6,16 +6,16 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{
-    ANSIBasicColor, EraseDisplayMode, EscSequence, OfsBufVT100, SgrCode, height, width,
-            ofs_buf::test_fixtures_ofs_buf::*,
-            term_col, term_row, tui_style_attrib};
+    ofs_buf::test_fixtures_ofs_buf::*, term_col, term_row, tui_style_attrib, vp_height,
+    vp_width, ANSIBasicColor, EraseDisplayMode, EscSequence, OfsBufVT100, SgrCode,
+};
 use crate::core::ansi::vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                             CsiSequence,
                                             vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::csi_seq_cursor_pos};
 
 /// Creates a test [`OfsBufVT100`] with 24x80 dimensions (more realistic terminal size).
 fn create_ofs_buf_24r_by_80c() -> OfsBufVT100 {
-    OfsBufVT100::new_empty(height(24) + width(80))
+    OfsBufVT100::new_empty(vp_height(24) + vp_width(80))
 }
 
 /// Tests for complex real-world [`ANSI`] sequences.
@@ -105,7 +105,8 @@ mod full_sequences {
                 5 + i,
                 ch,
                 |style_from_buf| {
-                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
+                    style_from_buf.color_fg.expect("conversion error")
+                        == ANSIBasicColor::DarkGreen.into()
                 },
                 "green foreground",
             );
@@ -133,7 +134,14 @@ mod vte_parser {
         performer.apply_ansi_bytes(&input);
 
         // Verify cursor position after processing.
-        assert_eq!(performer.ofs_buf_vt_100.get_cursor_pos().col_index.as_usize(), 6);
+        assert_eq!(
+            performer
+                .ofs_buf_vt_100
+                .get_cursor_pos()
+                .col_index
+                .as_usize(),
+            6
+        );
 
         // Verify "Hello" is in the buffer.
         assert_plain_text_at(&ofs_buf_vt_100, 0, 0, "Hello");
@@ -145,7 +153,8 @@ mod vte_parser {
             5,
             'R',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );

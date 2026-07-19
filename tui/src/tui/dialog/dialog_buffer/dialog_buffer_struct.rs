@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch,
-            fmt_option, ok};
-use std::fmt::{Debug, Display, Formatter, Result};
+use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FileExtensionToken,
+            InlineString, ItemsOwned, ch, fmt_option, ok};
+use std::fmt::{Debug, Display, Formatter};
 
 /// Please do not construct this struct directly and use
 /// [`new_empty`] instead.
@@ -33,7 +33,9 @@ impl DialogBuffer {
     #[must_use]
     pub fn new_empty() -> Self {
         DialogBuffer {
-            editor_buffer: EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None),
+            editor_buffer: EditorBuffer::new_empty(FileExtensionToken(
+                DEFAULT_SYN_HI_FILE_EXT,
+            )),
             title: InlineString::new(),
             maybe_results: None,
         }
@@ -45,7 +47,7 @@ mod impl_debug {
     use super::*;
 
     impl Debug for DialogBuffer {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let maybe_results: &dyn Debug = fmt_option!(&self.maybe_results);
             write!(
                 f,
@@ -73,7 +75,7 @@ mod impl_display {
         /// This must be a fast implementation, so we avoid deep traversal of the
         /// editor buffer. This is used for telemetry reporting, and it is expected
         /// to be fast, since it is called in a hot loop, on every render.
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             // Start with dialog identifier and title.
             write!(f, "dialog:")?;
 

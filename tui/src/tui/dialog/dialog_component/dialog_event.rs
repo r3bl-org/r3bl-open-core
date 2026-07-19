@@ -13,40 +13,33 @@ pub enum DialogEvent {
     None,
 }
 
-mod impl_dialog_event {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl DialogEvent {
-        /// Tries to convert the given [`InputEvent`] into a
-        /// [`DialogEvent`].
-        /// - Enter and Esc are also matched against to return
-        ///   [`DialogEvent::EnterPressed`] and [`DialogEvent::EscPressed`]
-        /// - Otherwise, [Err] is returned.
-        #[must_use]
-        pub fn from(input_event: &InputEvent) -> Self {
-            if let InputEvent::Keyboard(keypress) = input_event {
-                match keypress {
-                    // Compare to `Enter`.
-                    KeyPress::Plain {
-                        key: Key::SpecialKey(SpecialKey::Enter),
-                    } => {
-                        return Self::EnterPressed;
-                    }
-
-                    // Compare to `Esc`.
-                    KeyPress::Plain {
-                        key: Key::SpecialKey(SpecialKey::Esc),
-                    } => {
-                        return Self::EscPressed;
-                    }
-
-                    _ => {}
+/// Converts an [`InputEvent`] reference into a [`DialogEvent`].
+/// - Matches Enter to [`DialogEvent::EnterPressed`].
+/// - Matches Esc to [`DialogEvent::EscPressed`].
+/// - Matches all other input events to [`DialogEvent::None`].
+impl From<&InputEvent> for DialogEvent {
+    fn from(input_event: &InputEvent) -> DialogEvent {
+        if let InputEvent::Keyboard(keypress) = input_event {
+            match keypress {
+                // Compare to `Enter`.
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Enter),
+                } => {
+                    return DialogEvent::EnterPressed;
                 }
-            }
 
-            Self::None
+                // Compare to `Esc`.
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Esc),
+                } => {
+                    return DialogEvent::EscPressed;
+                }
+
+                _ => {}
+            }
         }
+
+        DialogEvent::None
     }
 }
 
@@ -67,5 +60,12 @@ mod test_dialog_event {
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Esc));
         let dialog_event = DialogEvent::from(&input_event);
         assert_eq2!(dialog_event, DialogEvent::EscPressed);
+    }
+
+    #[test]
+    fn dialog_event_handles_other_events() {
+        let input_event = InputEvent::Keyboard(key_press!(@char 'a'));
+        let dialog_event = DialogEvent::from(&input_event);
+        assert_eq2!(dialog_event, DialogEvent::None);
     }
 }

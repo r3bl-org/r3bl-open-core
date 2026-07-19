@@ -2,7 +2,13 @@
 
 # Make sure to keep this in sync with `run` nushell script `$workspace_folders`.
 [workspace]
-members = ["analytics_schema", "cmdr", "tui", "build-infra"]
+members = [
+  "analytics_schema",
+  "cmdr",
+  "tui",
+  "build-infra",
+  "rust-analyzer-mcp-server",
+]
 
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
@@ -101,9 +107,14 @@ large_futures = "warn"
 # ╔══════════════════════════════════════════════════════╗
 # ║ Explicitly allow/suppress these lints to avoid noise ║
 # ╚══════════════════════════════════════════════════════╝
-needless_pass_by_value = "allow"  # This triggers legitimate use of passing a Copy arg by value to a function.
-similar_names = "allow"  # This triggers legitimate variable names.
-single_match_else = "allow" # Rust 2024 changes if-let scope, so match on a single case is needed to retain the old behavior.
+# This triggers legitimate use of passing a Copy arg by value to a function.
+needless_pass_by_value = "allow"
+# This triggers legitimate variable names.
+similar_names = "allow"
+# Rust 2024 changes if-let scope, so match on a single case is needed to retain the old behavior.
+single_match_else = "allow"
+# Allow assert!(x.is_empty()) and assert!(!x.is_empty()) in unit tests.
+assert_is_empty = "allow"
 
 # ┌──────────────────────────────────────────────────────────┐
 # │                    RUSTC PROFILES SECTION                │
@@ -119,10 +130,9 @@ lto = false
 codegen-units = 256
 opt-level = 2
 
-# ┌────────────────────────────────────────────────────────────────────────┐
-# │ Disable debug info in dev and test builds to speed up compilation.     │
-# │ https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey │
-# └────────────────────────────────────────────────────────────────────────┘
+# ┌────────────────────────────────────────────────────────────────────┐
+# │ Disable debug info in dev and test builds to speed up compilation. │
+# └────────────────────────────────────────────────────────────────────┘
 [profile.release]
 debug = false
 

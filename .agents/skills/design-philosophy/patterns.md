@@ -88,6 +88,61 @@ enum Color { Red, Green, Blue, Rgb(u8, u8, u8) }
 fn set_color(color: Color) { ... }
 ```
 
+### Bad: Boolean Soup / Boolean Blindness
+
+```rust
+// Unclear what true/false means at call sites and obscures actual domain behavior
+pub fn is_file_extension_default(&self) -> bool { ... }
+
+if buffer.is_file_extension_default() {
+    render_r3bl();
+} else {
+    render_syntect();
+}
+```
+
+### Good: Self-Documenting Domain Enums
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyntaxHighlightPipeline<'a> {
+    /// R3BL custom Markdown parser & AST renderer
+    R3BLMarkdown,
+    /// Syntect syntax highlighter with language extension
+    Syntect(&'a str),
+    /// Plain text rendering without syntax highlighting
+    PlainText,
+}
+
+match buffer.get_syntax_highlight_pipeline() {
+    SyntaxHighlightPipeline::R3BLMarkdown => render_r3bl(),
+    SyntaxHighlightPipeline::Syntect(ext) => render_syntect(ext),
+    SyntaxHighlightPipeline::PlainText => render_plain_text(),
+}
+```
+
+### Mutator Returns: `Option<T>` vs Zero-Allocation `Option<()>`
+
+```rust
+// ❌ Bad: Boolean blindness on mutator returns
+pub fn delete_at_col(&mut self, row: CRow, col: CCol) -> bool;
+
+// ℹ️ Note: &mut self mutators that delete text CANNOT return borrowed slices (&str)
+// or metadata offsets (DocSeg) because the borrow checker forbids returning a &str
+// borrowing from self across a &mut self mutation, and deleted bytes no longer exist.
+// Returning deleted text payload unavoidably requires an owned Option<String> allocation.
+
+// ✅ Good: Option<T> when payload is removed and genuinely consumed by callers
+pub fn remove_line(&mut self, row: CRow) -> Option<LineMetadata>;
+
+// ✅ Good: Zero-allocation Option<()> when callers do NOT consume the deleted payload
+// (Avoids speculative String allocations while maintaining type-safe Option semantics)
+pub fn delete_at_col(&mut self, row: CRow, col: CCol) -> Option<()>;
+
+// Caller usage:
+let Some(()) = buffer.delete_at_col(row, col) else { return None; };
+```
+
 ---
 
 ## Abstraction Patterns

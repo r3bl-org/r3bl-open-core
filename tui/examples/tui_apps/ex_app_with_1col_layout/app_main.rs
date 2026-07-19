@@ -5,11 +5,11 @@ use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegi
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
                InputEvent, LayoutDirection, LayoutManagement, LengthOps,
                PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
-               RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
-               TuiStylesheet, ZOrder, box_end, box_start, ch, col, height, new_style,
-               ok, render_component_in_current_box, render_tui_styled_texts_into,
-               req_size_pc, row, surface, throws_with_return, tui_color,
-               tui_styled_text, tui_styled_texts, tui_stylesheet};
+               RenderPipeline, SPACER_GLYPH, Surface, SurfaceProps, SurfaceRender,
+               TuiStylesheet, VPSize, ZOrder, box_end, box_start, ch, new_style, ok,
+               render_component_in_current_box, render_tui_styled_texts_into,
+               req_size_pc, surface, throws_with_return, tui_color, tui_styled_text,
+               tui_styled_texts, tui_stylesheet, vp_col, vp_height, vp_row};
 
 // Constants for the ids.
 #[repr(u8)]
@@ -126,11 +126,11 @@ mod app_main_impl_app_trait {
             let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
-                pos: col(0) + row(0),
+                pos: vp_col(0) + vp_row(0),
                 size: {
                     let col_count = window_size.col_width;
                     let row_count = window_size.row_height -
-                                height(2) /* Bottom row for for status bar & HUD. */;
+                                vp_height(2) /* Bottom row for for status bar & HUD. */;
                     col_count + row_count
                 },
             })?;
@@ -239,7 +239,7 @@ mod hud {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: VPSize, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -249,13 +249,14 @@ mod hud {
             },
         };
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.index_from_end(vp_height(1))); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(
@@ -274,7 +275,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: VPSize) {
         let color_bg = tui_color!(hex "#076DEB");
         let color_fg = tui_color!(hex "#E9C940");
         let styled_texts = tui_styled_texts! {
@@ -305,13 +306,14 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.convert_to_index()); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(

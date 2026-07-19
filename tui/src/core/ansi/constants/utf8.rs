@@ -242,6 +242,13 @@ pub const UTF8_3BYTE_FIRST_MASK: u8 = 0b0000_1111;
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub const UTF8_4BYTE_FIRST_MASK: u8 = 0b0000_0111;
 
+/// [`UTF-8`] Maximum Bytes per Character ([`UTF-8`]): Max buffer size for single char.
+///
+/// Value: `4` dec.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+pub const UTF8_CHAR_MAX_BYTES: usize = 4;
+
 // ============================================================================
 // Tests
 // ============================================================================

@@ -63,14 +63,14 @@ mod impl_dsr_request_type {
     }
 
     impl From<&vte::Params> for DsrRequestType {
-        fn from(params: &vte::Params) -> Self {
+        fn from(params: &vte::Params) -> DsrRequestType {
             let first_param_or_zero = params.extract_nth_single_opt_raw(0).unwrap_or(0);
             first_param_or_zero.into()
         }
     }
 
     impl From<u16> for DsrRequestType {
-        fn from(n: u16) -> Self {
+        fn from(n: u16) -> DsrRequestType {
             match n {
                 5 => Self::RequestStatus,
                 6 => Self::RequestCursorPosition,
@@ -103,8 +103,8 @@ mod impl_dsr_request_type {
 /// assert_eq!(status.to_string(), "\x1b[0n");
 ///
 /// let cursor = DsrSequence::CursorPositionResponse {
-///     row: term_row(NonZeroU16::new(5).unwrap()),
-///     col: term_col(NonZeroU16::new(10).unwrap())
+///     row: term_row(NonZeroU16::new(5).expect("conversion error")),
+///     col: term_col(NonZeroU16::new(10).expect("conversion error"))
 /// };
 /// assert_eq!(cursor.to_string(), "\x1b[5;10R");
 /// ```
@@ -180,8 +180,8 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 /// use std::num::NonZeroU16;
 ///
 /// let request = PtyResponseEvent::CursorPosition {
-///     row: term_row(NonZeroU16::new(10).unwrap()),
-///     col: term_col(NonZeroU16::new(25).unwrap())
+///     row: term_row(NonZeroU16::new(10).expect("conversion error")),
+///     col: term_col(NonZeroU16::new(25).expect("conversion error"))
 /// };
 /// let response_bytes = request.to_string().into_bytes();
 /// // The response_bytes would be sent back through the PTY input channel
@@ -225,7 +225,7 @@ mod tests {
         let mut acc = BufTextStorage::new();
 
         // Test that write_to_buf works correctly.
-        sequence.write_to_buf(&mut acc).unwrap();
+        sequence.write_to_buf(&mut acc).expect("conversion error");
         let expected = dsr_cursor_position_response(term_row(nz(42)), term_col(nz(84)));
         assert_eq!(acc.clone(), expected);
     }

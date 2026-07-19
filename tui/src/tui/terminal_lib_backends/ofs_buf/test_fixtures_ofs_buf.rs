@@ -5,8 +5,24 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{ColWidth, LengthOps, OfsBuf, OfsBufVT100, PixelChar, PixelCharLine,
-            RowHeight, SPACER_GLYPH_CHAR, TuiStyle, col, row};
+use crate::{CanvasStorage, Flat2DArray, LengthOps, NarrowingCastToU16, OfsBuf,
+            OfsBufVT100, PixelChar, PixelCharLine, SPACER_GLYPH_CHAR, TuiStyle,
+            VPHeight, VPPos, VPSize, VPWidth, vp_col, vp_row};
+
+pub trait TestBuffer {
+    fn get_char(&self, pos: VPPos) -> Option<PixelChar>;
+    fn get_window_size(&self) -> VPSize;
+}
+
+impl<S: CanvasStorage> TestBuffer for OfsBuf<S> {
+    fn get_char(&self, pos: VPPos) -> Option<PixelChar> { self.get_char(pos) }
+    fn get_window_size(&self) -> VPSize { self.get_window_size() }
+}
+
+impl TestBuffer for OfsBufVT100 {
+    fn get_char(&self, pos: VPPos) -> Option<PixelChar> { self.get_char(pos) }
+    fn get_window_size(&self) -> VPSize { self.get_window_size() }
+}
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -17,14 +33,13 @@ use crate::{ColWidth, LengthOps, OfsBuf, OfsBufVT100, PixelChar, PixelCharLine,
 /// # Panics
 ///
 /// Panics if the position is out of bounds or if the character doesn't match.
-#[cfg(test)]
 pub fn assert_plain_char_at(
-    buffer: &OfsBuf,
+    buffer: &impl TestBuffer,
     row_idx: usize,
     col_idx: usize,
     expected_char: char,
 ) {
-    let pos = row(row_idx) + col(col_idx);
+    let pos = vp_row(row_idx.as_u16_narrowing()) + vp_col(col_idx.as_u16_narrowing());
     let window_size = buffer.get_window_size();
 
     // Check bounds.
@@ -79,9 +94,8 @@ pub fn assert_plain_char_at(
 /// # Panics
 ///
 /// Panics if the position is out of bounds or if the character/style doesn't match.
-#[cfg(test)]
 pub fn assert_styled_char_at<F>(
-    buffer: &OfsBuf,
+    buffer: &impl TestBuffer,
     row_idx: usize,
     col_idx: usize,
     expected_char: char,
@@ -90,7 +104,7 @@ pub fn assert_styled_char_at<F>(
 ) where
     F: FnOnce(&TuiStyle) -> bool,
 {
-    let pos = row(row_idx) + col(col_idx);
+    let pos = vp_row(row_idx.as_u16_narrowing()) + vp_col(col_idx.as_u16_narrowing());
     let window_size = buffer.get_window_size();
 
     // Check bounds.
@@ -143,9 +157,8 @@ pub fn assert_styled_char_at<F>(
 /// # Panics
 ///
 /// Panics if the position is out of bounds or if the character is not empty.
-#[cfg(test)]
-pub fn assert_empty_at(buffer: &OfsBuf, row_idx: usize, col_idx: usize) {
-    let pos = row(row_idx) + col(col_idx);
+pub fn assert_empty_at(buffer: &impl TestBuffer, row_idx: usize, col_idx: usize) {
+    let pos = vp_row(row_idx.as_u16_narrowing()) + vp_col(col_idx.as_u16_narrowing());
     let window_size = buffer.get_window_size();
 
     // Check bounds.
@@ -195,9 +208,8 @@ pub fn assert_empty_at(buffer: &OfsBuf, row_idx: usize, col_idx: usize) {
 /// 2. Each character in the string matches the expected character at the corresponding
 ///    position
 /// 3. All characters are plain text (not styled)
-#[cfg(test)]
 pub fn assert_plain_text_at(
-    buffer: &OfsBuf,
+    buffer: &impl TestBuffer,
     start_row: usize,
     start_col: usize,
     expected_text: &str,
@@ -210,20 +222,21 @@ pub fn assert_plain_text_at(
 /// Creates a test buffer with specified dimensions. This provides a common way to create
 /// buffers for testing while allowing each test module to specify the size that makes
 /// sense for their tests.
-#[cfg(test)]
 #[must_use]
-pub fn create_test_buffer_with_size(
-    buffer_width: ColWidth,
-    buffer_height: RowHeight,
+pub fn create_test_buffer_flat_2d(
+    buffer_width: VPWidth,
+    buffer_height: VPHeight,
 ) -> OfsBuf {
-    OfsBuf::new_empty(buffer_width + buffer_height)
+    OfsBuf::new(Flat2DArray::new_empty(
+        buffer_width + buffer_height,
+        PixelChar::Spacer,
+    ))
 }
 
-#[cfg(test)]
 #[must_use]
 pub fn create_vt100_test_buffer_with_size(
-    buffer_width: ColWidth,
-    buffer_height: RowHeight,
+    buffer_width: VPWidth,
+    buffer_height: VPHeight,
 ) -> OfsBufVT100 {
     OfsBufVT100::new_empty(buffer_width + buffer_height)
 }
@@ -233,8 +246,7 @@ pub fn create_vt100_test_buffer_with_size(
 /// This is the most common character type used in tests and provides a consistent way to
 /// create test characters across modules.
 ///
-/// [`PixelChar`]: crate::PixelChar
-#[cfg(test)]
+/// [`PixelChar`]: crate::tui::PixelChar
 #[must_use]
 pub fn create_plain_test_char(ch: char) -> PixelChar {
     PixelChar::PlainText {
@@ -249,13 +261,9 @@ pub fn create_plain_test_char(ch: char) -> PixelChar {
 /// characters (repeating if necessary) or padding with Spacers if not enough characters
 /// are provided.
 ///
-/// [`PixelCharLine`]: crate::PixelCharLine
-#[cfg(test)]
+/// [`PixelCharLine`]: PixelCharLine
 #[must_use]
-pub fn create_test_line_with_chars(
-    line_width: ColWidth,
-    chars: &[char],
-) -> PixelCharLine {
+pub fn create_test_line_with_chars(line_width: VPWidth, chars: &[char]) -> PixelCharLine {
     let mut line = vec![PixelChar::Spacer; line_width.as_usize()];
     for (i, &ch) in chars.iter().enumerate().take(line_width.as_usize()) {
         line[i] = create_plain_test_char(ch);

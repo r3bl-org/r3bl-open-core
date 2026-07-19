@@ -20,16 +20,16 @@
 //!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_bracketed_paste_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{GLYPH_CONTROLLED, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_CONTROLLER, InputEvent,
-            PtyTestContext, PtyTestMode, GLYPH_SUCCESS, MSG_TEST_RUNNING, GLYPH_WAITING,
+use crate::{VPWidth, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP,
+            GLYPH_SUCCESS, GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY,
+            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, PtyTestContext, PtyTestMode,
+            VPHeight,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
                                                                         VT100InputEventIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_terminal_events,
@@ -52,7 +52,9 @@ fn controller(context: PtyTestContext) {
 
     eprintln!("{GLYPH_CONTROLLER} PTY Controller: Starting terminal events test...");
 
-    eprintln!("{GLYPH_WAITING} PTY Controller: Waiting for controlled process to start...");
+    eprintln!(
+        "{GLYPH_WAITING} PTY Controller: Waiting for controlled process to start..."
+    );
 
     // Wait for controlled to confirm it's running and ready.
     child
@@ -66,8 +68,8 @@ fn controller(context: PtyTestContext) {
         (
             "Window Resize",
             VT100InputEventIR::Resize {
-                row_height: crate::RowHeight::from(24),
-                col_width: crate::ColWidth::from(80),
+                row_height: VPHeight::from(24),
+                col_width: VPWidth::from(80),
             },
         ),
         (

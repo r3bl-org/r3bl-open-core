@@ -43,7 +43,7 @@ mod convert_to_vec_string {
     /// Converts [`ItemsOwned`] to [`Vec<String>`]. For compatibility with other Rust
     /// [`std`] lib types.
     impl From<ItemsOwned> for Vec<String> {
-        fn from(items: ItemsOwned) -> Self {
+        fn from(items: ItemsOwned) -> Vec<String> {
             items.0.iter().map(ToString::to_string).collect()
         }
     }
@@ -51,7 +51,7 @@ mod convert_to_vec_string {
     /// Converts `&`[`ItemsOwned`] to [`Vec<String>`]. For compatibility with other Rust
     /// [`std`] lib types.
     impl From<&ItemsOwned> for Vec<String> {
-        fn from(items: &ItemsOwned) -> Self {
+        fn from(items: &ItemsOwned) -> Vec<String> {
             items.0.iter().map(ToString::to_string).collect()
         }
     }
@@ -117,7 +117,7 @@ mod convert_into_items_owned {
     /// [`SmallVec<[&str; N]>`]: smallvec::SmallVec
     #[allow(clippy::doc_markdown)]
     impl<const N: usize> From<SmallVec<[&str; N]>> for ItemsOwned {
-        fn from(items: SmallVec<[&str; N]>) -> Self {
+        fn from(items: SmallVec<[&str; N]>) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
                 inline_vec.push(item.into());
@@ -128,7 +128,7 @@ mod convert_into_items_owned {
 
     impl<const N: usize> From<&[&str; N]> for ItemsOwned {
         /// Handles arrays of any fixed size.
-        fn from(items: &[&str; N]) -> Self {
+        fn from(items: &[&str; N]) -> ItemsOwned {
             // Delegate to the slice implementation.
             ItemsOwned::from(&items[..])
         }
@@ -139,7 +139,7 @@ mod convert_into_items_owned {
         /// [`ItemsOwned`].
         ///
         /// [`&str`]: str
-        fn from(items: &[&str]) -> Self {
+        fn from(items: &[&str]) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
                 inline_vec.push((*item).into());
@@ -149,7 +149,7 @@ mod convert_into_items_owned {
     }
 
     impl From<Vec<&str>> for ItemsOwned {
-        fn from(items: Vec<&str>) -> Self {
+        fn from(items: Vec<&str>) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
                 inline_vec.push(item.into());
@@ -159,11 +159,11 @@ mod convert_into_items_owned {
     }
 
     impl From<InlineVec<InlineString>> for ItemsOwned {
-        fn from(items: InlineVec<InlineString>) -> Self { ItemsOwned(items) }
+        fn from(items: InlineVec<InlineString>) -> ItemsOwned { ItemsOwned(items) }
     }
 
     impl From<&InlineString> for ItemsOwned {
-        fn from(item: &InlineString) -> Self {
+        fn from(item: &InlineString) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(1);
             inline_vec.push(item.clone());
             ItemsOwned(inline_vec)
@@ -171,7 +171,7 @@ mod convert_into_items_owned {
     }
 
     impl From<InlineString> for ItemsOwned {
-        fn from(item: InlineString) -> Self {
+        fn from(item: InlineString) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(1);
             inline_vec.push(item);
             ItemsOwned(inline_vec)
@@ -179,7 +179,7 @@ mod convert_into_items_owned {
     }
 
     impl From<&str> for ItemsOwned {
-        fn from(item: &str) -> Self {
+        fn from(item: &str) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(1);
             inline_vec.push(item.into());
             ItemsOwned(inline_vec)
@@ -187,7 +187,7 @@ mod convert_into_items_owned {
     }
 
     impl From<String> for ItemsOwned {
-        fn from(item: String) -> Self {
+        fn from(item: String) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(1);
             inline_vec.push(item.into());
             ItemsOwned(inline_vec)
@@ -196,7 +196,7 @@ mod convert_into_items_owned {
 
     /// Converts [`Vec<String>`] to [`ItemsOwned`].
     impl From<Vec<String>> for ItemsOwned {
-        fn from(items: Vec<String>) -> Self {
+        fn from(items: Vec<String>) -> ItemsOwned {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
                 inline_vec.push(item.into());

@@ -2,60 +2,102 @@
 
 //! This module contains the implementation of the render cache for the editor buffer.
 //! Currently the cache can only hold 1 entry at a time. The cache is invalidated if the
-//! content of the editor buffer changes, or if the scroll offset or window size changes.
+//! content of the editor buffer changes, or if the viewport origin or window size
+//! changes.
 //!
-//! - The key is derived from the scroll offset and window size.
+//! - The key is derived from the viewport origin and window size.
 //! - The value is a [`RenderOpIRVec`] struct that contains the render operations to
 //!   render the content of the editor buffer to the screen.
 //!
 //! In the future, if there is a need to store multiple entries in the cache, the cache
-//! can be implemented as a [`crate::RingBuffer`] or [`crate::InlineVec`] of
-//! [`CacheEntry`] structs.
+//! can be implemented as a [`RingBuffer`] or [`InlineVec`] of [`CacheEntry`].
+//!
+//! [`InlineVec`]: crate::InlineVec
+//! [`RingBuffer`]: crate::RingBuffer
 
-use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOpIRVec, ScrOfs,
-            Size, engine_public_api};
-use std::ops::{Deref, DerefMut};
+use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOpIRVec, VPSize,
+            Viewport, engine_public_api};
 
-pub(in crate::tui::editor::editor_buffer) mod key {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
+/// Holds a single cache entry that represents the render operations to render the content
+/// of the editor buffer to the current viewport and (terminal) screen size.
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct RenderCache {
+    pub entry: Option<CacheEntry>,
+}
 
-    /// Cache key is combination of `scroll_offset` and `window_size`.
-    #[derive(Clone, Debug, PartialEq)]
-    pub struct Key((ScrOfs, Size));
+impl RenderCache {
+    /// Clears the single cache entry.
+    pub fn clear(&mut self) { self.entry = None; }
 
-    impl Key {
-        #[must_use]
-        pub fn new(scr_ofs: ScrOfs, window_size: Size) -> Self {
-            (scr_ofs, window_size).into()
+    /// Returns the cached [`RenderOpIRVec`] if the entry matches the given [`Viewport`].
+    #[must_use]
+    pub fn get(&self, viewport: Viewport) -> Option<&RenderOpIRVec> {
+        let (key, value) = self.entry.as_ref()?;
+
+        if *key == viewport {
+            return Some(value);
         }
+
+        None
     }
 
-    impl From<(ScrOfs, Size)> for Key {
-        fn from((scr_ofs, window_size): (ScrOfs, Size)) -> Self {
-            Self((scr_ofs, window_size))
+    /// This cache only holds a single entry. So if there is an existing entry, it is
+    /// replaced with the new entry.
+    pub fn insert(&mut self, viewport: Viewport, value: RenderOpIRVec) {
+        self.entry = Some((viewport, value));
+    }
+
+    /// Render the content of the editor buffer to the screen from the cache if the
+    /// content has not been modified.
+    ///
+    /// The cache miss occurs if
+    /// - Viewport origin changes
+    /// - Window size changes
+    /// - Content of the editor changes
+    pub fn render_content(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        window_size: VPSize,
+        has_focus: &mut HasFocus,
+        render_ops: &mut RenderOpIRVec,
+        use_cache: UseRenderCache,
+    ) {
+        use UseRenderCache::{No, Yes};
+
+        let viewport = Viewport::new(buffer.get_vp_origin(), window_size);
+
+        // Cache enabled & hit so early return.
+        let cache_entry = buffer.get_render_cache().get(viewport);
+        match (use_cache, cache_entry) {
+            (Yes, Some(value)) => {
+                *render_ops = value.clone();
+                return;
+            }
+            _ => { /* Cache disabled, or cache miss. */ }
+        }
+
+        // Cached disabled, or miss due to:
+        // - Content has been modified.
+        // - Viewport origin or Window size has been modified.
+        // So re-render content, generate & write to render_ops.
+        engine_public_api::render_content(
+            RenderArgs::new(engine, buffer, has_focus),
+            render_ops,
+        );
+
+        match use_cache {
+            // Cache is enabled, so update it.
+            Yes => buffer
+                .get_render_cache_mut()
+                .insert(viewport, render_ops.clone()),
+            // Cache is disabled, so invalidate it (it should contain nothing at this
+            // point).
+            No => buffer.get_render_cache_mut().clear(),
         }
     }
 }
-pub use key::*;
-// Allow code below to all the symbols in this mod.
 
-pub(in crate::tui::editor::editor_buffer) mod cache_entry {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// Cache entry is a combination of a single key and single value.
-    #[derive(Clone, Debug, PartialEq)]
-    pub struct CacheEntry(pub Key, pub RenderOpIRVec);
-
-    impl CacheEntry {
-        pub fn new(arg_key: impl Into<Key>, value: RenderOpIRVec) -> Self {
-            Self(arg_key.into(), value)
-        }
-    }
-}
-pub use cache_entry::*;
-// Allow code below to all the symbols in this mod.
+pub type CacheEntry = (Viewport, RenderOpIRVec);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UseRenderCache {
@@ -63,103 +105,12 @@ pub enum UseRenderCache {
     No,
 }
 
-/// Holds a single cache entry that represents the render operations to render the content
-/// of the editor buffer to the current viewport and (terminal) screen size. The key
-/// encodes information about the scroll offset and window size, which is used to derive
-/// the viewport information.
-#[derive(Clone, Default, Debug, PartialEq)]
-pub struct RenderCache {
-    pub entry: Option<cache_entry::CacheEntry>,
-}
-
-mod render_cache_impl_block {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Deref for RenderCache {
-        type Target = Option<cache_entry::CacheEntry>;
-
-        fn deref(&self) -> &Self::Target { &self.entry }
-    }
-
-    impl DerefMut for RenderCache {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.entry }
-    }
-    impl RenderCache {
-        pub fn clear(&mut self) { self.entry = None; }
-
-        pub fn get(&self, arg_key: impl Into<Key>) -> Option<&RenderOpIRVec> {
-            let key: Key = arg_key.into();
-            if key == self.entry.as_ref()?.0 {
-                Some(&self.entry.as_ref()?.1)
-            } else {
-                None
-            }
-        }
-
-        /// This cache only holds a single entry. So if there is an existing entry, it is
-        /// replaced with the new entry.
-        pub fn insert(&mut self, arg_key: impl Into<Key>, value: RenderOpIRVec) {
-            let key: Key = arg_key.into();
-            self.entry = Some(CacheEntry::new(key, value));
-        }
-
-        /// Render the content of the editor buffer to the screen from the cache if the
-        /// content has not been modified.
-        ///
-        /// The cache miss occurs if
-        /// - Scroll Offset changes
-        /// - Window size changes
-        /// - Content of the editor changes
-        pub fn render_content(
-            buffer: &mut EditorBuffer,
-            engine: &mut EditorEngine,
-            window_size: Size,
-            has_focus: &mut HasFocus,
-            render_ops: &mut RenderOpIRVec,
-            use_cache: UseRenderCache,
-        ) {
-            // Cache enabled & hit so early return.
-            if matches!(use_cache, UseRenderCache::Yes)
-                && let Some(cached_output) =
-                    buffer.render_cache.get((buffer.get_scr_ofs(), window_size))
-            {
-                *render_ops = cached_output.clone();
-                return;
-            }
-
-            // Cached disabled, or miss due to:
-            // - Content has been modified.
-            // - Scroll Offset or Window size has been modified.
-            // So re-render content, generate & write to render_ops.
-            engine_public_api::render_content(
-                RenderArgs {
-                    engine,
-                    buffer,
-                    has_focus,
-                },
-                render_ops,
-            );
-
-            match use_cache {
-                // Cache is enabled, so update it.
-                UseRenderCache::Yes => buffer
-                    .render_cache
-                    .insert((buffer.get_scr_ofs(), window_size), render_ops.clone()),
-                // Cache is disabled, so invalidate it (it should contain nothing at this
-                // point).
-                UseRenderCache::No => buffer.render_cache.clear(),
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RenderOpCommon, assert_eq2, col,
-                editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
-                scr_ofs, width};
+    use crate::{RenderOpCommon, assert_eq2, c_pos,
+                editor::test_fixtures_editor::mock_real_objects_for_editor, vp_height,
+                vp_width};
 
     /// Fake `render_ops` to be used in the tests.
     fn get_render_ops_og() -> RenderOpIRVec {
@@ -170,7 +121,7 @@ mod tests {
     }
 
     /// Fake window size to be used in the tests.
-    fn get_window_size_og() -> Size { height(70) + width(15) }
+    fn get_window_size_og() -> VPSize { vp_height(70) + vp_width(15) }
 
     #[test]
     fn test_cache_can_be_disabled() {
@@ -181,8 +132,8 @@ mod tests {
         // Cache should be empty.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             None
         );
 
@@ -200,8 +151,8 @@ mod tests {
         // Cache should have been populated with the render_ops_og.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
 
@@ -218,8 +169,8 @@ mod tests {
         // Cache should have been cleared.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             None
         );
     }
@@ -233,8 +184,8 @@ mod tests {
         // Cache should be empty.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             None
         );
 
@@ -252,8 +203,8 @@ mod tests {
         // Cache should have been populated with the render_ops_og.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
 
@@ -268,8 +219,8 @@ mod tests {
         );
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
 
@@ -292,8 +243,8 @@ mod tests {
         assert_eq2!(render_ops_mut, &get_render_ops_og());
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
     }
@@ -307,8 +258,8 @@ mod tests {
         // Cache should be empty.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             None
         );
 
@@ -326,8 +277,8 @@ mod tests {
         // Cache should have been populated with the render_ops_og.
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
 
@@ -350,8 +301,8 @@ mod tests {
         assert_eq2!(render_ops_mut, &get_render_ops_og());
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             Some(&get_render_ops_og())
         );
     }
@@ -374,7 +325,7 @@ mod tests {
         );
 
         // Change in window size should invalidate the cache and result in a cache miss.
-        let window_size_new = height(50) + width(15);
+        let window_size_new = vp_height(50) + vp_width(15);
         assert_ne!(window_size_new, get_window_size_og());
         RenderCache::render_content(
             buffer,
@@ -386,20 +337,20 @@ mod tests {
         );
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og())),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og())),
             None
         );
         assert_eq2!(
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), window_size_new)),
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), window_size_new)),
             Some(&get_render_ops_og())
         );
     }
 
     #[test]
-    fn test_scroll_offset_change_causes_cache_miss() {
+    fn test_vp_origin_change_causes_cache_miss() {
         let buffer = &mut EditorBuffer::default();
         let engine = &mut EditorEngine::default();
         let has_focus = &mut HasFocus::default();
@@ -415,12 +366,18 @@ mod tests {
             UseRenderCache::Yes,
         );
 
-        // Change in scroll_offset should invalidate the cache and result in a cache miss.
-        let scr_ofs_old = buffer.get_scr_ofs();
-        let scr_ofs_new = scr_ofs(col(1) + row(1));
-        assert_ne!(scr_ofs_new, scr_ofs_old);
+        // Change in vp_origin should invalidate the cache and result in a cache miss.
+        let vp_origin_old = buffer.get_vp_origin();
+        let vp_origin_new = c_pos(1, 1);
+        assert_ne!(vp_origin_new, vp_origin_old);
 
-        buffer.content.scr_ofs = scr_ofs_new;
+        {
+            let buffer_mut = buffer.get_mut_no_drop(get_window_size_og());
+            buffer_mut
+                .inner
+                .viewport
+                .set_origin_pos(|pos| *pos = vp_origin_new);
+        }
         RenderCache::render_content(
             buffer,
             engine,
@@ -430,11 +387,15 @@ mod tests {
             UseRenderCache::Yes,
         );
         assert_eq2!(
-            buffer.render_cache.get((scr_ofs_old, get_window_size_og())),
+            buffer
+                .get_render_cache()
+                .get(Viewport::new(vp_origin_old, get_window_size_og())),
             None
         );
         assert_eq2!(
-            buffer.render_cache.get((scr_ofs_new, get_window_size_og())),
+            buffer
+                .get_render_cache()
+                .get(Viewport::new(vp_origin_new, get_window_size_og())),
             Some(&get_render_ops_og())
         );
     }
@@ -458,14 +419,14 @@ mod tests {
             );
             assert!(
                 buffer
-                    .render_cache
-                    .get((buffer.get_scr_ofs(), get_window_size_og()))
+                    .get_render_cache()
+                    .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og()))
                     .is_some()
             );
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og()))
-                .unwrap()
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og()))
+                .expect("conversion error")
                 .clone()
         };
 
@@ -482,14 +443,14 @@ mod tests {
             );
             assert!(
                 buffer
-                    .render_cache
-                    .get((buffer.get_scr_ofs(), get_window_size_og()))
+                    .get_render_cache()
+                    .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og()))
                     .is_some()
             );
             buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og()))
-                .unwrap()
+                .get_render_cache()
+                .get(Viewport::new(buffer.get_vp_origin(), get_window_size_og()))
+                .expect("conversion error")
                 .clone()
         };
 

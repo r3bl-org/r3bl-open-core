@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn test_small_empty_string() {
         let gap_buffer = ZeroCopyGapBuffer::from(EMPTY_STRING);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 0);
     }
@@ -131,7 +131,7 @@ mod tests {
     fn test_small_only_newlines() {
         // ONLY_NEWLINES = "\n\n\n".
         let gap_buffer = ZeroCopyGapBuffer::from(ONLY_NEWLINES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 3);
         // Each newline becomes an empty Text element.
@@ -144,7 +144,7 @@ mod tests {
     fn test_small_single_line_no_newline() {
         // SINGLE_LINE_NO_NEWLINE = "Hello World".
         let gap_buffer = ZeroCopyGapBuffer::from(SINGLE_LINE_NO_NEWLINE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("Hello World")]);
@@ -154,7 +154,7 @@ mod tests {
     fn test_small_single_line_with_newline() {
         // SINGLE_LINE_WITH_NEWLINE = "Hello World\n".
         let gap_buffer = ZeroCopyGapBuffer::from(SINGLE_LINE_WITH_NEWLINE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("Hello World")]);
@@ -164,7 +164,7 @@ mod tests {
     fn test_small_simple_inline_code() {
         // SIMPLE_INLINE_CODE = "first\n`second`".
         let gap_buffer = ZeroCopyGapBuffer::from(SIMPLE_INLINE_CODE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 2);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("first")]);
@@ -175,7 +175,7 @@ mod tests {
     fn test_small_inline_code_variations() {
         // INLINE_CODE_VARIATIONS contains multiple inline code examples.
         let gap_buffer = ZeroCopyGapBuffer::from(INLINE_CODE_VARIATIONS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // This test data has multiple lines with inline code.
         assert!(!doc.is_empty());
@@ -200,7 +200,7 @@ mod tests {
     fn test_small_inline_code_with_unicode() {
         // INLINE_CODE_WITH_UNICODE = "`code 🎯`".
         let gap_buffer = ZeroCopyGapBuffer::from(INLINE_CODE_WITH_UNICODE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::InlineCode("code 🎯")]);
@@ -210,7 +210,7 @@ mod tests {
     fn test_small_bold_text() {
         // BOLD_TEXT = "This is *bold* text".
         let gap_buffer = ZeroCopyGapBuffer::from(BOLD_TEXT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(
@@ -227,7 +227,7 @@ mod tests {
     fn test_small_italic_text() {
         // ITALIC_TEXT = "This is _italic_ text".
         let gap_buffer = ZeroCopyGapBuffer::from(ITALIC_TEXT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(
@@ -244,7 +244,7 @@ mod tests {
     fn test_small_mixed_formatting() {
         // MIXED_FORMATTING contains mixed bold, italic, and inline code.
         let gap_buffer = ZeroCopyGapBuffer::from(MIXED_FORMATTING);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
         // Verify mixed formatting elements exist.
@@ -267,7 +267,7 @@ mod tests {
     fn test_small_links() {
         // LINKS = "Check out [Rust](https://rust-lang.org) website".
         let gap_buffer = ZeroCopyGapBuffer::from(LINKS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(
@@ -287,7 +287,7 @@ mod tests {
     fn test_small_images() {
         // IMAGES = "![Alt text](https://example.com/image.png)".
         let gap_buffer = ZeroCopyGapBuffer::from(IMAGES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(
@@ -303,7 +303,7 @@ mod tests {
     fn test_small_metadata_title() {
         // METADATA_TITLE = "@title: My Document Title".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_TITLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_title_element(&doc[0], "My Document Title");
@@ -313,7 +313,7 @@ mod tests {
     fn test_small_metadata_tags() {
         // METADATA_TAGS = "@tags: rust, programming, tutorial".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_TAGS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_tags_element(&doc[0], &["rust", "programming", "tutorial"]);
@@ -323,7 +323,7 @@ mod tests {
     fn test_small_metadata_authors() {
         // METADATA_AUTHORS = "@authors: John Doe, Jane Smith".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_AUTHORS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_authors_element(&doc[0], &["John Doe", "Jane Smith"]);
@@ -333,7 +333,7 @@ mod tests {
     fn test_small_metadata_date() {
         // METADATA_DATE = "@date: 2025-01-01".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_DATE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_date_element(&doc[0], "2025-01-01");
@@ -344,7 +344,7 @@ mod tests {
         // SPECIAL_CHARACTERS contains special characters like.
         // !@#$%^&*()_+-=[]{}|;':",./<>?
         let gap_buffer = ZeroCopyGapBuffer::from(SPECIAL_CHARACTERS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         // Special characters should be preserved as plain text.
@@ -364,7 +364,7 @@ mod tests {
     fn test_small_unicode_content() {
         // UNICODE_CONTENT contains text with emojis.
         let gap_buffer = ZeroCopyGapBuffer::from(UNICODE_CONTENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
         // Unicode should be preserved in the parsed content.
@@ -390,7 +390,7 @@ mod tests {
     fn test_small_emoji_h1_simple() {
         // EMOJI_H1_SIMPLE = "# Heading with emoji 😀".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_H1_SIMPLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 1, "Heading with emoji 😀");
@@ -400,7 +400,7 @@ mod tests {
     fn test_small_emoji_h2_simple() {
         // EMOJI_H2_SIMPLE = "## Subheading with emoji 😀".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_H2_SIMPLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 2, "Subheading with emoji 😀");
@@ -410,7 +410,7 @@ mod tests {
     fn test_small_emoji_multiple() {
         // EMOJI_MULTIPLE = "# Multiple emojis 😀🚀📝".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_MULTIPLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 1, "Multiple emojis 😀🚀📝");
@@ -421,7 +421,7 @@ mod tests {
         // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists,
         // code blocks.
         let gap_buffer = ZeroCopyGapBuffer::from(SMALL_REAL_WORLD_CONTENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
 
         // Should have multiple elements including metadata, headings, text, lists, and
@@ -446,7 +446,7 @@ mod tests {
     fn test_small_ex_editor_content() {
         // EX_EDITOR_CONTENT is a complex document with various markdown features.
         let gap_buffer = ZeroCopyGapBuffer::from(EX_EDITOR_CONTENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
 
         // Should be a complex document.
@@ -469,7 +469,9 @@ mod tests {
                 | MdElement::Date(_) => {
                     has_metadata = true;
                 }
-                MdElement::Heading(data) if data.text.chars().any(|c| c as u32 > 127) => {
+                MdElement::Heading(data)
+                    if data.text.chars().any(|c| u32::from(c) > 127) =>
+                {
                     has_emoji_heading = true;
                 }
                 MdElement::SmartList((lines, _, indent)) => {
@@ -506,7 +508,7 @@ mod tests {
     fn test_medium_multiple_lines() {
         // MULTIPLE_LINES contains multiple lines of text.
         let gap_buffer = ZeroCopyGapBuffer::from(MULTIPLE_LINES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have multiple text elements.
         assert!(doc.len() > 1, "Expected multiple lines");
@@ -522,7 +524,7 @@ mod tests {
     fn test_medium_heading_basic() {
         // HEADING_BASIC = "# Main Heading\nSome content"
         let gap_buffer = ZeroCopyGapBuffer::from(HEADING_BASIC);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 2);
         assert_heading_element(&doc[0], 1, "Main Heading");
@@ -532,7 +534,7 @@ mod tests {
     #[test]
     fn test_medium_multiple_headings() {
         let gap_buffer = ZeroCopyGapBuffer::from(MULTIPLE_HEADINGS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have multiple headings.
         let heading_count = doc
@@ -549,7 +551,7 @@ mod tests {
     fn test_medium_all_heading_levels() {
         // ALL_HEADING_LEVELS contains headings from H1 to H6.
         let gap_buffer = ZeroCopyGapBuffer::from(ALL_HEADING_LEVELS);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
 
         // Should have at least 6 headings.
@@ -571,7 +573,7 @@ mod tests {
     #[test]
     fn test_medium_unordered_list_simple() {
         let gap_buffer = ZeroCopyGapBuffer::from(UNORDERED_LIST_SIMPLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have unordered list items.
         let has_unordered_list = doc
@@ -583,7 +585,7 @@ mod tests {
     #[test]
     fn test_medium_ordered_list_simple() {
         let gap_buffer = ZeroCopyGapBuffer::from(ORDERED_LIST_SIMPLE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have ordered list items.
         let has_ordered_list = doc
@@ -595,7 +597,7 @@ mod tests {
     #[test]
     fn test_medium_nested_unordered_list() {
         let gap_buffer = ZeroCopyGapBuffer::from(NESTED_UNORDERED_LIST);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have nested lists (indent > 0)
         let has_nested = doc
@@ -607,7 +609,7 @@ mod tests {
     #[test]
     fn test_medium_nested_ordered_list() {
         let gap_buffer = ZeroCopyGapBuffer::from(NESTED_ORDERED_LIST);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have nested ordered lists.
         let has_nested_ordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), indent)) if *indent > 0));
@@ -618,7 +620,7 @@ mod tests {
     fn test_medium_checkboxes() {
         // CHECKBOXES contains checked and unchecked checkboxes in lists.
         let gap_buffer = ZeroCopyGapBuffer::from(CHECKBOXES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
 
         // Find lists with checkboxes.
@@ -646,7 +648,7 @@ mod tests {
     #[test]
     fn test_medium_mixed_list_types() {
         let gap_buffer = ZeroCopyGapBuffer::from(MIXED_LIST_TYPES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have both ordered and unordered lists.
         let has_ordered = doc
@@ -661,7 +663,7 @@ mod tests {
     #[test]
     fn test_medium_code_block_bash() {
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_BASH);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have bash code block.
         let has_bash_code = doc.iter().any(|e| {
@@ -674,7 +676,7 @@ mod tests {
     fn test_medium_code_block_rust() {
         // CODE_BLOCK_RUST contains a Rust code block.
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_RUST);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
 
         // Find the code block.
@@ -703,7 +705,7 @@ mod tests {
     #[test]
     fn test_medium_code_block_no_language() {
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_NO_LANGUAGE);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have code block without language.
         let has_plain_code = doc.iter().any(|e| {
@@ -715,7 +717,7 @@ mod tests {
     #[test]
     fn test_medium_empty_code_block() {
         let gap_buffer = ZeroCopyGapBuffer::from(EMPTY_CODE_BLOCK);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should have empty code block (just start and end tags)
         let has_empty_code = doc
@@ -727,7 +729,7 @@ mod tests {
     #[test]
     fn test_medium_formatting_edge_cases() {
         let gap_buffer = ZeroCopyGapBuffer::from(FORMATTING_EDGE_CASES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle edge cases gracefully.
         assert!(!doc.is_empty(), "Document should not be empty");
@@ -736,7 +738,7 @@ mod tests {
     #[test]
     fn test_medium_nested_formatting() {
         let gap_buffer = ZeroCopyGapBuffer::from(NESTED_FORMATTING);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle nested formatting.
         let has_formatting = doc.iter().any(|e| {
@@ -750,7 +752,7 @@ mod tests {
     #[test]
     fn test_medium_edge_case_empty_lines() {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_EMPTY_LINES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle empty lines correctly.
         assert!(!doc.is_empty(), "Document should parse empty lines");
@@ -759,7 +761,7 @@ mod tests {
     #[test]
     fn test_medium_edge_case_whitespace_lines() {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_WHITESPACE_LINES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle whitespace lines correctly.
         assert!(!doc.is_empty(), "Document should parse whitespace lines");
@@ -768,7 +770,7 @@ mod tests {
     #[test]
     fn test_medium_edge_case_trailing_spaces() {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_TRAILING_SPACES);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle trailing spaces correctly.
         assert!(
@@ -780,15 +782,15 @@ mod tests {
     #[test]
     fn test_medium_emoji_start_middle_end() {
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_START_MIDDLE_END);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Should handle emojis in various positions.
         let has_emoji_content = doc.iter().any(|e| match e {
             MdElement::Text(fragments) => fragments.iter().any(|f| match f {
-                MdLineFragment::Plain(text) => text.chars().any(|c| c as u32 > 127),
+                MdLineFragment::Plain(text) => text.chars().any(|c| u32::from(c) > 127),
                 _ => false,
             }),
-            MdElement::Heading(data) => data.text.chars().any(|c| c as u32 > 127),
+            MdElement::Heading(data) => data.text.chars().any(|c| u32::from(c) > 127),
             _ => false,
         });
         assert!(has_emoji_content, "Expected emoji content");
@@ -797,7 +799,7 @@ mod tests {
     #[test]
     fn test_medium_blog_post_document() {
         let gap_buffer = ZeroCopyGapBuffer::from(BLOG_POST_DOCUMENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Blog post should have various elements.
         assert!(doc.len() > 5, "Blog post should have multiple elements");
@@ -816,7 +818,7 @@ mod tests {
     #[test]
     fn test_large_complex_nested_document() {
         let gap_buffer = ZeroCopyGapBuffer::from(COMPLEX_NESTED_DOCUMENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Complex document should have many varied elements.
         assert!(doc.len() > 10, "Complex document should have many elements");
@@ -836,7 +838,7 @@ mod tests {
     #[test]
     fn test_large_tutorial_document() {
         let gap_buffer = ZeroCopyGapBuffer::from(TUTORIAL_DOCUMENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Tutorial should have structured content.
         assert!(doc.len() > 10, "Tutorial should have substantial content");
@@ -855,7 +857,7 @@ mod tests {
     #[test]
     fn test_invalid_malformed_syntax() {
         let gap_buffer = ZeroCopyGapBuffer::from(MALFORMED_SYNTAX);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         // Malformed syntax should still parse something.
         assert!(
             remainder.is_empty() || !doc.is_empty(),
@@ -866,7 +868,7 @@ mod tests {
     #[test]
     fn test_invalid_unclosed_formatting() {
         let gap_buffer = ZeroCopyGapBuffer::from(UNCLOSED_FORMATTING);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         // Unclosed formatting should still parse.
         assert!(
             remainder.is_empty() || !doc.is_empty(),
@@ -881,7 +883,7 @@ mod tests {
     #[test]
     fn test_jumbo_real_world_editor() {
         let gap_buffer = ZeroCopyGapBuffer::from(REAL_WORLD_EDITOR_CONTENT);
-        let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
+        let (remainder, doc) = parse_markdown(&gap_buffer).expect("conversion error");
         assert_eq!(remainder, "");
         // Real world content should be substantial and varied.
         assert!(doc.len() > 20, "Real world document should be large");

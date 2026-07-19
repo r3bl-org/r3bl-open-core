@@ -60,7 +60,7 @@
 //! - Applying style information correctly
 //!
 //! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`render_op` mod docs]: mod@crate::render_op
 //! [`render_pipeline`]: mod@crate::render_pipeline
@@ -68,7 +68,7 @@
 
 use super::RenderOpCommon;
 use crate::{InlineString, TuiStyle, ok};
-use std::{fmt::{Debug, Formatter, Result},
+use std::{fmt::{Debug, Formatter},
           ops::{AddAssign, Deref, DerefMut}};
 
 /// Intermediate Representation operations for app/component layer.
@@ -139,7 +139,7 @@ impl RenderOpIRVec {
 }
 
 impl From<RenderOpCommon> for RenderOpIR {
-    fn from(op: RenderOpCommon) -> Self { RenderOpIR::Common(op) }
+    fn from(op: RenderOpCommon) -> RenderOpIR { RenderOpIR::Common(op) }
 }
 
 impl Deref for RenderOpIRVec {
@@ -161,11 +161,11 @@ impl DerefMut for RenderOpIRVec {
 /// # Example
 ///
 /// ```
-/// # use r3bl_tui::{RenderOpCommon, RenderOpIRVec, Pos, row, col};
+/// # use r3bl_tui::{RenderOpCommon, RenderOpIRVec, vp_pos};
 /// let mut render_ops = RenderOpIRVec::new();
 ///
 /// // Using += operator (more ergonomic)
-/// render_ops += RenderOpCommon::MoveCursorPositionAbs(Pos::new((row(5), col(10))));
+/// render_ops += RenderOpCommon::MoveCursorPositionAbs(vp_pos(10, 5));
 ///
 /// assert_eq!(render_ops.len(), 1);
 /// ```
@@ -190,7 +190,7 @@ impl AddAssign<RenderOpCommon> for &mut RenderOpIRVec {
 }
 
 impl Debug for RenderOpIRVec {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         const DELIM: &str = "\n  - ";
 
         let mut iter = self.iter();
@@ -221,12 +221,12 @@ impl Debug for RenderOpIRVec {
 }
 
 impl From<Vec<RenderOpIR>> for RenderOpIRVec {
-    fn from(ops: Vec<RenderOpIR>) -> Self { Self { list: ops } }
+    fn from(ops: Vec<RenderOpIR>) -> RenderOpIRVec { RenderOpIRVec { list: ops } }
 }
 
 impl FromIterator<RenderOpIR> for RenderOpIRVec {
-    fn from_iter<I: IntoIterator<Item = RenderOpIR>>(iter: I) -> Self {
-        Self {
+    fn from_iter<I: IntoIterator<Item = RenderOpIR>>(iter: I) -> RenderOpIRVec {
+        RenderOpIRVec {
             list: iter.into_iter().collect(),
         }
     }

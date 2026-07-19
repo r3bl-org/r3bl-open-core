@@ -178,23 +178,24 @@ mod tests {
         let level_filter = LevelFilter::DEBUG;
         let writer_config = WriterConfig::Display(DisplayPreference::Stdout);
         let layer: Option<Box<DynLayer<tracing_subscriber::Registry>>> =
-            try_create_display_layer(level_filter, writer_config).unwrap();
+            try_create_display_layer(level_filter, writer_config)
+                .expect("conversion error");
 
         assert!(layer.is_some());
     }
 
     #[test]
     fn test_try_create_file_layer() {
-        let dir = try_create_temp_dir().unwrap();
+        let dir = try_create_temp_dir().expect("conversion error");
         let file_path = dir.join("my_temp_log_file.log");
-        let file_path = file_path.to_str().unwrap().to_string();
+        let file_path = file_path.to_str().expect("conversion error").to_string();
 
         println!("file_path: {file_path}");
 
         let level_filter = LevelFilter::DEBUG;
         let writer_config = WriterConfig::File(file_path.clone());
         let layer: Option<Box<DynLayer<tracing_subscriber::Registry>>> =
-            try_create_file_layer(level_filter, writer_config).unwrap();
+            try_create_file_layer(level_filter, writer_config).expect("conversion error");
 
         assert!(layer.is_some());
         assert!(std::path::Path::new(&file_path).exists());
@@ -202,9 +203,9 @@ mod tests {
 
     #[test]
     fn test_try_create_both_layers() {
-        let dir = try_create_temp_dir().unwrap();
+        let dir = try_create_temp_dir().expect("conversion error");
         let file_path = dir.join("my_temp_log_file.log");
-        let file_path = file_path.to_str().unwrap().to_string();
+        let file_path = file_path.to_str().expect("conversion error").to_string();
 
         let tracing_config = TracingConfig {
             writer_config: WriterConfig::DisplayAndFile(
@@ -214,7 +215,9 @@ mod tests {
             level_filter: LevelFilter::DEBUG,
         };
 
-        let layers = try_create_layers(&tracing_config).unwrap().unwrap();
+        let layers = try_create_layers(&tracing_config)
+            .expect("conversion error")
+            .expect("conversion error");
         assert_eq!(layers.len(), 3);
         assert!(std::path::Path::new(&file_path).exists());
     }
@@ -253,7 +256,7 @@ mod test_tracing_shared_writer_output {
             level_filter: LevelFilter::DEBUG,
         }
         .install_thread_local()
-        .unwrap();
+        .expect("conversion error");
 
         // Log some messages.
         tracing::error!("error");

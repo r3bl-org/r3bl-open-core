@@ -11,7 +11,7 @@ use crate::InlineString;
 /// use r3bl_tui::{fmt_option, FormatOptionMsg};
 ///
 /// struct FooStruct {
-///    pub insertion_pos_for_next_box: Option<r3bl_tui::Pos>,
+///    pub insertion_pos_for_next_box: Option<r3bl_tui::VPPos>,
 /// }
 ///
 /// impl std::fmt::Debug for FooStruct {

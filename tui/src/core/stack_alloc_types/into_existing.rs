@@ -102,10 +102,10 @@ use std::{fs::File,
 /// pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 5);
 /// assert_eq!(acc, "-----");
 ///
-/// use std::fmt::{Debug, Result, Formatter, Write};
+/// use std::fmt::{Debug, Formatter, Write};
 /// struct Foo;
 /// impl Debug for Foo {
-///     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+///     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 ///         // Note: pad_fmt! requires push_str method, so we use a String buffer
 ///         let mut buffer = String::new();
 ///         pad_fmt!(
@@ -379,7 +379,8 @@ pub mod write_to_file {
 
 #[cfg(test)]
 mod tests_write_to_file {
-    use crate::{into_existing::write_to_file::try_write_str_to_file, ok, try_create_temp_dir};
+    use crate::{into_existing::write_to_file::try_write_str_to_file, ok,
+                try_create_temp_dir};
     use miette::IntoDiagnostic;
     use std::fs;
 
@@ -478,8 +479,8 @@ mod tests_read_from_file {
         let temp_file_handle =
             File::open(&temp_file_path).expect("Failed to open temp file");
         assert!(
-            temp_file_handle.metadata().unwrap().len()
-                >= DEFAULT_DOCUMENT_SIZE.try_into().unwrap(),
+            temp_file_handle.metadata().expect("conversion error").len()
+                >= DEFAULT_DOCUMENT_SIZE.try_into().expect("conversion error"),
             "File size is not greater than 1MB"
         );
 

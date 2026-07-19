@@ -41,15 +41,26 @@
 //! - A grapheme cluster can take up more than one byte, and they don't fall cleanly into
 //!   byte boundaries.
 //!
-//! To complicate things further, the size that a grapheme cluster takes up is not the
-//! same as its byte size in memory. Let's unpack that.
+//! # Grapheme Cluster Display Width Taxonomy
 //!
-//! | Character   | Byte size   | Grapheme cluster size   | Compound   |
-//! | :---------- | :---------- | :---------------------- | :--------- |
-//! | `H`         | 1           | 1                       | No         |
-//! | `😃`        | 4           | 2                       | No         |
-//! | `📦`        | 4           | 2                       | No         |
-//! | `🙏🏽`        | 4           | 2                       | Yes        |
+//! There is a distinction between a character's **byte size in memory** and its
+//! **display width in terminal columns** (`display_width`):
+//!
+//! 1. **[`ASCII`] Characters**: [`ASCII`] characters ARE grapheme clusters, but they have
+//!    a single-column display width (`display_width == 1`).
+//! 2. **Single-Width Unicode Characters**: Many non-[`ASCII`] Unicode characters (such as
+//!    `é`, `α`, or `ñ`) are also grapheme clusters with single-column display width
+//!    (`display_width == 1`).
+//! 3. **Wide Grapheme Clusters**: Only multi-column grapheme clusters (such as jumbo
+//!    emojis `🙏🏽` or [`CJK`] characters `汉`) have `display_width > 1` (wide segments).
+//!
+//! | Character Category                       | Example  | Byte size | Display width (cols) | Compound |
+//! | :--------------------------------------- | :------- | :-------- | :------------------- | :------- |
+//! | 1. Single-Width [`ASCII`]                | `H`      | 1         | 1                    | No       |
+//! | 2. Single-Width Non-[`ASCII`] Unicode    | `é`, `α` | 2         | 1                    | No       |
+//! | 3. Multi-Column (Wide) [`CJK`] Character | `汉`     | 3         | 2                    | No       |
+//! | 4. Multi-Column (Wide) Jumbo Emoji       | `😃`     | 4         | 2                    | No       |
+//! | 5. Multi-Column (Wide) Compound Emoji    | `🙏🏽`     | 8         | 2                    | Yes      |
 //!
 //! > **Note**: For input parsing of [`UTF-8`] byte sequences from terminal input, see
 //! > [`mod@crate::vt_100_terminal_input_parser::utf8`]. That module
@@ -109,7 +120,7 @@
 //!
 //!   fn process_map(map: &mut HashMap<&str, Positions>) -> Result<()> {
 //!     for (index, (key, value)) in map.iter_mut().enumerate() {
-//!       let orig_pos: (u16, u16) = (/* col: */ 0, /* row: */ index as u16);
+//!       let orig_pos: (u16, u16) = (/* col: */ 0, /* row: */ index.as_u16_narrowing());
 //!       execute!(stdout(), MoveTo(orig_pos.0, orig_pos.1))?;
 //!       execute!(stdout(), Print(key))?;
 //!       let new_pos = cursor::position()?;
@@ -165,7 +176,7 @@
 //! Please take a look at [`crate::graphemes::GCStringOwned`] for the following
 //! items:
 //! - Methods in [`mod@crate::graphemes::gc_string`] for more details on how the
-//!   conversion between "display" (or `display_col_index`), ie, [`crate::ColIndex`] and
+//!   conversion between "display" (or `display_col_index`), ie, [`crate::VPCol`] and
 //!   "logical" or "segment", ie, [`SegIndex`] is done.
 //! - The choices that were made in the design of the [`GCStringOwned`] struct for
 //!   performance to minimize memory latency (for access and allocation). The results
@@ -200,9 +211,9 @@
 //!
 //! Example: In "H😀!", there are 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
 //!
-//! ## 3. `ColIndex` - Display Position
+//! ## 3. `VPCol` - Display Position
 //!
-//! [`ColIndex`] represents the column position on the terminal screen.
+//! [`VPCol`] represents the column position on the terminal screen.
 //! This is necessary because:
 //! - Some characters are wider than others (emojis typically take 2 columns)
 //! - Terminal rendering requires knowing exact column positions
@@ -231,9 +242,9 @@
 //! index types:
 //!
 //! - `&GCStringOwned + ByteIndex → Option<SegIndex>`: Find which segment contains a byte
-//! - `&GCStringOwned + ColIndex → Option<SegIndex>`: Find which segment is at a display
+//! - `&GCStringOwned + VPCol → Option<SegIndex>`: Find which segment is at a display
 //!   column
-//! - `&GCStringOwned + SegIndex → Option<ColIndex>`: Find the display column of a segment
+//! - `&GCStringOwned + SegIndex → Option<VPCol>`: Find the display column of a segment
 //!
 //! These conversions can return `None` when indices are out of bounds or fall between
 //! characters. For example, a `ByteIndex` in the middle of a multi-byte character would
@@ -241,12 +252,13 @@
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`ByteIndex`]: crate::ByteIndex
-//! [`ColIndex`]: crate::ColIndex
+//! [`CJK`]: https://en.wikipedia.org/wiki/CJK_characters
 //! [`reedline`]: https://crates.io/crates/reedline
 //! [`repaint_buffer()`]: https://github.com/nushell/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129
 //! [`unicode-segmentation`]: unicode-segmentation
 //! [`unicode-width`]: unicode-width
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`VPCol`]: crate::VPCol
 //! [Grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
 //! [Live coding video on Rust String]: https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq
 //! [UTF-8 encoding video]: https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc
@@ -264,7 +276,7 @@ pub use gc_string::owned;
 pub use gc_string::*;
 pub use traits::*;
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use traits::{grapheme_doc, grapheme_string, grapheme_string_owned_ext, seg_content};
+pub use traits::{grapheme_string, grapheme_string_owned_ext, seg_content};
 pub use unicode_segment::*;
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use unicode_segment::{seg, seg_index, seg_length, segment_builder};

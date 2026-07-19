@@ -22,7 +22,7 @@ pub fn test_worker_stop_exits_cleanly() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
     teardown_factory();
@@ -47,7 +47,7 @@ pub fn test_worker_continue_then_stop() {
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     let mut count = 0;
     while receiver.try_recv().is_ok() {
@@ -75,13 +75,13 @@ pub fn test_domain_events_flow_through() {
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Worker(TestEvent(0)) => {}
         other => panic!("Expected TestEvent(0), got {other:?}"),
     }
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Worker(TestEvent(1)) => {}
         other => panic!("Expected TestEvent(1), got {other:?}"),
     }
@@ -110,10 +110,10 @@ pub fn test_single_restart_success() {
     // Wait for create() to be called.
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // Worker2: stop.
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert_eq!(get_create_count(), 1);
     assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
@@ -141,9 +141,9 @@ pub fn test_restart_no_delay_fast() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert!(start.elapsed() < Duration::from_millis(500));
     teardown_factory();
@@ -171,15 +171,15 @@ pub fn test_events_before_and_after_restart() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // Worker2: event then stop.
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     // Both events should arrive (from different worker instances).
-    let e1 = receiver.try_recv().unwrap();
-    let e2 = receiver.try_recv().unwrap();
+    let e1 = receiver.try_recv().expect("conversion error");
+    let e2 = receiver.try_recv().expect("conversion error");
     assert!(matches!(e1, RRTEvent::Worker(TestEvent(_))));
     assert!(matches!(e2, RRTEvent::Worker(TestEvent(_))));
     teardown_factory();
@@ -211,7 +211,7 @@ pub fn test_interrupt_handle_swap_on_restart() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
 
     // Wait for the interrupt handle swap (happens right after create() returns).
     // Each TestInterrupt records its unique ID in LAST_INTERRUPT_ID when
@@ -230,7 +230,7 @@ pub fn test_interrupt_handle_swap_on_restart() {
     }
 
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
     teardown_factory();
 }
 
@@ -262,20 +262,20 @@ pub fn test_budget_resets_on_successful_create() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // W2 -> restart -> W3 created (budget resets again).
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // W3 -> restart -> W4 created (budget resets again).
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // W4 -> stop.
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert_eq!(get_create_count(), 3);
     assert!(matches!(*shared_state.lock(), ThreadState::Stopped));
@@ -309,14 +309,14 @@ pub fn test_restart_exhaustion() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     // W3 restarts, factory is empty -> create() returns Err -> budget exhausted.
     send_cmd_via_guard(&guard, b'r');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     // Should have received a Shutdown event.
     let mut found_shutdown = false;
@@ -347,9 +347,9 @@ pub fn test_zero_budget_immediate_exhaustion() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'r');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { attempts: 1 }) => {}
         other => panic!("Expected Shutdown(attempts=1), got {other:?}"),
     }
@@ -376,9 +376,9 @@ pub fn test_shutdown_event_payload() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'r');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Shutdown(ShutdownReason::RestartPolicyExhausted { attempts: 1 }) => {}
         other => panic!("Expected Shutdown(attempts=1), got {other:?}"),
     }
@@ -413,12 +413,12 @@ pub fn test_create_failure_then_success() {
     // Wait for second create() call (first fails, second succeeds).
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert_eq!(get_create_count(), 2);
     teardown_factory();
@@ -449,7 +449,7 @@ pub fn test_persistent_create_failure() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'r');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     let mut found_shutdown = false;
     while let Ok(event) = receiver.try_recv() {
@@ -496,9 +496,9 @@ pub fn test_backoff_delay_applied() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert!(start.elapsed() >= Duration::from_millis(50));
     teardown_factory();
@@ -540,16 +540,16 @@ pub fn test_delay_resets_after_successful_create() {
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b'r');
     notify_receiver
         .recv_timeout(Duration::from_secs(5))
-        .unwrap();
+        .expect("conversion error");
     send_cmd_via_guard(&guard, b's');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     let elapsed = start.elapsed();
     assert!(
@@ -574,9 +574,9 @@ pub fn test_panic_sends_shutdown_panic() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'p');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Shutdown(ShutdownReason::Panic) => {}
         other => panic!("Expected Shutdown(Panic), got {other:?}"),
     }
@@ -600,13 +600,13 @@ pub fn test_panic_after_events() {
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'e');
     send_cmd_via_guard(&guard, b'p');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Worker(TestEvent(_)) => {}
         other @ RRTEvent::Shutdown(_) => panic!("Expected Worker event, got {other:?}"),
     }
-    match receiver.try_recv().unwrap() {
+    match receiver.try_recv().expect("conversion error") {
         RRTEvent::Shutdown(ShutdownReason::Panic) => {}
         other => panic!("Expected Shutdown(Panic), got {other:?}"),
     }
@@ -629,7 +629,7 @@ pub fn test_no_restart_after_panic() {
 
     let guard = create_mock_guard(sender.clone(), shared_state.clone());
     send_cmd_via_guard(&guard, b'p');
-    handle.join().unwrap();
+    handle.join().expect("conversion error");
 
     assert_eq!(get_create_count(), 0);
     teardown_factory();

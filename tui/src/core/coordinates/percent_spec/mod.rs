@@ -19,8 +19,8 @@
 //! - Responsive UI sizing
 //! - Proportional distribution of space
 //!
-//! The layout engine converts these specifications into concrete [`ColWidth`] and
-//! [`RowHeight`] values.
+//! The layout engine converts these specifications into concrete [`VPWidth`] and
+//! [`VPHeight`] values.
 //!
 //! ## 2. Telemetry & Performance Metrics
 //!
@@ -31,10 +31,10 @@
 //!
 //! See [`crate::Telemetry`] for usage in performance monitoring.
 //!
-//! [`ColWidth`]: crate::coordinates::buffer_coords::ColWidth
 //! [`Pc`]: crate::coordinates::percent_spec::Pc
 //! [`ReqSizePc`]: crate::coordinates::percent_spec::ReqSizePc
-//! [`RowHeight`]: crate::coordinates::buffer_coords::RowHeight
+//! [`VPHeight`]: crate::coordinates::viewport_coords::VPHeight
+//! [`VPWidth`]: crate::coordinates::viewport_coords::VPWidth
 
 // Attach source files.
 pub mod pc;

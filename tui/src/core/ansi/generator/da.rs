@@ -25,7 +25,8 @@
 //! [`DA`]: crate::DaSequence
 //! [`ESC`]: crate::EscSequence
 
-use crate::{BufTextStorage, FastStringify, generate_impl_display_for_fast_stringify, DA1_VT220_COLOR_RESPONSE_STR};
+use crate::{BufTextStorage, DA1_VT220_COLOR_RESPONSE_STR, FastStringify,
+            generate_impl_display_for_fast_stringify};
 use std::fmt::{self};
 
 /// Builds Device Attributes (DA) response sequences.
@@ -105,7 +106,7 @@ mod tests {
         let sequence = DaSequence::PrimaryDeviceAttributes;
         let mut acc = BufTextStorage::new();
 
-        sequence.write_to_buf(&mut acc).unwrap();
+        sequence.write_to_buf(&mut acc).expect("conversion error");
         assert_eq!(acc.clone(), DA1_VT220_COLOR_RESPONSE_STR);
     }
 }

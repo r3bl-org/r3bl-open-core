@@ -1,6 +1,6 @@
 ---
 name: check-bounds-safety
-description: Apply type-safe bounds checking patterns using Index/Length types instead of usize. Use when working with arrays, buffers, cursors, viewports, or any code that handles indices and lengths.
+description: Apply type-safe bounds checking patterns using VPIndex/VPLength types instead of usize. Use when working with arrays, buffers, cursors, viewports, or any code that handles indices and lengths.
 ---
 
 # Type-Safe Bounds Checking
@@ -33,14 +33,14 @@ if x < length {  // Off-by-one error waiting to happen
 
 ## The Solution
 
-Use type-safe wrappers from `tui/src/core/units/bounds_check/`:
+Use type-safe wrappers from `tui/src/core/coordinates/bounds_check/`:
 
 ```rust
 // ✅ Good - Types make it clear
-use r3bl_tui::{idx, len, ArrayBoundsCheck};
+use r3bl_tui::{vp_idx, vp_len, ArrayBoundsCheck};
 
-let index = idx(10);      // Clearly an index (0-based)
-let length = len(100);    // Clearly a length (1-based)
+let index = vp_idx(10);      // Clearly an index (0-based)
+let length = vp_len(100);    // Clearly a length (1-based)
 
 if index.overflows(length) {
     // Safely caught! Can't accidentally compare incompatible types
@@ -52,15 +52,15 @@ if index.overflows(length) {
 Follow these principles when working with indices and lengths:
 
 1. **Use Index types (0-based)** instead of `usize`
-   - `RowIndex`, `ColIndex`, `Index`
-   - Construct with `row()`, `col()`, `idx()`
+   - `VPRow`, `VPCol`, `VPIndex`
+   - Construct with `row()`, `col()`, `vp_idx()`
 
 2. **Use Length types (1-based)** instead of `usize`
-   - `RowHeight`, `ColWidth`, `Length`
-   - Construct with `height()`, `width()`, `len()`
+   - `VPHeight`, `VPWidth`, `VPLength`
+   - Construct with `height()`, `width()`, `vp_len()`
 
 3. **Type-safe comparisons**
-   - Cannot compare `RowIndex` with `ColWidth` (compile error!)
+   - Cannot compare `VPRow` with `VPWidth` (compile error!)
    - Prevents category errors like "is row 5 < width 10?"
 
 4. **Use `.is_zero()` for zero checks**
@@ -86,7 +86,7 @@ use r3bl_tui::{
     RangeValidityStatus, RangeBoundsResult,
 
     // Type constructors
-    col, row, width, height, idx, len,
+    col, row, width, height, vp_idx, vp_len,
 
     // Terminal delta types (relative cursor movement)
     TermRowDelta, TermColDelta, term_row_delta, term_col_delta,
@@ -325,9 +325,9 @@ let right_one = CsiSequence::CursorForward(TermColDelta::ONE);
 **Use `RangeExt` to convert strongly-typed index ranges into primitive `usize` ranges for slice indexing.**
 
 ```rust
-use r3bl_tui::{idx, RangeExt};
+use r3bl_tui::{vp_idx, RangeExt};
 
-let index_range = idx(2)..idx(5); // Range<Index>
+let index_range = vp_idx(2)..vp_idx(5); // Range<VPIndex>
 
 // Convert to standard Range<usize> cleanly:
 for item in &mut buffer[index_range.as_usize_range()] {
@@ -407,7 +407,7 @@ if text_length.check_cursor_position_bounds(cursor) == CursorPositionBoundsStatu
 // Bad - this won't compile (good!)
 let row = row(5);
 let width = width(10);
-if row < width {  // Compile error! Can't compare RowIndex with ColWidth
+if row < width {  // Compile error! Can't compare VPRow with VPWidth
     // ...
 }
 ```
@@ -418,7 +418,7 @@ This is actually GOOD - the type system prevents nonsensical comparisons!
 
 ```rust
 // Bad - using subtraction to calculate distance.
-// This returns RowIndex, not RowHeight!
+// This returns VPRow, not VPHeight!
 let current_row = row(5);
 let target_row = row(15);
 let rows_to_scroll = target_row - current_row;  // Returns row(10), a position!
@@ -427,7 +427,7 @@ let rows_to_scroll = target_row - current_row;  // Returns row(10), a position!
 **Fix:**
 ```rust
 // Good - use distance_from() for measurement.
-let rows_to_scroll: RowHeight = target_row.distance_from(current_row);  // height(10)
+let rows_to_scroll: VPHeight = target_row.distance_from(current_row);  // height(10)
 ```
 
 ### ❌ Mistake 5: Emitting CSI zero for cursor movement
@@ -454,7 +454,7 @@ if let Some(delta) = TermColDelta::new(position % term_width) {
 When applying bounds checking:
 
 - ✅ All bounds checked with types → "Bounds safety verified with type-safe checks!"
-- 🔧 Converted raw usize to Index/Length types → Report conversions made
+- 🔧 Converted raw usize to VPIndex/VPLength types → Report conversions made
 - 📝 Added bounds checks → List where checks were added
 
 ## Supporting Files in This Skill

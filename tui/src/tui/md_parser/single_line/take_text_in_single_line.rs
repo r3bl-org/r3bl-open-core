@@ -62,7 +62,9 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "Hello, world!\n";
-            let (rem, output) = take_text_in_single_line().parse(input).unwrap();
+            let (rem, output) = take_text_in_single_line()
+                .parse(input)
+                .expect("conversion error");
             println!("{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -73,7 +75,9 @@ mod test_text_until_opt_eol {
         // Without EOL.
         {
             let input = "Hello, world!";
-            let (rem, output) = take_text_in_single_line().parse(input).unwrap();
+            let (rem, output) = take_text_in_single_line()
+                .parse(input)
+                .expect("conversion error");
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);
@@ -84,7 +88,9 @@ mod test_text_until_opt_eol {
         // With EOL.
         {
             let input = "\nfoo\nbar";
-            let (rem, output) = take_text_in_single_line().parse(input).unwrap();
+            let (rem, output) = take_text_in_single_line()
+                .parse(input)
+                .expect("conversion error");
             println!("\n{:8}: {:?}", "input", input);
             println!("{:8}: {:?}", "rem", rem);
             println!("{:8}: {:?}", "output", output);

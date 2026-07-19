@@ -4,9 +4,10 @@
 //!
 //! [`DA`]: crate::DaSequence
 
-use crate::PtyResponseEvent;
-use crate::core::ansi::constants::{DA1_REQUEST_NO_PARAM, DA1_REQUEST_PARAM_0, DA2_REQUEST};
 use super::super::test_fixtures_vt_100_ansi_conformance::create_test_ofs_buf_10r_by_10c;
+use crate::{PtyResponseEvent,
+            core::ansi::constants::{DA1_REQUEST_NO_PARAM, DA1_REQUEST_PARAM_0,
+                                    DA2_REQUEST}};
 
 #[test]
 fn test_conformance_da1_request_no_params() {

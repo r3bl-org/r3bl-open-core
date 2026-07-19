@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ColWidth, CowInlineString, GCStringOwned, InlineString,
+use crate::{CowInlineString, GCStringOwned, InlineString, VPWidth,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 use std::fmt::Write;
 
@@ -32,7 +32,7 @@ pub fn remove_escaped_quotes(s: &str) -> String {
 #[must_use]
 pub fn truncate_from_right(
     string: &str,
-    arg_width: impl Into<ColWidth>,
+    arg_width: impl Into<VPWidth>,
     pad: bool,
 ) -> CowInlineString<'_> {
     let display_width = arg_width.into();
@@ -98,7 +98,7 @@ pub fn truncate_from_right(
 #[must_use]
 pub fn truncate_from_left(
     string: &str,
-    arg_width: impl Into<ColWidth>,
+    arg_width: impl Into<VPWidth>,
     pad: bool,
 ) -> CowInlineString<'_> {
     let display_width = arg_width.into();
@@ -163,7 +163,7 @@ pub fn truncate_from_left(
 
 /// Helper module for truncation functionality both left and right.
 mod truncate_helper {
-    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned, InlineString};
+    use super::{CowInlineString, ELLIPSIS_GLYPH, GCStringOwned, InlineString, VPWidth};
 
     /// Checks if no processing is needed for [`ASCII`] strings
     ///
@@ -178,8 +178,8 @@ mod truncate_helper {
 
     /// Checks if no processing is needed for Unicode strings
     pub fn should_skip_processing_unicode(
-        string_display_width: ColWidth,
-        display_width: ColWidth,
+        string_display_width: VPWidth,
+        display_width: VPWidth,
         pad: bool,
     ) -> bool {
         string_display_width == display_width
@@ -245,7 +245,7 @@ mod truncate_from_right_helper {
     /// Handle Unicode truncation from the right
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
-        display_width: ColWidth,
+        display_width: VPWidth,
     ) -> CowInlineString<'static> {
         let postfix = ELLIPSIS_GLYPH;
         let postfix_gcs: GCStringOwned = postfix.into();
@@ -310,7 +310,7 @@ mod truncate_from_left_helper {
     /// Handle Unicode truncation from the left
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
-        display_width: ColWidth,
+        display_width: VPWidth,
     ) -> CowInlineString<'static> {
         let prefix = ELLIPSIS_GLYPH;
         let prefix_gcs: GCStringOwned = prefix.into();
@@ -329,7 +329,7 @@ mod truncate_from_left_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, cli_text_inline, new_style, tui_color, width};
+    use crate::{assert_eq2, cli_text_inline, new_style, tui_color, vp_width};
 
     #[test]
     fn test_contains_ansi_escape_sequence() {
@@ -343,26 +343,26 @@ mod tests {
         assert_eq2!(contains_ansi_escape_sequence("This is normal text."), false);
 
         assert_eq2!(
-        contains_ansi_escape_sequence(
-            &cli_text_inline(
-                "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-                new_style!(
-                    bold italic underline
-                    color_fg: {tui_color!(50, 50, 50)}
-                    color_bg: {tui_color!(100, 200, 1)}
-                ),
-            )
-            .to_string()
-        ),
-        true
-    );
+            contains_ansi_escape_sequence(
+                &cli_text_inline(
+                    "test",
+                    new_style!(
+                        bold italic underline
+                        color_fg: {tui_color!(50, 50, 50)}
+                        color_bg: {tui_color!(100, 200, 1)}
+                    ),
+                )
+                .to_string()
+            ),
+            true
+        );
     }
 
     #[test]
     fn test_truncate_or_pad_from_right() {
         let long_string = "Hello, world!";
         let short_string = "Hi!";
-        let width = width(10);
+        let width = vp_width(10);
 
         // Test ASCII truncation.
         assert_eq!(
@@ -397,7 +397,7 @@ mod tests {
     fn test_truncate_or_pad_from_left() {
         let long_string = "Hello, world!";
         let short_string = "Hi!";
-        let width = width(10);
+        let width = vp_width(10);
 
         // Test ASCII truncation.
         assert_eq!(
@@ -433,13 +433,13 @@ mod tests {
 mod bench_tests {
     extern crate test;
     use super::*;
-    use crate::width;
+    use crate::vp_width;
     use test::Bencher;
 
     #[bench]
     fn bench_truncate_ascii_no_truncation_no_pad(b: &mut Bencher) {
         let text = "Hello, world!";
-        let display_width = width(20);
+        let display_width = vp_width(20);
         b.iter(|| {
             let result = truncate_from_right(text, display_width, false);
             test::black_box(result);
@@ -449,7 +449,7 @@ mod bench_tests {
     #[bench]
     fn bench_truncate_ascii_with_truncation(b: &mut Bencher) {
         let text = "Hello, world! This is a long string that needs truncation";
-        let display_width = width(20);
+        let display_width = vp_width(20);
         b.iter(|| {
             let result = truncate_from_right(text, display_width, false);
             test::black_box(result);
@@ -459,7 +459,7 @@ mod bench_tests {
     #[bench]
     fn bench_truncate_ascii_with_padding(b: &mut Bencher) {
         let text = "Hi!";
-        let display_width = width(20);
+        let display_width = vp_width(20);
         b.iter(|| {
             let result = truncate_from_right(text, display_width, true);
             test::black_box(result);
@@ -469,7 +469,7 @@ mod bench_tests {
     #[bench]
     fn bench_truncate_unicode_no_truncation(b: &mut Bencher) {
         let text = "Hello, 世界!";
-        let display_width = width(20);
+        let display_width = vp_width(20);
         b.iter(|| {
             let result = truncate_from_right(text, display_width, false);
             test::black_box(result);
@@ -480,7 +480,7 @@ mod bench_tests {
     fn bench_truncate_unicode_with_truncation(b: &mut Bencher) {
         let text =
             "Hello, 世界! This is a long string with unicode that needs truncation";
-        let display_width = width(20);
+        let display_width = vp_width(20);
         b.iter(|| {
             let result = truncate_from_right(text, display_width, false);
             test::black_box(result);
@@ -491,7 +491,7 @@ mod bench_tests {
     fn test_zero_copy_optimization() {
         // Test that we get a borrowed reference when no processing is needed.
         let text = "Hello, world!";
-        let display_width = width(13); // Exact length, no padding
+        let display_width = vp_width(13); // Exact length, no padding
         let result = truncate_from_right(text, display_width, false);
 
         match result {

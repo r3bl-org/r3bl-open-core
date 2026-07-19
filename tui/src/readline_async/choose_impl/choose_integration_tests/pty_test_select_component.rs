@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ch, generate_pty_test, ColorSupport, Header, HowToChoose, ItemsOwned,
-            OutputDevice, OutputDeviceExt, PtyTestContext, PtyTestMode, SelectComponent,
-            State, StyleSheet, MSG_SUCCESS, GLYPH_CONTROLLER, BufReadExt,
-            FunctionComponent,
+use crate::{BufReadExt, ColorSupport, FunctionComponent, GLYPH_CONTROLLER, Header,
+            HowToChoose, ItemsOwned, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
+            PtyTestContext, PtyTestMode, SelectComponent, State, StyleSheet, ch,
+            generate_pty_test,
             global_color_support::{clear_override, set_override}};
 use std::time::{Duration, Instant};
 
@@ -76,12 +76,12 @@ fn controlled() {
     };
 
     set_override(ColorSupport::Ansi256);
-    component.render(&mut state).unwrap();
+    component.render(&mut state).expect("conversion error");
 
     let generated_output = stdout_mock.get_copy_of_buffer_as_string();
 
     let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;153m\u{1b}[48;5;235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m  ◉ Item 1\u{1b}[0m\u{1b}[38;5;46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
-    
+
     if generated_output != expected_output {
         eprintln!("Generated output does not match expected output!");
         eprintln!("Generated: {generated_output:?}");

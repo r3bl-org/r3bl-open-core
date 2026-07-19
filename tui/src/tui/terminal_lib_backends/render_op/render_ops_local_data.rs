@@ -33,12 +33,12 @@
 //! when the state hasn't changed. This optimization significantly reduces the amount of
 //! data sent to the terminal.
 //!
-//! Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to track cursor
+//! Used by [`PaintRenderOpImplCrossterm`] (Backend Executor) to track cursor
 //! position and colors, avoiding redundant commands.
 //!
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{Pos, TuiColor};
+use crate::{TuiColor, VPPos};
 
 /// Local state tracking for render operations optimization.
 ///
@@ -51,7 +51,7 @@ pub struct RenderOpsLocalData {
     ///
     /// Used to determine if cursor movement commands need to be sent
     /// when rendering at a new position.
-    pub cursor_pos: Pos,
+    pub cursor_pos: VPPos,
 
     /// Last known foreground color.
     ///

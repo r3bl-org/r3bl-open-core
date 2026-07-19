@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::Continuation;
-use crate::core::resilient_reactor_thread::{
-    InputSender, InterruptHandle, RRTEvent, RRTSoftwareInterrupt, RRTWorker,
-    ThreadLifecycleMonitor, ThreadState,
-};
+use crate::{Continuation,
+            core::resilient_reactor_thread::{InputSender, InterruptHandle, RRTEvent,
+                                             RRTSoftwareInterrupt, RRTWorker,
+                                             ThreadLifecycleMonitor, ThreadState}};
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -78,11 +77,11 @@ async fn test_input_sender_waits_for_restart() {
 
     // Await the sender task to ensure it successfully bypassed the transient state
     // and successfully delivered the message.
-    let result = sender_task.await.unwrap();
+    let result = sender_task.await.expect("conversion error");
     assert!(result.is_ok(), "Sender task should succeed");
 
     // Verify the message was successfully delivered to the new channel receiver.
-    let received = rx.recv().await.unwrap();
+    let received = rx.recv().await.expect("conversion error");
     assert_eq!(received, msg);
 }
 

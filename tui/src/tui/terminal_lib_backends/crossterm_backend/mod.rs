@@ -29,7 +29,7 @@
 //!
 //! ### Stage 4: Backend Converter (Shared)
 //! - **Not in this module** - Stage 4 is shared across all backends
-//! - See [`ofs_buf::paint_impl`] for the [`OfsBufPaintImpl`] converter
+//! - See [`ofs_buf::paint_impl`] for the backend converter
 //! - Converts [`OfsBuf`] → [`RenderOpOutputVec`] (shared by both Crossterm and
 //!   [`DirectToAnsi`])
 //!
@@ -41,14 +41,15 @@
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)
 //! - Handles colors, cursor movement, and text output
 //!
-//! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+//! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`ofs_buf::paint_impl`]: mod@crate::ofs_buf::paint_impl
-//! [`OfsBuf`]: crate::OfsBuf
-//! [`OfsBufPaint`]: crate::OfsBufPaint
-//! [`OfsBufPaintImpl`]: crate::OfsBufPaintImpl
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`OfsBuf`]: crate::tui::OfsBuf
+
+//!
+//!
+//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
-//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 

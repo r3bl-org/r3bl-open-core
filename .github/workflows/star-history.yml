@@ -1,0 +1,26 @@
+name: Generate Star History SVG
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-star-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Star History SVG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: npx -y tsx .github/workflows/generate-star-history.ts
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "[github-actions] Update star history chart in README.md"
+          file_pattern: ".github/assets/star-history.svg"

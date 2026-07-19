@@ -7,9 +7,10 @@ use crate::{common,
                    handle_branch_delete_command, handle_branch_new_command, ui_str}};
 use clap::ValueEnum;
 use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices,
-               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line, height,
+               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line,
                inline_vec,
-               readline_async::{HowToChoose, StyleSheet}};
+               readline_async::{HowToChoose, StyleSheet},
+               vp_height};
 
 /// The main function to for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
@@ -59,7 +60,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
         choose(
             header_with_instructions,
             branch_subcommand_options,
-            Some(height(20)),
+            Some(vp_height(20)),
             None,
             HowToChoose::Single,
             StyleSheet::default(),

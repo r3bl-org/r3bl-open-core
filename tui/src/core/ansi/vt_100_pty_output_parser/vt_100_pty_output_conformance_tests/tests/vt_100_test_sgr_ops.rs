@@ -4,8 +4,14 @@
 //!
 //! [`SGR`]: crate::SgrCode
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::as_conversions
+)]
+
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{ANSIBasicColor, CharacterSet, EscSequence, SgrCode,
+use crate::{ANSIBasicColor, CharacterSet, EscSequence, NarrowingCastToU16, SgrCode,
             core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer,
             ofs_buf::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self}};
@@ -16,7 +22,7 @@ use vte::Perform;
 /// [`SGR`]: crate::SgrCode
 pub mod sgr_styling {
     use super::*;
-    use crate::{col, row};
+    use crate::{vp_col, vp_row};
 
     #[test]
     fn test_sgr_reset_behavior() {
@@ -57,7 +63,8 @@ pub mod sgr_styling {
                 col,
                 expected_char,
                 |style_from_buf| {
-                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into()
+                    style_from_buf.color_fg.expect("conversion error")
+                        == ANSIBasicColor::Red.into()
                         && style_from_buf.attribs == tui_style_attrib::Bold.into()
                 },
                 "bold red text",
@@ -75,7 +82,7 @@ pub mod sgr_styling {
         // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(RED.len() + NORM.len()),
+            vp_row(0) + vp_col((RED.len() + NORM.len()).as_u16_narrowing()),
             "final cursor position after writing RED and NORM should be at row 0, col 7",
         );
     }
@@ -117,7 +124,8 @@ pub mod sgr_styling {
             |style_from_buf| {
                 style_from_buf.attribs
                     == tui_style_attrib::Bold + tui_style_attrib::Italic
-                    && style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                    && style_from_buf.color_fg.expect("conversion error")
+                        == ANSIBasicColor::DarkRed.into()
             },
             "bold italic dark-red",
         );
@@ -130,7 +138,8 @@ pub mod sgr_styling {
             'B',
             |style_from_buf| {
                 style_from_buf.attribs == tui_style_attrib::Italic.into()
-                    && style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                    && style_from_buf.color_fg.expect("conversion error")
+                        == ANSIBasicColor::DarkRed.into()
             },
             "italic dark-red (no bold)",
         );
@@ -143,7 +152,7 @@ pub mod sgr_styling {
         // Verify final cursor position in ofs_buf_vt_100.my_pos.
         assert_eq!(
             ofs_buf_vt_100.get_cursor_pos(),
-            row(0) + col(2),
+            vp_row(0) + vp_col(2),
             "final cursor position after writing AB should be at row 0, col 2",
         );
     }
@@ -194,7 +203,8 @@ pub mod sgr_styling {
             0,
             'B',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::Black.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::Black.into()
             },
             "black foreground",
         );
@@ -205,7 +215,8 @@ pub mod sgr_styling {
             1,
             'R',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );
@@ -216,7 +227,8 @@ pub mod sgr_styling {
             2,
             'G',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::DarkGreen.into()
             },
             "green foreground",
         );
@@ -227,7 +239,8 @@ pub mod sgr_styling {
             3,
             'W',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::White.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::White.into()
             },
             "white foreground",
         );
@@ -240,7 +253,8 @@ pub mod sgr_styling {
             5,
             'X',
             |style_from_buf| {
-                style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkRed.into()
+                style_from_buf.color_bg.expect("conversion error")
+                    == ANSIBasicColor::DarkRed.into()
             },
             "red background",
         );
@@ -251,7 +265,8 @@ pub mod sgr_styling {
             6,
             'Y',
             |style_from_buf| {
-                style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkGreen.into()
+                style_from_buf.color_bg.expect("conversion error")
+                    == ANSIBasicColor::DarkGreen.into()
             },
             "green background",
         );
@@ -262,8 +277,10 @@ pub mod sgr_styling {
             7,
             'Z',
             |style_from_buf| {
-                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
-                    && style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkBlue.into()
+                style_from_buf.color_fg.expect("conversion error")
+                    == ANSIBasicColor::DarkRed.into()
+                    && style_from_buf.color_bg.expect("conversion error")
+                        == ANSIBasicColor::DarkBlue.into()
             },
             "red on blue",
         );
@@ -757,7 +774,7 @@ pub mod character_sets {
         performer.apply_ansi_bytes(EscSequence::SelectDECGraphics.to_string());
 
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::DECGraphics
         );
 
@@ -778,7 +795,7 @@ pub mod character_sets {
 
         // Verify character set state after performer is dropped.
         assert_eq!(
-            ofs_buf_vt_100.parser_global_state.character_set,
+            ofs_buf_vt_100.get_parser_global_state().character_set,
             CharacterSet::Ascii
         );
 

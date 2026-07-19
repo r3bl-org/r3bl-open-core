@@ -13,14 +13,14 @@ use crate::NumericValue;
 /// validate safe array element access. It ensures that indices are within valid bounds
 /// for accessing array/buffer elements where the rule is `index < length`.
 ///
-/// ## Purpose
+/// # Purpose
 ///
 /// This trait answers the fundamental question: **"Can I access `array[index]` safely?"**
 ///
 /// This is the traditional bounds checking pattern used throughout programming for
 /// preventing buffer overruns, segmentation faults, and out-of-bounds panics.
 ///
-/// ## Key Trait Capabilities
+/// # Key Trait Capabilities
 ///
 /// - **Overflow checking**: Validate that an index is less than a container's length via
 ///   [`overflows()`]
@@ -30,23 +30,22 @@ use crate::NumericValue;
 /// - **Dual perspective**: Check from index view ([`index.overflows()`]) or length view
 ///   ([`length.is_overflowed_by()`])
 ///
-/// ## Implementing Types
+/// # Implementing Types
 ///
 /// The following index types in this codebase implement `ArrayBoundsCheck`:
 ///
-/// - [`Index`] - Generic implementation via blanket impls
-/// - [`RowIndex`] - Implements `ArrayBoundsCheck<RowHeight>` for vertical bounds checking
-/// - [`ColIndex`] - Implements `ArrayBoundsCheck<ColWidth>` for horizontal bounds
-///   checking
+/// - [`VPIndex`] - Generic implementation via blanket impls
+/// - [`VPRow`] - Implements `ArrayBoundsCheck<VPHeight>` for vertical bounds checking
+/// - [`VPCol`] - Implements `ArrayBoundsCheck<VPWidth>` for horizontal bounds checking
 /// - [`SegIndex`] - Implements `ArrayBoundsCheck<SegLength>` for grapheme segment bounds
 /// - [`ByteIndex`] - Implements `ArrayBoundsCheck<ByteLength>` for byte-level bounds
 ///
-/// ## Array Access Semantics
+/// # Array Access Semantics
 ///
 /// Array bounds checking uses strict inequality because array elements are indexed
 /// from 0 to length-1:
 ///
-/// ### Overflow Checking (`overflows()` method)
+/// ## Overflow Checking (`overflows()` method)
 /// ```text
 /// Array with length=10:
 ///                                                   ╭─ boundary
@@ -66,7 +65,7 @@ use crate::NumericValue;
 /// Invalid: array[10] and beyond (index >= length)
 /// ```
 ///
-/// ### Underflow Checking (`underflows()` method)
+/// ## Underflow Checking (`underflows()` method)
 /// ```text
 /// Checking against minimum bound:
 ///
@@ -86,16 +85,16 @@ use crate::NumericValue;
 /// underflows(min=3) for index=3 = Within  ← Boundary included!
 /// ```
 ///
-/// ## Key Distinction from Other Bounds Traits
+/// # Key Distinction from Other Bounds Traits
 ///
 /// | Trait                           | Rule                            | Use Case        | Example                                                |
 /// | ------------------------------- | ------------------------------- | --------------- | ------------------------------------------------------ |
-/// | `ArrayBoundsCheck`📍            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
+/// | ➤ `ArrayBoundsCheck`            | `index < length`                | Index safety    | `buffer[5]` needs `5 < buffer.len()`                   |
 /// | [`CursorBoundsCheck`]           | `index <= length`               | Text editing    | Cursor can be at position `length` (after last char)   |
 /// | [`ViewportBoundsCheck`]         | `start <= index < start+size`   | Rendering       | Content visibility in windows                          |
 /// | [`RangeBoundsExt`]              | `start <= end <= length`        | Iteration       | Range object structural validation                     |
 ///
-/// ## Safety Guarantees
+/// # Safety Guarantees
 ///
 /// The bounds checking in this trait prevents:
 /// - Buffer overruns: Accessing memory beyond allocated boundaries
@@ -103,15 +102,15 @@ use crate::NumericValue;
 /// - Array index panics: Out-of-bounds access in safe Rust code
 /// - Data corruption: Unintended writes to invalid memory locations
 ///
-/// ## Examples
+/// # Examples
 ///
 /// The `ArrayBoundsCheck` trait provides comprehensive array access validation:
 ///
 /// ```rust
-/// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, col, width};
+/// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 ///
-/// let index = col(5);
-/// let buffer_width = width(10);
+/// let index = vp_col(5);
+/// let buffer_width = vp_width(10);
 ///
 /// // Simple equality check - most common pattern
 /// if index.overflows(buffer_width) == ArrayOverflowResult::Within {
@@ -131,7 +130,7 @@ use crate::NumericValue;
 /// // Safe to proceed with buffer[index]
 /// ```
 ///
-/// ## See Also
+/// # See Also
 ///
 /// - [`IndexOps`] - Index types that use these bounds checking methods
 /// - [`LengthOps`] - Length types used in bounds comparisons
@@ -142,20 +141,20 @@ use crate::NumericValue;
 /// - [`RangeBoundsExt`] - Range validation for iteration and algorithms
 ///
 /// [`ByteIndex`]: crate::ByteIndex
-/// [`ColIndex`]: crate::ColIndex
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`index.overflows()`]: ArrayBoundsCheck::overflows
-/// [`Index`]: crate::Index
 /// [`IndexOps`]: crate::IndexOps
 /// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
 /// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
 /// [`overflows()`]: ArrayBoundsCheck::overflows
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
-/// [`RowIndex`]: crate::RowIndex
 /// [`SegIndex`]: crate::SegIndex
 /// [`underflows()`]: ArrayBoundsCheck::underflows
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`VPCol`]: crate::VPCol
+/// [`VPIndex`]: crate::VPIndex
+/// [`VPRow`]: crate::VPRow
 pub trait ArrayBoundsCheck<LengthType: LengthOps>
 where
     Self: NumericValue,
@@ -174,7 +173,7 @@ where
     {
         let length: LengthType = arg_length.into();
         // Special case: empty collection (length 0) has no valid indices.
-        if length.is_zero() {
+        if length.is_empty() {
             return ArrayOverflowResult::Overflowed;
         }
         if *self > length.convert_to_index() {
@@ -205,14 +204,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
+    use crate::{NarrowingCastToU16, VPCol, VPHeight, VPRow, VPWidth, vp_idx, vp_len};
 
     /// Comprehensive tests to ensure consistency between all bounds checking methods:
     /// - `overflows()`
     /// - `is_overflowed_by()`
     #[test]
     fn test_bounds_checking_consistency() {
-        // Test critical boundary cases with generic Index/Length.
+        // Test critical boundary cases with generic VPIndex/VPLength.
         let test_cases = [
             // (index, length, expected_overflows).
             (0, 1, false), // First valid index
@@ -225,8 +224,8 @@ mod tests {
         ];
 
         for (index_val, length_val, expected_overflows) in test_cases {
-            let index = idx(index_val);
-            let length = len(length_val);
+            let index = vp_idx(index_val);
+            let length = vp_len(length_val);
 
             let expected_status = if expected_overflows {
                 ArrayOverflowResult::Overflowed
@@ -238,28 +237,28 @@ mod tests {
             let overflows_result = index.overflows(length);
             assert_eq!(
                 overflows_result, expected_status,
-                "overflows mismatch for idx({index_val}).overflows(len({length_val}))"
+                "overflows mismatch for vp_idx({index_val}).overflows(vp_len({length_val}))"
             );
 
             // Test is_overflowed_by() method (same operation from length perspective).
             let is_overflowed_result = length.is_overflowed_by(index);
             assert_eq!(
                 is_overflowed_result, overflows_result,
-                "is_overflowed_by mismatch for len({length_val}).is_overflowed_by(idx({index_val}))"
+                "is_overflowed_by mismatch for vp_len({length_val}).is_overflowed_by(vp_idx({index_val}))"
             );
 
             // Test overflows() consistency (same as check_array_access_bounds).
             let bounds_status = index.overflows(length);
             assert_eq!(
                 bounds_status, expected_status,
-                "overflows mismatch for idx({index_val}).overflows(len({length_val}))"
+                "overflows mismatch for vp_idx({index_val}).overflows(vp_len({length_val}))"
             );
         }
     }
 
     #[test]
     fn test_typed_bounds_checking_consistency() {
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
+        use crate::{VPCol, VPHeight, VPRow, VPWidth};
 
         // Test with ColIndex/ColWidth
         let col_cases = [
@@ -270,8 +269,8 @@ mod tests {
         ];
 
         for (index_val, width_val, expected_overflows) in col_cases {
-            let col_index = ColIndex::new(index_val);
-            let col_width = ColWidth::new(width_val);
+            let col_index = VPCol::new(index_val);
+            let col_width = VPWidth::new(width_val.as_u16_narrowing());
 
             let expected_status = if expected_overflows {
                 ArrayOverflowResult::Overflowed
@@ -300,8 +299,8 @@ mod tests {
         ];
 
         for (index_val, height_val, expected_overflows) in row_cases {
-            let row_index = RowIndex::new(index_val);
-            let row_height = RowHeight::new(height_val);
+            let row_index = VPRow::new(index_val);
+            let row_height = VPHeight::new(height_val.as_u16_narrowing());
 
             let expected_status = if expected_overflows {
                 ArrayOverflowResult::Overflowed
@@ -325,14 +324,14 @@ mod tests {
 
     #[test]
     fn test_extreme_values_u16_max() {
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
+        use crate::{VPCol, VPHeight, VPRow, VPWidth};
 
         // Test u16::MAX values for bounds checking
         let max_u16 = u16::MAX;
 
         // Test ColIndex with max values
-        let col_index_max = ColIndex::new(max_u16);
-        let col_width_max = ColWidth::new(max_u16);
+        let col_index_max = VPCol::new(max_u16);
+        let col_width_max = VPWidth::new(max_u16);
 
         // Index at u16::MAX should overflow any length
         assert_eq!(
@@ -344,13 +343,13 @@ mod tests {
             ArrayOverflowResult::Overflowed
         );
         assert_eq!(
-            col_index_max.overflows(ColWidth::new(100)),
+            col_index_max.overflows(VPWidth::new(100u16)),
             ArrayOverflowResult::Overflowed
         );
 
         // Test RowIndex with max values
-        let row_index_max = RowIndex::new(max_u16);
-        let row_height_max = RowHeight::new(max_u16);
+        let row_index_max = VPRow::new(max_u16);
+        let row_height_max = VPHeight::new(max_u16);
 
         assert_eq!(
             row_index_max.overflows(row_height_max),
@@ -361,30 +360,30 @@ mod tests {
             ArrayOverflowResult::Overflowed
         );
         assert_eq!(
-            row_index_max.overflows(RowHeight::new(100)),
+            row_index_max.overflows(VPHeight::new(100u16)),
             ArrayOverflowResult::Overflowed
         );
 
         // Test near-max values
-        let col_index_near_max = ColIndex::new(max_u16 - 1);
+        let col_index_near_max = VPCol::new(max_u16 - 1);
         assert_eq!(
-            col_index_near_max.overflows(ColWidth::new(max_u16 - 1)),
+            col_index_near_max.overflows(VPWidth::new(max_u16 - 1)),
             ArrayOverflowResult::Overflowed
         );
         assert_eq!(
-            col_index_near_max.overflows(ColWidth::new(max_u16)),
+            col_index_near_max.overflows(VPWidth::new(max_u16)),
             ArrayOverflowResult::Within
         );
     }
 
     #[test]
     fn test_extreme_values_usize() {
-        // Test with generic Index/Length using large usize values
+        // Test with generic VPIndex/VPLength using large values
         // Using safer values that avoid potential overflow in comparisons
-        let large_val = 1_000_000;
-        let large_index = idx(large_val);
-        let larger_length = len(large_val + 1);
-        let equal_length = len(large_val);
+        let large_val = 60_000u16;
+        let large_index = vp_idx(large_val);
+        let larger_length = vp_len(large_val + 1);
+        let equal_length = vp_len(large_val);
 
         // Index should not overflow when length is larger
         assert_eq!(
@@ -412,7 +411,7 @@ mod tests {
         );
 
         // Should definitely overflow smaller length
-        let small_length = len(100);
+        let small_length = vp_len(100);
         assert_eq!(
             large_index.overflows(small_length),
             ArrayOverflowResult::Overflowed
@@ -425,16 +424,16 @@ mod tests {
 
     #[test]
     fn test_zero_length_edge_cases_comprehensive() {
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
+        use crate::{VPCol, VPHeight, VPRow, VPWidth};
 
         // Zero-length arrays should reject all indices
-        let zero_width = ColWidth::new(0);
-        let zero_height = RowHeight::new(0);
+        let zero_width = VPWidth::new(0u16);
+        let zero_height = VPHeight::new(0u16);
 
         // Test various indices against zero-length
         for i in [0, 1, 10, 100, u16::MAX] {
-            let col_idx = ColIndex::new(i);
-            let row_idx = RowIndex::new(i);
+            let col_idx = VPCol::new(i);
+            let row_idx = VPRow::new(i);
 
             assert_eq!(
                 col_idx.overflows(zero_width),
@@ -472,15 +471,15 @@ mod tests {
 
     #[test]
     fn test_unit_length_edge_cases() {
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
+        use crate::{VPCol, VPHeight, VPRow, VPWidth};
 
         // Unit-length arrays should only accept index 0
-        let unit_width = ColWidth::new(1);
-        let unit_height = RowHeight::new(1);
+        let unit_width = VPWidth::new(1u16);
+        let unit_height = VPHeight::new(1u16);
 
         // Index 0 should be valid
-        let col_zero = ColIndex::new(0);
-        let row_zero = RowIndex::new(0);
+        let col_zero = VPCol::new(0);
+        let row_zero = VPRow::new(0);
 
         assert_eq!(col_zero.overflows(unit_width), ArrayOverflowResult::Within);
         assert_eq!(
@@ -496,8 +495,8 @@ mod tests {
 
         // Any index >= 1 should be invalid
         for i in [1, 2, 10, 100] {
-            let col_idx = ColIndex::new(i);
-            let row_idx = RowIndex::new(i);
+            let col_idx = VPCol::new(i);
+            let row_idx = VPRow::new(i);
 
             assert_eq!(
                 col_idx.overflows(unit_width),
@@ -523,46 +522,46 @@ mod tests {
 
     #[test]
     fn test_overflows() {
-        // Test basic cases with Index/Length - now returns ArrayAccessResult
+        // Test basic cases with VPIndex/VPLength - now returns ArrayAccessResult
         assert_eq!(
-            idx(1).overflows(len(3)),
+            vp_idx(1u16).overflows(vp_len(3)),
             ArrayOverflowResult::Within,
             "Within bounds"
         );
         assert_eq!(
-            idx(3).overflows(len(3)),
+            vp_idx(3u16).overflows(vp_len(3)),
             ArrayOverflowResult::Overflowed,
             "At boundary"
         );
         assert_eq!(
-            idx(5).overflows(len(3)),
+            vp_idx(5u16).overflows(vp_len(3)),
             ArrayOverflowResult::Overflowed,
             "Beyond bounds"
         );
         assert_eq!(
-            idx(0).overflows(len(0)),
+            vp_idx(0u16).overflows(vp_len(0)),
             ArrayOverflowResult::Overflowed,
             "Empty collection edge case"
         );
 
         // Test with typed dimensions.
         assert_eq!(
-            ColIndex::new(5).overflows(ColWidth::new(10)),
+            VPCol::new(5).overflows(VPWidth::new(10u16)),
             ArrayOverflowResult::Within,
             "Typed indices within bounds"
         );
         assert_eq!(
-            ColIndex::new(10).overflows(ColWidth::new(10)),
+            VPCol::new(10).overflows(VPWidth::new(10u16)),
             ArrayOverflowResult::Overflowed,
             "Typed indices at boundary"
         );
         assert_eq!(
-            RowIndex::new(3).overflows(RowHeight::new(5)),
+            VPRow::new(3).overflows(VPHeight::new(5u16)),
             ArrayOverflowResult::Within,
             "Row indices within bounds"
         );
         assert_eq!(
-            RowIndex::new(5).overflows(RowHeight::new(5)),
+            VPRow::new(5).overflows(VPHeight::new(5u16)),
             ArrayOverflowResult::Overflowed,
             "Row indices at boundary"
         );
@@ -571,8 +570,8 @@ mod tests {
         // comparison)
         let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
         for (index_val, length_val) in test_cases {
-            let index = idx(index_val);
-            let length = len(length_val);
+            let index = vp_idx(index_val);
+            let length = vp_len(length_val);
             let overflows_result = index.overflows(length);
             assert_eq!(
                 overflows_result,
@@ -584,8 +583,8 @@ mod tests {
         // Test with specific typed combinations.
         let col_cases = [(0, 5), (4, 5), (5, 5), (6, 5)];
         for (index_val, width_val) in col_cases {
-            let col_index = ColIndex::new(index_val);
-            let col_width = ColWidth::new(width_val);
+            let col_index = VPCol::new(index_val);
+            let col_width = VPWidth::new(width_val.as_u16_narrowing());
             let overflows_result = col_index.overflows(col_width);
             assert_eq!(
                 overflows_result,
@@ -596,8 +595,8 @@ mod tests {
 
         let row_cases = [(0, 3), (2, 3), (3, 3), (4, 3)];
         for (index_val, height_val) in row_cases {
-            let row_index = RowIndex::new(index_val);
-            let row_height = RowHeight::new(height_val);
+            let row_index = VPRow::new(index_val);
+            let row_height = VPHeight::new(height_val.as_u16_narrowing());
             let overflows_result = row_index.overflows(row_height);
             assert_eq!(
                 overflows_result,
@@ -609,37 +608,37 @@ mod tests {
 
     #[test]
     fn test_underflows_method() {
-        use crate::RowIndex;
+        use crate::VPRow;
 
-        let min_row = RowIndex::new(3);
+        let min_row = VPRow::new(3);
 
         // Test underflow cases
         assert_eq!(
-            RowIndex::new(0).underflows(min_row),
+            VPRow::new(0).underflows(min_row),
             ArrayUnderflowResult::Underflowed,
             "Row 0 should underflow min 3"
         );
         assert_eq!(
-            RowIndex::new(2).underflows(min_row),
+            VPRow::new(2).underflows(min_row),
             ArrayUnderflowResult::Underflowed,
             "Row 2 should underflow min 3"
         );
 
         // Test at boundary
         assert_eq!(
-            RowIndex::new(3).underflows(min_row),
+            VPRow::new(3).underflows(min_row),
             ArrayUnderflowResult::Within,
             "Row 3 should not underflow min 3"
         );
 
         // Test above boundary
         assert_eq!(
-            RowIndex::new(5).underflows(min_row),
+            VPRow::new(5).underflows(min_row),
             ArrayUnderflowResult::Within,
             "Row 5 should not underflow min 3"
         );
         assert_eq!(
-            RowIndex::new(10).underflows(min_row),
+            VPRow::new(10).underflows(min_row),
             ArrayUnderflowResult::Within,
             "Row 10 should not underflow min 3"
         );

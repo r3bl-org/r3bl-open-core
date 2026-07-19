@@ -35,8 +35,8 @@
 use crate::{ChannelCapacity, CursorPositionBoundsStatus, GCStringOwned, GLYPH_FAILURE,
             GLYPH_SUCCESS, History, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
-            PtyTestContext, PtyTestMode, Readline, ReadlineControlFlow, Size, StdMutex,
-            generate_pty_test, height, readline_internal, seg_index, width};
+            PtyTestContext, PtyTestMode, Readline, ReadlineControlFlow, StdMutex,
+            generate_pty_test, readline_internal, seg_index, vp_height, vp_width};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use std::{io::Write, sync::Arc};
 use tokio::sync::broadcast;
@@ -58,7 +58,7 @@ fn controller(context: PtyTestContext) {
 
     child
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
-        .unwrap();
+        .expect("conversion error");
 
     let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
         line.contains(GLYPH_SUCCESS) || line.contains(GLYPH_FAILURE)
@@ -86,11 +86,11 @@ fn controller(context: PtyTestContext) {
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 fn controlled() {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {
         println!("{MSG_CONTROLLED_STARTING}");
         println!("{MSG_CONTROLLED_READY}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
 
         if run_test_readline_internal_process_event_and_terminal_output() {
             println!("{GLYPH_SUCCESS} test_readline_internal_process_event_and_terminal_output passed");
@@ -117,7 +117,7 @@ fn controlled() {
         }
 
         println!("{MSG_SUCCESS}");
-        std::io::stdout().flush().unwrap();
+        std::io::stdout().flush().expect("conversion error");
     });
 }
 
@@ -126,7 +126,7 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
     let (output_device, stdout_mock) = OutputDevice::new_mock();
     let input_device = InputDevice::new_mock(smallvec::smallvec![]);
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
-    let test_size = Size::new((width(100), height(100)));
+    let test_size = vp_width(100) + vp_height(100);
     let (readline, _) = Readline::try_new(
         prompt_str.into(),
         output_device.clone(),
@@ -135,7 +135,7 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
         ChannelCapacity::Minimal,
         test_size,
     )
-    .unwrap();
+    .expect("conversion error");
 
     let safe_is_spinner_active = Arc::new(StdMutex::new(None));
     let history = History::new();
@@ -146,7 +146,7 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
     let input_event = readline_internal::convert_crossterm_event_to_input_event(event);
     let control_flow = output_device.write(|term| {
         readline_internal::apply_event_to_line_state_and_render(
-            input_event.unwrap(),
+            input_event.expect("conversion error"),
             &readline.safe_line_state,
             term,
             &safe_history,
@@ -168,7 +168,7 @@ fn run_test_editor_state_empty_buffer() -> bool {
     let (output_device, _) = OutputDevice::new_mock();
     let input_device = InputDevice::new_mock(smallvec::smallvec![]);
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
-    let test_size = Size::new((width(100), height(100)));
+    let test_size = vp_width(100) + vp_height(100);
     let (readline, _) = Readline::try_new(
         prompt_str.into(),
         output_device,
@@ -177,7 +177,7 @@ fn run_test_editor_state_empty_buffer() -> bool {
         ChannelCapacity::Minimal,
         test_size,
     )
-    .unwrap();
+    .expect("conversion error");
 
     readline.get_buffer().is_empty()
         && readline.get_cursor_position_status() == CursorPositionBoundsStatus::AtStart
@@ -190,7 +190,7 @@ fn run_test_editor_state_with_content() -> bool {
     let (output_device, _) = OutputDevice::new_mock();
     let input_device = InputDevice::new_mock(smallvec::smallvec![]);
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
-    let test_size = Size::new((width(100), height(100)));
+    let test_size = vp_width(100) + vp_height(100);
     let (readline, _) = Readline::try_new(
         prompt_str.into(),
         output_device,
@@ -199,7 +199,7 @@ fn run_test_editor_state_with_content() -> bool {
         ChannelCapacity::Minimal,
         test_size,
     )
-    .unwrap();
+    .expect("conversion error");
 
     {
         readline.safe_line_state.write(|line_state| {
@@ -219,7 +219,7 @@ fn run_test_editor_state_cursor_at_start_with_content() -> bool {
     let (output_device, _) = OutputDevice::new_mock();
     let input_device = InputDevice::new_mock(smallvec::smallvec![]);
     let (shutdown_sender, _) = broadcast::channel::<()>(1);
-    let test_size = Size::new((width(100), height(100)));
+    let test_size = vp_width(100) + vp_height(100);
     let (readline, _) = Readline::try_new(
         prompt_str.into(),
         output_device,
@@ -228,7 +228,7 @@ fn run_test_editor_state_cursor_at_start_with_content() -> bool {
         ChannelCapacity::Minimal,
         test_size,
     )
-    .unwrap();
+    .expect("conversion error");
 
     {
         readline.safe_line_state.write(|line_state| {

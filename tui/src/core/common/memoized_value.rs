@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(*counter.borrow(), 0); // Display not called yet
 
         // Verify the value is cached.
-        let cached = cache.get_cached().unwrap();
+        let cached = cache.get_cached().expect("conversion error");
         assert_eq!(cached.value, "test");
     }
 
@@ -159,7 +159,7 @@ mod tests {
         // Second upsert should not recalculate.
         cache.upsert(|| TestValue::with_shared_counter("test2", counter_clone));
 
-        let cached = cache.get_cached().unwrap();
+        let cached = cache.get_cached().expect("conversion error");
         assert_eq!(cached.value, "test1"); // Should still be the first value
     }
 

@@ -94,7 +94,7 @@ impl<T> AddAssign<Vec<T>> for List<T> {
 }
 
 impl<'a> From<InlineVecStr<'a>> for List<&'a str> {
-    fn from(other: InlineVecStr<'a>) -> Self {
+    fn from(other: InlineVecStr<'a>) -> List<&'a str> {
         let mut it = List::with_capacity(other.len());
         it.extend(other);
         it
@@ -102,7 +102,7 @@ impl<'a> From<InlineVecStr<'a>> for List<&'a str> {
 }
 
 impl<T> From<Vec<T>> for List<T> {
-    fn from(other: Vec<T>) -> Self {
+    fn from(other: Vec<T>) -> List<T> {
         let mut it = List::with_capacity(other.len());
         it.extend(other);
         it

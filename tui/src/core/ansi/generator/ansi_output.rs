@@ -22,19 +22,19 @@
 //!
 //! Instead of raw format strings (❌ DON'T DO THIS):
 //! ```rust
-//! # use r3bl_tui::{row, col, CSI_START};
-//! let row_idx = row(5);
-//! let col_idx = col(10);
+//! # use r3bl_tui::{vp_row, vp_col, CSI_START};
+//! let row_idx = vp_row(5);
+//! let col_idx = vp_col(10);
 //! // Avoid this approach:
 //! let s = format!("{CSI_START}{};{}H", row_idx.as_usize() + 1, col_idx.as_usize() + 1);
 //! ```
 //!
 //! We now use semantic enums (✅ CURRENT APPROACH):
 //! ```rust
-//! # use r3bl_tui::{row, col, ansi_output};
-//! let row_idx = row(5);
-//! let col_idx = col(10);
-//! let s = r3bl_tui::ansi_output::cursor_movement::cursor_position(row_idx, col_idx);
+//! # use r3bl_tui::{vp_row, vp_col, ansi_output};
+//! let row_idx = vp_row(5);
+//! let col_idx = vp_col(10);
+//! let s = r3bl_tui::ansi_output::cursor_movement::cursor_position(row_idx.into(), col_idx.into());
 //! assert_eq!(s, "\x1b[6;11H");  // row 5 → 6, col 10 → 11 (1-based)
 //! ```
 //!
@@ -63,14 +63,15 @@
 //! [`FastStringify`]: crate::fast_stringify::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-use crate::{ColIndex, ColorTarget, RowIndex,
-            SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
+use crate::{ColorTarget, SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING,
-                                      BRACKETED_PASTE_MODE, CSI_PARAM_SEPARATOR,
-                                      CSI_START, SGR_BOLD, SGR_DIM, SGR_ITALIC,
-                                      SGR_MOUSE_MODE, SGR_RESET_STR,
-                                      SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
-                                      SGR_UNDERLINE, URXVT_MOUSE_EXTENSION},
+                                      BRACKETED_PASTE_MODE, CSI_ERASE_DISPLAY_ALL,
+                                      CSI_PARAM_SEPARATOR, CSI_START,
+                                      RCP_RESTORE_CURSOR_STR, SCP_SAVE_CURSOR_STR,
+                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_MOUSE_MODE,
+                                      SGR_RESET_STR, SGR_SET_GRAPHICS,
+                                      SGR_STRIKETHROUGH, SGR_UNDERLINE,
+                                      URXVT_MOUSE_EXTENSION},
                           vt_100_pty_output_parser::CsiSequence},
                    coordinates::{TermCol, TermRow}}};
 
@@ -83,12 +84,8 @@ pub mod cursor_movement {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn cursor_position(row: RowIndex, col: ColIndex) -> String {
-        CsiSequence::CursorPosition {
-            row: TermRow::from_zero_based(row),
-            col: TermCol::from_zero_based(col),
-        }
-        .to_string()
+    pub fn cursor_position(row: TermRow, col: TermCol) -> String {
+        CsiSequence::CursorPosition { row, col }.to_string()
     }
 
     /// Generate cursor to column
@@ -96,9 +93,8 @@ pub mod cursor_movement {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn cursor_to_column(col: ColIndex) -> String {
-        let term_col = TermCol::from_zero_based(col);
-        CsiSequence::CursorHorizontalAbsolute(term_col).to_string()
+    pub fn cursor_to_column(col: TermCol) -> String {
+        CsiSequence::CursorHorizontalAbsolute(col).to_string()
     }
 
     /// Generate cursor next line.
@@ -141,9 +137,7 @@ pub mod screen_clearing {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn clear_screen() -> &'static str {
-        crate::core::ansi::constants::CSI_ERASE_DISPLAY_ALL
-    }
+    pub fn clear_screen() -> &'static str { CSI_ERASE_DISPLAY_ALL }
 
     /// Clear current line
     /// [`CSI`] 2K (Erase Line: 2 = entire line)
@@ -255,35 +249,33 @@ pub mod cursor_visibility {
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     #[must_use]
-    pub fn show_cursor() -> &'static str {
-        const_format::formatcp!("{CSI_START}?25h")
-    }
+    pub fn show_cursor() -> &'static str { const_format::formatcp!("{CSI_START}?25h") }
 
     /// Hide cursor
     /// [`CSI`] ?25l (DECTCEM = reset)
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn hide_cursor() -> &'static str {
-        const_format::formatcp!("{CSI_START}?25l")
-    }
+    pub fn hide_cursor() -> &'static str { const_format::formatcp!("{CSI_START}?25l") }
 }
 
 pub mod cursor_save_restore {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Save cursor position - [`CSI`] s (Save Cursor, i.e., [`DECSC`]).
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     #[must_use]
-    pub fn save_cursor_position() -> &'static str { crate::core::ansi::constants::SCP_SAVE_CURSOR_STR }
+    pub fn save_cursor_position() -> &'static str { SCP_SAVE_CURSOR_STR }
 
     /// Restore cursor position - [`CSI`] u (Restore Cursor, i.e., [`DECRC`]).
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     #[must_use]
-    pub fn restore_cursor_position() -> &'static str { crate::core::ansi::constants::RCP_RESTORE_CURSOR_STR }
+    pub fn restore_cursor_position() -> &'static str { RCP_RESTORE_CURSOR_STR }
 }
 
 pub mod terminal_modes {

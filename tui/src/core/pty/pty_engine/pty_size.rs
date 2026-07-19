@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Size, height, width};
+use crate::{VPSize, vp_height, vp_width};
 
 /// Default size value for row height, for tests.
 pub const DEFAULT_ROW_HEIGHT: u16 = 24;
@@ -16,10 +16,10 @@ pub const DEFAULT_PIXEL_WIDTH: u16 = 0;
 /// this.
 pub const DEFAULT_PIXEL_HEIGHT: u16 = 0;
 
-/// Converts a [`Size`] to a [`portable_pty::PtySize`].
-impl From<Size> for portable_pty::PtySize {
-    fn from(it: Size) -> Self {
-        Self {
+/// Converts a [`VPSize`] to a [`portable_pty::PtySize`].
+impl From<VPSize> for portable_pty::PtySize {
+    fn from(it: VPSize) -> portable_pty::PtySize {
+        portable_pty::PtySize {
             rows: it.row_height.as_u16(),
             cols: it.col_width.as_u16(),
             pixel_width: DEFAULT_PIXEL_WIDTH,
@@ -37,15 +37,15 @@ impl From<Size> for portable_pty::PtySize {
 pub struct DefaultPtySize;
 
 impl From<DefaultPtySize> for portable_pty::PtySize {
-    fn from(_: DefaultPtySize) -> Self {
-        let size: Size = DefaultPtySize.into();
+    fn from(_: DefaultPtySize) -> portable_pty::PtySize {
+        let size: VPSize = DefaultPtySize.into();
         size.into()
     }
 }
 
-impl From<DefaultPtySize> for Size {
-    fn from(_: DefaultPtySize) -> Self {
-        width(DEFAULT_COL_WIDTH) + height(DEFAULT_ROW_HEIGHT)
+impl From<DefaultPtySize> for VPSize {
+    fn from(_: DefaultPtySize) -> VPSize {
+        vp_width(DEFAULT_COL_WIDTH) + vp_height(DEFAULT_ROW_HEIGHT)
     }
 }
 

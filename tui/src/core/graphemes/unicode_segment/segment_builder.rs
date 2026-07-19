@@ -12,8 +12,9 @@
 //! [`GCStringOwned`]: crate::GCStringOwned
 //! [module docs]: crate::graphemes
 
-use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index,
-            width};
+use crate::{CWidth, DocSeg, NarrowingCastToU16, Seg, SegmentArray, VPCol, VPWidth,
+            byte_index, byte_len, c_col, c_index, c_width, seg_index, vp_col, vp_len,
+            vp_width};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
@@ -42,23 +43,23 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
 
     let mut segments = SegmentArray::new();
     let mut byte_offset = 0;
-    let mut display_col = 0;
+    let mut display_col = 0u16;
 
     for (seg_idx, grapheme) in input.graphemes(true).enumerate() {
-        let bytes_size = len(grapheme.len());
+        let bytes_size = vp_len((grapheme.len()).as_u16_narrowing());
         let display_width = UnicodeWidthStr::width(grapheme);
 
         segments.push(Seg {
             start_byte_index: byte_index(byte_offset),
             end_byte_index: byte_index(byte_offset + bytes_size.as_usize()),
-            display_width: width(display_width),
-            seg_index: seg_index(seg_idx),
+            display_width: vp_width((display_width).as_u16_narrowing()),
+            seg_index: seg_index((seg_idx).as_u16_narrowing()),
             bytes_size,
-            start_display_col_index: col(display_col),
+            start_display_col_index: vp_col(display_col),
         });
 
         byte_offset += bytes_size.as_usize();
-        display_col += display_width;
+        display_col += (display_width).as_u16_narrowing();
     }
 
     segments
@@ -77,10 +78,10 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
         segments.push(Seg {
             start_byte_index: byte_index(i),
             end_byte_index: byte_index(i + 1),
-            display_width: width(1),
-            seg_index: seg_index(i),
-            bytes_size: len(1),
-            start_display_col_index: col(i),
+            display_width: vp_width(1),
+            seg_index: seg_index((i).as_u16_narrowing()),
+            bytes_size: vp_len(1),
+            start_display_col_index: vp_col((i).as_u16_narrowing()),
         });
     }
 
@@ -92,15 +93,75 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
 /// This sums up the display width of all segments to get the total width of the string
 /// when rendered in a terminal.
 #[must_use]
-pub fn calculate_display_width(segments: &SegmentArray) -> ColWidth {
+pub fn calculate_display_width(segments: &SegmentArray) -> VPWidth {
     match segments.last() {
         Some(seg) => {
-            let start_col: ColIndex = seg.start_display_col_index;
-            let seg_width: ColWidth = seg.display_width;
+            let start_col: VPCol = seg.start_display_col_index;
+            let seg_width: VPWidth = seg.display_width;
             let end_col = *start_col + *seg_width;
-            width(end_col)
+            vp_width(end_col)
         }
-        None => width(0),
+        None => vp_width(0),
+    }
+}
+
+/// Builds [`DocSeg`] grapheme cluster segments for any string slice using 64-bit Canvas
+/// coordinates.
+#[must_use]
+pub fn build_doc_segments_for_str(input: &str) -> Vec<DocSeg> {
+    if input.is_ascii() {
+        return build_ascii_doc_segments(input);
+    }
+
+    let mut segments = Vec::new();
+    let mut byte_offset = 0usize;
+    let mut display_col = 0usize;
+
+    for (seg_idx, grapheme) in input.graphemes(true).enumerate() {
+        let bytes_size = byte_len(grapheme.len());
+        let display_width = UnicodeWidthStr::width(grapheme);
+
+        segments.push(DocSeg {
+            start_byte_index: byte_index(byte_offset),
+            end_byte_index: byte_index(byte_offset + bytes_size.as_usize()),
+            display_width: c_width(display_width),
+            seg_index: c_index(seg_idx),
+            bytes_size,
+            start_display_col_index: c_col(display_col),
+        });
+
+        byte_offset += bytes_size.as_usize();
+        display_col += display_width;
+    }
+
+    segments
+}
+
+fn build_ascii_doc_segments(input: &str) -> Vec<DocSeg> {
+    let mut segments = Vec::with_capacity(input.len());
+
+    for (i, _) in input.char_indices() {
+        segments.push(DocSeg {
+            start_byte_index: byte_index(i),
+            end_byte_index: byte_index(i + 1),
+            display_width: c_width(1usize),
+            seg_index: c_index(i),
+            bytes_size: byte_len(1usize),
+            start_display_col_index: c_col(i),
+        });
+    }
+
+    segments
+}
+
+/// Calculates total [`Canvas`] display width from [`DocSeg`] segments.
+///
+/// [`Canvas`]: mod@crate::core::coordinates::canvas
+#[must_use]
+pub fn calculate_doc_display_width(segments: &[DocSeg]) -> CWidth {
+    match segments.last() {
+        Some(seg) => seg.start_display_col_index - c_col(0usize) + seg.display_width,
+        None => c_width(0usize),
     }
 }
 
@@ -115,14 +176,14 @@ mod tests {
         let segments = build_segments_for_str(input);
 
         assert_eq2!(segments.len(), 5);
-        assert_eq2!(calculate_display_width(&segments), width(5));
+        assert_eq2!(calculate_display_width(&segments), vp_width(5));
 
         // Check first segment 'H'.
         let seg = &segments[0];
         assert_eq2!(seg.start_byte_index, byte_index(0));
         assert_eq2!(seg.end_byte_index, byte_index(1));
-        assert_eq2!(seg.display_width, width(1));
-        assert_eq2!(seg.start_display_col_index, col(0));
+        assert_eq2!(seg.display_width, vp_width(1));
+        assert_eq2!(seg.start_display_col_index, vp_col(0));
     }
 
     #[test]
@@ -131,14 +192,14 @@ mod tests {
         let segments = build_segments_for_str(input);
 
         assert_eq2!(segments.len(), 3);
-        assert_eq2!(calculate_display_width(&segments), width(4)); // H(1) + 😀(2) + !(1)
+        assert_eq2!(calculate_display_width(&segments), vp_width(4)); // H(1) + 😀(2) + !(1)
 
         // Check emoji segment.
         let emoji_seg = &segments[1];
         assert_eq2!(emoji_seg.start_byte_index, byte_index(1));
         assert_eq2!(emoji_seg.end_byte_index, byte_index(5)); // 4 bytes
-        assert_eq2!(emoji_seg.display_width, width(2));
-        assert_eq2!(emoji_seg.start_display_col_index, col(1));
+        assert_eq2!(emoji_seg.display_width, vp_width(2));
+        assert_eq2!(emoji_seg.start_display_col_index, vp_col(1));
     }
 
     #[test]
@@ -148,7 +209,7 @@ mod tests {
         let segments = build_segments_for_str(input);
 
         assert_eq2!(segments.len(), 4);
-        assert_eq2!(calculate_display_width(&segments), width(4));
+        assert_eq2!(calculate_display_width(&segments), vp_width(4));
     }
 
     #[test]
@@ -157,17 +218,17 @@ mod tests {
         let segments = build_segments_for_str(input);
 
         assert_eq2!(segments.len(), 1); // Single grapheme cluster
-        assert_eq2!(calculate_display_width(&segments), width(2));
+        assert_eq2!(calculate_display_width(&segments), vp_width(2));
 
         let seg = &segments[0];
         assert_eq2!(seg.bytes_size.as_usize(), 8); // 4 bytes for 🙏 + 4 bytes for 🏽
-        assert_eq2!(seg.display_width, width(2));
+        assert_eq2!(seg.display_width, vp_width(2));
     }
 
     #[test]
     fn test_calculate_display_width_empty() {
         let segments = SegmentArray::new();
-        assert_eq2!(calculate_display_width(&segments), width(0));
+        assert_eq2!(calculate_display_width(&segments), vp_width(0));
     }
 }
 

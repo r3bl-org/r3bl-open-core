@@ -1,23 +1,23 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![rustfmt::skip]
+
 // Attach.
-pub mod buffer_struct;
-pub mod caret_locate;
-pub mod clipboard_service;
-pub mod clipboard_support;
-pub mod cur_index; // Not re-exported.
-pub mod history; // Not re-exported.
-pub mod render_cache; // Not re-exported.
-pub mod selection_list;
-pub mod selection_range;
-pub mod selection_support;
-pub mod sizing; // Not re-exported.
+mod buffer_config_struct;
+mod buffer_struct;
+mod caret_locate;
+mod clipboard;
+mod history;
+mod selection;
+
+// Not re-exported.
+pub mod render_cache;
+pub mod sizing;
 
 // Re-export.
+pub use buffer_config_struct::*;
 pub use buffer_struct::*;
 pub use caret_locate::*;
-pub use clipboard_service::*;
-pub use clipboard_support::*;
-pub use selection_list::*;
-pub use selection_range::*;
-pub use selection_support::*;
+pub use clipboard::*;
+pub use history::*;
+pub use selection::*;

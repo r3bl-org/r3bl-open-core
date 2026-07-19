@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Continuation, RRTEvent, RRTSoftwareInterrupt, RRTWorker, ThreadLifecycleMonitor,
-            ThreadState, InterruptHandle};
+use crate::{Continuation, InterruptHandle, RRTEvent, RRTSoftwareInterrupt, RRTWorker,
+            StopReason, ThreadLifecycleMonitor, ThreadState,
+            resilient_reactor_thread::TerminationGuard};
 use std::sync::{Arc,
                 atomic::{AtomicBool, Ordering}};
 
@@ -52,7 +53,7 @@ fn test_state_status() {
 
     let transient_states = vec![
         ThreadState::<TestWorker>::Starting,
-        ThreadState::<TestWorker>::Stopping(crate::StopReason::ZeroReceivers),
+        ThreadState::<TestWorker>::Stopping(StopReason::ZeroReceivers),
         ThreadState::<TestWorker>::Restarting,
     ];
     for state in transient_states {
@@ -82,7 +83,7 @@ fn test_interrupt_if_running() {
     let non_running_states = vec![
         ThreadState::Stopped,
         ThreadState::Starting,
-        ThreadState::Stopping(crate::StopReason::WorkerRequested),
+        ThreadState::Stopping(StopReason::WorkerRequested),
         ThreadState::Restarting,
     ];
 
@@ -108,8 +109,7 @@ fn test_termination_guard_drop() {
 
     // Case 1: Drop from Starting
     {
-        let _guard: crate::resilient_reactor_thread::TerminationGuard<TestWorker> =
-            monitor.clone().into();
+        let _guard: TerminationGuard<TestWorker> = monitor.clone().into();
     }
     assert!(matches!(*monitor.lock(), ThreadState::Stopped));
 
@@ -119,8 +119,7 @@ fn test_termination_guard_drop() {
             let mut state = monitor.lock();
             *state = ThreadState::Restarting;
         }
-        let _guard: crate::resilient_reactor_thread::TerminationGuard<TestWorker> =
-            monitor.clone().into();
+        let _guard: TerminationGuard<TestWorker> = monitor.clone().into();
     }
     assert!(matches!(*monitor.lock(), ThreadState::Stopped));
 
@@ -128,10 +127,9 @@ fn test_termination_guard_drop() {
     {
         {
             let mut state = monitor.lock();
-            *state = ThreadState::Stopping(crate::StopReason::ZeroReceivers);
+            *state = ThreadState::Stopping(StopReason::ZeroReceivers);
         }
-        let _guard: crate::resilient_reactor_thread::TerminationGuard<TestWorker> =
-            monitor.clone().into();
+        let _guard: TerminationGuard<TestWorker> = monitor.clone().into();
     }
     assert!(matches!(*monitor.lock(), ThreadState::Stopped));
 }
@@ -162,12 +160,12 @@ fn test_block_until_stable_state_reached() {
             ThreadState::Running(
                 InterruptHandle::new(interrupt),
                 tokio::sync::broadcast::channel(1).0,
-            )
+            ),
         );
         drop(state);
     }
 
-    let is_running = handle.join().unwrap();
+    let is_running = handle.join().expect("conversion error");
     assert!(is_running);
 }
 
@@ -194,6 +192,6 @@ fn test_block_until_stable_state_reached_failure_recovery() {
         drop(state);
     }
 
-    let is_stopped = handle.join().unwrap();
+    let is_stopped = handle.join().expect("conversion error");
     assert!(is_stopped);
 }

@@ -299,12 +299,15 @@ mod tests_shared_ledger_state_machine {
             let result = ledger.try_acquire(&mutex_any);
             assert!(result.is_ok());
             assert_eq!(ledger.held_policy, Some(PanicOnAnyLockNesting));
-            assert_eq!(ledger.addresses.as_ref().unwrap().len(), 1);
+            assert_eq!(
+                ledger.addresses.as_ref().expect("conversion error").len(),
+                1
+            );
             assert!(
                 ledger
                     .addresses
                     .as_ref()
-                    .unwrap()
+                    .expect("conversion error")
                     .contains(&mutex_any.get_address())
             );
         }
@@ -320,9 +323,17 @@ mod tests_shared_ledger_state_machine {
             let result = ledger.try_acquire(&mutex_specific);
             assert!(result.is_ok());
             assert_eq!(ledger.held_policy, Some(PanicOnSpecificLockNesting));
-            assert_eq!(ledger.addresses.as_ref().unwrap().len(), 1);
             assert_eq!(
-                *ledger.addresses.as_ref().unwrap().first().unwrap(),
+                ledger.addresses.as_ref().expect("conversion error").len(),
+                1
+            );
+            assert_eq!(
+                *ledger
+                    .addresses
+                    .as_ref()
+                    .expect("conversion error")
+                    .first()
+                    .expect("conversion error"),
                 mutex_specific.get_address()
             );
         }
@@ -338,7 +349,7 @@ mod tests_shared_ledger_state_machine {
             assert!(ledger.held_policy.is_none());
             assert!(ledger.addresses.is_none());
 
-            ledger.try_acquire(&mutex_any).unwrap();
+            ledger.try_acquire(&mutex_any).expect("conversion error");
             ledger.release(&mutex_any);
 
             assert!(ledger.held_policy.is_none());
@@ -353,7 +364,9 @@ mod tests_shared_ledger_state_machine {
             assert!(ledger.held_policy.is_none());
             assert!(ledger.addresses.is_none());
 
-            ledger.try_acquire(&mutex_specific).unwrap();
+            ledger
+                .try_acquire(&mutex_specific)
+                .expect("conversion error");
             ledger.release(&mutex_specific);
 
             assert!(ledger.held_policy.is_none());
@@ -425,7 +438,7 @@ mod tests_shared_ledger_state_machine {
         let mut ledger = SharedLedger::default();
 
         // First lock acquisition.
-        ledger.try_acquire(&mutex_any).unwrap();
+        ledger.try_acquire(&mutex_any).expect("conversion error");
 
         // Second lock acquisition - should error.
         let result = ledger.try_acquire(&mutex_any);
@@ -444,13 +457,16 @@ mod tests_shared_ledger_state_machine {
         // Ok to acquire specific lock on mutex 2 for thread.
         assert!(ledger.try_acquire(&mutex_specific_2).is_ok());
 
-        assert_eq!(ledger.addresses.as_ref().unwrap().len(), 2);
         assert_eq!(
-            ledger.addresses.as_ref().unwrap()[0],
+            ledger.addresses.as_ref().expect("conversion error").len(),
+            2
+        );
+        assert_eq!(
+            ledger.addresses.as_ref().expect("conversion error")[0],
             mutex_specific_1.get_address()
         );
         assert_eq!(
-            ledger.addresses.as_ref().unwrap()[1],
+            ledger.addresses.as_ref().expect("conversion error")[1],
             mutex_specific_2.get_address()
         );
 
@@ -471,7 +487,9 @@ mod tests_shared_ledger_state_machine {
         let mut ledger = SharedLedger::default();
 
         // Thread acquires mutex_specific.
-        ledger.try_acquire(&mutex_specific).unwrap();
+        ledger
+            .try_acquire(&mutex_specific)
+            .expect("conversion error");
 
         // Thread can't acquire mutex_any.
         let result = ledger.try_acquire(&mutex_any);
@@ -488,7 +506,7 @@ mod tests_shared_ledger_state_machine {
         let mut ledger = SharedLedger::default();
 
         // Thread acquires mutex_any.
-        ledger.try_acquire(&mutex_any).unwrap();
+        ledger.try_acquire(&mutex_any).expect("conversion error");
 
         // Thread can't acquire mutex_specific.
         let result = ledger.try_acquire(&mutex_specific);

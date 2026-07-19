@@ -1,10 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! One-based byte size measurements - see [`ByteLength`] type.
-
-use crate::{ByteIndex, ChUnit, Length,
-            bounds_check::{LengthOps, NumericConversions, NumericValue},
-            byte_index};
+use crate::{ArrayBoundsCheck, ByteIndex, ChUnit, NarrowingCastToUsize, VPLength,
+            WideningCastToUsize,
+            bounds_check::{LengthOps, NumericConversions, NumericValue,
+                           StorageCoordinate},
+            byte_index, usize};
 use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a byte length measurement (1-based).
@@ -14,11 +15,11 @@ use std::ops::{Add, Deref, DerefMut};
 /// positions), [`ByteLength`] is 1-based (representing sizes/counts).
 ///
 /// > This newtype struct does not use [`ChUnit`] like other unit types because
-/// > offsets are inherently [`usize`].
+/// > offsets are inherently [`prim@usize`].
 ///
 /// This type enables semantic correctness in the bounds checking system by providing
 /// a proper length type that pairs with [`ByteIndex`] for byte-based operations,
-/// eliminating the need for conversions to character-based [`Length`] types.
+/// eliminating the need for conversions to character-based [`VPLength`] types.
 ///
 /// # Type System Integration
 ///
@@ -47,12 +48,11 @@ use std::ops::{Add, Deref, DerefMut};
 /// assert_eq!(beyond_index.overflows(buffer_size), ArrayOverflowResult::Overflowed);
 /// ```
 ///
-/// [`Length`]: crate::Length
+/// [`VPLength`]: crate::VPLength
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
-pub struct ByteLength(pub usize);
+pub struct ByteLength(usize);
 
 /// Creates a new [`ByteLength`] from any type that can be converted into it.
-///
 /// This is a convenience function that is equivalent to calling [`ByteLength::from`].
 ///
 /// # Examples
@@ -60,15 +60,14 @@ pub struct ByteLength(pub usize);
 /// ```rust
 /// use r3bl_tui::{ByteLength, byte_len};
 ///
-/// let length = byte_len(42);
-/// assert_eq!(length, ByteLength::from(42usize));
+/// let length = byte_len(42u16);
+/// assert_eq!(length, ByteLength::from(42u16));
 /// ```
 pub fn byte_len(arg_byte_length: impl Into<ByteLength>) -> ByteLength {
     arg_byte_length.into()
 }
 
 impl ByteLength {
-    /// Gets the length value as a [`usize`].
     #[must_use]
     pub fn as_usize(&self) -> usize { self.0 }
 
@@ -102,36 +101,35 @@ impl DerefMut for ByteLength {
 }
 
 impl From<usize> for ByteLength {
-    fn from(it: usize) -> Self { Self(it) }
+    fn from(it: usize) -> ByteLength { ByteLength(it) }
 }
 
 impl From<ChUnit> for ByteLength {
-    fn from(it: ChUnit) -> Self { Self(crate::usize(it)) }
+    fn from(it: ChUnit) -> ByteLength { ByteLength(usize(it)) }
 }
 
 impl From<ByteIndex> for ByteLength {
-    /// Converts a byte index to a byte length.
+    /// Converts a 0-based index to a 1-based length.
     ///
-    /// This adds 1 to convert from 0-based index to 1-based length.
-    fn from(it: ByteIndex) -> Self { Self(it.as_usize() + 1) }
+    /// Index 0 becomes Length 1, Index 1 becomes Length 2, etc.
+    fn from(it: ByteIndex) -> ByteLength { ByteLength(it.as_usize().saturating_add(1)) }
 }
 
 impl From<u16> for ByteLength {
-    fn from(it: u16) -> Self { Self(it as usize) }
+    fn from(it: u16) -> ByteLength { ByteLength(it.as_usize_widening()) }
 }
 
 impl From<i32> for ByteLength {
-    #[allow(clippy::cast_sign_loss)]
-    fn from(it: i32) -> Self { Self(it as usize) }
+    fn from(it: i32) -> ByteLength { ByteLength(it.as_usize_narrowing()) }
 }
 
-impl From<Length> for ByteLength {
+impl From<VPLength> for ByteLength {
     /// Converts a character-based length to a byte-based length.
     ///
     /// Both types are 1-based measurements, so this is a direct value conversion. This
     /// conversion assumes that the Length value represents the same semantic measurement
     /// but in different units (characters vs bytes).
-    fn from(it: Length) -> Self { Self(it.as_usize()) }
+    fn from(it: VPLength) -> ByteLength { ByteLength(it.as_usize()) }
 }
 
 impl Add for ByteLength {
@@ -139,20 +137,27 @@ impl Add for ByteLength {
     fn add(self, other: Self) -> Self { ByteLength(self.0 + other.0) }
 }
 
-impl NumericConversions for ByteLength {
-    /// Converts the byte length to a [`usize`] value for numeric comparison.
-    fn as_usize(&self) -> usize { self.0 }
+impl Add<usize> for ByteLength {
+    type Output = Self;
+    fn add(self, other: usize) -> Self { ByteLength(self.0 + other) }
+}
 
-    /// Converts the byte length to a [`u16`] value for crossterm compatibility.
-    #[allow(clippy::cast_possible_truncation)]
-    fn as_u16(&self) -> u16 { self.0 as u16 }
+impl NumericConversions for ByteLength {
+    /// Converts the byte length to a [`prim@usize`] value for numeric comparison.
+    fn as_usize(&self) -> usize { self.0 }
 }
 
 impl NumericValue for ByteLength {}
 
 impl LengthOps for ByteLength {
     type IndexType = ByteIndex;
+
+    fn convert_to_index(&self) -> Self::IndexType { self.convert_to_index() }
 }
+
+impl StorageCoordinate for ByteLength {}
+
+impl ArrayBoundsCheck<ByteLength> for ByteLength {}
 
 #[cfg(test)]
 mod tests {
@@ -162,7 +167,7 @@ mod tests {
     // Basic construction and conversion tests.
     #[test]
     fn test_byte_length_from_usize() {
-        let length = ByteLength::from(42usize);
+        let length = ByteLength::from(42u16);
         assert_eq!(length.as_usize(), 42);
     }
 
@@ -283,9 +288,9 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        use std::collections::HashSet;
+        use rustc_hash::FxHashSet;
 
-        let mut set = HashSet::new();
+        let mut set = FxHashSet::default();
         let length1 = byte_len(42);
         let length2 = byte_len(42);
         let length3 = byte_len(24);
@@ -326,7 +331,7 @@ mod tests {
     #[test]
     fn test_byte_len_constructor_function() {
         let length = byte_len(42usize);
-        assert_eq!(length, ByteLength::from(42usize));
+        assert_eq!(length, ByteLength::from(42u16));
 
         let length_from_ch = byte_len(ch(10));
         assert_eq!(length_from_ch, ByteLength::from(ch(10)));
@@ -337,7 +342,6 @@ mod tests {
     fn test_unit_marker_implementation() {
         let length = byte_len(42);
         assert_eq!(length.as_usize(), 42);
-        assert_eq!(length.as_u16(), 42u16);
         assert!(!length.is_zero());
 
         let zero_length = byte_len(0);

@@ -29,10 +29,10 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`InputEvent`]: crate::InputEvent
 
-use crate::{KeyState,
-            core::ansi::{constants::{ASCII_DEL, ASCII_DIGIT_0, CONTROL_ENTER,
-                                     CONTROL_NUL, CONTROL_TAB, CSI_PREFIX,
-                                     FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
+use crate::{KeyState, LossyConvertToByte, NarrowingCastToU8,
+            core::ansi::{constants::{ASCII_DEL, ASCII_DIGIT_0, CONTROL_CHAR_MASK,
+                                     CONTROL_ENTER, CONTROL_NUL, CONTROL_TAB,
+                                     CSI_PREFIX, FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
                                      FUNCTION_F1_CODE, FUNCTION_F2_CODE,
                                      FUNCTION_F3_CODE, FUNCTION_F4_CODE,
                                      FUNCTION_F5_CODE, FUNCTION_F6_CODE,
@@ -56,7 +56,8 @@ use crate::{KeyState,
                                      PASTE_START_GENERATE_CODE,
                                      RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
                                      SPECIAL_DELETE_CODE, SPECIAL_INSERT_CODE,
-                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
+                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
+                                     UTF8_CHAR_MAX_BYTES},
                          vt_100_terminal_input_parser::{VT100FocusStateIR,
                                                         VT100InputEventIR,
                                                         VT100KeyCodeIR,
@@ -195,8 +196,8 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
             col_width,
             row_height,
         } => {
-            let rows = u16::try_from(row_height.as_usize()).unwrap_or(u16::MAX);
-            let cols = u16::try_from(col_width.as_usize()).unwrap_or(u16::MAX);
+            let rows = row_height.as_u16();
+            let cols = col_width.as_u16();
             Some(terminal_events::generate_resize_sequence(rows, cols))
         }
         VT100InputEventIR::Focus(state) => {
@@ -467,26 +468,27 @@ mod keyboard {
             && modifiers.shift == KeyState::NotPressed
         {
             let mut bytes = vec![ANSI_ESC];
-            let mut buf = [0u8; 4];
+            let mut buf = [0u8; UTF8_CHAR_MAX_BYTES];
             let encoded = c.encode_utf8(&mut buf);
             bytes.extend_from_slice(encoded.as_bytes());
             return Some(bytes);
         }
 
-        // Ctrl+letter: control byte (letter & 0x1F)
+        // Ctrl+letter: control byte (letter & CONTROL_CHAR_MASK)
         if modifiers.ctrl == KeyState::Pressed
             && modifiers.alt == KeyState::NotPressed
             && modifiers.shift == KeyState::NotPressed
         {
             if c.is_ascii_alphabetic() {
-                let control_byte = (c.to_ascii_lowercase() as u8) & 0x1F;
+                let control_byte =
+                    c.to_ascii_lowercase().to_u8_lossy() & CONTROL_CHAR_MASK;
                 return Some(vec![control_byte]);
             }
             return None; // Ctrl+non-letter not supported
         }
 
         // Plain character: UTF-8 encoded
-        let mut buf = [0u8; 4];
+        let mut buf = [0u8; UTF8_CHAR_MAX_BYTES];
         let encoded = c.encode_utf8(&mut buf);
         Some(encoded.as_bytes().to_vec())
     }
@@ -517,13 +519,13 @@ mod mouse {
 
         // Handle action/drag flag
         let action_char = match action {
-            VT100MouseActionIR::Release => MOUSE_SGR_RELEASE as char,
+            VT100MouseActionIR::Release => char::from(MOUSE_SGR_RELEASE),
             VT100MouseActionIR::Drag | VT100MouseActionIR::Motion => {
                 code |= MOUSE_MOTION_FLAG; // Motion/Drag flag (bit 5)
-                MOUSE_SGR_PRESS as char
+                char::from(MOUSE_SGR_PRESS)
             }
             VT100MouseActionIR::Press | VT100MouseActionIR::Scroll(_) => {
-                MOUSE_SGR_PRESS as char
+                char::from(MOUSE_SGR_PRESS)
             }
         };
 
@@ -536,7 +538,7 @@ mod mouse {
         bytes.extend_from_slice(&encoding::push_ascii_u16(col));
         bytes.push(ANSI_PARAM_SEPARATOR);
         bytes.extend_from_slice(&encoding::push_ascii_u16(row));
-        bytes.push(action_char as u8);
+        bytes.push(action_char.to_u8_lossy());
         bytes
     }
 
@@ -564,15 +566,12 @@ mod mouse {
         cb = apply_modifiers(cb, modifiers);
 
         // X10 coordinate encoding: add offset to make printable ASCII
-        #[allow(clippy::cast_possible_truncation)]
-        let cx = (col + MOUSE_X10_COORD_OFFSET) as u8;
-        #[allow(clippy::cast_possible_truncation)]
-        let cy = (row + MOUSE_X10_COORD_OFFSET) as u8;
+        let cx = (col + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
+        let cy = (row + MOUSE_X10_COORD_OFFSET).as_u8_narrowing();
 
         // Build sequence: ESC [ M Cb Cx Cy
         let mut bytes = MOUSE_X10_PREFIX.to_vec();
-        #[allow(clippy::cast_possible_truncation)]
-        bytes.push(cb as u8);
+        bytes.push(cb.as_u8_narrowing());
         bytes.push(cx);
         bytes.push(cy);
         bytes.push(CONTROL_NUL);

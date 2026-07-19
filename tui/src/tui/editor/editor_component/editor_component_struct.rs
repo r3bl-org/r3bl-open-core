@@ -3,9 +3,10 @@
 use super::HasEditorBuffers;
 use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
             EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
-            EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
-            HasFocus, InputEvent, SurfaceBounds, SystemClipboard,
-            TerminalWindowMainThreadSignal, editor_engine::engine_public_api, ok};
+            EditorEngineConfig, EventPropagation, FileExtensionToken, FlexBox,
+            FlexBoxId, GlobalData, HasFocus, InputEvent, SystemClipboard,
+            TerminalWindowMainThreadSignal, VPBoundingBox,
+            editor_engine::engine_public_api, ok};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -51,7 +52,7 @@ pub mod editor_component_impl_component_trait {
     {
         // Add an empty editor buffer if it doesn't exist.
         if !mut_state.contains_editor_buffer(self_id) {
-            let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+            let it = EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
             mut_state.insert_editor_buffer(self_id, it);
         }
 
@@ -59,7 +60,9 @@ pub mod editor_component_impl_component_trait {
             clippy::unwrap_used,
             reason = "Guaranteed to have an editor buffer because of the if block above"
         )]
-        mut_state.get_mut_editor_buffer(self_id).unwrap()
+        mut_state
+            .get_mut_editor_buffer(self_id)
+            .expect("conversion error")
     }
 
     impl<S, AS> Component<S, AS> for EditorComponent<S, AS>
@@ -80,7 +83,7 @@ pub mod editor_component_impl_component_trait {
             &mut self,
             global_data: &mut GlobalData<S, AS>,
             current_box: FlexBox,
-            _surface_bounds: SurfaceBounds, /* Ignore this. */
+            _surface_bounds: VPBoundingBox, /* Ignore this. */
             has_focus: &mut HasFocus,
         ) -> CommonResult {
             let GlobalData { state, .. } = global_data;

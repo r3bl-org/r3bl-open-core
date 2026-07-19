@@ -70,6 +70,13 @@
     - [v0.0.3 (2025-05-10)](#v003-2025-05-10)
     - [v0.0.2 (2024-09-12)](#v002-2024-09-12)
     - [v0.0.1 (2023-12-31)](#v001-2023-12-31)
+  - [`r3bl-rust-analyzer-mcp-server`](#r3bl-rust-analyzer-mcp-server)
+    - [v1.1.4 (2026-08-25)](#v114-2026-08-25)
+    - [v1.1.3 (2026-08-25)](#v113-2026-08-25)
+    - [v1.1.2 (2026-08-25)](#v112-2026-08-25)
+    - [v1.1.1 (2026-08-18)](#v111-2026-08-18)
+    - [v1.1.0 (2026-08-17)](#v110-2026-08-17)
+    - [v1.0.0 (2026-08-16)](#v100-2026-08-16)
 - [Archived](#archived)
   - [`r3bl_rs_utils_macro`](#r3bl_rs_utils_macro)
     - [Archived (formerly renamed to `r3bl_macro`)](#archived-formerly-renamed-to-r3bl_macro)
@@ -1461,6 +1468,66 @@ and converts inline links to reference-style in rustdoc comments.
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
+
+## `r3bl-rust-analyzer-mcp-server`
+
+Model Context Protocol (MCP) server for `rust-analyzer`. Built with Rust standard library
+threads to provide fast AST navigation, hover, definitions, code actions, and compiler
+diagnostics for AI/LLM coding agents (Claude, Antigravity, Cursor, etc.).
+Install with `cargo install r3bl-rust-analyzer-mcp-server`.
+
+### v1.1.4 (2026-08-25)
+
+- Changed:
+  - Cleaned up Prerequisites documentation formatting in `README.md` to avoid nested list rendering artifacts on crates.io.
+
+### v1.1.3 (2026-08-25)
+
+- Changed:
+  - Streamlined crate documentation in `README.md` for crates.io rendering: replaced wide markdown table with responsive list, removed redundant internal architecture diagrams and boilerplate JSON payloads in favor of concise usage and configuration examples.
+
+### v1.1.2 (2026-08-25)
+
+- Added:
+  - Published architectural deep-dive article: [To Async or Not to Async: Building a Rust MCP Server for rust-analyzer](https://developerlife.com/2026/08/22/to-async-or-not-to-async-rust-mcp-server/).
+  - Domain-specific type aliases for thread-safe state and document URIs: `DocumentUri`, `DocumentUriRef`, `DiagnosticList`, `DiagnosticsTable`, `SafeDiagnosticsTable`, `ResponseSender`, `PendingRequestsTable`, `SafePendingRequestsTable`, and `LspWriter`.
+  - Comprehensive unit test coverage for `JsonRpcRequestId` serde transparency, `LspRequest::new`, `IndexingStatus` conversions, and `ServerReadiness::default`.
+- Changed:
+  - Simplified `request_id` generation from `AtomicI64` to `JsonRpcRequestId` (`u64`) with `json_rpc::INITIAL_REQUEST_ID` constant.
+  - Organized `src/lsp/protocol.rs` into 4 functional modules: `primitive_types`, `table_types`, `readiness_types`, and `envelope_types`.
+  - Standardized crate architecture with clean private submodules and public barrel re-exports (`pub use lsp::*;`, `pub use mcp::*;`).
+  - Standardized constructor conventions: derived `Default` on `RustAnalyzerClient` and removed redundant no-arg `new()` on `ServerReadinessMonitor`.
+
+### v1.1.1 (2026-08-18)
+
+- Changed:
+  - Consolidated `r3bl-rust-analyzer-mcp-server` into the main `r3bl-open-core` workspace as a member crate.
+  - Updated repository metadata to point to `https://github.com/r3bl-org/r3bl-open-core`.
+  - Added workspace lint inheritance (`[lints] workspace = true`) and cleaned up strict clippy lints.
+
+### v1.1.0 (2026-08-17)
+
+- Added:
+  - Cold-start indexing warmup gating and server status tracking (`experimental/serverStatus`).
+  - Thread-safe `ServerReadinessMonitor` synchronizing background reader threads and AST queries.
+  - Eager startup of `rust-analyzer` on main event loop entry.
+  - AST inspection tool gating (`hover`, `definition`, `references`, `symbols`, `completion`, `code_actions`) during indexing.
+  - `ValueExt` extension trait for ergonomic parameter extraction.
+- Fixed:
+  - LSP 3.17 `WorkspaceDiagnosticReport` format handling and clean workspace empty states with fallback to cached publish-diagnostics.
+  - Parameter schema reconciliation in documentation and 0-based coordinate definitions.
+- Changed:
+  - Two-sided bridge architecture modularization: `src/lsp/` and `src/mcp/`.
+  - Extracted strongly-typed `McpServerError` into dedicated `src/error.rs`.
+
+### v1.0.0 (2026-08-16)
+
+- Added:
+  - Initial release of `r3bl-rust-analyzer-mcp-server`, a Model Context Protocol (MCP) server for `rust-analyzer`.
+  - 10 code intelligence tools connecting directly to `rust-analyzer` (`rust_analyzer_hover`, `rust_analyzer_definition`, `rust_analyzer_references`, `rust_analyzer_symbols`, `rust_analyzer_completion`, `rust_analyzer_format`, `rust_analyzer_code_actions`, `rust_analyzer_diagnostics`, `rust_analyzer_workspace_diagnostics`, `rust_analyzer_set_workspace`).
+  - Dedicated 3-thread UNIX pipe architecture (main event loop, stdout reader, stderr drainer).
+  - Pure standard library threading without async runtime overhead.
+  - Structured file and stderr tracing via `--log-level` and `--log-file` CLI flags.
 
 # Archived
 

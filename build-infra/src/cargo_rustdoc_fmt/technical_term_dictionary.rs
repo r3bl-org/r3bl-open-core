@@ -8,8 +8,9 @@
 //! compile time, or from a custom file provided via `--terms-file`.
 
 use crate::cargo_rustdoc_fmt::types::FormatterResult;
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 /// Embedded seed file (JSON5 format with comments).
 const EMBEDDED_SEED: &str = include_str!("known_technical_term_link_dictionary.jsonc");
@@ -42,7 +43,7 @@ struct SeedEntry {
 /// Dictionary of known technical terms and their canonical link targets.
 #[derive(Debug)]
 pub struct TechnicalTermDictionary {
-    terms: HashMap<String, TechnicalTermEntry>,
+    terms: FxHashMap<String, TechnicalTermEntry>,
 }
 
 impl TechnicalTermDictionary {
@@ -91,11 +92,11 @@ impl TechnicalTermDictionary {
 }
 
 /// Parses the seed file content (JSON5 format) into a term map.
-fn parse_seed(content: &str) -> FormatterResult<HashMap<String, TechnicalTermEntry>> {
-    let raw: HashMap<String, SeedEntry> = json5::from_str(content)
+fn parse_seed(content: &str) -> FormatterResult<FxHashMap<String, TechnicalTermEntry>> {
+    let raw: FxHashMap<String, SeedEntry> = json5::from_str(content)
         .map_err(|e| miette::miette!("Failed to parse seed file: {e}"))?;
 
-    let mut terms = HashMap::new();
+    let mut terms = FxHashMap::default();
     for (term, entry) in raw {
         let tier = match entry.tier.as_str() {
             "internal" => TechnicalTermTier::Internal,

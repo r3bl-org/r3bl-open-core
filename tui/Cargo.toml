@@ -173,6 +173,9 @@ portable-pty = "0.9.0"
 # Desktop notifications
 notify-rust = "4.11.3"
 
+# Telemetry
+hdrhistogram = "7.6.0"
+
 # Unix-only dependencies for DirectToAnsi backend.
 [target.'cfg(unix)'.dependencies]
 # Signal handling for DirectToAnsi backend (SIGWINCH for terminal resize).

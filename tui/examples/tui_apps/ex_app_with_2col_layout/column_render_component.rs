@@ -5,10 +5,10 @@ use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelC
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, LengthOps,
-               Pos, RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey,
-               SurfaceBounds, TerminalWindowMainThreadSignal, TextColorizationPolicy,
-               ZOrder, ch, col, glyphs, inline_string, ok, row, send_signal,
-               throws_with_return};
+               RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, VPBoundingBox,
+               VPPos, ZOrder, ch, glyphs, inline_string, ok, send_signal,
+               throws_with_return, vp_col, vp_row};
 use smallvec::smallvec;
 
 #[derive(Debug, Clone, Default)]
@@ -134,7 +134,7 @@ mod column_render_component_impl_component_trait {
             &mut self,
             global_data: &mut GlobalData<State, AppSignal>,
             current_box: FlexBox,
-            _surface_bounds: SurfaceBounds, /* Ignore this. */
+            _surface_bounds: VPBoundingBox, /* Ignore this. */
             has_focus: &mut HasFocus,
         ) -> CommonResult {
             // Things from component scope.
@@ -146,12 +146,11 @@ mod column_render_component_impl_component_trait {
 
             // Setup intermediate vars.
             // Adjusted for style margin (if any).
-            let box_origin_pos = current_box.style_adjusted_origin_pos;
-            // Adjusted for style margin (if any).
-            let box_bounds_size = current_box.style_adjusted_bounds_size;
+            let box_origin_pos = current_box.style_adjusted_bounds.origin_pos;
+            let box_bounds_size = current_box.style_adjusted_bounds.bounds_size;
 
-            let mut row_index = row(0);
-            let mut col_index = col(0);
+            let mut row_index = vp_row(0);
+            let mut col_index = vp_col(0);
 
             let mut render_ops = RenderOpIRVec::new();
 
@@ -242,7 +241,7 @@ mod column_render_component_impl_component_trait {
                     current_box = ?current_box,
                     box_origin_pos = ?box_origin_pos,
                     box_bounds_size = ?box_bounds_size,
-                    content_pos = ?Pos { col_index, row_index },
+                    content_pos = ?VPPos { col_index, row_index },
                     render_pipeline = ?pipeline,
                 );
             });

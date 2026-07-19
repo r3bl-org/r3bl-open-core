@@ -15,8 +15,9 @@
 //! [`CSI`]: crate::CsiSequence
 
 use super::test_helpers::*;
-use crate::{col, pos, render_op::RenderOpCommon, row};
-use crate::ansi_output::{cursor_save_restore, screen_clearing};
+use crate::{ansi_output::{cursor_save_restore, screen_clearing},
+            render_op::RenderOpCommon,
+            vp_col, vp_row};
 
 #[test]
 fn test_clear_screen() {
@@ -41,10 +42,7 @@ fn test_clear_current_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 2K clears current line
-    assert_eq!(
-        output,
-        screen_clearing::clear_current_line()
-    );
+    assert_eq!(output, screen_clearing::clear_current_line());
 }
 
 #[test]
@@ -57,10 +55,7 @@ fn test_clear_to_end_of_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 0K clears to end of line
-    assert_eq!(
-        output,
-        screen_clearing::clear_to_end_of_line()
-    );
+    assert_eq!(output, screen_clearing::clear_to_end_of_line());
 }
 
 #[test]
@@ -73,10 +68,7 @@ fn test_clear_to_start_of_line() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI 1K clears to start of line
-    assert_eq!(
-        output,
-        screen_clearing::clear_to_start_of_line()
-    );
+    assert_eq!(output, screen_clearing::clear_to_start_of_line());
 }
 
 #[test]
@@ -86,7 +78,7 @@ fn test_screen_operations_preserve_cursor_state() {
     let mut state = create_test_state();
 
     // Set cursor position
-    let move_op = RenderOpCommon::MoveCursorPositionAbs(pos(row(5) + col(10)));
+    let move_op = RenderOpCommon::MoveCursorPositionAbs(vp_row(5) + vp_col(10));
     let _unused = execute_and_capture(move_op, &mut state, &output_device, &stdout_mock);
     let saved_pos = state.cursor_pos;
 
@@ -115,12 +107,6 @@ fn test_save_and_restore_cursor_position() {
         execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain both sequences (CSI format: ESC [ s and ESC [ u)
-    assert!(
-        output.contains(cursor_save_restore::save_cursor_position())
-    );
-    assert!(
-        output.contains(
-            cursor_save_restore::restore_cursor_position()
-        )
-    );
+    assert!(output.contains(cursor_save_restore::save_cursor_position()));
+    assert!(output.contains(cursor_save_restore::restore_cursor_position()));
 }

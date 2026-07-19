@@ -58,6 +58,8 @@ pub const CLOCK_TICK_GLYPH: &str = "↻"; // "↺"; //"✹"; //'❀'; //'✲';
 pub const STOP_GLYPH: &str = "∎";
 pub const TOP_UNDERLINE_GLYPH: &str = "‾";
 pub const SPACER_GLYPH: &str = " ";
+// XMARK: Intentional numeric casting using as.
+#[allow(clippy::as_conversions)]
 pub const SPACER_GLYPH_CHAR: char = SPACER_GLYPH.as_bytes()[0] as char;
 pub const ELLIPSIS_GLYPH: &str = "…";
 pub const RENDER_GLYPH: &str = "◧";

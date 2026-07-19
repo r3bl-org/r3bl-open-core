@@ -3,10 +3,10 @@
 //! Tests for control sequences and edge cases.
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AnsiToOfsBufPerformer, col,
+use crate::{AnsiToOfsBufPerformer,
             core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN, LINE_FEED, TAB},
             ofs_buf::test_fixtures_ofs_buf::*,
-            row};
+            vp_col, vp_row};
 use vte::Perform;
 
 /// Tests for C0 control characters (CR, LF, Tab, Backspace, etc.).
@@ -26,7 +26,7 @@ fn test_control_characters() {
     performer.execute(CARRIAGE_RETURN);
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        row(0) + col(0),
+        vp_row(0) + vp_col(0),
         "Cursor should be at start of line after CR"
     );
     performer.print('X'); // Should overwrite 'A'
@@ -35,43 +35,47 @@ fn test_control_characters() {
     performer.execute(LINE_FEED);
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(1),
+        vp_row(1) + vp_col(1),
         "Cursor should move to next row after LF, but same column"
     );
 
     // Reset column for next test.
-    performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.col_index = col(0));
+    performer
+        .ofs_buf_vt_100
+        .update_cursor_pos(|pos| pos.col_index = vp_col(0));
     performer.print('Y');
 
     // Tab should advance cursor.
     performer.execute(TAB);
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(8),
+        vp_row(1) + vp_col(8),
         "Cursor should move to col 8 after tab"
     );
     performer.print('Z');
 
     // Backspace should move cursor back.
-    performer.ofs_buf_vt_100.update_cursor_pos(|pos| pos.col_index = col(3));
+    performer
+        .ofs_buf_vt_100
+        .update_cursor_pos(|pos| pos.col_index = vp_col(3));
     performer.print('M');
     performer.execute(BACKSPACE); // Backspace
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(3),
+        vp_row(1) + vp_col(3),
         "Cursor should move back one column after BS, to col 3"
     );
     performer.print('N'); // Should overwrite 'M' at col 3
     assert_eq!(
         performer.ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(4),
+        vp_row(1) + vp_col(4),
         "Cursor should move to col 4 after printing 'N', same row"
     );
 
     // Verify final ofs_buf_vt_100 cursor position.
     assert_eq!(
         ofs_buf_vt_100.get_cursor_pos(),
-        row(1) + col(4),
+        vp_row(1) + vp_col(4),
         "Final cursor position should be row 1, col 4"
     );
 

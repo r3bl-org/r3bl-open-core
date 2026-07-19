@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::RenderOpsLocalData;
-use crate::{LockedOutputDevice, RenderOpOutput, Size};
+use crate::{LockedOutputDevice, RenderOpOutput, VPSize};
 
 /// Trait for executing individual [`RenderOpOutput`] operations on a terminal.
 ///
@@ -81,7 +81,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// <!-- It is ok to use ignore here -->
 ///
 /// ```ignore
-/// // In backend converter (e.g., OfsBufPaintImpl):
+/// // In backend converter (e.g., paint_impl):
 /// for render_op_output in &render_ops_collection {
 ///     let mut painter = CrosstermPainter::new();
 ///     RenderOpPaintImplCrossterm {}.paint(
@@ -108,8 +108,8 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// - `RenderOpPaintImplDirectToAnsi` - [`DirectToAnsi`] backend
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`crossterm`]: crate::TerminalLibBackend::Crossterm
-/// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+/// [`crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 /// [rendering pipeline overview]:
 ///     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 pub trait RenderOpPaint {
@@ -146,12 +146,12 @@ pub trait RenderOpPaint {
     /// 5. NOT flush (flushing is coordinated at a higher level)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`crossterm`]: crate::TerminalLibBackend::Crossterm
-    /// [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
+    /// [`crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+    /// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
     fn paint(
         &mut self,
         render_op_output: &RenderOpOutput,
-        window_size: Size,
+        window_size: VPSize,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     );

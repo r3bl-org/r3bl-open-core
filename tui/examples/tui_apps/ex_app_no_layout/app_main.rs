@@ -6,12 +6,13 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
                ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
-               InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, RenderOpCommon,
-               RenderOpIR, RenderOpIRVec, RenderPipeline, SPACER_GLYPH, Size,
+               InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, NarrowingCastToU16,
+               RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, SPACER_GLYPH,
                SpecialKey, TerminalWindowMainThreadSignal, TextColorizationPolicy,
-               ZOrder, ch, col, defaults::get_default_gradient_stops, glyphs, height,
-               inline_string, new_style, render_tui_styled_texts_into, row, send_signal,
-               throws_with_return, tui_color, tui_styled_text, tui_styled_texts, width};
+               VPSize, ZOrder, ch, defaults::get_default_gradient_stops, glyphs,
+               inline_string, new_style, render_tui_styled_texts_into, send_signal,
+               throws_with_return, tui_color, tui_styled_text, tui_styled_texts, vp_col,
+               vp_height, vp_row, vp_width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -336,18 +337,18 @@ mod app_main_impl_trait_app {
 
             let sample_line_of_text =
                 format!("{state_string}, gradient: [index: X, len: Y]");
-            let content_size_col = width(sample_line_of_text.len());
+            let content_size_col = vp_width(sample_line_of_text.len().as_u16_narrowing());
             let window_size = global_data.window_size;
             let data = &mut self.data;
 
             // Horizontal centering.
-            let col_idx = col({
+            let col_idx = vp_col({
                 let it = *window_size.col_width - *content_size_col;
                 it / 2
             });
 
             // Vertical centering.
-            let mut row_idx = row({
+            let mut row_idx = vp_row({
                 // Shift up by 2 rows (adjust for extra status & HUD rows).
                 let vertical_offset = 2;
                 let content_height = ch(data.color_wheel_ansi_vec.len());
@@ -367,7 +368,7 @@ mod app_main_impl_trait_app {
                     let text = {
                         let index = color_wheel.get_index();
                         let len = match color_wheel.get_gradient_len() {
-                            GradientLengthKind::ColorWheel(len) => len,
+                            GradientLengthKind::ColorWheel(len) => len.as_usize(),
                             _ => 0,
                         };
                         inline_string!(
@@ -387,7 +388,7 @@ mod app_main_impl_trait_app {
                     );
                     render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                    row_idx += row(1);
+                    row_idx += vp_row(1);
                 }
 
                 // Render 1 row using color_wheel_rgb.
@@ -398,7 +399,7 @@ mod app_main_impl_trait_app {
                     let text = {
                         let index = data.color_wheel_rgb.get_index();
                         let len = match data.color_wheel_rgb.get_gradient_len() {
-                            GradientLengthKind::ColorWheel(len) => len,
+                            GradientLengthKind::ColorWheel(len) => len.as_usize(),
                             _ => 0,
                         };
                         inline_string!(
@@ -415,7 +416,7 @@ mod app_main_impl_trait_app {
                     );
                     render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                    row_idx += row(1);
+                    row_idx += vp_row(1);
                 }
 
                 // Render 1 row using lolcat_fg.
@@ -436,7 +437,7 @@ mod app_main_impl_trait_app {
                     );
                     render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                    row_idx += row(1);
+                    row_idx += vp_row(1);
                 }
 
                 // Render 1 row using lolcat_bg.
@@ -457,7 +458,7 @@ mod app_main_impl_trait_app {
                     );
                     render_tui_styled_texts_into(&texts, &mut acc_render_ops);
 
-                    row_idx += row(1);
+                    row_idx += vp_row(1);
                 }
 
                 acc_render_ops
@@ -484,7 +485,7 @@ mod hud {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
+    pub fn create_hud(pipeline: &mut RenderPipeline, size: VPSize, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
         let color_fg = tui_color!(hex "#942997");
         let styled_texts = tui_styled_texts! {
@@ -494,13 +495,14 @@ mod hud {
             },
         };
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.index_from_end(vp_height(1))); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(
@@ -519,7 +521,7 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
+    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: VPSize) {
         let color_bg = tui_color!(hex "#076DEB");
         let color_fg = tui_color!(hex "#E9C940");
         let styled_texts = tui_styled_texts! {
@@ -550,13 +552,14 @@ mod status_bar {
         };
 
         let display_width = styled_texts.display_width();
-        let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
+        let col_idx = vp_col(*(size.col_width - display_width) / 2);
+        let row_idx = vp_row(*size.row_height.convert_to_index()); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops +=
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx));
+        render_ops += RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            vp_col(0) + row_idx,
+        ));
         render_ops += RenderOpCommon::ResetColor;
         render_ops += RenderOpCommon::SetBgColor(color_bg);
         render_ops += RenderOpIR::PaintTextWithAttributes(

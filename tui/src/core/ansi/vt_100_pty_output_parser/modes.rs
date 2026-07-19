@@ -33,7 +33,7 @@ pub enum AutoWrapMode {
 ///
 /// [`DECTCEM`]: https://vt100.net/docs/vt510-rm/DECTCEM.html
 /// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
-/// [`OfsBuf`]: crate::OfsBuf
+/// [`OfsBuf`]: crate::tui::OfsBuf
 /// [`OutputRenderer::composite_virtual_cursor_into_buffer`]:
 ///     crate::core::pty::OutputRenderer::composite_virtual_cursor_into_buffer
 /// [`ParserGlobalState::cursor_visibility`]: crate::ParserGlobalState::cursor_visibility

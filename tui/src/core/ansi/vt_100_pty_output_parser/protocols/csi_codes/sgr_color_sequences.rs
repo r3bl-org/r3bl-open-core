@@ -93,13 +93,15 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
-use crate::{AnsiValue, RgbValue, TuiColor, convert_u16_to_ascii_str_slice, core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
+use crate::{AnsiValue, NarrowingCastToU8, RgbValue, TuiColor, WideningCastToU16,
+            convert_u16_to_ascii_str_slice,
+            core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
                                      SGR_BG_EXTENDED, SGR_COLOR_MODE_256,
                                      SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                                      SGR_SET_GRAPHICS},
-                   common::fast_stringify::{BufTextStorage, FastStringify}}, generate_impl_display_for_fast_stringify, ok,
-            };
-use std::fmt::Result;
+                   common::fast_stringify::{BufTextStorage, FastStringify}},
+            generate_impl_display_for_fast_stringify, ok};
+// use std::fmt::Result;
 
 /// Which layer (foreground or background) a color applies to.
 ///
@@ -241,14 +243,14 @@ impl SgrColorSequence {
             [fg_or_bg, SGR_COLOR_MODE_256, index, ..]
                 if *fg_or_bg == SGR_FG_EXTENDED && *index <= 255 =>
             {
-                Some(Self::SetForegroundAnsi256(*index as u8))
+                Some(Self::SetForegroundAnsi256(index.as_u8_narrowing()))
             }
 
             // 256-color background: ESC[48:5:n or ESC[48;5;n
             [fg_or_bg, SGR_COLOR_MODE_256, index, ..]
                 if *fg_or_bg == SGR_BG_EXTENDED && *index <= 255 =>
             {
-                Some(Self::SetBackgroundAnsi256(*index as u8))
+                Some(Self::SetBackgroundAnsi256(index.as_u8_narrowing()))
             }
 
             // RGB foreground: ESC[38:2:r:g:b or ESC[38;2;r;g;b
@@ -258,7 +260,11 @@ impl SgrColorSequence {
                     && *g <= 255
                     && *b <= 255 =>
             {
-                Some(Self::SetForegroundRgb(*r as u8, *g as u8, *b as u8))
+                Some(Self::SetForegroundRgb(
+                    r.as_u8_narrowing(),
+                    g.as_u8_narrowing(),
+                    b.as_u8_narrowing(),
+                ))
             }
 
             // RGB background: ESC[48:2:r:g:b or ESC[48;2;r;g;b
@@ -268,7 +274,11 @@ impl SgrColorSequence {
                     && *g <= 255
                     && *b <= 255 =>
             {
-                Some(Self::SetBackgroundRgb(*r as u8, *g as u8, *b as u8))
+                Some(Self::SetBackgroundRgb(
+                    r.as_u8_narrowing(),
+                    g.as_u8_narrowing(),
+                    b.as_u8_narrowing(),
+                ))
             }
 
             // Not an extended color sequence
@@ -328,7 +338,7 @@ impl From<SgrColorSequence> for TuiColor {
     /// let color: TuiColor = SgrColorSequence::SetForegroundAnsi256(42).into();
     /// assert!(matches!(color, TuiColor::Ansi(_)));
     /// ```
-    fn from(seq: SgrColorSequence) -> Self {
+    fn from(seq: SgrColorSequence) -> TuiColor {
         match seq {
             SgrColorSequence::SetForegroundAnsi256(index)
             | SgrColorSequence::SetBackgroundAnsi256(index) => {
@@ -363,18 +373,22 @@ impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
     /// ```
     ///
     /// [`SGR`]: crate::SgrCode
-    fn from((color, target): (TuiColor, ColorTarget)) -> Self {
+    fn from((color, target): (TuiColor, ColorTarget)) -> SgrColorSequence {
         match color {
             TuiColor::Ansi(val) => match target {
-                ColorTarget::Foreground => Self::SetForegroundAnsi256(val.index),
-                ColorTarget::Background => Self::SetBackgroundAnsi256(val.index),
+                ColorTarget::Foreground => {
+                    SgrColorSequence::SetForegroundAnsi256(val.index)
+                }
+                ColorTarget::Background => {
+                    SgrColorSequence::SetBackgroundAnsi256(val.index)
+                }
             },
             TuiColor::Rgb(val) => match target {
                 ColorTarget::Foreground => {
-                    Self::SetForegroundRgb(val.red, val.green, val.blue)
+                    SgrColorSequence::SetForegroundRgb(val.red, val.green, val.blue)
                 }
                 ColorTarget::Background => {
-                    Self::SetBackgroundRgb(val.red, val.green, val.blue)
+                    SgrColorSequence::SetBackgroundRgb(val.red, val.green, val.blue)
                 }
             },
         }
@@ -394,7 +408,7 @@ impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 impl FastStringify for SgrColorSequence {
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> std::fmt::Result {
         acc.push_str(CSI_START);
         match self {
             SgrColorSequence::SetForegroundAnsi256(index) => {
@@ -402,36 +416,36 @@ impl FastStringify for SgrColorSequence {
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_256));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*index)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*index).as_u16_widening()));
             }
             SgrColorSequence::SetBackgroundAnsi256(index) => {
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_BG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_256));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*index)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*index).as_u16_widening()));
             }
             SgrColorSequence::SetForegroundRgb(r, g, b) => {
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_FG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_RGB));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*r)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*r).as_u16_widening()));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*g)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*g).as_u16_widening()));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*b)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*b).as_u16_widening()));
             }
             SgrColorSequence::SetBackgroundRgb(r, g, b) => {
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_BG_EXTENDED));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
                 acc.push_str(convert_u16_to_ascii_str_slice!(SGR_COLOR_MODE_RGB));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*r)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*r).as_u16_widening()));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*g)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*g).as_u16_widening()));
                 acc.push(CSI_SUB_PARAM_SEPARATOR);
-                acc.push_str(convert_u16_to_ascii_str_slice!(u16::from(*b)));
+                acc.push_str(convert_u16_to_ascii_str_slice!((*b).as_u16_widening()));
             }
         }
         acc.push(SGR_SET_GRAPHICS);
@@ -607,13 +621,14 @@ mod tests {
         // but parsing accepts both.
 
         // 256-color foreground
-        let parsed = SgrColorSequence::parse_from_raw_slice(&[38, 5, 196]).unwrap();
+        let parsed = SgrColorSequence::parse_from_raw_slice(&[38, 5, 196])
+            .expect("conversion error");
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[38:5:196m");
 
         // RGB background
-        let parsed =
-            SgrColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0]).unwrap();
+        let parsed = SgrColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0])
+            .expect("conversion error");
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[48:2:255:128:0m");
     }

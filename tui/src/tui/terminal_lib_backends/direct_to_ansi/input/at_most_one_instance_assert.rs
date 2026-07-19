@@ -16,8 +16,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// **Do not use [`Mutex<bool>`] here.** The singleton test uses [`catch_unwind`] to
 /// verify that creating a second device panics. If [`claim_and_assert()`] panics while
 /// holding a [`Mutex`] lock, Rust marks the mutex as **poisoned**. Subsequent
-/// `lock().unwrap()` calls (e.g., in [`release()`] during drop) will panic, causing the
-/// test to hang or fail.
+/// `lock().expect("conversion error")` calls (e.g., in [`release()`] during drop) will
+/// panic, causing the test to hang or fail.
 ///
 /// `AtomicBool::swap()` is **panic-safe** as there's no lock to poison.
 ///

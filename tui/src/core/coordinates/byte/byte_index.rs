@@ -2,9 +2,12 @@
 
 //! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
 
-use crate::{ArrayBoundsCheck, ByteLength, ByteOffset, ChUnit, Index,
-            bounds_check::{IndexOps, NumericConversions, NumericValue}};
-use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
+use crate::{ArrayBoundsCheck, ByteLength, ByteOffset, ChUnit, NarrowingCastToUsize,
+            VPIndex, WideningCastToUsize,
+            bounds_check::{IndexOps, NumericConversions, NumericValue,
+                           StorageCoordinate},
+            usize};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Range, Sub, SubAssign};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
 ///
@@ -14,7 +17,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// which is 1-based and represents sizes/counts.
 ///
 /// > This newtype struct does not use [`ChUnit`] like other unit types because byte
-/// > positions are inherently [`usize`].
+/// > positions are inherently [`prim@usize`].
 ///
 /// This type is primarily used for byte-level operations in text processing, particularly
 /// when working with [`UTF-8`] strings where character boundaries don't align with byte
@@ -32,8 +35,8 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// [`ByteIndex`] is conceptually distinct from related types in the type system:
 /// - **vs [`ByteLength`]**: Index is 0-based position, Length is 1-based size
 /// - **vs [`ByteOffset`]**: Index is absolute position, Offset is relative displacement
-/// - **vs [`Index`]**: [`ByteIndex`] is for byte positions, Index is for character
-///   positions
+/// - **vs [`VPIndex`]**: [`ByteIndex`] is for byte positions, [`VPIndex`] is for
+///   character positions
 ///
 /// Think of it as:
 /// - [`ByteIndex`] = absolute byte coordinate (like "byte position 42")
@@ -57,20 +60,21 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 /// // Check if the byte position is valid for array access
 /// assert_eq!(pos.overflows(buffer_size), ArrayOverflowResult::Within);
 ///
-/// // Convert to character-based Index if needed
-/// use r3bl_tui::Index;
-/// let char_index: Index = pos.into();
+/// // Convert to character-based VPIndex if needed
+/// use r3bl_tui::VPIndex;
+/// let char_index: VPIndex = pos.into();
 /// ```
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
-pub struct ByteIndex(pub usize);
+pub struct ByteIndex(usize);
 
 impl ByteIndex {
     #[must_use]
     pub fn as_usize(&self) -> usize { self.0 }
 }
 
+/// Helper constructor for [`ByteIndex`].
 pub fn byte_index(arg_byte_index: impl Into<ByteIndex>) -> ByteIndex {
     arg_byte_index.into()
 }
@@ -85,64 +89,89 @@ impl DerefMut for ByteIndex {
 }
 
 impl From<usize> for ByteIndex {
-    fn from(it: usize) -> Self { Self(it) }
+    fn from(it: usize) -> ByteIndex { ByteIndex(it) }
 }
 
 impl From<ChUnit> for ByteIndex {
-    fn from(it: ChUnit) -> Self { Self(crate::usize(it)) }
+    fn from(it: ChUnit) -> ByteIndex { ByteIndex(usize(it)) }
 }
 
-impl From<ByteIndex> for Index {
-    fn from(it: ByteIndex) -> Self { Self::from(it.0) }
+impl From<ByteIndex> for VPIndex {
+    fn from(it: ByteIndex) -> VPIndex { VPIndex::from(it.0) }
 }
 
 impl From<ByteOffset> for ByteIndex {
-    fn from(it: ByteOffset) -> Self { Self(it.as_usize()) }
+    fn from(it: ByteOffset) -> ByteIndex { ByteIndex(it.as_usize()) }
 }
 
 impl From<ByteIndex> for usize {
-    fn from(it: ByteIndex) -> Self { it.0 }
+    fn from(it: ByteIndex) -> usize { it.0 }
 }
 
 impl From<u16> for ByteIndex {
-    fn from(it: u16) -> Self { Self(it as usize) }
+    fn from(it: u16) -> ByteIndex { ByteIndex(it.as_usize_widening()) }
 }
 
 impl From<i32> for ByteIndex {
-    #[allow(clippy::cast_sign_loss)]
-    fn from(it: i32) -> Self { Self(it as usize) }
+    fn from(it: i32) -> ByteIndex { ByteIndex(it.as_usize_narrowing()) }
 }
 
 impl NumericConversions for ByteIndex {
     /// Converts the byte index to a usize value for numeric comparison, usually for array
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
-
-    /// Converts the byte index to a u16 value for crossterm compatibility and other
-    /// terminal operations.
-    #[allow(clippy::cast_possible_truncation)]
-    fn as_u16(&self) -> u16 { self.0 as u16 }
 }
 
 impl NumericValue for ByteIndex {}
 
 impl IndexOps for ByteIndex {
     type LengthType = ByteLength;
+
+    fn convert_to_length(&self) -> Self::LengthType {
+        crate::byte_len(self.as_usize().saturating_add(1))
+    }
 }
 
-/// Implement Add trait to enable `RangeBoundsExt` usage.
+impl StorageCoordinate for ByteIndex {}
+
+/// Implement `Add` trait for `ByteIndex`.
 /// This allows `ByteIndex` to be used with `Range<ByteIndex>` for type-safe bounds
 /// checking.
 impl Add for ByteIndex {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output { Self(self.0 + other.0) }
+    fn add(self, other: Self) -> Self::Output { Self(self.0.saturating_add(other.0)) }
+}
+
+impl Add<usize> for ByteIndex {
+    type Output = Self;
+
+    fn add(self, other: usize) -> Self::Output { Self(self.0.saturating_add(other)) }
 }
 
 /// Implement `AddAssign` trait for convenient position advancement.
 /// This allows `+=` operations to increment a byte position.
 impl AddAssign for ByteIndex {
-    fn add_assign(&mut self, other: Self) { self.0 += other.0; }
+    fn add_assign(&mut self, other: Self) { self.0 = self.0.saturating_add(other.0); }
+}
+
+impl AddAssign<usize> for ByteIndex {
+    fn add_assign(&mut self, other: usize) { self.0 = self.0.saturating_add(other); }
+}
+
+impl Sub<usize> for ByteIndex {
+    type Output = Self;
+
+    fn sub(self, other: usize) -> Self::Output { Self(self.0.saturating_sub(other)) }
+}
+
+/// Implement `SubAssign` trait for in-place position decrement.
+impl SubAssign for ByteIndex {
+    fn sub_assign(&mut self, other: Self) { self.0 = self.0.saturating_sub(other.0); }
+}
+
+impl SubAssign<usize> for ByteIndex {
+    fn sub_assign(&mut self, other: usize) { self.0 = self.0.saturating_sub(other); }
 }
 
 /// Extension trait to enable conversion from [`Range<ByteIndex>`] to [`Range<usize>`]
@@ -163,19 +192,19 @@ impl AddAssign for ByteIndex {
 /// assert_eq!(usize_range, 5..10);
 /// ```
 ///
-/// [`Range<ByteIndex>`]: Range
-/// [`Range<usize>`]: Range
+/// [`ByteIndex`]: crate::ByteIndex
+/// [`Range<ByteIndex>`]: std::ops::Range
+/// [`Range<usize>`]: std::ops::Range
+/// [`Range`]: std::ops::Range
+/// [`std`]: std
 pub trait ByteIndexRangeExt {
     /// Converts a [`Range<ByteIndex>`] to [`Range<usize>`] for slice indexing.
     ///
     /// This method provides the functionality that would ideally be available via
-    /// `.into()`, but Rust's orphan rule prevents implementing
-    /// `From<Range<ByteIndex>> for Range<usize>`
-    /// because the target type's head type [`Range`] is foreign (from [`std`]), even
-    /// though [`ByteIndex`] in the source type is from our crate.
-    ///
-    /// [`Range<ByteIndex>`]: Range
-    /// [`Range<usize>`]: Range
+    /// `.into()`, but Rust's orphan rule prevents implementing the following:
+    /// - `From<Range<ByteIndex>> for Range<usize>`
+    /// - Why? Because the target type's head type [`Range`] is foreign (from [`std`]),
+    ///   even though [`ByteIndex`] in the source type is from our crate.
     fn to_usize_range(self) -> Range<usize>;
 }
 
@@ -236,7 +265,7 @@ mod tests {
     #[test]
     fn test_byte_index_to_index() {
         let index = byte_index(42);
-        let generic_index: Index = index.into();
+        let generic_index: VPIndex = index.into();
         assert_eq!(generic_index.as_usize(), 42);
     }
 
@@ -331,9 +360,9 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        use std::collections::HashSet;
+        use rustc_hash::FxHashSet;
 
-        let mut set = HashSet::new();
+        let mut set = FxHashSet::default();
         let index1 = byte_index(42);
         let index2 = byte_index(42);
         let index3 = byte_index(24);
@@ -368,7 +397,7 @@ mod tests {
     #[test]
     fn test_byte_index_constructor_function() {
         let index = byte_index(42usize);
-        assert_eq!(index, ByteIndex::from(42usize));
+        assert_eq!(index, ByteIndex::from(42u16));
 
         let index_from_ch = byte_index(ch(10));
         assert_eq!(index_from_ch, ByteIndex::from(ch(10)));
@@ -419,6 +448,49 @@ mod tests {
         // Test zero displacement
         position += byte_offset(0);
         assert_eq!(position, byte_index(180));
+    }
+
+    #[test]
+    fn test_byte_index_saturating_add() {
+        let max_index = byte_index(usize::MAX);
+        assert_eq!(max_index + 10, byte_index(usize::MAX));
+        assert_eq!(max_index + byte_index(10), byte_index(usize::MAX));
+
+        let mut index = byte_index(usize::MAX);
+        index += 10;
+        assert_eq!(index, byte_index(usize::MAX));
+    }
+
+    #[test]
+    fn test_byte_index_subtraction() {
+        use crate::byte_offset;
+
+        let index = byte_index(30);
+        assert_eq!(index - byte_index(10), byte_offset(20));
+        assert_eq!(index - 10, byte_index(20));
+    }
+
+    #[test]
+    fn test_byte_index_sub_assign() {
+        let mut index = byte_index(30);
+        index -= byte_index(10);
+        assert_eq!(index, byte_index(20));
+
+        index -= 5;
+        assert_eq!(index, byte_index(15));
+    }
+
+    #[test]
+    fn test_byte_index_saturating_sub() {
+        use crate::byte_offset;
+
+        let index = byte_index(10);
+        assert_eq!(index - byte_index(30), byte_offset(0));
+        assert_eq!(index - 30, byte_index(0));
+
+        let mut index = byte_index(10);
+        index -= 30;
+        assert_eq!(index, byte_index(0));
     }
 
     #[test]

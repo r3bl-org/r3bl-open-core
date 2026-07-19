@@ -7,19 +7,20 @@
 //! parser]. Process switching is instant - just display a different buffer.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [ANSI parser]: crate::AnsiToOfsBufPerformer
+//! [ANSI parser]: crate::core::ansi::AnsiToOfsBufPerformer
 
 use super::STATUS_BAR_HEIGHT;
 #[allow(unused_imports, reason = "Allows short rustdoc ref def links")]
 use crate::core::pty::pty_mux;
-use crate::{ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER, DefaultPtySessionConfig,
-            OfsBufVT100, PtyInputEvent, PtySessionConfigOption, ScrollbackAmount, Size,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER,
+            DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyInputEvent,
+            PtySessionConfigOption, ScrollbackAmount, VPSize, VPWidth,
             core::{osc::OscEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
-            height, ok};
-use std::fmt::{Debug, Formatter, Result};
+            ok, vp_height};
+use std::fmt::{Debug, Formatter};
 
 /// Manages multiple [`PTY`] processes and handles switching between them.
 ///
@@ -41,21 +42,21 @@ pub enum UnrenderedOutput {
 #[derive(Debug)]
 pub struct ProcessManager {
     processes: Vec<Process>,
-    active_index: usize,
-    terminal_size: Size,
+    focused_index: usize,
+    terminal_size: VPSize,
 }
 
 /// Represents a single process that can be managed by the multiplexer.
 ///
-/// Semantically, this is a **virtual tab**. For a detailed explanation of the
-/// architecture, see the [Virtual Tab Mental Model].
+/// Semantically, this is a **virtual terminal**. For a detailed explanation of the
+/// architecture, see the [Virtual Terminal Architecture].
 ///
 /// Each process maintains its own virtual terminal emulator through an [`OfsBufVT100`],
 /// enabling true terminal multiplexing where switching between processes is instant and
 /// preserves the complete terminal state (including scrollback).
 ///
-/// [Virtual Tab Mental Model]:
-///     mod@pty_mux#virtual-terminal-architecture-the-virtual-tab-mental-model
+/// [Virtual Terminal Architecture]:
+///     mod@pty_mux#virtual-terminal-architecture
 pub struct Process {
     /// Display name for this process (shown in status bar).
     pub name: String,
@@ -85,7 +86,7 @@ pub struct Process {
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub terminal_title: Option<String>,
 
-    /// Optional vertical scroll offset.
+    /// Optional vertical viewport origin.
     ///
     /// - [`None`] means the viewport is locked to the live output (bottom).
     /// - [`Some`] means the user has detached and scrolled up into the history.
@@ -101,14 +102,28 @@ impl Process {
         name: impl Into<String>,
         command: impl Into<String>,
         args: Vec<String>,
-        terminal_size: Size,
+        terminal_size: VPSize,
     ) -> Self {
+        Self::new_with_virtual_width(name, command, args, terminal_size, None)
+    }
+
+    /// Creates a new process definition with an optional custom virtual terminal width.
+    ///
+    /// The buffer height is sized to (height-1) to reserve space for the status bar.
+    /// The buffer width is sized to `maybe_virtual_width` if provided, otherwise
+    /// defaulting to `terminal_size.col_width`.
+    pub fn new_with_virtual_width(
+        name: impl Into<String>,
+        command: impl Into<String>,
+        args: Vec<String>,
+        terminal_size: VPSize,
+        maybe_virtual_width: Option<VPWidth>,
+    ) -> Self {
+        let col_width = maybe_virtual_width.unwrap_or(terminal_size.col_width);
         // Reserve bottom row for status bar - buffer gets reduced height.
-        let buffer_size = Size {
-            row_height: height(
-                terminal_size.row_height.saturating_sub(STATUS_BAR_HEIGHT),
-            ),
-            col_width: terminal_size.col_width,
+        let buffer_size = VPSize {
+            row_height: terminal_size.row_height - vp_height(STATUS_BAR_HEIGHT),
+            col_width,
         };
 
         Self {
@@ -126,8 +141,8 @@ impl Process {
 
     /// Scrolls the viewport back into the history buffer by the specified amount.
     pub fn scroll_back_by(&mut self, amount: ScrollbackAmount) {
-        let history_len = self.terminal_state.scrollback_buffer.lines.len();
-        if history_len == 0 {
+        let max_scrollback_amt = self.terminal_state.get_history_len();
+        if max_scrollback_amt == 0 {
             // Nowhere to scroll back to.
             return;
         }
@@ -139,9 +154,9 @@ impl Process {
             Some(current_offset) => current_offset.saturating_add(amount),
         };
 
-        self.maybe_scroll_offset = match new_offset.overflows(history_len) {
-            // Clip the scroll offset to the top of the history buffer.
-            ArrayOverflowResult::Overflowed => Some(history_len.into()),
+        self.maybe_scroll_offset = match new_offset.overflows(max_scrollback_amt) {
+            // Clip the viewport origin to the top of the history buffer.
+            ArrayOverflowResult::Overflowed => Some(max_scrollback_amt.into()),
             // Otherwise, keep the new offset.
             ArrayOverflowResult::Within => Some(new_offset),
         };
@@ -157,7 +172,7 @@ impl Process {
         // Subtract the scroll amount from the current offset.
         let new_offset = current_offset.saturating_sub(amount);
 
-        if *new_offset == 0 {
+        if new_offset.is_empty() {
             // If the result of subtracting is 0, then we've scrolled all the way forward
             // to the live boundary.
             self.maybe_scroll_offset = None;
@@ -165,6 +180,16 @@ impl Process {
             // Otherwise, keep the new offset.
             self.maybe_scroll_offset = Some(new_offset);
         }
+    }
+
+    /// Pans the virtual terminal viewport left by the specified amount.
+    pub fn pan_left_by(&mut self, amount: VPWidth) {
+        self.terminal_state.pan_viewport_left(amount);
+    }
+
+    /// Pans the virtual terminal viewport right by the specified amount.
+    pub fn pan_right_by(&mut self, amount: VPWidth) {
+        self.terminal_state.pan_viewport_right(amount);
     }
 
     /// Returns whether this process is currently running.
@@ -182,7 +207,7 @@ impl Process {
     /// enabling instant switching without any delays or resizing tricks.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`PixelChar`]: crate::PixelChar
+    /// [`PixelChar`]: crate::tui::PixelChar
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
         if !output.is_empty() {
@@ -240,7 +265,7 @@ impl Process {
                     message = "PtyProcess::process_pty_output_and_update_buffer",
                     process_name = %self.name,
                     bytes = output.len(),
-                    cursor = ?self.terminal_state.get_cursor_pos(),
+                    cursor = ?self.terminal_state.get_active_screen_buffer().get_cursor_pos(),
                     "Process updated buffer"
                 };
             });
@@ -298,7 +323,7 @@ impl Process {
 }
 
 impl Debug for Process {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Process")
             .field("name", &self.name)
             .field("command", &self.command)
@@ -316,10 +341,10 @@ impl Debug for Process {
 impl ProcessManager {
     /// Creates a new process manager with the given processes and terminal size.
     #[must_use]
-    pub fn new(processes: Vec<Process>, terminal_size: Size) -> Self {
+    pub fn new(processes: Vec<Process>, terminal_size: VPSize) -> Self {
         Self {
             processes,
-            active_index: 0,
+            focused_index: 0,
             terminal_size,
         }
     }
@@ -339,12 +364,12 @@ impl ProcessManager {
                 && let Err(e) = self.spawn_process(i)
             {
                 // Fail immediately if any process can't be started.
-                miette::bail!(
+                return Err(miette::miette!(
                     "Failed to start process '{}' ({}): {}. Please ensure it's installed and in PATH.",
                     self.processes[i].name,
                     self.processes[i].command,
                     e
-                );
+                ));
             }
         }
         ok!()
@@ -357,7 +382,7 @@ impl ProcessManager {
     /// instant because each process maintains its complete terminal state independently.
     ///
     /// **What happens**:
-    /// 1. Change the `active_index` to point to a different process
+    /// 1. Change the `focused_index` to point to a different process
     /// 2. That's it! No delays, no resize tricks, no screen clearing
     /// 3. The next render will display the target process's virtual terminal
     ///
@@ -370,8 +395,8 @@ impl ProcessManager {
             return None;
         }
 
-        let old_index = self.active_index;
-        self.active_index = index;
+        let old_index = self.focused_index;
+        self.focused_index = index;
 
         DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
@@ -401,14 +426,11 @@ impl ProcessManager {
             };
         });
 
-        // Reserve bottom row for status bar - PTY gets reduced height.
-        let pty_size = Size {
-            row_height: height(
-                self.terminal_size
-                    .row_height
-                    .saturating_sub(STATUS_BAR_HEIGHT),
-            ),
-            col_width: self.terminal_size.col_width,
+        // Reserve bottom row for status bar - PTY gets reduced height and
+        // process-configured width.
+        let pty_size = VPSize {
+            row_height: self.terminal_size.row_height - vp_height(STATUS_BAR_HEIGHT),
+            col_width: process.terminal_state.get_window_size().col_width,
         };
 
         // Use existing PtySessionBuilder with reduced size.
@@ -426,7 +448,7 @@ impl ProcessManager {
     ///
     /// This is the heart of the per-process virtual terminal architecture:
     ///
-    /// **Key Innovation**: ALL processes are polled continuously, not just the active
+    /// **Key Innovation**: ALL processes are polled continuously, not just the focused
     /// one. Each process maintains its own complete virtual terminal state through its
     /// [`OfsBufVT100`]. When you switch between processes, you're instantly seeing
     /// their maintained terminal state - no delays, no fake resize tricks needed.
@@ -435,28 +457,28 @@ impl ProcessManager {
     /// 1. Poll each process for new [`PTY`] output (non-blocking)
     /// 2. If output exists, process it through the [`ANSI`] parser
     /// 3. Update the process's virtual terminal buffer
-    /// 4. Track if the currently active process had updates
+    /// 4. Track if the currently focused process had updates
     ///
     /// **Why this enables universal compatibility**:
     /// - bash: Command history and prompt state persist in the virtual terminal
     /// - TUI apps: Complete screen state maintained perfectly
     /// - CLI tools: Output preserved exactly as generated
     ///
-    /// Returns true if the active process had new output (triggers rendering).
+    /// Returns true if the focused process had new output (triggers rendering).
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn poll_all_processes(&mut self) -> bool {
-        let mut active_had_output = false;
+        let mut focused_had_output = false;
 
         for (i, process) in self.processes.iter_mut().enumerate() {
             if let Some(output) = process.try_get_output() {
                 // Update this process's virtual terminal buffer.
                 process.process_pty_output_and_update_buffer(output);
 
-                // Track if the active process had output.
-                if i == self.active_index {
-                    active_had_output = true;
+                // Track if the focused process had output.
+                if i == self.focused_index {
+                    focused_had_output = true;
                 }
 
                 DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
@@ -465,62 +487,63 @@ impl ProcessManager {
                         message = "ProcessManager::poll_all_processes",
                         process_index = %i,
                         process_name = %process.name,
-                        active = %(i == self.active_index),
+                        focused = %(i == self.focused_index),
                         "Updated virtual terminal buffer"
                     };
                 });
             }
         }
 
-        active_had_output
+        focused_had_output
     }
 
-    /// Sends input to the currently active process.
+    /// Sends input to the currently focused process.
     pub fn send_input(&mut self, event: PtyInputEvent) {
-        if let Some(session) = &self.processes[self.active_index].session
-            && let Err(err) = session.tx_input_event.try_send(event) {
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
-                    tracing::warn!("Ignored input for dead process: {}", err);
-                });
-            }
+        if let Some(session) = &self.processes[self.focused_index].session
+            && let Err(err) = session.tx_input_event.try_send(event)
+        {
+            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                tracing::warn!("Ignored input for dead process: {}", err);
+            });
+        }
     }
 
-    /// Gets the name of the currently active process.
+    /// Gets the name of the currently focused process.
     #[must_use]
-    pub fn active_name(&self) -> &str { &self.processes[self.active_index].name }
+    pub fn focused_name(&self) -> &str { &self.processes[self.focused_index].name }
 
     /// Gets a slice of all processes.
     #[must_use]
     pub fn processes(&self) -> &[Process] { &self.processes }
 
-    /// Gets the index of the currently active process.
+    /// Gets the index of the currently focused process.
     #[must_use]
-    pub fn active_index(&self) -> usize { self.active_index }
+    pub fn focused_index(&self) -> usize { self.focused_index }
 
-    /// Gets the terminal title of the currently active process (if any).
+    /// Gets the terminal title of the currently focused process (if any).
     #[must_use]
-    pub fn active_terminal_title(&self) -> Option<&str> {
-        self.processes[self.active_index].terminal_title.as_deref()
+    pub fn focused_terminal_title(&self) -> Option<&str> {
+        self.processes[self.focused_index].terminal_title.as_deref()
     }
 
-    /// Gets read-only access to the active process's virtual terminal buffer.
+    /// Gets read-only access to the focused process's virtual terminal buffer.
     #[must_use]
-    pub fn active_buffer(&self) -> &OfsBufVT100 {
-        &self.processes[self.active_index].terminal_state
+    pub fn focused_process_buffer(&self) -> &OfsBufVT100 {
+        &self.processes[self.focused_index].terminal_state
     }
 
-    /// Gets immutable access to the active process.
+    /// Gets immutable access to the focused process.
     #[must_use]
-    pub fn active_process(&self) -> &Process { &self.processes[self.active_index] }
+    pub fn focused_process(&self) -> &Process { &self.processes[self.focused_index] }
 
-    /// Gets mutable access to the active process.
-    pub fn active_process_mut(&mut self) -> &mut Process {
-        &mut self.processes[self.active_index]
+    /// Gets mutable access to the focused process.
+    pub fn focused_process_mut(&mut self) -> &mut Process {
+        &mut self.processes[self.focused_index]
     }
 
-    /// Marks the active process as having been rendered.
-    pub fn mark_active_as_rendered(&mut self) {
-        self.processes[self.active_index].mark_as_rendered();
+    /// Marks the focused process as having been rendered.
+    pub fn mark_focused_as_rendered(&mut self) {
+        self.processes[self.focused_index].mark_as_rendered();
     }
 
     /// Handles terminal resize with per-process buffer architecture.
@@ -530,12 +553,12 @@ impl ProcessManager {
     /// reflow.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn handle_terminal_resize(&mut self, new_size: Size) {
+    pub fn handle_terminal_resize(&mut self, new_size: VPSize) {
         self.terminal_size = new_size;
 
         // Calculate PTY/buffer size (reserve status bar).
-        let pty_size = Size {
-            row_height: height(new_size.row_height.saturating_sub(STATUS_BAR_HEIGHT)),
+        let pty_size = VPSize {
+            row_height: new_size.row_height - vp_height(STATUS_BAR_HEIGHT),
             col_width: new_size.col_width,
         };
 
@@ -726,5 +749,57 @@ impl ProcessManager {
                 "Finished shutting down all processes"
             };
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{vp_col, vp_height, vp_size, vp_width};
+
+    #[test]
+    fn test_process_virtual_width_sizing() {
+        let terminal_size = vp_size(vp_width(80), vp_height(25));
+        let proc_default = Process::new("bash", "bash", vec![], terminal_size);
+        assert_eq!(
+            proc_default.terminal_state.get_window_size(),
+            vp_size(vp_width(80), vp_height(24))
+        );
+
+        let proc_wide = Process::new_with_virtual_width(
+            "bash",
+            "bash",
+            vec![],
+            terminal_size,
+            Some(vp_width(1000)),
+        );
+        assert_eq!(
+            proc_wide.terminal_state.get_window_size(),
+            vp_size(vp_width(1000), vp_height(24))
+        );
+    }
+
+    #[test]
+    fn test_process_horizontal_panning() {
+        let terminal_size = vp_size(vp_width(80), vp_height(25));
+        let mut proc = Process::new_with_virtual_width(
+            "bash",
+            "bash",
+            vec![],
+            terminal_size,
+            Some(vp_width(1000)),
+        );
+
+        assert_eq!(proc.terminal_state.get_viewport_col_offset(), vp_col(0));
+
+        proc.pan_right_by(vp_width(50));
+        assert_eq!(proc.terminal_state.get_viewport_col_offset(), vp_col(50));
+
+        proc.pan_left_by(vp_width(20));
+        assert_eq!(proc.terminal_state.get_viewport_col_offset(), vp_col(30));
+
+        // Saturates at col 0 when panning left further than current offset.
+        proc.pan_left_by(vp_width(100));
+        assert_eq!(proc.terminal_state.get_viewport_col_offset(), vp_col(0));
     }
 }

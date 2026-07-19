@@ -12,7 +12,7 @@
 //! - Parsing [`ANSI`] escape sequences (e.g., `ESC[5;10H`)
 //! - Working with `vt_100_pty_output_parser` module
 //!
-//! For all other terminal operations (including crossterm), use [`buffer_coords`] types
+//! For all other terminal operations (including crossterm), use [`viewport_coords`] types
 //! which are 0-based.
 //!
 //! # Core Types
@@ -51,14 +51,16 @@
 //! # Coordinate Conversion
 //!
 //! Always use explicit conversion methods:
-//! - `.to_zero_based()`: Convert to 0-based buffer coordinates
-//! - `.from_zero_based()`: Convert from 0-based buffer coordinates
+//! - `.to_zero_based()`: Convert to 0-based viewport coordinates
+//! - `.from_zero_based()`: Convert from 0-based viewport coordinates
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`buffer_coords`]: crate::coordinates::buffer_coords
 //! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
+//! [`viewport_coords`]: crate::coordinates::viewport_coords
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+
+#![rustfmt::skip]
 
 // Submodule declarations (private).
 mod csi_count;
@@ -75,3 +77,9 @@ pub use term_col_delta::*;
 pub use term_pos::*;
 pub use term_row::*;
 pub use term_row_delta::*;
+
+/// Error returned when attempting to create a VT-100 1-based coordinate or count with a
+/// value of 0.
+#[derive(thiserror::Error, Debug, miette::Diagnostic, Clone, PartialEq, Eq)]
+#[error("VT-100 coordinates and counts must be non-zero")]
+pub struct ZeroCoordinateError;

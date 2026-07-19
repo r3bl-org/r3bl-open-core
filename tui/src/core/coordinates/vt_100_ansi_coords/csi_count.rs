@@ -31,7 +31,8 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
 
-use crate::NumericConversions;
+use super::ZeroCoordinateError;
+use crate::{NumericConversions, WideningCastToUsize};
 use std::{fmt::{Display, Formatter},
           num::NonZeroU16};
 
@@ -71,8 +72,7 @@ use std::{fmt::{Display, Formatter},
 pub struct CsiCount(NonZeroU16);
 
 impl NumericConversions for CsiCount {
-    fn as_usize(&self) -> usize { self.0.get() as usize }
-    fn as_u16(&self) -> u16 { self.0.get() }
+    fn as_usize(&self) -> usize { self.0.get().as_usize_widening() }
 }
 
 impl Display for CsiCount {
@@ -84,8 +84,8 @@ impl Display for CsiCount {
 impl CsiCount {
     /// A count of 1 - the most common count value.
     ///
-    /// Use this constant instead of `CsiCount::new(1).unwrap()` to avoid
-    /// panic documentation requirements and make intent clear.
+    /// Use this constant instead of `CsiCount::new(1).expect("conversion error")` to
+    /// avoid panic documentation requirements and make intent clear.
     pub const ONE: Self = Self(NonZeroU16::MIN);
 
     /// Creates a new count from a raw value.
@@ -125,10 +125,25 @@ impl CsiCount {
     /// Gets the raw [`u16`] value (guaranteed to be `>= 1`).
     #[must_use]
     pub const fn get(self) -> u16 { self.0.get() }
+
+    /// Gets the raw [`u16`] value.
+    #[must_use]
+    pub const fn as_u16(self) -> u16 { self.0.get() }
 }
 
 impl From<NonZeroU16> for CsiCount {
-    fn from(value: NonZeroU16) -> Self { Self::from_non_zero_value(value) }
+    fn from(value: NonZeroU16) -> CsiCount { CsiCount::from_non_zero_value(value) }
+}
+
+impl TryFrom<u16> for CsiCount {
+    type Error = ZeroCoordinateError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        let Some(count) = Self::new(value) else {
+            return Err(ZeroCoordinateError);
+        };
+        Ok(count)
+    }
 }
 
 /// Creates a [`CsiCount`] from a raw value.
@@ -158,23 +173,23 @@ mod tests {
 
     #[test]
     fn test_new_non_zero_returns_some() {
-        let count = CsiCount::new(3).unwrap();
+        let count = CsiCount::new(3).expect("conversion error");
         assert_eq!(count.get(), 3);
 
-        let count2 = csi_count(5).unwrap();
+        let count2 = csi_count(5).expect("conversion error");
         assert_eq!(count2.get(), 5);
     }
 
     #[test]
     fn test_from_non_zero_value() {
-        let nz = NonZeroU16::new(7).unwrap();
+        let nz = NonZeroU16::new(7).expect("conversion error");
         let count = CsiCount::from_non_zero_value(nz);
         assert_eq!(count.get(), 7);
     }
 
     #[test]
     fn test_from_trait() {
-        let nz = NonZeroU16::new(10).unwrap();
+        let nz = NonZeroU16::new(10).expect("conversion error");
         let count: CsiCount = nz.into();
         assert_eq!(count.get(), 10);
     }
@@ -186,20 +201,20 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let count = CsiCount::new(3).unwrap();
+        let count = CsiCount::new(3).expect("conversion error");
         assert_eq!(format!("{count}"), "CsiCount(3)");
     }
 
     #[test]
     fn test_numeric_conversions() {
-        let count = CsiCount::new(100).unwrap();
+        let count = CsiCount::new(100).expect("conversion error");
         assert_eq!(count.as_usize(), 100_usize);
         assert_eq!(count.as_u16(), 100_u16);
     }
 
     #[test]
     fn test_value_returns_non_zero_u16() {
-        let count = CsiCount::new(5).unwrap();
+        let count = CsiCount::new(5).expect("conversion error");
         let nz: NonZeroU16 = count.value();
         assert_eq!(nz.get(), 5);
     }

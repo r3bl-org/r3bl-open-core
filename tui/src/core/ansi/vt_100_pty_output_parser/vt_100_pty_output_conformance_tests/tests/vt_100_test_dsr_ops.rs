@@ -6,13 +6,12 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_ofs_buf_10r_by_10c, nz};
 use crate::{
-    PtyResponseEvent, DsrRequestType, col,
+    PtyResponseEvent, DsrRequestType,
             core::ansi::{
                 constants::DSR_STATUS_OK_FULL_RESPONSE,
                 vt_100_pty_output_parser::{CsiSequence,
                                      vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::dsr_cursor_position_response},
-            },
-            row, term_col, term_row};
+            }, term_col, term_row, vp_col, vp_row};
 
 #[test]
 fn test_dsr_status_report() {
@@ -52,7 +51,7 @@ fn test_dsr_cursor_position_report() {
     let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Move cursor to position (3, 5) - 0-based internally
-    ofs_buf_vt_100.set_cursor_pos(row(3) + col(5));
+    ofs_buf_vt_100.set_cursor_pos(vp_row(3) + vp_col(5));
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
@@ -92,7 +91,7 @@ fn test_dsr_cursor_position_at_origin() {
     let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Cursor starts at (0, 0) - 0-based internally
-    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(0) + col(0));
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(0) + vp_col(0));
 
     // Send CSI 6n (cursor position report request)
     let dsr_request = format!(
@@ -146,7 +145,7 @@ fn test_multiple_dsr_requests() {
     let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
     // Move cursor to (2, 3)
-    ofs_buf_vt_100.set_cursor_pos(row(2) + col(3));
+    ofs_buf_vt_100.set_cursor_pos(vp_row(2) + vp_col(3));
 
     // Send multiple DSR requests in one sequence.
     let dsr_requests = format!(

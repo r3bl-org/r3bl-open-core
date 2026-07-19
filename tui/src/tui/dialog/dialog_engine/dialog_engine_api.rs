@@ -1,18 +1,19 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{DialogEngine, DialogEngineConfigOptions, DialogEngineMode};
+use super::{DialogEngine, DialogEngineConfig, DialogEngineMode};
 use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer,
             DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
             EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
             GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
-            KeyPress, LengthOps, MinSize, PartialFlexBox, Pos, RenderOpCommon,
-            RenderOpIR, RenderOpIRVec, RenderPipeline, Size, SpecialKey, SurfaceBounds,
-            SystemClipboard, TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
+            KeyPress, MinSize, PartialFlexBox, RangeBoundsResult,
+            RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, SpecialKey,
+            SystemClipboard, TextColorizationPolicy, TuiStyle, VPBoundingBox, VPPos,
+            VPSize, ViewportBoundsCheck, WideningCastToU8, WideningCastToU16, ZOrder,
+            c_col, c_row, ch,
             editor_engine::engine_public_api,
-            height, inline_string, ok, pc, render_tui_styled_texts_into, row,
-            throws_with_return,
+            inline_string, ok, pc, render_tui_styled_texts_into, throws_with_return,
             tui_style_attrib::{Dim, Underline},
-            tui_style_attribs, u16, usize, width};
+            tui_style_attribs, u16, vp_col, vp_height, vp_row, vp_width};
 use std::{borrow::Cow, fmt::Debug};
 
 #[derive(Debug)]
@@ -76,7 +77,10 @@ impl DialogEngineApi {
             }
         };
 
-        let (origin_pos, bounds_size) = overlay_flex_box.get_style_adjusted_pos_and_dim();
+        let VPBoundingBox {
+            origin_pos,
+            bounds_size,
+        } = overlay_flex_box.get_style_adjusted_pos_and_dim();
 
         global_data.pipeline.push(
             ZOrder::Glass,
@@ -114,12 +118,7 @@ impl DialogEngineApi {
         impl_internal::render_editor(
             origin_pos,
             bounds_size,
-            DialogEngineArgs {
-                self_id,
-                global_data,
-                engine: dialog_engine,
-                has_focus,
-            },
+            DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus),
         )?;
 
         ok!()
@@ -206,6 +205,16 @@ pub enum DisplayConstants {
     DefaultResultsPanelRowCount = 5,
 }
 
+impl WideningCastToU16 for DisplayConstants {
+    fn as_u16_widening(self) -> u16 {
+        // XMARK: Intentional numeric casting using as.
+        #[allow(clippy::as_conversions)]
+        {
+            self as u16
+        }
+    }
+}
+
 mod impl_internal {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -232,12 +241,12 @@ mod impl_internal {
     /// ```
     pub fn make_flex_box_for_dialog(
         dialog_id: FlexBoxId,
-        dialog_options: DialogEngineConfigOptions,
-        window_size: Size,
-        maybe_surface_bounds: Option<SurfaceBounds>,
+        dialog_options: DialogEngineConfig,
+        window_size: VPSize,
+        maybe_surface_bounds: Option<VPBoundingBox>,
     ) -> CommonResult<PartialFlexBox> {
         let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
-            surface_bounds.box_size
+            surface_bounds.bounds_size
         } else {
             window_size
         };
@@ -245,19 +254,20 @@ mod impl_internal {
         let surface_origin_pos = if let Some(surface_bounds) = maybe_surface_bounds {
             surface_bounds.origin_pos
         } else {
-            col(0) + row(0)
+            vp_col(0) + vp_row(0)
         };
 
         // Check to ensure that the dialog box has enough space to be displayed.
-        if window_size.col_width < width(MinSize::Col as u8)
-            || window_size.row_height < height(MinSize::Row as u8)
+        if window_size.col_width < vp_width(MinSize::Col.as_u16_widening())
+            || window_size.row_height < vp_height(MinSize::Row.as_u16_widening())
         {
+            let min_col = MinSize::Col.as_u8_widening();
+            let min_row = MinSize::Row.as_u8_widening();
+
             return CommonError::new_error_result(
                 CommonErrorType::DisplaySizeTooSmall,
                 &format!(
-                    "Window size is too small. Min size is {} cols x {} rows",
-                    MinSize::Col as u8,
-                    MinSize::Row as u8
+                    "Window size is too small. Min size is {min_col} cols x {min_row} rows"
                 ),
             );
         }
@@ -269,21 +279,29 @@ mod impl_internal {
                     let col_count = {
                         let percent =
                             pc!(DisplayConstants::DialogComponentBorderWidthPercent
-                                as u16)?;
-                        width(percent.apply_to(*surface_size.col_width))
+                                .as_u16_widening())?;
+                        vp_width(percent.apply_to(*surface_size.col_width))
                     };
-                    let row_count = height(DisplayConstants::SimpleModalRowCount as u16);
+                    let row_count = vp_height(
+                        DisplayConstants::SimpleModalRowCount.as_u16_widening(),
+                    );
                     let size = col_count + row_count;
-                    debug_assert!(size.row_height < height(MinSize::Row as u8));
+                    debug_assert!(
+                        size.row_height < vp_height(MinSize::Row.as_u16_widening())
+                    );
                     size
                 };
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col = col(*surface_size.col_width / ch(2)
-                        - *simple_dialog_size.col_width / ch(2));
-                    let origin_row = row(*surface_size.row_height / ch(2)
-                        - *simple_dialog_size.row_height / ch(2));
+                    let origin_col = vp_col(
+                        *surface_size.col_width / ch(2)
+                            - *simple_dialog_size.col_width / ch(2),
+                    );
+                    let origin_row = vp_row(
+                        *surface_size.row_height / ch(2)
+                            - *simple_dialog_size.row_height / ch(2),
+                    );
                     let mut it = origin_col + origin_row;
                     it += surface_origin_pos;
                     it
@@ -294,26 +312,34 @@ mod impl_internal {
             DialogEngineMode::ModalAutocomplete => {
                 let autocomplete_dialog_size = {
                     // Calc dialog bounds size based on window size.
-                    let row_count = height(DisplayConstants::SimpleModalRowCount as u16)
-                        + height(DisplayConstants::EmptyLine as u16)
-                        + dialog_options.result_panel_display_row_count;
+                    let row_count = vp_height(
+                        DisplayConstants::SimpleModalRowCount.as_u16_widening(),
+                    ) + vp_height(
+                        DisplayConstants::EmptyLine.as_u16_widening(),
+                    ) + dialog_options.result_panel_display_row_count;
                     let col_count = {
                         let percent =
                             pc!(DisplayConstants::DialogComponentBorderWidthPercent
-                                as u16)?;
-                        width(percent.apply_to(*surface_size.col_width))
+                                .as_u16_widening())?;
+                        vp_width(percent.apply_to(*surface_size.col_width))
                     };
                     let size = col_count + row_count;
-                    debug_assert!(size.row_height < height(MinSize::Row as u8));
+                    debug_assert!(
+                        size.row_height < vp_height(MinSize::Row.as_u16_widening())
+                    );
                     size
                 };
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col = col(*surface_size.col_width / ch(2)
-                        - *autocomplete_dialog_size.col_width / ch(2));
-                    let origin_row = row(*surface_size.row_height / ch(2)
-                        - *autocomplete_dialog_size.row_height / ch(2));
+                    let origin_col = vp_col(
+                        *surface_size.col_width / ch(2)
+                            - *autocomplete_dialog_size.col_width / ch(2),
+                    );
+                    let origin_row = vp_row(
+                        *surface_size.row_height / ch(2)
+                            - *autocomplete_dialog_size.row_height / ch(2),
+                    );
                     let mut it = origin_col + origin_row;
                     it += surface_origin_pos;
                     it
@@ -326,16 +352,18 @@ mod impl_internal {
         throws_with_return!({
             PartialFlexBox {
                 id: dialog_id,
-                style_adjusted_origin_pos: origin_pos,
-                style_adjusted_bounds_size: bounds_size,
+                style_adjusted_bounds: VPBoundingBox {
+                    origin_pos,
+                    bounds_size,
+                },
                 maybe_computed_style: None,
             }
         })
     }
 
     pub fn render_editor<S, AS>(
-        origin_pos: Pos,
-        bounds_size: Size,
+        origin_pos: VPPos,
+        bounds_size: VPSize,
         args: DialogEngineArgs<'_, S, AS>,
     ) -> CommonResult
     where
@@ -354,22 +382,22 @@ mod impl_internal {
         let maybe_style = dialog_engine.dialog_options.maybe_style_editor;
 
         let flex_box: FlexBox = {
-            let origin_pos_width = origin_pos.col_index + width(1);
-            let origin_pos_height = origin_pos.row_index + height(2);
-            let origin_pos = origin_pos_width + origin_pos_height;
+            let origin_pos = origin_pos + vp_width(1) + vp_height(2);
 
             let bounds_size_width = {
-                let it = bounds_size.col_width - width(2);
-                width(*it)
+                let it = bounds_size.col_width - vp_width(2);
+                vp_width(*it)
             };
 
-            let bounds_size_height = height(1);
+            let bounds_size_height = vp_height(1);
             let bounds_size = bounds_size_width + bounds_size_height;
 
             PartialFlexBox {
                 id: self_id,
-                style_adjusted_origin_pos: origin_pos,
-                style_adjusted_bounds_size: bounds_size,
+                style_adjusted_bounds: VPBoundingBox {
+                    origin_pos,
+                    bounds_size,
+                },
                 maybe_computed_style: maybe_style,
             }
             .into()
@@ -415,7 +443,7 @@ mod impl_internal {
 
             ops.push(RenderOpCommon::ResetColor);
             ops.push(RenderOpCommon::MoveCursorPositionAbs(
-                flex_box.style_adjusted_origin_pos,
+                flex_box.style_adjusted_bounds.origin_pos,
             ));
 
             ops.push(RenderOpIR::PaintTextWithAttributes(
@@ -438,8 +466,8 @@ mod impl_internal {
     }
 
     pub fn render_results_panel<S>(
-        origin_pos: Pos,
-        bounds_size: Size,
+        origin_pos: VPPos,
+        bounds_size: VPSize,
         dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
         state: &mut S,
@@ -471,128 +499,126 @@ mod impl_internal {
 
         pub fn paint_results(
             ops: &mut RenderOpIRVec,
-            origin_pos: Pos,
-            bounds_size: Size,
+            origin_pos: VPPos,
+            bounds_size: VPSize,
             results: &[InlineString],
             dialog_engine: &DialogEngine,
         ) {
-            let col_start_index = col(1);
+            let col_start_index = vp_col(1);
             let row_start_index =
-                row(DisplayConstants::SimpleModalRowCount as u16) - row(1);
+                vp_row(DisplayConstants::SimpleModalRowCount.as_u16_widening())
+                    - vp_row(1);
 
             let mut rel_insertion_pos = col_start_index + row_start_index;
 
-            let scroll_offset_row_index = dialog_engine.scroll_offset_row_index;
+            let vp_origin_row_index = dialog_engine.vp_origin.row_index;
             let selected_row_index = dialog_engine.selected_row_index;
 
             // Print results panel.
-            for (row_index, item) in results.iter().enumerate() {
-                let row_index = row(row_index);
+            for (row_index_usize, item) in results.iter().enumerate() {
+                let row_index = c_row(row_index_usize);
 
-                // Skip rows that are above the scroll offset.
-                if row_index < scroll_offset_row_index {
-                    continue;
-                }
+                let result_panel_height =
+                    dialog_engine.dialog_options.result_panel_display_row_count;
 
-                rel_insertion_pos.add_row(height(1));
+                match row_index
+                    .check_viewport_bounds(vp_origin_row_index, result_panel_height)
+                {
+                    RangeBoundsResult::Underflowed => {}
+                    RangeBoundsResult::Overflowed => break,
+                    RangeBoundsResult::Within => {
+                        rel_insertion_pos.add_row(vp_height(1));
 
-                let text = item.as_str();
-                let text_gcs = GCStringOwned::from(text);
-                let text_display_width = text_gcs.display_width;
+                        let text = item.as_str();
+                        let text_gcs = GCStringOwned::from(text);
+                        let text_display_width = text_gcs.display_width;
 
-                let max_display_col_count = bounds_size.col_width - width(2);
+                        let max_display_col_count = bounds_size.col_width - vp_width(2);
 
-                let clipped_text = if text_display_width > max_display_col_count {
-                    let snip_len = width(2); /* `..` */
-                    let postfix_len = width(5); /* last 5 characters */
+                        let clipped_text = if text_display_width > max_display_col_count {
+                            let snip_len = vp_width(2); /* `..` */
+                            let postfix_len = vp_width(5); /* last 5 characters */
 
-                    let lhs_start_index = col(0);
-                    let lhs_end_width = max_display_col_count - postfix_len - snip_len;
-                    let lhs_str = text_gcs.clip(lhs_start_index, lhs_end_width);
+                            let lhs_start_index = c_col(0);
+                            let lhs_end_width =
+                                max_display_col_count - postfix_len - snip_len;
+                            let lhs_str = text_gcs.clip(lhs_start_index, lhs_end_width);
 
-                    // This is calculated relative to the end of the string (not the
-                    // start!). So it's backwards.
-                    let rhs_start_index = (text_display_width - postfix_len)
-                        .convert_to_index()
-                        + col(1) /* skip one segment right */;
-                    let rhs_str = text_gcs.clip(rhs_start_index, text_display_width);
+                            // This is calculated relative to the end of the string (not
+                            // the start!). So it's backwards.
+                            let rhs_start_index = c_col(0)
+                                + (text_display_width - postfix_len)
+                                + vp_width(1) /* skip one segment right */;
+                            let rhs_str =
+                                text_gcs.clip(rhs_start_index, text_display_width);
 
-                    Cow::Owned(inline_string!("{lhs_str}..{rhs_str}"))
-                } else {
-                    Cow::Borrowed(item)
-                };
+                            Cow::Owned(inline_string!("{lhs_str}..{rhs_str}"))
+                        } else {
+                            Cow::Borrowed(item)
+                        };
 
-                let max_display_row_index = {
-                    let viewport_height =
-                        dialog_engine.dialog_options.result_panel_display_row_count;
-                    scroll_offset_row_index + viewport_height
-                };
+                        ops.push(RenderOpCommon::ResetColor);
+                        ops.push(RenderOpCommon::MoveCursorPositionRelTo(
+                            origin_pos,
+                            rel_insertion_pos,
+                        ));
 
-                if row_index >= max_display_row_index {
-                    break;
-                }
-
-                ops.push(RenderOpCommon::ResetColor);
-                ops.push(RenderOpCommon::MoveCursorPositionRelTo(
-                    origin_pos,
-                    rel_insertion_pos,
-                ));
-
-                // Set style to underline if selected row & paint.
-                if selected_row_index.eq(&row_index) {
-                    // This is the selected row.
-                    let my_selected_style =
-                        match dialog_engine.dialog_options.maybe_style_results_panel {
-                            // Update existing style.
-                            Some(mut style) => {
-                                style.attribs.underline = Some(Underline);
-                                style
+                        // Set style to underline if selected row & paint.
+                        if selected_row_index.eq(&row_index) {
+                            // This is the selected row.
+                            let my_selected_style = match dialog_engine
+                                .dialog_options
+                                .maybe_style_results_panel
+                            {
+                                // Update existing style.
+                                Some(mut style) => {
+                                    style.attribs.underline = Some(Underline);
+                                    style
+                                }
+                                // No existing style, so create a new style w/ only
+                                // underline.
+                                _ => TuiStyle {
+                                    attribs: tui_style_attribs(Underline),
+                                    ..Default::default()
+                                },
                             }
-                            // No existing style, so create a new style w/ only underline.
-                            _ => TuiStyle {
-                                attribs: tui_style_attribs(Underline),
-                                ..Default::default()
-                            },
+                            .into();
+                            // Paint the text for the row.
+                            ops.push(RenderOpCommon::ApplyColors(my_selected_style));
+                            ops.push(RenderOpIR::PaintTextWithAttributes(
+                                clipped_text.into_owned(),
+                                my_selected_style,
+                            ));
+                        } else {
+                            // Regular row, not selected.
+                            // Paint the text for the row.
+                            ops.push(RenderOpCommon::ApplyColors(
+                                dialog_engine.dialog_options.maybe_style_results_panel,
+                            ));
+                            ops.push(RenderOpIR::PaintTextWithAttributes(
+                                clipped_text.into_owned(),
+                                dialog_engine.dialog_options.maybe_style_results_panel,
+                            ));
                         }
-                        .into();
-                    // Paint the text for the row.
-                    ops.push(RenderOpCommon::ApplyColors(my_selected_style));
-                    ops.push(RenderOpIR::PaintTextWithAttributes(
-                        clipped_text.into_owned(),
-                        my_selected_style,
-                    ));
-                } else {
-                    // Regular row, not selected.
-                    // Paint the text for the row.
-                    ops.push(RenderOpCommon::ApplyColors(
-                        dialog_engine.dialog_options.maybe_style_results_panel,
-                    ));
-                    ops.push(RenderOpIR::PaintTextWithAttributes(
-                        clipped_text.into_owned(),
-                        dialog_engine.dialog_options.maybe_style_results_panel,
-                    ));
+                    }
                 }
             }
         }
     }
 
     pub fn render_title(
-        origin_pos: Pos,
-        bounds_size: Size,
+        origin_pos: VPPos,
+        bounds_size: VPSize,
         title: &str,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOpIRVec {
         let mut ops = RenderOpIRVec::new();
 
-        let row_pos = {
-            let col_index = origin_pos.col_index + 1;
-            let row_index = origin_pos.row_index + 1;
-            col_index + row_index
-        };
+        let row_pos = origin_pos + vp_col(1) + vp_row(1);
 
         let title_gcs = GCStringOwned::from(title);
         let title_content_clipped =
-            title_gcs.trunc_end_to_fit(bounds_size.col_width - width(2));
+            title_gcs.trunc_end_to_fit(bounds_size.col_width - vp_width(2));
 
         ops.push(RenderOpCommon::ResetColor);
         ops.push(RenderOpCommon::MoveCursorPositionAbs(row_pos));
@@ -641,8 +667,8 @@ mod impl_internal {
     }
 
     pub fn render_border(
-        origin_pos: Pos,
-        bounds_size: Size,
+        origin_pos: VPPos,
+        bounds_size: VPSize,
         dialog_engine: &mut DialogEngine,
     ) -> RenderOpIRVec {
         let mut ops = RenderOpIRVec::new();
@@ -667,16 +693,16 @@ mod impl_internal {
     }
 
     mod render_border_helper {
-        use super::{ColorWheel, DialogEngine, DialogEngineMode, DisplayConstants, Pos,
-                    RenderOpCommon, RenderOpIRVec, Size, TuiStyle, col,
-                    lolcat_from_style, row, u16};
-        use crate::border_cache;
+        use super::{ColorWheel, DialogEngine, DialogEngineMode, DisplayConstants,
+                    RenderOpCommon, RenderOpIRVec, TuiStyle, VPPos, VPSize,
+                    lolcat_from_style, u16};
+        use crate::{WideningCastToU16, border_cache, vp_col, vp_row};
 
         /// Renders all border lines for the dialog
         pub fn render_border_lines(
             ops: &mut RenderOpIRVec,
-            origin_pos: Pos,
-            bounds_size: Size,
+            origin_pos: VPPos,
+            bounds_size: VPSize,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
@@ -697,8 +723,8 @@ mod impl_internal {
         /// Renders a single border line at the specified row index
         fn render_single_border_line(
             ops: &mut RenderOpIRVec,
-            origin_pos: Pos,
-            bounds_size: Size,
+            origin_pos: VPPos,
+            bounds_size: VPSize,
             row_idx: u16,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
@@ -726,14 +752,12 @@ mod impl_internal {
         }
 
         /// Calculates the position for a specific row
-        fn calculate_row_position(origin_pos: Pos, row_idx: u16) -> Pos {
-            let col_index = origin_pos.col_index;
-            let row_index = origin_pos.row_index + row_idx;
-            col_index + row_index
+        fn calculate_row_position(origin_pos: VPPos, row_idx: u16) -> VPPos {
+            origin_pos + vp_row(row_idx)
         }
 
         /// Determines the type of line based on row index and bounds
-        fn determine_line_type(row_idx: u16, bounds_size: Size) -> LineType {
+        fn determine_line_type(row_idx: u16, bounds_size: VPSize) -> LineType {
             let max_row_idx = u16(*bounds_size.row_height);
             let is_first = row_idx == 0;
             let is_last = row_idx == max_row_idx - 1;
@@ -749,7 +773,7 @@ mod impl_internal {
         /// Sets up common render operations for a line
         fn setup_render_ops_for_line(
             ops: &mut RenderOpIRVec,
-            row_pos: Pos,
+            row_pos: VPPos,
             maybe_style: Option<TuiStyle>,
         ) {
             ops.push(RenderOpCommon::ResetColor);
@@ -760,7 +784,7 @@ mod impl_internal {
         /// Renders the top border line
         fn render_top_border_line(
             ops: &mut RenderOpIRVec,
-            bounds_size: Size,
+            bounds_size: VPSize,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
@@ -772,7 +796,7 @@ mod impl_internal {
         /// Renders a middle border line (vertical sides with spaces)
         fn render_middle_border_line(
             ops: &mut RenderOpIRVec,
-            bounds_size: Size,
+            bounds_size: VPSize,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
@@ -785,7 +809,7 @@ mod impl_internal {
         /// Renders the bottom border line
         fn render_bottom_border_line(
             ops: &mut RenderOpIRVec,
-            bounds_size: Size,
+            bounds_size: VPSize,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
@@ -798,8 +822,8 @@ mod impl_internal {
         /// Renders the separator line for autocomplete mode
         pub fn render_autocomplete_separator(
             ops: &mut RenderOpIRVec,
-            origin_pos: Pos,
-            bounds_size: Size,
+            origin_pos: VPPos,
+            bounds_size: VPSize,
             dialog_engine: &mut DialogEngine,
         ) {
             match dialog_engine.dialog_options.mode {
@@ -819,8 +843,8 @@ mod impl_internal {
         /// Renders the actual separator line for autocomplete mode
         fn render_separator_line(
             ops: &mut RenderOpIRVec,
-            origin_pos: Pos,
-            bounds_size: Size,
+            origin_pos: VPPos,
+            bounds_size: VPSize,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
@@ -838,9 +862,10 @@ mod impl_internal {
         }
 
         /// Calculates the position for the autocomplete separator
-        fn calculate_separator_position() -> Pos {
-            let col_start_index = col(0);
-            let row_start_index = row(DisplayConstants::SimpleModalRowCount as u16 - 1);
+        fn calculate_separator_position() -> VPPos {
+            let col_start_index = vp_col(0);
+            let row_start_index =
+                vp_row(DisplayConstants::SimpleModalRowCount.as_u16_widening() - 1);
             col_start_index + row_start_index
         }
 
@@ -873,7 +898,7 @@ mod impl_internal {
                 }
 
                 DialogEngineMode::ModalAutocomplete => {
-                    let selected_index = usize(*dialog_engine.selected_row_index);
+                    let selected_index = usize::from(dialog_engine.selected_row_index);
                     if let Some(results) = &dialog_buffer.maybe_results
                         && let Some(selected_result) = results.get(selected_index)
                     {
@@ -911,13 +936,17 @@ mod impl_internal {
         if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
         })]) {
-            if *dialog_engine.selected_row_index > ch(0) {
-                *dialog_engine.selected_row_index -= 1;
+            if dialog_engine.selected_row_index > c_row(0) {
+                dialog_engine.selected_row_index -= 1;
             }
 
-            if dialog_engine.selected_row_index < dialog_engine.scroll_offset_row_index {
-                *dialog_engine.scroll_offset_row_index -= 1;
-            }
+            let results_panel_viewport_height_row_count =
+                dialog_engine.dialog_options.result_panel_display_row_count;
+
+            dialog_engine.pan_viewport_to_keep_row_in_view(
+                dialog_engine.selected_row_index,
+                results_panel_viewport_height_row_count,
+            );
 
             return EventPropagation::ConsumedRender;
         }
@@ -926,21 +955,24 @@ mod impl_internal {
         if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Down),
         })]) {
-            let max_abs_row_index = dialog_buffer.get_results_count() - ch(1);
+            let max_abs_row_index = c_row(
+                dialog_buffer
+                    .maybe_results
+                    .as_ref()
+                    .map_or(0, |it| it.len().saturating_sub(1)),
+            );
 
             let results_panel_viewport_height_row_count =
                 dialog_engine.dialog_options.result_panel_display_row_count;
 
-            if *dialog_engine.selected_row_index < max_abs_row_index {
-                *dialog_engine.selected_row_index += 1;
+            if dialog_engine.selected_row_index < max_abs_row_index {
+                dialog_engine.selected_row_index += 1;
             }
 
-            if dialog_engine.selected_row_index
-                >= dialog_engine.scroll_offset_row_index
-                    + results_panel_viewport_height_row_count
-            {
-                *dialog_engine.scroll_offset_row_index += 1;
-            }
+            dialog_engine.pan_viewport_to_keep_row_in_view(
+                dialog_engine.selected_row_index,
+                results_panel_viewport_height_row_count,
+            );
 
             return EventPropagation::ConsumedRender;
         }
@@ -958,7 +990,7 @@ mod test_dialog_engine_api_render_engine {
     #[test]
     fn render_engine_with_no_dialog_buffer_in_state() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = width(70) + height(15);
+        let window_size = vp_width(70) + vp_height(15);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let global_data = &mut {
             let (mut it, _) = make_global_data(Some(window_size));
@@ -966,32 +998,22 @@ mod test_dialog_engine_api_render_engine {
             it
         };
         let has_focus = &mut HasFocus::default();
-        let args = DialogEngineArgs {
-            self_id,
-            global_data,
-            engine: dialog_engine,
-            has_focus,
-        };
+        let args = DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
         assert_eq2!(DialogEngineApi::render_engine(args).is_err(), true);
     }
 
     #[test]
     fn render_engine_with_dialog_buffer_in_state() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = width(70) + height(15);
+        let window_size = vp_width(70) + vp_height(15);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let global_data = &mut {
             let (it, _) = make_global_data(Some(window_size));
             it
         };
         let has_focus = &mut HasFocus::default();
-        let args = DialogEngineArgs {
-            self_id,
-            global_data,
-            engine: dialog_engine,
-            has_focus,
-        };
-        DialogEngineApi::render_engine(args).unwrap();
+        let args = DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
+        DialogEngineApi::render_engine(args).expect("conversion error");
         let render_ops = global_data.pipeline.get(&ZOrder::Glass);
         assert!(!render_ops.is_empty());
     }
@@ -1008,7 +1030,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     #[test]
     fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
-        let window_size = Size::default();
+        let window_size = VPSize::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.
@@ -1021,22 +1043,31 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //   },
         let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             dialog_id,
-            DialogEngineConfigOptions {
+            DialogEngineConfig {
                 mode: DialogEngineMode::ModalSimple,
                 ..Default::default()
             },
             window_size,
-            Some(SurfaceBounds::from(&surface)),
+            Some(surface.bounds),
         ));
 
         // Assert that a general `CommonError` is returned.
         let my_err = result_flex_box.err();
-        // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
-        assert_eq2!(my_err.as_ref().unwrap().is::<CommonError>(), true);
+        // More info on downcast_ref::<T>(): https://doc.rust-lang.org/book/ch17-02-trait-objects.html
+        assert_eq2!(
+            my_err
+                .as_ref()
+                .expect("conversion error")
+                .is::<CommonError>(),
+            true
+        );
 
         // Assert that this specific error is returned.
         let result = matches!(
-            my_err.as_ref().unwrap().downcast_ref::<CommonError>(),
+            my_err
+                .as_ref()
+                .expect("conversion error")
+                .downcast_ref::<CommonError>(),
             Some(CommonError {
                 error_type: CommonErrorType::DisplaySizeTooSmall,
                 error_message: _,
@@ -1052,7 +1083,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     #[test]
     fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
         let surface = Surface::default();
-        let window_size = Size::default();
+        let window_size = VPSize::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.
@@ -1065,22 +1096,31 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //   },
         let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             dialog_id,
-            DialogEngineConfigOptions {
+            DialogEngineConfig {
                 mode: DialogEngineMode::ModalAutocomplete,
                 ..Default::default()
             },
             window_size,
-            Some(SurfaceBounds::from(&surface)),
+            Some(surface.bounds),
         ));
 
         // Assert that a general `CommonError` is returned.
         let my_err = result_flex_box.err();
-        // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
-        assert_eq2!(my_err.as_ref().unwrap().is::<CommonError>(), true);
+        // More info on downcast_ref::<T>(): https://doc.rust-lang.org/book/ch17-02-trait-objects.html
+        assert_eq2!(
+            my_err
+                .as_ref()
+                .expect("conversion error")
+                .is::<CommonError>(),
+            true
+        );
 
         // Assert that this specific error is returned.
         let result = matches!(
-            my_err.as_ref().unwrap().downcast_ref::<CommonError>(),
+            my_err
+                .as_ref()
+                .expect("conversion error")
+                .downcast_ref::<CommonError>(),
             Some(CommonError {
                 error_type: CommonErrorType::DisplaySizeTooSmall,
                 error_message: _,
@@ -1095,30 +1135,38 @@ mod test_dialog_api_make_flex_box_for_dialog {
         // 1. The surface and window_size are not the same width and height.
         // 2. The surface is also not starting from the top left corner of the window.
         let surface = Surface {
-            origin_pos: col(2) + row(2),
-            box_size: width(65) + height(10),
+            bounds: VPBoundingBox {
+                origin_pos: (vp_col(2) + vp_row(2)),
+                bounds_size: vp_width(65) + vp_height(10),
+            },
             ..Default::default()
         };
-        let window_size = width(70) + height(15);
+        let window_size = vp_width(70) + vp_height(15);
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             self_id,
-            DialogEngineConfigOptions {
+            DialogEngineConfig {
                 mode: DialogEngineMode::ModalSimple,
                 ..Default::default()
             },
             window_size,
-            Some(SurfaceBounds::from(&surface)),
+            Some(surface.bounds),
         ));
 
         assert_eq2!(result_flex_box.is_ok(), true);
 
-        let flex_box = result_flex_box.unwrap();
+        let flex_box = result_flex_box.expect("conversion error");
         assert_eq2!(flex_box.id, self_id);
-        assert_eq2!(flex_box.style_adjusted_bounds_size, width(58) + height(4));
-        assert_eq2!(flex_box.style_adjusted_origin_pos, col(5) + row(5));
+        assert_eq2!(
+            flex_box.style_adjusted_bounds.bounds_size,
+            vp_width(58) + vp_height(4)
+        );
+        assert_eq2!(
+            flex_box.style_adjusted_bounds.origin_pos,
+            (vp_col(5) + vp_row(5))
+        );
     }
 
     #[test]
@@ -1126,30 +1174,38 @@ mod test_dialog_api_make_flex_box_for_dialog {
         // 1. The surface and window_size are not the same width and height.
         // 2. The surface is also not starting from the top left corner of the window.
         let surface = Surface {
-            origin_pos: col(2) + row(2),
-            box_size: width(65) + height(10),
+            bounds: VPBoundingBox {
+                origin_pos: (vp_col(2) + vp_row(2)),
+                bounds_size: vp_width(65) + vp_height(10),
+            },
             ..Default::default()
         };
-        let window_size = width(70) + height(15);
+        let window_size = vp_width(70) + vp_height(15);
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
             self_id,
-            DialogEngineConfigOptions {
+            DialogEngineConfig {
                 mode: DialogEngineMode::ModalAutocomplete,
                 ..Default::default()
             },
             window_size,
-            Some(SurfaceBounds::from(&surface)),
+            Some(surface.bounds),
         ));
 
         assert_eq2!(result_flex_box.is_ok(), true);
 
-        let flex_box = result_flex_box.unwrap();
+        let flex_box = result_flex_box.expect("conversion error");
         assert_eq2!(flex_box.id, self_id);
-        assert_eq2!(flex_box.style_adjusted_bounds_size, width(58) + height(10));
-        assert_eq2!(flex_box.style_adjusted_origin_pos, col(5) + row(2));
+        assert_eq2!(
+            flex_box.style_adjusted_bounds.bounds_size,
+            vp_width(58) + vp_height(10)
+        );
+        assert_eq2!(
+            flex_box.style_adjusted_bounds.origin_pos,
+            (vp_col(5) + vp_row(2))
+        );
     }
 }
 
@@ -1171,7 +1227,7 @@ mod test_dialog_engine_api_apply_event {
                 dialog_engine,
                 input_event,
             )
-            .unwrap()
+            .expect("conversion error")
         );
         assert!(matches!(
             response,
@@ -1192,7 +1248,7 @@ mod test_dialog_engine_api_apply_event {
                 dialog_engine,
                 input_event
             )
-            .unwrap()
+            .expect("conversion error")
         );
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
             &response
@@ -1218,12 +1274,12 @@ mod test_dialog_engine_api_apply_event {
                 dialog_engine,
                 input_event
             )
-            .unwrap()
+            .expect("conversion error")
         );
         if let DialogEngineApplyResponse::UpdateEditorBuffer = &response {
             let editor_content = state
                 .get_mut_dialog_buffer(self_id)
-                .unwrap()
+                .expect("conversion error")
                 .editor_buffer
                 .get_as_string_with_comma_instead_of_newlines();
             assert_eq2!(editor_content, "a");

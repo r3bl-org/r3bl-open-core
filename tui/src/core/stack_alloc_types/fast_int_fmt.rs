@@ -5,6 +5,7 @@
 //! See [`macro@crate::convert_u16_to_ascii_str_slice`] and
 //! [`macro@crate::convert_usize_to_ascii_str_slice`] for the primary public API.
 
+use crate::{LossyConvertToByte, NarrowingCastToU8};
 use std::debug_assert_matches;
 
 /// A highly optimized macro that takes a [`u16`] and returns a temporary `&str` slice
@@ -112,7 +113,7 @@ pub mod usize_impl {
         }
 
         while num_copy > 0 && index > 0 {
-            let digit = u8::try_from(num_copy % 10).unwrap_or(0);
+            let digit = (num_copy % 10).as_u8_narrowing();
             result[index] = b'0' + digit; // Convert digit to ASCII character
             num_copy /= 10;
             index -= 1;
@@ -148,7 +149,9 @@ pub mod usize_impl {
             clippy::unwrap_used,
             reason = "Numbers are mathematically guaranteed to be valid UTF-8"
         )]
-        result_str.unwrap().trim_start_matches(char::from(0))
+        result_str
+            .expect("conversion error")
+            .trim_start_matches(char::from(0))
     }
 
     /// This is just a sanity check done in the debug release to makes sure that the
@@ -221,7 +224,7 @@ pub mod u16_impl {
         }
 
         while num_copy > 0 {
-            let digit = (num_copy % 10) as u8;
+            let digit = (num_copy % 10).to_u8_lossy();
             result[index] = b'0' + digit; // Convert digit to ASCII character
             num_copy /= 10;
             index = index.saturating_sub(1);
@@ -268,7 +271,9 @@ pub mod u16_impl {
             clippy::unwrap_used,
             reason = "Numbers are mathematically guaranteed to be valid UTF-8"
         )]
-        result_str.unwrap().trim_start_matches(char::from(0))
+        result_str
+            .expect("conversion error")
+            .trim_start_matches(char::from(0))
     }
 }
 

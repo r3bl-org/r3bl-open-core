@@ -1,40 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Flat1DSimd, Flat1DSimdMut, address_translation};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, Pos, RangeBoundsExt, RangeExt,
-            RangeValidityStatus, RowIndex};
-use std::ops::Range;
+use super::{Flat1DSimd, Flat1DSimdMut};
+use crate::{
+    c_row, ArrayBoundsCheck, ArrayOverflowResult, CRow, RangeBoundsExt, RangeExclusive,
+    RangeExt, RangeValidityStatus, VPLength,
+};
+use std::cmp::{max, min};
 
 impl<T> Flat1DSimd<'_, T> {
     /// Returns the raw contiguous slice for aggressive loop vectorization.
     #[must_use]
     pub fn as_raw_slice(&self) -> &[T] { self.data }
-
-    /// Helper to calculate the 2D coordinates from a 1D index.
-    ///
-    /// This is the exact inverse of [`address_translation::pos_to_index`]. It is
-    /// primarily used during [SIMD] fast-path diffing, where the algorithm iterates
-    /// linearly over the 1D slice, finds a difference at a specific 1D `index`, and needs
-    /// to know the corresponding `(row, col)` coordinate to issue a terminal cursor
-    /// movement command.
-    ///
-    /// Delegates to [`address_translation::index_to_pos`].
-    ///
-    /// [`address_translation::index_to_pos`]:
-    ///     crate::core::common::flat_2d_array::address_translation::index_to_pos
-    /// [`address_translation::pos_to_index`]:
-    ///     crate::core::common::flat_2d_array::address_translation::pos_to_index
-    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
-    #[inline]
-    #[must_use]
-    pub fn get_pos_from_index(&self, index: usize) -> Option<Pos> {
-        address_translation::index_to_pos(index, self.width, self.height)
-    }
-}
-
-impl<T> Flat1DSimdMut<'_, T> {
-    /// Returns the raw contiguous slice for aggressive loop vectorization.
-    pub fn as_raw_mut_slice(&mut self) -> &mut [T] { self.data }
 }
 
 impl<T: Copy> Flat1DSimdMut<'_, T> {
@@ -48,8 +24,8 @@ impl<T: Copy> Flat1DSimdMut<'_, T> {
     /// [`slice::copy_within`]: slice::copy_within
     pub fn copy_within_rows(
         &mut self,
-        src_row_range: Range<RowIndex>,
-        dest_row_start_idx: RowIndex,
+        src_row_range: RangeExclusive<CRow>,
+        dest_row_start_idx: CRow,
     ) {
         let dest_row_range = {
             let num_rows = src_row_range.end - src_row_range.start;
@@ -81,6 +57,95 @@ impl<T: Copy> Flat1DSimdMut<'_, T> {
 
         self.data.copy_within(src_range, dest_offset_start_idx);
     }
+
+    /// Shifts rows up within the specified range by a given amount, filling vacated rows
+    /// with `empty_char`.
+    ///
+    /// # Example
+    ///
+    /// Calling `shift_rows_up(c_row(1)..c_row(4), vp_len(1), empty_char)`:
+    ///
+    /// ```text
+    /// Before:                           After shift_rows_up
+    ///        ┌──────────┐                     ┌──────────┐
+    ///  row 0 │  Row 0   │               row 0 │  Row 0   │
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 1 │  Row 1   │ ◄─ start = 1  row 1 │  Row 2   │ shifted up
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 2 │  Row 2   │               row 2 │  Row 3   │ shifted up
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 3 │  Row 3   │               row 3 │  empty   │ vacated & filled w/ empty_char
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 4 │  Row 4   │ ◄─ end = 4    row 4 │  Row 4   │
+    ///        └──────────┘                     └──────────┘
+    /// ```
+    pub fn shift_rows_up(
+        &mut self,
+        row_range: RangeExclusive<CRow>,
+        amount: VPLength,
+        empty_char: T,
+    ) {
+        let clamped_range = row_range.clamp_range_to(self.height);
+
+        if amount.is_empty() || clamped_range.is_empty() {
+            return;
+        }
+
+        let start = clamped_range.start.as_usize();
+        let end = clamped_range.end.as_usize();
+
+        let row_range_to_copy = c_row(start + amount.as_usize())..c_row(end);
+        let start_idx = c_row(start);
+        self.copy_within_rows(row_range_to_copy, start_idx);
+
+        let fill_start = max(start, end.saturating_sub(amount.as_usize()));
+        self.fill_rows(c_row(fill_start)..c_row(end), empty_char);
+    }
+
+    /// Shifts rows down within the specified range by a given amount, filling vacated
+    /// rows with `empty_char`.
+    ///
+    /// # Example
+    ///
+    /// Calling `shift_rows_down(c_row(1)..c_row(4), vp_len(1), empty_char)`:
+    ///
+    /// ```text
+    /// Before:                           After shift_rows_down
+    ///        ┌──────────┐                     ┌──────────┐
+    ///  row 0 │  Row 0   │               row 0 │  Row 0   │
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 1 │  Row 1   │ ◄─ start = 1  row 1 │  empty   │ vacated & filled w/ empty_char
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 2 │  Row 2   │               row 2 │  Row 1   │ shifted down
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 3 │  Row 3   │               row 3 │  Row 2   │ shifted down
+    ///        ├──────────┤                     ├──────────┤
+    ///  row 4 │  Row 4   │ ◄─ end = 4    row 4 │  Row 4   │
+    ///        └──────────┘                     └──────────┘
+    /// ```
+    pub fn shift_rows_down(
+        &mut self,
+        row_range: RangeExclusive<CRow>,
+        amount: VPLength,
+        empty_char: T,
+    ) {
+        let clamped_range = row_range.clamp_range_to(self.height);
+
+        if amount.is_empty() || clamped_range.is_empty() {
+            return;
+        }
+
+        let start = clamped_range.start.as_usize();
+        let end = clamped_range.end.as_usize();
+
+        let row_range_to_copy =
+            c_row(start)..c_row(end.saturating_sub(amount.as_usize()));
+        let start_idx = c_row(start + amount.as_usize());
+        self.copy_within_rows(row_range_to_copy, start_idx);
+
+        let fill_end = min(start + amount.as_usize(), end);
+        self.fill_rows(c_row(start)..c_row(fill_end), empty_char);
+    }
 }
 
 impl<T: Clone> Flat1DSimdMut<'_, T> {
@@ -91,7 +156,7 @@ impl<T: Clone> Flat1DSimdMut<'_, T> {
     /// See [`Flat1DSimd`] for more details.
     ///
     /// [`slice::fill`]: slice::fill
-    pub fn fill_rows(&mut self, row_range: Range<RowIndex>, val: T) {
+    pub fn fill_rows(&mut self, row_range: RangeExclusive<CRow>, val: T) {
         let is_invalid = row_range.check_range_is_valid_for_length(self.height)
             != RangeValidityStatus::Valid;
         if is_invalid {
@@ -172,7 +237,7 @@ impl<T: Clone> Flat1DSimdMut<'_, T> {
     ///
     /// [`slice::split_at_mut`]: slice::split_at_mut
     /// [`slice::swap_with_slice`]: slice::swap_with_slice
-    pub fn swap_rows(&mut self, row_1: RowIndex, row_2: RowIndex) {
+    pub fn swap_rows(&mut self, row_1: CRow, row_2: CRow) {
         // If the two row indices are the same, there's nothing to swap, so we can return
         // early.
         if row_1 == row_2 {
@@ -215,192 +280,194 @@ impl<T: Clone> Flat1DSimdMut<'_, T> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{Flat2DArray, Flat2DArrayError, col, height, row, width};
-
-    #[test]
-    fn test_get_pos_from_index() {
-        let grid = Flat2DArray::<i32>::new_empty((width(3), height(3)), 0);
-        let simd = grid.as_simd();
-
-        // First row
-        assert_eq!(simd.get_pos_from_index(0), Some(row(0) + col(0)));
-        assert_eq!(simd.get_pos_from_index(1), Some(row(0) + col(1)));
-        assert_eq!(simd.get_pos_from_index(2), Some(row(0) + col(2)));
-
-        // Second row
-        assert_eq!(simd.get_pos_from_index(3), Some(row(1) + col(0)));
-        assert_eq!(simd.get_pos_from_index(4), Some(row(1) + col(1)));
-        assert_eq!(simd.get_pos_from_index(5), Some(row(1) + col(2)));
-
-        // Third row
-        assert_eq!(simd.get_pos_from_index(6), Some(row(2) + col(0)));
-        assert_eq!(simd.get_pos_from_index(7), Some(row(2) + col(1)));
-        assert_eq!(simd.get_pos_from_index(8), Some(row(2) + col(2)));
-
-        // Out of bounds
-        assert_eq!(simd.get_pos_from_index(9), None);
-        assert_eq!(simd.get_pos_from_index(100), None);
-    }
+    use crate::{CHeight, CSize, CWidth, Flat2DArray, c_row};
 
     #[test]
     fn test_copy_within_rows() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
         // Row 0: [1, 2]
-        let _ = grid.try_set(row(0) + col(0), 1);
-        let _ = grid.try_set(row(0) + col(1), 2);
+        grid[c_row(0)][0] = 1;
+        grid[c_row(0)][1] = 2;
         // Row 1: [3, 4]
-        let _ = grid.try_set(row(1) + col(0), 3);
-        let _ = grid.try_set(row(1) + col(1), 4);
+        grid[c_row(1)][0] = 3;
+        grid[c_row(1)][1] = 4;
 
         // Copy Row 0 to Row 2
-        grid.as_simd_mut().copy_within_rows(row(0)..row(1), row(2));
+        grid.as_simd_mut()
+            .copy_within_rows(c_row(0)..c_row(1), c_row(2));
 
         // Row 2 should now be [1, 2]
-        assert_eq!(grid.try_get(row(2) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(2) + col(1)), Ok(&2));
+        assert_eq!(grid[c_row(2)][0], 1);
+        assert_eq!(grid[c_row(2)][1], 2);
 
         // Row 1 should still be [3, 4]
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&3));
+        assert_eq!(grid[c_row(1)][0], 3);
     }
 
     #[test]
     fn test_fill_rows() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
 
         // Fill Row 1
-        grid.as_simd_mut().fill_rows(row(1)..row(2), 99);
+        grid.as_simd_mut().fill_rows(c_row(1)..c_row(2), 99);
 
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&0));
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&99));
-        assert_eq!(grid.try_get(row(1) + col(1)), Ok(&99));
-        assert_eq!(grid.try_get(row(2) + col(0)), Ok(&0));
+        assert_eq!(grid[c_row(0)][0], 0);
+        assert_eq!(grid[c_row(1)][0], 99);
+        assert_eq!(grid[c_row(1)][1], 99);
+        assert_eq!(grid[c_row(2)][0], 0);
     }
 
     #[test]
     fn test_zero_dimensions() {
-        let mut grid = Flat2DArray::new_empty((width(0), height(0)), 0);
+        let grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(0usize), CHeight::from(0usize))),
+            0,
+        );
         assert_eq!(grid.as_simd().as_raw_slice().len(), 0);
-        assert_eq!(
-            grid.try_set(row(0) + col(0), 1),
-            Err(Flat2DArrayError::OutOfBounds)
-        );
-        assert_eq!(
-            grid.try_get(row(0) + col(0)),
-            Err(Flat2DArrayError::OutOfBounds)
-        );
     }
 
     #[test]
     fn test_copy_within_rows_overlapping() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
         // Row 0: [1, 2], Row 1: [3, 4], Row 2: [5, 6]
-        let _ = grid.try_set(row(0) + col(0), 1);
-        let _ = grid.try_set(row(0) + col(1), 2);
-        let _ = grid.try_set(row(1) + col(0), 3);
-        let _ = grid.try_set(row(1) + col(1), 4);
-        let _ = grid.try_set(row(2) + col(0), 5);
-        let _ = grid.try_set(row(2) + col(1), 6);
+        grid[c_row(0)][0] = 1;
+        grid[c_row(0)][1] = 2;
+        grid[c_row(1)][0] = 3;
+        grid[c_row(1)][1] = 4;
+        grid[c_row(2)][0] = 5;
+        grid[c_row(2)][1] = 6;
 
         // Copy Row 0..2 (Rows 0 and 1) to Row 1..3 (Rows 1 and 2)
-        grid.as_simd_mut().copy_within_rows(row(0)..row(2), row(1));
+        grid.as_simd_mut()
+            .copy_within_rows(c_row(0)..c_row(2), c_row(1));
 
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(2) + col(0)), Ok(&3));
+        assert_eq!(grid[c_row(0)][0], 1);
+        assert_eq!(grid[c_row(1)][0], 1);
+        assert_eq!(grid[c_row(2)][0], 3);
     }
 
     #[test]
     fn test_copy_within_rows_out_of_bounds() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
-        let _ = grid.try_set(row(0) + col(0), 1);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
+        grid[c_row(0)][0] = 1;
 
         // Source out of bounds
-        grid.as_simd_mut().copy_within_rows(row(0)..row(4), row(1)); // Should not panic
+        grid.as_simd_mut()
+            .copy_within_rows(c_row(0)..c_row(4), c_row(1)); // Should not panic
 
         // Destination out of bounds
-        grid.as_simd_mut().copy_within_rows(row(0)..row(1), row(3)); // Should not panic
+        grid.as_simd_mut()
+            .copy_within_rows(c_row(0)..c_row(1), c_row(3)); // Should not panic
 
         // Inverse range (start > end)
-        grid.as_simd_mut().copy_within_rows(row(2)..row(1), row(0)); // Should not panic
+        grid.as_simd_mut()
+            .copy_within_rows(c_row(2)..c_row(1), c_row(0)); // Should not panic
 
         // Grid should remain unmodified
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&0));
+        assert_eq!(grid[c_row(0)][0], 1);
+        assert_eq!(grid[c_row(1)][0], 0);
     }
 
     #[test]
     fn test_fill_rows_out_of_bounds() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
 
         // Out of bounds end
-        grid.as_simd_mut().fill_rows(row(1)..row(5), 99); // Should not panic
+        grid.as_simd_mut().fill_rows(c_row(1)..c_row(5), 99); // Should not panic
 
         // Inverse range
-        grid.as_simd_mut().fill_rows(row(2)..row(1), 99); // Should not panic
+        grid.as_simd_mut().fill_rows(c_row(2)..c_row(1), 99); // Should not panic
 
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&0)); // Remained 0
+        assert_eq!(grid[c_row(1)][0], 0); // Remained 0
     }
 
     #[test]
     fn test_fill_all() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(2)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(2usize))),
+            0,
+        );
         grid.as_simd_mut().fill_all(42);
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&42));
-        assert_eq!(grid.try_get(row(1) + col(1)), Ok(&42));
+        assert_eq!(grid[c_row(0)][0], 42);
+        assert_eq!(grid[c_row(1)][1], 42);
     }
 
     #[test]
     fn test_swap_rows() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
         // Row 0: [1, 2]
-        let _ = grid.try_set(row(0) + col(0), 1);
-        let _ = grid.try_set(row(0) + col(1), 2);
+        grid[c_row(0)][0] = 1;
+        grid[c_row(0)][1] = 2;
         // Row 1: [3, 4]
-        let _ = grid.try_set(row(1) + col(0), 3);
-        let _ = grid.try_set(row(1) + col(1), 4);
+        grid[c_row(1)][0] = 3;
+        grid[c_row(1)][1] = 4;
         // Row 2: [5, 6]
-        let _ = grid.try_set(row(2) + col(0), 5);
-        let _ = grid.try_set(row(2) + col(1), 6);
+        grid[c_row(2)][0] = 5;
+        grid[c_row(2)][1] = 6;
 
-        // Swap row 0 and 2
-        grid.as_simd_mut().swap_rows(row(0), row(2));
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&5));
-        assert_eq!(grid.try_get(row(0) + col(1)), Ok(&6));
-        assert_eq!(grid.try_get(row(2) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(2) + col(1)), Ok(&2));
+        // Swap c_row 0 and 2
+        grid.as_simd_mut().swap_rows(c_row(0), c_row(2));
+        assert_eq!(grid[c_row(0)][0], 5);
+        assert_eq!(grid[c_row(0)][1], 6);
+        assert_eq!(grid[c_row(2)][0], 1);
+        assert_eq!(grid[c_row(2)][1], 2);
         // Row 1 unchanged
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&3));
+        assert_eq!(grid[c_row(1)][0], 3);
 
-        // Swap row 2 and 1 (reverse order params)
-        grid.as_simd_mut().swap_rows(row(2), row(1));
-        assert_eq!(grid.try_get(row(1) + col(0)), Ok(&1)); // formerly row 2
-        assert_eq!(grid.try_get(row(2) + col(0)), Ok(&3)); // formerly row 1
+        // Swap c_row 2 and 1 (reverse order params)
+        grid.as_simd_mut().swap_rows(c_row(2), c_row(1));
+        assert_eq!(grid[c_row(1)][0], 1); // formerly c_row 2
+        assert_eq!(grid[c_row(2)][0], 3); // formerly c_row 1
     }
 
     #[test]
     fn test_swap_rows_out_of_bounds() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
-        let _ = grid.try_set(row(0) + col(0), 1);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
+        grid[c_row(0)][0] = 1;
 
         // Should not panic, just return early
-        grid.as_simd_mut().swap_rows(row(0), row(5));
-        grid.as_simd_mut().swap_rows(row(5), row(0));
+        grid.as_simd_mut().swap_rows(c_row(0), c_row(5));
+        grid.as_simd_mut().swap_rows(c_row(5), c_row(0));
 
         // Array unchanged
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&1));
+        assert_eq!(grid[c_row(0)][0], 1);
     }
 
     #[test]
     fn test_swap_rows_same_row() {
-        let mut grid = Flat2DArray::new_empty((width(2), height(3)), 0);
-        let _ = grid.try_set(row(0) + col(0), 1);
-        let _ = grid.try_set(row(0) + col(1), 2);
+        let mut grid = Flat2DArray::new_empty(
+            CSize::from((CWidth::from(2usize), CHeight::from(3usize))),
+            0,
+        );
+        grid[c_row(0)][0] = 1;
+        grid[c_row(0)][1] = 2;
 
         // Should not panic, just return early
-        grid.as_simd_mut().swap_rows(row(0), row(0));
+        grid.as_simd_mut().swap_rows(c_row(0), c_row(0));
 
         // Array unchanged
-        assert_eq!(grid.try_get(row(0) + col(0)), Ok(&1));
-        assert_eq!(grid.try_get(row(0) + col(1)), Ok(&2));
+        assert_eq!(grid[c_row(0)][0], 1);
+        assert_eq!(grid[c_row(0)][1], 2);
     }
 }

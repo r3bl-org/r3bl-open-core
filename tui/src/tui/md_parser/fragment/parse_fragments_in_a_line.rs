@@ -380,8 +380,8 @@ mod tests_parse_fragment {
     #[test]
     fn test_parse_fragment_plaintext_unicode() {
         let result = parse_fragment_plain_text_no_new_line("- straight😃\n");
-        let remainder = result.as_ref().unwrap().0;
-        let output = result.as_ref().unwrap().1;
+        let remainder = result.as_ref().expect("conversion error").0;
+        let output = result.as_ref().expect("conversion error").1;
         assert_eq2!(remainder, "\n");
         assert_eq2!(output, "- straight😃");
     }

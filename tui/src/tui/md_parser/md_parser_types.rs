@@ -97,7 +97,9 @@ mod impl_hyperlink_data {
     }
 
     impl<'a> From<(&'a str, &'a str)> for HyperlinkData<'a> {
-        fn from((text, url): (&'a str, &'a str)) -> Self { Self { text, url } }
+        fn from((text, url): (&'a str, &'a str)) -> HyperlinkData<'a> {
+            HyperlinkData { text, url }
+        }
     }
 }
 
@@ -107,11 +109,11 @@ pub struct HeadingLevel {
 }
 
 impl From<HeadingLevel> for usize {
-    fn from(other: HeadingLevel) -> Self { other.level }
+    fn from(other: HeadingLevel) -> usize { other.level }
 }
 
 impl From<usize> for HeadingLevel {
-    fn from(size: usize) -> Self { HeadingLevel { level: size } }
+    fn from(size: usize) -> HeadingLevel { HeadingLevel { level: size } }
 }
 
 #[derive(Debug, PartialEq, Clone)]

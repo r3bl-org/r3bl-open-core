@@ -1,12 +1,13 @@
 # Claude Code Instructions for r3bl-build-infra
 
-This crate provides CLI tools for the r3bl workspace. After making code changes, you **must** reinstall the binaries for the changes to take effect.
+This crate provides CLI tools for the r3bl workspace. After making code changes, you
+**must** reinstall the binary for the changes to take effect.
 
 ## Important: Binary Installation Workflow
 
 This crate provides command-line tools (binaries) that are installed to `~/.cargo/bin`:
-- `cargo-rustdoc-fmt` - Format markdown tables and links in rustdoc comments
-- Other utility commands
+
+- `cargo-rustdoc-fmt`: Format markdown tables and links in rustdoc comments
 
 ### After Making Code Changes
 
@@ -34,20 +35,26 @@ cargo install --path build-infra --force
 When working on changes to this crate, follow this workflow:
 
 1. **Make code changes**
+
 2. **Run tests to verify logic:**
-   ```bash
-   cargo test --lib
-   cargo test --all-targets
-   ```
+
+    ```bash
+    cargo test --lib
+    cargo test --all-targets
+    ```
+
 3. **Install the updated binary:**
-   ```bash
-   cargo install --path . --force
-   ```
+
+    ```bash
+    cargo install --path . --force
+    ```
+
 4. **Test the installed binary:**
-   ```bash
-   # Example: test cargo-rustdoc-fmt on an actual file
-   cd .. && cargo rustdoc-fmt tui/src/some/file.rs
-   ```
+
+    ```bash
+    # Test cargo-rustdoc-fmt on an actual file
+    cd .. && cargo rustdoc-fmt tui/src/some/file.rs
+    ```
 
 ## Development Guidelines
 
@@ -66,6 +73,7 @@ After making changes, run these checks in order:
 ### Module Organization
 
 Follow the standard Rust module organization:
+
 - Private implementation modules
 - Public re-exports in `mod.rs` for clean API
 - See root `AGENTS.md` for general Rust guidelines
@@ -82,17 +90,17 @@ Follow the standard Rust module organization:
 ```
 build-infra/
 ├── src/
-│   ├── bin/                    # Binary entry points
+│   ├── bin/                             # Binary entry points
 │   │   └── cargo-rustdoc-fmt.rs
-│   ├── cargo_rustdoc_fmt/      # cargo-rustdoc-fmt implementation
-│   │   ├── cli_arg.rs          # CLI argument parsing
-│   │   ├── processor.rs        # File processing orchestration
-│   │   ├── extractor.rs        # Rustdoc block extraction
-│   │   ├── link_converter.rs   # Link conversion and aggregation
-│   │   ├── table_formatter.rs  # Markdown table formatting
-│   │   └── validation_tests/   # Integration tests with fixtures
-│   └── common/                 # Shared utilities
-└── tests/                      # Integration tests
+│   ├── cargo_rustdoc_fmt/               # cargo-rustdoc-fmt implementation
+│   │   ├── cli_arg.rs                   # CLI argument parsing
+│   │   ├── processor.rs                 # File processing orchestration
+│   │   ├── extractor.rs                 # Rustdoc block extraction
+│   │   ├── link_converter.rs            # Link conversion and aggregation
+│   │   ├── table_formatter.rs           # Markdown table formatting
+│   │   └── validation_tests/            # Integration tests with fixtures
+│   └── common/                          # Shared utilities
+└── tests/                               # Integration tests
 ```
 
 ## Skipping Files
@@ -107,16 +115,19 @@ CSI, ANSI) which would be incorrectly linkified.
 ### Binary Not Using Latest Code?
 
 Check which binary is being executed:
+
 ```bash
 which cargo-rustdoc-fmt
 ls -la ~/.cargo/bin/cargo-rustdoc-fmt
 ```
 
 Compare the timestamp with your last code change. If it's older, run:
+
 ```bash
 cargo install --path . --force
 ```
 
 ### Test Shows Different Behavior Than Binary?
 
-This usually means you forgot to run `cargo install`. Tests use the compiled code directly from `target/`, but the binary in `~/.cargo/bin` is a separate file.
+This usually means you forgot to run `cargo install`. Tests use the compiled code directly
+from `target/`, but the binary in `~/.cargo/bin` is a separate file.

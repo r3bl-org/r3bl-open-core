@@ -67,13 +67,14 @@
 //! - Eliminates reallocation overhead
 //! - Perfect for [`OfsBuf`] which knows terminal dimensions
 //!
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`RenderOpIR`]: crate::RenderOpIR
 
 #[cfg(test)]
 mod pixel_char_benchmarks {
     extern crate test;
-    use crate::{PixelChar, RgbValue, SPACER_GLYPH_CHAR, TuiColor, TuiStyle};
+    use crate::{NarrowingCastToU8, PixelChar, RgbValue, SPACER_GLYPH_CHAR, TuiColor,
+                TuiStyle, WideningCastToUsize};
     use smallvec::SmallVec;
     use test::Bencher;
 
@@ -82,13 +83,12 @@ mod pixel_char_benchmarks {
     type PixelCharVec = Vec<PixelChar>;
 
     // Helper to create test pixel chars.
-    #[allow(clippy::cast_possible_truncation)]
     fn create_test_pixel_chars(count: usize) -> Vec<PixelChar> {
         let mut chars = Vec::with_capacity(count);
         for i in 0..count {
             let ch = match i % 3 {
                 0 => PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle {
                         color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
                         color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0))),
@@ -114,7 +114,7 @@ mod pixel_char_benchmarks {
             let mut line = PixelCharSmallVec::new();
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle::default(),
                 };
                 line.push(ch);
@@ -130,7 +130,7 @@ mod pixel_char_benchmarks {
             let mut line = PixelCharVec::new();
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle::default(),
                 };
                 line.push(ch);
@@ -146,7 +146,7 @@ mod pixel_char_benchmarks {
             let mut line = PixelCharVec::with_capacity(80);
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle::default(),
                 };
                 line.push(ch);
@@ -274,7 +274,7 @@ mod pixel_char_benchmarks {
             let mut line = PixelCharSmallVec::new();
             for i in 0..8 {
                 line.push(PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle::default(),
                 });
             }
@@ -289,7 +289,7 @@ mod pixel_char_benchmarks {
             let mut line = PixelCharVec::new();
             for i in 0..8 {
                 line.push(PixelChar::PlainText {
-                    display_char: ((i % 26) as u8 + b'a') as char,
+                    display_char: char::from((i.as_u8_narrowing() % 26) + b'a'),
                     style: TuiStyle::default(),
                 });
             }
@@ -310,7 +310,11 @@ mod pixel_char_benchmarks {
             for ch in &line {
                 match ch {
                     PixelChar::PlainText { display_char, .. } => {
-                        count += *display_char as usize;
+                        // Dummy operation to prevent the compiler from optimizing the
+                        // loop away. By interacting with the
+                        // inner enum data, the compiler is forced to
+                        // actually load the `PixelChar` from memory and execute the loop.
+                        count += u32::from(*display_char).as_usize_widening();
                     }
                     _ => count += 1,
                 }
@@ -331,7 +335,11 @@ mod pixel_char_benchmarks {
             for ch in &line {
                 match ch {
                     PixelChar::PlainText { display_char, .. } => {
-                        count += *display_char as usize;
+                        // Dummy operation to prevent the compiler from optimizing the
+                        // loop away. By interacting with the
+                        // inner enum data, the compiler is forced to
+                        // actually load the `PixelChar` from memory and execute the loop.
+                        count += u32::from(*display_char).as_usize_widening();
                     }
                     _ => count += 1,
                 }

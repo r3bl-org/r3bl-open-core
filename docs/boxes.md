@@ -213,3 +213,12 @@ Provide a quick reference for Unicode box-drawing characters commonly used in AS
  │ Yes │     │ No  │
  └─────┘     └─────┘
 ```
+
+## External Unicode Reference Links
+
+- [Box Drawing Characters](https://symbl.cc/en/unicode/blocks/box-drawing/)
+- [Arrows and Arrow Symbols](https://symbl.cc/en/unicode/blocks/arrows/)
+- [Brackets Collection](https://symbl.cc/en/collections/brackets/)
+- [Crosses Collection](https://symbl.cc/en/collections/crosses/)
+- [Miscellaneous Symbols and Arrows](https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/)
+

@@ -2,11 +2,11 @@
 
 use super::tasks::orchestrator::spawn_orchestrator_task;
 use crate::{CaptureFlag, ControlledChildTerminationHandle, DefaultPtySize, DefaultSize,
-            InputEventSenderHalf, OutputEventReceiverHalf, PtyCommand,
-            PtyInputEvent, PtyOrchestratorHandle, PtyOutputEvent, PtyPair, Size};
+            InputEventSenderHalf, OutputEventReceiverHalf, PtyCommand, PtyInputEvent,
+            PtyOrchestratorHandle, PtyOutputEvent, PtyPair, VPSize};
 use miette::{IntoDiagnostic, miette};
-use std::{collections::HashMap,
-          ops::{Add, AddAssign},
+use rustc_hash::FxHashMap;
+use std::{ops::{Add, AddAssign},
           path::PathBuf};
 
 /// Builder for configuring and spawning [`PTY`] sessions.
@@ -73,7 +73,7 @@ pub struct PtySessionBuilder {
     pub cli_args: Vec<String>,
 
     /// Environment variables to set for the child process.
-    pub env_vars: HashMap<String, String>,
+    pub env_vars: FxHashMap<String, String>,
 
     /// Optional working directory for the child process.
     ///
@@ -99,7 +99,7 @@ mod impl_pty_session_builder {
             Self {
                 command: command.into(),
                 cli_args: Vec::new(),
-                env_vars: HashMap::new(),
+                env_vars: FxHashMap::default(),
                 maybe_cwd: None,
                 config: DefaultPtySessionConfig.into(),
             }
@@ -398,9 +398,6 @@ pub struct PtySession {
     pub child_process_termination_handle: ControlledChildTerminationHandle,
 }
 
-// XMARK: Clever Rust, use of `impl Into<PtySessionConfig>` for elegant constructor config
-// options.
-
 /// Configuration for a [`PTY`] session.
 ///
 /// This struct holds the final resolved state of all configuration options. While this
@@ -438,13 +435,12 @@ pub struct PtySessionConfig {
     /// See [`PtySessionConfigOption::CaptureOutput`] for details.
     pub capture_output: CaptureFlag,
 
-
     /// The initial window size for the [`PTY`].
     ///
     /// See [`PtySessionConfigOption::Size`] for details.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub pty_size: Size,
+    pub pty_size: VPSize,
 }
 
 /// Marker struct that provides the default [`PtySessionConfig`].
@@ -480,7 +476,9 @@ mod impl_default_pty_session_config {
 
     /// Convert [`DefaultPtySessionConfig`] marker to [`PtySessionConfig`].
     impl From<DefaultPtySessionConfig> for PtySessionConfig {
-        fn from(_: DefaultPtySessionConfig) -> Self { DefaultPtySessionConfig::default() }
+        fn from(_: DefaultPtySessionConfig) -> PtySessionConfig {
+            DefaultPtySessionConfig::default()
+        }
     }
 }
 
@@ -534,18 +532,19 @@ pub enum PtySessionConfigOption {
     /// [`Exit`]: crate::PtyOutputEvent::Exit
     NoCaptureOutput,
 
-
     /// Specify the initial window size ([`rows`] and [`columns`]) for the [`PTY`].
     ///
     /// Correct sizing is essential for **`TUI`** applications like `htop` or
     /// `vim` to render their interface properly within the available terminal
     /// area.
     ///
-    /// [`columns`]: crate::ColWidth
+    /// [`columns`]: crate::VPWidth
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`rows`]: crate::RowHeight
-    Size(Size),
+    /// [`rows`]: crate::VPHeight
+    Size(VPSize),
 }
+
+// XMARK: Elegant Constructor DSL.
 
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
 ///
@@ -558,6 +557,15 @@ pub enum PtySessionConfigOption {
 /// into [`PtySessionConfig`], and [`Add`] traits to combine them with `+`. This is what
 /// allows [`PtySessionBuilder::with_config`] to accept multiple types of inputs via
 /// [`impl Into<PtySessionConfig>`].
+///
+/// # Architecture: Constructor DSL Tokens vs Storage Types
+///
+/// 1. **Constructor DSL Tokens / Inputs** ([`PtySessionConfigOption`],
+///    [`DefaultPtySessionConfig`]):
+///    - Token types passed to configure session options or compose with `+`.
+///
+/// 2. **Canonical Storage Struct** ([`PtySessionConfig`]):
+///    - Aggregates resolved [`PTY`] session flags, size, and settings.
 ///
 /// See [`PtySessionBuilder`] docs for a full usage example.
 ///
@@ -630,13 +638,14 @@ mod impl_elegant_constructor_dsl_pattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{height, size, width};
+    use crate::{vp_height, vp_width};
 
     #[test]
     fn test_default_config() {
         let config = PtySessionConfig::from(DefaultPtySessionConfig);
         assert_eq!(config.capture_osc, CaptureFlag::NoCapture);
-        assert_eq!(config.capture_output, CaptureFlag::Capture);    }
+        assert_eq!(config.capture_output, CaptureFlag::Capture);
+    }
 
     #[test]
     fn test_option_combination() {
@@ -659,7 +668,7 @@ mod tests {
         assert_eq!(config.capture_output, CaptureFlag::NoCapture);
 
         // DefaultPtySessionConfig + three options.
-        let sz = size(width(80) + height(24));
+        let sz = vp_width(80) + vp_height(24);
         let config = DefaultPtySessionConfig
             + PtySessionConfigOption::CaptureOsc
             + PtySessionConfigOption::CaptureOutput
@@ -675,7 +684,7 @@ mod tests {
         config += PtySessionConfigOption::CaptureOsc;
         assert_eq!(config.capture_osc, CaptureFlag::Capture);
 
-        let sz = size(width(100) + height(50));
+        let sz = vp_width(100) + vp_height(50);
         let config = config
             + PtySessionConfigOption::Size(sz)
             + PtySessionConfigOption::NoCaptureOutput;
@@ -686,7 +695,7 @@ mod tests {
 
     #[test]
     fn test_default_with_size() {
-        let sz = size(width(120) + height(60));
+        let sz = vp_width(120) + vp_height(60);
         let config = DefaultPtySessionConfig + PtySessionConfigOption::Size(sz);
         assert_eq!(config.pty_size, sz);
         assert_eq!(config.capture_output, CaptureFlag::Capture); // Default
@@ -695,7 +704,7 @@ mod tests {
 
     #[test]
     fn test_builder_pattern() {
-        let sz = size(width(80) + height(24));
+        let sz = vp_width(80) + vp_height(24);
         let builder = PtySessionBuilder::new("bash")
             .cli_args(["-c", "ls"])
             .cli_arg("-la")
@@ -710,9 +719,18 @@ mod tests {
 
         assert_eq!(builder.command, "bash");
         assert_eq!(builder.cli_args, vec!["-c", "ls", "-la"]);
-        assert_eq!(builder.env_vars.get("KEY1").unwrap(), "VAL1");
-        assert_eq!(builder.env_vars.get("KEY2").unwrap(), "VAL2");
-        assert_eq!(builder.env_vars.get("KEY3").unwrap(), "VAL3");
+        assert_eq!(
+            builder.env_vars.get("KEY1").expect("conversion error"),
+            "VAL1"
+        );
+        assert_eq!(
+            builder.env_vars.get("KEY2").expect("conversion error"),
+            "VAL2"
+        );
+        assert_eq!(
+            builder.env_vars.get("KEY3").expect("conversion error"),
+            "VAL3"
+        );
         assert_eq!(builder.maybe_cwd, Some(PathBuf::from("/tmp")));
         assert_eq!(builder.config.pty_size, sz);
         assert_eq!(builder.config.capture_osc, CaptureFlag::Capture);
@@ -753,10 +771,16 @@ mod tests {
         impl_start::enable_osc_sequences(&mut builder);
 
         assert_eq!(
-            builder.env_vars.get("CARGO_TERM_PROGRESS_WHEN").unwrap(),
+            builder
+                .env_vars
+                .get("CARGO_TERM_PROGRESS_WHEN")
+                .expect("conversion error"),
             "always"
         );
-        assert_eq!(builder.env_vars.get("TERM").unwrap(), "xterm-256color");
+        assert_eq!(
+            builder.env_vars.get("TERM").expect("conversion error"),
+            "xterm-256color"
+        );
     }
 
     #[allow(clippy::unnecessary_get_then_check)]
@@ -767,10 +791,16 @@ mod tests {
             .with_config(DefaultPtySessionConfig + PtySessionConfigOption::CaptureOsc);
 
         assert_eq!(
-            builder.env_vars.get("CARGO_TERM_PROGRESS_WHEN").unwrap(),
+            builder
+                .env_vars
+                .get("CARGO_TERM_PROGRESS_WHEN")
+                .expect("conversion error"),
             "always"
         );
-        assert_eq!(builder.env_vars.get("TERM").unwrap(), "xterm-256color");
+        assert_eq!(
+            builder.env_vars.get("TERM").expect("conversion error"),
+            "xterm-256color"
+        );
 
         // with_config(NoCaptureOsc) should NOT trigger the side effect.
         let builder = PtySessionBuilder::new("cargo")

@@ -209,7 +209,7 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
         .copied()
         .collect::<Vec<_>>()
         .try_into()
-        .unwrap()
+        .expect("conversion error")
 }
 
 /// This is a special set of chars called `set_3`.
@@ -230,7 +230,7 @@ fn get_sp_char_set_3<'a>() -> [&'a str; 7] {
         .copied()
         .collect::<Vec<_>>()
         .try_into()
-        .unwrap()
+        .expect("conversion error")
 }
 
 fn check_input_starts_with<'a>(input: &'a str, char_set: &[&'a str]) -> Option<&'a str> {
@@ -261,7 +261,7 @@ mod tests {
         {
             let input = "hello\0\0\0world";
             let (remainder, content) =
-                parse_fragment_plain_text_no_new_line(input).unwrap();
+                parse_fragment_plain_text_no_new_line(input).expect("conversion error");
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "\0\0\0world");
         }
@@ -270,7 +270,7 @@ mod tests {
         {
             let input = "hello\n\0\0\0world";
             let (remainder, content) =
-                parse_fragment_plain_text_no_new_line(input).unwrap();
+                parse_fragment_plain_text_no_new_line(input).expect("conversion error");
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "\n\0\0\0world");
         }
@@ -279,7 +279,7 @@ mod tests {
         {
             let input = "hello world\0\0\0";
             let (remainder, content) =
-                parse_fragment_plain_text_no_new_line(input).unwrap();
+                parse_fragment_plain_text_no_new_line(input).expect("conversion error");
             assert_eq2!(content, "hello world");
             assert_eq2!(remainder, "\0\0\0");
         }

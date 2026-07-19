@@ -220,7 +220,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`ESC`]: crate::EscSequence
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`OfsBuf`]: crate::OfsBuf
+//! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`Perform`]: vte::Perform
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput

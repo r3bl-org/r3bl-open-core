@@ -81,19 +81,21 @@ impl Deref for PtyControlledChildExitStatus {
 }
 
 impl From<portable_pty::ExitStatus> for PtyControlledChildExitStatus {
-    fn from(it: portable_pty::ExitStatus) -> Self { Self { inner: it } }
+    fn from(it: portable_pty::ExitStatus) -> PtyControlledChildExitStatus {
+        PtyControlledChildExitStatus { inner: it }
+    }
 }
 
 impl From<u32> for PtyControlledChildExitStatus {
-    fn from(code: u32) -> Self {
-        Self {
+    fn from(code: u32) -> PtyControlledChildExitStatus {
+        PtyControlledChildExitStatus {
             inner: portable_pty::ExitStatus::with_exit_code(code),
         }
     }
 }
 
 impl From<PtyControlledChildExitStatus> for std::process::ExitStatus {
-    fn from(status: PtyControlledChildExitStatus) -> Self {
+    fn from(status: PtyControlledChildExitStatus) -> std::process::ExitStatus {
         status.pty_to_std_exit_status()
     }
 }
@@ -117,42 +119,23 @@ impl PtyControlledChildExitStatus {
 
         if self.inner.success() {
             // Success case: use explicit success status
-            #[cfg(unix)]
-            return std::process::ExitStatus::from_raw(0);
-            #[cfg(windows)]
             return std::process::ExitStatus::from_raw(0);
         }
-        // Failure case: encode exit code properly
-        let code = self.inner.exit_code();
 
-        // Ensure we don't overflow when shifting for Unix wait status format.
-        let wait_status = if code <= 255 {
-            #[allow(clippy::cast_possible_wrap)]
-            let code_i32 = code as i32;
-            #[cfg(unix)]
-            {
-                code_i32 << 8
-            }
-            #[cfg(windows)]
-            {
-                code_i32
-            }
-        } else {
-            // If exit code is too large, clamp to 255 and encode.
-            #[cfg(unix)]
-            {
-                255_i32 << 8
-            }
-            #[cfg(windows)]
-            {
-                255_i32
-            }
-        };
+        // Failure case: encode exit code properly. Standard exit codes max out at 255.
+        let clamped = self.inner.exit_code().min(255);
 
         #[cfg(unix)]
-        return std::process::ExitStatus::from_raw(wait_status);
+        {
+            // On Unix, the exit code is packed into the second byte (bits 8-15) of the
+            // wait status.
+            std::process::ExitStatus::from_raw(i32::try_from(clamped).unwrap_or(255) << 8)
+        }
         #[cfg(windows)]
-        return std::process::ExitStatus::from_raw(wait_status as u32);
+        {
+            // On Windows, the exit code is stored directly as a 32-bit DWORD.
+            std::process::ExitStatus::from_raw(u32::try_from(clamped).unwrap_or(255))
+        }
     }
 }
 

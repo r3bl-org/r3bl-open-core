@@ -9,7 +9,7 @@
 
 use super::super::{conformance_data::{basic_sequences, cursor_sequences},
                    test_fixtures_vt_100_ansi_conformance::*};
-use crate::{col, row, CsiCount, PixelChar, TermCol, TermRow};
+use crate::{CsiCount, PixelChar, TermCol, TermRow, vp_col, vp_row};
 
 #[test]
 fn test_basic_delete_char_integration() {
@@ -19,15 +19,26 @@ fn test_basic_delete_char_integration() {
     let text_sequence = basic_sequences::insert_text("ABCDEF");
     let _write_result = ofs_buf_vt_100.apply_ansi_bytes(text_sequence);
 
-    // Move to position 4 (letter 'D') and delete it using sequence builder
+    // Move to position 3 ('C') and delete 2 characters using sequence builder
     let delete_sequence = basic_sequences::move_and_delete_chars(
-        TermCol::from_raw_non_zero_value(nz(4)),
-        CsiCount::ONE,
+        TermCol::from_raw_non_zero_value(nz(3)),
+        CsiCount::from_non_zero_value(nz(2)),
     );
     let _result = ofs_buf_vt_100.apply_ansi_bytes(delete_sequence);
 
-    // Should now read "ABCEF " (D deleted, chars shifted left, blank at end)
-    assert_line_content(&ofs_buf_vt_100, 0, "ABCEF ");
+    // Should now read "ABEF" (C and D deleted)
+    let actual: String = ofs_buf_vt_100
+        .get_primary_buffer()
+        .get_row(vp_row(0))
+        .expect("conversion error")
+        .iter()
+        .take(4)
+        .map(|pixel_char| match pixel_char {
+            PixelChar::PlainText { display_char, .. } => *display_char,
+            PixelChar::Spacer | PixelChar::Void => ' ',
+        })
+        .collect();
+    assert_eq!(actual, "ABEF", "Expected 'ABEF', got: '{actual}'");
 }
 
 #[test]
@@ -38,7 +49,7 @@ fn test_basic_insert_char_integration() {
     let text_sequence = basic_sequences::insert_text("HELLO");
     let _write_result = ofs_buf_vt_100.apply_ansi_bytes(text_sequence);
 
-    // Move to position 3 and insert a blank character using sequence builder
+    // Move to position 3 ('L') and insert a space using sequence builder
     let insert_sequence = basic_sequences::move_and_insert_chars(
         TermCol::from_raw_non_zero_value(nz(3)),
         CsiCount::ONE,
@@ -46,7 +57,10 @@ fn test_basic_insert_char_integration() {
     let _result = ofs_buf_vt_100.apply_ansi_bytes(insert_sequence);
 
     // Should now read "HE LLO" (blank inserted at position 3)
-    let actual: String = ofs_buf_vt_100.ofs_buf.get_row(0).unwrap()
+    let actual: String = ofs_buf_vt_100
+        .get_primary_buffer()
+        .get_row(vp_row(0))
+        .expect("conversion error")
         .iter()
         .take(6) // "HE LLO" is 6 chars
         .map(|pixel_char| match pixel_char {
@@ -73,7 +87,10 @@ fn test_basic_erase_char_integration() {
     let _result = ofs_buf_vt_100.apply_ansi_bytes(erase_sequence);
 
     // Should now read "HE LO" (L erased to blank, no shifting)
-    let actual: String = ofs_buf_vt_100.ofs_buf.get_row(0).unwrap()
+    let actual: String = ofs_buf_vt_100
+        .get_primary_buffer()
+        .get_row(vp_row(0))
+        .expect("conversion error")
         .iter()
         .take(5) // "HE LO" is 5 chars
         .map(|pixel_char| match pixel_char {
@@ -98,5 +115,5 @@ fn test_basic_vpa_integration() {
     let _result = ofs_buf_vt_100.apply_ansi_bytes(vpa_sequence);
 
     // Should be at row 2 (0-based), column 6 (0-based)
-    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), row(2) + col(6));
+    assert_eq!(ofs_buf_vt_100.get_cursor_pos(), vp_row(2) + vp_col(6));
 }

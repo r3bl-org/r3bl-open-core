@@ -14,7 +14,8 @@
 //! [`ESC`]: crate::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{CsiSequence, PixelChar, PrivateModeType, col, row, term_col, term_row};
+use crate::{CsiSequence, PixelChar, PrivateModeType, term_col, term_row, vp_col, vp_row};
+use std::cmp::min;
 
 /// Tests for basic TAB character (0x09) functionality.
 /// The current implementation uses fixed 8-column tab stops.
@@ -26,13 +27,13 @@ pub mod basic_tab_operations {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
         // Start at column 0 (origin)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(0));
 
         // Send TAB character
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should move to column 8 (next 8-column tab stop)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(8));
     }
 
     #[test]
@@ -48,13 +49,13 @@ pub mod basic_tab_operations {
             }
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(3));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(3));
 
         // Send TAB character
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should move to column 8 (next 8-column tab stop)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(8));
     }
 
     #[test]
@@ -70,13 +71,13 @@ pub mod basic_tab_operations {
             }
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(8));
 
         // Send TAB character
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should move to column 16 (next 8-column tab stop)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(16));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(16));
     }
 
     #[test]
@@ -84,15 +85,18 @@ pub mod basic_tab_operations {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_20r_by_20c();
 
         // Start at column 0
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(0));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(0));
 
         // Send multiple TAB characters
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t\t\t");
 
         // Should move through tab stops: 0 → 8 → 16 → 24
         // But buffer is only 20 columns wide, so clamp to max column index 19
-        let expected_col = std::cmp::min(24, 20 - 1); // 19
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(expected_col));
+        let expected_col = min(24, 20 - 1); // 19
+        assert_eq!(
+            ofs_buf_vt_100.get_cursor_pos().col_index,
+            vp_col(expected_col)
+        );
     }
 
     #[test]
@@ -108,14 +112,14 @@ pub mod basic_tab_operations {
             }
         );
         let _result = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(9));
 
         // Send TAB character
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should clamp to rightmost column (next tab stop would be 16, but buffer is only
         // 10 wide)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(9)); // Stays at max valid column
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(9)); // Stays at max valid column
     }
 
     #[test]
@@ -127,10 +131,13 @@ pub mod basic_tab_operations {
 
         // Check cursor position (ABC = 3 chars, tab moves to column 8, DEF = 3 more
         // chars)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(11)); // 8 + 3 = 11
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(11)); // 8 + 3 = 11
 
         // Verify the text placement
-        let first_row = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
+        let first_row = ofs_buf_vt_100
+            .get_primary_buffer()
+            .get_row(vp_row(0))
+            .expect("conversion error");
 
         // Check text positions: "ABC" at 0-2, "DEF" at 8-10
         if let PixelChar::PlainText { display_char, .. } = &first_row[0] {
@@ -173,7 +180,7 @@ pub mod basic_tab_operations {
                 }
             );
             let _result = ofs_buf_vt_100.apply_ansi_bytes(move_sequence);
-            assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(start_col));
+            assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(start_col));
 
             // Send TAB
             let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
@@ -181,7 +188,7 @@ pub mod basic_tab_operations {
             // Verify expected position
             assert_eq!(
                 ofs_buf_vt_100.get_cursor_pos().col_index,
-                col(expected_col),
+                vp_col(expected_col),
                 "Tab from column {} should move to column {}, but cursor is at column {}",
                 start_col,
                 expected_col,
@@ -213,7 +220,7 @@ pub mod tab_edge_cases {
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should remain at last valid column
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(9));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(9));
     }
 
     #[test]
@@ -243,7 +250,7 @@ pub mod tab_edge_cases {
         let _result = ofs_buf_vt_100.apply_ansi_bytes("\t");
 
         // Should move to column 8, but stay within bounds
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(8));
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(8));
     }
 
     #[test]
@@ -257,12 +264,18 @@ pub mod tab_edge_cases {
         // Verify final cursor position
         // "AB" (cols 0-1) → TAB (col 8) → "CD" (cols 8-9) → CR (col 0) → LF (next line) →
         // TAB (col 8) → "EF" (cols 8-9)
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, row(1)); // Second row
-        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, col(10)); // After "EF" at tab position
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().row_index, vp_row(1)); // Second row
+        assert_eq!(ofs_buf_vt_100.get_cursor_pos().col_index, vp_col(10)); // After "EF" at tab position
 
         // Verify content placement
-        let first_row = &ofs_buf_vt_100.ofs_buf.get_row(0).unwrap();
-        let second_row = &ofs_buf_vt_100.ofs_buf.get_row(1).unwrap();
+        let first_row = &ofs_buf_vt_100
+            .get_primary_buffer()
+            .get_row(vp_row(0))
+            .expect("conversion error");
+        let second_row = &ofs_buf_vt_100
+            .get_primary_buffer()
+            .get_row(vp_row(1))
+            .expect("conversion error");
 
         // First row: "AB" at 0-1, "CD" at 8-9
         if let PixelChar::PlainText { display_char, .. } = &first_row[0] {

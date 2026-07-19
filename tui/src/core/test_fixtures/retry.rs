@@ -77,7 +77,7 @@ macro_rules! retry_until_success_test {
         })
     };
     ($body:block) => {
-        $crate::retry_until_success_test!(2, $body)
+        retry_until_success_test!(2, $body)
     };
 }
 
@@ -128,7 +128,7 @@ macro_rules! retry_until_success_test_async {
             })
     };
     ($body:block) => {
-        $crate::retry_until_success_test_async!(2, $body)
+        retry_until_success_test_async!(2, $body)
     };
 }
 

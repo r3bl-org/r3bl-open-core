@@ -490,7 +490,8 @@
 //! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
 
 use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
-use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
+use crate::{ASCII_DEL, ByteOffset, KeyState, NarrowingCastToU8, WideningCastToU16,
+            byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
@@ -697,7 +698,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
     }
 
     // Convert to character
-    let ch = second as char;
+    let ch = char::from(second);
 
     Some((
         VT100InputEventIR::Keyboard {
@@ -919,7 +920,7 @@ mod helpers {
                 // 0*10+1=1 → 1*10+2=12 → 12*10+3=123.
                 acc_numeric_param = acc_numeric_param
                     .saturating_mul(10)
-                    .saturating_add(u16::from(byte - ASCII_DIGIT_0));
+                    .saturating_add((byte - ASCII_DIGIT_0).as_u16_widening());
             } else if byte == ANSI_PARAM_SEPARATOR {
                 // Semicolon: parameter separator.
                 params.push(acc_numeric_param);
@@ -1044,10 +1045,9 @@ mod helpers {
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    #[allow(clippy::cast_possible_truncation)]
     fn extract_modifier_parameter(param: u16) -> u8 {
         debug_assert!(param <= 255, "Modifier parameter out of range: {param}");
-        param as u8
+        param.as_u8_narrowing()
     }
 
     /// Decode [`CSI`] modifier parameter (1-8) to [`VT100KeyModifiersIR`].
@@ -1397,7 +1397,8 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -1422,7 +1423,8 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Right,
@@ -1448,7 +1450,8 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Up,
@@ -1477,7 +1480,8 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Down,
@@ -1502,7 +1506,8 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Left,
@@ -1527,7 +1532,8 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Left,
@@ -1647,7 +1653,8 @@ mod tests {
     #[test]
     fn test_f1_key() {
         let input = function_key_sequence(1, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -1663,7 +1670,8 @@ mod tests {
     #[test]
     fn test_f6_key() {
         let input = function_key_sequence(6, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -1680,7 +1688,8 @@ mod tests {
     fn test_f12_key() {
         // Build F12 sequence (ANSI code 24) using generator
         let input = function_key_sequence(12, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -1703,7 +1712,8 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -1729,7 +1739,8 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),

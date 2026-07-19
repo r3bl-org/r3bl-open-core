@@ -123,7 +123,7 @@ pub fn is_command_available(command_name: &str) -> bool {
 ///
 /// async fn check() {
 ///     let package_name = "bash";
-///     let is_installed = check_if_package_is_installed(package_name).await.unwrap();
+///     let is_installed = check_if_package_is_installed(package_name).await.expect("conversion error");
 ///     assert!(is_installed);
 /// }
 /// ```
@@ -179,7 +179,7 @@ pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result
 ///
 /// async fn install() {
 ///     let package_name = "tree";
-///     install_package(package_name).await.unwrap();
+///     install_package(package_name).await.expect("conversion error");
 /// }
 /// ```
 ///
@@ -226,12 +226,12 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
     if command_result.status.success() {
         ok!()
     } else {
-        miette::bail!(
+        Err(miette::miette!(
             "Failed to install package '{}' with {}: {:?}",
             package_name,
             cmd,
             String::from_utf8_lossy(&command_result.stderr)
-        );
+        ))
     }
 }
 

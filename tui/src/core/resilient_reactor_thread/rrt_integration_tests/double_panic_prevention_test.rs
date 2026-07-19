@@ -30,8 +30,8 @@
 //! 4. [`drop()`] attempts to lock the poisoned mutex.
 //!   - If [`drop()`] is poison-safe (uses [`into_inner()`]), it restores the terminal and
 //!     returns.
-//!   - If [`drop()`] is NOT poison-safe (uses `mutex.lock().unwrap()`), a **Double Panic
-//!     Abort** occurs, and the process exits with [`SIGABRT`] (134).
+//!   - If [`drop()`] is NOT poison-safe (uses `mutex.lock().expect("conversion error")`),
+//!     a **Double Panic Abort** occurs, and the process exits with [`SIGABRT`] (134).
 //!
 //! # Run with:
 //!
@@ -52,7 +52,7 @@
 use crate::{CaughtPanicResult, ChannelCapacity, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
             GLYPH_FAILURE, GLYPH_SUCCESS, InputDevice, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, extract_panic_message,
-            generate_pty_test, height, width};
+            generate_pty_test, vp_height, vp_width};
 use std::{panic::catch_unwind, process::exit};
 use tokio::sync::broadcast;
 
@@ -121,7 +121,7 @@ fn controlled() {
         let (output_device, _) = OutputDevice::new_mock();
         let input_device = InputDevice::new_mock(smallvec::smallvec![]);
         let (shutdown_sender, _) = broadcast::channel::<()>(1);
-        let test_size = width(100) + height(100);
+        let test_size = vp_width(100) + vp_height(100);
 
         let (readline, _) = Readline::try_new(
             "> ".into(),

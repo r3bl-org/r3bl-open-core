@@ -101,7 +101,9 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::ZeroCopyGapBuffer;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, LINE_FEED_BYTE, LengthOps, NULL_BYTE, RangeBoundsExt, RangeValidityStatus, RowIndex, SegIndex, byte_index, len, ok, seg_length};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
+            LINE_FEED_BYTE, NULL_BYTE, RangeBoundsExt, RangeValidityStatus, byte_index,
+            c_len, ok};
 use miette::{Result, miette};
 use std::ops::Range;
 
@@ -126,18 +128,18 @@ impl ZeroCopyGapBuffer {
     /// - Segment rebuilding fails
     pub fn delete_grapheme_at(
         &mut self,
-        arg_line_index: impl Into<RowIndex>,
-        arg_seg_index: impl Into<SegIndex>,
+        arg_line_index: impl Into<CRow>,
+        arg_seg_index: impl Into<CIndex>,
     ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
-        let seg_index: SegIndex = arg_seg_index.into();
+        let line_index: CRow = arg_line_index.into();
+        let seg_index: CIndex = arg_seg_index.into();
         // Validate line index.
         let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
         // Validate segment index using sophisticated bounds checking.
-        let segments_count = seg_length(line_info.grapheme_segments.len());
+        let segments_count = c_len(line_info.grapheme_segments.len());
         if seg_index.overflows(segments_count) == ArrayOverflowResult::Overflowed {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
@@ -181,25 +183,25 @@ impl ZeroCopyGapBuffer {
     /// - Segment rebuilding fails
     pub fn delete_range(
         &mut self,
-        arg_line_index: impl Into<RowIndex>,
-        arg_start_seg: impl Into<SegIndex>,
-        arg_end_seg: impl Into<SegIndex>,
+        arg_line_index: impl Into<CRow>,
+        arg_start_seg: impl Into<CIndex>,
+        arg_end_seg: impl Into<CIndex>,
     ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
-        let start_seg: SegIndex = arg_start_seg.into();
-        let end_seg: SegIndex = arg_end_seg.into();
+        let line_index: CRow = arg_line_index.into();
+        let start_seg: CIndex = arg_start_seg.into();
+        let end_seg: CIndex = arg_end_seg.into();
         // Validate line index.
         let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        let delete_range: Range<SegIndex> = start_seg..end_seg;
-        let segments_count = seg_length(line_info.grapheme_segments.len());
+        let delete_range: Range<CIndex> = start_seg..end_seg;
+        let segments_count = c_len(line_info.grapheme_segments.len());
 
         if delete_range.check_range_is_valid_for_length(segments_count)
             != RangeValidityStatus::Valid
         {
-            if start_seg >= end_seg {
+            if delete_range.is_empty() {
                 return ok!(); // Empty range - nothing to delete
             }
             return Err(miette!(
@@ -263,11 +265,11 @@ impl ZeroCopyGapBuffer {
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn delete_bytes_at_range(
         &mut self,
-        arg_line_index: impl Into<RowIndex>,
+        arg_line_index: impl Into<CRow>,
         arg_start_index: impl Into<ByteIndex>,
         arg_end_index: impl Into<ByteIndex>,
     ) -> Result<()> {
-        let line_index: RowIndex = arg_line_index.into();
+        let line_index: CRow = arg_line_index.into();
         let start_index: ByteIndex = arg_start_index.into();
         let end_index: ByteIndex = arg_end_index.into();
         // Get line info and validate line index.
@@ -305,7 +307,8 @@ impl ZeroCopyGapBuffer {
         }
 
         // Extract values needed for buffer operations before mutable operations.
-        let num_deleted_chars = len((end_index - start_index).as_usize());
+        let num_deleted_bytes =
+            crate::byte_len(end_index.as_usize() - start_index.as_usize());
         let delete_start = line_info.buffer_start + ByteOffset::from(start_index);
         let current_content_len = line_info.content_byte_len;
         let buffer_pos = line_info.buffer_start;
@@ -315,8 +318,8 @@ impl ZeroCopyGapBuffer {
             // Content remains after deletion - need to shift.
             let move_from = (buffer_pos + ByteOffset::from(end_index)).as_usize();
             let move_to = delete_start.as_usize();
-            let remaining_content = current_content_len.remaining_from(end_index);
-            let move_len = remaining_content.as_usize();
+            let remaining_content = current_content_len.as_usize() - end_index.as_usize();
+            let move_len = remaining_content;
 
             // Move content (including the newline).
             for i in 0..=move_len {
@@ -325,7 +328,9 @@ impl ZeroCopyGapBuffer {
         }
 
         // Calculate new content length after deletion.
-        let new_content_len = current_content_len - num_deleted_chars;
+        let new_content_len = crate::byte_len(
+            current_content_len.as_usize() - num_deleted_bytes.as_usize(),
+        );
 
         // Place newline at new end position.
         let newline_pos = buffer_pos.as_usize() + new_content_len.as_usize();
@@ -334,9 +339,7 @@ impl ZeroCopyGapBuffer {
         // Fill the freed space with null bytes.
         let null_start = newline_pos + 1;
         let null_end = buffer_pos.as_usize() + current_content_len.as_usize() + 1;
-        for i in null_start..null_end {
-            self.buffer[i] = NULL_BYTE;
-        }
+        self.buffer[null_start..null_end].fill(NULL_BYTE);
 
         // Update line metadata.
         let line_info_mut = self.get_line_info_mut(line_index).ok_or_else(|| {
@@ -360,183 +363,195 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{row, seg_index};
+    use crate::{c_index, c_row};
 
     #[test]
     fn test_delete_at_grapheme() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert initial text.
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
+            .expect("conversion error");
 
         // Delete the space (index 5).
-        buffer.delete_grapheme_at(row(0), seg_index(5)).unwrap();
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(5))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "HelloWorld");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(10));
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(10));
     }
 
     #[test]
     fn test_delete_range() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert initial text.
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World!")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World!")
+            .expect("conversion error");
 
         // Delete "World" (indices 6-11).
         buffer
-            .delete_range(row(0), seg_index(6), seg_index(11))
-            .unwrap();
+            .delete_range(c_row(0), c_index(6), c_index(11))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "Hello !");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(7));
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(7));
     }
 
     #[test]
     fn test_delete_at_beginning() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .expect("conversion error");
 
         // Delete first character.
-        buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(0))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "ello");
     }
 
     #[test]
     fn test_delete_at_end() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .expect("conversion error");
 
         // Delete last character.
-        buffer.delete_grapheme_at(row(0), seg_index(4)).unwrap();
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(4))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "Hell");
     }
 
     #[test]
     fn test_delete_unicode() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert text with emoji.
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀 World")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello 😀 World")
+            .expect("conversion error");
 
         // Delete the emoji (index 6).
-        buffer.delete_grapheme_at(row(0), seg_index(6)).unwrap();
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(6))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "Hello  World");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(12)); // Space still there
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(12)); // Space still there
     }
 
     #[test]
     fn test_delete_complex_grapheme() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert text with compound grapheme cluster.
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "👨‍👩‍👧‍👦 Family")
+            .expect("conversion error");
 
         // Delete the family emoji (1 grapheme cluster).
-        buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(0))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, " Family");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(7)); // Space + 6 letters
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(7)); // Space + 6 letters
     }
 
     #[test]
     fn test_delete_entire_line() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .expect("conversion error");
 
         // Delete all characters.
         buffer
-            .delete_range(row(0), seg_index(0), seg_index(5))
-            .unwrap();
+            .delete_range(c_row(0), c_index(0), c_index(5))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(0));
-        assert_eq!(line_info.content_byte_len, len(0));
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(0));
+        assert_eq!(line_info.content_byte_len, crate::byte_len(0));
     }
 
     #[test]
     fn test_delete_invalid_indices() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .expect("conversion error");
 
         // Try to delete beyond the end.
-        let result = buffer.delete_grapheme_at(row(0), seg_index(10));
+        let result = buffer.delete_grapheme_at(c_row(0), c_index(10));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
 
         // Try to delete from invalid line.
-        let result = buffer.delete_grapheme_at(row(5), seg_index(0));
+        let result = buffer.delete_grapheme_at(c_row(5), c_index(0));
         assert!(result.is_err());
 
         // Try empty range (start == end) - should succeed as no-op.
-        let result = buffer.delete_range(row(0), seg_index(3), seg_index(3));
+        let result = buffer.delete_range(c_row(0), c_index(3), c_index(3));
         assert!(result.is_ok()); // Empty range is valid and does nothing
 
         // Try truly invalid range (start > end).
-        let result = buffer.delete_range(row(0), seg_index(4), seg_index(3));
+        let result = buffer.delete_range(c_row(0), c_index(4), c_index(3));
         assert!(result.is_ok()); // This is also treated as empty range and does nothing
     }
 
     #[test]
     fn test_delete_preserves_null_padding() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
-            .unwrap();
-        buffer.delete_grapheme_at(row(0), seg_index(2)).unwrap(); // Delete 'l'
+            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .expect("conversion error");
+        buffer
+            .delete_grapheme_at(c_row(0), c_index(2))
+            .expect("conversion error"); // Delete 'l'
 
         // Check that the buffer is properly null-padded.
-        let line_info = buffer.get_line_info(0).unwrap();
+        let line_info = buffer.get_line_info(0).expect("conversion error");
         let buffer_start = line_info.buffer_start.as_usize();
         let content_len = line_info.content_byte_len.as_usize();
 
@@ -544,40 +559,43 @@ mod tests {
         assert_eq!(buffer.buffer[buffer_start + content_len], LINE_FEED_BYTE);
 
         // Everything after newline should be null.
-        for i in (buffer_start + content_len + 1)
-            ..(buffer_start + line_info.capacity.as_usize())
+        for (idx, &byte) in buffer.buffer[(buffer_start + content_len + 1)
+            ..(buffer_start + line_info.capacity.as_usize())]
+            .iter()
+            .enumerate()
         {
-            assert_eq!(buffer.buffer[i], NULL_BYTE, "Byte at {i} should be null");
+            let i = buffer_start + content_len + 1 + idx;
+            assert_eq!(byte, NULL_BYTE, "Byte at {i} should be null");
         }
     }
 
     #[test]
     fn test_delete_range_with_unicode_boundaries() {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
 
         // Insert text with mixed Unicode.
         buffer
-            .insert_text_at_grapheme(row(0), seg_index(0), "a😀b🌍c")
-            .unwrap();
+            .insert_text_at_grapheme(c_row(0), c_index(0), "a😀b🌍c")
+            .expect("conversion error");
 
         // Delete range including emojis (indices 1-4, which is "😀b🌍").
         buffer
-            .delete_range(row(0), seg_index(1), seg_index(4))
-            .unwrap();
+            .delete_range(c_row(0), c_index(1), c_index(4))
+            .expect("conversion error");
 
-        let content = buffer.get_line_content(row(0)).unwrap();
+        let content = buffer.get_line_content(c_row(0)).expect("conversion error");
         assert_eq!(content, "ac");
 
-        let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, len(2));
+        let line_info = buffer.get_line_info(0).expect("conversion error");
+        assert_eq!(line_info.grapheme_count, c_len(2));
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{row, seg_index};
+    use crate::{c_index, c_row};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -585,150 +603,168 @@ mod benches {
 
     #[bench]
     fn bench_delete_single_grapheme(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "Hello World";
 
         b.iter(|| {
             // Setup: insert text.
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
 
             // Benchmark: delete a character.
             buffer
-                .delete_grapheme_at(row(0), black_box(seg_index(5)))
-                .unwrap();
+                .delete_grapheme_at(c_row(0), black_box(c_index(5)))
+                .expect("conversion error");
 
             // Cleanup: clear rest of content.
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_delete_range_small(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "Hello Beautiful World";
 
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
 
             // Benchmark: delete "Beautiful " (indices 6-16).
             buffer
-                .delete_range(row(0), black_box(seg_index(6)), black_box(seg_index(16)))
-                .unwrap();
+                .delete_range(c_row(0), black_box(c_index(6)), black_box(c_index(16)))
+                .expect("conversion error");
 
             // Cleanup
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_delete_unicode_grapheme(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "Hello 😀 World";
 
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
 
             // Benchmark: delete the emoji.
             buffer
-                .delete_grapheme_at(row(0), black_box(seg_index(6)))
-                .unwrap();
+                .delete_grapheme_at(c_row(0), black_box(c_index(6)))
+                .expect("conversion error");
 
             // Cleanup
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_delete_from_beginning(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "Hello World";
 
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
 
             // Benchmark: delete first 5 chars.
             buffer
-                .delete_range(row(0), black_box(seg_index(0)), black_box(seg_index(5)))
-                .unwrap();
+                .delete_range(c_row(0), black_box(c_index(0)), black_box(c_index(5)))
+                .expect("conversion error");
 
             // Cleanup
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_delete_entire_line_content(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "This is a test line with some content";
 
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
 
             // Benchmark: delete all content.
             buffer
                 .delete_range(
-                    row(0),
-                    black_box(seg_index(0)),
-                    black_box(seg_index(count.as_usize())),
+                    c_row(0),
+                    black_box(c_index(0)),
+                    black_box(c_index(count.as_usize())),
                 )
-                .unwrap();
+                .expect("conversion error");
         });
     }
 
     #[bench]
     fn bench_delete_complex_grapheme_cluster(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         let test_text = "Family: 👨‍👩‍👧‍👦 is here";
 
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
-                .unwrap();
+                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .expect("conversion error");
 
             // Benchmark: delete the complex family emoji.
             buffer
-                .delete_grapheme_at(row(0), black_box(seg_index(8)))
-                .unwrap();
+                .delete_grapheme_at(c_row(0), black_box(c_index(8)))
+                .expect("conversion error");
 
             // Cleanup
-            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            let count = buffer
+                .get_line_info(0)
+                .expect("conversion error")
+                .grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
-                .unwrap();
+                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .expect("conversion error");
         });
     }
 }

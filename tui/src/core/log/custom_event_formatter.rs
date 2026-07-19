@@ -134,10 +134,11 @@
 //! - Additional fields form key-value pairs in the body
 //! - Empty field values are skipped to avoid blank lines
 
-use crate::{inline_string, new_style, tui_color};
-use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
-            TuiColor, TuiStyle, cli_text_inline, fg_color, get_terminal_width, glyphs,
-            remove_escaped_quotes, truncate_from_right, tui_style_attrib, usize, width};
+use crate::{ColorWheel, GCStringOwned, InlineString, LruCache, OrderedMap, RgbValue,
+            ThreadSafeLruCache, TuiColor, TuiStyle, VPWidth, cli_text_inline, fg_color,
+            get_terminal_width, glyphs, inline_string, new_style,
+            new_threadsafe_lru_cache, ok, remove_escaped_quotes, truncate_from_right,
+            tui_color, tui_style_attrib, usize, vp_width};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
@@ -148,6 +149,7 @@ use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
                                        SUBSEQUENT_LINE_PREFIX, TRACE_FG_COLOR,
                                        TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
 use std::{fmt::{self},
+          hash::{Hash, Hasher},
           sync::LazyLock};
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event, Subscriber,
@@ -165,8 +167,8 @@ pub struct CustomEventFormatter;
 pub struct FieldContentParams<'a> {
     heading: &'a str,
     body: &'a str,
-    line_width_used: ColWidth,
-    max_display_width: ColWidth,
+    line_width_used: VPWidth,
+    max_display_width: VPWidth,
     text_wrap_options: &'a Options<'a>,
     spacer: &'a str,
 }
@@ -205,8 +207,8 @@ pub mod custom_event_formatter_constants {
 
 /// Cache for colorized log headings.
 mod heading_cache {
-    use super::{LazyLock, TuiStyle};
-    use std::hash::{Hash, Hasher};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Key for caching colorized headings.
     #[derive(Clone, PartialEq, Eq, Debug)]
@@ -253,13 +255,11 @@ mod heading_cache {
     /// "error", etc.). The cache significantly reduces the overhead of colorization
     /// in hot paths.
     pub static COLORIZED_HEADING_CACHE: LazyLock<
-        crate::ThreadSafeLruCache<HeadingCacheKey, String>,
-    > = LazyLock::new(|| crate::new_threadsafe_lru_cache(1000));
+        ThreadSafeLruCache<HeadingCacheKey, String>,
+    > = LazyLock::new(|| new_threadsafe_lru_cache(1000));
 }
 
 mod helpers {
-    use crate::ok;
-
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -312,10 +312,7 @@ mod helpers {
     }
 
     /// Gets level string and style based on the event's log level.
-    pub fn get_level_info(
-        event: &Event<'_>,
-        spacer: &str,
-    ) -> (InlineString, crate::TuiStyle) {
+    pub fn get_level_info(event: &Event<'_>, spacer: &str) -> (InlineString, TuiStyle) {
         let mut style = new_style!();
         let level_str = match *event.metadata().level() {
             tracing::Level::ERROR => {
@@ -360,13 +357,13 @@ mod helpers {
         ctx: &tracing_subscriber::fmt::FmtContext<'_, S, N>,
         event: &Event<'_>,
         spacer: &str,
-    ) -> ColWidth
+    ) -> VPWidth
     where
         S: Subscriber + for<'a> LookupSpan<'a>,
         N: for<'a> FormatFields<'a> + 'static,
     {
         let spacer_display_width = GCStringOwned::from(spacer).width();
-        let mut line_width_used = width(0);
+        let mut line_width_used = vp_width(0);
 
         // Timestamp width
         let timestamp = Local::now();
@@ -408,10 +405,7 @@ mod helpers {
 
         // Write heading line.
         let heading = remove_escaped_quotes(heading);
-        let line_1_width = {
-            let it = max_display_width - line_width_used - spacer_display_width;
-            width(*it)
-        };
+        let line_1_width = max_display_width - line_width_used - spacer_display_width;
         let truncated_heading = truncate_from_right(&heading, line_1_width, false);
         let line_1_text = inline_string!(
             "{spacer}{heading}",
@@ -424,7 +418,7 @@ mod helpers {
         let cache_key = super::heading_cache::HeadingCacheKey::new(&line_1_text, style);
 
         let line_1_text_fmt = super::heading_cache::COLORIZED_HEADING_CACHE.write(
-            |cache_guard: &mut crate::LruCache<
+            |cache_guard: &mut LruCache<
                 super::heading_cache::HeadingCacheKey,
                 String,
             >| {
@@ -598,7 +592,7 @@ impl Visit for VisitEventAndPopulateOrderedMapWithFields<'_> {
 }
 
 #[must_use]
-pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
+pub fn build_spacer(max_display_width: VPWidth) -> InlineString {
     let spacer = ENTRY_SEPARATOR_CHAR.repeat(max_display_width.as_usize());
     fg_color(tui_color!(dark_lizard_green), &spacer).to_small_str()
 }

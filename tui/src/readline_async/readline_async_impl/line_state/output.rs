@@ -1,9 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{early_return_if_paused, ok};
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness,
-            ReadlineError, TermCol, TermColDelta, TermRowDelta, width};
+            NarrowingCastToU16, ReadlineError, TermCol, TermColDelta, TermRowDelta,
+            early_return_if_paused, ok, vp_width};
 use std::io::Write;
 
 impl LineState {
@@ -81,17 +81,18 @@ impl LineState {
         // prompt. Usually data does end in newline due to the buffering of
         // SharedWriter, but sometimes it may not (i.e. if .flush() is called).
         if self.last_line_completed {
-            self.last_line_length = width(0);
+            self.last_line_length = vp_width(0);
         } else {
             // Add data length to last_line_length.
             let new_len = self.last_line_length.as_usize() + data.len();
             let term_width = self.term_size.col_width.as_usize();
             // Make sure that last_line_length wraps around when doing multiple writes.
             if new_len >= term_width {
-                self.last_line_length = width(new_len % term_width);
+                self.last_line_length =
+                    vp_width((new_len % term_width).as_u16_narrowing());
                 writeln!(term)?;
             } else {
-                self.last_line_length = width(new_len);
+                self.last_line_length = vp_width((new_len).as_u16_narrowing());
             }
             writeln!(term)?; // Move to beginning of line and make new line
         }
@@ -199,8 +200,8 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{core::test_fixtures::StdoutMock, vp_height, vp_width};
     use smallvec::SmallVec;
-    use crate::{core::test_fixtures::StdoutMock, Size, height, width};
 
     /// Helper to decode [`ANSI`] escape sequences in output for debugging.
     ///
@@ -219,11 +220,11 @@ mod tests {
                 while i < output.len()
                     && (output[i].is_ascii_digit() || output[i] == b';')
                 {
-                    params.push(output[i] as char);
+                    params.push(char::from(output[i]));
                     i += 1;
                 }
                 if i < output.len() {
-                    let cmd = output[i] as char;
+                    let cmd = char::from(output[i]);
                     let desc = match cmd {
                         'A' => format!("CursorUp({params})"),
                         'B' => format!("CursorDown({params})"),
@@ -235,10 +236,10 @@ mod tests {
                         'K' => format!("EraseLine({params})"),
                         _ => format!("CSI[{params}{cmd}]"),
                     };
-                    write!(result, "[{desc}]").unwrap();
+                    write!(result, "[{desc}]").expect("conversion error");
                     i += 1;
                 } else {
-                    write!(result, "[CSI:incomplete@{start}]").unwrap();
+                    write!(result, "[CSI:incomplete@{start}]").expect("conversion error");
                 }
             } else if output[i] == b'\n' {
                 result.push_str("[LF]");
@@ -247,10 +248,10 @@ mod tests {
                 result.push_str("[CR]");
                 i += 1;
             } else if output[i].is_ascii_graphic() || output[i] == b' ' {
-                result.push(output[i] as char);
+                result.push(char::from(output[i]));
                 i += 1;
             } else {
-                write!(result, "[0x{:02x}]", output[i]).unwrap();
+                write!(result, "[0x{:02x}]", output[i]).expect("conversion error");
                 i += 1;
             }
         }
@@ -263,17 +264,19 @@ mod tests {
     /// exactly one LF in the output, preventing extra blank lines before the prompt.
     #[test]
     fn test_print_data_no_extra_newlines_issue_442() {
-        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("> ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
         // Simulate initial state: prompt has been rendered.
-        line_state.render_and_flush(&mut stdout_mock).unwrap();
+        line_state
+            .render_and_flush(&mut stdout_mock)
+            .expect("conversion error");
         stdout_mock.buffer.write(SmallVec::clear);
 
         // First log line (ends with newline).
         line_state
             .print_data_and_flush(b"line 1\n", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
 
         // Verify last_line_completed is true.
         assert!(
@@ -287,7 +290,7 @@ mod tests {
         // Second log line (ends with newline).
         line_state
             .print_data_and_flush(b"line 2\n", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
 
         // Verify the stripped output has exactly 1 newline.
         let stripped = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
@@ -314,16 +317,18 @@ mod tests {
     /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_partial_line_emits_cha() {
-        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("> ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.render_and_flush(&mut stdout_mock).unwrap();
+        line_state
+            .render_and_flush(&mut stdout_mock)
+            .expect("conversion error");
         stdout_mock.buffer.write(SmallVec::clear);
 
         // Partial line (no newline at end).
         line_state
             .print_data_and_flush(b"partial", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
 
         // Verify last_line_completed is false.
         assert!(
@@ -351,16 +356,18 @@ mod tests {
     /// [`CHA(1)`]: crate::CsiSequence::CursorHorizontalAbsolute
     #[test]
     fn test_print_data_multiple_segments() {
-        let mut line_state = LineState::new("> ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("> ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.render_and_flush(&mut stdout_mock).unwrap();
+        line_state
+            .render_and_flush(&mut stdout_mock)
+            .expect("conversion error");
         stdout_mock.buffer.write(SmallVec::clear);
 
         // Multiple lines in single call.
         line_state
             .print_data_and_flush(b"line1\nline2\n", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
 
         let decoded = describe_ansi_output(&stdout_mock.get_copy_of_buffer());
         // After first LF, we need CHA(1) so line2 starts at column 1.
@@ -379,11 +386,11 @@ mod tests {
 
     #[test]
     fn test_exit_clears_line() {
-        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("$ ".into(), vp_width(80) + vp_height(24));
         line_state.line = GCStringOwned::new("some content");
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.exit(&mut stdout_mock).unwrap();
+        line_state.exit(&mut stdout_mock).expect("conversion error");
 
         // Line should be cleared.
         assert!(line_state.line.is_empty());
@@ -391,29 +398,31 @@ mod tests {
 
     #[test]
     fn test_update_prompt_changes_prompt() {
-        let mut line_state = LineState::new("old> ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("old> ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.update_prompt("new> ", &mut stdout_mock).unwrap();
+        line_state
+            .update_prompt("new> ", &mut stdout_mock)
+            .expect("conversion error");
 
         assert_eq!(line_state.prompt, "new> ");
     }
 
     #[test]
     fn test_print_data_sets_last_line_completed() {
-        let mut line_state = LineState::new("$ ".into(), Size::new((width(80), height(24))));
+        let mut line_state = LineState::new("$ ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
         // Data ending with newline.
         line_state
             .print_data_and_flush(b"hello\n", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
         assert!(line_state.last_line_completed);
 
         // Data not ending with newline.
         line_state
             .print_data_and_flush(b"world", &mut stdout_mock)
-            .unwrap();
+            .expect("conversion error");
         assert!(!line_state.last_line_completed);
     }
 }
