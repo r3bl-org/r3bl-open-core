@@ -365,16 +365,24 @@ mod keyboard {
     ) -> Option<Vec<u8>> {
         match code {
             // Arrow keys: CSI [1;mod] A/B/C/D
-            VT100KeyCodeIR::Up => Some(generate_arrow_key(ARROW_UP_FINAL, modifiers)),
-            VT100KeyCodeIR::Down => Some(generate_arrow_key(ARROW_DOWN_FINAL, modifiers)),
-            VT100KeyCodeIR::Right => {
-                Some(generate_arrow_key(ARROW_RIGHT_FINAL, modifiers))
+            VT100KeyCodeIR::Up => Some(generate_modified_csi_key(ARROW_UP_FINAL, modifiers)),
+            VT100KeyCodeIR::Down => {
+                Some(generate_modified_csi_key(ARROW_DOWN_FINAL, modifiers))
             }
-            VT100KeyCodeIR::Left => Some(generate_arrow_key(ARROW_LEFT_FINAL, modifiers)),
+            VT100KeyCodeIR::Right => {
+                Some(generate_modified_csi_key(ARROW_RIGHT_FINAL, modifiers))
+            }
+            VT100KeyCodeIR::Left => {
+                Some(generate_modified_csi_key(ARROW_LEFT_FINAL, modifiers))
+            }
 
-            // Navigation keys: CSI H/F (no modifier support in this format)
-            VT100KeyCodeIR::Home => Some(generate_simple_csi(SPECIAL_HOME_FINAL)),
-            VT100KeyCodeIR::End => Some(generate_simple_csi(SPECIAL_END_FINAL)),
+            // Navigation keys: CSI [1;mod] H/F
+            VT100KeyCodeIR::Home => {
+                Some(generate_modified_csi_key(SPECIAL_HOME_FINAL, modifiers))
+            }
+            VT100KeyCodeIR::End => {
+                Some(generate_modified_csi_key(SPECIAL_END_FINAL, modifiers))
+            }
 
             // Special keys: CSI n [;mod] ~
             VT100KeyCodeIR::Insert => {
@@ -403,8 +411,13 @@ mod keyboard {
         }
     }
 
-    /// Generate arrow key sequence: `CSI [1;mod] final`.
-    fn generate_arrow_key(final_byte: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
+    /// Generate a modifier-aware [`CSI`] key sequence: `CSI [1;mod] final`.
+    ///
+    /// Used for arrow keys and Home/End, which share the same `CSI 1 ; mod final`
+    /// modifier encoding.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    fn generate_modified_csi_key(final_byte: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
         let mut bytes = CSI_PREFIX.to_vec();
         if encoding::has_modifiers(modifiers) {
             bytes.push(encoding::push_ascii_number(1));
