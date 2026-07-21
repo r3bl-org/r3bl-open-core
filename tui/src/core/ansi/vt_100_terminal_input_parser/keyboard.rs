@@ -980,6 +980,21 @@ mod helpers {
                     modifiers,
                 })
             }
+            // Home/End keys with modifiers: CSI 1 ; m H/F (e.g. Ctrl+End = ESC[1;5F)
+            (2, SPECIAL_HOME_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Home,
+                    modifiers,
+                })
+            }
+            (2, SPECIAL_END_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::End,
+                    modifiers,
+                })
+            }
             // Function keys and special keys: CSI n ~ or CSI n ; m ~
             (1, ANSI_FUNCTION_KEY_TERMINATOR) => {
                 parse_function_or_special_key(params[0], VT100KeyModifiersIR::default())
@@ -1538,6 +1553,112 @@ mod tests {
                 assert_eq!(modifiers.ctrl, KeyState::Pressed);
             }
             _ => panic!("Expected Shift+Alt+Ctrl+Left"),
+        }
+        assert_eq!(bytes_consumed.as_usize(), input.len());
+    }
+
+    // ==================== Home/End Keys with Modifiers ====================
+    // Regression tests: ESC[1;5H (Ctrl+Home) and ESC[1;5F (Ctrl+End) used to fall
+    // through to `_ => None` in parse_csi_parameters, which is indistinguishable from
+    // "incomplete sequence" to the caller's stateful byte accumulator - permanently
+    // wedging all future keyboard input once either combo was pressed.
+
+    #[test]
+    fn test_ctrl_home() {
+        // ESC[1;5H = Ctrl+Home (sent by xterm, alacritty, kitty, foot, wezterm, ...)
+        let input = special_key_sequence(
+            VT100KeyCodeIR::Home,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("Should parse Ctrl+Home");
+        match event {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers,
+            } => {
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(
+                    modifiers.ctrl,
+                    KeyState::Pressed,
+                    "Ctrl+Home should have ctrl modifier set"
+                );
+            }
+            _ => panic!("Expected Ctrl+Home"),
+        }
+        assert_eq!(bytes_consumed.as_usize(), input.len());
+    }
+
+    #[test]
+    fn test_ctrl_end() {
+        // ESC[1;5F = Ctrl+End (sent by xterm, alacritty, kitty, foot, wezterm, ...)
+        let input = special_key_sequence(
+            VT100KeyCodeIR::End,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(&input).expect("Should parse Ctrl+End");
+        match event {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers,
+            } => {
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(
+                    modifiers.ctrl,
+                    KeyState::Pressed,
+                    "Ctrl+End should have ctrl modifier set"
+                );
+            }
+            _ => panic!("Expected Ctrl+End"),
+        }
+        assert_eq!(bytes_consumed.as_usize(), input.len());
+    }
+
+    #[test]
+    fn test_shift_home() {
+        // ESC[1;2H = Shift+Home
+        let input = &[0x1B, b'[', b'1', b';', b'2', b'H'];
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Shift+Home");
+        match event {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers,
+            } => {
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+            }
+            _ => panic!("Expected Shift+Home"),
+        }
+        assert_eq!(bytes_consumed.as_usize(), input.len());
+    }
+
+    #[test]
+    fn test_shift_end() {
+        // ESC[1;2F = Shift+End
+        let input = &[0x1B, b'[', b'1', b';', b'2', b'F'];
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Shift+End");
+        match event {
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers,
+            } => {
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+            }
+            _ => panic!("Expected Shift+End"),
         }
         assert_eq!(bytes_consumed.as_usize(), input.len());
     }
