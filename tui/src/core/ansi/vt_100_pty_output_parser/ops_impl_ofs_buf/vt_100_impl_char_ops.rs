@@ -29,8 +29,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, OfsBufVT100, PixelChar,
-            VPLength,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, GCStringOwned,
+            NarrowingCastToU16, OfsBufVT100, PixelChar, VPLength,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
                                               RangeBoundsExt, RangeConvertExt, RangeExt},
             ok, vp_col, vp_width};
@@ -347,9 +347,32 @@ impl OfsBufVT100 {
                 },
             )?;
 
-            // Move cursor forward.
-            let next_col_index = current_col + vp_col(1);
-            let new_col = next_col_index;
+            // Deal w/ wide characters (e.g. CJK, emoji) whose display width is > 1.
+            // A wide glyph occupies its own cell plus `width - 1` trailing cells. Those
+            // trailing cells must be filled with `PixelChar::Void` so downstream
+            // rendering (the main compositor + real terminals both advance the cursor
+            // by the glyph's display width) stays aligned with this buffer's columns.
+            // Without this, the cell after a wide glyph collides with the glyph's second
+            // column when it is painted, which swallows the following character and
+            // corrupts text selection overlays. This mirrors the `> 1` handling in
+            // `process_character_segments` in the compositor.
+            //
+            // Width is computed via `unicode_width` (`GCStringOwned::width_char`). A
+            // width of 0 (e.g. a stray combining mark arriving on its own) is treated as
+            // 1 so the cursor always advances and never stalls, matching the prior
+            // always-advance-by-1 behavior.
+            let char_width = GCStringOwned::width_char(display_char).as_usize().max(1);
+            for extra in 1..char_width {
+                let mut void_pos = cursor_pos;
+                void_pos.col_index = current_col + vp_col(extra.as_u16_narrowing());
+                if void_pos.col_index.overflows(col_max) == ArrayOverflowResult::Within {
+                    self.get_active_screen_buffer_mut()
+                        .set_char(void_pos, PixelChar::Void)?;
+                }
+            }
+
+            // Move cursor forward by the glyph's display width.
+            let new_col = current_col + vp_col(char_width.as_u16_narrowing());
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             //
@@ -1281,5 +1304,82 @@ mod tests_print_char {
             buffer.get_parser_global_state_mut().get_pending_wrap(),
             PendingWrap::No
         );
+    }
+
+    #[test]
+    fn test_print_char_wide_emoji_injects_void() {
+        // A wide glyph (emoji '✨' is East-Asian-Wide => display width 2) must occupy
+        // its own cell plus a trailing `Void`, and advance the cursor by 2.
+        let mut buffer = create_vt100_test_buffer_with_size(vp_width(10), vp_height(3));
+        buffer.set_cursor_pos(vp_row(0) + vp_col(0));
+
+        let _unused = buffer.print_char('✨');
+
+        match buffer.get_char(vp_row(0) + vp_col(0)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, '✨'),
+            other => panic!("Expected PlainText with '✨', got {other:?}"),
+        }
+        assert_eq!(buffer.get_char(vp_row(0) + vp_col(1)).unwrap(), PixelChar::Void);
+        // Cursor advanced by the glyph's display width (2), not 1.
+        assert_eq!(buffer.get_cursor_pos(), vp_row(0) + vp_col(2));
+    }
+
+    #[test]
+    fn test_print_char_wide_cjk_injects_void() {
+        // CJK ideographs are also width 2.
+        let mut buffer = create_vt100_test_buffer_with_size(vp_width(10), vp_height(3));
+        buffer.set_cursor_pos(vp_row(0) + vp_col(0));
+
+        let _unused = buffer.print_char('好');
+
+        match buffer.get_char(vp_row(0) + vp_col(0)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, '好'),
+            other => panic!("Expected PlainText with '好', got {other:?}"),
+        }
+        assert_eq!(buffer.get_char(vp_row(0) + vp_col(1)).unwrap(), PixelChar::Void);
+        assert_eq!(buffer.get_cursor_pos(), vp_row(0) + vp_col(2));
+    }
+
+    #[test]
+    fn test_print_char_wide_then_narrow_not_swallowed() {
+        // Regression for the "swallowed character after emoji" bug: printing '✨'
+        // then '.' must yield [PlainText('✨'), Void, PlainText('.')] with the '.'
+        // landing in its own cell (column 2), not colliding with the emoji.
+        let mut buffer = create_vt100_test_buffer_with_size(vp_width(10), vp_height(3));
+        buffer.set_cursor_pos(vp_row(0) + vp_col(0));
+
+        let _unused = buffer.print_char('✨');
+        let _unused = buffer.print_char('.');
+
+        match buffer.get_char(vp_row(0) + vp_col(0)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, '✨'),
+            other => panic!("Expected PlainText with '✨', got {other:?}"),
+        }
+        assert_eq!(buffer.get_char(vp_row(0) + vp_col(1)).unwrap(), PixelChar::Void);
+        match buffer.get_char(vp_row(0) + vp_col(2)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, '.'),
+            other => panic!("Expected PlainText with '.', got {other:?}"),
+        }
+        assert_eq!(buffer.get_cursor_pos(), vp_row(0) + vp_col(3));
+    }
+
+    #[test]
+    fn test_print_char_narrow_still_advances_by_one() {
+        // Regression guard: an ordinary ASCII char advances by 1 and writes no Void.
+        let mut buffer = create_vt100_test_buffer_with_size(vp_width(10), vp_height(3));
+        buffer.set_cursor_pos(vp_row(0) + vp_col(0));
+
+        let _unused = buffer.print_char('a');
+        let _unused = buffer.print_char('b');
+
+        match buffer.get_char(vp_row(0) + vp_col(0)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'a'),
+            other => panic!("Expected PlainText with 'a', got {other:?}"),
+        }
+        match buffer.get_char(vp_row(0) + vp_col(1)).unwrap() {
+            PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'b'),
+            other => panic!("Expected PlainText with 'b', got {other:?}"),
+        }
+        assert_eq!(buffer.get_cursor_pos(), vp_row(0) + vp_col(2));
     }
 }
