@@ -85,6 +85,11 @@ _Meta Task: Prepare v0.8.0 Release_
       https://github.com/r3bl-org/r3bl-open-core/pull/471
 - [ ] [fix fish shell issues in pty_mux module](task/fix-fish-in-pty-mux.md)
 
+# [TODO] build-infra tasks
+
+- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
+- [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+
 # [TODO] Unify rendering
 
 - [ ] [unify the interactive entry points to alternate screen](task_refactor_interactive_apis_to_alternate_screen.md)
@@ -94,11 +99,6 @@ _Meta Task: Prepare v0.8.0 Release_
 
 - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)
 - [ ] [rustdocs - fix readability of esc codes](fix-esc-code-formatting.md)
-
-# [TODO] build-infra tasks
-
-- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
-- [ ] [build-infra-upgrade-support.md](build-infra-upgrade-support.md)
 
 # [TODO] Release Verification & Publication
 
