@@ -38,6 +38,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 // Private modules (hide internal structure).
+mod backpressure_stdout;
 mod enhanced_keys;
 mod input_device;
 mod input_event;
@@ -46,9 +47,11 @@ mod modifier_keys_mask;
 mod mouse_input;
 mod output_device;
 mod shared_writer;
-mod terminal_io_type_aliases;
+mod terminal_mode_controller;
+mod types;
 
 // Re-exports for flat public API.
+pub use backpressure_stdout::*;
 pub use enhanced_keys::*;
 pub use input_device::*;
 pub use input_event::*;
@@ -57,7 +60,8 @@ pub use modifier_keys_mask::*;
 pub use mouse_input::*;
 pub use output_device::*;
 pub use shared_writer::*;
-pub use terminal_io_type_aliases::*;
+pub use terminal_mode_controller::*;
+pub use types::*;
 
 // Backend compatibility tests (Linux-only PTY tests).
 // Public for docs and tests so intra-doc links resolve.

@@ -366,13 +366,13 @@ mod app_main_impl_trait_app {
                     let color_wheel = &mut data.color_wheel_ansi_vec[color_wheel_index];
 
                     let text = {
-                        let index = color_wheel.get_index();
+                        let index = color_wheel.get_index().as_usize();
                         let len = match color_wheel.get_gradient_len() {
                             GradientLengthKind::ColorWheel(len) => len.as_usize(),
                             _ => 0,
                         };
                         inline_string!(
-                            "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                            "{state_string}, gradient: [index: {index}, len: {len}]"
                         )
                     };
 
@@ -397,13 +397,13 @@ mod app_main_impl_trait_app {
                         RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx);
 
                     let text = {
-                        let index = data.color_wheel_rgb.get_index();
+                        let index = data.color_wheel_rgb.get_index().as_usize();
                         let len = match data.color_wheel_rgb.get_gradient_len() {
                             GradientLengthKind::ColorWheel(len) => len.as_usize(),
                             _ => 0,
                         };
                         inline_string!(
-                            "{state_string}, gradient: [index: {index:?}, len: {len}]"
+                            "{state_string}, gradient: [index: {index}, len: {len}]"
                         )
                     };
 

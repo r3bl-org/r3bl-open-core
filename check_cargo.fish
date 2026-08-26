@@ -54,6 +54,7 @@ end
 
 function check_windows_build
     set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+    ensure_windows_build_dependencies || return 1
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
 end
 

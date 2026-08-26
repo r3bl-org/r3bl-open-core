@@ -280,19 +280,14 @@ mod terminal_fd {
     /// This function implements a robust strategy for acquiring a terminal handle,
     /// essential for enabling raw mode regardless of whether input is redirected:
     ///
-    /// 1. **Check Stdin**: It first checks if [`stdin`] is a [`TTY`]. If so, it uses
+    /// 1. **Check [`stdin`]**: It first checks if [`stdin`] is a [`TTY`]. If so, it uses
     ///    [`stdin`] as the primary handle for terminal configuration.
     /// 2. **Fallback to [`/dev/tty`]**: If [`stdin`] is not a [`TTY`] (e.g., when input
     ///    is redirected from a pipe or file like `cat data.txt | my_app`), it attempts to
-    ///    open [`/dev/tty`] directly.
-    ///
-    /// ### What is [`/dev/tty`]?
-    ///
-    /// [`/dev/tty`] is a special file in Unix-like systems that acts as a "backdoor" to
-    /// the **controlling terminal** of the current process. Even when [`stdin`] is
-    /// redirected to a pipe, [`/dev/tty`] still provides access to the physical terminal
-    /// device. This allows the application to call [`tcsetattr`] and enable raw mode on
-    /// the actual terminal window where the user is interacting.
+    ///    open [`/dev/tty`] directly. This allows the application to call [`tcsetattr`]
+    ///    and enable raw mode on the actual terminal window where the user is
+    ///    interacting. See [direct access via `/dev/tty`] in [`PtyPair`] for details on
+    ///    how this bypass works.
     ///
     /// ### Design Rationale: Backend-Aware [`TTY`] Detection
     ///
@@ -307,12 +302,16 @@ mod terminal_fd {
     /// - [`stdin`] is not a [`TTY`] AND [`/dev/tty`] cannot be opened.
     /// - The process lacks permissions to open the controlling terminal.
     ///
-    /// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+    /// [`/dev/tty`]:
+    ///     crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
+    /// [`PtyPair`]: crate::PtyPair
     /// [`stdin`]: std::io::stdin
     /// [`tcsetattr`]: termios::tcsetattr
     /// [`term.rs`]: mod@crate::term
     /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+    /// [direct access via `/dev/tty`]:
+    ///     crate::pty_engine::pty_pair::PtyPair#the-solution-direct-access-via-devtty
     pub fn get() -> io::Result<TerminalFd> {
         if is_tty_stdin() == TtyStatus::IsTty {
             let stdin = io::stdin();

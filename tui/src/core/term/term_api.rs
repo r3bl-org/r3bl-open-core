@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words winsize tcgetwinsize
+// cspell:words winsize tcgetwinsize devtty
 
 //! Terminal interactivity, size detection, and [`stderr`] redirection disclaimer.
 //! See [`TerminalInteractiveStatus`], [`TerminalNotInteractiveReason`], and
@@ -46,8 +46,87 @@ impl<T> IntoErr for TuiAvailability<T> {
     }
 }
 
-/// Represents the interactivity status of the terminal. This does not represent any
-/// fallible states. [`check_is_terminal_interactive()`] returns this.
+/// Represents the interactivity status of the terminal streams ([`stdin`] and
+/// [`stdout`]).
+///
+/// This does not represent any fallible states. [`check_is_terminal_interactive()`]
+/// returns this.
+///
+/// # Why Terminal Interactivity Checking Exists
+///
+/// Different parts of this codebase query terminal interactivity before operating:
+/// - **[`Spinner`]** requires [`stdout`] to be an interactive [`TTY`] before animating;
+///   writing spinner frames to a pipe or file produces garbage.
+/// - **[`ReadlineAsyncContext`]** requires both [`stdin`] (to read keystrokes) and
+///   [`stdout`] (to render the prompt) to be interactive [`TTY`]s.
+/// - **[Color detection]** queries [`stdout`] / [`stderr`] to decide whether to emit
+///   [`ANSI`] color codes.
+/// - **[Raw mode]** needs a terminal file descriptor to call [`tcsetattr`]; if [`stdin`]
+///   is redirected, it falls back to [`/dev/tty`].
+/// - **Tests** distinguish a real terminal from CI pipe environments to adjust assertions
+///   like expected color depth.
+///
+/// # Interactivity Levels
+///
+/// 1. **Input Interactivity** ([`is_input_interactive()`]): Can we read keystrokes and
+///    mouse events from [`stdin`]?
+/// 2. **Output Interactivity** ([`is_output_interactive()`]): Can we render the TUI to
+///    [`stdout`]? (Redirection of [`stderr`] does not disable the TUI).
+/// 3. **Full Interactivity** ([`is_fully_interactive()`]): Are all three streams
+///    ([`stdin`], [`stdout`], [`stderr`]) connected to a [`TTY`]?
+///
+/// # Shell Redirection and Pipeline Behavior
+///
+/// When a process runs normally in a terminal, [`stdin`] ([`fd`] `0`), [`stdout`] ([`fd`]
+/// `1`), and [`stderr`] ([`fd`] `2`) all point to the active terminal device
+/// ([`/dev/pts/*`] or [`/dev/tty*`]), so [`isatty`] returns `true`.
+///
+/// Pipelines and file redirections swap the character device for an anonymous pipe or
+/// file handle, changing the interactivity status:
+///
+/// | Scenario              | Description                         | [`stdin`] ([`fd`] `0`) | [`stdout`] ([`fd`] `1`) | [`stderr`] ([`fd`] `2`) | Interactivity Status                   |
+/// | :-------------------- | :---------------------------------- | :--------------------- | :---------------------- | :---------------------- | :------------------------------------- |
+/// | **Normal Terminal**   | Direct interactive terminal session | TTY ([`/dev/pts/*`])   | TTY ([`/dev/pts/*`])    | TTY ([`/dev/pts/*`])    | [`Available`]                          |
+/// | **Piped Input**       | Input piped from another process    | Pipe (`false`)         | TTY ([`/dev/pts/*`])    | TTY ([`/dev/pts/*`])    | [`NotAvailable(StdinNotInteractive)`]  |
+/// | **Piped Output**      | Output piped into another process   | TTY ([`/dev/pts/*`])   | Pipe (`false`)          | TTY ([`/dev/pts/*`])    | [`NotAvailable(StdoutNotInteractive)`] |
+/// | **Redirected Stderr** | Error stream redirected to a file   | TTY ([`/dev/pts/*`])   | TTY ([`/dev/pts/*`])    | File (`false`)          | [`Available`] (logs decoupled)         |
+///
+/// Examples in bash:
+/// 
+/// ```bash
+/// # Normal terminal:
+/// my_app
+///
+/// # Piped input:
+/// cat data.txt | my_app
+///
+/// # Piped output:
+/// my_app | grep "pattern"
+///
+/// # Redirected stderr:
+/// my_app 2> errors.log
+/// ```
+///
+/// [`/dev/pts/*`]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
+/// [`/dev/tty*`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
+/// [`/dev/tty`]: crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`Available`]: Self::Available
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`isatty`]: https://man7.org/linux/man-pages/man3/isatty.3.html
+/// [`NotAvailable(StdinNotInteractive)`]:
+///     TerminalNotInteractiveReason::StdinNotInteractive
+/// [`NotAvailable(StdoutNotInteractive)`]:
+///     TerminalNotInteractiveReason::StdoutNotInteractive
+/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+/// [`Spinner`]: crate::Spinner
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`tcsetattr`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+/// [Color detection]: crate::examine_env_vars_to_determine_color_support
+/// [Raw mode]: crate::terminal_raw_mode
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TerminalInteractiveStatus {
     Available,

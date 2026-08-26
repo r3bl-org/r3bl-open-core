@@ -17,6 +17,9 @@
 //! [`create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 //! [`RRTWorker`]: crate::RRTWorker
 
+// Imported specifically for the intra-doc links in the struct documentation.
+#[allow(unused_imports)]
+use super::handler_stdin::consume_stdin_input_with_sender;
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState,
                     stateful_parser::StatefulInputParser},
@@ -24,15 +27,11 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
             dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             sources::SourceRegistry};
-// Imported specifically for the intra-doc links in the struct documentation.
-#[allow(unused_imports)]
-use super::handler_stdin::consume_stdin_input_with_sender;
 use crate::{Continuation,
             core::resilient_reactor_thread::{RRTEvent, RRTWorker}};
 use miette::Diagnostic;
 use mio::{Events, Interest, Poll, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
-use signal_hook_mio::v1_0::Signals;
 use std::{io::ErrorKind, os::fd::AsRawFd as _};
 use tokio::sync::broadcast::Sender;
 
@@ -63,11 +62,11 @@ const EVENTS_CAPACITY: usize = 8;
 /// Because [`stdin`] and [`stdout`] share the same underlying file description on Linux,
 /// setting `O_NONBLOCK` on [`stdin`] accidentally makes [`stdout`] non-blocking as well.
 /// See the [How this affects stdout as well] section for details on how this is handled,
-/// and see [`FullBufferWaitingStdout`] / [`OutputDevice::new_stdout()`] for the
+/// and see [`BackpressureStdout`] / [`OutputDevice::new_stdout()`] for the
 /// implementation of the fix.
 ///
+/// [`BackpressureStdout`]: crate::core::terminal_io::BackpressureStdout
 /// [`block_until_ready_then_dispatch()`]: MioPollWorker::block_until_ready_then_dispatch
-/// [`FullBufferWaitingStdout`]: crate::core::terminal_io::FullBufferWaitingStdout
 /// [`mio_poller::consume_stdin_input_with_sender`]:
 ///     super::handler_stdin::consume_stdin_input_with_sender
 /// [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
@@ -148,7 +147,8 @@ impl RRTWorker for MioPollWorker {
         let poll_handle = Poll::new().map_err(PollCreationError)?;
         let mio_registry = poll_handle.registry();
 
-        // Create & register the synthetic software interrupt.
+        // CONTROL PLANE: Administrative Signals
+        // Register synthetic software interrupt (mio::Waker / eventfd).
 
         // Create waker from poll's registry (must be created BEFORE registering sources).
         let software_interrupt = MioSoftwareInterrupt::create_and_register_synthetic_software_interrupt_source(
@@ -156,7 +156,8 @@ impl RRTWorker for MioPollWorker {
             SourceKindReady::SoftwareInterrupt.to_token(),
         )?;
 
-        // DATA PLANE: Register real hardware/OS sources (stdin, signals).
+        // DATA PLANE: User Payload Traffic
+        // Register real hardware/OS sources (stdin, signals).
 
         // Register stdin with mio.
         let stdin = std::io::stdin();
@@ -166,7 +167,6 @@ impl RRTWorker for MioPollWorker {
         } else {
             None
         };
-
         mio_registry
             .register(
                 &mut SourceFd(&stdin.as_raw_fd()),
@@ -175,8 +175,12 @@ impl RRTWorker for MioPollWorker {
             )
             .map_err(StdinRegistrationError)?;
 
-        // Register SIGWINCH with signal-hook-mio.
-        let mut signals = Signals::new([SIGWINCH]).map_err(SignalCreationError)?;
+        // Convert SIGWINCH into a file descriptor via signal-hook-mio adapter.
+        // mio::Registry only monitors file descriptors, not raw OS signals directly.
+        // signal_hook crate uses the self-pipe trick: when SIGWINCH arrives, the signal
+        // handler writes 1 byte to an internal pipe whose read-end FD is registered here.
+        let mut signals = signal_hook_mio::v1_0::Signals::new([SIGWINCH])
+            .map_err(SignalCreationError)?;
         mio_registry
             .register(
                 &mut signals,

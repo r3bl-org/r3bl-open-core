@@ -1360,6 +1360,94 @@ function install_windows_target
     return 0
 end
 
+# Ensures all dependencies for Windows cross-compilation checks are present.
+#
+# Checks and ensures:
+# 1. Rust target `x86_64-pc-windows-gnu` via rustup (auto-installed if missing).
+# 2. MinGW cross-compiler binaries (`x86_64-w64-mingw32-dlltool`, `x86_64-w64-mingw32-gcc`).
+#    If missing in interactive mode, prompts to run `./bootstrap.sh`.
+#    If missing in non-interactive/watch mode, displays a clear diagnostic and fails fast.
+#
+# Returns: 0 if all dependencies are satisfied, 1 otherwise.
+#
+# Usage:
+#   ensure_windows_build_dependencies || return 1
+function ensure_windows_build_dependencies
+    set -l target "x86_64-pc-windows-gnu"
+
+    # 1. Ensure Rust target is installed (non-root / self-healing).
+    if not rustup target list --installed | grep -q $target
+        echo "Installing Windows cross-compilation target..."
+        if not rustup target add $target
+            echo "❌ Failed to install Rust target $target"
+            return 1
+        end
+        echo "✅ $target target installed"
+    end
+
+    # 2. Check for required MinGW binaries.
+    set -l missing_tools
+    if not command -v x86_64-w64-mingw32-dlltool >/dev/null
+        set -a missing_tools "x86_64-w64-mingw32-dlltool"
+    end
+    if not command -v x86_64-w64-mingw32-gcc >/dev/null
+        set -a missing_tools "x86_64-w64-mingw32-gcc"
+    end
+
+    if test (count $missing_tools) -eq 0
+        return 0
+    end
+
+    # Find bootstrap.sh path.
+    set -l script_dir (dirname (status filename))
+    set -l bootstrap_path "$script_dir/bootstrap.sh"
+    if not test -f "$bootstrap_path"
+        if test -f "./bootstrap.sh"
+            set bootstrap_path "./bootstrap.sh"
+        end
+    end
+
+    # 3. Interactive prompt vs Non-interactive fast failure.
+    if isatty stdin
+        echo ""
+        echo (set_color yellow --bold)"⚠️  Missing Windows cross-compilation tools: "(string join ", " $missing_tools)(set_color normal)
+        echo "   These are required by cc-rs build scripts (e.g. windows-sys, parking_lot_core)."
+        echo ""
+        read -P "   Run ./bootstrap.sh now to install them? [Y/n]: " -l confirm
+        if test -z "$confirm"; or string match -qi "y*" "$confirm"
+            if test -f "$bootstrap_path"
+                echo "   🚀 Running $bootstrap_path..."
+                bash "$bootstrap_path"
+                # Re-verify after bootstrap.
+                if not command -v x86_64-w64-mingw32-dlltool >/dev/null; or not command -v x86_64-w64-mingw32-gcc >/dev/null
+                    echo "   ❌ Required MinGW tools are still missing after bootstrap.sh"
+                    return 1
+                end
+                echo "   ✅ MinGW tools installed successfully"
+                return 0
+            else
+                echo "   ❌ bootstrap.sh not found at $bootstrap_path"
+                return 1
+            end
+        else
+            echo "   Skipped running bootstrap.sh."
+            return 1
+        end
+    else
+        echo ""
+        echo (set_color red --bold)"❌ Missing Windows cross-compilation tools: "(string join ", " $missing_tools)(set_color normal)
+        echo "   These are required by cc-rs build scripts (e.g. windows-sys, parking_lot_core)."
+        echo "   Please run: ./bootstrap.sh"
+        echo "   Or install via your package manager:"
+        echo "     • Arch:   sudo pacman -S mingw-w64-gcc mingw-w64-binutils"
+        echo "     • Debian: sudo apt-get install gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64"
+        echo "     • Fedora: sudo dnf install mingw64-gcc mingw64-binutils"
+        echo "     • macOS:  brew install mingw-w64"
+        echo ""
+        return 1
+    end
+end
+
 # ============================================================================
 # Toolchain Script Locking Utilities
 # ============================================================================
