@@ -534,12 +534,7 @@ end
 function check-windows-build
     set -l target "x86_64-pc-windows-gnu"
 
-    # Verify target is installed
-    if not rustup target list --installed | grep -q $target
-        echo (set_color red)"Error: $target target not installed"(set_color normal)
-        echo "Run: fish run.fish install-cargo-tools"
-        return 1
-    end
+    ensure_windows_build_dependencies || return 1
 
     echo (set_color cyan --bold)"Verifying Windows cross-compilation for r3bl_tui..."(set_color normal)
     echo "Target: $target"

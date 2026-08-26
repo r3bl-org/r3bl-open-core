@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen eventfd userspace
+// cspell:words EINTR wakeup kqueue epoll ttimeoutlen eventfd userspace kevent POLLIN
+// cspell:words POLLOUT EVFILT EVFILT_READ EVFILT_WRITE EPOLLIN EPOLLOUT EINVAL
 
 //! # Architecture Overview
 //!
@@ -58,6 +59,82 @@
 //! │ • Software Interrupt (Token 2)     │           │                                 │
 //! └────────────────────────────────────┘           └─────────────────────────────────┘
 //! ```
+//!
+//! ### The Core Mental Model of [`mio`]
+//!
+//! [`mio`] (Metal I/O) is a thin Rust wrapper over the OS kernel's event multiplexer. In
+//! `r3bl_tui`, [`mio_poller`] is **compiled exclusively on Linux** where [`mio`] wraps
+//! the native [`epoll`] subsystem (syscalls: [`epoll_create1`], [`epoll_ctl`],
+//! [`epoll_wait`]):
+//!
+//! ```text
+//!    Rust Code (User Space)                        Linux Kernel (Kernel Space)
+//! ┌──────────────────────────────┐                ┌──────────────────────────────┐
+//! │  poll = Poll::new()          │ ──────────────►│ epoll_create1()              │
+//! ├──────────────────────────────┤                ├──────────────────────────────┤
+//! │  poll.registry().register(   │                │ epoll_ctl(EPOLL_CTL_ADD,     │
+//! │    fd, Token(1),             │ ──────────────►│    fd, Token=1,              │
+//! │    Interest::READABLE        │                │    EPOLLIN / POLLIN)         │
+//! │  )                           │                │                              │
+//! ├──────────────────────────────┤                ├──────────────────────────────┤
+//! │  poll.poll(&mut events, None)│ ──────────────►│ epoll_wait()                 │
+//! │                              │ ◄──────────────│ (Sleeps until event occurs)  │
+//! └──────────────────────────────┘                └──────────────────────────────┘
+//! ```
+//!
+//! <div class="warning">
+//!
+//! **Linux-Only Input Engine**: In this crate [`mio_poller`] is only compiled on Linux
+//! (`#[cfg(target_os = "linux")]`). On macOS and Windows, [`TERMINAL_LIB_BACKEND`]
+//! selects the Crossterm backend instead. This is because macOS's `kqueue(2)` returns
+//! [`EINVAL`] when polling [`/dev/tty`] or [`PTY`] descriptors. See [Why Linux-Only?] for
+//! details and potential future macOS support.
+//!
+//! </div>
+//!
+//! #### [`Interest`] to Kernel Flag Mapping
+//!
+//! [`mio::Interest`] maps directly to underlying Linux/POSIX kernel flags:
+//! - **[`Interest::READABLE`]**: Maps to Linux [`EPOLLIN`] / POSIX [`POLLIN`] ("data
+//!   available to read").
+//! - **[`Interest::WRITABLE`]**: Maps to Linux [`EPOLLOUT`] / POSIX [`POLLOUT`] ("buffer
+//!   space available to write").
+//!
+//! #### Architectural Asymmetry: Continuous Input vs. On-Demand Output
+//!
+//! We intentionally chose an asymmetric polling architecture between input and output.
+//! Here is the rationale:
+//!
+//! 1. **Continuous Input ([`Stdin`])**: User input is monitored continuously via
+//!    [`mio::Poll`] inside [`MioPollWorker`] with [`Interest::READABLE`] ([`EPOLLIN`]).
+//!    Because keyboard and mouse events arrive unpredictably, the background reactor
+//!    thread sleeps until the OS kernel signals that new bytes are ready.
+//! 2. **On-Demand Output (`stdout`)**: Output is handled synchronously on-demand via
+//!    [`BackpressureStdout`]. Because [`stdout`] has buffer capacity 99.9% of the time,
+//!    registering it permanently in [`mio::Poll`] with [`Interest::WRITABLE`]
+//!    ([`EPOLLOUT`]) would trigger an immediate return on every iteration, causing a 100%
+//!    CPU busy-spin [loop]. Instead, [`BackpressureStdout`] performs a one-shot
+//!    [`rustix::event::poll()`] call watching for [`POLLOUT`] *only* when an OS write
+//!    buffer is full and returns [`ErrorKind::WouldBlock`]. See
+//!    [`BackpressureStdout`]'s [Why Stdout Needs Backpressure Handling] for output
+//!    backpressure handling.
+//!
+//! #### Control Plane vs. Data Plane
+//!
+//! The [`mio_poller`] architecture divides sources into two distinct operational planes:
+//!
+//! 1. **Control Plane**: Administrative Lifecycle Signals
+//!    - **Source & Token**: [`SoftwareInterrupt`] (`Token 2`).
+//!    - **Underlying Mechanism**: [`mio::Waker`] (backed by `eventfd` on Linux).
+//!    - **Responsibility**: Thread lifecycle management. Unblocks [`Poll::poll()`] when
+//!      [`SubscriberGuard`] drops to check if all receivers are closed and exit cleanly.
+//! 2. **Data Plane**: User Payload Traffic
+//!    - **Sources & Tokens**: [`Stdin`] (`Token 0`), [`Signals`] (`Token 1`).
+//!    - **Underlying Mechanism**: Real OS/hardware file descriptors (`fd 0` and
+//!      [`signal_hook_mio`]).
+//!    - **Responsibility**: User payload processing. Reads keyboard/mouse bytes and
+//!      terminal resize ([`SIGWINCH`]) events, publishing them over the broadcast
+//!      channel.
 //!
 //! ## Thread Lifecycle
 //!
@@ -126,8 +203,8 @@
 //!    | Network timeout ([`SSH`])        | sshd eventually closes connection → [`EOF`]                           |
 //!    | Pipe closed                      | Writer closes pipe → reader gets [`EOF`]                              |
 //!
-//!    **Note on software interrupt (thread restart)**: When all [`broadcast::Receiver`]s are
-//!    dropped, the thread exits. This typically happens when:
+//!    **Note on software interrupt (thread restart)**: When all [`broadcast::Receiver`]s
+//!    are dropped, the thread exits. This typically happens when:
 //!    - [`DirectToAnsiInputDevice`] is dropped (it holds a receiver internally)
 //!    - A TUI app exits and drops its input device
 //!    - All async consumers finish and drop their receivers
@@ -284,7 +361,9 @@
 //!
 //! [100ms `ttimeoutlen` delay]:
 //!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
+//! [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`Arc<AtomicBool>`]: std::sync::atomic::AtomicBool
+//! [`BackpressureStdout`]: crate::core::terminal_io::BackpressureStdout
 //! [`broadcast::Receiver`]: tokio::sync::broadcast::Receiver
 //! [`consume_pending_signals_with_sender()`]:
 //!     handler_signals::consume_pending_signals_with_sender
@@ -295,9 +374,16 @@
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+//! [`epoll_create1`]: https://man7.org/linux/man-pages/man2/epoll_create1.2.html
+//! [`epoll_ctl`]: https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
+//! [`epoll_wait`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`EPOLLIN`]: https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
+//! [`EPOLLOUT`]: https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
 //! [`ErrorKind::Interrupted`]: std::io::ErrorKind::Interrupted
+//! [`ErrorKind::WouldBlock`]: std::io::ErrorKind::WouldBlock
 //! [`ESC`]: crate::EscSequence
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
 //! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
@@ -306,20 +392,27 @@
 //!     handler_software_interrupt::handle_software_interrupt_with_sender
 //! [`InputEvent`]: crate::InputEvent
 //! [`integration_tests`]: crate::core::resilient_reactor_thread::rrt_integration_tests
+//! [`Interest::READABLE`]: mio::Interest::READABLE
+//! [`Interest::WRITABLE`]: mio::Interest::WRITABLE
+//! [`Interest`]: mio::Interest
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
 //! [`mio::Waker`]: mio::Waker
 //! [`mio_poller`]: mod@self
-//! [`mio`]: https://docs.rs/mio
+//! [`mio`]: mio
 //! [`MioPollWorker`]: mio_poll_worker::MioPollWorker
 //! [`Mutex`]: std::sync::Mutex
 //! [`PasteCollectionState`]: super::paste_state_machine::PasteCollectionState
 //! [`poll()`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`poll.poll(&mut events, None)`]: mio::Poll::poll
+//! [`Poll::poll()`]: mio::Poll::poll
 //! [`PollerEvent::Signal`]: super::channel_types::PollerEvent::Signal
 //! [`PollerEvent::Stdin`]: super::channel_types::PollerEvent::Stdin
 //! [`PollerEvent`]: super::channel_types::PollerEvent
+//! [`POLLIN`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
@@ -334,9 +427,11 @@
 //! [`Signal(Resize)`]: super::channel_types::SignalEvent::Resize
 //! [`signal_hook_mio`]: signal_hook_mio
 //! [`SignalEvent::Resize`]: super::channel_types::SignalEvent::Resize
+//! [`Signals`]: signal_hook_mio::v1_0::Signals
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
 //! [`socket`]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [`SoftwareInterrupt`]: sources::SourceKindReady::SoftwareInterrupt
 //! [`SourceFd`]: mio::unix::SourceFd
 //! [`SourceKindReady`]: sources::SourceKindReady
 //! [`SourceRegistry`]: sources::SourceRegistry
@@ -346,13 +441,16 @@
 //! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
 //! [`Stdin(Error)`]: super::channel_types::StdinEvent::Error
 //! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
+//! [`Stdin`]: std::io::Stdin
 //! [`stdin`]: std::io::stdin
 //! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
+//! [`stdout`]: std::io::stdout
 //! [`SubscriberGuard::drop()`]: crate::SubscriberGuard#method.drop
 //! [`SubscriberGuard`]: crate::SubscriberGuard
 //! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 //! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`ThreadState::Stopped`]: crate::core::resilient_reactor_thread::ThreadState::Stopped
 //! [`tokio::io::stdin()`]: tokio::io::stdin
 //! [`tokio::select!`]: tokio::select
@@ -362,11 +460,13 @@
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100InputEventIR`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [canonical mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
+//! [loop]: crate::core::resilient_reactor_thread::run_worker_loop
 //! [paste state machine]: super::paste_state_machine::PasteCollectionState
 //! [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [RRT module docs]: crate::core::resilient_reactor_thread
@@ -374,6 +474,8 @@
 //!     super::DirectToAnsiInputDevice#the-problems
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
+//! [Why Stdout Needs Backpressure Handling]:
+//!     crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling
 
 // XMARK: impl trait rustdoc link definition heading-anchor (eg: #method.drop) see above
 

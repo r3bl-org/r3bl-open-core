@@ -11,41 +11,49 @@
 //! progress display:
 //!
 //! ## 1. Rust Toolchain Update: `rustup toolchain install nightly --force`
-//! - **What it does**: Downloads and installs the latest nightly Rust toolchain
-//! - **Why `--force`**: Forces reinstallation even if nightly is already installed,
+//!
+//! - What it does: Downloads and installs the latest nightly Rust toolchain
+//! - Why `--force`: Forces reinstallation even if nightly is already installed,
 //!   guaranteeing progress output
-//! - **Progress display**: Shows real-time download/installation messages (e.g.,
-//!   "downloading component 'rust-std'")
-//! - **Benefits**: Ensures the latest Rust features and bug fixes are available for
+//! - Progress display: Shows real-time download/installation messages (e.g., "downloading
+//!   component 'rust-std'")
+//! - Benefits: Ensures the latest Rust features and bug fixes are available for
 //!   compilation
 //!
 //! ## 2. Crate Installation: `cargo +nightly install r3bl-cmdr`
-//! - **What it does**: Downloads, compiles, and installs the latest version of
-//!   [`r3bl-cmdr`] from crates.io
-//! - **Why `+nightly`**: Explicitly uses the nightly toolchain for compilation, ensuring
+//!
+//! - What it does: Downloads, compiles, and installs the latest version of [`r3bl-cmdr`]
+//!   from crates.io
+//! - Why `+nightly`: Explicitly uses the nightly toolchain for compilation, ensuring
 //!   consistency
-//! - **Progress display**: Emits [`OSC`] escape sequences showing compilation percentage
+//! - Progress display: Emits [`OSC`] escape sequences showing compilation percentage
 //!   (0-100%). See [`PtySessionConfigOption::CaptureOsc`] for the environment variables
 //!   that trigger this behavior.
-//! - **Benefits**: Uses the latest nightly features for optimal performance and newest
+//! - Benefits: Uses the latest nightly features for optimal performance and newest
 //!   language capabilities
 //!
 //! ## Testing the Progress Display
 //!
 //! To see the upgrade progress in action:
-//! 1. Run [`../remove_toolchains.sh`] to remove existing toolchains (optional, for
-//!    testing)
+//! 1. Run [`remove_toolchains.sh`] to remove existing toolchains (optional, for testing)
 //! 2. Run `cargo run --bin edi` or `cargo run --bin giti`
 //! 3. When you exit, if an upgrade is available, you'll see:
 //!    - Spinner with real-time rustup installation messages (using output)
 //!    - Progress percentages during cargo compilation (using [`OSC`])
 //!    - Both processes can be cancelled with Ctrl+C
 //!
-//! [`../remove_toolchains.sh`]:
-//!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
+//! ## Note on Terminology: "Update" vs "Upgrade"
+//!
+//! - **Update (`rustup`)**: Refreshes and synchronizes the local build environment by
+//!   installing the latest nightly compiler toolchain components.
+//! - **Upgrade (`cargo install`)**: Replaces the currently installed application binary
+//!   with a newer release published on crates.io.
+//!
 //! [`OSC`]: r3bl_tui::osc_codes::OscSequence
 //! [`PtySessionConfigOption::CaptureOsc`]: r3bl_tui::PtySessionConfigOption::CaptureOsc
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
+//! [`remove_toolchains.sh`]:
+//!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
@@ -221,15 +229,21 @@ pub async fn show_exit_message(context: ExitContext) {
 
 /// Extracts meaningful progress information from rustup output.
 ///
-/// Looks for patterns like:
-/// - "Updating to 1.75.0"
-/// - "Downloading component 'rust-std'"
-/// - "Installing component 'cargo'"
+/// Looks for patterns that start with [`info: `], such as:
+/// - `info: syncing channel updates for 'nightly-x86_64-unknown-linux-gnu'`
+/// - `info: downloading component 'rust-std'`
+/// - `info: installing component 'cargo'`
+/// - `info: checking for self-updates`
 ///
 /// # Returns
 ///
-/// The last meaningful line, truncated if too long for spinner display.
+/// The last meaningful line stripped of any [`info: `] prefix, truncated if too long
+/// for spinner display.
+///
+/// [`info: `]: ui_str::rustup_progress::INFO_PREFIX
 fn extract_rustup_progress(output: &str) -> String {
+    use ui_str::rustup_progress::{ELLIPSIS, INFO_PREFIX, MAX_DISPLAY_LEN, TRUNCATE_LEN};
+
     let lines: Vec<&str> = output
         .lines()
         .filter(|line| !line.trim().is_empty())
@@ -238,11 +252,11 @@ fn extract_rustup_progress(output: &str) -> String {
     if let Some(last_line) = lines.last() {
         let trimmed = last_line.trim();
         // Remove any common prefixes that are not informative.
-        let cleaned = trimmed.strip_prefix("info: ").unwrap_or(trimmed);
+        let cleaned = trimmed.strip_prefix(INFO_PREFIX).unwrap_or(trimmed);
 
         // Truncate if too long for spinner display.
-        if cleaned.len() > 50 {
-            format!("{}...", &cleaned[..47])
+        if cleaned.len() > MAX_DISPLAY_LEN {
+            format!("{}{ELLIPSIS}", &cleaned[..TRUNCATE_LEN])
         } else {
             cleaned.to_string()
         }
@@ -441,5 +455,50 @@ fn report_upgrade_install_result(res: Result<ExitStatus, Error>) {
                 ui_str::upgrade_install::install_failed_to_run_command_msg(err)
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use r3bl_tui::assert_eq2;
+
+    #[test]
+    fn test_extract_rustup_progress_empty() {
+        assert_eq2!(extract_rustup_progress(""), "");
+        assert_eq2!(extract_rustup_progress("   \n\n  "), "");
+    }
+
+    #[test]
+    fn test_extract_rustup_progress_with_info_prefix() {
+        let output = "info: downloading component 'rust-std'";
+        assert_eq2!(
+            extract_rustup_progress(output),
+            "downloading component 'rust-std'"
+        );
+    }
+
+    #[test]
+    fn test_extract_rustup_progress_without_info_prefix() {
+        let output = "syncing channel updates";
+        assert_eq2!(extract_rustup_progress(output), "syncing channel updates");
+    }
+
+    #[test]
+    fn test_extract_rustup_progress_multiline() {
+        let output =
+            "info: syncing channel updates\ninfo: downloading component 'cargo'\n\n";
+        assert_eq2!(
+            extract_rustup_progress(output),
+            "downloading component 'cargo'"
+        );
+    }
+
+    #[test]
+    fn test_extract_rustup_progress_truncation() {
+        let long_line = "info: syncing channel updates for 'nightly-x86_64-unknown-linux-gnu' and extra long text";
+        let result = extract_rustup_progress(long_line);
+        assert_eq2!(result.len(), ui_str::rustup_progress::MAX_DISPLAY_LEN);
+        assert!(result.ends_with(ui_str::rustup_progress::ELLIPSIS));
     }
 }

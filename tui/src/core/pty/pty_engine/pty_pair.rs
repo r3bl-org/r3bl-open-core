@@ -61,12 +61,13 @@ use crate::VPSize;
 /// terminal interface (the [POSIX terminal API] or [`termios`] API). It is a broad
 /// interface, not a specific device. There are three main types:
 ///
-/// | Device Type                | Timeline  | Description/Examples                                                                           |
-/// | :------------------------- | :-------- | :--------------------------------------------------------------------------------------------- |
-/// | [physical terminal]        | 1960s-80s | Hardware teletypewriter, [DEC video terminals] (1978).                                         |
-/// | [terminal emulator] window | 1984-now  | GUI apps like [`xterm`] (1984) and [`WezTerm`] (2018) that create their own [`PTY`].           |
-/// | [kernel virtual console]   | 1984-now  | First on [`Xenix`] (1984), then on [Linux (1992)]: `Ctrl+Alt+F1-F6` aka `/dev/tty1-/dev/tty6`. |
-/// | [`PTY`] controlled         | 1998-now  | The specific device node (e.g., `/dev/pts/0`) that acts as the terminal for a child process.   |
+/// | Device Type                  | Timeline  | Description/Examples                                                                           |
+/// | :--------------------------- | :-------- | :--------------------------------------------------------------------------------------------- |
+/// | [physical terminal]          | 1960s-80s | Hardware teletypewriter, [DEC video terminals] (1978).                                         |
+/// | [terminal emulator] window   | 1984-now  | GUI apps like [`xterm`] (1984) and [`WezTerm`] (2018) that create their own [`PTY`].           |
+/// | [kernel virtual console]     | 1984-now  | First on [`Xenix`] (1984), then on [Linux (1992)]: `Ctrl+Alt+F1-F6` aka `/dev/tty1-/dev/tty6`. |
+/// | [`PTY`] controlled           | 1998-now  | The specific device node (e.g., `/dev/pts/0`) that acts as the terminal for a child process.   |
+/// | [controlling terminal alias] | 1970s-now | Special unnumbered [`/dev/tty`] path that acts as an alias to the active terminal.             |
 ///
 /// ### Is the [`PTY`] controlled side a "real" [`TTY`]?
 ///
@@ -75,6 +76,73 @@ use crate::VPSize;
 /// child process, it returns `true`. It has a [line discipline], it handles [`termios`]
 /// flags (like [`ONLCR`], [`ECHO`], [`ICANON`]), and it responds to [`ioctl`] calls to
 /// set window size.
+///
+/// ## Controlling terminal alias ([`/dev/tty`])
+///
+/// While numbered device nodes (`/dev/pts/0`, `/dev/tty1`) represent specific sessions,
+/// the unnumbered path [`/dev/tty`] dynamically resolves to the calling process's active
+/// controlling terminal:
+///
+/// ```text
+///      ┌──────────────────────────────────────────────────────────────────┐
+///      │ Calling Process opens: /dev/tty                                  │
+///      │                                                                  │
+///      │ /dev/tty acts as an alias to the process's controlling terminal: │
+///      └────────────────────────────────┬─────────────────────────────────┘
+///                                       │
+///           ┌───────────────────────────┼───────────────────────────┐
+///           │                           │                           │
+///           ▼                           ▼                           ▼
+/// ┌───────────────────┐       ┌───────────────────┐       ┌───────────────────┐
+/// │ GUI Terminal /    │       │ Linux Console     │       │ Serial Port /     │
+/// │ SSH Session       │       │ (Ctrl+Alt+F2)     │       │ Embedded Device   │
+/// │                   │       │                   │       │                   │
+/// │ Resolves to:      │       │ Resolves to:      │       │ Resolves to:      │
+/// │   /dev/pts/3      │       │   /dev/tty2       │       │   /dev/ttyS0      │
+/// └───────────────────┘       └───────────────────┘       └───────────────────┘
+/// ```
+///
+/// Opening [`/dev/tty`] allows a process to bypass redirected standard input streams
+/// (e.g., when [`stdin`] is a pipe) and prompt the human operator directly.
+///
+/// ### The problem: when [`stdin`] is occupied by a pipe
+///
+/// Imagine a CLI utility reading data from a shell pipeline:
+///
+/// ```bash
+/// cat encrypted_backup.tar.gz | gpg --decrypt > backup.tar.gz
+/// ```
+///
+/// 1. [`stdin`] ([`fd`] `0`) is occupied by the pipe carrying the raw data payload.
+/// 2. If the program needs to ask the human operator a question (e.g., prompting for a
+///    passphrase), reading from [`stdin`] would consume data bytes from the payload
+///    instead of keystrokes.
+///
+/// ### The solution: direct access via [`/dev/tty`]
+///
+/// By opening [`/dev/tty`], the program acquires a dedicated file descriptor connected
+/// directly to the active controlling terminal (e.g., `/dev/pts/3`), bypassing the
+/// redirected [`stdin`] stream:
+///
+/// ```text
+/// ┌────────────────┐      ┌──────┐      ┌───────────────┐
+/// │ Shell Pipeline ├─────►│ Pipe ├─────►│  stdin (fd 0) │────┐
+/// │ (cat file.txt) │      └──────┘      └───────────────┘    │ (Payload data)
+/// └────────────────┘                                         ▼
+///                                                  ┌───────────────────┐
+///                                                  │  Running Process  │
+///                                                  │ (e.g. gpg / sudo) │
+///                                                  └─────────┬─────────┘
+///                                                            │ (opens directly)
+/// ┌───────────────────┐                                      ▼
+/// │ Human Operator    │◄────────────────────────────►┌───────────────┐
+/// │ (Keyboard/Screen) │     Interactive Prompts      │   /dev/tty    │
+/// └───────────────────┘     (Passwords / Input)      └───────────────┘
+/// ```
+///
+/// In this codebase, [raw mode] uses this exact fallback mechanism to configure
+/// terminal settings (`tcsetattr`) on the active window even when input is redirected
+/// from a pipe.
 ///
 /// ## Child process perspective
 ///
@@ -466,6 +534,7 @@ use crate::VPSize;
 /// [3-layer Functional Stack]: crate::core::pty#the-functional-stack
 /// [`/dev/ptmx`]: https://man7.org/linux/man-pages/man4/ptmx.4.html
 /// [`/dev/pts/N`]: https://man7.org/linux/man-pages/man4/pts.4.html
+/// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 /// [`4.2BSD`]: https://en.wikipedia.org/wiki/Berkeley_Software_Distribution#4.2BSD
 /// [`Alacritty`]: https://alacritty.org/
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -529,6 +598,7 @@ use crate::VPSize;
 /// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 /// [`Xenix`]: https://en.wikipedia.org/wiki/Xenix
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+/// [controlling terminal alias]: #controlling-terminal-alias-devtty
 /// [DEC video terminals]: https://vt100.net/shuford/terminal/dec.html
 /// [fork-exec]: https://en.wikipedia.org/wiki/Fork-exec
 /// [Inclusive Naming Initiative - Tier 1 Terms]:

@@ -85,7 +85,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// thread when the terminal buffer is full.
 ///
 /// To resolve this without removing the non-blocking behavior from [`stdin`], [`stdout`]
-/// uses a polite polling mechanism. See [`FullBufferWaitingStdout`] / [`new_stdout()`]
+/// uses a polite polling mechanism. See [`BackpressureStdout`] / [`new_stdout()`]
 /// for the implementation of the fix.
 ///
 /// # Returns
@@ -94,6 +94,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// - [`Continuation::Stop`]: [`EOF`] or fatal worker-domain error.
 ///
 /// [`.read()`]: std::io::Read::read
+/// [`BackpressureStdout`]: crate::core::terminal_io::BackpressureStdout
 /// [`Drop`]: super::MioPollWorker#method.drop
 /// [`EINTR` Handling]: super#eintr-handling
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
@@ -101,7 +102,6 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`EPOLLET`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`ErrorKind::WouldBlock`]: std::io::ErrorKind::WouldBlock
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-/// [`FullBufferWaitingStdout`]: crate::core::terminal_io::FullBufferWaitingStdout
 /// [`kevent`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Poll`]: mio::Poll

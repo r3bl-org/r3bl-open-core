@@ -1,18 +1,18 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words fcntl getfl setfl EAGAIN NONBLOCK
+// cspell:words fcntl getfl setfl EAGAIN NONBLOCK POLLOUT EINTR
 
-//! [`PTY`] integration test for [`FullBufferWaitingStdout`] /
+//! [`PTY`] integration test for [`BackpressureStdout`] /
 //! [`OutputDevice::new_stdout()`] ensuring that setting [`O_NONBLOCK`] on [`stdin`] does
 //! not cause [`stdout`] writes to panic the application under heavy load.
 //!
 //! # Related Documentation
 //! - **The [`stdout`] recovery mechanism:**
-//!   - In [`FullBufferWaitingStdout`]:
-//!       - See [Mental Model] for why setting [`stdin`] to non-blocking affects
-//!         [`stdout`] on Linux.
-//!       - See [Blocking vs Busy Waiting vs Yielding] for the educational guide on thread
-//!         yielding.
+//!   - In [`BackpressureStdout`]:
+//!       - See [Why Stdout Needs Backpressure Handling] for why setting [`stdin`] to
+//!         non-blocking affects [`stdout`] on Linux and how [`POLLOUT`] event-driven
+//!         backpressure works.
+//!       - See [Signal Interrupts] for `EINTR` signal recovery and error handling.
 //! - **The [`stdin`] non-blocking requirement:**
 //!   - See [`MioPollWorker`] section [How This Affects stdout as well] to see how the
 //!     [`stdout`] side-effect is introduced.
@@ -25,23 +25,25 @@
 //! cargo test -p r3bl_tui test_pty_non_blocking_stdout_no_panic -- --nocapture
 //! ```
 //!
-//! [`FullBufferWaitingStdout`]: FullBufferWaitingStdout
+//! [`BackpressureStdout`]: BackpressureStdout
 //! [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 //! [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
+//! [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
-//! [Blocking vs Busy Waiting vs Yielding]:
-//!     FullBufferWaitingStdout#blocking-vs-busy-waiting-vs-yielding
 //! [How This Affects stdout as well]: MioPollWorker#how-this-affects-stdout-as-well
-//! [Mental Model]: FullBufferWaitingStdout#the-mental-model
+//! [Signal Interrupts]:
+//!     BackpressureStdout#signal-interrupts-eintr-and-fatal-error-handling
+//! [Why Stdout Needs Backpressure Handling]:
+//!     BackpressureStdout#why-stdout-needs-backpressure-handling
 //! [Why We Need Non-Blocking Read]:
 //!     consume_stdin_input_with_sender#why-we-need-non-blocking-read
 
 // Imported specifically for the intra-doc links in the module-level documentation.
 #[allow(unused_imports)]
 use crate::{
-    core::terminal_io::FullBufferWaitingStdout,
+    core::terminal_io::BackpressureStdout,
     tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
         MioPollWorker, handler_stdin::consume_stdin_input_with_sender,
     },

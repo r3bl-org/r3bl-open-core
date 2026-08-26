@@ -2,11 +2,10 @@
 
 //! Event dispatching for the [`mio`] poller event loop.
 
-use super::{MioPollWorker,
+use super::{super::channel_types::PollerEvent, MioPollWorker,
             handler_signals::consume_pending_signals_with_sender,
             handler_software_interrupt::handle_software_interrupt_with_sender,
-            handler_stdin::consume_stdin_input_with_sender, sources::SourceKindReady,
-            super::channel_types::PollerEvent};
+            handler_stdin::consume_stdin_input_with_sender, sources::SourceKindReady};
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
             tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use mio::Token;

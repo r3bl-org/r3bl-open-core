@@ -6,6 +6,20 @@ use r3bl_tui::{ColorWheel, GradientGenerationPolicy, InlineString,
                TextColorizationPolicy, glyphs, inline_string};
 use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
 
+pub mod rustup_progress {
+    /// Prefix stripped from rustup stdout lines to extract progress information.
+    pub const INFO_PREFIX: &str = "info: ";
+
+    /// Suffix appended to truncated progress output.
+    pub const ELLIPSIS: &str = "...";
+
+    /// Maximum character length of progress message shown in spinner display.
+    pub const MAX_DISPLAY_LEN: usize = 50;
+
+    /// Truncation slice length before appending [`ELLIPSIS`].
+    pub const TRUNCATE_LEN: usize = MAX_DISPLAY_LEN - ELLIPSIS.len();
+}
+
 pub mod upgrade_install {
     #[allow(clippy::wildcard_imports)]
     use super::*;

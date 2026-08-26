@@ -87,8 +87,9 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] build-infra tasks
 
-- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
+- [x] [fix linux perf problem](done/fix-yield_now-slowdown-on-linux.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
 # [TODO] Unify rendering
 
