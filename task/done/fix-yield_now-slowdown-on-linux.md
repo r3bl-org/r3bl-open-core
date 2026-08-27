@@ -35,6 +35,72 @@ Profiling data on Linux (`flamegraph-benchmark.perf-folded`) reveals that a larg
 of frame time on Linux is spent inside `__sched_yield` syscalls triggered by
 `BackpressureStdout::write()` and `flush()`.
 
+## Root Cause Analysis: Why the Slowdown Occurred ONLY on Linux
+
+The root cause of why this performance penalty was observed exclusively on Linux and not
+on macOS or Windows lies in how each platform selects its terminal backend and manages
+file descriptor flags:
+
+### 1. Platform Backend Selection Difference
+
+The backend is chosen at compile time via `TERMINAL_LIB_BACKEND`:
+
+- **macOS & Windows (`TERMINAL_LIB_BACKEND = Crossterm`)**:
+    - `Crossterm` operates entirely on standard blocking stdio.
+    - It **never sets `O_NONBLOCK`** on `stdin`.
+    - `stdout` remains in standard blocking mode natively.
+    - When `stdout.write()` or `flush()` writes large frames, the OS kernel blocks the
+      thread natively and resumes execution the moment the terminal emulator consumes
+      bytes.
+    - Because `stdout` is blocking, `stdout.write()` **never returned
+      `ErrorKind::WouldBlock`**.
+    - Consequently, macOS and Windows **never executed the `yield_now()` fallback loop**,
+      running at full native speed (173 FPS on macOS).
+
+- **Linux (`TERMINAL_LIB_BACKEND = DirectToAnsi`)**:
+    - `DirectToAnsi` uses `MioPollWorker` to perform high-performance edge-triggered input
+      multiplexing (`epoll` with `EPOLLET`).
+    - To enable edge-triggered polling without deadlocking the poller thread,
+      `MioPollWorker` sets `O_NONBLOCK` on `stdin` (fd 0).
+
+### 2. The Linux Shared Kernel Open File Description (OFD) Mechanism
+
+On Unix and Linux systems, file descriptor 0 (`stdin`), file descriptor 1 (`stdout`), and
+file descriptor 2 (`stderr`) point to the **same underlying Open File Description (OFD)**
+for the controlling terminal (`/dev/pts/X` or `/dev/tty`):
+
+1. The `O_NONBLOCK` flag is stored in the kernel OFD (`struct file.f_flags`), not in the
+   per-process file descriptor table.
+2. When `MioPollWorker` enabled `O_NONBLOCK` on `stdin`, it implicitly modified the shared
+   OFD.
+3. This unintended side effect caused **`stdout` to become non-blocking as well**.
+
+### 3. The `WouldBlock` and `yield_now()` Churn on Linux
+
+When App 0 painted large frames (e.g., 18 color wheel gradient lines), the generated ANSI
+byte payload exceeded the 4,096-byte `n_tty` kernel buffer:
+
+1. Because `stdout` was non-blocking on Linux, `stdout.write()` immediately failed with
+   `ErrorKind::WouldBlock` (`EAGAIN`).
+2. `BackpressureStdout` caught `WouldBlock` and invoked `std::thread::yield_now()`
+   (`sched_yield()` syscall) to let the terminal emulator catch up.
+3. `sched_yield` blindly surrendered the CPU timeslice to the OS scheduler without any
+   knowledge of when buffer capacity would actually be available.
+4. If the buffer was not drained by the next timeslice, repeated context switches created
+   massive latency churn (accounting for 30% to 40% of total frame time in flamegraphs),
+   dropping Linux throughput from 175 FPS down to 106 FPS.
+
+### Summary Comparison
+
+| Metric / Dimension                  | macOS / Windows               | Linux                                    |
+| :---------------------------------- | :---------------------------- | :--------------------------------------- |
+| **Backend Selected**                | `Crossterm`                   | `DirectToAnsi` (`MioPollWorker`)         |
+| **`stdin` Mode**                    | Blocking                      | Non-blocking (`O_NONBLOCK`)              |
+| **`stdout` Mode**                   | Blocking                      | Non-blocking (via shared OFD)            |
+| **`stdout.write()` Result on >4KB** | Kernel blocks thread natively | Returns `ErrorKind::WouldBlock`          |
+| **Entered `yield_now()` Loop?**     | **No** (never hit)            | **Yes** (triggered on every heavy frame) |
+| **Performance Impact**              | None (Baseline 173 FPS)       | Severe (-65% FPS penalty: 106 FPS)       |
+
 ---
 
 ## Architectural Insight: The Missing Half of the Async Reactor
@@ -56,32 +122,6 @@ was implemented:
 │                                           │ - Missing: Wait on `POLLOUT` (0% CPU)  ✅   │
 └───────────────────────────────────────────┴────────────────────────────────────────────┘
 ```
-
-### The Root Cause Chain Reaction & Backend Context
-
-The platform performance discrepancy maps directly to [`TERMINAL_LIB_BACKEND`]:
-
-1. **macOS & Windows (`TERMINAL_LIB_BACKEND = Crossterm`)**:
-    - `Crossterm` uses standard blocking I/O and does not set `O_NONBLOCK` on `stdin`.
-    - `stdout` remains in standard blocking mode natively.
-    - `stdout.write()` never returns `ErrorKind::WouldBlock`, so it never entered the
-      `yield_now()` loop (which is why macOS showed 173 fps without `__sched_yield`
-      slowdown).
-
-2. **Linux (`TERMINAL_LIB_BACKEND = DirectToAnsi`)**:
-    - `DirectToAnsi` uses `MioPollWorker` for high-performance edge-triggered input
-      multiplexing (`EPOLLET`).
-    - `MioPollWorker` sets `O_NONBLOCK` on `stdin`.
-    - Because `stdin` and `stdout` share the same kernel Open File Description (OFD) for
-      `/dev/pts/X`, `stdout` automatically becomes non-blocking.
-    - When App 0 paints large frames (18 color wheel gradient lines), ANSI escape
-      sequences exceed the 4,096-byte `n_tty` kernel buffer.
-    - Non-blocking `stdout.write()` immediately returns `ErrorKind::WouldBlock`
-      (`EAGAIN`).
-    - `BackpressureStdout` caught `WouldBlock` and called `std::thread::yield_now()`
-      (`sched_yield()`).
-    - `sched_yield` context-switches away blindly without knowing when the PTY has space,
-      adding 1 to 3 ms of scheduler latency per frame.
 
 ---
 

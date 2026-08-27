@@ -475,7 +475,7 @@
 //! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
 //! [Why Stdout Needs Backpressure Handling]:
-//!     crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling
+//!     crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
 
 // XMARK: impl trait rustdoc link definition heading-anchor (eg: #method.drop) see above
 
