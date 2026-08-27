@@ -26,7 +26,26 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// - **On Windows:** It politely yields the thread timeslice via [`yield_now()`] as a
 ///   fallback.
 ///
-/// # Why [`Stdout`] Needs Backpressure Handling
+/// # Platform-Specific Behavior and Zero-Overhead Pass-Through
+///
+/// While [`BackpressureStdout`] is used inside [`OutputDevice`] across all supported
+/// operating systems to provide a uniform terminal output interface, its backpressure
+/// wait path is primarily exercised on Linux:
+///
+/// - **Linux ([`DirectToAnsi`] Backend):** [`MioPollWorker`] sets `O_NONBLOCK` on [`stdin`],
+///   implicitly converting [`stdout`] into non-blocking mode via the shared Open File
+///   Description (OFD). When a frame payload exceeds the 4,096-byte kernel buffer,
+///   [`write()`] returns [`WouldBlock`], and [`BackpressureStdout`] puts the thread on the
+///   kernel [`PTY`] wait-queue using [`rustix::event::poll`] on [`POLLOUT`].
+///
+/// - **macOS & Windows ([`Crossterm`] Backend):** Crossterm uses standard blocking stdio and
+///   never puts [`stdin`] into non-blocking mode. Consequently, [`stdout`] remains in
+///   standard blocking mode natively. Calls to [`write()`] and [`flush()`] succeed
+///   immediately or block natively in the OS kernel without ever returning
+///   [`WouldBlock`]. On macOS and Windows, this struct acts as a zero-overhead
+///   pass-through.
+///
+/// # Why [`Stdout`] Needs Backpressure Handling on Linux with [`DirectToAnsi`]
 ///
 /// 1. **Problem:** We made [`stdin`] non-blocking on Linux to perform high-performance
 ///    [edge-triggered polling] with [`mio`] without deadlocking the poller thread (see
@@ -84,6 +103,8 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// [`/dev/tty`]: crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`cat`]: https://en.wikipedia.org/wiki/Cat_(Unix)
+/// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+/// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 /// [`drop()`]:
 ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker#method.drop
 /// [`EBADF`]: https://man7.org/linux/man-pages/man3/errno.3.html
@@ -97,6 +118,7 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// [`n_tty`]: https://docs.kernel.org/driver-api/tty/n_tty.html
 /// [`original_stdin_flags`]:
 ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker::original_stdin_flags
+/// [`OutputDevice`]: crate::OutputDevice
 /// [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`rustix::event::poll`]: rustix::event::poll

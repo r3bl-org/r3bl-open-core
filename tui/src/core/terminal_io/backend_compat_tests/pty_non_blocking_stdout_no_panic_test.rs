@@ -36,7 +36,7 @@
 //! [Signal Interrupts]:
 //!     BackpressureStdout#signal-interrupts-eintr-and-fatal-error-handling
 //! [Why Stdout Needs Backpressure Handling]:
-//!     BackpressureStdout#why-stdout-needs-backpressure-handling
+//!     BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
 //! [Why We Need Non-Blocking Read]:
 //!     consume_stdin_input_with_sender#why-we-need-non-blocking-read
 
