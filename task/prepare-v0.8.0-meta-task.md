@@ -70,6 +70,7 @@ _Meta Task: Prepare v0.8.0 Release_
     - [ ] [Enable mouse in editor](editor-mouse-enable.md)
     - [ ] [Update Layout Engine](modernize-layout-engine.md)
     - [ ] [rasterize editor component rendering](rasterize-editor-component-rendering.md)
+- [x] [fix linux perf problem](done/fix-yield_now-slowdown-on-linux.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/473
 - [ ] [invert control and decouple UI in pty_mux](pty-mux-invert-control.md)
 - [ ] **NEEDS RESEARCH & PLANNING** https://github.com/r3bl-org/r3bl-open-core/pull/468
@@ -87,7 +88,7 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] build-infra tasks
 
-- [x] [fix linux perf problem](done/fix-yield_now-slowdown-on-linux.md)
+- [ ] [spawny](binaries-self-upgrade-support.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
