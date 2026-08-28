@@ -20,7 +20,6 @@
     "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
     "usernamehw.errorlens", // Error Lens.
     "rust-lang.rust-analyzer", // Rust Analyzer.
-    "fill-labs.dependi", // crates.io.
     "dnut.rewrap-revived", // Rewrap Revived.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "naumovs.color-highlight", // Color Highlight.
@@ -31,8 +30,6 @@
     "bmalehorn.vscode-fish", // Fish.
     "qwtel.sqlite-viewer", // SQLite Viewer.
     "perkovec.emoji", // Emoji.
-    "vadimcn.vscode-lldb", // LLDB. Debugger.
-    "ms-vscode.cpptools", // C/C++. Debugger.
     "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
     "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
     "hoovercj.vscode-settings-cycler", // Settings Cycler.
@@ -41,6 +38,9 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "ms-vscode.cpptools", // C/C++. Debugger.
+    "vadimcn.vscode-lldb", // LLDB. Debugger.
+    "fill-labs.dependi", // crates.io.
     "anthropic.claude-code", // Claude Code.
     "s-nlf-fh.glassit", // GlassIt (does not work w/ Wayland, only X11).
     "ms-vscode-remote.remote-containers", // Remote - Containers.

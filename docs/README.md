@@ -47,6 +47,7 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 - [`AGENTS.md`](../AGENTS.md) - AI agent integration documentation
 - [`dd_parser_conformance.md`](dd_parser_conformance.md) - Parser conformance testing documentation
+- [`ril.md`](ril.md) - Rust Innovation Lab (RIL) application and architecture overview
 
 ### Plans
 
