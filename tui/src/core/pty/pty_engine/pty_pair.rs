@@ -144,6 +144,59 @@ use crate::VPSize;
 /// terminal settings (`tcsetattr`) on the active window even when input is redirected
 /// from a pipe.
 ///
+/// ## How [`/dev/ptmx`] and [`/dev/pts/N`] work together
+///
+/// Unix98 and [`POSIX.1-2001`] standardized pseudo-terminal allocation by introducing a
+/// single multiplexer character device: [`/dev/ptmx`].
+///
+/// ```text
+/// ┌────────────────────────────────────────────────────────────────────────┐
+/// │ Controller Process (e.g. WSL init, sshd, r3bl_tui PtyPair)             │
+/// └───────────────────────────────────┬────────────────────────────────────┘
+///                                     │
+///          1. open("/dev/ptmx") ─────►│ Returns master fd (e.g., fd 7)
+///          2. ioctl(master_fd, ...) ─►│ Calls grantpt(), unlockpt()
+///          3. ioctl(master_fd, ...) ─►│ Calls ptsname() -> "/dev/pts/3"
+///                                     │
+///                                     ▼
+/// ┌────────────────────────────────────────────────────────────────────────┐
+/// │ Linux Kernel (devpts filesystem & TTY subsystem)                       │
+/// │                                                                        │
+/// │   Master Side (fd 7)                    Slave Device Node              │
+/// │   [ Holds Controller End ]              [ /dev/pts/3 created ]         │
+/// │              ▲                                   ▲                     │
+/// │              │                                   │                     │
+/// │              └──────────[ Line Discipline ]──────┘                     │
+/// │                         * Raw vs Canonical                             │
+/// │                         * Echoing                                      │
+/// │                         * Signals (Ctrl+C)                             │
+/// └──────────────────────────────────────────────────┬─────────────────────┘
+///                                                    │
+///                                                    │ 4. Child process opens
+///                                                    │    /dev/pts/3 as:
+///                                                    │    stdin (0), stdout (1),
+///                                                    │    stderr (2)
+///                                                    ▼
+/// ┌────────────────────────────────────────────────────────────────────────┐
+/// │ Controlled Process (e.g. /bin/bash, vim, htop)                         │
+/// └────────────────────────────────────────────────────────────────────────┘
+/// ```
+///
+/// 1. **Opening the Multiplexer**: When a process calls `open("/dev/ptmx", O_RDWR)` (or
+///    [`posix_openpt()`]), the Linux kernel creates a brand new pseudo-terminal instance.
+/// 2. **Master File Descriptor**: The file descriptor returned by `open()` is the [`PTY`]
+///    master, representing the controller end of the terminal.
+/// 3. **Dynamic Slave Creation**: The kernel dynamically registers a corresponding device
+///    node inside the `devpts` virtual filesystem at `/dev/pts/<N>` (e.g., `/dev/pts/3`).
+/// 4. **Child Attachment**: The controller forks a child process. The child opens
+///    `/dev/pts/3` and duplicates it onto standard file descriptors `0` ([`stdin`]), `1`
+///    ([`stdout`]), and `2` ([`stderr`]).
+/// 5. **Bidirectional Communication**:
+///    - When the child writes to [`stdout`] (`/dev/pts/3`), the kernel routes data
+///      through the [line discipline] to the master file descriptor.
+///    - When the controller writes to the master file descriptor, the kernel routes data
+///      to the child's [`stdin`].
+///
 /// ## Child process perspective
 ///
 /// When you spawn a process in a [`PTY`], the **child process** gets a [`/dev/pts/N`]
@@ -568,6 +621,7 @@ use crate::VPSize;
 /// [`portable_pty's openpty()`]: portable_pty::PtySystem::openpty
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
 /// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
+/// [`posix_openpt()`]: https://man7.org/linux/man-pages/man3/posix_openpt.3.html
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyPair::into_controller()`]: PtyPair::into_controller
 /// [`PtyPair::open_raw_pair()`]: Self::open_raw_pair

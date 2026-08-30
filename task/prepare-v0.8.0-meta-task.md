@@ -88,7 +88,8 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] build-infra tasks
 
-- [ ] [spawny](binaries-self-upgrade-support.md)
+- [ ] [add-posix-source](add-posix-source.md)
+- [ ] [spawny](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
