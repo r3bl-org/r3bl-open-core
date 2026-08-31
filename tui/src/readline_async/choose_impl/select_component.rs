@@ -1,12 +1,10 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{
-    core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
-    inline_string, ok, queue_commands, usize, vp_width, c_col, ChUnit,
-    CliTextInline, CommonResult, FunctionComponent, GCStringOwned, Header, HowToChoose,
-    InlineString, InlineVec, OutputDevice, RangeExt, State, StyleSheet, TuiStyle, ch,
-    cli_text_inline, DEVELOPMENT_MODE,
-};
+use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+            GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
+            RangeExt, State, StyleSheet, TuiStyle, c_col, ch, cli_text_inline,
+            core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
+            inline_string, ok, queue_commands, usize, vp_width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -237,8 +235,8 @@ mod render_helper {
                 // processing the rest of the spans in this line.
                 if span_us_display_width > available_space_col_count {
                     // Clip the text to available space.
-                    let clipped_text_str = span_text_gcs
-                        .clip(c_col(0), vp_width(available_space_col_count));
+                    let clipped_text_str =
+                        span_text_gcs.clip(c_col(0), vp_width(available_space_col_count));
                     let clipped_text = inline_string!("{clipped_text_str}...");
                     header_line_modified.push(clipped_text);
                     break 'inner;

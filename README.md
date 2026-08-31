@@ -371,6 +371,7 @@ contains these apps:
 
 - `giti`: Interactive git workflows made easy.
 - `edi`: Beautiful Markdown editor with advanced rendering and editing features.
+- `env-source`: Fast cross-platform environment loader evaluating scripts across POSIX sh, Fish, PowerShell, and cmd.exe.
 
 You can install & run this with the following command:
 
@@ -380,6 +381,8 @@ cargo install r3bl-cmdr
 giti --version
 # Beautiful Markdown editor with advanced rendering and editing features.
 edi --version
+# Fast cross-platform environment loader.
+env-source --version
 ```
 
 ### Build infrastructure and developer tooling crate
@@ -660,7 +663,7 @@ fish run.fish install-cargo-tools
 
 **From local source (via `cargo install --path`):**
 
-- **cmdr**: `edi`, `giti`, `rc` binaries (calls `run.fish install-cmdr`)
+- **cmdr**: `edi`, `giti`, `rc`, `env-source` binaries (calls `run.fish install-cmdr`)
 - **build-infra**: `cargo-rustdoc-fmt` (calls `run.fish install-build-infra`)
 - **rust-analyzer-mcp-server**: `rust-analyzer-mcp-server` MCP binary (calls `run.fish install-rust-analyzer-mcp-server`)
 
@@ -842,14 +845,14 @@ fish run.fish
 | `fish run.fish test`                                       | Run all tests across the workspace                                                      |
 | `fish run.fish install-cargo-tools`                        | Install all dev tools (`crates.io` + local source packages)                             |
 | `fish run.fish update-cargo-tools`                         | Update all tools (`crates.io` + rebuild local source packages)                          |
-| `fish run.fish install-cmdr`                               | Install `cmdr` binaries (`edi`, `giti`, `rc`) from source                               |
+| `fish run.fish install-cmdr`                               | Install `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) from source                 |
 | `fish run.fish install-build-infra`                        | Install `build-infra` tools (`cargo-rustdoc-fmt`) from source                           |
 | `fish run.fish test-watch [pattern]`                       | Watch for file changes and run specific test                                            |
 | `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
 | `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
 | `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
 | `fish run.fish bench`                                      | Run benchmarks                                                                          |
-| `fish run.fish run-binaries`                               | Run `cmdr` binaries (`edi`, `giti`, `rc`) interactively                                 |
+| `fish run.fish run-binaries`                               | Run `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) interactively                   |
 | `fish run.fish dev-dashboard`                              | Start 2-pane `tmux` development dashboard (tests, docs, checks)                         |
 | `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
 | `fish run.fish check-windows-build`                        | Verify Windows cross-compilation (platform `cfg` gates)                                 |

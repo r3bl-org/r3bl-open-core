@@ -2,8 +2,8 @@
 
 // cspell:words noconfirm
 
-use crate::{command, ok};
-use miette::IntoDiagnostic;
+use crate::{CommandOutputResult, command, ok};
+use miette::{Context, IntoDiagnostic};
 
 /// Supported package manager types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,39 +25,53 @@ impl PackageManager {
     #[must_use]
     pub fn detect() -> Option<Self> {
         // Check in order of specificity
-        if std::process::Command::new("apt-get")
+        let cmd_output_result = std::process::Command::new("apt-get")
             .arg("--version")
-            .output()
-            .is_ok()
-        {
-            Some(PackageManager::Apt)
-        } else if std::process::Command::new("dnf")
-            .arg("--version")
-            .output()
-            .is_ok()
-        {
-            Some(PackageManager::Dnf)
-        } else if std::process::Command::new("pacman")
-            .arg("-V")
-            .output()
-            .is_ok()
-        {
-            Some(PackageManager::Pacman)
-        } else if std::process::Command::new("zypper")
-            .arg("--version")
-            .output()
-            .is_ok()
-        {
-            Some(PackageManager::Zypper)
-        } else if std::process::Command::new("brew")
-            .arg("--version")
-            .output()
-            .is_ok()
-        {
-            Some(PackageManager::Brew)
-        } else {
-            None
+            .output();
+        if matches!(
+            CommandOutputResult::from(cmd_output_result),
+            CommandOutputResult::Success(_)
+        ) {
+            return Some(PackageManager::Apt);
         }
+
+        let cmd_output_result =
+            std::process::Command::new("dnf").arg("--version").output();
+        if matches!(
+            CommandOutputResult::from(cmd_output_result),
+            CommandOutputResult::Success(_)
+        ) {
+            return Some(PackageManager::Dnf);
+        }
+
+        let cmd_output_result = std::process::Command::new("pacman").arg("-V").output();
+        if matches!(
+            CommandOutputResult::from(cmd_output_result),
+            CommandOutputResult::Success(_)
+        ) {
+            return Some(PackageManager::Pacman);
+        }
+
+        let cmd_output_result = std::process::Command::new("zypper")
+            .arg("--version")
+            .output();
+        if matches!(
+            CommandOutputResult::from(cmd_output_result),
+            CommandOutputResult::Success(_)
+        ) {
+            return Some(PackageManager::Zypper);
+        }
+
+        let cmd_output_result =
+            std::process::Command::new("brew").arg("--version").output();
+        if matches!(
+            CommandOutputResult::from(cmd_output_result),
+            CommandOutputResult::Success(_)
+        ) {
+            return Some(PackageManager::Brew);
+        }
+
+        None
     }
 
     /// Gets the command used to check if a package is installed.
@@ -94,13 +108,14 @@ impl PackageManager {
 /// executable. This works on all Unix-like systems (Linux and macOS)
 /// regardless of package manager.
 #[must_use]
-#[allow(clippy::map_unwrap_or)]
 pub fn is_command_available(command_name: &str) -> bool {
-    std::process::Command::new("which")
+    let cmd_output_result = std::process::Command::new("which")
         .arg(command_name)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .output();
+    matches!(
+        CommandOutputResult::from(cmd_output_result),
+        CommandOutputResult::Success(_)
+    )
 }
 
 /// Checks if a package is installed on the system.
@@ -148,15 +163,18 @@ pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result
 
     let (cmd, base_args) = pkg_mgr.check_command();
 
-    let output = command!(
+    let cmd_output_result = command!(
         program => cmd,
         args => base_args[0], package_name
     )
     .output()
-    .await
-    .into_diagnostic()?;
+    .await;
 
-    ok!(output.status.success())
+    match CommandOutputResult::from(cmd_output_result) {
+        CommandOutputResult::Success(_) => ok!(true),
+        CommandOutputResult::NonZeroExit(_) => ok!(false),
+        CommandOutputResult::SpawnFailed(err) => Err(err).into_diagnostic(),
+    }
 }
 
 /// Install a package using the system's package manager.
@@ -196,7 +214,7 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 
     let (cmd, base_args) = pkg_mgr.install_command();
 
-    let command_result = if pkg_mgr.requires_sudo() {
+    let cmd_output_result = if pkg_mgr.requires_sudo() {
         // Build args: ["apt", "install", "-y", package_name]
         let mut args = vec![cmd];
         args.extend(base_args.iter().copied());
@@ -208,7 +226,6 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
         )
         .output()
         .await
-        .into_diagnostic()?
     } else {
         // For brew, no sudo needed
         let mut args: Vec<&str> = base_args.to_vec();
@@ -220,18 +237,23 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
         )
         .output()
         .await
-        .into_diagnostic()?
     };
 
-    if command_result.status.success() {
-        ok!()
-    } else {
-        Err(miette::miette!(
+    match CommandOutputResult::from(cmd_output_result) {
+        CommandOutputResult::Success(_) => ok!(),
+        CommandOutputResult::NonZeroExit(output) => Err(miette::miette!(
             "Failed to install package '{}' with {}: {:?}",
             package_name,
             cmd,
-            String::from_utf8_lossy(&command_result.stderr)
-        ))
+            String::from_utf8_lossy(&output.stderr)
+        )),
+        CommandOutputResult::SpawnFailed(err) => {
+            Err(err).into_diagnostic().wrap_err_with(|| {
+                format!(
+                    "Failed to spawn installation command for package '{package_name}'"
+                )
+            })
+        }
     }
 }
 
@@ -278,5 +300,16 @@ mod tests_package_manager {
 
         // This should fail because the package doesn't exist
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_command_available() {
+        #[cfg(unix)]
+        {
+            assert!(is_command_available("sh"));
+            assert!(!is_command_available(
+                "definitely_nonexistent_binary_xyz_123"
+            ));
+        }
     }
 }

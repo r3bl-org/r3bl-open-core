@@ -2,7 +2,7 @@
 
 //! Core client structure and lifecycle state machine for `rust-analyzer`.
 
-use crate::{constants::{lsp_framing, lsp_methods},
+use crate::{constants::lsp_methods,
             error::McpServerError,
             lsp::{protocol::{primitive_types::{JsonRpcRequestId, LspWriter},
                              readiness_types::ServerReadiness,
@@ -70,10 +70,11 @@ impl Debug for RustAnalyzerClient {
 }
 
 /// Canonicalizes a workspace path with a fallback to resolving relative to the current
-/// working directory.
+/// working directory. On Windows, verbatim UNC prefixes (`\\?\`) are stripped for
+/// compatibility with tools and language servers.
 #[must_use]
 pub fn canonicalize_path(path: &Path) -> PathBuf {
-    path.canonicalize().unwrap_or_else(|_| {
+    let canonical = path.canonicalize().unwrap_or_else(|_| {
         if path.is_absolute() {
             path.to_path_buf()
         } else {
@@ -81,7 +82,42 @@ pub fn canonicalize_path(path: &Path) -> PathBuf {
                 .unwrap_or_else(|_| PathBuf::from("."))
                 .join(path)
         }
-    })
+    });
+
+    #[cfg(windows)]
+    {
+        let s = canonical.to_string_lossy();
+        if let Some(stripped) = s.strip_prefix(r"\\?\") {
+            return PathBuf::from(stripped);
+        }
+    }
+
+    canonical
+}
+
+/// Converts a path to a valid RFC 3986 `file://` URI string.
+/// On Windows, backslashes are converted to forward slashes and prefixed with `file:///`.
+#[must_use]
+pub fn path_to_file_uri(path: &Path) -> String {
+    let path_buf = canonicalize_path(path);
+    let s = path_buf.to_string_lossy();
+    #[cfg(windows)]
+    {
+        let normalized = s.replace('\\', "/");
+        if normalized.starts_with('/') {
+            format!("file://{normalized}")
+        } else {
+            format!("file:///{normalized}")
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        if s.starts_with('/') {
+            format!("file://{s}")
+        } else {
+            format!("file:///{s}")
+        }
+    }
 }
 
 impl RustAnalyzerClient {
@@ -148,11 +184,7 @@ impl RustAnalyzerClient {
     /// Sends the LSP `initialize` request and subsequent `initialized` notification to
     /// complete the protocol startup handshake.
     fn initialize(&mut self) -> Result<(), McpServerError> {
-        let workspace_uri = format!(
-            "{}{}",
-            lsp_framing::FILE_URI_PREFIX,
-            self.workspace_root.display()
-        );
+        let workspace_uri = path_to_file_uri(&self.workspace_root);
         let current_pid = std::process::id();
 
         let init_params = json!({
@@ -303,11 +335,11 @@ mod tests {
     fn test_canonicalize_path_relative_and_absolute() {
         let current_dir = std::env::current_dir().unwrap();
         let canonical_current = canonicalize_path(Path::new("."));
-        assert_eq!(canonical_current, current_dir.canonicalize().unwrap());
+        assert_eq!(canonical_current, canonicalize_path(&current_dir));
 
-        let non_existent = Path::new("/tmp/non_existent_folder_abc123");
-        let fallback = canonicalize_path(non_existent);
-        assert_eq!(fallback, PathBuf::from("/tmp/non_existent_folder_abc123"));
+        let non_existent = std::env::temp_dir().join("non_existent_folder_abc123");
+        let fallback = canonicalize_path(&non_existent);
+        assert_eq!(fallback, non_existent);
     }
 
     #[test]

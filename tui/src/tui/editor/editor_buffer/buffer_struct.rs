@@ -6,7 +6,7 @@ use crate::{CCaret, CCol, CHeight, CPos, CRow, CWidth, CursorPositionBoundsStatu
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, NumericValue, TinyInlineString, VPCaret,
-            VPSize, Viewport, ZeroCopyGapBuffer, format_as_kilobytes_with_commas,
+            VPSize, Viewport, ZeroCopyGapBuffer, format_as_kibibytes_with_commas,
             glyphs, inline_string, locate_col, ok,
             validate_buffer_mut::EditorBufferMutNoDrop, vp_caret, vp_col, vp_pos,
             vp_row, with_mut};
@@ -970,7 +970,7 @@ mod impl_debug {
         #[allow(clippy::nonstandard_macro_braces)]
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let mem_size = self.get_mem_size();
-            let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
+            let mem_size_fmt = format_as_kibibytes_with_commas(mem_size);
 
             write! {
                 f,

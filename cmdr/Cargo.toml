@@ -7,11 +7,15 @@ homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 description = """
-Fully async TUI apps for developers (built on r3bl_tui). giti: interactive git CLI with visual branch selection and streamlined commit workflows. edi: TUI Markdown editor with gradient colors, syntax highlighting, smart lists, emoji support, SSH optimized (diff-based rendering), zero-copy gap buffer for large files. Never blocks the main thread. Auto-detects terminal capabilities.
+Fully async TUI & CLI apps for developers (built on r3bl_tui). giti: interactive git CLI with visual branch selection and streamlined commit workflows. edi: TUI Markdown editor with gradient colors, syntax highlighting, smart lists, emoji support, SSH optimized (diff-based rendering), zero-copy gap buffer for large files. env-source: fast cross-platform environment loader evaluating scripts across POSIX sh, Fish, PowerShell, and cmd.exe. Never blocks the main thread. Auto-detects terminal capabilities.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "git", "markdown", "editor", "async"]
-categories = ["command-line-interface", "command-line-utilities"]
+keywords = ["tui", "git", "markdown", "editor", "shell"]
+categories = [
+    "command-line-utilities",
+    "development-tools",
+    "text-editors",
+]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"
 authors = [
@@ -44,6 +48,10 @@ path = "src/bin/edi.rs"
 [[bin]]
 name = "rc"
 path = "src/bin/rc.rs"
+
+[[bin]]
+name = "env-source"
+path = "src/bin/env-source.rs"
 
 [lib]
 name = "r3bl_cmdr"
@@ -107,11 +115,6 @@ rustc-hash = "2.1.0"
 #
 # mimalloc (by Microsoft):
 # - https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance
-#
-# jemalloc (originally by Facebook, now archived):
-# - https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
-# - https://news.ycombinator.com/item?id=35473271
-# - https://crates.io/crates/jemallocator
 mimalloc = "0.1.48"
 
 [dev-dependencies]

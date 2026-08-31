@@ -1,5 +1,6 @@
 # Task: Binary Self-Upgrade & Bootstrap
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN mktoc -->
 
 - [Overview](#overview)
@@ -26,7 +27,9 @@
 - [Cross-Platform Test Matrix](#cross-platform-test-matrix)
     - [Test Scenario Matrix](#test-scenario-matrix)
     - [OS-Specific Verification Checklist](#os-specific-verification-checklist)
-          <!-- END mktoc -->
+
+<!-- END mktoc -->
+<!-- prettier-ignore-end -->
 
 ## Overview
 
@@ -227,7 +230,8 @@ application:
 - Intercept `--upgrade` at startup in `cargo-rustdoc-fmt.rs` and `spawny.rs`.
 - Spawn background version check at startup in both binaries.
 - At exit, invoke `r3bl_tui::handle_upgrade_at_exit()` with `UpgradePolicy::AutoUpgrade`
-  (or `NotifyOnly` when `CI=true` or `R3BL_NO_AUTO_UPGRADE=1`) and `UpgradeOutputTarget::Stdout`.
+  (or `NotifyOnly` when `CI=true` or `R3BL_NO_AUTO_UPGRADE=1`) and
+  `UpgradeOutputTarget::Stdout`.
 - Release bundles all build-infra binaries: `cargo-rustdoc-fmt` and `spawny`.
 
 ### 4. r3bl-rust-analyzer-mcp-server
@@ -286,15 +290,16 @@ application:
 
 **Consolidated Showcase & Installation Guides Across All Mediums**:
 
-- **Crate READMEs & `lib.rs` Modules**: Each crate (`cmdr`, `build-infra`,
-  `rust-analyzer-mcp-server`, and root `r3bl-open-core`) provides:
+- **Crate READMEs & `lib.rs` Modules**: Each crate (`cmdr`, `build-infra` [for both
+  `cargo-rustdoc-fmt` and `spawny`], `rust-analyzer-mcp-server`, and root
+  `r3bl-open-core`) provides:
     1. Primary: 1-line bootstrap script (`install.sh` / `install.ps1`).
     2. Feature docs & `--upgrade` CLI flag instructions.
     3. End-of-file fallback instructions: `cargo install <crate> --force`.
 - **R3BL Website Homepage (`r3bl.com`)**:
     - Update `../r3bl_website/index.html` to consolidate the entire tool suite
-      (`r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`) with
-      copy-pasteable bootstrap commands.
+      (`r3bl-cmdr`, `r3bl-build-infra` [`cargo-rustdoc-fmt` + `spawny`],
+      `r3bl-rust-analyzer-mcp-server`) with copy-pasteable bootstrap commands.
     - Replace placeholder text with modern product highlights and clear architecture
       diagrams.
     - Clean up and modernize `../r3bl_website/css/styles.css` and root variable styling.
@@ -395,9 +400,11 @@ application:
 
 **Integration into `r3bl-build-infra` (`cargo-rustdoc-fmt`, `spawny`)**:
 
-- [ ] Add `--upgrade` CLI flag to `cargo-rustdoc-fmt` in `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
+- [ ] Add `--upgrade` CLI flag to `cargo-rustdoc-fmt` in
+      `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
 - [ ] Add `--upgrade` CLI flag to `spawny` in `build-infra/src/spawny/cli/`.
-- [ ] Intercept `--upgrade` at startup in `build-infra/src/bin/cargo-rustdoc-fmt.rs` and `build-infra/src/bin/spawny.rs`.
+- [ ] Intercept `--upgrade` at startup in `build-infra/src/bin/cargo-rustdoc-fmt.rs` and
+      `build-infra/src/bin/spawny.rs`.
 - [ ] Integrate background check and exit upgrade handler (`UpgradePolicy::AutoUpgrade`,
       `UpgradeOutputTarget::Stdout`).
 - [ ] Ensure CI / environment guardrail (`CI=true` or `R3BL_NO_AUTO_UPGRADE=1`) falls back
@@ -436,7 +443,9 @@ application:
 - [ ] Update `build-infra/README.md` and `build-infra/src/lib.rs`:
     - Add bootstrap install commands (`install.sh build-infra` /
       `install.ps1 build-infra`).
-    - Document `--upgrade` standalone CLI argument.
+    - Document `--upgrade` standalone CLI argument across both `cargo-rustdoc-fmt` and
+      `spawny`.
+    - Document features and commands for both `cargo-rustdoc-fmt` and `spawny`.
     - Add end-of-file fallback instructions: `cargo install r3bl-build-infra --force`.
 - [ ] Update `rust-analyzer-mcp-server/README.md` and
       `rust-analyzer-mcp-server/src/lib.rs`:
@@ -450,7 +459,8 @@ application:
     - Add fallback `cargo install <crate> --force` instructions.
 - [ ] Update `r3bl.com` website in `../r3bl_website/index.html`:
     - Replace placeholder content with product showcase for `r3bl-cmdr`,
-      `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`.
+      `r3bl-build-infra` (`cargo-rustdoc-fmt` + `spawny`), and
+      `r3bl-rust-analyzer-mcp-server`.
     - Provide prominent copy-pasteable bootstrap install commands (`install.sh` and
       `install.ps1`).
     - Provide fallback source compilation instructions (`cargo install <crate> --force`).
@@ -525,17 +535,20 @@ behaviors across clean container environments for 3 major Linux distributions:
     - **Fedora** (`cmdr-fedora`): Fedora 41, dnf package manager.
 - **Verification Steps in `systemd-nspawn` Containers**:
     - [ ] Run `./create-containers.fish all` to initialize fresh distro root filesystems.
-    - [ ] Test `install.sh` bootstrap in clean containers without Rust or build toolchains installed.
-    - [ ] Test `giti --upgrade`, `edi --upgrade`, `rc --upgrade`, `cargo-rustdoc-fmt --upgrade`,
-          and `rust-analyzer-mcp-server --upgrade`.
+    - [ ] Test `install.sh` bootstrap in clean containers without Rust or build toolchains
+          installed.
+    - [ ] Test `giti --upgrade`, `edi --upgrade`, `rc --upgrade`,
+          `cargo-rustdoc-fmt --upgrade`, and `rust-analyzer-mcp-server --upgrade`.
     - [ ] Verify in-place binary swap replaces inode cleanly via POSIX `rename`.
-    - [ ] Test fallback source compilation with Linux PTY (`/dev/pts`) when GitHub is simulated offline.
-    - [ ] Verify `CI=true` and `R3BL_NO_AUTO_UPGRADE=1` suppress automated upgrades and fall
-          back to `NotifyOnly`.
+    - [ ] Test fallback source compilation with Linux PTY (`/dev/pts`) when GitHub is
+          simulated offline.
+    - [ ] Verify `CI=true` and `R3BL_NO_AUTO_UPGRADE=1` suppress automated upgrades and
+          fall back to `NotifyOnly`.
     - [ ] Run `./cleanup.fish` after verification completes.
 - **Follow-up Workspace Task**:
-    - Consolidate and generalize `cmdr/systemd-nspawn/` and `/home/nazmul/github/notes/files/scripts/tests`
-      into a root-level workspace test suite (`tests/nspawn/`) that tests all workspace binaries.
+    - Consolidate and generalize `cmdr/systemd-nspawn/` and
+      `/home/nazmul/github/notes/files/scripts/tests` into a root-level workspace test
+      suite (`tests/nspawn/`) that tests all workspace binaries.
 
 #### macOS Apple Silicon (`aarch64-apple-darwin`) & Intel (`x86_64-apple-darwin`)
 

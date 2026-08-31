@@ -19,13 +19,22 @@ use crate::{CCol, CPos, CRow, CanvasRangeExt, RangeBoundsExt, RangeBoundsResult,
 /// camera panning operations).
 ///
 /// See the [Canvas and Viewport concept] for details on how this coordinates with the
-/// underlying [`Canvas`].
+/// underlying [`Canvas`]. The separation between Canvas coordinates ([`usize`]) and
+/// Viewport coordinates ([`u16`]) implements the "Parse, don't validate" principle and
+/// the Newtype and Typestate patterns, guaranteeing runtime faultlessness and
+/// invalidation of illegal states with zero performance penalty. For more information,
+/// see [academic research on type safety at scale] ([theoretical foundations], [empirical
+/// benchmarks]).
 ///
 /// [`Canvas`]: mod@crate::core::coordinates::canvas
 /// [`CanvasCameraExt`]: crate::CanvasCameraExt
 /// [`CanvasToViewportExt`]: crate::CanvasToViewportExt
 /// [`ViewportToCanvasExt`]: crate::ViewportToCanvasExt
+/// [academic research on type safety at scale]:
+///     mod@crate::core::coordinates::canvas#academic-research-on-type-safety-at-scale
 /// [Canvas and Viewport concept]: mod@crate::core::coordinates::canvas#canvas-and-viewport-concept
+/// [empirical benchmarks]: mod@crate::core::coordinates::canvas#empirical-benchmarks
+/// [theoretical foundations]: mod@crate::core::coordinates::canvas#theoretical-foundations
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
 pub struct Viewport {
     origin_pos: CPos,

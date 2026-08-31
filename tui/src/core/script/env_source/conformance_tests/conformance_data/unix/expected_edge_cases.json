@@ -1,0 +1,14 @@
+{
+  "added": {
+    "EMPTY_VAR": "",
+    "MULTILINE": "line 1\nline 2\nline 3",
+    "QUOTE_DOUBLE": "said \"hello\"",
+    "QUOTE_SINGLE": "don't fail",
+    "WITH_BACKSLASH": "path\\to\\dir",
+    "WITH_SEMICOLON": "foo; bar; baz"
+  },
+  "modified": {},
+  "removed": [
+    "EXISTING_VAR"
+  ]
+}

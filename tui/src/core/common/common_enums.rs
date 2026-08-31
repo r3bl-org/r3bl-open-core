@@ -30,7 +30,7 @@
 /// [`.into()`]: Into::into
 /// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
 /// [Main event loop]: crate::main_event_loop_impl
-/// [PTY input processing]: crate::pty_session::pty_session_builder
+/// [PTY input processing]: crate::pty_session::pty_session_struct
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Continuation<E = ()> {
     /// Continue to the next iteration.

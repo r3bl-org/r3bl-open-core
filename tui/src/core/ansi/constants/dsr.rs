@@ -69,3 +69,8 @@ define_ansi_const!(@dsr_str : DSR_STATUS_OK_FULL_RESPONSE = ["0n"] =>
 define_ansi_const!(@dsr_str : DSR_STATUS_OK_RESPONSE_STR = ["0n"] =>
     "Status OK Response (DSR 0n)" : "Complete status OK response: `ESC [ 0 n`."
 );
+
+define_ansi_const!(@dsr_str : DSR_CURSOR_POSITION_ORIGIN_RESPONSE = ["1;1R"] =>
+    "Cursor Position Origin Response (DSR 1;1R)" :
+    "Complete cursor position report at origin (row 1, col 1): `ESC [ 1 ; 1 R`."
+);

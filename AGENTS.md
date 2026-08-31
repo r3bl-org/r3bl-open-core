@@ -97,7 +97,8 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
       task/phase/sub-phase:
         - **Option A (Interactive Chat Review):** If the user triggers `/code-review` or
           asks for an interactive chunk-by-chunk review, follow the `code-review` skill to
-          present diffs one at a time and wait for approval.
+          audit test coverage (`check-test-coverage`), present diffs one chunk at a time,
+          and wait for approval.
         - **Option B (IDE Review):**
             1. Ask the user: "choose your ide: 1: code, 2: antigravity-ide, 3: codium, 4:
                code-insiders, 5: codium-insiders, if you press enter we will default to 1".
@@ -246,6 +247,9 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
   clippy -> tests). Use after completing code changes and before creating commits.
     - Supporting file: `reference.md` (detailed cargo command reference)
 
+- **check-test-coverage** - Audit and verify branch-targeted test coverage for a specific file or module, ensuring all custom logic paths and error branches are covered while strictly eliminating dependency test bloat.
+    - Supporting file: `examples.md` (audit patterns and good vs bad coverage examples)
+
 - **run-clippy** - Clippy linting, comment punctuation, cargo fmt. Use after code changes
   and before creating commits.
     - Supporting file: `patterns.md` (code style patterns and examples)
@@ -273,8 +277,8 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
     - Supporting file: `examples.md` (6 complete module organization examples)
 
 - **organize-tests** - Test directory taxonomy (why a test is isolated), PTY conventions
-  (Run with section, deadlock prevention), and isolated process orchestration. Use when
-  adding or refactoring tests.
+  (Run with section, deadlock prevention), zero test-bloat directive (test our code, not
+  dependencies), and isolated process orchestration. Use when adding or refactoring tests.
     - Supporting files: `taxonomy.md` (directory guide), `pty-conventions.md` (PTY rules),
       `examples.md` (macro templates)
 
@@ -341,6 +345,7 @@ via autocomplete in the Antigravity CLI.
 | `/batch-refactor`           | batch-refactor-with-sub-agents             |
 | `/check-bounds-safety`      | check-bounds-safety                        |
 | `/check`                    | check-code-quality                         |
+| `/check-test-coverage`      | check-test-coverage                        |
 | `/code-review`              | code-review                                |
 | `/concurrency-safety`       | concurrency-safety                         |
 | `/create-commit-message`    | create-commit-message                      |
@@ -386,6 +391,20 @@ Commands with **no check.fish equivalent** (run directly):
 - `cargo clippy --all-targets --fix --allow-dirty`: auto-fix lints
 - `cargo fmt --all`: format code
 
+### Non-Blocking Verification via Subagents
+
+Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`,
+`./check.fish --quick-doc`, and `./check.fish --full`) can take 1 to 2+ minutes. To prevent
+blocking the active conversation loop:
+
+- **Fast Checks**: Lightweight commands like `./check.fish --check` and
+  `./check.fish --fmt` take only a few seconds and may run directly.
+- **Long-Running Checks**: Delegate time-consuming checks to a background subagent (e.g.,
+  using `invoke_subagent` with `TypeName: "self"`).
+- **Unblocked Collaboration**: While the subagent verifies build, test, or documentation
+  status in the background, the primary agent remains interactive to discuss code,
+  perform reviews, and plan next steps.
+
 ## Rust Code Guidelines
 
 ### Writing Documentation & Markdown
@@ -418,6 +437,14 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    LaTeX math delimiters in doc comments, task `.md` files, or chat responses. They do not
    render correctly in standard markdown viewers. Use standard Markdown text, backticks
    (e.g., `[start, start+len)`), or code blocks instead.
+
+7. **Cross-Platform Doctests for Platform-Specific APIs**: When writing doctests that
+   reference platform-specific types (such as Linux-only `DirectToAnsiInputDevice` or
+   `MioPollWorker`), do NOT use `ignore` and do NOT downgrade them to noisy generic mocks.
+   Instead, use the `# #[cfg(not(target_os = "linux"))] # fn main() {}` and
+   `# #[cfg(target_os = "linux")] # mod linux_only { ... }` pattern documented in the
+   `write-documentation` skill. This keeps rendered docs clean, validates real types on
+   Linux, and compiles safely on macOS and Windows.
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 

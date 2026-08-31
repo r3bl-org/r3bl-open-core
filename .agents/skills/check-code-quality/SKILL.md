@@ -12,6 +12,14 @@ description: Run comprehensive Rust code quality checks including compilation, l
 - Before creating pull requests
 - When user says "check code quality", "run quality checks", "make sure code is good", etc.
 
+## Non-Blocking Execution via Subagents
+
+Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`, `./check.fish --quick-doc`, and `./check.fish --full`) can take multiple minutes. To keep the primary conversation responsive and unblocked:
+
+1. **Fast Synchronous Checks**: Lightweight checks like `./check.fish --check` (fast typecheck) and `./check.fish --fmt` take only a few seconds and can run directly in the conversation.
+2. **Long-Running Checks via Subagent**: Delegate time-consuming checks to a background subagent (e.g., `invoke_subagent` with `TypeName: "self"`).
+3. **Continuous Collaboration**: While the subagent runs tests or builds docs in the background, the primary agent remains completely free to converse, review diffs, answer questions, or plan next steps with the user.
+
 ## Quick Approach (Recommended)
 
 Run the comprehensive check script which handles everything automatically:
@@ -132,7 +140,7 @@ Inspect `git diff` on all modified files to audit line-by-line that only intende
 
 Runs clippy and enforces code style standards. **You MUST fix all warnings.** Do not just report them. If `./check.fish --clippy` reports warnings, use `cargo clippy --all-targets --fix --allow-dirty` to auto-fix where possible, and manually fix any remaining warnings. Never ignore warnings during a quality check.
 
-### 8. Concurrency Safety Check
+### 9. Concurrency Safety Check
 
 Invoke the `concurrency-safety` skill to verify thread-safety patterns.
 
@@ -142,7 +150,7 @@ Invoke the `concurrency-safety` skill to verify thread-safety patterns.
 - **Ergonomic Atomics**: Is `AtomicU8Ext` used instead of raw `load`/`store`?
 - **No Deadlocks**: Are locks released before calling macros or long-running async blocks?
 
-### 9. Bounds Safety Check
+### 10. Bounds Safety Check
 
 Invoke the `check-bounds-safety` skill to verify index and length handling.
 
@@ -152,7 +160,15 @@ Invoke the `check-bounds-safety` skill to verify index and length handling.
 - **CSI Zero Prevention**: Are `TermRowDelta` and `TermColDelta` used for relative cursor movement?
 - **Off-by-One**: verify `index < length` for access and `index <= length` for cursor.
 
-### 10. Run All Tests
+### 11. Audit Test Coverage (Zero Bloat) on Modified Files
+
+For every source file that is modified in the current working tree, invoke the `check-test-coverage` skill:
+
+- **Branch-Targeted Verification**: Ensure all custom logic branches, match arms, error paths, and state transitions are covered by tests.
+- **Eliminate Test Bloat**: Confirm zero test bloat (no redundant tests asserting standard library behaviors, compiler derives like `#[derive(Default)]`, or third-party macros like `strum` and `clap`).
+- **One Test per Branch**: Confirm that each test serves a distinct purpose covering our code.
+
+### 12. Run All Tests
 
 ```bash
 ./check.fish --test
@@ -161,9 +177,10 @@ Invoke the `check-bounds-safety` skill to verify index and length handling.
 
 Runs all tests (unit, integration, doctests).
 
-If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
+- **Test Scope Principle**: Ensure tests strictly target *our* codebase's branches, state transitions, and logic paths (see `organize-tests` skill). Do NOT write redundant tests that merely re-verify standard library or third-party crate behaviors.
+- If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
 
-### 11. Stress Test (Optional - After Major Refactors)
+### 13. Stress Test (Optional - After Major Refactors)
 
 After major refactors or changes that affect process spawning, PTY tests, or async
 infrastructure, run the full test suite 20 times back-to-back to detect flaky regressions:
@@ -178,7 +195,7 @@ for i in {1..20}; do echo "=== Run $i/20 ===" && cargo test --all-targets -- --n
 - After modifying the resilient reactor thread (RRT) restart logic
 - Before merging large cross-cutting changes that touch many test files
 
-### 9. Cross-Platform Verification (Optional)
+### 14. Cross-Platform Verification (Optional)
 
 For code with platform-specific `#[cfg]` gates (especially Unix-only code), verify Windows compatibility:
 
@@ -193,27 +210,24 @@ This checks that `#[cfg(unix)]` and `#[cfg(not(unix))]` gates compile correctly 
 - When working on platform-abstraction code
 - Before committing changes to `DirectToAnsi` input handling or other Unix-specific code
 
-### 10. Final Step: Manual Review
+### 15. Final Step: Manual Review
 
 A task, phase, or sub-phase is not complete until a manual review has been performed by the user. 
 This is the final verification before marking a task as done.
 
-- **Type-Safe Errors**: Did you use custom error types (enums/structs with \`thiserror\` and \`miette\`) instead of raw \`String\` for \`Result\` errors?
+- **Type-Safe Errors**: Did you use custom error types (enums/structs with `thiserror` and `miette`) instead of raw `String` for `Result` errors?
 - **No `.and_then()`**: Did you avoid using `.and_then()` for Option/Result combinators, preferring idiomatic `?` operator early returns instead?
 - **Technical Precision**: are terms like "parameter", "argument", "declaration", and "definition" used accurately in documentation and comments? See the [Terminology Precision] guide.
 - **No Connecting Dashes/En Dashes/Em Dashes**: Are dashes, en dashes, or em dashes (`-`, `–`, or `—`) avoided when connecting sentences or clauses in doc comments? (Prefer separate sentences, colons, or semicolons).
-- **Mandatory Checkbox List:** You MUST automatically add a "Mandatory manual review" 
-
-[Terminology Precision]: ../write-documentation/terminology-precision.md  step with a checkbox list of all modified files to the end of every task, phase, 
-  and sub-phase you create or update.
-- **Review Workflow:** When the user prompts for a manual review at the end of a 
-  task/phase/sub-phase:
+- **Mandatory Checkbox List:** You MUST automatically add a "Mandatory manual review" step with a checkbox list of all modified files to the end of every task, phase, and sub-phase you create or update.
+- **Review Workflow:** When the user prompts for a manual review at the end of a task/phase/sub-phase:
   1. Use `run_shell_command("codium-insider <file_path>")` to open the first file with a checkbox.
   2. Ask the user to manually review it.
   3. Once the user confirms ("good" or similar), check the box in the task file using `replace`.
   4. Move to the next file and repeat until all checkboxes are checked.
-- **Completion:** Do not mark the task/phase as complete in the task file until ALL 
-  file-level checkboxes are checked and the user has given final approval.
+- **Completion:** Do not mark the task/phase as complete in the task file until ALL file-level checkboxes are checked and the user has given final approval.
+
+[Terminology Precision]: ../write-documentation/terminology-precision.md
 
 ## ICE Recovery and Toolchain Escalation
 
@@ -280,11 +294,12 @@ This skill includes additional reference material:
 ## Related Skills
 
 - `write-documentation` - For rustdoc formatting (step 3) and fixing doc link warnings (step 4)
-- `run-clippy` - For linting and code style (step 6)
-- `concurrency-safety` - For lock and atomic safety (step 7)
-- `check-bounds-safety` - For type-safe index/length handling (step 8)
+- `run-clippy` - For linting and code style (step 8)
+- `concurrency-safety` - For lock and atomic safety (step 9)
+- `check-bounds-safety` - For type-safe index/length handling (step 10)
+- `check-test-coverage` - For branch-targeted test coverage and zero bloat audit on modified files (step 11)
 - `analyze-performance` - For optional performance checks
-- `test-runner` agent - For fixing test failures (step 6)
+- `test-runner` agent - For fixing test failures (step 12)
 
 ## Related Commands
 

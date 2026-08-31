@@ -53,6 +53,6 @@ pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
 pub const EXCLAMATION: &str = "!";
 
 pub const TAB_CHAR: char = '\t';
-pub const NULL_CHAR: char = '\0';
+pub use crate::NULL_CHAR;
 pub const NULL_STR: &str = "\0";
 pub const NEWLINE_OR_NULL: &str = "\n\0";

@@ -1,8 +1,7 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::history_cursor::{HistoryCursor, HistoryCursorLoc};
-use crate::{EditorContent, GetMemSize, RingBuffer, RingBufferHeap,
-            format_as_kilobytes_with_commas, get_mem_size};
+use crate::{EditorContent, GetMemSize, RingBuffer, RingBufferHeap, get_mem_size};
 use std::{fmt::{Debug, Formatter},
           mem::size_of};
 
@@ -140,9 +139,8 @@ impl EditorHistory {
 }
 
 mod impl_debug_format {
-    use super::{Debug, EditorHistory, Formatter, RingBuffer,
-                format_as_kilobytes_with_commas};
-    use crate::GetMemSize;
+    use super::{Debug, EditorHistory, Formatter, RingBuffer};
+    use crate::{GetMemSize, format_as_kibibytes_with_commas};
 
     impl Debug for EditorHistory {
         /// # Implementation Note: Intentional Use of Raw `usize`
@@ -151,7 +149,7 @@ mod impl_debug_format {
         /// Type-safe bounds checking not needed for debug display.
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let self_mem_size = self.get_mem_size();
-            let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
+            let size_fmt = format_as_kibibytes_with_commas(self_mem_size);
 
             write!(
                 f,

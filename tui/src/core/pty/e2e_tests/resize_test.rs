@@ -7,7 +7,7 @@ use std::time::Duration;
 
 #[tokio::test]
 async fn test_pty_resize() {
-    let mut session = cross_platform_commands::bash_or_cmd()
+    let mut session = cross_platform_commands::sh()
         .with_config(
             DefaultPtySessionConfig
                 + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
@@ -53,7 +53,7 @@ async fn test_pty_resize() {
     #[cfg(unix)]
     let cmd = "stty size && exit";
     #[cfg(windows)]
-    let cmd = "powershell.exe -NoProfile -Command \"$host.UI.RawUI.WindowSize; exit\"";
+    let cmd = "powershell.exe -NoProfile -Command \"$host.UI.RawUI.WindowSize\" & exit";
 
     session
         .tx_input_event

@@ -58,6 +58,22 @@ fn test_my_struct_size() {
 }
 ```
 
+### 6. Test OUR Code, Not Dependencies (Zero Test Bloat)
+Tests must exclusively target the branches, state transitions, error paths, and delegation logic of **our** codebase (the System Under Test).
+
+**Why Noisy Tests Add Negative Value:**
+- **Compilation Overhead**: Each redundant test function generates additional compiler symbols, AST nodes, and test runner harness code, slowing down incremental `cargo test` and `check.fish` iteration cycles.
+- **Obfuscation & Signal Dilution**: When a real regression occurs, walls of redundant, noisy failures obscure the root cause, making triage and debugging far harder.
+- **Refactoring Drag**: Tests that assert upstream crate or `std` behaviors add zero bug-catching value while creating maintenance friction during internal architecture refactors.
+
+**Key Rules:**
+1. **Never Test the Standard Library or Third-Party Crates**: Do NOT write test cases that merely assert or re-verify standard library behaviors (such as `std::ffi::OsString` UTF-8 validation permutations, `std::collections::HashMap` storage integrity, `tokio` task scheduling, `serde` serialization formats, etc.). These dependencies are already heavily tested upstream.
+2. **Branch-Targeted Coverage**: Count the execution paths and branches in **our** code:
+   - If our method has two branches (e.g., `Ok` fast path vs `unwrap_or_else` fallback closure), write exactly one test per branch.
+   - Redundant permutations of valid inputs (such as testing multiple languages, emojis, whitespace variants, or path styles on a method that simply forwards to a standard library function) test the standard library, not our logic.
+3. **High Signal, Low Cognitive Load**: Every test in the repository must serve a distinct purpose by covering a specific branch or boundary condition of our implementation. Proactively remove redundant, needless, or duplicative tests that only inflate maintenance overhead.
+
 ## Related Skills
 - `organize-modules`: Use for general module structure and re-exports.
 - `write-documentation`: Use for formatting "Run with:" blocks and intra-doc links.
+- `check-code-quality`: Use for comprehensive quality checklists and test execution.

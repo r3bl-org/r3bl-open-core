@@ -379,12 +379,12 @@ pub const HISTORY_SIZE_MAX: usize = 1_000;
 /// ┌────────────┬─────────────────┬──────────────┬─────────────────────────────┐
 /// │  Variant   │  Capacity       │  Memory      │  Use Case                   │
 /// ├────────────┼─────────────────┼──────────────┼─────────────────────────────┤
-/// │  Minimal   │   10,000 msgs   │    0.61 MB   │  Simple CLIs, <10K outputs  │
-/// │  Moderate  │   20,000 msgs   │    1.22 MB   │  Medium burst traffic       │
-/// │  Large     │   50,000 msgs   │    3.05 MB   │  Large codebases (<50K)     │
-/// │  VeryLarge │  100,000 msgs   │    6.10 MB   │  Very large projects        │
-/// │  Extreme   │  200,000 msgs   │   12.20 MB   │  Huge monorepos             │
-/// │  Overkill  │  500,000 msgs   │   30.50 MB   │  Pathological cases         │
+/// │  Minimal   │   10,000 msgs   │    0.61 MiB  │  Simple CLIs, <10K outputs  │
+/// │  Moderate  │   20,000 msgs   │    1.22 MiB  │  Medium burst traffic       │
+/// │  Large     │   50,000 msgs   │    3.05 MiB  │  Large codebases (<50K)     │
+/// │  VeryLarge │  100,000 msgs   │    6.10 MiB  │  Very large projects        │
+/// │  Extreme   │  200,000 msgs   │   12.20 MiB  │  Huge monorepos             │
+/// │  Overkill  │  500,000 msgs   │   30.50 MiB  │  Pathological cases         │
 /// └────────────┴─────────────────┴──────────────┴─────────────────────────────┘
 /// ```
 ///
@@ -409,17 +409,17 @@ pub const HISTORY_SIZE_MAX: usize = 1_000;
 /// [`SharedWriter`]: crate::SharedWriter
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelCapacity {
-    /// 10,000 messages (~0.61 MB) - For simple CLIs with light output.
+    /// 10,000 messages (~0.61 MiB) - For simple CLIs with light output.
     Minimal,
-    /// 20,000 messages (~1.22 MB) - For moderate burst traffic.
+    /// 20,000 messages (~1.22 MiB) - For moderate burst traffic.
     Moderate,
-    /// 50,000 messages (~3.05 MB) - For large codebases.
+    /// 50,000 messages (~3.05 MiB) - For large codebases.
     Large,
-    /// 100,000 messages (~6.10 MB) - For very large projects (recommended default).
+    /// 100,000 messages (~6.10 MiB) - For very large projects (recommended default).
     VeryLarge,
-    /// 200,000 messages (~12.20 MB) - For huge monorepos.
+    /// 200,000 messages (~12.20 MiB) - For huge monorepos.
     Extreme,
-    /// 500,000 messages (~30.50 MB) - For pathological edge cases.
+    /// 500,000 messages (~30.50 MiB) - For pathological edge cases.
     Overkill,
 }
 
@@ -439,7 +439,7 @@ impl ChannelCapacity {
 }
 
 impl Default for ChannelCapacity {
-    /// Defaults to [`VeryLarge`] (100K messages, ~6 MB) as a safe choice for most applications.
+    /// Defaults to [`VeryLarge`] (100K messages, ~6.10 MiB) as a safe choice for most applications.
     ///
     /// [`VeryLarge`]: ChannelCapacity::VeryLarge
     fn default() -> Self { Self::VeryLarge }

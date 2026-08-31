@@ -1,0 +1,11 @@
+{
+  "added": {
+    "QUOTE_SINGLE": "don't fail",
+    "WITH_BACKSLASH": "path\\to\\dir",
+    "WITH_SEMICOLON": "foo; bar; baz"
+  },
+  "modified": {},
+  "removed": [
+    "EXISTING_VAR"
+  ]
+}
