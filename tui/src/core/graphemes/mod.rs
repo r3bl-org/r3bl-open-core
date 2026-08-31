@@ -91,7 +91,6 @@
 //! ```no_run
 //! use crossterm::{self, *, terminal::*, style::*, cursor::*, event::*};
 //! use std::io::*;
-//! use std::collections::*;
 //! use r3bl_tui::*;
 //!
 //! pub fn test_crossterm_grapheme_cluster_width_calc() -> Result<()> {
@@ -109,7 +108,7 @@
 //!     col_width: u16,
 //!   }
 //!
-//!   let mut map = HashMap::<&str, Positions>::new();
+//!   let mut map = HashMap::<&str, Positions>::default();
 //!   map.insert("Hi", Positions::default());
 //!   map.insert(" ", Positions::default());
 //!   map.insert("😃", Positions::default());

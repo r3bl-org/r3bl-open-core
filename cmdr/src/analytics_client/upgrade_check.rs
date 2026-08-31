@@ -144,16 +144,9 @@ pub fn get_self_bin_name() -> InlineString {
 }
 
 /// Gets the emoji representing the currently running executable (at run time).
-/// When adding new binaries make sure to update this function to return the
-/// correct emoji for the new binary.
 #[must_use]
-pub fn get_self_bin_emoji() -> String {
-    match get_self_bin_name().as_str() {
-        "giti" => "🐱".to_string(),
-        "edi" => "🦜".to_string(),
-        "rc" => "🐒".to_string(),
-        _ => "👾".to_string(),
-    }
+pub fn get_self_bin_emoji() -> &'static str {
+    crate::common::get_bin_emoji(get_self_bin_name().as_str())
 }
 
 pub fn is_upgrade_required() -> bool {

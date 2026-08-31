@@ -222,9 +222,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_clone_silent_error() {
+    fn test_clone_silent_error() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
         assert!(!shared_writer.silent_error);

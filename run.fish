@@ -192,12 +192,12 @@ function print-help
         echo "    "(set_color green)"bench"(set_color normal)"                                      Run benchmarks"
         echo ""
         echo (set_color cyan --bold)"Local source package commands:"(set_color normal)
-        echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc) from source"
+        echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc, env-source) from source"
         echo "    "(set_color green)"install-build-infra"(set_color normal)"  Install build-infra tools (cargo-rustdoc-fmt) from source"
         echo "    "(set_color green)"install-rust-analyzer-mcp-server"(set_color normal)" Install rust-analyzer MCP server from source"
         echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
-        echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, or rc"
+        echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, rc, or env-source"
         echo "    "(set_color green)"test-cmdr-install-on-all-linux-distros"(set_color normal)
         echo "                             Test install on Ubuntu/Fedora/Arch (Linux only)"
         echo ""
@@ -261,7 +261,7 @@ end
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
-# - cmdr: CLI apps (edi, giti, rc)
+# - cmdr: CLI apps (edi, giti, rc, env-source)
 # - rust-analyzer: Language server component
 # - rust-src: Rust standard library source component
 # - x86_64-pc-windows-gnu: Cross-compilation target for Windows verification
@@ -691,7 +691,7 @@ end
 # - And all other cargo-installed tools
 #
 # Local source packages rebuilt:
-# - cmdr: edi, giti, rc binaries
+# - cmdr: edi, giti, rc, env-source binaries
 # - build-infra: cargo-rustdoc-fmt
 # - rust-analyzer-mcp-server: rust-analyzer-mcp-server
 #
@@ -972,7 +972,7 @@ function run-binaries
     set original_dir $PWD
     cd cmdr
 
-    set binaries edi giti rc
+    set binaries edi giti rc env-source
     set selection (string join \n $binaries | fzf --prompt 'Select a binary to run: ')
     set fzf_status $status
 
@@ -993,7 +993,7 @@ function install-cmdr
     set original_dir $PWD
     cd cmdr
 
-    echo (set_color cyan --bold)"Installing cmdr binaries (edi, giti, rc) from source..."(set_color normal)
+    echo (set_color cyan --bold)"Installing cmdr binaries (edi, giti, rc, env-source) from source..."(set_color normal)
     if cargo install --path . --force
         echo (set_color green)"✓ cmdr binaries installed successfully"(set_color normal)
     else

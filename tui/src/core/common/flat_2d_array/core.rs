@@ -246,9 +246,9 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 /// ```
 ///
 /// To quantify this penalty (using an Intel i7-14700 as an example):
-/// - **L1 Cache Hit** (~32 KB size): ~1-4 clock cycles
-/// - **L2 Cache Hit** (~4 MB size): ~10-15 clock cycles
-/// - **L3 Cache Hit** (~33 MB size): ~40-70 clock cycles
+/// - **L1 Cache Hit** (~32 KiB size): ~1-4 clock cycles
+/// - **L2 Cache Hit** (~4 MiB size): ~10-15 clock cycles
+/// - **L3 Cache Hit** (~33 MiB size): ~40-70 clock cycles
 /// - **Main RAM Fetch (Cache Miss)**: ~200-300+ clock cycles
 ///
 /// The CPU pipeline would suffer a stall, wasting ~300 clock cycles per row while it

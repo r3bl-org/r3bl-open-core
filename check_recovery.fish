@@ -23,7 +23,7 @@ end
 
 # Evict build cache if total size exceeds MAX_TARGET_SIZE_GB.
 # Prevents managed directories from filling the tmpfs over long watch sessions.
-# Uses du -sk (kilobytes) for cross-platform compatibility (Linux + macOS).
+# Uses du -sk (1024-byte KiB blocks) for cross-platform compatibility (Linux + macOS).
 function cleanup_oversized_target
     # Sum the sizes of all managed directories
     set -l managed_dirs $CHECK_TARGET_DIR \
@@ -43,7 +43,7 @@ function cleanup_oversized_target
     set -l max_kb (math "$MAX_TARGET_SIZE_GB * 1048576")
     if test "$total_kb" -ge "$max_kb"
         set -l size_gb (math --scale=1 "$total_kb / 1048576")
-        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Managed dirs are "$size_gb"GB (limit: "$MAX_TARGET_SIZE_GB"GB), cleaning..."
+        log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Managed dirs are "$size_gb"GiB (limit: "$MAX_TARGET_SIZE_GB"GiB), cleaning..."
         for dir in $managed_dirs
             if test -d "$dir"
                 command rm -rf "$dir"

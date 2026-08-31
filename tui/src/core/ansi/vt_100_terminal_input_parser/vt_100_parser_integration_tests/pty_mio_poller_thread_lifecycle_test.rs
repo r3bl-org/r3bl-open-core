@@ -50,8 +50,7 @@ use crate::{GLYPH_COMPLETION, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_STEP,
             core::resilient_reactor_thread::ThreadState,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
             generate_pty_test};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
 const LIFECYCLE_READY: &str = "LIFECYCLE_TEST_READY";

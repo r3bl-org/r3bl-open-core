@@ -39,11 +39,16 @@ For each chunk (e.g., Chunk X of N):
    `### Chunk X of N: path/to/file.rs` (use clickable markdown file links).
 2. **Context & Rationale**:
    Provide a concise 1-2 sentence explanation of what changed in this chunk and why.
-3. **Diff Snippet**:
+3. **Test Coverage Verification**:
+   Invoke the `check-test-coverage` skill for the modified file:
+   - Verify that all custom logic branches, state transitions, and error paths in this file/chunk are covered by tests.
+   - Confirm zero test bloat (no redundant tests asserting standard library behaviors, compiler derives, or third-party macros).
+   - Report a concise 1-line coverage status.
+4. **Diff Snippet**:
    Provide a clean `diff` code block containing only the relevant hunk.
-4. **Approval Prompt**:
+5. **Approval Prompt**:
    Ask: `Please reply with **"good"** to approve and move to Chunk X+1.`
-5. **STOP and WAIT**:
+6. **STOP and WAIT**:
    Do NOT output subsequent chunks in the same turn. Yield control and wait for user input.
 
 ### 3. Handle User Feedback
@@ -65,3 +70,11 @@ Once all N chunks have been explicitly approved:
 2. Run `./check.fish --fmt` on changed files.
 3. Notify the user that all chunks have been reviewed and approved, and ask how to proceed
    with next steps.
+
+## Related Skills
+
+- `check-test-coverage` - For branch-targeted test coverage and zero bloat verification
+- `check-code-quality` - Comprehensive quality checks
+- `run-clippy` - Clippy linting and formatting
+- `write-documentation` - Rustdoc formatting and intra-doc link validation
+

@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{VPBoundingBox, CommonResult, FlexBox, FlexBoxId, InputEvent, Surface};
+use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, Surface, VPBoundingBox};
 use std::fmt::Debug;
 
 /// See [`crate::App`].

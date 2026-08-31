@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::ok;
+use crate::{CommandOutputResult, ok};
 use miette::{Context, IntoDiagnostic};
 use std::process::Stdio;
 use tokio::{io::AsyncWriteExt,
@@ -203,20 +203,21 @@ macro_rules! bail_command_ran_and_failed {
 /// - I/O errors occur during command execution
 pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
-    let output = command
+    let cmd_output_result = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .await
-        .into_diagnostic()
-        .wrap_err(miette::miette!("Unable to run command: {:?}", command))?;
+        .await;
 
-    // At this point, command_one has run, but it might result in a success or failure.
-    if output.status.success() {
-        ok!(output.stdout)
-    } else {
-        bail_command_ran_and_failed!(command, output.status, output.stderr);
+    match CommandOutputResult::from(cmd_output_result) {
+        CommandOutputResult::Success(output) => ok!(output.stdout),
+        CommandOutputResult::NonZeroExit(output) => {
+            bail_command_ran_and_failed!(command, output.status, output.stderr);
+        }
+        CommandOutputResult::SpawnFailed(err) => Err(err)
+            .into_diagnostic()
+            .wrap_err_with(|| miette::miette!("Unable to run command: {:?}", command)),
     }
 }
 
@@ -245,20 +246,21 @@ pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// - I/O errors occur during command execution
 pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
-    let output = command
+    let cmd_output_result = command
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
-        .await
-        .into_diagnostic()
-        .wrap_err(miette::miette!("Unable to run command: {:?}", command))?;
+        .await;
 
-    // At this point, command_one has run, but it might result in a success or failure.
-    if output.status.success() {
-        ok!(output.stdout)
-    } else {
-        bail_command_ran_and_failed!(command, output.status, output.stderr);
+    match CommandOutputResult::from(cmd_output_result) {
+        CommandOutputResult::Success(output) => ok!(output.stdout),
+        CommandOutputResult::NonZeroExit(output) => {
+            bail_command_ran_and_failed!(command, output.status, output.stderr);
+        }
+        CommandOutputResult::SpawnFailed(err) => Err(err)
+            .into_diagnostic()
+            .wrap_err_with(|| miette::miette!("Unable to run command: {:?}", command)),
     }
 }
 
@@ -297,31 +299,24 @@ pub async fn pipe(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     // Try to run command_one (might be unable to run it if the program is invalid).
-    let command_one_output =
-        command_one
-            .output()
-            .await
-            .into_diagnostic()
-            .wrap_err(miette::miette!(
-                "Unable to run command_one: {:?}",
-                command_one
-            ))?;
-    // At this point, command_one has run, but it might result in a success or failure.
-    if !command_one_output.status.success() {
-        bail_command_ran_and_failed!(
-            command_one,
-            command_one_output.status,
-            command_one_output.stderr
-        );
-    }
-    let command_one_stdout = command_one_output.stdout;
+    let cmd_output_result_one = command_one.output().await;
+    let command_one_stdout = match CommandOutputResult::from(cmd_output_result_one) {
+        CommandOutputResult::Success(output) => output.stdout,
+        CommandOutputResult::NonZeroExit(output) => {
+            bail_command_ran_and_failed!(command_one, output.status, output.stderr);
+        }
+        CommandOutputResult::SpawnFailed(err) => {
+            return Err(err).into_diagnostic().wrap_err_with(|| {
+                miette::miette!("Unable to run command_one: {:?}", command_one)
+            });
+        }
+    };
 
     // Spawn the second command, make it to accept piped input from the first command.
     let command_two = command_two
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    // Try to run command_one (might be unable to run it if the program is invalid).
     let mut child_handle: Child =
         command_two
             .spawn()
@@ -336,16 +331,19 @@ pub async fn pipe(
             .await
             .into_diagnostic()?;
     }
-    // At this point, command_one has run, but it might result in a success or failure.
-    let command_two_output = child_handle.wait_with_output().await.into_diagnostic()?;
-    if command_two_output.status.success() {
-        ok!(String::from_utf8_lossy(&command_two_output.stdout).to_string())
-    } else {
-        bail_command_ran_and_failed!(
-            command_two,
-            command_two_output.status,
-            command_two_output.stderr
-        );
+    let cmd_output_result_two = child_handle.wait_with_output().await;
+    match CommandOutputResult::from(cmd_output_result_two) {
+        CommandOutputResult::Success(output) => {
+            ok!(String::from_utf8_lossy(&output.stdout).to_string())
+        }
+        CommandOutputResult::NonZeroExit(output) => {
+            bail_command_ran_and_failed!(command_two, output.status, output.stderr);
+        }
+        CommandOutputResult::SpawnFailed(err) => {
+            Err(err).into_diagnostic().wrap_err_with(|| {
+                miette::miette!("Unable to run command_two: {:?}", command_two)
+            })
+        }
     }
 }
 
@@ -354,8 +352,8 @@ mod tests_command_runner {
     use super::*;
     use crate::ItemsOwned;
 
-    #[tokio::test]
-    async fn test_command_with_list_of_args() {
+    #[test]
+    fn test_command_with_list_of_args() {
         let items: ItemsOwned = (&["item1", "item2"]).into();
         let cmd = command!(
             program => "echo",
@@ -476,6 +474,25 @@ mod tests_command_runner {
             assert!(err.to_string().contains("does_not_exist"));
         } else {
             panic!("Expected an error, but got success");
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_run_nonzero_exit() {
+        let result = command!(
+            program => "sh",
+            args => "-c", "exit 42",
+        )
+        .run()
+        .await;
+
+        match result {
+            Err(err) => {
+                let err_str = format!("{err:?}");
+                assert!(err_str.contains("failed"));
+            }
+            Ok(_) => panic!("Expected error from non-zero exit status"),
         }
     }
 }

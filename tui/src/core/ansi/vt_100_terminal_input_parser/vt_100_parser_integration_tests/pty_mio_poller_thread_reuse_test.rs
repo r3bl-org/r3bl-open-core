@@ -40,8 +40,7 @@ use crate::{GLYPH_COMPLETION, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_STEP,
             GLYPH_SUCCESS, GLYPH_WAITING, PtyTestContext, PtyTestMode,
             direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
             generate_pty_test};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
 const REUSE_READY: &str = "REUSE_TEST_READY";

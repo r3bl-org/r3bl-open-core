@@ -3,7 +3,8 @@
 use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyInputEvent,
             PtyOutputEvent, ok};
 use miette::miette;
-use std::io::Write;
+use std::{io::Write,
+          sync::{Arc, Mutex}};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 /// Spawns a blocking task that reads [`PtyInputEvent`]s from an [`bounded MPSC channel`]
@@ -26,15 +27,12 @@ use tokio::sync::mpsc::{Receiver, Sender};
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[must_use]
 pub fn spawn_blocking_writer_task(
-    controller: Controller,
+    mut writer: ControllerWriter,
+    controller: Arc<Mutex<Option<Controller>>>,
     mut input_event_ch_rx_half: Receiver<PtyInputEvent>,
     output_event_ch_tx_half: Sender<PtyOutputEvent>,
 ) -> tokio::task::JoinHandle<miette::Result<()>> {
     tokio::task::spawn_blocking(move || -> miette::Result<()> {
-        let mut writer = controller
-            .take_writer()
-            .map_err(|e| miette!("Failed to take PTY writer: {}", e))?;
-
         while let Some(input) = input_event_ch_rx_half.blocking_recv() {
             match impl_writer_task::handle_pty_input_event(
                 input,
@@ -64,19 +62,31 @@ mod impl_writer_task {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
+    #[cfg(target_os = "windows")]
+    /// Windows console EOF byte sequence: `Ctrl+Z` (`SUB`, decimal 26, `1A` in hex)
+    /// followed by carriage return (`b'\r'`) and line feed (`b'\n'`).
+    ///
+    /// Win32 console handles (`STD_INPUT_HANDLE`) do not deliver native pipe EOF
+    /// semantics when the input pipe is closed. Interactive Windows console utilities
+    /// (such as `findstr "^"`, `more`, or `copy con`) require `Ctrl+Z` followed by
+    /// `Enter` to recognize end of file.
+    const WIN_CONSOLE_EOF_BYTES: [u8; 3] = [26, b'\r', b'\n'];
+
     pub fn handle_pty_input_event(
         input: PtyInputEvent,
         writer: &mut ControllerWriter,
-        controller: &Controller,
+        controller: &Arc<Mutex<Option<Controller>>>,
         output_event_ch_tx_half: &Sender<PtyOutputEvent>,
     ) -> miette::Result<Continuation> {
         match input {
-            PtyInputEvent::Write(bytes) => write_to_pty_with_flush(
-                writer,
-                &bytes,
-                "Write failed",
-                output_event_ch_tx_half,
-            )?,
+            PtyInputEvent::Write(bytes) => {
+                write_to_pty_with_flush(
+                    writer,
+                    &bytes,
+                    "Write failed",
+                    output_event_ch_tx_half,
+                )?;
+            }
             PtyInputEvent::WriteLine(text) => {
                 let mut data = text.into_bytes();
                 data.push(LINE_FEED_BYTE);
@@ -97,12 +107,17 @@ mod impl_writer_task {
                 )?;
             }
             PtyInputEvent::Resize(size) => {
-                controller.resize(size.into()).map_err(|e| {
-                    let _unused = output_event_ch_tx_half.blocking_send(
-                        PtyOutputEvent::WriteError(format!("Resize failed: {e}")),
-                    );
-                    miette!("Failed to resize PTY")
-                })?;
+                if let Ok(guard) = controller.lock() {
+                    let Some(controller) = guard.as_ref() else {
+                        return Ok(Continuation::Continue);
+                    };
+                    controller.resize(size.into()).map_err(|e| {
+                        let _unused = output_event_ch_tx_half.blocking_send(
+                            PtyOutputEvent::WriteError(format!("Resize failed: {e}")),
+                        );
+                        miette!("Failed to resize PTY")
+                    })?;
+                }
             }
             PtyInputEvent::Flush => {
                 writer.flush().map_err(|e| {
@@ -112,7 +127,25 @@ mod impl_writer_task {
                     miette!("Failed to flush PTY")
                 })?;
             }
-            PtyInputEvent::Close => return Ok(Continuation::Stop),
+            PtyInputEvent::Close => {
+                let is_teardown = controller.lock().is_ok_and(|g| g.is_none());
+                if is_teardown {
+                    return Ok(Continuation::Stop);
+                }
+
+                #[cfg(target_os = "windows")]
+                {
+                    // Attempt to write Ctrl+Z to signal EOF to interactive console
+                    // utilities. On Windows, do not stop or drop writer while the
+                    // child is still running, as closing the input pipe causes ConPTY
+                    // to abort child processes with STATUS_CONTROL_C_EXIT (0xC000013A).
+                    let _unused = writer.write_all(&WIN_CONSOLE_EOF_BYTES);
+                    let _unused = writer.flush();
+                    return Ok(Continuation::Continue);
+                }
+                #[cfg(not(target_os = "windows"))]
+                return Ok(Continuation::Stop);
+            }
         }
         Ok(Continuation::Continue)
     }
@@ -136,3 +169,5 @@ mod impl_writer_task {
         ok!()
     }
 }
+
+// cspell:words findstr

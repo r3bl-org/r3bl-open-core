@@ -119,8 +119,8 @@ mod tests {
                                                            parse_keyboard_sequence,
                                                            parse_utf8_text}};
 
-    #[tokio::test]
-    async fn test_event_parsing() {
+    #[test]
+    fn test_event_parsing() {
         // Test event parsing from buffer - verify parsers handle different sequence
         // types. These tests use the parser functions directly since they don't
         // need the device.
@@ -156,8 +156,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_paste_state_machine_basic() {
+    #[test]
+    fn test_paste_state_machine_basic() {
         // Test: Basic paste collection - Start marker, text, End marker.
         // Use a local paste_state to test the state machine logic directly.
         let mut paste_state = PasteCollectionState::Inactive;
@@ -225,8 +225,8 @@ mod tests {
         assert!(matches!(paste_state, PasteCollectionState::Inactive));
     }
 
-    #[tokio::test]
-    async fn test_paste_state_machine_multiline() {
+    #[test]
+    fn test_paste_state_machine_multiline() {
         // Test: Paste with newlines.
         let mut paste_state = PasteCollectionState::Inactive;
 
@@ -265,8 +265,8 @@ mod tests {
         assert_eq!(text, "Line1\nLine2");
     }
 
-    #[tokio::test]
-    async fn test_paste_state_machine_orphaned_end() {
+    #[test]
+    fn test_paste_state_machine_orphaned_end() {
         // Test: Orphaned End marker (without Start) should be handled gracefully.
         let mut paste_state = PasteCollectionState::Inactive;
 
@@ -289,8 +289,8 @@ mod tests {
         assert!(matches!(paste_state, PasteCollectionState::Inactive));
     }
 
-    #[tokio::test]
-    async fn test_paste_state_machine_empty_paste() {
+    #[test]
+    fn test_paste_state_machine_empty_paste() {
         // Test: Empty paste (Start immediately followed by End).
         let mut paste_state = PasteCollectionState::Inactive;
 

@@ -15,8 +15,8 @@
 //! mental model representing the actual backing data structure (such as [`EditorContent`]
 //! for text editors, or types implementing [`CanvasStorage`] like [`GrowableBuffer`] and
 //! [`Flat2DArray`] for terminal output). This module provides the coordinate types (e.g.,
-//! [`CPos`]) to safely address absolute positions within those storage structures,
-//! and provides a concrete [`Viewport`] struct to act as the sliding camera over them.
+//! [`CPos`]) to safely address absolute positions within those storage structures, and
+//! provides a concrete [`Viewport`] struct to act as the sliding camera over them.
 //!
 //! </div>
 //!
@@ -121,15 +121,14 @@
 //!
 //! ### Viewport Coordinates (Decorator Pattern)
 //!
-//! Viewport types (e.g., [`VPRow`]) wrap the 16-bit primitives ([`VPRow`],
-//! [`VPCol`]). We use the decorator pattern here because:
+//! Viewport types (e.g., [`VPRow`]) wrap the 16-bit primitives ([`VPRow`], [`VPCol`]). We
+//! use the decorator pattern here because:
 //!
 //! 1. **Zero-Boilerplate Trait Delegation via [`Deref`] / [`DerefMut`]**: Because the
 //!    inner type ([`VPRow`]) already implements complex domain traits (like
-//!    `NumericValue`), the decorator struct (e.g. [`VPRow(pub VPRow)`])
-//!    simply implements [`Deref`]. This transparently forwards arithmetic, bounds
-//!    checking, and formatting directly to the inner type via Rust's implicit deref
-//!    coercion.
+//!    `NumericValue`), the decorator struct (e.g. [`VPRow(pub VPRow)`]) simply implements
+//!    [`Deref`]. This transparently forwards arithmetic, bounds checking, and formatting
+//!    directly to the inner type via Rust's implicit deref coercion.
 //!
 //! 2. **Reuse of Existing Infrastructure**: By leveraging the underlying types generated
 //!    by [`generate_index_type_impl!`] rather than defining separate primitive types, all
@@ -137,10 +136,62 @@
 //!
 //! ### Canvas Coordinates (Newtype Pattern)
 //!
-//! Canvas types (e.g., [`CRow`]) wrap 64-bit [`usize`] primitives directly.
-//! They use the newtype pattern rather than decorating 16-bit primitives to allow canvas
-//! storage dimensions to easily exceed the 65,535 line limit of standard terminal APIs
-//! (which typically use [`u16`] for screen coordinates).
+//! Canvas types (e.g., [`CRow`]) wrap 64-bit [`usize`] primitives directly. They use the
+//! newtype pattern rather than decorating 16-bit primitives to allow canvas storage
+//! dimensions to easily exceed the 65,535 line limit of standard terminal APIs (which
+//! typically use [`u16`] for screen coordinates).
+//!
+//! ## Academic Research on Type Safety at Scale
+//!
+//! The design decisions in this module (separating coordinate spaces, wrapping raw
+//! primitives in domain-specific newtypes, and enforcing state transitions via
+//! consuming methods) are grounded in programming languages research and verified by
+//! empirical performance benchmarks.
+//!
+//! ### Theoretical Foundations
+//!
+//! This architecture builds directly upon typed design pattern research:
+//!
+//! 1. **Parse, Don't Validate**: Alexis King's [Parse, don't validate] principle guides
+//!    our boundary handling. Raw terminal input dimensions and scroll coordinates are
+//!    parsed immediately into strongly typed coordinates ([`CPos`], [`VPSize`]).
+//!    Downstream storage and rendering code can safely trust these types without
+//!    defensive re-validation.
+//!
+//! 2. **Typestate and State Machine Patterns**: Will Crichton's research in the
+//!    [FUNARCH 2023 paper] and [The Typestate Pattern in Rust] course guide (from
+//!    [Stanford CS 242]) formalizes the four core principles of typestate in Rust:
+//!    - **State as Type**: Distinct types represent distinct states (e.g.,
+//!      [`CanvasStorage`] vs [`Viewport`]).
+//!    - **Restricted Transitions**: Methods only exist on the valid state types.
+//!    - **Type Transformation**: Transition operations take `self` by value and return
+//!      the next state type.
+//!    - **Invalidation**: Consuming `self` by value prevents reusing stale or illegal
+//!      states.
+//!
+//! ### Empirical Benchmarks
+//!
+//! The practical impact of these patterns on real-world Rust software is evaluated in
+//! the [FUNARCH 2026 paper]:
+//!
+//! > ["Functional State Machines in Rust: Typestate and Newtype Patterns (Experience
+//! > Report)"][FUNARCH 2026 paper] by Leon Heuer, Falk Woldmann Lu, and Jan Haase (ACM
+//! > FUNARCH 2026).
+//!
+//! Key findings from the paper:
+//! - **Faultlessness**: Combining the Newtype pattern with "Parse, don't validate"
+//!   elevates software faultlessness and systematically eliminates invalid runtime states
+//!   at compile time with low structural overhead.
+//! - **Zero Runtime Performance Penalty**: Rigorous Criterion benchmarks demonstrate
+//!   that these compile-time abstractions incur zero runtime performance penalty
+//!   (execution-time differences remained within the +/- 2% noise margin).
+//! - **Encapsulation vs. Delegation**: Wrapping raw primitives with strict Newtypes
+//!   (without [`Deref`]) is optimal for preventing illegal arithmetic, whereas decorating
+//!   existing domain types via [`Deref`] avoids boilerplate while preserving guarantees.
+//!
+//! See the [FUNARCH 2026 paper], Will Crichton's [FUNARCH 2023 paper], Crichton's guide
+//! on [The Typestate Pattern in Rust] from [Stanford CS 242], and Alexis King's essay on
+//! [Parse, don't validate] for foundational theory and empirical benchmarks.
 //!
 //! [`numeric_value`]: mod@crate::numeric_value
 //! [`Add`]: std::ops::Add
@@ -166,8 +217,16 @@
 //! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`VPHeight`]: crate::VPHeight
 //! [`VPWidth`]: crate::VPWidth
+//! [`VPSize`]: crate::VPSize
 //! [`NumericValue`]: crate::core::NumericValue
 //! [`usize`]: prim@usize
+//! [FUNARCH 2023 paper]: https://doi.org/10.1145/3609025.3609477
+//! [FUNARCH 2026 paper]: https://doi.org/10.1145/3830438.3830958
+//! [Parse, don't validate]:
+//!     https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+//! [Stanford CS 242]: https://stanford-cs242.github.io/f19/
+//! [The Typestate Pattern in Rust]:
+//!     https://willcrichton.net/rust-api-type-patterns/typestate.html
 
 // Attach (Private).
 mod canvas_coords;
@@ -182,3 +241,5 @@ pub use canvas_range_ext::*;
 pub use viewport::*;
 pub use canvas_camera_ext::*;
 pub use canvas_projection_ext::*;
+
+// cspell:words FUNARCH Falk Haase Heuer Woldmann

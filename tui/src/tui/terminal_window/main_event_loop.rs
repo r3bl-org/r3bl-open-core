@@ -19,7 +19,7 @@ use std::{fmt::{Debug, Display},
           marker::PhantomData};
 use tokio::sync::mpsc;
 
-// XMARK: Box::pin a future that is larger than 16KB.
+// XMARK: Box::pin a future that is larger than 16 KiB.
 
 /// Main event loop implementation that handles terminal UI events and app state
 /// management.
@@ -58,16 +58,16 @@ use tokio::sync::mpsc;
 ///
 /// # Why return a pinned boxed future?
 ///
-/// This function returns a pinned boxed future ([`Pin<Box<T>>`]; > 16KB clippy threshold)
-/// for safer memory management and better performance characteristics.
+/// This function returns a pinned boxed future ([`Pin<Box<T>>`]; > 16 KiB clippy
+/// threshold) for safer memory management and better performance characteristics.
 ///
 /// ## Performance Benefits
 ///
-/// * **Without [`Box::pin`]**: The entire > 16KB future gets copied every time it moves
+/// * **Without [`Box::pin`]**: The entire > 16 KiB future gets copied every time it moves
 ///   between stack frames (function calls, async state transitions, [`select!`]
 ///   operations).
 /// * **With [`Box::pin`]**: Only an 8-byte pointer moves, while the actual future data
-///   stays fixed on the heap, avoiding expensive > 16KB memory copies.
+///   stays fixed on the heap, avoiding expensive > 16 KiB memory copies.
 /// * Reduces stack pressure and improves CPU cache locality.
 ///
 /// ## Safety Benefits

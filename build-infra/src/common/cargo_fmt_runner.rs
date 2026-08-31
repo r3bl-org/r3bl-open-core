@@ -3,7 +3,7 @@
 //! Run `cargo fmt` on specified files.
 
 use miette::{IntoDiagnostic, Result, WrapErr};
-use r3bl_tui::ok;
+use r3bl_tui::{CommandOutputResult, ok};
 use std::{path::PathBuf, process::Command};
 
 /// Run `cargo fmt` on the specified files.
@@ -52,25 +52,26 @@ pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
     }
 
     // Execute command
-    let output = cmd
-        .output()
-        .into_diagnostic()
-        .wrap_err("Failed to execute cargo fmt command")?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(miette::miette!(
-            "cargo fmt failed with exit code: {:?}\n{}",
-            output.status.code(),
-            stderr
-        ));
+    let cmd_output_result = cmd.output();
+    match CommandOutputResult::from(cmd_output_result) {
+        CommandOutputResult::Success(_) => {
+            if verbose {
+                println!("cargo fmt completed successfully");
+            }
+            ok!()
+        }
+        CommandOutputResult::NonZeroExit(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(miette::miette!(
+                "cargo fmt failed with exit code: {:?}\n{}",
+                output.status.code(),
+                stderr
+            ))
+        }
+        CommandOutputResult::SpawnFailed(err) => Err(err)
+            .into_diagnostic()
+            .wrap_err("Failed to execute cargo fmt command"),
     }
-
-    if verbose {
-        println!("cargo fmt completed successfully");
-    }
-
-    ok!()
 }
 
 #[cfg(test)]

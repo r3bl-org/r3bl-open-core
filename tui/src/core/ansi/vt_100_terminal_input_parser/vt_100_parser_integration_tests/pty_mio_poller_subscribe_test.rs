@@ -51,8 +51,7 @@ use crate::{PtyTestContext, PtyTestMode,
                              input::{channel_types::{PollerEvent, StdinEvent},
                                      global_input_resource::SINGLETON}},
             generate_pty_test};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
 const SUBSCRIBE_READY: &str = "SUBSCRIBE_TEST_READY";
@@ -131,18 +130,10 @@ fn controlled() {
 
     runtime.block_on(async {
         eprintln!("Subscribe Controlled: Starting subscribe test...");
-        let is_running = || {
-            matches!(
-                *SINGLETON.shared_state.lock(),
-                ThreadState::Running(_, _)
-            )
-        };
-        let is_stopped = || {
-            matches!(
-                *SINGLETON.shared_state.lock(),
-                ThreadState::Stopped
-            )
-        };
+        let is_running =
+            || matches!(*SINGLETON.shared_state.lock(), ThreadState::Running(_, _));
+        let is_stopped =
+            || matches!(*SINGLETON.shared_state.lock(), ThreadState::Stopped);
 
         // Step 1: Verify initial state (no thread yet).
         eprintln!("Step 1: Checking initial state...");

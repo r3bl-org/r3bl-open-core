@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::FlexBoxId;
-use crate::{VPBoundingBox, ReqSizePc, TuiStyle, VPPos, ok};
+use crate::{ReqSizePc, TuiStyle, VPBoundingBox, VPPos, ok};
 use std::fmt::Debug;
 
 /// Direction of the layout of the box.

@@ -1,9 +1,7 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{
-    CCol, ChUnit, ContainsWideSegment, Seg, SegContent, SegIndex, SegLength, VPCol,
-    VPWidth,
-};
+use crate::{CCol, ChUnit, ContainsWideSegment, Seg, SegContent, SegIndex, SegLength,
+            VPCol, VPWidth};
 use std::fmt::Display;
 
 /// Single-line grapheme-aware string trait providing core operations

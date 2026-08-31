@@ -103,3 +103,12 @@ pub enum BranchSubcommand {
     #[clap(help = "TODO Create a new branch")]
     New,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    #[test]
+    fn verify_cli_schema() { CLIArg::command().debug_assert(); }
+}

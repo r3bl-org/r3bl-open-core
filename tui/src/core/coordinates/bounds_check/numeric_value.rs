@@ -202,7 +202,7 @@ pub trait ScreenCoordinate: NumericValue + From<u16> {
 /// Unlike [`ScreenCoordinate`] types (which are bounded by 16-bit screen / display
 /// terminal grid dimensions), [`StorageCoordinate`] types require machine-width integer
 /// addressability to handle large buffers (such as documents exceeding 65,535 lines or 64
-/// KB).
+/// KiB).
 ///
 /// ## Capabilities and Bounds
 ///

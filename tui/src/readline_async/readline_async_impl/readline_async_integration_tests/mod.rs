@@ -34,35 +34,31 @@
 
 #![rustfmt::skip]
 
-// These PTY tests use DirectToAnsiInputDevice which is Linux-only.
-// On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
-// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
-// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+// These PTY tests use InputDevice which is cross-platform (DirectToAnsi on Linux, Crossterm on macOS/Windows).
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_ctrl_d_eof_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_ctrl_d_delete_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_ctrl_u_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_ctrl_w_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_ctrl_navigation_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod pty_alt_navigation_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(any(all(unix, doc), test))]
 pub mod test_pty_alt_word_deletion;
 
 // These PTY tests use portable_pty's generate_pty_test! macro which spawns a
 // child process in a PTY. The read_lines_and_drain() helper handles ConPTY's
 // lack of reliable EOF on Windows via a polling/timeout strategy.
-// Doc builds stay Unix-only to avoid broken intra-doc links on Windows.
 
 #[cfg(any(all(unix, doc), test))]
 pub mod pty_shared_writer_no_blank_line_test;

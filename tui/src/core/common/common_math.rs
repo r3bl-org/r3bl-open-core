@@ -3,45 +3,45 @@
 use crate::{InlineString, tui::md_parser::md_parser_constants::COMMA_CHAR};
 use std::fmt::Write;
 
-/// Formats the given number of bytes as kilobytes with commas. If the number of bytes is
+/// Formats the given number of bytes as kibibytes with commas. If the number of bytes is
 /// less than 1024, it will be formatted as bytes.
 #[must_use]
-pub fn format_as_kilobytes_with_commas(bytes_size: usize) -> InlineString {
+pub fn format_as_kibibytes_with_commas(bytes_size: usize) -> InlineString {
     if bytes_size < 1024 {
         let mut acc = format_with_commas(bytes_size);
         // We don't care about the result of this operation.
         write!(acc, " B").ok();
         acc
     } else {
-        let kilobytes = bytes_size / 1024;
-        let mut acc = format_with_commas(kilobytes);
+        let kibibytes = bytes_size / 1024;
+        let mut acc = format_with_commas(kibibytes);
         // We don't care about the result of this operation.
-        write!(acc, " KB").ok();
+        write!(acc, " KiB").ok();
         acc
     }
 }
 
 #[test]
-fn test_format_as_kilobytes_with_commas() {
+fn test_format_as_kibibytes_with_commas() {
     // Test with a number of bytes less than 1024.
     {
         let bytes_size = 512;
-        let result = format_as_kilobytes_with_commas(bytes_size);
+        let result = format_as_kibibytes_with_commas(bytes_size);
         assert_eq!(result, "512 B");
     }
 
     // Test with a number of bytes equal to 1024.
     {
         let bytes_size = 1024;
-        let result = format_as_kilobytes_with_commas(bytes_size);
-        assert_eq!(result, "1 KB");
+        let result = format_as_kibibytes_with_commas(bytes_size);
+        assert_eq!(result, "1 KiB");
     }
 
     // Test with a number of bytes greater than 1024.
     {
         let bytes_size = 2048;
-        let result = format_as_kilobytes_with_commas(bytes_size);
-        assert_eq!(result, "2 KB");
+        let result = format_as_kibibytes_with_commas(bytes_size);
+        assert_eq!(result, "2 KiB");
     }
 }
 

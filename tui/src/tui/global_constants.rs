@@ -159,8 +159,14 @@ pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
 /// Newline byte used to terminate lines.
 pub const LINE_FEED_BYTE: u8 = b'\n';
 
+/// Carriage return byte used in CRLF line endings.
+pub const CARRIAGE_RETURN_BYTE: u8 = b'\r';
+
 /// Null byte used for padding unused capacity.
 pub const NULL_BYTE: u8 = b'\0';
+
+/// Null character used to delimit records or pad unused capacity.
+pub const NULL_CHAR: char = '\0';
 
 /// [`EIO`] (`errno` `5`) is how Linux signals that the controlled side of a [`PTY`] has
 /// closed. See [POSIX `EOF` vs Linux `EIO`] and [`BufReadExt`] for more info.

@@ -122,6 +122,6 @@ set -g CHECK_TIMEOUT_SECS 300
 # Used by run_check_with_recovery to distinguish timeouts from other failures.
 set -g TIMEOUT_EXIT_CODE 124
 
-# Maximum size (in GB) for managed directories before triggering automatic cleanup.
-# 16GB gives headroom for incremental artifacts without thrashing.
+# Maximum size (in GiB) for managed directories before triggering automatic cleanup.
+# 16 GiB gives headroom for incremental artifacts without thrashing.
 set -g MAX_TARGET_SIZE_GB 16

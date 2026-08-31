@@ -130,10 +130,8 @@ mod tests {
 
         let origin_col = c_col(0) + prefix_width;
 
-        let mut pattern_matcher = PatternMatcherStateMachine::new(
-            my_pattern,
-            Some(origin_col),
-        );
+        let mut pattern_matcher =
+            PatternMatcherStateMachine::new(my_pattern, Some(origin_col));
         let mut result = String::new();
 
         for (index, character) in my_line.chars().enumerate() {

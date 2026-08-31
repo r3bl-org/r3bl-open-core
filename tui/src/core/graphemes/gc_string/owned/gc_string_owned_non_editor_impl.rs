@@ -997,7 +997,10 @@ mod tests {
             assert_eq!(col_idx, vp_col(6));
 
             // Clipping from that position should give expected result
-            assert_eq!(gc_string.clip(c_col(col_idx.as_usize()), vp_width(5)), "world");
+            assert_eq!(
+                gc_string.clip(c_col(col_idx.as_usize()), vp_width(5)),
+                "world"
+            );
         }
 
         #[test]

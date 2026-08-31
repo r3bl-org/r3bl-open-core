@@ -480,7 +480,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`ESC`]: crate::EscSequence
 /// [`EventStream`]: crossterm::event::EventStream
-/// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`InputDevice`]: crate::InputDevice
 /// [`INTERNAL_EVENT_READER`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149

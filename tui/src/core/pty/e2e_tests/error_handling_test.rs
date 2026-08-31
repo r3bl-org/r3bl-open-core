@@ -24,7 +24,7 @@ async fn test_unexpected_exit_reporting() {
     assert!(!status.success());
 
     // 2. Drain channel.
-    // All events are already in the channel buffer — the completion handle
+    // All events are already in the channel buffer: the completion handle
     // joins the reader task and sends Exit before returning.
     let mut exit_reported = false;
     while let Ok(event) = session.rx_output_event.try_recv() {

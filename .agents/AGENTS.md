@@ -235,6 +235,9 @@ Reference in rustdoc using `mod@` links:
 In all the code that is part of the current git working tree, make sure that there is sufficient
 documentation and test code coverage.
 
+- **Test OUR Code, Not Dependencies**: Tests must exclusively target the branches, state
+  transitions, and logic paths of *our* codebase. Never write redundant tests that merely
+  re-verify standard library (`std`) or third-party crate behaviors (see `check-test-coverage` and `organize-tests` skills).
 - For existing tests, make sure they add value and are not redundant or needless.
 - If they are needless, remove them. If there are missing tests, then add them.
 

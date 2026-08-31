@@ -2,9 +2,24 @@
 
 ## Why R3BL?
 
+<!--
 <img
 src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
 height="256px">
+-->
+
+<!-- R3BL TUI library & suite of apps focused on developer productivity -->
+
+<!-- prettier-ignore-start -->
+```
+██████╗ ██████╗ ██████╗ ██╗         ████████╗██╗   ██╗██╗
+██╔══██╗╚════██╗██╔══██╗██║         ╚══██╔══╝██║   ██║██║
+██████╔╝ █████╔╝██████╔╝██║            ██║   ██║   ██║██║
+██╔══██╗ ╚═══██╗██╔══██╗██║            ██║   ██║   ██║██║
+██║  ██║██████╔╝██████╔╝███████╗       ██║   ╚██████╔╝██║
+╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝       ╚═╝    ╚═════╝ ╚═╝
+```
+<!-- prettier-ignore-end -->
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -85,6 +100,19 @@ in which this crate is meant to exist.
 - [Type-safe bounds checking](#type-safe-bounds-checking)
   - [The Problem](#the-problem)
   - [The Solution](#the-solution)
+  - [Screen vs Storage Coordinates](#screen-vs-storage-coordinates)
+- [Safe Numeric Casting: Widening and
+  Saturating](#safe-numeric-casting-widening-and-saturating)
+- [Canvas vs Viewport Architecture](#canvas-vs-viewport-architecture)
+  - [Canvas Concepts](#canvas-concepts)
+  - [Viewport Concepts](#viewport-concepts)
+  - [Panning / Scrolling and Component
+    Integration](#panning--scrolling-and-component-integration)
+  - [Academic Research on Type Safety at
+    Scale](#academic-research-on-type-safety-at-scale)
+- [Zero-Allocation String Formatting](#zero-allocation-string-formatting)
+  - [The Performance Challenge](#the-performance-challenge)
+  - [The `fast_strings` Solution](#the-fast_strings-solution)
 - [Terminal Restoration: Panic, Drop, and Mutex
   Poison-Safety](#terminal-restoration-panic-drop-and-mutex-poison-safety)
   - [Panic vs. Drop handling](#panic-vs-drop-handling)
@@ -125,6 +153,7 @@ in which this crate is meant to exist.
   - [`OutputDevice`: Thread-Safe Terminal
     Output](#outputdevice-thread-safe-terminal-output)
   - [Offscreen buffer](#offscreen-buffer)
+    - [SIMD-Accelerated Memory Layout](#simd-accelerated-memory-layout)
   - [Complete Rendering Pipeline Architecture (Path 1: Composed Component
     Pipeline)](#complete-rendering-pipeline-architecture-path-1-composed-component-pipeline)
   - [Render pipeline (Path 1: Composed Component
@@ -234,6 +263,11 @@ programming.
 
 Here are some highlights of this library:
 
+- Mathematically and empirically validated type safety: Coordinate systems and
+  viewport cameras eliminate off-by-one errors and invalid runtime states at compile
+  time using Typestate and "Parse, don't validate" patterns, with zero runtime
+  performance penalty as verified by Criterion benchmarks (see
+  [academic research on type safety at scale]).
 - It works over SSH without flickering, since it uses double buffering to paint the
   UI, and diffs the output of renders, to only paint the parts of the screen that
   changed.
@@ -254,8 +288,8 @@ Here are some highlights of this library:
     resize your terminal window and everything will be laid out correctly.
   - A terminal independent underlying rendering and painting engine (can use Crossterm
     or [`direct_to_ansi`] backends). The [`direct_to_ansi`] backend is part of this
-    R3BL TUI crate and is the default on Linux, with no reliance on Crossterm at all.
-    We plan to roll this out to macOS and Windows.
+    crate and is the default on Linux, with no reliance on Crossterm at all. We plan
+    to roll this out to macOS and Windows.
   - Markdown text editor with syntax highlighting support, metadata (tags, title,
     author, date), smart lists. This uses a custom Markdown parser and custom syntax
     highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
@@ -363,12 +397,40 @@ cargo install r3bl-cmdr
 edi
 ```
 
-### Terminal multiplexer
+### Terminal multiplexer & virtual terminal architecture
 
-[`PTYMux::run()`] lets you build a terminal multiplexer similar to [`tmux`]. It
-manages multiple child processes (each in its own PTY) with per-process virtual
-terminal buffers and instant switching. See the [`pty_mux_example`] for a working
-example that wraps `bash`, `htop`, and other CLI tools.
+[`PTYMux`] provides a headless **per-process virtual terminal architecture** for
+multiplexing terminal sessions with universal compatibility (`bash`, `htop`, `nvim`,
+`cat`).
+
+Key architectural highlights:
+
+1. **2D Canvas & Viewport Panning Innovation:** Each process paints onto an
+   independent offscreen 2D canvas ([`OfsBuf`]). For normal-mode CLI tools (`cat`,
+   `grep`, `head`, `tail`), our virtual terminal supports **2D Viewport Panning** —
+   allowing users to pan both **Up/Down** (vertical scrollback) and **Left/Right**
+   (horizontal panning) across long lines without truncation.
+
+   - **Vertical (Up/Down) Scrollback:** Handled via `get_row_with_scrollback(row,
+     scrollback_amt)` and the underlying [`VecDeque`] history. Vertical scrolling is
+     applied externally during rendering ([`ScrollbackAmount`]) to prevent detaching
+     the VT-100 parser's writing cursor from the live bottom line.
+   - **Horizontal (Left/Right) Panning:** Handled natively via [`try_pan_viewport_to`]
+     by changing `origin_pos.col_index`, which is safe because shifting columns does
+     not affect line-appending.
+
+2. **`terminfo` Bypassing & SSH Robustness:** The rendering engine speaks direct raw
+   ANSI, bypassing OS-level `terminfo` database dependencies. By masquerading as
+   `xterm-256color` for child processes, it runs zero-config and deterministically
+   over SSH remote connections without requiring root access or custom `.terminfo`
+   file deployment on remote servers.
+
+3. **Instant Session Switching:** Because every process continuously updates its
+   headless 2D canvas in the background, switching active terminals is instant,
+   flicker-free, and requires no redraw queries to child processes.
+
+See the [`pty_mux_example`] for a working example that wraps `bash`, `htop`, and CLI
+tools.
 
 ### Indeterminate progress spinner
 
@@ -394,7 +456,7 @@ cargo run --release --example spinner
 ### Power via composition
 
 You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case you
-need. `r3bl_tui` allows you to create application state that can be moved between
+need. This crate allows you to create application state that can be moved between
 various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
 
 ## Changelog
@@ -599,6 +661,9 @@ The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
 **Example test structure:**
 
 ```rust
+use r3bl_tui::{generate_pty_test, PtyTestMode, DirectToAnsiInputDevice, PtyPair, PtyTestChild, PtyTestContext};
+use std::io::{Write, BufRead};
+fn process_terminal_events(_: &DirectToAnsiInputDevice) {}
 generate_pty_test! {
     test_fn: interactive_input_parsing,
     controller: |context: PtyTestContext| {
@@ -610,10 +675,10 @@ generate_pty_test! {
             mut writer,
         } = context;
 
-        child.wait_for_ready(&mut buf_reader, "CONTROLLED_READY").unwrap();
+        child.wait_for_ready(&mut buf_reader, "CONTROLLED_READY").expect("conversion error");
 
-        writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
-        writer.flush().unwrap();
+        writer.write_all(b"\x1b[A").expect("conversion error");  // Send Up Arrow
+        writer.flush().expect("conversion error");
 
         let output = child.read_line_state(&mut buf_reader, "Event:");
         assert!(output.contains("UpArrow event received"));
@@ -648,7 +713,8 @@ demonstrates:
 - Proper process coordination and cleanup
 
 **Real-world applications:**
-- **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100` input sequences
+- **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100`
+  input sequences
 - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 - **Interactive applications**: Tests readline, editor, and TUI component interactions
 
@@ -739,9 +805,9 @@ app built using this TUI engine.
 
 ## Type-safe bounds checking
 
-The R3BL TUI engine uses a comprehensive type-safe bounds checking system that
-eliminates off-by-one errors and prevents mixing incompatible index types (like
-comparing row positions with column widths) at compile time.
+Our codebase uses a comprehensive type-safe bounds checking system that eliminates
+off-by-one errors and prevents mixing incompatible index types (like comparing row
+positions with column widths) at compile time.
 
 ### The Problem
 
@@ -760,12 +826,12 @@ with multiple sources of confusion:
 ```rust
 // ❌ Unsafe: raw integers hide these distinctions
 let cursor_row: usize = 5;        // Is this 0-based or 1-based?
-let viewport_width: usize = 80;   // Is this a size or position?
+let vp_width: usize = 80;   // Is this a size or position?
 let buffer_size: usize = 100;     // Can I use this as an index?
 let buffer: Vec<u8> = vec![0; 100];
 
 // Problem 1: Dimension confusion
-if cursor_row < viewport_width { /* Mixing row index with column size! */ }
+if cursor_row < vp_width { /* Mixing row index with column size! */ }
 
 // Problem 2: 0-based vs 1-based confusion
 if buffer_size > 0 {
@@ -789,20 +855,20 @@ for row in scroll_region_start..scroll_region_end {
 Use strongly-typed indices and lengths with semantic validation:
 
 ```rust
-use r3bl_tui::{row, height, ArrayBoundsCheck, ArrayOverflowResult};
+use r3bl_tui::{vp_row, vp_height, ArrayBoundsCheck, ArrayOverflowResult};
 
-let cursor_row = row(5);          // RowIndex (0-based position)
-let viewport_height = height(24); // RowHeight (1-based size)
+let cursor_row = vp_row(5);          // VPRow (0-based index)
+let vp_height = vp_height(24); // VPHeight (1-based length)
 
 // ✅ Type-safe: Compiler prevents row/column confusion
-if cursor_row.overflows(viewport_height) == ArrayOverflowResult::Within {
+if cursor_row.overflows(vp_height) == ArrayOverflowResult::Within {
     // Safe to access buffer[cursor_row]
 }
 ```
 
 ### Key Benefits
 
-- **Compile-time safety**: Impossible to compare [`RowIndex`] with [`ColWidth`]
+- **Compile-time safety**: Impossible to compare [`VPRow`] with [`VPWidth`]
 - **Semantic clarity**: Code intent is explicit (position vs size, row vs column)
 - **Zero-cost abstraction**: No runtime overhead compared to raw integers
 - **Comprehensive coverage**: Handles array access, cursor positioning, viewport
@@ -822,9 +888,10 @@ The system uses a two-tier trait architecture:
 
 **Array/buffer access** (strict bounds):
 ```rust
-use r3bl_tui::{col, width, ArrayBoundsCheck, ArrayOverflowResult};
-let index = col(5);
-let buffer_width = width(10);
+use r3bl_tui::{vp_col, vp_width, ArrayBoundsCheck, ArrayOverflowResult};
+let buffer: Vec<char> = vec!['a'; 10];
+let index = vp_col(5);
+let buffer_width = vp_width(10);
 
 // Check before accessing
 if index.overflows(buffer_width) == ArrayOverflowResult::Within {
@@ -834,9 +901,9 @@ if index.overflows(buffer_width) == ArrayOverflowResult::Within {
 
 **Text cursor positioning** (allows end-of-line):
 ```rust
-use r3bl_tui::{col, width, CursorBoundsCheck, CursorPositionBoundsStatus};
-let cursor_col = col(10);
-let line_width = width(10);
+use r3bl_tui::{vp_col, vp_width, CursorBoundsCheck, CursorPositionBoundsStatus};
+let cursor_col = vp_col(10);
+let line_width = vp_width(10);
 
 // Cursor can be placed after last character (position == length)
 match line_width.check_cursor_position_bounds(cursor_col) {
@@ -849,26 +916,26 @@ match line_width.check_cursor_position_bounds(cursor_col) {
 
 **Viewport visibility** (rendering optimization):
 ```rust
-use r3bl_tui::{row, height, ViewportBoundsCheck, RangeBoundsResult};
-let content_row = row(15);
-let viewport_start = row(10);
-let viewport_size = height(20);
+use r3bl_tui::{vp_height, vp_row, ViewportBoundsCheck, RangeBoundsResult};
+let content_row = vp_row(15);
+let vp_start = vp_row(10);
+let vp_size = vp_height(20);
 
 // Check if content is visible before rendering
-if content_row.check_viewport_bounds(viewport_start, viewport_size) == RangeBoundsResult::Within {
+if content_row.check_viewport_bounds(vp_start, vp_size) == RangeBoundsResult::Within {
     // Render this row
 }
 ```
 
 **Range boundary handling** (inclusive vs exclusive):
 ```rust
-use r3bl_tui::{row, RangeConvertExt};
+use r3bl_tui::{vp_row, RangeConvertExt};
 
 // VT-100 scroll region: inclusive bounds [2, 5] means rows 2,3,4,5
-let scroll_region = row(2)..=row(5);
+let scroll_region = vp_row(2)..=vp_row(5);
 
 // Convert to exclusive for Rust iteration: [2, 6) means rows 2,3,4,5
-let iter_range = scroll_region.to_exclusive();  // row(2)..row(6)
+let iter_range = scroll_region.to_exclusive();  // vp_row(2)..vp_row(6)
 
 // Now safe to use for iteration - no off-by-one errors!
 // for row in iter_range { /* process rows 2,3,4,5 */ }
@@ -880,10 +947,172 @@ For comprehensive documentation including:
 - Complete trait reference and method details
 - Decision trees for choosing the right trait
 - Common pitfalls and best practices
-- Advanced patterns (range validation, scroll regions, text selections)
 
-See the extensive and detailed [`bounds_check` module
-documentation](mod@crate::bounds_check).
+### Screen vs Storage Coordinates
+
+A key design philosophy is bifurcating visual display space from memory space. The
+engine formally separates these two spaces using traits:
+
+- **[`ScreenCoordinate`] (16-bit)**: Terminal displays conceptually max out at
+  realistic limits; they never reach millions of rows. By restricting physical display
+  types ([`VPRow`], [`VPCol`], [`VPHeight`], [`VPWidth`], [`VPSize`], [`VPPos`],
+  [`VPCaret`], and [`ChUnit`]) to 16-bit constraints internally via the
+  [`ScreenCoordinate`] trait, we eliminate silent layout arithmetic overflows and
+  halve the memory footprint for grid coordinate storage.
+- **[`StorageCoordinate`] (usize)**: Document storage and memory representations (such
+  as scrollback lines, string lengths, buffer sizes, byte offsets) implement
+  [`StorageCoordinate`], backed by `usize`. These include Canvas coordinate types
+  ([`CPos`], [`CCaret`], [`CCol`], [`CRow`], [`CWidth`], [`CHeight`],
+  [`CBoundingBox`]) and memory unit types ([`ByteIndex`], [`ByteLength`],
+  [`SegIndex`], [`SegLength`]).
+
+When bridging from [`StorageCoordinate`] (e.g., standard `usize` lengths or Canvas
+coordinates) to [`ScreenCoordinate`] sizes, the framework leverages the
+[`NarrowingCastToU16`] trait to safely and gracefully saturate bounds at `u16::MAX`
+without panicking.
+
+## Safe Numeric Casting: Widening and Saturating
+
+To prevent silent truncation and hard-to-debug layout arithmetic overflows, we
+globally ban the use of the raw `as` keyword for numeric conversions
+(`#![deny(clippy::as_conversions)]`).
+
+Developers must explicitly declare their intent when casting numeric types using one
+of our safe extension traits (found in `primitive_casting.rs`):
+
+- **Widening Casts ([`WideningCastToUsize`], [`WideningCastToU32`], etc.)**: Use these
+  traits ([`.as_usize_widening()`], [`.as_u32_widening()`]) for mathematically
+  infallible, lossless upcasts (e.g., `u8` to `usize`). This explicitly documents that
+  the cast is safe.
+- **Saturating/Narrowing Casts ([`NarrowingCastToU16`], [`NarrowingCastToUsize`])**:
+  Use these traits ([`.as_u16_narrowing()`], [`.as_usize_narrowing()`]) when casting
+  from a potentially larger type (e.g., `usize` to `u16`). They perform bounds
+  checking, log errors via [`tracing::error!`] if limits are exceeded, and safely
+  clamp the value (e.g., at `u16::MAX`) rather than silently truncating modulo `2^16`
+  like a raw `as` cast would.
+- **Standard Conversions**: Where the standard library provides safe, infallible
+  conversions (e.g., `u32::from(char)`), use the `From`/`Into` traits instead.
+
+## Canvas vs Viewport Architecture
+
+Built on top of the type-safe bounds checking system is the formal distinction between
+the **Canvas** and the **Viewport**.
+
+### Canvas Concepts
+The **Canvas** (see the [`canvas`] module documentation) is an architectural pattern
+and coordinate domain representing the conceptually unbounded (or large) 2D plane
+where text and component content live.
+- This guarantees at compile time that data "coordinate math" (storage related) and
+  "screen math" (rendering or painting related) are never mixed.
+- It is not a single concrete struct or trait. It is merely a type-safe coordinate
+  space [`CPos`], [`CCaret`], [`CCol`], [`CRow`], [`CBoundingBox`], which are backed
+  by concrete data structures:
+  - [`ZeroCopyGapBuffer`] (text editor).
+  - [`Flat2DArray`] (compositor grid).
+  - [`GrowableBuffer`] (compositor grid).
+
+### Viewport Concepts
+The [`Viewport`] is a constrained 2D projection of the Canvas onto a physical screen
+region (such as a component layout box). It frames a visible rectangular window over
+the Canvas starting at a top-left origin ([`CPos`]) with screen-constrained dimensions
+([`VPSize`]). Screen-relative coordinates and 2D bounding regions use specialized
+Viewport types like [`VPCol`], [`VPRow`], and [`VPBoundingBox`].
+
+### Panning / Scrolling and Component Integration
+By defining a type-safe offset, the Viewport can be "panned" across the unbounded
+Canvas. This normal mode of panning terminal apps is tied directly to the
+Canvas/Viewport architecture. This ensures that Canvas layout math and Viewport math
+are never mixed up.
+
+Camera panning seamlessly leverages the [`ViewportBoundsCheck`] trait. Methods like
+[`CanvasCameraExt::pan_to_keep_coord_in_view`] evaluate target coordinates against the
+viewport window using half-open `[start, start+len)` intervals, mapping the resulting
+[`RangeBoundsResult`] directly to panning actions:
+- [`RangeBoundsResult::Underflowed`]: The target sits before the visible window; the
+  viewport origin snaps backward to include it.
+- [`RangeBoundsResult::Within`]: The target is already visible; the viewport origin
+  remains unchanged.
+- [`RangeBoundsResult::Overflowed`]: The target sits past the visible window; the
+  viewport origin advances forward to bring the target into view.
+
+The editor component ([`EditorEngine`], [`EditorBuffer`], [`ZeroCopyGapBuffer`]) and
+dialog systems fully leverage this architecture. Internal buffer storage, line
+metadata, and selection calculations operate strictly in Canvas coordinate space
+([`CPos`], [`CCaret`], [`CCol`], [`CRow`], [`CWidth`], [`CHeight`]). Screen rendering,
+scrollbar positioning, and mouse click hit-testing translate Canvas coordinates into
+Viewport space ([`VPPos`], [`VPCaret`], [`VPCol`], [`VPRow`], [`VPWidth`]) using
+[`CanvasCameraExt::pan_to_keep_coord_in_view`] and [`CCaret::to_viewport_caret`]. The
+Rust type system prevents accidental mixing of Canvas and Viewport coordinates at
+compile time.
+
+For comprehensive details, design patterns, ASCII visual diagrams, and code examples,
+see the detailed [`bounds_check`] and [`canvas`] module documentation.
+
+### Academic Research on Type Safety at Scale
+
+The separation of coordinate spaces (Canvas vs Viewport), newtype encapsulation of
+primitives, and state transitions in `r3bl_tui` are grounded in programming language
+theory and confirmed by empirical benchmarks. For comprehensive details, see the
+[academic research on type safety at scale] section in the [`canvas`] module.
+
+#### Theoretical Foundations (Typestate & "Parse, Don't Validate")
+- **Will Crichton ([FUNARCH 2023 paper], [Stanford CS 242])**: Establishes how modern
+  type systems like Rust implement Typestate, State Machines, and the Witness pattern.
+  The four core principles (State as Type, Restricted Transitions, Type Transformation,
+  and Invalidation via consuming `self`) prevent invalid coordinates and views from
+  ever being representable.
+- **Alexis King ([Parse, don't validate])**: Raw coordinate inputs are parsed into
+  strongly typed domain newtypes ([`CPos`], [`VPSize`]) at system boundaries, freeing
+  downstream rendering and layout logic from defensive runtime checks.
+
+#### Empirical Benchmarks (Faultlessness & Performance)
+- **Heuer, Lu, and Haase ([FUNARCH 2026 paper])**: An empirical experience report
+  verifying that combining Newtypes with "Parse, don't validate" elevates software
+  faultlessness and eliminates invalid runtime states at low structural cost.
+- **Zero Runtime Performance Penalty**: Rigorous Criterion benchmarks demonstrate
+  that these compile-time safety abstractions incur zero runtime performance penalty
+  (execution-time differences remained within the +/- 2% noise margin).
+- **Encapsulation vs Delegation**: Validates our strategy of using strict Newtypes
+  (without [`Deref`]) to prevent arbitrary primitive math on Canvas storage, while
+  using Decorators (with [`Deref`]) on Viewport coordinates to eliminate boilerplate.
+
+For full citations, empirical analysis, and module architecture, see the
+[`canvas`] module documentation ([academic research on type safety at scale]).
+
+## Zero-Allocation String Formatting
+
+When rendering terminal UIs, especially at high frame rates or when parsing
+high-volume `VT-100` PTY output, generating strings and formatting ANSI escape
+sequences can quickly become a performance bottleneck due to excessive heap
+allocations and the overhead of the [`std::fmt::Formatter`] state machine.
+
+### The Performance Challenge
+
+Standard formatting mechanisms like `format!()` or implementations of
+[`std::fmt::Display`] are versatile but carry hidden costs:
+1. **Heap Allocations**: They frequently allocate new `String` objects on the heap.
+2. **Formatter Overhead**: They rely on [`std::fmt::Formatter`], which maintains
+   internal state (padding, alignment) and adds computational overhead even for simple
+   strings.
+3. **Indirection**: Output is often written to intermediate buffers before hitting the
+   actual destination.
+
+### The `fast_strings` Solution
+
+This crate includes the [`fast_strings`] architecture, which completely eliminates
+these bottlenecks for hot-path rendering.
+
+- **[`format_no_alloc`]**: Provides a drop-in replacement for `format!()` that
+  evaluates and joins string slices entirely on the stack, returning a `String` only
+  at the very end.
+- **[`FastStringify`]**: A trait that bypasses [`std::fmt::Formatter`] entirely,
+  writing bytes directly to a pre-allocated, resizable buffer ([`BufTextStorage`]).
+- **[`generate_impl_display_for_fast_stringify!`]**: A macro that automatically
+  bridges `FastStringify` back to [`std::fmt::Display`] for API compatibility when
+  performance isn't critical.
+
+See the [`fast_strings`] module documentation for detailed performance analysis and
+usage patterns.
 
 ## Terminal Restoration: Panic, Drop, and Mutex Poison-Safety
 
@@ -928,8 +1157,8 @@ may play out:
    [`RawModeGuard`]).
 6. To do so, one of the `drop()` implementations (on Thread A) attempts to re-acquire
    the **same [`OutputDevice`] lock**.
-7. Since it is using the same mutex, a call to `lock().unwrap()` will hit the poisoned
-   mutex and **panic a second time**.
+7. Since it is using the same mutex, a call to `lock().expect("conversion error")`
+   will hit the poisoned mutex and **panic a second time**.
 8. **Result**: The Rust runtime immediately **Aborts** the process because Thread A is
    panicking while already panicking. This is the **Double Panic Abort**. No further
    `drop()` calls occur, and the user's terminal is left "bricked" in raw mode.
@@ -959,6 +1188,8 @@ For standard application logic, we prefer the "Fail-Fast" approach. If a mutex i
 poisoned, it means a previous thread panicked while holding the lock, and the
 protected data is likely in an inconsistent/corrupted state. In these cases, we use:
 ```rust
+use std::sync::Mutex;
+let mutex = Mutex::new(0);
 let guard = mutex.lock().expect("Mutex poisoned");
 ```
 This intentionally propagates the panic, preventing the system from operating on
@@ -975,6 +1206,8 @@ bypassing all remaining `Drop` implementations.
 To prevent this, we use the `into_inner()` method on the `PoisonError` to access the
 underlying data even if it's "dirty":
 ```rust
+use std::sync::Mutex;
+let mutex = Mutex::new(0);
 let guard = match mutex.lock() {
     Ok(guard) => guard,
     Err(poisoned) => {
@@ -989,8 +1222,8 @@ logic can still attempt to call [`disable_raw_mode()`] and exit gracefully.
 
 ### Deadlock Prevention: Scoped Access vs. Chain of Custody
 
-Beyond poison-safety, terminal applications must also be resilient against
-deadlocks. We use two primary patterns to manage shared state safely:
+Beyond poison-safety, terminal applications must also be resilient against deadlocks.
+We use two primary patterns to manage shared state safely:
 
 #### 1. Scoped Access (Friction-as-a-Feature)
 
@@ -1000,8 +1233,10 @@ impossible to hold a lock guard longer than the execution of a single closure.
 
 To further mitigate recursion-based deadlocks, [`ScopedMutex`] includes **Recursion
 Detection** (enabled by default). If a recursive lock is detected on the same thread,
-it will panic with a clear message instead of hanging the terminal. For
-performance-critical hot paths, this check can be opted-out at compile-time.
+it will panic with a clear message instead of hanging the terminal. This behavior is
+controlled by the chosen policy **coordinate** (generic over value). For
+performance-critical hot paths, this check can be opted-out at compile-time. See the
+[Parameters] section in [`ScopedMutex`] for more info.
 
 #### 2. Chain of Custody (Guard Passing)
 
@@ -1021,19 +1256,20 @@ This table summarizes the architectural decisions made at each critical mutex
 boundary. Documentation for these components follows the standardized dual-heading
 format (`# Panics` and `# Poison Safety`).
 
-| Component                  | File                           | Implementation  | # Panics | # Poison Safety |
-| :------------------------- | :----------------------------- | :-------------- | :------: | :-------------: |
-| [`OutputDevice::lock()`]   | [`output_device.rs`]           | **Poison-Safe** |    N     |        Y        |
-| [`RawModeGuard::drop()`]   | [`raw_mode_core.rs`]           | **Poison-Safe** |    N     |        Y        |
-| [`Readline::drop()`]       | [`readline.rs`]                | **Poison-Safe** |    N     |        Y        |
-| [`TerminationGuard`]       | [`rrt_termination_guard.rs`]   | **Poison-Safe** |    N     |        Y        |
-| [`SubscriberGuard`]        | [`rrt_subscriber_guard.rs`]    | **Poison-Safe** |    N     |        Y        |
-| [`ScopedMutex::read()`]    | [`scoped_mutex.rs`]            | **Fail-Fast**   |    Y     |        Y        |
-| [`ScopedMutex::lock_raw()`]| [`scoped_mutex.rs`]            | **Poison-Safe** |    N     |        Y        |
-| [`Monitor::lock()`]        | [`monitor.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
-| [`rrt_monitor::lock()`]    | [`rrt_monitor.rs`]             | **Fail-Fast**   |    Y     |        Y        |
-| [`run_worker_loop()`]      | [`rrt_engine.rs`]              | **Fail-Fast**   |    Y     |        Y        |
-| [`Spinner`] methods        | [`spinner.rs`]                 | **Fail-Fast**   |    Y     |        Y        |
+| Component                    | File                         | Implementation  | # Panics | # Poison Safety |
+| :--------------------------- | :--------------------------- | :-------------- | :------: | :-------------: |
+| [`OutputDevice::write()`]    | [`output_device.rs`]         | **Fail-Fast**   |    Y     |        Y        |
+| [`OutputDevice::lock_raw()`] | [`output_device.rs`]         | **Poison-Safe** |    N     |        Y        |
+| [`RawModeGuard::drop()`]     | [`raw_mode_core.rs`]         | **Poison-Safe** |    N     |        Y        |
+| [`Readline::drop()`]         | [`readline.rs`]              | **Poison-Safe** |    N     |        Y        |
+| [`TerminationGuard`]         | [`rrt_termination_guard.rs`] | **Poison-Safe** |    N     |        Y        |
+| [`SubscriberGuard`]          | [`rrt_subscriber_guard.rs`]  | **Poison-Safe** |    N     |        Y        |
+| [`ScopedMutex::read()`]      | [`scoped_mutex.rs`]          | **Fail-Fast**   |    Y     |        Y        |
+| [`ScopedMutex::lock_raw()`]  | [`scoped_mutex.rs`]          | **Poison-Safe** |    N     |        Y        |
+| [`Monitor::lock()`]          | [`monitor.rs`]               | **Fail-Fast**   |    Y     |        Y        |
+| [`rrt_monitor::lock()`]      | [`rrt_monitor.rs`]           | **Fail-Fast**   |    Y     |        Y        |
+| [`run_worker_loop()`]        | [`rrt_engine.rs`]            | **Fail-Fast**   |    Y     |        Y        |
+| [`Spinner`] methods          | [`spinner.rs`]               | **Fail-Fast**   |    Y     |        Y        |
 
 ### Key Poison-Safe Components
 
@@ -1047,8 +1283,8 @@ format (`# Panics` and `# Poison Safety`).
 
 ## Grapheme support
 
-The R3BL TUI engine provides comprehensive Unicode support through grapheme cluster
-handling, ensuring correct text manipulation regardless of character complexity.
+This crate provides comprehensive Unicode support through grapheme cluster handling,
+ensuring correct text manipulation regardless of character complexity.
 
 ### The Challenge
 
@@ -1083,7 +1319,7 @@ The grapheme system uses three distinct index types to handle text correctly:
    - For cursor movement and text editing
    - Example: In "H😀!", 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
 
-- **[`ColIndex`]** - Display position (terminal column)
+- **[`VPCol`]** - Display position (terminal column)
    - For rendering and visual positioning
    - Example: In "H😀!", 'H' at col 0, '😀' spans cols 1-2, '!' at col 3
 
@@ -1098,7 +1334,7 @@ Content:  [H][😀----][!]
 SegIndex:  0    1     2
 Segments: [H] [😀]  [!]
 
-ColIndex:  0  1  2   3
+CCol:      0  1  2   3
 Display:  [H][😀--] [!]
 ```
 
@@ -1115,8 +1351,8 @@ let display_width = text.display_width;    // Actual terminal columns needed
 
 // Safe conversions between index types
 // ByteIndex → SegIndex: find which character contains a byte
-// ColIndex → SegIndex: find which character is at a column
-// SegIndex → ColIndex: find the display column of a character
+// CCol → SegIndex: find which character is at a display column
+// SegIndex → CCol: find the display column of a character
 ```
 
 ### Key Features
@@ -1152,8 +1388,8 @@ documentation](mod@crate::core::graphemes) documentation.
 
 The current render pipeline flow is:
 - Input Event → State generation → [App] renders to [`RenderOpIRVec`]
-- [`RenderOpIRVec`] → Rendered to [`OffscreenBuffer`] ([`PixelChar`] grid)
-- [`OffscreenBuffer`] → Diffed with previous buffer → Generate diff chunks
+- [`RenderOpIRVec`] → Rendered to [`OfsBuf`] ([`PixelChar`] grid)
+- [`OfsBuf`] → Diffed with previous buffer → Generate diff chunks
 - Diff chunks → Converted back to [`RenderOpOutputVec`] for painting
 - [`RenderOpOutputVec`] execution → Each op routed through crossterm backend
 - Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
@@ -1188,9 +1424,10 @@ The current render pipeline flow is:
       processed the entire [App] gets re-rendered. This is the unidirectional data
       flow architecture inspired by React and Elm.
 - Your [App] trait impl is the main entry point for laying out the entire application.
-  Before the first render, the [App] is initialized (via a call to [`App::app_init_components`]
-  and [`App::app_start_background_services`]). The `app_init_components` method is responsible
-  for creating all the [Component]s that it uses, and saving them to the [`ComponentRegistryMap`].
+  Before the first render, the [App] is initialized (via a call to
+  [`App::app_init_components`] and [`App::app_start_background_services`]). The
+  `app_init_components` method is responsible for creating all the [Component]s that
+  it uses, and saving them to the [`ComponentRegistryMap`].
   - State is stored in many places. Globally at the [`GlobalData`] level, and also in
     [App], and also in [Component].
 - This sets everything up so that [`App::app_render`],
@@ -1376,17 +1613,20 @@ look at the details in each of the sections below.
 The main building blocks of a TUI app are:
 - [`TerminalWindow`] - You can think of this as the main "window" of the app. All the
   content of your app is painted inside of this "window". And the "window"
-  conceptually maps to the screen that is contained inside your terminal emulator
-  program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
-  the screen space of this terminal emulator. It will also enter raw mode, and paint
-  to an alternate screen buffer, leaving your original scroll back buffer and history
-  intact. When you `request_shutdown` this TUI app, it will return your terminal to
-  where you'd left off. You don't write this code, this is something that you use.
+  conceptually maps to the **Viewport** that is contained inside your terminal
+  emulator program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up
+  100% of the screen space of this terminal emulator. It will also enter raw mode, and
+  paint to an alternate screen buffer, leaving your original scroll back buffer and
+  history intact. When you `request_shutdown` this TUI app, it will return your
+  terminal to where you'd left off. You don't write this code, this is something that
+  you use.
 - [App] - This is where you write your code. You pass in a [App] to the
-  [`TerminalWindow`] to bootstrap your TUI app. You can just use [App] to build your
-  app, if it is a simple one & you don't really need any sophisticated layout or
-  styling. But if you want layout and styling, now we have to deal with [`FlexBox`],
-  [Component], and [`crate::TuiStyle`].
+  [`TerminalWindow`] to bootstrap your TUI app. The app's components are rendered into
+  the conceptually unbounded **Canvas**, which is then viewed through the
+  `TerminalWindow`'s Viewport. You can just use [App] to build your app, if it is a
+  simple one & you don't really need any sophisticated layout or styling. But if you
+  want layout and styling, now we have to deal with [`FlexBox`], [Component], and
+  [`crate::TuiStyle`].
 
 ## Layout and styling
 
@@ -1426,7 +1666,7 @@ has focus.
 The [`HasFocus`] struct takes care of this. This provides 2 things:
 
 - It holds an `id` of a [`FlexBox`] / [`Component`] that has focus.
-- It also holds a map that holds a [`crate::Pos`] for each `id`. This is used to
+- It also holds a map that holds a [`crate::VPPos`] for each `id`. This is used to
   represent a cursor (whatever that means to your app & component). This cursor is
   maintained for each `id`. This allows a separate cursor for each [Component] that
   has focus. This is needed to build apps like editors and viewers that maintains a
@@ -1445,26 +1685,24 @@ then it is simply dropped.
 
 ## Rendering and painting
 
-The R3BL TUI engine provides two complementary rendering architectures optimized for
-different use cases. Both leverage a high-performance [`PixelChar`] concept which
-represents a single "pixel" in the terminal screen at a given col and row index
-position. There are only as many [`PixelChar`]s as there are rows and cols in a
-terminal screen, and the index maps directly to the position of the pixel in the
-terminal screen.
+This crate provides two complementary rendering architectures optimized for different
+use cases. Both leverage a high-performance [`PixelChar`] concept which represents a
+single "pixel" in the terminal screen at a given col and row index position. There are
+only as many [`PixelChar`]s as there are rows and cols in a terminal screen, and the
+index maps directly to the position of the pixel in the terminal screen.
 
 ### Dual Rendering Paths
 
-The R3BL TUI engine supports two distinct rendering approaches, each optimized for
-different use cases and complexity levels:
+This crate supports two distinct rendering approaches, each optimized for different
+use cases and complexity levels:
 
 #### Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full TUI)
 
 - **Use Case**: Full-screen interactive applications, responsive layouts, complex
   hierarchies
 - **Example**: Full-featured text editor, dashboard app, terminal multiplexer
-- **Pipeline**: [`RenderOpIRVec`] → [`OffscreenBuffer`] → (diff) →
-  [`RenderOpOutputVec`] → [`PixelChar`] array → [`PixelCharRenderer`] → ANSI bytes →
-  Terminal
+- **Pipeline**: [`RenderOpIRVec`] → [`OfsBuf`] → (diff) → [`RenderOpOutputVec`] →
+  [`PixelChar`] array → [`PixelCharRenderer`] → ANSI bytes → Terminal
 - **Benefits**:
   - **High performance** through diff-based optimization (only changed pixels to
     terminal)
@@ -1505,6 +1743,21 @@ This enables:
 - **Composed Path**: [`RenderOpOutputVec`] execution → [`PixelCharRenderer`] → bytes
 - **Direct Path**: [`CliTextInline`] → [`PixelChar`] → [`PixelCharRenderer`] → bytes
 
+### Terminal Mode Control: [`TerminalModeController`]
+
+Terminal state transitions (e.g., entering raw mode, toggling the alternate screen, or
+hiding the cursor) are managed independently of the rendering pipeline. The
+[`TerminalModeController`] trait provides an ergonomic API to explicitly control these
+global modes:
+
+- **Separation of concerns**: Lifecycle operations are kept entirely separate from UI
+  components and the `RenderOp` queue.
+- **Implementations**: The main implementation is on [`OutputDevice`], which delegates
+  raw mode calls to [`terminal_raw_mode`] and writes ANSI mode-setting bytes directly.
+- **Panic-Safety**: Global setups like `enter_raw_mode` and alternate screen are
+  wrapped in [`RAII`] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
+  to ensure the terminal state is always correctly restored upon exit or panic.
+
 ### [`CliTextInline`]: Styled Text Fragments
 
 For direct rendering paths, [`CliTextInline`] represents a fragment of text with
@@ -1539,9 +1792,9 @@ conditions or interleaved output.
 ### Offscreen buffer
 
 Here is an example of what a single row of rendered output might look like in a row of
-the [`OffscreenBuffer`]. This diagram shows each [`PixelChar`] in `row_index: 1` of
-the [`OffscreenBuffer`]. In this example, there are 80 columns in the terminal screen.
-This actual log output generated by the TUI engine when logging is enabled.
+the [`OfsBuf`]. This diagram shows each [`PixelChar`] in `row_index: 1` of the
+[`OfsBuf`]. In this example, there are 80 columns in the terminal screen. This actual
+log output generated by the TUI engine when logging is enabled.
 
 ```
 row_index: 1
@@ -1561,13 +1814,13 @@ row_index: 1
 078 S ░░░░░░░╳░░░░░░░░079 S ░░░░░░░╳░░░░░░░░080 S ░░░░░░░╳░░░░░░░░spacer [ 0, 16-80 ]
 ```
 
-When [`RenderOpIRVec`] are executed and used to create an [`OffscreenBuffer`] that
-maps to the size of the terminal window, clipping is performed automatically. This
-means that it isn't possible to move the caret outside of the bounds of the viewport
-(terminal window size). And it isn't possible to paint text that is larger than the
-size of the offscreen buffer. The buffer really represents the current state of the
-viewport. Scrolling has to be handled by the component itself (an example of this is
-the editor component).
+When [`RenderOpIRVec`] are executed and used to create an [`OfsBuf`] that maps to the
+size of the terminal window, clipping is performed automatically. This means that it
+isn't possible to move the caret outside of the bounds of the viewport (terminal
+window size). And it isn't possible to paint text that is larger than the size of the
+offscreen buffer. The buffer really represents the current state of the viewport.
+Scrolling has to be handled by the component itself (an example of this is the editor
+component).
 
 Each [`PixelChar`] can be one of 4 things:
 
@@ -1588,6 +1841,18 @@ Each [`PixelChar`] can be one of 4 things:
   which is smart enough to "stack" styles that appear beside each other for quicker
   rendering in terminals.
 
+#### SIMD-Accelerated Memory Layout
+
+The [`OfsBuf`] can be backed by [`Flat2DArray`], which represents a 2D grid using a
+highly-optimized, contiguous 1D memory array. This architecture allows the TUI engine
+to completely bypass standard 2D vector CPU cache misses and math pipeline stalls
+during hot-path rendering by exposing predictably aligned chunks of memory to the
+compiler for aggressive [SIMD] auto-vectorization.
+
+For a detailed, plain-English breakdown of how and why this provides a massive speedup
+for 1D and 2D iteration, see the [Rule of Thumb for 1D vs 2D Memory Iteration] in the
+[`Flat1DSimd`] documentation.
+
 ### Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)
 
 Here's a detailed overview of the complete rendering pipeline architecture used for
@@ -1603,7 +1868,7 @@ Component
  ↓
 RenderOpIRVec
  ↓
-RenderPipeline → OffscreenBuffer
+RenderPipeline → OfsBuf
  ↓
 RenderOpOutputVec
  ↓
@@ -1626,8 +1891,8 @@ This is very much like a compiler pipeline with multiple stages.
 
 </div>
 
-The R3BL TUI rendering system for Path 1 is organized into 6 distinct stages, each
-with a clear responsibility:
+Our rendering system for Path 1 is organized into 6 distinct stages, each with a clear
+responsibility:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -1654,7 +1919,7 @@ with a clear responsibility:
 ┌────────────────▼───────────────────────────────────────────────────────────────┐
 │ STAGE 3: Compositor (Rendering to Offscreen Buffer)                            │
 │ ─────────────────────────────────────────────────────────────────────────────  │
-│ Processes RenderOpIRVec → writes to OffscreenBuffer                            │
+│ Processes RenderOpIRVec → writes to OfsBuf                                     │
 │ Module: compositor_render_ops_to_ofs_buf                                       │
 │                                                                                │
 │ The Compositor is the rendering engine. It:                                    │
@@ -1664,25 +1929,25 @@ with a clear responsibility:
 │ - Manages cursor position and color state                                      │
 │ - Acts as an intermediate "virtual terminal"                                   │
 │                                                                                │
-│ Output: A complete 2D grid (OffscreenBuffer) representing the rendered frame.  │
+│ Output: A complete 2D grid (OfsBuf) representing the rendered frame.           │
 │ This buffer can be analyzed to determine what changed since the last frame.    │
 └────────────────┬───────────────────────────────────────────────────────────────┘
                  │
 ┌────────────────▼───────────────────────────────────────────────────────────────┐
 │ STAGE 4: Backend Converter (Diff & Optimization Layer)                         │
 │ ─────────────────────────────────────────────────────────────────────────────  │
-│ Scans OffscreenBuffer → generates RenderOpOutputVec                            │
-│ Module: crossterm_backend/offscreen_buffer_paint_impl                          │
-│         (Backend-specific implementation of OffscreenBufferPaint trait)        │
+│ Scans OfsBuf → generates RenderOpOutputVec                                     │
+│ Module: crossterm_backend/ofs_buf_paint_impl                                   │
+│         (Backend-specific implementation using paint_impl functions)           │
 │                                                                                │
 │ The Backend Converter:                                                         │
-│ - Compares current OffscreenBuffer with previous frame (optional)              │
+│ - Compares current OfsBuf with previous frame (optional)                       │
 │ - Generates only the operations needed for selective redraw                    │
 │ - Converts PixelChar grid into optimized text painting operations              │
 │ - Produces RenderOpOutputVec (no clipping needed—already handled)              │
 │ - Eliminates redundant operations for performance                              │
 │                                                                                │
-│ Input: OffscreenBuffer (what we rendered)                                      │
+│ Input: OfsBuf (what we rendered)                                               │
 │ Output: RenderOpOutputVec (optimized operations to display it)                 │
 └────────────────┬───────────────────────────────────────────────────────────────┘
                  │
@@ -1745,7 +2010,7 @@ screen using the composed component pipeline (Path 1).
 │ │             │  │             │ │                      ⎩ + ⎩
 │ │             │  │             │ │       ╭─────────────────────╮
 │ └─────────────┘  └─────────────┘ │       │                     │
-│                                  │       │  OffscreenBuffer    │
+│                                  │       │       OfsBuf        │
 ╰──────────────────────────────────╯       │                     │
                                            ╰─────────────────────╯
 ```
@@ -1763,23 +2028,23 @@ position is remembered after each [`RenderOpIR`] is executed. However, once a ne
 
 Once a set of these [`RenderPipeline`]s have been generated, typically after the user
 enters some input event, and that produces a new state which then has to be rendered,
-they are combined and painted into an [`OffscreenBuffer`].
+they are combined and painted into an [`OfsBuf`].
 
 ### First render (Path 1)
 
 The [`paint`] module contains the [`paint()`] function, which is the entry point for
 all rendering in the composed component pipeline (Path 1). Once the first render
-occurs, the [`OffscreenBuffer`] that is generated is saved to [`GlobalData`]. The
-following table shows the various tasks that have to be performed in order to render
-to an [`OffscreenBuffer`]. There is a different code path that is taken for ANSI text
-and plain text (which includes [`TuiStyledText`] which is just plain text with a
-color). Syntax highlighted text is also just [`TuiStyledText`].
+occurs, the [`OfsBuf`] that is generated is saved to [`GlobalData`]. The following
+table shows the various tasks that have to be performed in order to render to an
+[`OfsBuf`]. There is a different code path that is taken for ANSI text and plain text
+(which includes [`TuiStyledText`] which is just plain text with a color). Syntax
+highlighted text is also just [`TuiStyledText`].
 
-| UTF-8 | Task                                                                                                           |
-|:------|:---------------------------------------------------------------------------------------------------------------|
-| Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
-| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`OffscreenBufferPaintImpl`] |
-| Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                                      |
+| UTF-8 | Task                                                                                     |
+|:------|:-----------------------------------------------------------------------------------------|
+| Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OfsBuf`])                 |
+| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`paint_impl`] |
+| Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                 |
 
 Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
 the terminal. But this process is really simple making it very easy to swap out other
@@ -1787,7 +2052,7 @@ terminal libraries or even a GUI backend, or some other custom output driver.
 
 ### Subsequent render (Path 1)
 
-Since the [`OffscreenBuffer`] is cached in [`GlobalData`], a diff can be performed for
+Since the [`OfsBuf`] is cached in [`GlobalData`], a diff can be performed for
 subsequent renders. And only those diff chunks are painted to the screen. This ensures
 that there is no flicker when the content of the screen changes. It also minimizes the
 amount of work that the terminal or terminal emulator has to do in order to render the
@@ -1796,8 +2061,8 @@ high performance characteristics compared to Path 2.
 
 ## Platform-specific backends
 
-R3BL TUI supports multiple terminal backends to balance cross-platform compatibility
-with platform-specific optimizations.
+We support multiple terminal backends to balance cross-platform compatibility with
+platform-specific optimizations.
 
 ### Backend selection
 
@@ -1847,7 +2112,7 @@ Stages 1-4 (Shared)           Stage 5 (Backend-Specific)
 ──────────────────────────    ─────────────────────────────
 Component → RenderPipeline    → Crossterm (cross-platform)
          → Compositor            OR
-         → OffscreenBuffer    → DirectToAnsi (Linux-native)
+         → OfsBuf             → DirectToAnsi (Linux-native)
          → RenderOpOutput
 ```
 
@@ -1972,14 +2237,14 @@ processes (like `bash`, `vim`, etc.) and updates the terminal display state:
 pty_mux (receives child process output)
      │
      ▼
-OffscreenBuffer::apply_ansi_bytes()
+OfsBufVT100::apply_ansi_bytes()
      │
      │ Uses VTE state machine
      ▼
 AnsiToOfsBufPerformer (updates buffer state)
      │
      ▼
-OffscreenBuffer (cursor, text, styles)
+OfsBuf (cursor, text, styles)
 ```
 
 This enables the terminal multiplexer to correctly render output from any `VT-100`-
@@ -1987,15 +2252,15 @@ compatible program running in a PTY.
 
 ### In-memory terminal emulation
 
-[`OffscreenBuffer`] can function as a **standalone in-memory terminal emulator**. By
-calling [`OffscreenBuffer::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape
-sequences directly into the buffer — no real terminal or PTY required:
+[`OfsBuf`] can function as a **standalone in-memory terminal emulator**. By calling
+[`OfsBufVT100::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape sequences
+directly into the buffer — no real terminal or PTY required:
 
 <!-- It is ok to use ignore here - demonstrates API usage with types not importable
 in doctests -->
 
 ```rust
-let mut buffer = OffscreenBuffer::new(Size { col_count: 80, row_count: 24 });
+let mut buffer = OfsBuf::new(Size { col_count: 80, row_count: 24 });
 
 // Feed ANSI bytes from any source (file, network, PTY, test data)
 buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
@@ -2019,13 +2284,13 @@ buffer.apply_ansi_bytes(b"\x1b[31mRed text\x1b[0m Normal text");
 
 The [`backend_compat_tests`] use in-memory terminal emulation to verify that
 [`crossterm`] and [`direct_to_ansi`] backends produce identical output. Tests spawn
-controlled processes in real PTYs, capture their ANSI output, apply it to
-[`OffscreenBuffer`]s, and compare the resulting screen state — all without needing to
-visually inspect terminal output.
+controlled processes in real PTYs, capture their ANSI output, apply it to [`OfsBuf`]s,
+and compare the resulting screen state — all without needing to visually inspect
+terminal output.
 
 This is the same mechanism that powers [`PTYMux`] — each managed process gets its own
-[`OffscreenBuffer`] that continuously receives and renders ANSI output, enabling
-instant switching between processes with fully preserved screen state.
+[`OfsBuf`] that continuously receives and renders ANSI output, enabling instant
+switching between processes with fully preserved screen state.
 
 ### Key `VT-100` references
 
@@ -2089,13 +2354,13 @@ The recommended approach uses RAII for automatic cleanup:
 context to run -->
 
 ```rust
-use r3bl_tui::RawModeGuard;
-
+use r3bl_tui::{TerminalModeController, OutputDevice};
 {
-    let _guard = RawModeGuard::new()?;
+    let output_device = OutputDevice::new_stdout();
+    let _guard = output_device.enter_raw_mode()?;
     // Terminal is now in raw mode
     // ... process input ...
-} // Raw mode automatically disabled when guard drops
+} // Raw mode automatically disabled when guard drops.
 ```
 
 ### Terminal state management
@@ -2103,11 +2368,12 @@ use r3bl_tui::RawModeGuard;
 Raw mode settings are stored statically and restored on disable. The implementation
 handles:
 
-- **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`
-- **Panic safety**: [`RawModeGuard`] ensures restoration even on panic
-- **Multiple enables**: Safe to call `enable_raw_mode()` multiple times
+- **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`.
+- **Panic safety**: [`RawModeGuard`] ensures restoration even on panic.
+- **Multiple enables**: Safe to call [`output_device.enter_raw_mode()`] multiple
+  times.
 
-For implementation details and historical context (TTY, line discipline, `stty`):
+For implementation details and historical context ([`TTY`], line discipline, `stty`):
 
 - [`terminal_raw_mode`] - Main documentation
 - [`raw_mode_unix`] - Linux/macOS impl
@@ -2167,6 +2433,9 @@ Use this macro for single-feature PTY tests:
 controller/controlled functions -->
 
 ```rust
+use r3bl_tui::{generate_pty_test, PtyTestMode, PtyTestContext};
+fn my_controller_function(_: PtyTestContext) {}
+fn my_controlled_function() {}
 generate_pty_test! {
     test_fn: test_raw_mode_enables_correctly,
     controller: my_controller_function,
@@ -2246,7 +2515,7 @@ on the state.
     component is placed).
   - The [`EditorBuffer`] contains the text content in a [`ZeroCopyGapBuffer`]. This
     provides efficient, zero-copy access to editor content. It also contains the
-    viewport, caret position, and file extension for syntax highlighting.
+    viewport origin, caret position, and file extension for syntax highlighting.
 
 In other words,
 
@@ -2254,7 +2523,8 @@ In other words,
   - Contains the logic to process keypresses and modify an editor buffer.
 - [`EditorBuffer`] -> **This goes in the `State`**
   - Contains the data that represents the document being edited. This contains the
-    caret (insertion point) position, viewport, selections, and undo / redo history.
+    caret (insertion point) position and scroll position. And in the future can
+    contain lots of other information such as undo / redo history, etc.
 
 Here are the connection points with the impl of [`Component<S, AS>`] in
 [`EditorComponent`]:
@@ -2430,8 +2700,8 @@ command-line tools.
 
 #### Core Capabilities
 
-**Per-process virtual terminals**: Each process maintains its own [`OffscreenBuffer`]
-that acts as a complete virtual terminal, enabling:
+**Per-process virtual terminals**: Each process maintains its own [`OfsBuf`] that acts
+as a complete virtual terminal, enabling:
 - **Instant switching** between processes (F1-F9) - no delays or rendering artifacts
 - **Independent state**: Each process's screen state is fully preserved
 - **True multiplexing**: All processes update their buffers continuously, only the
@@ -2452,11 +2722,11 @@ that acts as a complete virtual terminal, enabling:
 #### Architecture: The Virtual Terminal Pipeline
 
 ```
-╭─────────────╮    ╭──────────╮    ╭────────────╮    ╭─────────────────╮
-│ Child Proc  │────► PTY      │────► VTE Parser │────► OffscreenBuffer │
-│ (vim, bash) │    │ (bytes)  │    │ (ANSI)     │    │ (virtual        │
-╰────▲────────╯    ╰──────────╯    ╰────────────╯    │  terminal)      │
-     │                                    │          ╰─────────────────╯
+╭─────────────╮    ╭──────────╮    ╭────────────╮    ╭────────────────────╮
+│ Child Proc  │────► PTY      │────► VTE Parser │────► OfsBuf             │
+│ (vim, bash) │    │ (bytes)  │    │ (ANSI)     │    │ (virtual terminal) │
+╰────▲────────╯    ╰──────────╯    ╰────────────╯    │                    │
+     │                                    │          ╰────────────────────╯
      │                                    │                  │
      │                           ╔════════▼══════╗           │
      │                           ║ Perform Trait ║           │
@@ -2484,7 +2754,7 @@ Alacritty):
 **Three-layer architecture** for maintainability:
 ```
 Layer 1: SHIM           → Protocol delegation (vt_100_shim_char_ops)
-Layer 2: IMPLEMENTATION → Business logic (vt_100_impl_char_ops)
+Layer 2: IMPLEMENTATION → Business logic (impl_char_ops)
 Layer 3: TESTS          → Conformance validation (vt_100_test_char_ops)
 ```
 
@@ -2678,7 +2948,27 @@ feature requests, feel free to add them there too 👍.
 
 <!-- Type references for documentation links -->
 
+[Rule of Thumb for 1D vs 2D Memory Iteration]:
+    crate::core::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
+[`Flat1DSimd`]: crate::core::Flat1DSimd
+[SIMD]: https://en.wikipedia.org/wiki/SIMD
+[`fast_strings`]:
+    mod@crate::core::common::fast_strings#string-allocation-performance-strategy
+[`format_no_alloc`]: macro@crate::format_no_alloc
+[`FastStringify`]: crate::core::common::fast_strings::fast_stringify::FastStringify
+[`generate_impl_display_for_fast_stringify!`]:
+    macro@crate::generate_impl_display_for_fast_stringify
+[`BufTextStorage`]: crate::core::common::fast_strings::fast_stringify::BufTextStorage
+[`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+[`TerminalModeController`]: crate::TerminalModeController
+[`FullScreenTuiModeGuard`]: crate::FullScreenTuiModeGuard
+[`RawModeGuard`]: crate::RawModeGuard
+[`terminal_raw_mode`]: crate::terminal_raw_mode
+[`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+[`read()`]: ScopedMutex::read()
+[`write()`]: ScopedMutex::write()
 [`OutputDevice`]: crate::OutputDevice
+[`output_device.enter_raw_mode()`]: crate::OutputDevice::enter_raw_mode
 [`Readline`]: crate::Readline
 [`Monitor`]: crate::Monitor
 [`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor
@@ -2698,35 +2988,40 @@ feature requests, feel free to add them there too 👍.
 [`TuiAvailability<Spinner>`]: crate::TuiAvailability
 [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 [`TuiAvailability<T>`]: crate::TuiAvailability
-[`Spinner::try_start()`]: crate::Spinner::try_start
+[`Spinner::try_start()`]: crate::readline_async::Spinner::try_start
 [`tmux`]: https://github.com/tmux/tmux
-[`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
+[`ReadlineAsyncContext::try_new()`]:
+    crate::readline_async::ReadlineAsyncContext::try_new
 [`PTYMux::run()`]: crate::pty_mux::PTYMux::run
 [`choose()`]: crate::choose
 [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 [`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
-[App]: crate::App
+[App]: crate::tui::App
 [Component]: crate::Component
 [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 [TerminalWindow]: crate::TerminalWindow
-[FlexBox]: crate::FlexBox
-[Surface]: crate::Surface
+[FlexBox]: crate::tui::FlexBox
+[Surface]: crate::tui::Surface
 [HasFocus]: crate::HasFocus
 [ComponentRegistry]: crate::ComponentRegistry
 [ComponentRegistryMap]: crate::ComponentRegistryMap
 [GlobalData]: crate::GlobalData
 [EventPropagation]: crate::EventPropagation
-[`RenderOpCommon`]: crate::RenderOpCommon
-[`RenderOpIRVec`]: crate::RenderOpIRVec
-[`RenderOpOutputVec`]: crate::RenderOpOutputVec
+[`RenderOpCommon`]: crate::tui::RenderOpCommon
+[`RenderOpIRVec`]: crate::tui::RenderOpIRVec
+[`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 [RenderPipeline]: crate::RenderPipeline
-[OffscreenBuffer]: crate::OffscreenBuffer
-[PixelChar]: crate::PixelChar
-[ZOrder]: crate::ZOrder
+[OfsBuf]: crate::tui::OfsBuf
+[PixelChar]: crate::tui::PixelChar
+[`VecDeque`]: std::collections::VecDeque
+[`try_pan_viewport_to`]: crate::CanvasStorage::try_pan_viewport_to
+[`get_row_with_scrollback`]: crate::tui::GrowableBuffer::get_row_with_scrollback
+[`ScrollbackAmount`]: crate::ScrollbackAmount
+[ZOrder]: crate::tui::ZOrder
 [`paint`]: mod@crate::paint
 [`paint()`]: fn@crate::paint
-[`OffscreenBufferPaintImpl`]: struct@crate::OffscreenBufferPaintImpl
+[`paint_impl`]: mod@crate::terminal_lib_backends::ofs_buf::paint_impl
 [EditorComponent]: crate::EditorComponent
 [EditorEngine]: crate::EditorEngine
 [EditorBuffer]: crate::EditorBuffer
@@ -2749,18 +3044,22 @@ feature requests, feel free to add them there too 👍.
 [CsiSequence]: crate::CsiSequence
 [EscSequence]: crate::EscSequence
 [SgrCode]: crate::SgrCode
-[`vt_100_pty_output_parser`]: mod@crate::vt_100_pty_output_parser
-[RowIndex]: crate::RowIndex
-[ColIndex]: crate::ColIndex
-[ColWidth]: crate::ColWidth
-[RowHeight]: crate::RowHeight
+[`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+[VPRow]: crate::VPRow
+[VPCol]: crate::VPCol
+[VPWidth]: crate::VPWidth
+[VPHeight]: crate::VPHeight
 [IndexOps]: crate::IndexOps
 [LengthOps]: crate::LengthOps
-[ArrayBoundsCheck]: crate::ArrayBoundsCheck
+[ArrayBoundsCheck]: crate::core::ArrayBoundsCheck
 [CursorBoundsCheck]: crate::CursorBoundsCheck
 [ViewportBoundsCheck]: crate::ViewportBoundsCheck
 [RangeBoundsExt]: crate::RangeBoundsExt
 [RangeConvertExt]: crate::RangeConvertExt
+[`RangeBoundsResult`]: crate::RangeBoundsResult
+[`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
+[`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
+[`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within
 [ByteIndex]: crate::ByteIndex
 [SegIndex]: crate::SegIndex
 [GCStringOwned]: crate::GCStringOwned
@@ -2773,8 +3072,10 @@ feature requests, feel free to add them there too 👍.
 [`child`]: field@PtyTestContext::child
 [`buf_reader`]: field@PtyTestContext::buf_reader
 [`writer`]: field@PtyTestContext::writer
-[`input_parser_integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
-[`raw_mode_integration_tests`]: mod@crate::terminal_raw_mode::raw_mode_integration_tests
+[`input_parser_integration_tests`]:
+    mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+[`raw_mode_integration_tests`]:
+    mod@crate::terminal_raw_mode::raw_mode_integration_tests
 [`test_pty_input_device`]:
     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
 [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
@@ -2784,7 +3085,8 @@ feature requests, feel free to add them there too 👍.
 [`direct_to_ansi`]: crate::direct_to_ansi
 [`crossterm_backend`]: crate::crossterm_backend
 [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
-[`OutputDevice::lock()`]: crate::OutputDevice::lock
+[`OutputDevice::write()`]: crate::OutputDevice::write
+[`OutputDevice::lock_raw()`]: crate::OutputDevice::lock_raw
 [`RawModeGuard::drop()`]: crate::RawModeGuard::drop
 [`output_device.rs`]: crate::OutputDevice
 [`raw_mode_core.rs`]: crate::RawModeGuard
@@ -2792,6 +3094,7 @@ feature requests, feel free to add them there too 👍.
 [`rrt_termination_guard.rs`]: crate::resilient_reactor_thread::TerminationGuard
 [`rrt_subscriber_guard.rs`]: crate::resilient_reactor_thread::SubscriberGuard
 [`monitor.rs`]: crate::core::common::Monitor
+[`scoped_mutex.rs`]: crate::core::common::ScopedMutex
 [`rrt_monitor.rs`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor
 [`rrt_engine.rs`]: crate::resilient_reactor_thread::run_worker_loop
 [`spinner.rs`]: crate::readline_async::Spinner
@@ -2805,7 +3108,7 @@ feature requests, feel free to add them there too 👍.
 [`RawModeGuard`]: crate::RawModeGuard
 [`terminal_raw_mode`]: crate::terminal_raw_mode
 [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
-[`OffscreenBuffer::apply_ansi_bytes()`]: crate::OffscreenBuffer::apply_ansi_bytes
+[`OfsBufVT100::apply_ansi_bytes()`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 [`RRT`]: crate::RRT
 [`SubscriberGuard`]: crate::SubscriberGuard
 [`RRTWorker`]: crate::RRTWorker
@@ -2813,6 +3116,47 @@ feature requests, feel free to add them there too 👍.
 [`resilient_reactor_thread`]: crate::resilient_reactor_thread
 [`mio_poller`]: crate::mio_poller
 [`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+[`bounds_check`]: mod@crate::bounds_check
+[`canvas`]: mod@crate::core::coordinates::canvas
+[`CPos`]: crate::CPos
+[`CCaret`]: crate::CCaret
+[`CCol`]: crate::CCol
+[`CRow`]: crate::CRow
+[`CWidth`]: crate::CWidth
+[`CHeight`]: crate::CHeight
+[`CBoundingBox`]: crate::CBoundingBox
+[`VPRow`]: crate::VPRow
+[`VPCol`]: crate::VPCol
+[`VPHeight`]: crate::VPHeight
+[`VPWidth`]: crate::VPWidth
+[`VPSize`]: crate::VPSize
+[`VPPos`]: crate::VPPos
+[`VPCaret`]: crate::VPCaret
+[`VPBoundingBox`]: crate::VPBoundingBox
+[`ChUnit`]: crate::ChUnit
+[`ByteIndex`]: crate::ByteIndex
+[`ByteLength`]: crate::ByteLength
+[`SegIndex`]: crate::SegIndex
+[`SegLength`]: crate::SegLength
+[`NarrowingCastToU16`]: crate::NarrowingCastToU16
+[`NarrowingCastToUsize`]: crate::NarrowingCastToUsize
+[`WideningCastToUsize`]: crate::WideningCastToUsize
+[`WideningCastToU32`]: crate::WideningCastToU32
+[`.as_usize_widening()`]: crate::WideningCastToUsize::as_usize_widening
+[`.as_u32_widening()`]: crate::WideningCastToU32::as_u32_widening
+[`.as_u16_narrowing()`]: crate::NarrowingCastToU16::as_u16_narrowing
+[`.as_usize_narrowing()`]: crate::NarrowingCastToUsize::as_usize_narrowing
+[`tracing::error!`]: tracing::error
+[`ScreenCoordinate`]: crate::ScreenCoordinate
+[`StorageCoordinate`]: crate::StorageCoordinate
+[`Flat2DArray`]: crate::Flat2DArray
+[`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+[`GrowableBuffer`]: crate::GrowableBuffer
+[`EditorEngine`]: crate::EditorEngine
+[`EditorBuffer`]: crate::EditorBuffer
+[`CanvasCameraExt::pan_to_keep_coord_in_view`]:
+    crate::CanvasCameraExt::pan_to_keep_coord_in_view
+[`CCaret::to_viewport_caret`]: crate::CCaret::to_viewport_caret
 [`crossterm`]: crossterm
 [`mio`]: mio
 [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
@@ -2821,7 +3165,7 @@ feature requests, feel free to add them there too 👍.
 [`syntect`]: syntect
 [`vte`]: vte
 [`RenderOpOutput`]: crate::RenderOpOutput
-[`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
+[`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 [Architecture Overview]: crate::resilient_reactor_thread#architecture-overview
 [ANSI X3.64 Standard]:
     https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
@@ -2833,5 +3177,19 @@ feature requests, feel free to add them there too 👍.
 [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 [`pty_mux_example`]:
     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
+[`Condvar::wait()`]: std::sync::Condvar::wait
+[`Deref`]: std::ops::Deref
+[Parameters]: crate::ScopedMutex#parameters
+[academic research on type safety at scale]:
+    crate::core::coordinates::canvas#academic-research-on-type-safety-at-scale
+[theoretical foundations]: crate::core::coordinates::canvas#theoretical-foundations
+[empirical benchmarks]: crate::core::coordinates::canvas#empirical-benchmarks
+[FUNARCH 2023 paper]: https://doi.org/10.1145/3609025.3609477
+[FUNARCH 2026 paper]: https://doi.org/10.1145/3830438.3830958
+[Parse, don't validate]:
+    https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+[Stanford CS 242]: https://stanford-cs242.github.io/f19/
+[The Typestate Pattern in Rust]:
+    https://willcrichton.net/rust-api-type-patterns/typestate.html
 
 License: Apache-2.0

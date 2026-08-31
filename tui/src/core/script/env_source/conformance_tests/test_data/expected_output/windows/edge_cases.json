@@ -1,0 +1,21 @@
+[
+  {
+    "action": "remove",
+    "key": "EXISTING_VAR"
+  },
+  {
+    "action": "add",
+    "key": "QUOTE_SINGLE",
+    "value": "don't fail"
+  },
+  {
+    "action": "add",
+    "key": "WITH_BACKSLASH",
+    "value": "path\\to\\dir"
+  },
+  {
+    "action": "add",
+    "key": "WITH_SEMICOLON",
+    "value": "foo; bar; baz"
+  }
+]

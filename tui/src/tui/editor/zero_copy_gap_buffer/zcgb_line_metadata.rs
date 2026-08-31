@@ -16,8 +16,8 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, CCol, 
 /// Represents a grapheme cluster segment within a continuous document line.
 ///
 /// Unlike [`Seg`] (which uses 16-bit Viewport types), [`DocSeg`] uses 64-bit
-/// [`Canvas`]-domain coordinate types ([`CCol`], [`CIndex`], [`CWidth`]) and [`ByteLength`],
-/// allowing document lines to exceed 65,535 columns or grapheme clusters.
+/// [`Canvas`]-domain coordinate types ([`CCol`], [`CIndex`], [`CWidth`]) and
+/// [`ByteLength`], allowing document lines to exceed 65,535 columns or grapheme clusters.
 ///
 /// [`Canvas`]: mod@crate::core::coordinates::canvas
 /// [`Seg`]: crate::Seg

@@ -89,6 +89,14 @@ pub const DEBUG_TUI_VT100_PARSER: bool = false;
 /// [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
 pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
 
+/// Controls selective warning and error logging for the [`env_source`] module.
+///
+/// When enabled, logs subshell process spawn failures and non-zero subshell exit
+/// statuses with captured stderr.
+///
+/// [`env_source`]: mod@crate::core::script::env_source
+pub const DEBUG_ENV_SOURCE: bool = false;
+
 /// Unicode replacement character used when a grapheme cluster cannot be converted to a
 /// single char. This character (�) is the standard fallback for invalid/undisplayable
 /// characters.

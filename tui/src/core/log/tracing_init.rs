@@ -171,7 +171,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::try_create_temp_dir;
+    use crate::{GlobalLogFileGuard, try_create_temp_dir};
+    use serial_test::serial;
 
     #[test]
     fn test_try_create_display_layer() {
@@ -185,9 +186,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_try_create_file_layer() {
+        // Clean slate on entry and auto-reset on exit via Drop.
+        drop(GlobalLogFileGuard);
+        let _guard = GlobalLogFileGuard;
+
         let dir = try_create_temp_dir().expect("conversion error");
-        let file_path = dir.join("my_temp_log_file.log");
+        let file_path = dir.join("test_file_layer.log");
         let file_path = file_path.to_str().expect("conversion error").to_string();
 
         println!("file_path: {file_path}");
@@ -202,9 +208,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_try_create_both_layers() {
+        // Clean slate on entry and auto-reset on exit via Drop.
+        drop(GlobalLogFileGuard);
+        let _guard = GlobalLogFileGuard;
+
         let dir = try_create_temp_dir().expect("conversion error");
-        let file_path = dir.join("my_temp_log_file.log");
+        let file_path = dir.join("test_both_layers.log");
         let file_path = file_path.to_str().expect("conversion error").to_string();
 
         let tracing_config = TracingConfig {

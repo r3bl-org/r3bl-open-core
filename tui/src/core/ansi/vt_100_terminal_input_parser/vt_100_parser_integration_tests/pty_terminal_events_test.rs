@@ -20,10 +20,9 @@
 //!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_bracketed_paste_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{VPWidth, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP,
-            GLYPH_SUCCESS, GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY,
-            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, PtyTestContext, PtyTestMode,
-            VPHeight,
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode, VPHeight, VPWidth,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100FocusStateIR,
                                                                         VT100InputEventIR}},

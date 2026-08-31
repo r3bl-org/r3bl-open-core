@@ -27,9 +27,9 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module documentation]: mod@super#testing-philosophy
 
-use crate::{MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, GLYPH_WAITING,
-            InputEvent, MSG_TEST_RUNNING, PtyTestContext, PtyTestMode, TermPos,
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode, TermPos,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyModifiersIR,
@@ -37,8 +37,7 @@ use crate::{MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, GLYPH_CONTROLLED, GLY
                                                                         VT100MouseButtonIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_mouse_events,
@@ -126,7 +125,8 @@ fn controller(context: PtyTestContext) {
         writer.flush().expect("Failed to flush");
         // Read responses until we get a mouse event line. The controlled process
         // responds immediately after receiving input, so blocking reads work.
-        let event_line = child.read_line_state(&mut buf_reader, |line| line.starts_with("Mouse:"));
+        let event_line =
+            child.read_line_state(&mut buf_reader, |line| line.starts_with("Mouse:"));
         eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
     }
 

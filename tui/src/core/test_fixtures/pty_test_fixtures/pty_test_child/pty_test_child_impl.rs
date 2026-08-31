@@ -88,7 +88,7 @@ impl PtyTestChild {
     /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
     #[must_use]
     pub fn clone_termination_handle(&self) -> ControlledChildTerminationHandle {
-        self.child.clone_killer()
+        self.child.clone_termination_handle()
     }
 
     /// Drains the [`PTY`] until [`EIO`] or [`EOF`], then waits for the child process to
@@ -112,22 +112,22 @@ impl PtyTestChild {
     ///    [`PTY`] buffer is full (nobody is reading the controller side).
     /// 5. Deadlock happens: controller waits for child, child waits for buffer space.
     ///
-    /// macOS [`PTY`] buffers are ~1 KB (vs ~4 KB on Linux), making this trigger
+    /// macOS [`PTY`] buffers are ~1 KiB (vs ~4 KiB on Linux), making this trigger
     /// frequently.
     ///
     /// # Solution
     ///
-    /// 1. **Drop `pty_pair`** — closes the parent's controller [`fd`]. The `buf_reader`'s
+    /// 1. **Drop `pty_pair`**: closes the parent's controller [`fd`]. The `buf_reader`'s
     ///    cloned controller [`fd`] remains valid. The controlled [`fd`] must already be
     ///    closed by the caller (via [`PtyPair::open_and_spawn()`]) before the
     ///    controller's reading phase begins; that ensures [`EIO`] (or [`EOF`] on some
     ///    platforms) arrives when the child process exits rather than only when
     ///    [`Self::drain_and_wait()`] is reached.
-    /// 2. **Drain `buf_reader` until [`EIO`] or [`EOF`]** — unblocks the child's
+    /// 2. **Drain `buf_reader` until [`EIO`] or [`EOF`]**: unblocks the child's
     ///    [`std::process::exit(0)`] flush. Once the child process exits and its
     ///    controlled [`fd`]s close, the controller gets [`EIO`] on Linux (or [`EOF`] on
     ///    some platforms).
-    /// 3. **[`child.wait()`]** — the child has already exited, so this reaps the zombie
+    /// 3. **[`child.wait()`]**: the child has already exited, so this reaps the zombie
     ///    immediately.
     ///
     /// # Platform behavior: POSIX [`EOF`] vs Linux [`EIO`]
@@ -427,7 +427,8 @@ impl PtyTestChild {
     ///
     /// - **Windows**: Performs the mandatory [`ConPTY`] [`DSR`] handshake before
     ///   returning the writer. This requires reading from the provided `reader` until the
-    ///   [`DSR_CURSOR_POSITION_REQUEST`] is found.
+    ///   [`DSR_CURSOR_POSITION_REQUEST`] is found and replying with
+    ///   [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`].
     /// - **Other OSes**: Simply takes the writer from the [`PtyPair`] and returns it
     ///   immediately. This is a zero-cost operation on Unix/macOS.
     ///
@@ -443,6 +444,7 @@ impl PtyTestChild {
     ///
     /// [`ConPTY`]:
     ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+    /// [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`]: crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
     /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
     /// [`DSR`]: crate::DsrSequence
     /// [`stdout`]: std::io::Stdout
@@ -453,35 +455,164 @@ impl PtyTestChild {
     ) -> ControllerWriter {
         #[cfg(target_os = "windows")]
         {
-            use std::io::Write;
-            let mut writer = pty_pair
-                .controller()
-                .take_writer()
-                .expect("Failed to take writer");
+            self.get_writer_windows(pty_pair, reader)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Self::get_writer_unix(pty_pair, reader)
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn get_writer_unix<R: Read>(pty_pair: &PtyPair, _reader: &mut R) -> ControllerWriter {
+        let writer = pty_pair
+            .controller()
+            .take_writer()
+            .expect("Failed to take writer");
+        Box::new(writer)
+    }
+
+    /// Windows-specific implementation of [`Self::get_writer_with_handshake()`].
+    ///
+    /// # Why the Handshake is Necessary on Windows ([`ConPTY`])
+    ///
+    /// When [`portable_pty`] creates a Windows Pseudoconsole session via the Win32
+    /// [`CreatePseudoConsole`] API, it passes the `PSEUDOCONSOLE_INHERIT_CURSOR` flag.
+    /// Because of this flag, the background headless console host (`conhost.exe`)
+    /// automatically emits [`DSR_CURSOR_POSITION_REQUEST`] to the output pipe on startup.
+    /// It does this to query the outer host terminal for the initial cursor location
+    /// before rendering.
+    ///
+    /// In our [`PTY`] test harness, the test process acts as that host terminal. The
+    /// controller reads the stream until it encounters [`DSR_CURSOR_POSITION_REQUEST`]
+    /// and immediately replies with [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`], telling
+    /// [`ConPTY`] that the cursor is at row 1, col 1 (origin). Once answered, [`ConPTY`]
+    /// completes its initialization and begins delivering child process output.
+    ///
+    /// # Graceful Fallback (Avoiding 60-Second Watchdog Timeout)
+    ///
+    /// On Windows, [`ConPTY`] does **not** close the output pipe when the child exits and
+    /// `conhost.exe` holds the pipe open until the pseudoconsole is explicitly torn down.
+    /// If a child process panics, crashes, or exits during startup before completing the
+    /// handshake, calling `reader.read()` blocks indefinitely waiting for a
+    /// [`DSR_CURSOR_POSITION_REQUEST`] that will never arrive. This causes the test
+    /// runner to hang until the 60-second [`PtyTestWatchdog`] kills the process.
+    ///
+    /// > On POSIX systems, when a child process exits or panics, the operating system
+    /// > closes the replica pseudoterminal file descriptors, causing the controller's
+    /// > `reader.read()` to return immediately with `EOF` or `EIO`.
+    ///
+    /// To fail fast in milliseconds instead of hanging for 60 seconds, this method
+    /// queries [`Self::is_child_terminated_windows()`] before reading and between buffer
+    /// chunks. If the child has already exited, it breaks out of the handshake loop
+    /// immediately and returns the writer so the test controller can reap the child and
+    /// report the error without delay.
+    ///
+    /// [`ConPTY`]:
+    ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+    /// [`CreatePseudoConsole`]:
+    ///     https://learn.microsoft.com/en-us/windows/console/createpseudoconsole
+    /// [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`]:
+    ///     crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
+    /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
+    /// [`portable_pty`]: portable_pty
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
+    #[cfg(target_os = "windows")]
+    fn get_writer_windows<R: Read>(
+        &self,
+        pty_pair: &PtyPair,
+        reader: &mut R,
+    ) -> ControllerWriter {
+        use crate::{DSR_CURSOR_POSITION_ORIGIN_RESPONSE, DSR_CURSOR_POSITION_REQUEST};
+        use std::io::Write;
+
+        let mut writer = pty_pair
+            .controller()
+            .take_writer()
+            .expect("Failed to take writer");
+
+        // If the child process has already terminated (e.g., mock test or early exit), it
+        // will never emit DSR, so return immediately without blocking.
+        if !self.is_child_terminated_windows() {
             let mut buf = [0u8; 4096];
             loop {
+                // If the child process has already terminated, break out of the loop.
+                if self.is_child_terminated_windows() {
+                    break;
+                }
+                // Read from the reader, up to a page of 4 KiB.
                 match reader.read(&mut buf) {
                     Ok(n) if n > 0 => {
-                        let req = crate::DSR_CURSOR_POSITION_REQUEST.as_bytes();
-                        if buf[..n].windows(req.len()).any(|w| w == req) {
-                            let _unused = writer.write_all(b"\x1b[1;1R");
+                        let expected_dsr_request = DSR_CURSOR_POSITION_REQUEST.as_bytes();
+                        let window_size = expected_dsr_request.len();
+
+                        // If ConPTY sent the cursor position request anywhere in this
+                        // chunk, reply with the origin position report (1, 1) to satisfy
+                        // the handshake and complete.
+                        if buf[..n]
+                            .windows(window_size)
+                            .any(|byte_chunk| byte_chunk == expected_dsr_request)
+                        {
+                            let _unused = writer.write_all(
+                                DSR_CURSOR_POSITION_ORIGIN_RESPONSE.as_bytes(),
+                            );
                             let _unused = writer.flush();
+                            break;
+                        }
+
+                        // If the request was not in this chunk and the child process has
+                        // now exited, break out immediately to avoid blocking
+                        // indefinitely on the next read call.
+                        if self.is_child_terminated_windows() {
                             break;
                         }
                     }
                     _ => break,
                 }
             }
-            Box::new(writer)
         }
-        #[cfg(not(target_os = "windows"))]
-        {
-            let _ = reader;
-            let writer = pty_pair
-                .controller()
-                .take_writer()
-                .expect("Failed to take writer");
-            Box::new(writer)
+
+        Box::new(writer)
+    }
+
+    /// Polls the child process handle without blocking to check if it has exited.
+    ///
+    /// # How it works
+    ///
+    /// On Windows, process handles (`hProcess`) are kernel synchronization objects.
+    /// While a process is active, its handle remains in a nonsignaled state. When the
+    /// process terminates, the kernel transitions its handle to the signaled state.
+    ///
+    /// Invoking [`WaitForSingleObject`] with a timeout of `0` milliseconds performs
+    /// an instantaneous, non-blocking poll. If it returns [`WAIT_OBJECT_0`] (`0`),
+    /// the child process has terminated. If it returns `WAIT_TIMEOUT` (`0x102`), the
+    /// process is still running.
+    ///
+    /// This check operates on [`self.child.as_raw_handle()`], allowing a non-blocking
+    /// liveness query with only an immutable reference (`&self`), avoiding the need
+    /// for `&mut self` required by [`portable_pty::Child::try_wait()`].
+    ///
+    /// [`WAIT_OBJECT_0`]:
+    ///     https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject#return-value
+    /// [`WaitForSingleObject`]:
+    ///     https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
+    #[cfg(target_os = "windows")]
+    fn is_child_terminated_windows(&self) -> bool {
+        use std::os::windows::io::RawHandle;
+
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn WaitForSingleObject(hHandle: RawHandle, dwMilliseconds: u32) -> u32;
+        }
+        const WAIT_OBJECT_0: u32 = 0;
+
+        if let Some(raw_handle) = self.child.as_raw_handle() {
+            unsafe { WaitForSingleObject(raw_handle, 0) == WAIT_OBJECT_0 }
+        } else {
+            false
         }
     }
 }
+
+// cspell:words PSEUDOCONSOLE nonsignaled conhost

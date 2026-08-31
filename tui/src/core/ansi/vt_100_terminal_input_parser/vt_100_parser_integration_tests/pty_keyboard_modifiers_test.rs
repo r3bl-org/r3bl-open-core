@@ -19,17 +19,16 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, GLYPH_WAITING,
-            InputEvent, KeyState, PtyTestContext, PtyTestMode,
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, InputEvent, KeyState, MSG_CONTROLLED_READY,
+            MSG_CONTROLLED_STARTING, PtyTestContext, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_keyboard_modifiers,
@@ -151,7 +150,8 @@ fn controller(context: PtyTestContext) {
 
         // Read responses until we get a keyboard event line. The controlled process
         // responds immediately after receiving input, so blocking reads work.
-        let event_line = child.read_line_state(&mut buf_reader, |line| line.starts_with("Keyboard:"));
+        let event_line =
+            child.read_line_state(&mut buf_reader, |line| line.starts_with("Keyboard:"));
 
         eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
     }

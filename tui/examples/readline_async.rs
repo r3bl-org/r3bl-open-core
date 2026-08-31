@@ -4,7 +4,7 @@
 // cspell:words nextest
 
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal,
+use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal, OsStringExt,
                OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
                TuiAvailability, assert_terminal_is_interactive, bold, fg_color, fg_red,
                fg_slate_gray, inline_string,
@@ -464,12 +464,10 @@ pub mod file_walker {
 
         let name = path
             .file_name()
-            .ok_or_else(|| miette!("Could not get current working directory"))?;
+            .ok_or_else(|| miette!("Could not get current working directory"))?
+            .to_os_string();
 
-        Ok((
-            path.to_string_lossy().to_string(),
-            name.to_string_lossy().to_string(),
-        ))
+        Ok((path.into_string_lossy(), name.into_string_lossy()))
     }
 
     #[derive(Debug, Clone)]
@@ -626,7 +624,7 @@ pub mod file_walker {
                 .into_diagnostic()?
                 .filter_map(Result::ok)
                 .filter(|entry| entry.path().is_dir())
-                .map(|entry| entry.file_name().to_string_lossy().to_string())
+                .map(|entry| entry.file_name().into_string_lossy())
                 .collect();
 
             // Add each sub-folder (contained in the current node) to the stack. And add
@@ -685,7 +683,7 @@ pub mod file_walker {
 ///
 /// # Channel Capacity Choice
 ///
-/// Uses [`ChannelCapacity::Minimal`] (10K messages, ~0.61 MB) since we artificially
+/// Uses [`ChannelCapacity::Minimal`] (10K messages, ~0.61 MiB) since we artificially
 /// limit output to 100 items. This demonstrates proper capacity selection for known
 /// workload sizes.
 ///

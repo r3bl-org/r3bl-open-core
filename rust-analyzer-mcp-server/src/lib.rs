@@ -257,7 +257,7 @@
 //!
 //! However, when an AI / LLM coding agent launches our MCP server locally, communication
 //! relies on **OS anonymous pipes** (`stdin` and `stdout`). An OS pipe is a
-//! unidirectional, in-memory FIFO buffer in the kernel (typically 64 KB on Linux).
+//! unidirectional, in-memory FIFO buffer in the kernel (typically 64 KiB on Linux).
 //! Because these are single serialized byte streams, communication between the coding
 //! agent and our server is inherently sequential by design:
 //!
@@ -318,7 +318,7 @@
 //!    - Spawned by: [`RustAnalyzerClient::start`].
 //!    - Function: [`spawn_stderr_reader_thread`].
 //!    - Purpose: Continuously drains [`rust-analyzer`]'s `stderr` pipe to prevent OS
-//!      kernel pipe buffer deadlocks (64 KB limit), and outputs structured logs when
+//!      kernel pipe buffer deadlocks (64 KiB limit), and outputs structured logs when
 //!      [`DEBUG_LSP_CLIENT`] is active.
 //!
 //! ## Request-Response Correlation
