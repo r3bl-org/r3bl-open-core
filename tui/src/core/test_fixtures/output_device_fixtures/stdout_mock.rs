@@ -81,9 +81,9 @@ impl Write for StdoutMock {
     fn flush(&mut self) -> Result<()> { ok!() }
 }
 
-#[tokio::test]
+#[test]
 #[allow(clippy::needless_return)]
-async fn test_stdout_mock_no_strip_ansi() {
+fn test_stdout_mock_no_strip_ansi() {
     let mut stdout_mock = StdoutMock::default();
     let stdout_mock_clone = stdout_mock.clone(); // Points to the same inner value as `stdout_mock`.
 
@@ -104,9 +104,9 @@ async fn test_stdout_mock_no_strip_ansi() {
     );
 }
 
-#[tokio::test]
+#[test]
 #[allow(clippy::needless_return)]
-async fn test_stdout_mock_strip_ansi() {
+fn test_stdout_mock_strip_ansi() {
     let mut stdout_mock = StdoutMock::default();
     let stdout_mock_clone = stdout_mock.clone(); // Points to the same inner value as `stdout_mock`.
 

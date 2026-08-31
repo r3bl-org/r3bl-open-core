@@ -92,6 +92,10 @@ impl CLIArg {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::CommandFactory;
+
+    #[test]
+    fn verify_cli_schema() { CLIArg::command().debug_assert(); }
 
     #[test]
     fn test_cli_defaults() {

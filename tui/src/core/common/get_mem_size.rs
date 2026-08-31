@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{MemoizedValue, format_as_kilobytes_with_commas};
+use crate::{MemoizedValue, format_as_kibibytes_with_commas};
 use std::fmt::Display;
 
 pub trait GetMemSize {
@@ -43,7 +43,7 @@ pub fn ring_buffer_size<T: GetMemSize, const N: usize>(
 /// Memory size wrapper for telemetry display.
 ///
 /// This struct wraps a memory size value and provides a `Display` implementation
-/// that shows the size in kilobytes with commas for readability, or "?" if the
+/// that shows the size in kibibytes with commas for readability, or "?" if the
 /// size is not available.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemorySize {
@@ -68,7 +68,7 @@ impl Display for MemorySize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Get memory size from cache if available, otherwise show "?".
         let memory_str = if let Some(size) = self.inner {
-            format_as_kilobytes_with_commas(size)
+            format_as_kibibytes_with_commas(size)
         } else {
             "?".into()
         };
@@ -191,8 +191,8 @@ mod tests {
     #[test]
     fn test_memory_size_display() {
         // Test with known value.
-        let size = MemorySize::new(1024 * 1024); // 1MB
-        assert_eq!(format!("{size}"), "1,024 KB");
+        let size = MemorySize::new(1024 * 1024); // 1 MiB
+        assert_eq!(format!("{size}"), "1,024 KiB");
 
         // Test with unknown value.
         let unknown = MemorySize::unknown();

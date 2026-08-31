@@ -172,16 +172,23 @@ pub fn try_subscribe<W: RRTWorker>(
 ///    for the entire process, preventing resource contention.
 ///
 ///    ```no_run
+///    # #[cfg(not(target_os = "linux"))]
+///    # fn main() {}
+///    # #[cfg(target_os = "linux")]
+///    # use linux_only::main;
+///    # #[cfg(target_os = "linux")]
+///    # mod linux_only {
 ///    use r3bl_tui::{MioPollWorker, ok};
 ///    use r3bl_tui::core::resilient_reactor_thread::RRT;
 ///    // Global resources (static + const fn = singleton).
 ///    static SINGLETON: RRT<MioPollWorker> = RRT::new();
 ///
-///    fn main() -> miette::Result<()> {
+///    pub fn main() -> miette::Result<()> {
 ///        // Subscribe to get a guard that auto-manages the thread.
 ///        let guard = SINGLETON.try_subscribe(())?;
 ///        ok!()
 ///    }
+///    # }
 ///    ```
 ///
 /// 2. **Local Variable**: Ideal for when you need more control over the `RRT` instance's
@@ -189,9 +196,15 @@ pub fn try_subscribe<W: RRTWorker>(
 ///    variable or another struct.
 ///
 ///    ```no_run
+///    # #[cfg(not(target_os = "linux"))]
+///    # fn main() {}
+///    # #[cfg(target_os = "linux")]
+///    # use linux_only::main;
+///    # #[cfg(target_os = "linux")]
+///    # mod linux_only {
 ///    use r3bl_tui::{MioPollWorker, ok};
 ///    use r3bl_tui::core::resilient_reactor_thread::RRT;
-///    fn main() -> miette::Result<()> {
+///    pub fn main() -> miette::Result<()> {
 ///         // Local instance.
 ///         let rrt: RRT<MioPollWorker> = RRT::new();
 ///
@@ -199,6 +212,7 @@ pub fn try_subscribe<W: RRTWorker>(
 ///         let guard = rrt.try_subscribe(())?;
 ///         ok!()
 ///    }
+///    # }
 ///    ```
 ///
 /// > See the [`direct_to_ansi`] input singleton ([`global_input_resource::SINGLETON`])
@@ -302,9 +316,9 @@ pub fn try_subscribe<W: RRTWorker>(
 /// │                                                                       │
 /// │  Timeline without solution:                                           │
 /// │                                                                       │
-/// │    create Poll ──► spawn thread ──► Poll moves ──► x can't create     │
-/// │                    (Poll gone!)                      interrupt anymore│
-/// │                                                                       │
+/// │    create Poll ──► spawn thread ──► Poll moves ──► ✗                  │
+/// │                    (Poll gone!)                    can't create       │
+/// │                                                    interrupt anymore  │
 /// └───────────────────────────────────────────────────────────────────────┘
 ///
 /// ┌───────────────────────────────────────────────────────────────────────┐
@@ -488,7 +502,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`direct_to_ansi`]: crate::terminal_lib_backends::direct_to_ansi
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`global_input_resource::SINGLETON`]:
 ///     crate::terminal_lib_backends::direct_to_ansi::input::global_input_resource::SINGLETON
 /// [`InterruptHandle`]: super::InterruptHandle

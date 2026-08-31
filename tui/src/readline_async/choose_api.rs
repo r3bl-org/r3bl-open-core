@@ -1,12 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CalculateResizeHint, CaretVerticalViewportLocation, VPWidth,
-            DEVELOPMENT_MODE, EventLoopResult, Header, InlineString, InputDevice,
-            InputEvent, IntoErr, ItemsOwned, Key, KeyPress, KeyState,
-            LineStateControlSignal, ModifierKeysMask, OutputDevice, SelectComponent,
-            SharedWriter, SpecialKey, State, StyleSheet, TerminalInteractiveStatus,
-            TuiAvailability, VPHeight, ch, check_is_terminal_interactive,
-            enter_event_loop_async, fg_green, get_size, inline_string,
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
+            EventLoopResult, Header, InlineString, InputDevice, InputEvent, IntoErr,
+            ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
+            ModifierKeysMask, OutputDevice, SelectComponent, SharedWriter, SpecialKey,
+            State, StyleSheet, TerminalInteractiveStatus, TuiAvailability, VPHeight,
+            VPWidth, ch, check_is_terminal_interactive, enter_event_loop_async,
+            fg_green, get_size, inline_string,
             tui::md_parser::md_parser_constants::SPACE_CHAR, usize};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
@@ -18,7 +18,7 @@ pub const DEFAULT_HEIGHT: usize = 5;
 pub type ChooseFuture<'a> =
     Pin<Box<dyn Future<Output = miette::Result<ItemsOwned>> + 'a>>;
 
-// XMARK: Box::pin a future that is larger than 16KB.
+// XMARK: Box::pin a future that is larger than 16 KiB.
 
 /// Async function to choose an item from a list of items.
 ///
@@ -77,15 +77,15 @@ pub type ChooseFuture<'a> =
 ///
 /// # Why return a pinned boxed future?
 ///
-/// This function returns a pinned boxed future ([`Box::pin`]; > 16KB clippy threshold)
+/// This function returns a pinned boxed future ([`Box::pin`]; > 16 KiB clippy threshold)
 /// for safer memory management and better performance characteristics.
 ///
 /// ## Performance Benefits
 ///
-/// * **Without [`Box::pin`]**: The entire > 16KB future gets copied every time it moves
+/// * **Without [`Box::pin`]**: The entire > 16 KiB future gets copied every time it moves
 ///   between stack frames (function calls, async state transitions, select! operations).
 /// * **With [`Box::pin`]**: Only an 8-byte pointer moves, while the actual future data
-///   stays fixed on the heap, avoiding expensive > 16KB memory copies.
+///   stays fixed on the heap, avoiding expensive > 16 KiB memory copies.
 /// * Reduces stack pressure and improves CPU cache locality.
 ///
 /// ## Safety Benefits
@@ -421,7 +421,10 @@ mod keypress_handler_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn handle_resize_event(state: &mut State, size: crate::VPSize) -> EventLoopResult {
+    pub fn handle_resize_event(
+        state: &mut State,
+        size: crate::VPSize,
+    ) -> EventLoopResult {
         DEVELOPMENT_MODE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {

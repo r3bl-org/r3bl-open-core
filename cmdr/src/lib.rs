@@ -13,7 +13,9 @@
 
 //! # Why R3BL?
 //!
-//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true" height="256px">
+//! <img
+//! src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true"
+//! height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -57,44 +59,54 @@
 //!
 //! - [Introduction](#introduction)
 //! - [Installation](#installation)
+//! - [Run `giti` binary target](#run-giti-binary-target)
+//! - [Run `edi` binary target](#run-edi-binary-target)
+//! - [Run `env-source` binary target](#run-env-source-binary-target)
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [Run `giti` binary target](#run-giti-binary-target)
-//! - [Run `edi` binary target](#run-edi-binary-target)
-//! - [Build, run, test tasks](#build-run-test-tasks)
-//!   - [Prerequisites](#prerequisites)
-//!     - [Binary Development Features](#binary-development-features)
 //!
 //! <!-- /TOC -->
 //!
 //! # Introduction
 //!
-//! Please read the
-//! main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
-//! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
-//! context in which this crate is meant to exist.
+//! `r3bl-cmdr` is a suite of fully async TUI & CLI developer productivity tools built on
+//! [`r3bl_tui`]. It is cross-platform and runs natively on Linux, macOS, and Windows.
 //!
-//! # Installation
+//! The apps that comprise `r3bl-cmdr` will make you smile and make you more productive:
 //!
-//! The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will make you smile and make
-//! you more productive. Both are fully async (built on [`r3bl_tui`]) and currently
-//! available as early access preview 🐣.
-//!
-//! - 😺 `giti` - An interactive git CLI app designed to give you more confidence and a
-//!   better experience when working with git.
-//!   - Fully async—never blocks the main thread
+//! - 😺 `giti` (Early access preview 🐣) - An interactive git CLI app designed to give
+//!   you more confidence and a better experience when working with git.
+//!   - Fully async (never blocks the main thread, built on [`r3bl_tui`])
 //!   - Visual branch selection
 //!   - Streamlined commit workflows
 //!
-//! - 🦜 `edi` - A TUI Markdown editor that lets you edit Markdown files in your terminal
-//!   in style.
-//!   - Fully async—never blocks the main thread
+//! - 🦜 `edi` (Early access preview 🐣) - A TUI Markdown editor that lets you edit
+//!   Markdown files in your terminal in style.
+//!   - Fully async (never blocks the main thread, built on [`r3bl_tui`])
 //!   - Gradient colors and smart terminal capability detection (gracefully degrades)
 //!   - Smart list formatting and full emoji support
 //!   - Language-specific syntax highlighting inside fenced code blocks
-//!   - SSH optimized—only repaints what's changed
+//!   - SSH optimized (only repaints what's changed)
 //!   - Zero-copy gap buffer for responsive editing even in large files
+//!
+//! - 📜 `env-source` (Released 🚀) - A fast cross-platform environment loader that evaluates
+//!   shell scripts in a native subshell and exports environment variable diffs for your
+//!   interactive shell.
+//!   - Fast (~1.8 ms execution time, over 100x faster than [Python-based
+//!     alternatives](https://github.com/edc/bass)).
+//!   - Evaluates POSIX `sh` or Bash scripts on Linux/macOS and `.bat`/`cmd.exe` scripts
+//!     on Windows.
+//!   - Multiple output formats: Fish (`set -gx`), PowerShell (`$env:`), JSON, and Dotenv
+//!     (`.env`).
+//!   - Seamless shell startup integration (pipe output directly into `source`).
+//!
+//! - 🐒 `rc` (Under Construction 🚧) - A unified developer hub and interactive command
+//!   launcher for the `r3bl-cmdr` suite.
+//!   - This is currently just a placeholder, pointing to [issue
+//!     #363](https://github.com/r3bl-org/r3bl-open-core/issues/363).
+//!
+//! # Installation
 //!
 //! To install `r3bl-cmdr` on your system, run the following command, assuming you have
 //! `cargo` on your system:
@@ -106,18 +118,11 @@
 //! If you don't have `cargo` on your system, you can either:
 //!
 //! 1. Follow these [instructions](https://rustup.rs/) to install `cargo` on your system
-//!    first. Then run `cargo install r3bl-cmdr` to install this crate. Here are the
-//!    commands for Linux:
+//!    first (available for Linux, macOS, and Windows). Then run `cargo install r3bl-cmdr`
+//!    to install this crate.
 //!
-//!    ```bash
-//!    # Install Rust toolchain using rustup.
-//!    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-//!    # Install the r3bl-cmdr crate.
-//!    cargo install r3bl-cmdr
-//!    ```
-//!
-//! 2. Build the binaries from the crate's source code. First clone this [repo](https://github.com/r3bl-org/r3bl-open-core/).
-//!    Then, run:
+//! 2. Build the binaries from the crate's source code. First clone this
+//!    [repo](https://github.com/r3bl-org/r3bl-open-core/). Then, run:
 //!
 //!    ```bash
 //!    git clone https://github.com/r3bl-org/r3bl-open-core/ # clone the repo locally
@@ -127,19 +132,6 @@
 //!    cargo install --path .  # after install, the binaries are in ~/.cargo/bin
 //!    ```
 //!
-//! # Changelog
-//!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr) to
-//! see how the crate has evolved over time.
-//!
-//! # Learn how these crates are built, provide feedback
-//!
-//! To learn how we built this crate, please take a look at the following resources.
-//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
-//!   Please consider [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
-//! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
-//!
 //! # Run `giti` binary target
 //!
 //! <!--
@@ -147,21 +139,9 @@
 //! Source: https://github.com/nazmulidris/developerlife.com/issues/5
 //! Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586
 //! -->
-//! ![giti video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/giti.gif?raw=true)
+//! ![giti
+//! video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/giti.gif?raw=true)
 //!
-//! To run from binary:
-//! - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install
-//!   `giti` locally to `~/.cargo/bin`.
-//! - Run `giti` from anywhere on your system.
-//! - Try `giti --help` to see the available commands.
-//! - To delete one or more branches in your repo run `giti branch delete`.
-//! - To checkout a branch run `giti branch checkout`.
-//! - To create a new branch run `giti branch new`.
-//!
-//! To run from source:
-//! - Clone the `r3bl-open-core` repo.
-//! - Run `./bootstrap.sh` to install all required tools (Linux/macOS).
-//! - Run `fish run.fish install-cmdr` to install `giti` locally to `~/.cargo/bin`.
 //! - Run `giti` from anywhere on your system.
 //! - Try `giti --help` to see the available commands.
 //! - To delete one or more branches in your repo run `giti branch delete`.
@@ -177,53 +157,38 @@
 //! Source: https://github.com/nazmulidris/developerlife.com/issues/6
 //! Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41
 //! -->
-//! ![edi video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/edi.gif?raw=true)
+//! ![edi
+//! video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/edi.gif?raw=true)
 //!
-//! To run from binary:
-//! - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `edi`
-//!   locally to `~/.cargo/bin`.
-//! - Run `edi` from anywhere on your system.
-//! - Try `edi --help` to see the available commands.
-//! - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
-//!
-//! To run from source:
-//! - Clone the `r3bl-open-core` repo.
-//! - Run `./bootstrap.sh` to install all required tools (Linux/macOS).
-//! - Run `fish run.fish install-cmdr` to install `edi` locally to `~/.cargo/bin`.
 //! - Run `edi` from anywhere on your system.
 //! - Try `edi --help` to see the available commands.
 //! - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
 //! - If you want to generate log output for `edi`, run `edi -l`. For example, `edi -l
 //!   README.md`. To view this log output run `fish run.fish log`.
 //!
-//! # Build, run, test tasks
+//! # Run `env-source` binary target
 //!
-//! ## Prerequisites
+//! - Run `env-source` from anywhere on your system.
+//! - Try `env-source --help` to see the available options and flags.
 //!
-//! 🌠 The easiest way to get started is to use the bootstrap script:
+//! # Changelog
 //!
-//! ```bash
-//! ./bootstrap.sh
-//! fish run.fish install-cargo-tools
-//! cargo install --path .
-//! ```
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr)
+//! to see how the crate has evolved over time.
 //!
-//! This script above automatically installs:
-//! - Rust toolchain via rustup
-//! - Fish shell
-//! - File watchers (inotifywait/fswatch)
-//! - All required cargo development tools
-//! - The `r3bl-cmdr` binaries
+//! # Learn how these crates are built, provide feedback
 //!
-//! For complete development setup and all available commands, see the
-//! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
-//!
-//! ### Binary Development Features
-//!
-//! - **Interactive binary selection**: Choose which binary to run with fuzzy search
-//! - **Smart log monitoring**: Automatically detects and manages log files from binaries
-//! - **Docker builds**: Build release binaries in isolated Docker environment
-//! - **Cross-platform file watching**: Uses inotifywait (Linux) or fswatch (macOS)
+//! To learn how we built this crate and explore the broader ecosystem:
+//! - Read the main
+//!   [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of the
+//!   `r3bl-open-core` monorepo and workspace to get a better understanding of the context
+//!   in which this crate is meant to exist.
+//! - If you like consuming video content, here's our [YT
+//!   channel](https://www.youtube.com/@developerlifecom). Please consider
+//!   [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer
+//!   [site](https://developerlife.com/).
 
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
@@ -233,6 +198,7 @@ pub mod analytics_client;
 pub mod common;
 pub mod edi;
 pub mod giti;
+pub mod env_source;
 pub mod rc;
 
 // Re-export.

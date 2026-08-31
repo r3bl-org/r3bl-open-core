@@ -10,10 +10,10 @@
 //!
 //! [Threading Model]: mod@crate#threading-model
 
-use crate::{constants::{debug_flags::DEBUG_MCP_SERVER, lsp_framing, mcp_methods,
-                        mcp_protocol, param_names, tool_names},
+use crate::{constants::{debug_flags::DEBUG_MCP_SERVER, mcp_methods, mcp_protocol,
+                        param_names, tool_names},
             error::McpServerError,
-            lsp::{RustAnalyzerClient, canonicalize_path},
+            lsp::{RustAnalyzerClient, canonicalize_path, path_to_file_uri},
             mcp::{JsonRpcErrorPayload, McpRequest, McpResponse, ToolResult, get_tools,
                   handle_code_actions, handle_completion, handle_definition,
                   handle_diagnostics, handle_format, handle_hover, handle_references,
@@ -83,15 +83,8 @@ impl RustAnalyzerMCPServer {
         &mut self,
         file_path: &str,
     ) -> Result<String, McpServerError> {
-        let absolute_path = self.workspace_root.join(file_path);
-        let absolute_path = absolute_path
-            .canonicalize()
-            .unwrap_or_else(|_| absolute_path.clone());
-        let uri = format!(
-            "{}{}",
-            lsp_framing::FILE_URI_PREFIX,
-            absolute_path.display()
-        );
+        let absolute_path = canonicalize_path(&self.workspace_root.join(file_path));
+        let uri = path_to_file_uri(&absolute_path);
         let content = std::fs::read_to_string(&absolute_path)?;
 
         if let Some(client) = &mut self.client {

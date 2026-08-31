@@ -65,7 +65,7 @@ pub use types::*;
 
 // Backend compatibility tests (Linux-only PTY tests).
 // Public for docs and tests so intra-doc links resolve.
-// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
-// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+// DirectToAnsiInputDevice is Linux-only, so exclude on macOS and Windows across all
+// builds.
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod backend_compat_tests;

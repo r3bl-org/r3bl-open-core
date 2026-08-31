@@ -88,7 +88,14 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] build-infra tasks
 
-- [ ] [spawny](binaries-self-upgrade-support.md)
+- [x] [add-env-source.md](done/add-env-source.md)
+- [x] [fix-win-conpty-eof.md](done/fix-win-conpty-eof.md)
+- [x] [add-academic-research-on-type-safety-at-scale.md](done/add-academic-research-on-type-safety-at-scale.md)
+- [x] [clean-command-result-handling.md](done/clean-command-result-handling.md)
+- [x] [fix-windows-tests-tui-term-api-and-mcp.md](done/fix-windows-tests-tui-term-api-and-mcp.md)
+- [ ] [task/make-pty-session-sync.md](make-pty-session-sync.md)
+- [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
+- [ ] [spawny](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
@@ -129,3 +136,11 @@ _Meta Task: Prepare v0.8.0 Release_
         - [ ] Publish to crates.io.
         - [ ] Create and push git tag `v???`.
         - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+
+# Future tasks
+
+- [rust-dojo-and-r3bl-runner.md](rust-dojo-and-r3bl-runner.md)
+- [agent-runner.md](agent-runner.md)
+- [new-call-chain-ext.md](../../r3bl-vscode-extensions/task/new-call-chain-ext.md)
+
+<!-- cspell:words windowstests -->

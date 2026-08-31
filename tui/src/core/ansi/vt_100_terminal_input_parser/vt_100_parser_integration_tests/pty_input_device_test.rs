@@ -81,16 +81,15 @@
 //! [`tokio`]: tokio
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
-            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY,
-            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, PtyTestContext, PtyTestMode,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
             generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_input_device,
@@ -218,7 +217,7 @@ fn controller(context: PtyTestContext) {
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.

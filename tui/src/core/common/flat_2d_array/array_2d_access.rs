@@ -3,7 +3,7 @@
 // cspell:words indexmut
 
 use super::{Flat1DSimd, Flat1DSimdMut, Flat2DArray};
-use crate::{c_row, ArrayBoundsCheck, ArrayOverflowResult, CRow, CWidth, RangeExclusive};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CRow, CWidth, RangeExclusive, c_row};
 use std::ops::{Index, IndexMut};
 
 impl<T> Flat2DArray<T> {

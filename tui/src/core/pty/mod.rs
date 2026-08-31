@@ -388,5 +388,5 @@ pub use pty_session::*;
 // Rustdoc search link fixes.
 
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use pty_session::{pty_input_event, pty_output_event, pty_session_builder,
+pub use pty_session::{pty_input_event, pty_output_event, pty_session_struct,
                       pty_session_types, tasks};

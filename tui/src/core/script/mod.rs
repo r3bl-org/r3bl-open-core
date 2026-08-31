@@ -9,6 +9,10 @@ mod directory_change;
 mod directory_create;
 mod download;
 #[cfg(any(test, doc))]
+pub mod env_source;
+#[cfg(not(any(test, doc)))]
+mod env_source;
+#[cfg(any(test, doc))]
 pub mod environment;
 #[cfg(not(any(test, doc)))]
 mod environment;
@@ -32,6 +36,7 @@ pub use crates_api::*;
 pub use directory_change::*;
 pub use directory_create::*;
 pub use download::*;
+pub use env_source::*;
 pub use environment::*;
 pub use fs_path::*;
 pub use git::*;

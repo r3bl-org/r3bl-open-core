@@ -28,8 +28,8 @@ pub type ParseListStorage<T> = Vec<T>;
 /// - Each frame allocates parser state on the stack
 /// - If list types use [`SmallVec`] with 16-item stack-allocated inline capacity, each
 ///   adds 648 bytes per frame
-/// - **Total stack usage**: 648 bytes × 300 frames = **194,400 bytes (~189 KB)**
-/// - **Result**: Stack overflow! (Default stack is typically 8 MB, but recursive parsers
+/// - **Total stack usage**: 648 bytes × 300 frames = **194,400 bytes (~190 KiB)**
+/// - **Result**: Stack overflow! (Default stack is typically 8 MiB, but recursive parsers
 ///   combined with large inline allocations quickly exhaust it)
 ///
 /// ## The Solution: Heap Allocation via Vec
@@ -38,7 +38,7 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// - [Vec] descriptor: **24 bytes** (ptr + len + capacity) on the stack
 /// - **Contents stored on heap**, not stack (this is the key difference!)
-/// - **Total stack usage**: 24 bytes × 300 frames = **7,200 bytes (~7 KB)**
+/// - **Total stack usage**: 24 bytes × 300 frames = **7,200 bytes (~7 KiB)**
 /// - **Result**: No stack overflow! Stack usage well within limits
 ///
 /// ## Performance Trade-off

@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, CONTROL_C, DebouncedState, GLYPH_CONTROLLED,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, KeyState, MSG_CONTROLLED_READY,
-            MSG_LINE_PREFIX, PtyTestContext, SegIndex, StdMutex,
-            core::test_fixtures::StdoutMock, direct_to_ansi::DirectToAnsiInputDevice,
+            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, InputDevice, KeyState,
+            MSG_CONTROLLED_READY, MSG_LINE_PREFIX, PtyTestContext, SegIndex, StdMutex,
+            core::test_fixtures::StdoutMock,
             readline_async::readline_async_impl::LineState, vp_height, vp_width};
 use std::{io::{Write, stdout},
           sync::Arc,
@@ -37,7 +37,7 @@ use std::{io::{Write, stdout},
 /// via [`DebouncedState`].
 ///
 /// # Panics
-/// Panics if it fails to initialize the input device or flush [`stdout`].
+/// Panics if it fails to flush [`stdout`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`readline_async`]: crate::readline_async
@@ -48,8 +48,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
         LineState::new(initial_text.to_string(), vp_width(100) + vp_height(100));
     line_state.line_cursor_grapheme = initial_cursor;
 
-    let mut input_device = DirectToAnsiInputDevice::new()
-        .expect("Failed to initialize DirectToAnsiInputDevice");
+    let mut input_device = InputDevice::new();
 
     // Signal readiness
     println!("{MSG_CONTROLLED_READY}");

@@ -110,12 +110,16 @@ pub fn new_isolated_test_command() -> std::process::Command {
     #[allow(unused_mut)]
     let mut cmd =
         std::process::Command::new(std::env::current_exe().expect("current_exe"));
+
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        // Suppresses creation of a new visible console window on the desktop
+        // when running isolated test subprocesses.
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
+
     cmd
 }
 

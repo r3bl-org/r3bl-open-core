@@ -1,0 +1,36 @@
+[
+  {
+    "action": "add",
+    "key": "EMPTY_VAR",
+    "value": ""
+  },
+  {
+    "action": "remove",
+    "key": "EXISTING_VAR"
+  },
+  {
+    "action": "add",
+    "key": "MULTILINE",
+    "value": "line 1\nline 2\nline 3"
+  },
+  {
+    "action": "add",
+    "key": "QUOTE_DOUBLE",
+    "value": "said \"hello\""
+  },
+  {
+    "action": "add",
+    "key": "QUOTE_SINGLE",
+    "value": "don't fail"
+  },
+  {
+    "action": "add",
+    "key": "WITH_BACKSLASH",
+    "value": "path\\to\\dir"
+  },
+  {
+    "action": "add",
+    "key": "WITH_SEMICOLON",
+    "value": "foo; bar; baz"
+  }
+]

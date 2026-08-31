@@ -19,12 +19,11 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
-use crate::{MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, GLYPH_WAITING,
-            InputEvent, PtyTestContext, PtyTestMode, MSG_TEST_RUNNING, generate_pty_test,
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use std::{io::Write,
-          time::Duration};
+use std::{io::Write, time::Duration};
 
 generate_pty_test! {
     test_fn: test_pty_utf8_text,
@@ -78,7 +77,8 @@ fn controller(context: PtyTestContext) {
             .expect("Failed to write text");
         writer.flush().expect("Failed to flush");
 
-        let event_line = child.read_line_state(&mut buf_reader, |line| line.starts_with("Text:"));
+        let event_line =
+            child.read_line_state(&mut buf_reader, |line| line.starts_with("Text:"));
         eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
     }
 

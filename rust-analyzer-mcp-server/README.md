@@ -15,7 +15,7 @@ needless complexity from async runtimes like Tokio.
 We built this native bridge from the ground up with these design goals in mind:
 
 - **Deadlock-Free 3-Thread Architecture:** Main event loop, `stdout` reader, and
-  background `stderr` drainer preventing 64 KB OS kernel buffer deadlocks.
+  background `stderr` drainer preventing 64 KiB OS kernel buffer deadlocks.
 - **Zero Tokio Overhead:** Pure standard library threading (`std::process`, `std::thread`,
   `std::sync::mpsc::sync_channel(1)`), sub-millisecond cold starts (<2ms), and low memory
   usage with zero lock contention.

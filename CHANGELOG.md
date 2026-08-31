@@ -676,8 +676,8 @@ Updated:
 
 Added:
 
-- New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the system default
-  allocator. `jemalloc` is optimized for multi-threaded use cases where lots of small objects are
+- New `memory_allocator.rs` module that allow `mimalloc` to be loaded instead of the system default
+  allocator. `mimalloc` is optimized for multi-threaded use cases where lots of small objects are
   created and deleted, which is a great fit for this crate. Use this in all the examples.
 - New `network_io` module that contains support for length prefixed binary protocols that can be
   used to create TCP API servers. Currently this does not include TLS support, and that needs to be
@@ -1224,8 +1224,8 @@ refactored and the entire codebase updated so that a the more ergonomic `ChUnit`
 throughout the codebase. No new functionality is added in this release.
 
 - Added:
-  - New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the system
-    default allocator. `jemalloc` is optimized for multi-threaded use cases where lots of small
+  - New `memory_allocator.rs` module that allow `mimalloc` to be loaded instead of the system
+    default allocator. `mimalloc` is optimized for multi-threaded use cases where lots of small
     objects are created and deleted, which is a great fit for this crate. Use this in all the binary
     targets.
   - Add support for the binaries in the crate to upgrade themselves when a new version is detected.

@@ -386,8 +386,8 @@
 //! [`ErrorKind::WouldBlock`]: std::io::ErrorKind::WouldBlock
 //! [`ESC`]: crate::EscSequence
 //! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
-//! [`fd`]: https://en.wikipedia.org/wiki/File_descriptor
-//! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
+//! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+//! [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`handle_software_interrupt_with_sender()`]:
 //!     handler_software_interrupt::handle_software_interrupt_with_sender
 //! [`InputEvent`]: crate::InputEvent

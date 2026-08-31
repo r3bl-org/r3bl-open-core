@@ -10,7 +10,11 @@ async fn test_session_with_cat() {
         .expect("Failed to spawn session");
 
     // 1. Send input.
+    #[cfg(unix)]
     let test_data = b"hello cat\n";
+    #[cfg(windows)]
+    let test_data = b"hello cat\r\n";
+
     session
         .tx_input_event
         .try_send(PtyInputEvent::Write(test_data.to_vec()))
@@ -29,7 +33,7 @@ async fn test_session_with_cat() {
         .expect("Session error");
 
     // 4. Drain the channel.
-    // All events are already in the channel buffer — the completion handle
+    // All events are already in the channel buffer: the completion handle
     // joins the reader task and sends Exit before returning.
     let mut captured_output = Vec::new();
     while let Ok(event) = session.rx_output_event.try_recv() {

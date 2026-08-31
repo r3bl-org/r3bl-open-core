@@ -53,13 +53,18 @@
 //! 0-based indexing where `(0,0)` is top-left. Byte positions must use [`usize`] for
 //! string slicing. Mixing these causes off-by-one errors.
 //!
-//! ## 2. **Type Safety Over Convenience**
+//! ## 2. **Type Safety Over Ambiguous Primitives**
 //!
-//! Instead of using raw [`usize`] or [`u16`] everywhere, each coordinate type is wrapped
-//! in a newtype that:
+//! Instead of using ambiguous raw [`usize`] or [`u16`] primitives everywhere, each
+//! coordinate type is wrapped in a newtype that:
 //! - Prevents mixing incompatible types (e.g., can't add [`VPCol`] to [`VPHeight`])
 //! - Makes conversions explicit (e.g., [`term_row.to_zero_based()`])
 //! - Provides domain-specific operations (e.g., [`vp_index.overflows(vp_length)`])
+//!
+//! This design implements the "Parse, don't validate" principle and the Newtype and
+//! Typestate patterns, guaranteeing runtime faultlessness and invalidation of illegal
+//! states with zero performance penalty. For more information, see [academic research
+//! on type safety at scale] ([theoretical foundations], [empirical benchmarks]).
 //!
 //! ## 3. **Index vs Length Distinction**
 //!
@@ -79,8 +84,8 @@
 //!
 //! - **Index types** ([`VPCol`], [`VPRow`]): 0-based positions for array access
 //! - **Length types** ([`VPWidth`], [`VPHeight`]): 1-based counts/sizes
-//! - **Arithmetic**: [`VPIndex`] + [`VPLength`] = [`VPIndex`], [`VPIndex`] - [`VPLength`] =
-//!   [`VPIndex`]
+//! - **Arithmetic**: [`VPIndex`] + [`VPLength`] = [`VPIndex`], [`VPIndex`] - [`VPLength`]
+//!   = [`VPIndex`]
 //!
 //! # When To Use What: Quick Reference
 //!
@@ -154,8 +159,10 @@
 //! - **[`viewport_coords`]**: 0-based coordinates for internal app logic and buffer
 //!   indexing. Includes generic types ([`VPIndex`], [`VPLength`]) and concrete types
 //!   ([`VPCol`], [`VPRow`], [`VPWidth`], [`VPHeight`], [`VPPos`], [`VPSize`])
-//! - **[`vt_100_ansi_coords`]**: 1-based coordinates for [`VT-100`] [`ANSI`] escape sequence
-//!   parsing
+//! - **[`canvas`]**: 2D coordinate space and viewport camera abstractions over buffer
+//!   storage
+//! - **[`vt_100_ansi_coords`]**: 1-based coordinates for [`VT-100`] [`ANSI`] escape
+//!   sequence parsing
 //! - **[`byte`]**: Byte-level coordinates for [`UTF-8`] text processing
 //! - **[`percent_spec`]**: Percentage types ([`Pc`], [`ReqSizePc`]) for UI layout
 //!   specifications and telemetry metrics
@@ -170,6 +177,7 @@
 //! [`ByteIndexRangeExt`]: byte::ByteIndexRangeExt
 //! [`ByteLength`]: byte::ByteLength
 //! [`ByteOffset`]: byte::ByteOffset
+//! [`canvas`]: canvas
 //! [`CCaret`]: viewport_coords::CCaret
 //! [`ChUnit`]: primitives::ChUnit
 //! [`CursorBoundsCheck`]: bounds_check::CursorBoundsCheck
@@ -178,7 +186,8 @@
 //! [`Pc`]: crate::Pc
 //! [`percent_spec`]: percent_spec
 //! [`primitives`]: primitives
-//! [`RangeBoundsExt::check_range_is_valid_for_length()`]: bounds_check::RangeBoundsExt::check_range_is_valid_for_length
+//! [`RangeBoundsExt::check_range_is_valid_for_length()`]:
+//!     bounds_check::RangeBoundsExt::check_range_is_valid_for_length
 //! [`RangeBoundsExt`]: bounds_check::RangeBoundsExt
 //! [`ReqSizePc`]: crate::ReqSizePc
 //! [`term_row.to_zero_based()`]: vt_100_ansi_coords::TermRow::to_zero_based
@@ -195,10 +204,12 @@
 //! [`VPCaret`]: viewport_coords::VPCaret
 //! [`VPCol`]: viewport_coords::VPCol
 //! [`VPHeight`]: viewport_coords::VPHeight
-//! [`VPIndex::check_viewport_bounds()`]: bounds_check::ViewportBoundsCheck::check_viewport_bounds
+//! [`VPIndex::check_viewport_bounds()`]:
+//!     bounds_check::ViewportBoundsCheck::check_viewport_bounds
 //! [`VPIndex::overflows()`]: viewport_coords::VPIndex::overflows
 //! [`VPIndex`]: viewport_coords::VPIndex
-//! [`VPLength::check_cursor_position_bounds()`]: bounds_check::CursorBoundsCheck::check_cursor_position_bounds
+//! [`VPLength::check_cursor_position_bounds()`]:
+//!     bounds_check::CursorBoundsCheck::check_cursor_position_bounds
 //! [`VPLength`]: viewport_coords::VPLength
 //! [`VPPos`]: viewport_coords::VPPos
 //! [`VPRow`]: viewport_coords::VPRow
@@ -207,6 +218,10 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_ansi_coords`]: vt_100_ansi_coords
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+//! [academic research on type safety at scale]:
+//!     canvas#academic-research-on-type-safety-at-scale
+//! [empirical benchmarks]: canvas#empirical-benchmarks
+//! [theoretical foundations]: canvas#theoretical-foundations
 
 #![rustfmt::skip]
 

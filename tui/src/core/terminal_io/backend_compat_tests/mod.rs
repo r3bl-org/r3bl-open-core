@@ -59,16 +59,16 @@
 //! [`test_pty_backend_direct_to_ansi`]: mod@backend_compat_input_test
 
 // Public for docs and tests so intra-doc links resolve.
-// Doc builds are allowed on Unix platforms (macOS/Linux) where the dependencies exist.
-// Windows doc builds exclude these since signal_hook/mio::unix are unavailable.
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+// DirectToAnsiInputDevice is Linux-only, so exclude on macOS and Windows across all
+// builds.
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod backend_compat_input_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod backend_compat_output_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_non_blocking_stdout_no_panic_test;
 
-#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
+#[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_terminal_mode_test;

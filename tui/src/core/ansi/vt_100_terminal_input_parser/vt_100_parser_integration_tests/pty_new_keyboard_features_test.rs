@@ -20,10 +20,9 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{GLYPH_CONTROLLED, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_CONTROLLER, InputEvent,
-            PtyTestContext, PtyTestMode, GLYPH_SUCCESS, GLYPH_WAITING,
-            GLYPH_WARNING,
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
+            GLYPH_WAITING, GLYPH_WARNING, InputEvent, MSG_CONTROLLED_READY,
+            MSG_CONTROLLED_STARTING, PtyTestContext, PtyTestMode,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
                                     BACKTAB_FINAL, CONTROL_NUL, CONTROL_TAB,
@@ -58,9 +57,13 @@ fn controller(context: PtyTestContext) {
         mut writer,
     } = context;
 
-    eprintln!("{GLYPH_CONTROLLER} PTY Controller: Starting new keyboard features test...");
+    eprintln!(
+        "{GLYPH_CONTROLLER} PTY Controller: Starting new keyboard features test..."
+    );
 
-    eprintln!("{GLYPH_WAITING} PTY Controller: Waiting for controlled process to start...");
+    eprintln!(
+        "{GLYPH_WAITING} PTY Controller: Waiting for controlled process to start..."
+    );
 
     // Wait for controlled to confirm it's running and ready. The controlled process sends
     // TEST_RUNNING, CONTROLLED_STARTING, and CONTROLLED_READY on startup.

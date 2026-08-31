@@ -123,6 +123,9 @@ pub fn is_tty_stderr() -> TtyStatus {
 fn is_cargo_run() -> bool {
     #[cfg(target_os = "windows")]
     {
+        if cfg!(test) || std::env::var("R3BL_TEST_ISOLATED_PROCESS").is_ok() {
+            return false;
+        }
         std::env::var("CARGO").is_ok() || std::env::var("CARGO_PKG_NAME").is_ok()
     }
     #[cfg(not(target_os = "windows"))]

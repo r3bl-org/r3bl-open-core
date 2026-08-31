@@ -29,6 +29,8 @@ pub mod string_repeat_cache;
 pub mod telemetry;
 pub mod time_duration;
 pub mod primitive_casting;
+pub mod os_string_ext;
+pub mod type_aliases;
 
 // Re-export.
 pub use common_atomic::*;
@@ -52,3 +54,5 @@ pub use string_repeat_cache::*;
 pub use telemetry::*;
 pub use time_duration::*;
 pub use primitive_casting::*;
+pub use os_string_ext::*;
+pub use type_aliases::*;

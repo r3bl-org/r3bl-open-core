@@ -1,9 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words findstr
-
 use crate::PtySessionBuilder;
-use std::path::Path;
 
 /// Returns a [`PtySessionBuilder`] configured for a cross-platform [`cat`] command that
 /// echoes [`stdin`] to [`stdout`] verbatim (line by line, preserving order).
@@ -14,19 +11,13 @@ use std::path::Path;
 pub fn cat() -> PtySessionBuilder {
     #[cfg(unix)]
     {
-        let paths = ["/usr/bin/cat", "/bin/cat"];
-        for path in paths {
-            if Path::new(path).exists() {
-                return PtySessionBuilder::new(path);
-            }
-        }
         PtySessionBuilder::new("cat")
     }
     #[cfg(windows)]
     {
-        // `findstr "^"` echoes all stdin lines verbatim (unlike `sort` which
+        // `findstr.exe "^"` echoes all stdin lines verbatim (unlike `sort` which
         // reorders lines alphabetically, breaking multi-line test assertions).
-        PtySessionBuilder::new("cmd.exe").cli_args(["/c", "findstr \"^\""])
+        PtySessionBuilder::new("findstr.exe").cli_arg("^")
     }
 }
 
@@ -37,20 +28,19 @@ pub fn cat() -> PtySessionBuilder {
 pub fn sleep(seconds: u64) -> PtySessionBuilder {
     #[cfg(unix)]
     {
-        let paths = ["/usr/bin/sleep", "/bin/sleep"];
-        for path in paths {
-            if Path::new(path).exists() {
-                return PtySessionBuilder::new(path).cli_arg(seconds.to_string());
-            }
-        }
         PtySessionBuilder::new("sleep").cli_arg(seconds.to_string())
     }
     #[cfg(windows)]
     {
-        PtySessionBuilder::new("timeout.exe").cli_args([
-            "/t",
-            &seconds.to_string(),
-            "/nobreak",
+        // `timeout.exe` fails in non-interactive or redirected console environments
+        // ("ERROR: Input redirection is not supported, exiting the process
+        // immediately."). Using PowerShell with `Start-Sleep` avoids this
+        // restriction.
+        let ps_cmd = format!("Start-Sleep -Seconds {seconds}");
+        PtySessionBuilder::new("powershell.exe").cli_args([
+            "-NoProfile",
+            "-Command",
+            &ps_cmd,
         ])
     }
 }
@@ -60,15 +50,9 @@ pub fn sleep(seconds: u64) -> PtySessionBuilder {
 ///
 /// [`cmd`]: https://en.wikipedia.org/wiki/Command_Prompt
 /// [`sh`]: https://en.wikipedia.org/wiki/Bourne_shell
-pub fn bash_or_cmd() -> PtySessionBuilder {
+pub fn sh() -> PtySessionBuilder {
     #[cfg(unix)]
     {
-        let paths = ["/usr/bin/sh", "/bin/sh"];
-        for path in paths {
-            if Path::new(path).exists() {
-                return PtySessionBuilder::new(path);
-            }
-        }
         PtySessionBuilder::new("sh")
     }
     #[cfg(windows)]
@@ -85,12 +69,6 @@ pub fn bash_or_cmd() -> PtySessionBuilder {
 pub fn printf(osc_sequence: &str) -> PtySessionBuilder {
     #[cfg(unix)]
     {
-        let paths = ["/usr/bin/printf", "/bin/printf"];
-        for path in paths {
-            if Path::new(path).exists() {
-                return PtySessionBuilder::new(path).cli_arg(osc_sequence);
-            }
-        }
         PtySessionBuilder::new("printf").cli_arg(osc_sequence)
     }
     #[cfg(windows)]
@@ -108,3 +86,5 @@ pub fn printf(osc_sequence: &str) -> PtySessionBuilder {
         ])
     }
 }
+
+// cspell:words findstr
