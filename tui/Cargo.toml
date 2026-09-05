@@ -72,7 +72,7 @@ nom = "8.0.0"
 # http://xion.io/post/code/rust-examples.html
 
 # For clipboard.
-copypasta-ext = "0.4.4"
+copypasta = "0.10.2"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
