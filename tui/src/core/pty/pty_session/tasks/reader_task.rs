@@ -49,7 +49,7 @@ pub fn spawn_blocking_reader_task(
 
         loop {
             match reader.read(&mut buf) {
-                Ok(0) => break, // EOF
+                Ok(0) => break, // EOF.
                 Ok(n) => {
                     // 1. Process regular output.
                     if config.capture_output == CaptureFlag::Capture {
@@ -66,6 +66,10 @@ pub fn spawn_blocking_reader_task(
                                 .blocking_send(PtyOutputEvent::Osc(event));
                         }
                     }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+                    // Expected when the PTY output pipe is closed after child exit.
+                    break;
                 }
                 Err(e) => {
                     // This error is expected when the PTY is closed (e.g., child

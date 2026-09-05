@@ -779,9 +779,9 @@ mod tests {
 
     // cspell:words ello testx
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_add_char() {
+    fn test_add_char() {
         let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
@@ -803,9 +803,9 @@ mod tests {
         assert_eq!(line.line.as_str(), "a");
     }
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_move_cursor() {
+    fn test_move_cursor() {
         let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
@@ -827,9 +827,9 @@ mod tests {
         assert_eq!(line.current_column, vp_col(3));
     }
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_search_next() {
+    fn test_search_next() {
         let mut line = LineState::new("foo".into(), vp_width(100) + vp_height(100));
 
         let stdout_mock = StdoutMock::default();
@@ -853,8 +853,8 @@ mod tests {
 
     // Phase 1.1: Tests for recent bug fixes.
 
-    #[tokio::test]
-    async fn test_ctrl_d_empty_line_eof() {
+    #[test]
+    fn test_ctrl_d_empty_line_eof() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -877,8 +877,8 @@ mod tests {
         assert!(matches!(result, Ok(Some(ReadlineEvent::Eof))));
     }
 
-    #[tokio::test]
-    async fn test_ctrl_d_non_empty_deletes_char() {
+    #[test]
+    fn test_ctrl_d_non_empty_deletes_char() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("abc");
         line.line_cursor_grapheme = seg_index(1); // Cursor after 'a'
@@ -905,8 +905,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "ac");
     }
 
-    #[tokio::test]
-    async fn test_ctrl_w_word_boundaries() {
+    #[test]
+    fn test_ctrl_w_word_boundaries() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
@@ -932,8 +932,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "hello ");
     }
 
-    #[tokio::test]
-    async fn test_ctrl_left_word_navigation() {
+    #[test]
+    fn test_ctrl_left_word_navigation() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(15); // End of line
@@ -970,8 +970,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
-    async fn test_ctrl_right_word_navigation() {
+    #[test]
+    fn test_ctrl_right_word_navigation() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello-world foo");
         line.line_cursor_grapheme = seg_index(0); // Start of line
@@ -1010,8 +1010,8 @@ mod tests {
 
     // Phase 1.2: Tests for new Alt+key handlers.
 
-    #[tokio::test]
-    async fn test_alt_b_backward_word() {
+    #[test]
+    fn test_alt_b_backward_word() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // End of line
@@ -1048,8 +1048,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
-    async fn test_alt_f_forward_word() {
+    #[test]
+    fn test_alt_f_forward_word() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(0); // Start of line
@@ -1086,8 +1086,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(13));
     }
 
-    #[tokio::test]
-    async fn test_alt_d_kill_word() {
+    #[test]
+    fn test_alt_d_kill_word() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("foo bar baz");
         line.line_cursor_grapheme = seg_index(0); // Start of line
@@ -1118,8 +1118,8 @@ mod tests {
         assert_eq!(line.line.as_str(), " baz");
     }
 
-    #[tokio::test]
-    async fn test_alt_backspace_backward_kill_word() {
+    #[test]
+    fn test_alt_backspace_backward_kill_word() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("one two three");
         line.line_cursor_grapheme = seg_index(13); // At end
@@ -1152,8 +1152,8 @@ mod tests {
 
     // Phase 1.3: Tests for interrupt handling.
 
-    #[tokio::test]
-    async fn test_ctrl_c_interrupt() {
+    #[test]
+    fn test_ctrl_c_interrupt() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("some input");
         let stdout_mock = StdoutMock::default();
@@ -1177,8 +1177,8 @@ mod tests {
         assert!(matches!(result, Ok(Some(ReadlineEvent::Interrupted))));
     }
 
-    #[tokio::test]
-    async fn test_ctrl_l_clear_screen() {
+    #[test]
+    fn test_ctrl_l_clear_screen() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("test");
         let stdout_mock = StdoutMock::default();
@@ -1204,8 +1204,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "test");
     }
 
-    #[tokio::test]
-    async fn test_ctrl_u_delete_to_start() {
+    #[test]
+    fn test_ctrl_u_delete_to_start() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(6); // After "hello "
@@ -1232,9 +1232,9 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
+    #[test]
     #[cfg(feature = "emacs")]
-    async fn test_ctrl_a_move_to_start() {
+    fn test_ctrl_a_move_to_start() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
@@ -1260,9 +1260,9 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
+    #[test]
     #[cfg(feature = "emacs")]
-    async fn test_ctrl_e_move_to_end() {
+    fn test_ctrl_e_move_to_end() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
@@ -1288,8 +1288,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(5));
     }
 
-    #[tokio::test]
-    async fn test_enter_submit_line() {
+    #[test]
+    fn test_enter_submit_line() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         let stdout_mock = StdoutMock::default();
@@ -1310,8 +1310,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "");
     }
 
-    #[tokio::test]
-    async fn test_backspace_delete_before() {
+    #[test]
+    fn test_backspace_delete_before() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
@@ -1333,8 +1333,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
     }
 
-    #[tokio::test]
-    async fn test_delete_key_delete_at_cursor() {
+    #[test]
+    fn test_delete_key_delete_at_cursor() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(0); // At start
@@ -1355,8 +1355,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "ello");
     }
 
-    #[tokio::test]
-    async fn test_left_arrow_move_left() {
+    #[test]
+    fn test_left_arrow_move_left() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello");
         line.line_cursor_grapheme = seg_index(5); // At end
@@ -1377,8 +1377,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(4));
     }
 
-    #[tokio::test]
-    async fn test_home_key_move_to_start() {
+    #[test]
+    fn test_home_key_move_to_start() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(11); // At end
@@ -1399,8 +1399,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
-    async fn test_end_key_move_to_end() {
+    #[test]
+    fn test_end_key_move_to_end() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello world");
         line.line_cursor_grapheme = seg_index(0); // At start
@@ -1421,8 +1421,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(11));
     }
 
-    #[tokio::test]
-    async fn test_down_arrow_history_next() {
+    #[test]
+    fn test_down_arrow_history_next() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1456,8 +1456,8 @@ mod tests {
 
     // Phase 3: Edge case and Unicode tests.
 
-    #[tokio::test]
-    async fn test_unicode_emoji_word_operations() {
+    #[test]
+    fn test_unicode_emoji_word_operations() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("hello 🎉 world");
         line.line_cursor_grapheme = seg_index(14); // At end
@@ -1484,8 +1484,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "hello 🎉 ");
     }
 
-    #[tokio::test]
-    async fn test_ctrl_w_empty_line() {
+    #[test]
+    fn test_ctrl_w_empty_line() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1509,8 +1509,8 @@ mod tests {
         assert_eq!(line.line.as_str(), "");
     }
 
-    #[tokio::test]
-    async fn test_word_boundaries_with_only_punctuation() {
+    #[test]
+    fn test_word_boundaries_with_only_punctuation() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("...---===");
         line.line_cursor_grapheme = seg_index(9); // At end
@@ -1537,8 +1537,8 @@ mod tests {
         assert_eq!(line.line_cursor_grapheme, seg_index(0));
     }
 
-    #[tokio::test]
-    async fn test_ctrl_left_unicode() {
+    #[test]
+    fn test_ctrl_left_unicode() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1588,8 +1588,8 @@ mod tests {
     // ===================================================================================
 
     /// Test that F1-F12 keys are correctly converted to FnKey(1)-FnKey(12).
-    #[tokio::test]
-    async fn test_fnkey_f1_through_f12() {
+    #[test]
+    fn test_fnkey_f1_through_f12() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1629,9 +1629,9 @@ mod tests {
 
     /// Test comprehensive `SpecialKey` -> `ReadlineEvent` mapping for pass-through keys.
     /// These are keys that readline doesn't handle internally - they're passed to caller.
-    #[tokio::test]
+    #[test]
     #[allow(clippy::type_complexity)]
-    async fn test_passthrough_special_keys() {
+    fn test_passthrough_special_keys() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
@@ -1673,8 +1673,8 @@ mod tests {
 
     /// Test that internally-handled keys return Ok(None) (they modify state, not return
     /// events).
-    #[tokio::test]
-    async fn test_internal_special_keys_return_none() {
+    #[test]
+    fn test_internal_special_keys_return_none() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         line.line = GCStringOwned::new("test");
         line.line_cursor_grapheme = seg_index(2); // Middle of line
@@ -1714,8 +1714,8 @@ mod tests {
     }
 
     /// Test that Esc key (and other unhandled `SpecialKey`s) return `UnhandledKey`.
-    #[tokio::test]
-    async fn test_unhandled_special_key_returns_unhandled_event() {
+    #[test]
+    fn test_unhandled_special_key_returns_unhandled_event() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));

@@ -2,16 +2,13 @@
 
 //! OS-level type aliases, constants, and utility functions for [`PTY`] operations.
 //! - [`Controller`], [`Controlled`] - [`PTY`] halves
-//! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
 //! - [`ControllerReader`], [`ControllerWriter`] - [`PTY`] I/O streams
-//! - [`PtyCommand`], [`PtyControlledChildExitStatus`] - Command execution and exit status
-//! - [`pty_to_std_exit_status()`] - Convert [`PtyControlledChildExitStatus`] to
-//!   [`std::process::ExitStatus`]
+//! - [`PtyCommand`], [`PtyControlledChildExitStatus`]: command execution and exit status.
 //!
-//! [`pty_to_std_exit_status()`]: PtyControlledChildExitStatus::pty_to_std_exit_status
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
+use crate::CommandOutputResult;
+use portable_pty::{CommandBuilder, MasterPty, SlavePty};
 use std::ops::Deref;
 
 /// Buffer size for reading [`PTY`] output (4KB stack allocation).
@@ -37,11 +34,6 @@ pub type Controlled = Box<dyn SlavePty + Send>;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type Controller = Box<dyn MasterPty + Send>;
 
-/// Type alias for a spawned child process in a [`PTY`].
-///
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
-
 /// Type alias for the writer used in [`PTY`] operations.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -51,9 +43,6 @@ pub type ControllerWriter = Box<dyn std::io::Write + Send>;
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type ControllerReader = Box<dyn std::io::Read + Send>;
-
-/// Type alias for a controlled child termination handle.
-pub type ControlledChildTerminationHandle = Box<dyn ChildKiller + Send + Sync>;
 
 /// Type alias for a validated [`PTY`] command ready for execution.
 ///
@@ -67,7 +56,6 @@ pub type PtyCommand = CommandBuilder;
 /// this alias.
 ///
 /// [`portable_pty`]: https://docs.rs/portable-pty
-/// [`pty_to_std_exit_status()`]: PtyControlledChildExitStatus::pty_to_std_exit_status
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub struct PtyControlledChildExitStatus {
@@ -95,47 +83,8 @@ impl From<u32> for PtyControlledChildExitStatus {
 }
 
 impl From<PtyControlledChildExitStatus> for std::process::ExitStatus {
-    fn from(status: PtyControlledChildExitStatus) -> std::process::ExitStatus {
-        status.pty_to_std_exit_status()
-    }
-}
-
-impl PtyControlledChildExitStatus {
-    /// Converts [`PtyControlledChildExitStatus`] to [`std::process::ExitStatus`].
-    ///
-    /// - Handles Unix wait status format encoding and Windows exit codes
-    /// - Clamps large exit codes to `255` to prevent overflow on Unix systems
-    /// - On success: uses explicit success status (exit code `0`)
-    /// - On failure: encodes exit code in Unix wait status format with bounds checking
-    ///
-    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    /// [`std::process::ExitStatus`]: std::process::ExitStatus
-    #[must_use]
-    pub fn pty_to_std_exit_status(&self) -> std::process::ExitStatus {
-        #[cfg(unix)]
-        use std::os::unix::process::ExitStatusExt;
-        #[cfg(windows)]
-        use std::os::windows::process::ExitStatusExt;
-
-        if self.inner.success() {
-            // Success case: use explicit success status
-            return std::process::ExitStatus::from_raw(0);
-        }
-
-        // Failure case: encode exit code properly. Standard exit codes max out at 255.
-        let clamped = self.inner.exit_code().min(255);
-
-        #[cfg(unix)]
-        {
-            // On Unix, the exit code is packed into the second byte (bits 8-15) of the
-            // wait status.
-            std::process::ExitStatus::from_raw(i32::try_from(clamped).unwrap_or(255) << 8)
-        }
-        #[cfg(windows)]
-        {
-            // On Windows, the exit code is stored directly as a 32-bit DWORD.
-            std::process::ExitStatus::from_raw(u32::try_from(clamped).unwrap_or(255))
-        }
+    fn from(status: PtyControlledChildExitStatus) -> Self {
+        CommandOutputResult::make_exit_status(status.exit_code())
     }
 }
 
@@ -152,7 +101,22 @@ mod tests {
         fn check_controller(_: Controller) {}
         #[allow(dead_code)]
         fn check_controlled(_: Controlled) {}
-        #[allow(dead_code)]
-        fn check_controlled_child(_: ControlledChild) {}
+    }
+
+    #[test]
+    fn test_pty_controlled_child_exit_status_to_std_exit_status() {
+        // Test From<u32> and Deref:
+        let status_ok = PtyControlledChildExitStatus::from(0);
+        assert_eq!(status_ok.exit_code(), 0);
+        let std_ok: std::process::ExitStatus = status_ok.into();
+        assert!(std_ok.success());
+
+        // Test From<portable_pty::ExitStatus> and Into<std::process::ExitStatus>:
+        let raw = portable_pty::ExitStatus::with_exit_code(42);
+        let status_err = PtyControlledChildExitStatus::from(raw);
+        assert_eq!(status_err.exit_code(), 42);
+        let std_err: std::process::ExitStatus = status_err.into();
+        assert!(!std_err.success());
+        assert_eq!(std_err.code(), Some(42));
     }
 }

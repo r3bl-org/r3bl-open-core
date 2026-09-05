@@ -25,6 +25,9 @@
 //! cargo test -p r3bl_tui test_pty_non_blocking_stdout_no_panic -- --nocapture
 //! ```
 //!
+//! why-stdout-needs-backpressure-handling-on-linux-with-directtoansi [Why We Need
+//! Non-Blocking Read]:     consume_stdin_input_with_sender#why-we-need-non-blocking-read
+//!
 //! [`BackpressureStdout`]: BackpressureStdout
 //! [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 //! [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
@@ -36,9 +39,7 @@
 //! [Signal Interrupts]:
 //!     BackpressureStdout#signal-interrupts-eintr-and-fatal-error-handling
 //! [Why Stdout Needs Backpressure Handling]:
-//!     BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
-//! [Why We Need Non-Blocking Read]:
-//!     consume_stdin_input_with_sender#why-we-need-non-blocking-read
+//!     BackpressureStdout#
 
 // Imported specifically for the intra-doc links in the module-level documentation.
 #[allow(unused_imports)]
@@ -111,11 +112,11 @@ fn controlled() {
     });
 
     // 4. Scenario 2 (Massive Write): Blast the PTY buffer to trigger EAGAIN / WouldBlock
-    // A PTY buffer is typically a few KB. We write megabytes to guarantee overflow.
-    let chunk = vec![b'A'; 1024]; // 1 KB chunk
+    // A PTY buffer is typically a few KiB. We write mebibytes to guarantee overflow.
+    let chunk = vec![b'A'; 1024]; // 1 KiB chunk
     output_device.write(|writer| {
         for _ in 0..10_000 {
-            // 10 MB total
+            // ~9.77 MiB (10,240,000 bytes) total
             writer.write_all(&chunk).expect("Massive write failed");
         }
         writer

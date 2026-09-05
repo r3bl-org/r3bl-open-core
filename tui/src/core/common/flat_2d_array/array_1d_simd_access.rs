@@ -1,10 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{Flat1DSimd, Flat1DSimdMut};
-use crate::{
-    c_row, ArrayBoundsCheck, ArrayOverflowResult, CRow, RangeBoundsExt, RangeExclusive,
-    RangeExt, RangeValidityStatus, VPLength,
-};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CRow, RangeBoundsExt, RangeExclusive,
+            RangeExt, RangeValidityStatus, VPLength, c_row};
 use std::cmp::{max, min};
 
 impl<T> Flat1DSimd<'_, T> {

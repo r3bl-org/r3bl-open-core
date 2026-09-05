@@ -4,8 +4,8 @@
 
 use std::io::Stdout;
 
-#[cfg(doc)]
-/// Make the link to this shorter when used in rustdoc for [`BackpressureStdout`].
+// Make the link to `consume_stdin_input_with_sender` shorter when used in rustdocs.
+#[cfg(all(target_os = "linux", doc))]
 use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
     self, handler_stdin::consume_stdin_input_with_sender,
 };
@@ -32,14 +32,15 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// operating systems to provide a uniform terminal output interface, its backpressure
 /// wait path is primarily exercised on Linux:
 ///
-/// - **Linux ([`DirectToAnsi`] Backend):** [`MioPollWorker`] sets `O_NONBLOCK` on [`stdin`],
-///   implicitly converting [`stdout`] into non-blocking mode via the shared Open File
-///   Description (OFD). When a frame payload exceeds the 4,096-byte kernel buffer,
-///   [`write()`] returns [`WouldBlock`], and [`BackpressureStdout`] puts the thread on the
-///   kernel [`PTY`] wait-queue using [`rustix::event::poll`] on [`POLLOUT`].
+/// - **Linux ([`DirectToAnsi`] Backend):** [`MioPollWorker`] sets `O_NONBLOCK` on
+///   [`stdin`], implicitly converting [`stdout`] into non-blocking mode via the shared
+///   Open File Description (OFD). When a frame payload exceeds the 4,096-byte kernel
+///   buffer, [`write()`] returns [`WouldBlock`], and [`BackpressureStdout`] puts the
+///   thread on the kernel [`PTY`] wait-queue using [`rustix::event::poll`] on
+///   [`POLLOUT`].
 ///
-/// - **macOS & Windows ([`Crossterm`] Backend):** Crossterm uses standard blocking stdio and
-///   never puts [`stdin`] into non-blocking mode. Consequently, [`stdout`] remains in
+/// - **macOS & Windows ([`Crossterm`] Backend):** Crossterm uses standard blocking stdio
+///   and never puts [`stdin`] into non-blocking mode. Consequently, [`stdout`] remains in
 ///   standard blocking mode natively. Calls to [`write()`] and [`flush()`] succeed
 ///   immediately or block natively in the OS kernel without ever returning
 ///   [`WouldBlock`]. On macOS and Windows, this struct acts as a zero-overhead

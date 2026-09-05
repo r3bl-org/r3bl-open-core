@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn test_try_create_file_layer() {
         let dir = try_create_temp_dir().expect("conversion error");
-        let file_path = dir.join("my_temp_log_file.log");
+        let file_path = dir.join("test_file_layer.log");
         let file_path = file_path.to_str().expect("conversion error").to_string();
 
         println!("file_path: {file_path}");
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_try_create_both_layers() {
         let dir = try_create_temp_dir().expect("conversion error");
-        let file_path = dir.join("my_temp_log_file.log");
+        let file_path = dir.join("test_both_layers.log");
         let file_path = file_path.to_str().expect("conversion error").to_string();
 
         let tracing_config = TracingConfig {

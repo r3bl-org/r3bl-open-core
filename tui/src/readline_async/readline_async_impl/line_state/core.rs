@@ -180,8 +180,8 @@ mod tests {
                 core::test_fixtures::StdoutMock, seg_index, vp_height, vp_width};
     use std::sync::Arc;
 
-    #[tokio::test]
-    async fn test_pause_resume_state() {
+    #[test]
+    fn test_pause_resume_state() {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));

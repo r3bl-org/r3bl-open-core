@@ -20,6 +20,10 @@ use std::{ops::{Add, AddAssign},
 /// 3. Call [`start()`] in order to get a [`PtySession`] struct, which you can use to wire
 ///    up your app.
 ///
+/// For an architectural overview of how this fits into the [`PTY`] stack, the
+/// lifecycle diagram, and the standard [`tokio::select!`] usage pattern, see the
+/// [Session Layer] documentation.
+///
 /// # Examples
 ///
 /// ```no_run
@@ -61,6 +65,7 @@ use std::{ops::{Add, AddAssign},
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`start()`]: Self::start()
 /// [`with_config()`]: Self::with_config()
+/// [Session Layer]: mod@crate::pty_session
 #[derive(Debug, Clone)]
 pub struct PtySessionBuilder {
     /// The executable command to run (e.g., [`bash`] or [`ls`]).
@@ -231,8 +236,7 @@ mod impl_pty_session_builder {
         }
 
         /// Starts a [`PTY`] session by orchestrating the setup of the OS-level
-        /// [`PtyPair`] and the [Background Tasks] needed for full bidirectional
-        /// I/O.
+        /// [`PtyPair`] and the [Background Tasks] needed for full bidirectional I/O.
         ///
         /// This function handles the entire initialization sequence:
         /// 1. Creates a [`bounded MPSC channel`] for output events (sized to
@@ -244,6 +248,10 @@ mod impl_pty_session_builder {
         /// 5. Spawns a [Writer Task] (blocking) to pump input events to the process.
         /// 6. Spawns an [Orchestrator Task] (async) to monitor the child process's
         ///    lifecycle.
+        ///
+        /// For an architectural overview of how this fits into the [`PTY`] stack, the
+        /// lifecycle diagram, and the standard [`tokio::select!`] usage pattern, see the
+        /// [Session Layer] documentation.
         ///
         /// # Errors
         ///
@@ -257,6 +265,7 @@ mod impl_pty_session_builder {
         /// [Background Tasks]: crate::core::pty#the-task-trio
         /// [Orchestrator Task]: crate::tasks::spawn_orchestrator_task
         /// [Reader Task]: crate::tasks::spawn_blocking_reader_task
+        /// [Session Layer]: mod@crate::pty_session
         /// [Writer Task]: crate::tasks::spawn_blocking_writer_task
         pub fn start(self) -> miette::Result<PtySession> { impl_start::start(self) }
     }
@@ -269,7 +278,8 @@ pub mod impl_start {
     /// Start a [`PTY`] session from the given [`PtySessionBuilder`] configuration.
     ///
     /// Opens a [`PTY`] pair, spawns the child process, and wires up input/output
-    /// channels.
+    /// channels. For the complete lifecycle architecture, see the [Session Layer]
+    /// documentation.
     ///
     /// # Errors
     ///
@@ -279,6 +289,7 @@ pub mod impl_start {
     /// - The controller reader cannot be cloned.
     ///
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [Session Layer]: mod@crate::pty_session
     pub fn start(this: PtySessionBuilder) -> miette::Result<PtySession> {
         // Channel for output events (child process → app).
         let (output_event_ch_tx_half, output_event_ch_rx_half) =
@@ -297,24 +308,17 @@ pub mod impl_start {
         let (pty_pair, controlled_child) =
             PtyPair::open_and_spawn(this.config.pty_size, command)?;
 
-        let child_process_termination_handle = controlled_child.clone_killer();
-
-        let controller_reader = pty_pair
-            .controller()
-            .try_clone_reader()
-            .map_err(|e| miette!("Failed to clone reader: {}", e))?;
-
-        let controller = pty_pair.into_controller();
+        let child_process_termination_handle =
+            controlled_child.clone_termination_handle();
 
         let orchestrator_task_handle = spawn_orchestrator_task(
             controlled_child,
-            controller_reader,
-            controller,
+            pty_pair.into_controller(),
             input_event_ch_tx_half.clone(),
             input_event_ch_rx_half,
             output_event_ch_tx_half,
             this.config,
-        );
+        )?;
 
         Ok(PtySession {
             tx_input_event: input_event_ch_tx_half,
@@ -380,8 +384,14 @@ pub mod impl_start {
 ///
 /// This is returned by [`PtySessionBuilder::start()`].
 ///
+/// Holds the communication channels and lifecycle handles for interacting with the
+/// background tasks running the child process. For the full lifecycle diagram and
+/// canonical [`tokio::select!`] loop driving these channels and task handles, see the
+/// [Session Layer] documentation.
+///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtySessionBuilder::start()`]: PtySessionBuilder::start
+/// [Session Layer]: mod@crate::pty_session
 #[derive(Debug)]
 pub struct PtySession {
     /// Send [`PtyInputEvent`] events to the child process.
@@ -400,8 +410,10 @@ pub struct PtySession {
 
 /// Configuration for a [`PTY`] session.
 ///
-/// This struct holds the final resolved state of all configuration options. While this
-/// struct is `pub`, it is **not** intended to be constructed manually. Instead, either:
+/// This struct holds the final resolved state of all configuration options. These
+/// settings govern event routing and terminal capabilities in the [Session Layer].
+/// While this struct is `pub`, it is **not** intended to be constructed manually.
+/// Instead, either:
 /// 1. Compose the desired [`PtySessionConfigOption`]s using the `+` operator from
 ///    scratch.
 /// 2. Start with [`DefaultPtySessionConfig`] and use `+` operator to override any default
@@ -421,6 +433,7 @@ pub struct PtySession {
 /// ```
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [Session Layer]: mod@crate::pty_session
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PtySessionConfig {
     /// Whether to capture **[`OSC`]** sequences.
@@ -567,10 +580,12 @@ pub enum PtySessionConfigOption {
 /// 2. **Canonical Storage Struct** ([`PtySessionConfig`]):
 ///    - Aggregates resolved [`PTY`] session flags, size, and settings.
 ///
-/// See [`PtySessionBuilder`] docs for a full usage example.
+/// See [`PtySessionBuilder`] docs for a full usage example and the [Session Layer]
+/// documentation for the architectural context.
 ///
 /// [`impl Into<PtySessionConfig>`]: PtySessionConfig
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [Session Layer]: mod@crate::pty_session
 mod impl_elegant_constructor_dsl_pattern {
     #[allow(clippy::wildcard_imports)]
     use super::*;

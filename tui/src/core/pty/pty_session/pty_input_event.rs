@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CSI_START, ControlSequence, CursorKeyMode, FunctionKey, Key, KeyPress,
-            KeyState, LossyConvertToByte, ModifierKeysMask, VPSize, SpecialKey,
+            KeyState, LossyConvertToByte, ModifierKeysMask, SpecialKey, VPSize,
             WideningCastToU32};
 
 /// Input events that can be sent to an interactive [`PTY`] session.

@@ -817,7 +817,7 @@ use external URLs (man pages, Wikipedia, specs):
 //! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 //! [`Actor`]: https://en.wikipedia.org/wiki/Actor_model
 //! [`stdin`]: std::io::stdin
-//! [`file descriptor`]: https://en.wikipedia.org/wiki/File_descriptor
+//! [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
 ```
 
 **Common external link targets:**
@@ -864,7 +864,7 @@ link it. The cost of an extra link is near zero; the cost of excluding a reader 
 |------|-----|
 | design pattern | `https://en.wikipedia.org/wiki/Software_design_pattern` |
 | RAII | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` |
-| file descriptor | `https://en.wikipedia.org/wiki/File_descriptor` |
+| file descriptor | `https://man7.org/linux/man-pages/man2/open.2.html` |
 | dependency injection | `https://en.wikipedia.org/wiki/Dependency_injection` |
 | inversion of control | `https://en.wikipedia.org/wiki/Inversion_of_control` |
 | Actor model | `https://en.wikipedia.org/wiki/Actor_model` |
@@ -996,12 +996,15 @@ Do NOT use `$` or `$$` or `\(...\)` LaTeX math delimiters in rustdoc comments or
 
 ```bash
 ./check.fish --quick-doc
-# (runs: cargo doc --no-deps, directly to serving dir - fastest for iteration)
+# (runs: cargo doc --no-deps, directly to serving dir; fastest for iteration)
 # Use --doc for final verification before commits (includes staging/sync)
 
 ./check.fish --test
 # (runs: cargo test --doc)
 ```
+
+> [!TIP]
+> **Run in a Subagent:** Building workspace documentation and running doctests can take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) so the active conversation with the user is not blocked.
 
 ---
 
@@ -1115,6 +1118,81 @@ pub use input::*;
 **Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard. If the dep uses
 `cfg(unix)`, gate docs with `all(unix, doc)`. If the dep uses `cfg(target_os = "linux")`, gate
 docs with `all(target_os = "linux", doc)`.
+
+#### Cross-Platform Doctests with Platform-Specific APIs
+
+When writing doctests (or doc code examples) that reference platform-specific APIs (such as Linux-only `DirectToAnsiInputDevice` or `MioPollWorker`), **never downgrade the code example to a generic mock or use ```` ```ignore ````**. Real types provide concrete value and clickable intra-doc links for readers.
+
+However, `cargo test --doc` executes across multiple operating systems (Linux, macOS, Windows). If a doctest references Linux-only symbols at the root level, it will fail to compile on Windows and macOS with unresolved import errors.
+
+##### The `linux_only` Module Wrapper Pattern
+
+To allow the doctest to showcase real Linux production types on Linux while cleanly passing on non-Linux platforms (Windows and macOS), wrap the Linux-specific code in a hidden module and conditionally re-export `main`:
+
+```rust
+/// ```no_run
+/// # #[cfg(not(target_os = "linux"))]
+/// # fn main() {}
+/// # #[cfg(target_os = "linux")]
+/// # use linux_only::main;
+/// # #[cfg(target_os = "linux")]
+/// # mod linux_only {
+/// use r3bl_tui::{MioPollWorker, ok};
+/// use r3bl_tui::core::resilient_reactor_thread::RRT;
+///
+/// // Global resources (static + const fn = singleton).
+/// static SINGLETON: RRT<MioPollWorker> = RRT::new();
+///
+/// pub fn main() -> miette::Result<()> {
+///     // Subscribe to get a guard that auto-manages the thread.
+///     let guard = SINGLETON.try_subscribe(())?;
+///     ok!()
+/// }
+/// # }
+/// ```
+```
+
+##### For Macros and Non-Main Doctests
+
+For macros like `generate_pty_test!` where the macro itself generates functions rather than a `main` function:
+
+```rust
+//! ```no_run
+//! # #[cfg(not(target_os = "linux"))]
+//! # fn main() {}
+//! # #[cfg(target_os = "linux")]
+//! # fn main() {}
+//! # #[cfg(target_os = "linux")]
+//! # mod linux_only {
+//! use r3bl_tui::{
+//!     generate_pty_test, PtyTestMode, DirectToAnsiInputDevice,
+//!     PtyPair, PtyTestChild, PtyTestContext
+//! };
+//! use std::io::{Write, BufRead};
+//! fn process_terminal_events(_: &DirectToAnsiInputDevice) {}
+//! generate_pty_test! {
+//!     test_fn: interactive_input_parsing,
+//!     controller: |context: PtyTestContext| {
+//!         // ...
+//!     },
+//!     controlled: || {
+//!         let mut input_device = DirectToAnsiInputDevice::new()
+//!             .expect("Failed to initialize DirectToAnsiInputDevice");
+//!         println!("CONTROLLED_READY");
+//!         process_terminal_events(&input_device);
+//!         std::process::exit(0);
+//!     },
+//!     mode: PtyTestMode::Raw,
+//! }
+//! # }
+//! ```
+```
+
+##### Why This Works
+
+1. **Clean Rendered Docs**: In rendered rustdoc HTML, all `#` lines are stripped. Readers only see the clean, real-world code featuring production types without platform-gating noise or mock boilerplate.
+2. **Linux Type Verification**: On Linux, rustdoc compiles and runs the real `linux_only::main`, validating production types and preventing regressions.
+3. **macOS & Windows Safety**: On non-Linux platforms, `rustc` compiles the trivial empty `fn main() {}`. Because `mod linux_only` is guarded by `#[cfg(target_os = "linux")]`, the compiler never evaluates or resolves the Linux-only imports, compiling in less than 1 ms without errors.
 
 ---
 

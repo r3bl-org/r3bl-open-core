@@ -126,6 +126,7 @@
         "destructures",
         "dialup",
         "dimens",
+        "directtoansi",
         "disp",
         "distros",
         "Doctest",
@@ -238,6 +239,7 @@
         "mimalloc",
         "mispredictions",
         "mkosi",
+        "mktemp",
         "mktoc",
         "mmap",
         "mmput",
@@ -329,6 +331,7 @@
         "rustls",
         "rustrover",
         "RUSTSEC",
+        "sandboxed",
         "scalarize",
         "scalarized",
         "scalarizing",
@@ -364,6 +367,8 @@
         "stylesheet",
         "Subcmd",
         "subsec",
+        "subshell",
+        "subshells",
         "subvolume",
         "subvolumes",
         "Superscalar",
@@ -414,6 +419,7 @@
         "uninteractive",
         "unparseable",
         "Unrepresentable",
+        "unsets",
         "unspecial",
         "unstaged",
         "uring",
@@ -442,5 +448,6 @@
         "XMARK",
         "zcgb",
         "Zoey"
-    ]
+    ],
+    "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu"
 }

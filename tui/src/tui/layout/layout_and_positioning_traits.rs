@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlexBox, FlexBoxProps, SurfaceProps};
-use crate::{CommonResult, VPSize, VPPos};
+use crate::{CommonResult, VPPos, VPSize};
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {

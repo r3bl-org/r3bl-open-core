@@ -88,9 +88,9 @@ impl History {
 mod tests {
     use super::*;
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_update() {
+    fn test_update() {
         let (mut history, _) = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));
@@ -114,9 +114,9 @@ mod tests {
     }
 
     // write tests for search_next and search_previous.
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_search_next() {
+    fn test_search_next() {
         let (mut history, _) = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));
@@ -129,9 +129,9 @@ mod tests {
         assert_eq!(history.search_next(), Some("test2"));
     }
 
-    #[tokio::test]
+    #[test]
     #[allow(clippy::needless_return)]
-    async fn test_search_previous() {
+    fn test_search_previous() {
         let (mut history, _) = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));

@@ -1,5 +1,6 @@
 # Task: Build-Infra Spawny Systemd-nspawn Machine Manager
 
+<!-- prettier-ignore-start -->
 <!-- BEGIN mktoc -->
 
 - [Overview](#overview)
@@ -28,7 +29,10 @@
     - [Phase 8: Verification & Testing](#phase-8-verification--testing)
 - [Verification Matrix](#verification-matrix)
     - [Distro Coverage Matrix](#distro-coverage-matrix)
-    - [Command Verification Checklist](#command-verification-checklist) <!-- END mktoc -->
+    - [Command Verification Checklist](#command-verification-checklist)
+
+<!-- END mktoc -->
+<!-- prettier-ignore-end -->
 
 ## Overview
 
@@ -36,6 +40,22 @@ Build `spawny`, a native Rust systemd-nspawn machine manager and clean-room test
 inside `r3bl-build-infra`. `spawny` replaces fragile shell scripts with a type-safe,
 general-purpose CLI tool that manages multi-distro Linux containers (Ubuntu, Fedora, Arch)
 for automated release testing, installer script validation, and interactive debugging.
+
+> **Why Ubuntu, Fedora, and Arch?**
+>
+> Together, these three distributions represent the canonical "Big Three" Linux ecosystem
+> archetypes with native, first-class `mkosi` support:
+>
+> 1. **Ubuntu (Debian / `apt` family)**: Default environment for GitHub Actions CI
+>    (`ubuntu-latest`) and dominant developer desktop base (Pop!\_OS, Mint). Testing on
+>    Ubuntu guarantees `.deb`/`apt` compatibility across real-world developer setups.
+> 2. **Fedora (Red Hat / `dnf` family)**: The reference platform for modern `systemd`,
+>    `dnf5`, and RPM packaging, upstream of RHEL, CentOS Stream, and Rocky Linux.
+> 3. **Arch Linux (Rolling / `pacman` family)**: Canonical upstream for `pacman` and
+>    bleeding-edge glibc/toolchains. Testing against pure upstream Arch ensures
+>    out-of-the-box `mkosi` compatibility and guarantees software runs on all downstream
+>    derivatives (CachyOS, EndeavourOS, Manjaro) without depending on custom kernel or
+>    repository optimizations.
 
 ### Systemd-nspawn Clean-Room Testing
 
@@ -419,7 +439,7 @@ spawny (cargo-spawny)
 
 ### Phase 5: Binary Integration & Self-Upgrade
 
-**Binary entry point and packaging**:
+**Binary entry point, packaging, and documentation**:
 
 - [ ] Add `spawny` binary to `build-infra/Cargo.toml` (`[[bin]]`).
 - [ ] Implement `build-infra/src/bin/spawny.rs`.
@@ -427,11 +447,16 @@ spawny (cargo-spawny)
 - [ ] Export `spawny` module in `build-infra/src/lib.rs`.
 - [ ] Install binary locally via `cargo install --path build-infra --force` and verify
       `spawny --help`.
+- [ ] Update `build-infra/README.md` and `build-infra/src/lib.rs` documentation to include
+      `spawny` features, command hierarchy, and usage alongside `cargo-rustdoc-fmt`.
+- [ ] Update root workspace `README.md` to showcase `spawny` in the binary tool suite.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `build-infra/Cargo.toml`
     - [ ] `build-infra/src/bin/spawny.rs`
     - [ ] `build-infra/src/lib.rs`
+    - [ ] `build-infra/README.md`
+    - [ ] `README.md`
 
 ### Phase 6: Remove Legacy cmdr nspawn Scripts
 
@@ -507,4 +532,4 @@ spawny (cargo-spawny)
 - [ ] Migrate `~/github/notes/files/scripts/tests/` to use `spawny` and purge obsolete
       fish test scripts.
 
-<!-- cspell:words postinst Rootfs machinectl nsenter debootstrap -->
+<!-- cspell:words postinst Rootfs machinectl nsenter debootstrap userland -->

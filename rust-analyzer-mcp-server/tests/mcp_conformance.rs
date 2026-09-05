@@ -16,14 +16,24 @@ fn get_server_bin() -> PathBuf {
 
 /// Tests tool discovery via `npx @modelcontextprotocol/inspector --cli ... --method
 /// tools/list`.
-///
+fn get_npx_command() -> Command {
+    #[cfg(windows)]
+    {
+        Command::new("npx.cmd")
+    }
+    #[cfg(not(windows))]
+    {
+        Command::new("npx")
+    }
+}
+
 /// Verifies that:
 /// 1. The MCP handshake succeeds over stdio.
 /// 2. All 10 tools are registered and advertised with valid input schemas.
 #[test]
 fn test_inspector_cli_tools_list() {
     let server_bin = get_server_bin();
-    let output = Command::new("npx")
+    let output = get_npx_command()
         .args([
             "-y",
             "@modelcontextprotocol/inspector",
@@ -103,7 +113,7 @@ fn test_inspector_cli_tools_call_symbols() {
     let file_arg = format!("file_path={file_path}");
     let server_bin = get_server_bin();
 
-    let output = Command::new("npx")
+    let output = get_npx_command()
         .args([
             "-y",
             "@modelcontextprotocol/inspector",
@@ -157,6 +167,7 @@ fn test_server_graceful_shutdown_on_stdin_eof() {
     let mut child = Command::new(server_bin)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("Failed to spawn rust-analyzer-mcp-server");
 
@@ -164,14 +175,15 @@ fn test_server_graceful_shutdown_on_stdin_eof() {
     drop(child.stdin.take());
 
     // Wait for the server to exit gracefully.
-    let status = child
-        .wait()
+    let output = child
+        .wait_with_output()
         .expect("Failed to wait on rust-analyzer-mcp-server");
 
     assert!(
-        status.success(),
-        "Expected clean exit on stdin EOF, got exit code: {:?}",
-        status.code()
+        output.status.success(),
+        "Expected clean exit on stdin EOF, got exit code: {:?}.\nStderr:\n{}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr)
     );
 }
 

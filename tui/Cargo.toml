@@ -50,7 +50,8 @@ futures-util = "0.3.31"
 # - termios: raw mode terminal state manipulation.
 # - std: std::io and standard library type conversions.
 # - event: event-driven POLLOUT backpressure via poll(2).
-rustix = { version = "1.1.2", features = ["termios", "std", "event"] }
+# - fs: non-blocking stdin OFlags manipulation via fcntl.
+rustix = { version = "1.1.2", features = ["termios", "std", "event", "fs"] }
 
 # mio for cross-platform async I/O (uses kqueue on macOS, epoll on Linux).
 # Used by DirectToAnsi backend to poll stdin and SIGWINCH together.
@@ -72,7 +73,7 @@ nom = "8.0.0"
 # http://xion.io/post/code/rust-examples.html
 
 # For clipboard.
-copypasta-ext = "0.4.4"
+copypasta = "0.10.2"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
@@ -163,11 +164,6 @@ serde_json = "1.0.145"
 #
 # mimalloc (by Microsoft):
 # - https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance
-#
-# jemalloc (originally by Facebook, now archived):
-# - https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
-# - https://news.ycombinator.com/item?id=35473271
-# - https://crates.io/crates/jemallocator
 mimalloc = "0.1.48"
 
 # For PTY support

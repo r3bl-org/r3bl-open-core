@@ -19,7 +19,7 @@
 //! [`GCStringOwned`]: crate::GCStringOwned
 
 #[cfg(test)]
-use crate::md_parser::md_parser_constants::NULL_CHAR;
+use crate::NULL_CHAR;
 use crate::{GCStringOwned, ZeroCopyGapBuffer,
             md_parser::md_parser_constants::NEW_LINE_CHAR};
 

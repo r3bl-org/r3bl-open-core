@@ -72,11 +72,11 @@
 
 pub mod pty_input_event;
 pub mod pty_output_event;
-pub mod pty_session_builder;
+pub mod pty_session_struct;
 pub mod pty_session_types;
 pub mod tasks;
 
 pub use pty_input_event::*;
 pub use pty_output_event::*;
-pub use pty_session_builder::*;
+pub use pty_session_struct::*;
 pub use pty_session_types::*;

@@ -340,6 +340,26 @@ chmod +x doc-format.sh
 ./doc-format.sh
 ```
 
+### Cross-Platform Doctest Gating
+
+When running doctests across platforms (`./check.fish --test` on Linux, `cargo test -p r3bl_tui --doc` on macOS and Windows), doctests referencing platform-specific APIs (such as Linux-only `DirectToAnsiInputDevice` or `MioPollWorker`) must not use `ignore` or generic mocks. Instead, wrap them using the `linux_only` hidden module pattern:
+
+```rust
+/// ```no_run
+/// # #[cfg(not(target_os = "linux"))]
+/// # fn main() {}
+/// # #[cfg(target_os = "linux")]
+/// # use linux_only::main;
+/// # #[cfg(target_os = "linux")]
+/// # mod linux_only {
+/// use r3bl_tui::{MioPollWorker, ok};
+/// // Real Linux-only example code here...
+/// # }
+/// ```
+```
+
+See the `write-documentation` skill for complete templates and guidelines.
+
 ## Summary
 
 `cargo rustdoc-fmt` is your ally for maintaining beautiful, consistent Rust documentation:

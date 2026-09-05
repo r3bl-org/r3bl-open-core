@@ -64,17 +64,17 @@ pub mod test_pty_alt_word_deletion;
 // lack of reliable EOF on Windows via a polling/timeout strategy.
 // Doc builds stay Unix-only to avoid broken intra-doc links on Windows.
 
-#[cfg(any(all(unix, doc), test))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_shared_writer_no_blank_line_test;
 
-#[cfg(any(all(unix, doc), test))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_editor_state_test;
 
-#[cfg(any(all(unix, doc), test))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_multiline_output_test;
 
-#[cfg(any(all(unix, doc), test))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod pty_readline_test;
 
-#[cfg(any(all(unix, doc), test))]
+#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
 pub mod readline_async_pty_test_fixtures;

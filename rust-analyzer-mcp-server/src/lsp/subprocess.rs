@@ -9,6 +9,7 @@ use crate::{constants::{debug_flags::DEBUG_LSP_CLIENT, lsp_framing},
                   protocol::table_types::{SafeDiagnosticsTable,
                                           SafePendingRequestsTable},
                   readiness_monitor::ServerReadinessMonitor}};
+use r3bl_tui::CommandOutputResult;
 use std::{io::{BufRead, BufReader, Read},
           path::{Path, PathBuf},
           process::{Child, Command, Stdio},
@@ -22,25 +23,51 @@ impl RustAnalyzerClient {
     ///
     /// Returns [`McpServerError::ProcessSpawn`] if `rust-analyzer` is not found.
     pub fn locate_rust_analyzer_binary() -> Result<PathBuf, McpServerError> {
-        let which_output = Command::new("which")
+        if let Ok(path) = which::which(lsp_framing::RUST_ANALYZER_BINARY) {
+            return Ok(path);
+        }
+
+        // Fallback: check ~/.cargo/bin directory directly.
+        let home_dir = std::env::var("USERPROFILE")
+            .or_else(|_| std::env::var("HOME"))
+            .map(PathBuf::from);
+        if let Ok(home) = home_dir {
+            let binary_name = format!(
+                "{}{}",
+                lsp_framing::RUST_ANALYZER_BINARY,
+                std::env::consts::EXE_SUFFIX
+            );
+            let candidate = home.join(".cargo").join("bin").join(binary_name);
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+
+        #[cfg(windows)]
+        let binary_locator = "where.exe";
+        #[cfg(not(windows))]
+        let binary_locator = "which";
+
+        let cmd_output_result = Command::new(binary_locator)
             .arg(lsp_framing::RUST_ANALYZER_BINARY)
             .output();
 
-        match which_output {
-            Ok(output) if output.status.success() => {
+        match CommandOutputResult::from(cmd_output_result) {
+            CommandOutputResult::Success(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
-                let trimmed = stdout.trim();
-                if trimmed.is_empty() {
-                    Err(McpServerError::ProcessSpawn(
+                let first_line = stdout.lines().find(|line| !line.trim().is_empty());
+                match first_line {
+                    Some(line) => Ok(PathBuf::from(line.trim())),
+                    None => Err(McpServerError::ProcessSpawn(
                         "rust-analyzer binary not found in PATH".to_string(),
-                    ))
-                } else {
-                    Ok(PathBuf::from(trimmed))
+                    )),
                 }
             }
-            _ => Err(McpServerError::ProcessSpawn(
-                "rust-analyzer binary not found in PATH".to_string(),
-            )),
+            CommandOutputResult::NonZeroExit(_) | CommandOutputResult::SpawnFailed(_) => {
+                Err(McpServerError::ProcessSpawn(
+                    "rust-analyzer binary not found in PATH".to_string(),
+                ))
+            }
         }
     }
 
@@ -90,7 +117,7 @@ impl RustAnalyzerClient {
     /// Spawns a background thread that drains `stderr` from `rust-analyzer`.
     ///
     /// Draining stderr continuously is critical to prevent operating system pipe buffer
-    /// deadlocks (typically 64 KB limit on Linux).
+    /// deadlocks (typically 64 KiB limit on Linux).
     ///
     /// # Panics
     ///

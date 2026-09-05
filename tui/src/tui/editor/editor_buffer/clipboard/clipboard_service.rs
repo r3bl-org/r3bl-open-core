@@ -2,7 +2,7 @@
 
 use super::{ClipboardResult, ClipboardService};
 use crate::{DEBUG_TUI_COPY_PASTE, ok, throws};
-use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
+use copypasta::{ClipboardContext, ClipboardProvider};
 
 #[derive(Debug)]
 pub struct SystemClipboard;
