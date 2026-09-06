@@ -1,9 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Enhanced, ModifierKeysMask};
+use super::{Enhanced, KeyState, ModifierKeysMask};
 use crate::{MediaKey, ModifierKeyEnum, SpecialKeyExt, try_convert_key_modifiers};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
                        ModifierKeyCode};
+use std::fmt;
+use std::str::FromStr;
 
 /// Examples.
 ///
@@ -588,6 +590,372 @@ pub mod convert_key_event {
             KC::IsoLevel5Shift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
                 ModifierKeyEnum::IsoLevel5Shift,
             )),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Human-readable string (de)serialization, e.g. for parsing keybindings from a config
+// file. The grammar is `[ctrl+][alt+][shift+]<key>` (modifiers are case-insensitive and
+// may appear in any order) where `<key>` is a single character, a named special key
+// (`tab`, `esc`, `pageup`, ...), `space`, or a function key `f1`..`f12`.
+// ---------------------------------------------------------------------------------------
+
+impl fmt::Display for KeyPress {
+    /// Renders a [`KeyPress`] in the canonical `ctrl+alt+shift+<key>` form (lowercase
+    /// modifiers, fixed order). The round-trip `s.parse::<KeyPress>()?.to_string()` is
+    /// stable for every value this crate delivers from the terminal.
+    ///
+    /// [`Key::KittyKeyboardProtocol`] values are not representable in the config grammar;
+    /// they are rendered lossily (and [`FromStr`] rejects them), which is fine because the
+    /// app never writes those into a config file.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (key, mask) = match self {
+            KeyPress::Plain { key } => (key, None),
+            KeyPress::WithModifiers { key, mask } => (key, Some(mask)),
+        };
+        if let Some(mask) = mask {
+            if mask.ctrl_key_state == KeyState::Pressed {
+                f.write_str("ctrl+")?;
+            }
+            if mask.alt_key_state == KeyState::Pressed {
+                f.write_str("alt+")?;
+            }
+            if mask.shift_key_state == KeyState::Pressed {
+                f.write_str("shift+")?;
+            }
+        }
+        match key {
+            Key::Character(' ') => f.write_str("space"),
+            Key::Character(c) => write!(f, "{c}"),
+            Key::SpecialKey(sk) => f.write_str(special_key_name(*sk)),
+            Key::FunctionKey(fk) => write!(f, "f{}", u8::from(*fk)),
+            Key::KittyKeyboardProtocol(enhanced) => write!(f, "kitty:{enhanced:?}"),
+        }
+    }
+}
+
+fn special_key_name(sk: SpecialKey) -> &'static str {
+    match sk {
+        SpecialKey::Backspace => "backspace",
+        SpecialKey::Enter => "enter",
+        SpecialKey::Left => "left",
+        SpecialKey::Right => "right",
+        SpecialKey::Up => "up",
+        SpecialKey::Down => "down",
+        SpecialKey::Home => "home",
+        SpecialKey::End => "end",
+        SpecialKey::PageUp => "pageup",
+        SpecialKey::PageDown => "pagedown",
+        SpecialKey::Tab => "tab",
+        SpecialKey::BackTab => "backtab",
+        SpecialKey::Delete => "delete",
+        SpecialKey::Insert => "insert",
+        SpecialKey::Esc => "esc",
+    }
+}
+
+impl FromStr for KeyPress {
+    type Err = String;
+
+    /// Parses a [`KeyPress`] from the `[ctrl+][alt+][shift+]<key>` grammar.
+    ///
+    /// The result mirrors exactly what the terminal delivers, so a parsed binding compares
+    /// equal to a real key event:
+    /// - A character key never carries a shift modifier; `shift` folds into the character
+    ///   (uppercasing ASCII letters), matching the crossterm → [`KeyPress`] conversion.
+    /// - `shift+tab` and `backtab` both yield [`SpecialKey::BackTab`].
+    /// - With no modifiers left, the result is [`KeyPress::Plain`]; otherwise
+    ///   [`KeyPress::WithModifiers`] (there is no empty-mask representation).
+    ///
+    /// # Errors
+    ///
+    /// Returns a human-readable message for an empty input, a missing key after modifiers,
+    /// or an unrecognized key token.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut rest = s.trim();
+        if rest.is_empty() {
+            return Err("empty key specification".to_string());
+        }
+
+        let (mut ctrl, mut alt, mut shift) = (false, false, false);
+        loop {
+            if let Some(r) = strip_prefix_ci(rest, "ctrl+") {
+                ctrl = true;
+                rest = r;
+            } else if let Some(r) = strip_prefix_ci(rest, "alt+") {
+                alt = true;
+                rest = r;
+            } else if let Some(r) = strip_prefix_ci(rest, "shift+") {
+                shift = true;
+                rest = r;
+            } else {
+                break;
+            }
+        }
+
+        if rest.is_empty() {
+            return Err(format!("missing key after modifiers in '{s}'"));
+        }
+
+        let mut key = parse_key_token(rest)?;
+
+        // Fold shift to match terminal delivery (see doc comment above).
+        if shift {
+            match key {
+                Key::Character(c) => {
+                    if c.is_ascii_alphabetic() {
+                        key = Key::Character(c.to_ascii_uppercase());
+                    }
+                    shift = false;
+                }
+                Key::SpecialKey(SpecialKey::Tab) => {
+                    key = Key::SpecialKey(SpecialKey::BackTab);
+                    shift = false;
+                }
+                _ => {}
+            }
+        }
+
+        if !(ctrl || alt || shift) {
+            Ok(KeyPress::Plain { key })
+        } else {
+            let mut mask = ModifierKeysMask::new();
+            if ctrl {
+                mask = mask.with_ctrl();
+            }
+            if alt {
+                mask = mask.with_alt();
+            }
+            if shift {
+                mask = mask.with_shift();
+            }
+            Ok(KeyPress::WithModifiers { key, mask })
+        }
+    }
+}
+
+/// Case-insensitively strips `prefix` from the start of `s`, returning the remainder.
+/// Uses [`str::get`] so a non-ASCII leading character can never cause a byte-boundary
+/// panic.
+fn strip_prefix_ci<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    let head = s.get(..prefix.len())?;
+    if head.eq_ignore_ascii_case(prefix) {
+        Some(&s[prefix.len()..])
+    } else {
+        None
+    }
+}
+
+/// Parses the key token (the part after any modifiers): a named special key, `space`, a
+/// function key `f1`..`f12`, or a single character.
+fn parse_key_token(token: &str) -> Result<Key, String> {
+    let lower = token.to_ascii_lowercase();
+
+    let special = match lower.as_str() {
+        "backspace" => Some(SpecialKey::Backspace),
+        "enter" | "return" => Some(SpecialKey::Enter),
+        "left" => Some(SpecialKey::Left),
+        "right" => Some(SpecialKey::Right),
+        "up" => Some(SpecialKey::Up),
+        "down" => Some(SpecialKey::Down),
+        "home" => Some(SpecialKey::Home),
+        "end" => Some(SpecialKey::End),
+        "pageup" | "pgup" => Some(SpecialKey::PageUp),
+        "pagedown" | "pgdn" => Some(SpecialKey::PageDown),
+        "tab" => Some(SpecialKey::Tab),
+        "backtab" => Some(SpecialKey::BackTab),
+        "delete" | "del" => Some(SpecialKey::Delete),
+        "insert" | "ins" => Some(SpecialKey::Insert),
+        "esc" | "escape" => Some(SpecialKey::Esc),
+        _ => None,
+    };
+    if let Some(sk) = special {
+        return Ok(Key::SpecialKey(sk));
+    }
+
+    if lower == "space" {
+        return Ok(Key::Character(' '));
+    }
+
+    // Function keys f1..f12 (but not a bare "f", which is the character key).
+    if let Some(num) = lower.strip_prefix('f')
+        && let Ok(n) = num.parse::<u8>()
+    {
+        let fk = match n {
+            1 => Some(FunctionKey::F1),
+            2 => Some(FunctionKey::F2),
+            3 => Some(FunctionKey::F3),
+            4 => Some(FunctionKey::F4),
+            5 => Some(FunctionKey::F5),
+            6 => Some(FunctionKey::F6),
+            7 => Some(FunctionKey::F7),
+            8 => Some(FunctionKey::F8),
+            9 => Some(FunctionKey::F9),
+            10 => Some(FunctionKey::F10),
+            11 => Some(FunctionKey::F11),
+            12 => Some(FunctionKey::F12),
+            _ => None,
+        };
+        if let Some(fk) = fk {
+            return Ok(Key::FunctionKey(fk));
+        }
+    }
+
+    // Single character (letters, digits, symbols like `+` or `` ` ``).
+    let mut chars = token.chars();
+    if let Some(c) = chars.next()
+        && chars.next().is_none()
+    {
+        return Ok(Key::Character(c));
+    }
+
+    Err(format!("unrecognized key: '{token}'"))
+}
+
+#[cfg(test)]
+mod parse_display_tests {
+    use super::*;
+
+    fn ctrl() -> ModifierKeysMask {
+        ModifierKeysMask::new().with_ctrl()
+    }
+    fn alt() -> ModifierKeysMask {
+        ModifierKeysMask::new().with_alt()
+    }
+
+    #[test]
+    fn parses_plain_characters() {
+        assert_eq!("q".parse::<KeyPress>().unwrap(), key_press! { @char 'q' });
+        assert_eq!("A".parse::<KeyPress>().unwrap(), key_press! { @char 'A' });
+        assert_eq!("`".parse::<KeyPress>().unwrap(), key_press! { @char '`' });
+        assert_eq!("+".parse::<KeyPress>().unwrap(), key_press! { @char '+' });
+        assert_eq!("space".parse::<KeyPress>().unwrap(), key_press! { @char ' ' });
+    }
+
+    #[test]
+    fn shift_folds_into_the_character() {
+        // Shift+letter is delivered by the terminal as the uppercase char, no modifier.
+        assert_eq!("shift+a".parse::<KeyPress>().unwrap(), key_press! { @char 'A' });
+    }
+
+    #[test]
+    fn parses_modified_characters() {
+        assert_eq!(
+            "ctrl+a".parse::<KeyPress>().unwrap(),
+            key_press! { @char ctrl(), 'a' }
+        );
+        assert_eq!(
+            "alt+`".parse::<KeyPress>().unwrap(),
+            key_press! { @char alt(), '`' }
+        );
+    }
+
+    #[test]
+    fn modifier_order_is_irrelevant_and_case_insensitive() {
+        let a = "ctrl+alt+x".parse::<KeyPress>().unwrap();
+        let b = "ALT+Ctrl+x".parse::<KeyPress>().unwrap();
+        assert_eq!(a, b);
+        assert_eq!(
+            a,
+            key_press! { @char ModifierKeysMask::new().with_ctrl().with_alt(), 'x' }
+        );
+    }
+
+    #[test]
+    fn parses_special_keys() {
+        assert_eq!(
+            "tab".parse::<KeyPress>().unwrap(),
+            key_press! { @special SpecialKey::Tab }
+        );
+        assert_eq!(
+            "esc".parse::<KeyPress>().unwrap(),
+            key_press! { @special SpecialKey::Esc }
+        );
+        // Both spellings of Shift+Tab collapse to BackTab.
+        let backtab = key_press! { @special SpecialKey::BackTab };
+        assert_eq!("backtab".parse::<KeyPress>().unwrap(), backtab);
+        assert_eq!("shift+tab".parse::<KeyPress>().unwrap(), backtab);
+    }
+
+    #[test]
+    fn parses_ctrl_arrows() {
+        for (spec, sk) in [
+            ("ctrl+up", SpecialKey::Up),
+            ("ctrl+down", SpecialKey::Down),
+            ("ctrl+left", SpecialKey::Left),
+            ("ctrl+right", SpecialKey::Right),
+        ] {
+            assert_eq!(
+                spec.parse::<KeyPress>().unwrap(),
+                key_press! { @special ctrl(), sk }
+            );
+        }
+    }
+
+    #[test]
+    fn parses_function_keys() {
+        assert_eq!(
+            "f1".parse::<KeyPress>().unwrap(),
+            key_press! { @fn FunctionKey::F1 }
+        );
+        assert_eq!(
+            "f12".parse::<KeyPress>().unwrap(),
+            key_press! { @fn FunctionKey::F12 }
+        );
+        // A bare `f` is the character key, not a function key.
+        assert_eq!("f".parse::<KeyPress>().unwrap(), key_press! { @char 'f' });
+    }
+
+    #[test]
+    fn rejects_invalid_specs() {
+        assert!("".parse::<KeyPress>().is_err());
+        assert!("   ".parse::<KeyPress>().is_err());
+        assert!("ctrl+".parse::<KeyPress>().is_err());
+        assert!("nonsense".parse::<KeyPress>().is_err());
+        assert!("f13".parse::<KeyPress>().is_err());
+    }
+
+    #[test]
+    fn displays_in_canonical_form() {
+        assert_eq!(key_press! { @char 'q' }.to_string(), "q");
+        assert_eq!(key_press! { @char 'A' }.to_string(), "A");
+        assert_eq!(key_press! { @char ' ' }.to_string(), "space");
+        assert_eq!(key_press! { @char ctrl(), 'a' }.to_string(), "ctrl+a");
+        assert_eq!(key_press! { @char alt(), '`' }.to_string(), "alt+`");
+        assert_eq!(
+            key_press! { @special ctrl(), SpecialKey::Down }.to_string(),
+            "ctrl+down"
+        );
+        assert_eq!(
+            key_press! { @special SpecialKey::BackTab }.to_string(),
+            "backtab"
+        );
+        assert_eq!(key_press! { @fn FunctionKey::F1 }.to_string(), "f1");
+    }
+
+    #[test]
+    fn round_trips_every_representable_value() {
+        let cases = [
+            key_press! { @char 'q' },
+            key_press! { @char 'A' },
+            key_press! { @char ' ' },
+            key_press! { @char '`' },
+            key_press! { @char ctrl(), 'a' },
+            key_press! { @char alt(), '`' },
+            key_press! { @special SpecialKey::Tab },
+            key_press! { @special SpecialKey::BackTab },
+            key_press! { @special SpecialKey::Esc },
+            key_press! { @special ctrl(), SpecialKey::Up },
+            key_press! { @special ctrl(), SpecialKey::Down },
+            key_press! { @special ctrl(), SpecialKey::Left },
+            key_press! { @special ctrl(), SpecialKey::Right },
+            key_press! { @fn FunctionKey::F5 },
+        ];
+        for kp in cases {
+            let rendered = kp.to_string();
+            let reparsed = rendered.parse::<KeyPress>().unwrap();
+            assert_eq!(kp, reparsed, "round-trip failed for {rendered:?}");
         }
     }
 }
