@@ -25,7 +25,7 @@ use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,
                choose,
                core::pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
-                           PtySessionConfigOption},
+                           PtySessionConfigToken},
                ok,
                readline_async::{HowToChoose, style::StyleSheet},
                set_mimalloc_in_main, vp_height, vp_width};
@@ -49,9 +49,9 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .cli_args(["-u", "-i"]) // -u: unbuffered, -i: interactive
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
+                + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
-        .start()?;
+        .start_async()?;
 
     // Spawn a task to handle output.
     let output_handle = tokio::spawn(async move {
@@ -210,12 +210,12 @@ async fn run_shell_demo() -> miette::Result<()> {
 
     // Start a shell session.
     let mut session = PtySessionBuilder::new("sh")
-        .cli_args(["-i"]) // Interactive mode
+        .cli_args(["-i"]) // Interactive mode.
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
+                + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
-        .start()?;
+        .start_async()?;
 
     // Spawn output handler.
     let output_handle = tokio::spawn(async move {

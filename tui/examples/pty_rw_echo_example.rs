@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Super minimal [`PTY`] test - just echo raw bytes to verify data flow
+//! Super minimal [`PTY`] test: just echo raw bytes to verify data flow.
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
@@ -9,7 +9,7 @@ use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                             PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
-                            PtySessionConfigOption},
+                            PtySessionConfigToken},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                ok, set_mimalloc_in_main, vp_col, vp_row};
@@ -22,9 +22,10 @@ async fn main() -> miette::Result<()> {
 
     // Initialize logging.
     let _log_guard = try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
+    tracing::debug!("Starting Echo Test");
 
     println!("🚀 Starting Echo Test");
-    println!("📋 Running 'cat' - it will echo whatever you type");
+    println!("📋 Running 'cat': it will echo whatever you type");
     println!("⌨️  Type anything, Ctrl+Q to quit");
     println!();
 
@@ -33,7 +34,7 @@ async fn main() -> miette::Result<()> {
     let output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
-    // Start raw mode and full screen TUI
+    // Start raw mode and full screen TUI.
     let _raw_mode_guard = output_device.enter_raw_mode()?;
     let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
 
@@ -53,10 +54,8 @@ async fn main() -> miette::Result<()> {
 
     // Spawn cat process (simple echo).
     let mut session = PtySessionBuilder::new("cat")
-        .with_config(
-            DefaultPtySessionConfig + PtySessionConfigOption::Size(terminal_size),
-        )
-        .start()?;
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(terminal_size))
+        .start_async()?;
 
     println!("Type something and press Enter to see it echo back:");
 

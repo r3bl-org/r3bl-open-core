@@ -10,7 +10,6 @@ description = "Fully async modern TUI framework for Rust. Flexbox layouts, CSS s
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "async", "terminal", "markdown", "pty"]
 categories = ["command-line-interface", "command-line-utilities"]
-readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
 authors = [
     "Nazmul Idris <idris@developerlife.com>",

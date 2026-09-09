@@ -89,12 +89,12 @@
 //! For a complete understanding of offscreen buffers, storage, and virtual terminals,
 //! refer to:
 //!
-//! 1. [`CanvasStorage`] ([`types.rs`]): Trait Level — *The "Why"* (Architectural
+//! 1. [`CanvasStorage`] ([`types.rs`]): Trait Level: *The "Why"* (Architectural
 //!    evolution, storage abstraction, and motivation for 2D viewport panning).
-//! 2. [`GrowableBuffer`] ([`growable_buffer.rs`]): Implementation Level — *The "How It's
+//! 2. [`GrowableBuffer`] ([`growable_buffer.rs`]): Implementation Level: *The "How It's
 //!    Stored"* (The [Canvas and Viewport concept], [`VecDeque`] history storage, and 2D
 //!    grid mechanics).
-//! 3. [`pty_mux`] ([`mod.rs`]): UX & Parser Level — *The "How It's Triggered"* (Viewport
+//! 3. [`pty_mux`] ([`mod.rs`]): UX & Parser Level: *The "How It's Triggered"* (Viewport
 //!    mechanics, mouse scroll vs horizontal pan, and [`VT-100`] parser cursor anchoring).
 //!
 //! # Usage Example

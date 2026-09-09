@@ -42,8 +42,33 @@
 //! - **Type safety**: Protocol types use [`VT-100`] nomenclature; public API uses
 //!   domain-appropriate names
 //! - **Evolution**: Protocol can change without breaking application code
+//! ## Protocol Scope & Limitations
 //!
+//! This module translates [`VT-100`] IR produced by
+//! [`vt_100_terminal_input_parser`].
+//!
+//! * **No Enhanced Keyboard Protocol Support**: The [`direct_to_ansi`] input pipeline
+//!   currently does not support [`Fixterms`] or the [`Kitty`] keyboard protocol. Incoming
+//!   escape sequences using [`CSI u`] (such as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by
+//!   [`vt_100_terminal_input_parser`] before reaching this module.
+//! * **Platform Backend Selection**: On Linux, [`TERMINAL_LIB_BACKEND`] selects
+//!   [`direct_to_ansi`]. On macOS and Windows, [`TERMINAL_LIB_BACKEND`] selects
+//!   [`Crossterm`], which supports enhanced keyboard protocols.
+//! * **Outbound Child Process Translation**: To translate outbound [`KeyPress`] events
+//!   into raw terminal control sequences (including [`CSI u`] / [`Fixterms`]) for child
+//!   processes running inside a [`PTY`], see [`key_press_generator`].
+//!
+//! [`Crossterm`]: https://crates.io/crates/crossterm
+//! [`CSI u`]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+//! [`direct_to_ansi`]: mod@crate::terminal_lib_backends::direct_to_ansi
+//! [`Fixterms`]: https://www.leonerd.org.uk/hacks/fixterms/
+//! [`key_press_generator`]: mod@crate::core::pty::pty_session::events::key_press_generator
+//! [`KeyPress`]: crate::KeyPress
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
 
 use crate::{Button, FocusEvent, FunctionKey, InputEvent, Key, KeyPress, KeyState,
             ModifierKeysMask, MouseInput, MouseInputKind, SpecialKey, VPSize,
@@ -240,7 +265,7 @@ fn convert_key_code_to_keypress(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FunctionKey, NarrowingCastToU16, TermPos, VPWidth, VPHeight};
+    use crate::{FunctionKey, NarrowingCastToU16, TermPos, VPHeight, VPWidth};
 
     // MARK: Keyboard conversion tests
 

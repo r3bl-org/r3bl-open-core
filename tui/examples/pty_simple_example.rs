@@ -9,9 +9,9 @@
 use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
                TerminalModeController, ansi_output, assert_terminal_is_interactive,
                core::{get_size,
-                      pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
-                            PtyInputEvent, PtyOutputEvent, PtySession,
-                            PtySessionBuilder, PtySessionConfigOption},
+                      pty::{AsyncPtySession, ControlSequence, CursorKeyMode,
+                            DefaultPtySessionConfig, PtyInputEvent, PtyOutputEvent,
+                            PtySessionBuilder, PtySessionConfigToken},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                ok, set_mimalloc_in_main, vp_col, vp_row};
@@ -59,10 +59,8 @@ async fn main() -> miette::Result<()> {
     tracing::debug!("Spawning htop with PTY size: {:?}", terminal_size);
 
     let session = PtySessionBuilder::new("htop")
-        .with_config(
-            DefaultPtySessionConfig + PtySessionConfigOption::Size(terminal_size),
-        )
-        .start()?;
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(terminal_size))
+        .start_async()?;
 
     tracing::debug!("htop process started successfully");
 
@@ -80,7 +78,7 @@ async fn main() -> miette::Result<()> {
 }
 
 async fn run_event_loop(
-    mut session: PtySession,
+    mut session: AsyncPtySession,
     input_device: &mut InputDevice,
     output_device: &mut OutputDevice,
 ) -> miette::Result<()> {
@@ -91,7 +89,7 @@ async fn run_event_loop(
 
     loop {
         tokio::select! {
-            // Handle PTY output - properly wait for data.
+            // Handle PTY output: properly wait for data.
             Some(event) = session.rx_output_event.recv() => {
                 match event {
                     PtyOutputEvent::Output(data) => {

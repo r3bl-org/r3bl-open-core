@@ -3,11 +3,11 @@
 use super::cross_platform_commands;
 use crate::{DefaultPtySessionConfig, PtyInputEvent, PtyOutputEvent,
             PtySessionConfigOption, vp_height, vp_width};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-#[tokio::test]
-async fn test_pty_resize() {
-    let mut session = cross_platform_commands::sh()
+#[test]
+fn test_pty_resize() {
+    let session = cross_platform_commands::sh()
         .with_config(
             DefaultPtySessionConfig
                 + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
@@ -20,7 +20,6 @@ async fn test_pty_resize() {
     session
         .tx_input_event
         .send(PtyInputEvent::Resize(new_size))
-        .await
         .expect("Failed to send resize");
 
     // 2. Wait for the shell to be ready by sending a probe command and polling output
@@ -30,22 +29,30 @@ async fn test_pty_resize() {
     session
         .tx_input_event
         .send(PtyInputEvent::WriteLine("echo READY".to_string()))
-        .await
         .expect("Failed to send readiness probe");
 
     let mut captured_output = Vec::new();
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        match tokio::time::timeout_at(deadline, session.rx_output_event.recv()).await {
-            Ok(Some(PtyOutputEvent::Output(bytes))) => {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        assert!(
+            !remaining.is_zero(),
+            "Shell did not become ready within 5 seconds"
+        );
+        match session.rx_output_event.recv_timeout(remaining) {
+            Ok(PtyOutputEvent::Output(bytes)) => {
                 captured_output.extend_from_slice(&bytes);
                 if String::from_utf8_lossy(&captured_output).contains("READY") {
                     break;
                 }
             }
-            Ok(Some(_)) => {} // Ignore non-output events.
-            Ok(None) => panic!("Output channel closed before shell became ready"),
-            Err(err) => panic!("Shell did not become ready within 5 seconds: {err}"),
+            Ok(_) => {} // Ignore non-output events.
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("Output channel closed before shell became ready");
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                panic!("Shell did not become ready within 5 seconds: timed out");
+            }
         }
     }
 
@@ -58,22 +65,21 @@ async fn test_pty_resize() {
     session
         .tx_input_event
         .send(PtyInputEvent::WriteLine(cmd.to_string()))
-        .await
         .expect("Failed to send input");
 
-    // 3b. Close the input channel so the writer task can exit.
-    // Without this, the writer task blocks on `blocking_recv()` waiting for more input,
-    // while the session completion handler waits for the writer task - causing a
-    // deadlock.
+    // 3b. Close the input channel so the writer thread can exit.
+    // Without this, the writer thread blocks on `recv()` waiting for more input,
+    // while the session completion handler waits for the writer thread (causing a
+    // deadlock).
     session
         .tx_input_event
         .send(PtyInputEvent::Close)
-        .await
         .expect("Failed to send close");
 
     // 4. Wait for completion.
-    let _status = (&mut session.orchestrator_task_handle)
-        .await
+    let _status = session
+        .orchestrator_task_handle
+        .join()
         .expect("Join error")
         .expect("Session error");
 

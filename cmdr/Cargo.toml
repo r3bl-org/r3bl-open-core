@@ -1,7 +1,6 @@
 [package]
 name = "r3bl-cmdr"
 version = "0.0.26"
-readme = "README.md"
 edition = "2024"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"

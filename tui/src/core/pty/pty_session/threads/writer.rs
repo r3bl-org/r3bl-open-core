@@ -4,61 +4,65 @@ use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyInput
             PtyOutputEvent, ok};
 use miette::miette;
 use std::{io::Write,
-          sync::{Arc, Mutex}};
-use tokio::sync::mpsc::{Receiver, Sender};
+          sync::{Arc, Mutex,
+                 mpsc::{Receiver, SyncSender}},
+          thread::JoinHandle};
 
-/// Spawns a blocking task that reads [`PtyInputEvent`]s from an [`bounded MPSC channel`]
+/// Spawns a dedicated thread that reads [`PtyInputEvent`]s from a synchronous bounded
 /// channel and writes to the [`PTY`] controller.
 ///
-/// This task runs on a dedicated blocking thread. It uses [`blocking_recv()`] to wait for
-/// input events without spinning, ensuring efficient CPU usage.
+/// This thread runs with the name `pty-writer`. It waits for input events without
+/// spinning, ensuring efficient CPU usage.
 ///
 /// # Backpressure and Stalling
 ///
-/// 1. **Input Empty**: If the input channel is empty, this task stalls on
-///    [`blocking_recv()`], waiting for the TUI to send a command.
+/// 1. **Input Empty**: If the input channel is empty, this thread stalls waiting for the
+///    caller to send a command.
 /// 2. **Output Full**: If the output event channel is full, any error reporting via
-///    [`blocking_send()`] will stall this task until the main event loop drains the
-///    output queue.
+///    [`send()`] will stall this thread until the receiver drains the output queue.
 ///
-/// [`blocking_recv()`]: tokio::sync::mpsc::Receiver::blocking_recv
-/// [`blocking_send()`]: tokio::sync::mpsc::Sender::blocking_send
-/// [`bounded MPSC channel`]: tokio::sync::mpsc::channel
+/// # Errors
+///
+/// Returns an [`Err`] if spawning the OS thread fails.
+///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[must_use]
-pub fn spawn_blocking_writer_task(
+/// [`send()`]: std::sync::mpsc::SyncSender::send
+pub fn spawn_pty_writer_thread(
     mut writer: ControllerWriter,
     controller: Arc<Mutex<Option<Controller>>>,
-    mut input_event_ch_rx_half: Receiver<PtyInputEvent>,
-    output_event_ch_tx_half: Sender<PtyOutputEvent>,
-) -> tokio::task::JoinHandle<miette::Result<()>> {
-    tokio::task::spawn_blocking(move || -> miette::Result<()> {
-        while let Some(input) = input_event_ch_rx_half.blocking_recv() {
-            match impl_writer_task::handle_pty_input_event(
-                input,
-                &mut writer,
-                &controller,
-                &output_event_ch_tx_half,
-            )? {
-                Continuation::Continue => {}
-                Continuation::Stop => break,
-                Continuation::Restart => {
-                    unreachable!("handle_pty_input_event never returns Restart")
-                }
-                Continuation::ReturnError(()) => {
-                    unimplemented!(
-                        "The PTY writer loop does not currently produce error-carrying \
-                         continuations. If this is reached, the framework's internal \
-                         logic has been violated."
-                    );
+    input_event_ch_rx_half: Receiver<PtyInputEvent>,
+    output_event_ch_tx_half: SyncSender<PtyOutputEvent>,
+) -> miette::Result<JoinHandle<miette::Result<()>>> {
+    std::thread::Builder::new()
+        .name("pty-writer".into())
+        .spawn(move || -> miette::Result<()> {
+            while let Ok(input) = input_event_ch_rx_half.recv() {
+                match impl_writer::handle_pty_input_event(
+                    input,
+                    &mut writer,
+                    &controller,
+                    &output_event_ch_tx_half,
+                )? {
+                    Continuation::Continue => {}
+                    Continuation::Stop => break,
+                    Continuation::Restart => {
+                        unreachable!("handle_pty_input_event never returns Restart")
+                    }
+                    Continuation::ReturnError(()) => {
+                        unimplemented!(
+                            "The PTY writer loop does not currently produce error-carrying \
+                             continuations. If this is reached, the framework's internal \
+                             logic has been violated."
+                        );
+                    }
                 }
             }
-        }
-        ok!()
-    })
+            ok!()
+        })
+        .map_err(|e| miette!("Failed to spawn pty-writer thread: {e}"))
 }
 
-mod impl_writer_task {
+mod impl_writer {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -76,7 +80,7 @@ mod impl_writer_task {
         input: PtyInputEvent,
         writer: &mut ControllerWriter,
         controller: &Arc<Mutex<Option<Controller>>>,
-        output_event_ch_tx_half: &Sender<PtyOutputEvent>,
+        output_event_ch_tx_half: &SyncSender<PtyOutputEvent>,
     ) -> miette::Result<Continuation> {
         match input {
             PtyInputEvent::Write(bytes) => {
@@ -112,7 +116,7 @@ mod impl_writer_task {
                         return Ok(Continuation::Continue);
                     };
                     controller.resize(size.into()).map_err(|e| {
-                        let _unused = output_event_ch_tx_half.blocking_send(
+                        let _unused = output_event_ch_tx_half.send(
                             PtyOutputEvent::WriteError(format!("Resize failed: {e}")),
                         );
                         miette!("Failed to resize PTY")
@@ -121,9 +125,8 @@ mod impl_writer_task {
             }
             PtyInputEvent::Flush => {
                 writer.flush().map_err(|e| {
-                    let _unused = output_event_ch_tx_half.blocking_send(
-                        PtyOutputEvent::WriteError(format!("Flush failed: {e}")),
-                    );
+                    let _unused = output_event_ch_tx_half
+                        .send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
                     miette!("Failed to flush PTY")
                 })?;
             }
@@ -154,16 +157,16 @@ mod impl_writer_task {
         writer: &mut ControllerWriter,
         data: &[u8],
         error_msg: &str,
-        output_event_ch_tx_half: &Sender<PtyOutputEvent>,
+        output_event_ch_tx_half: &SyncSender<PtyOutputEvent>,
     ) -> miette::Result<()> {
         writer.write_all(data).map_err(|e| {
             let _unused = output_event_ch_tx_half
-                .blocking_send(PtyOutputEvent::WriteError(format!("Write failed: {e}")));
+                .send(PtyOutputEvent::WriteError(format!("Write failed: {e}")));
             miette!("{error_msg}")
         })?;
         writer.flush().map_err(|e| {
             let _unused = output_event_ch_tx_half
-                .blocking_send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
+                .send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
             miette!("{error_msg}")
         })?;
         ok!()

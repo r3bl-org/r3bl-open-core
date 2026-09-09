@@ -1,43 +1,50 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{OscEvent, PtyControlledChildExitStatus};
+use crate::VPSize;
 use std::borrow::Cow;
 
-/// Events received from a [`PTY`] process.
+// Input event definitions.
+
+/// Input events that can be sent to an interactive [`PTY`] session.
 ///
-/// This is a unified event type used by both read-only and read-write sessions.
+/// These events allow your program to communicate with the child process running in
+/// the [`PTY`], from basic text input to terminal control sequences and window resizing.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
-pub enum PtyOutputEvent {
-    /// Raw output from the child process.
-    Output(Vec<u8>),
+pub enum PtyInputEvent {
+    /// Send raw bytes to child process's stdin.
+    Write(Vec<u8>),
 
-    /// [`OSC`] (Operating System Command) sequences.
+    /// Send text with an automatic newline.
+    WriteLine(String),
+
+    /// Send a terminal control sequence (Ctrl-C, Arrow keys, Function keys, etc.).
+    /// Takes a [`ControlSequence`] and the current [`CursorKeyMode`].
+    SendControl(ControlSequence, CursorKeyMode),
+
+    /// Request a terminal window resize.
+    Resize(VPSize),
+
+    /// Explicit flush without writing new data.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Osc(OscEvent),
+    /// Forces any previously buffered data to be sent to the child process immediately.
+    Flush,
 
-    /// Child process exited normally.
-    Exit(PtyControlledChildExitStatus),
-
-    /// Child process crashed or terminated unexpectedly.
-    UnexpectedExit(String),
-
-    /// Write operation failed - session will terminate.
-    ///
-    /// This gives users a chance to understand why the session ended.
-    WriteError(String),
+    /// Close the input stream (EOF).
+    Close,
 }
+
+// Control sequence definitions.
 
 /// Cursor key mode for terminal compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorKeyMode {
-    /// Normal mode ([`ANSI`][ - `ESC`][ sequences
+    /// Normal mode ([`ANSI`]: `ESC [` sequences).
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     Normal,
-    /// Application mode (VT52) - `ESC O` sequences
+    /// Application mode (VT52): `ESC O` sequences.
     #[default]
     Application,
 }
@@ -55,26 +62,26 @@ pub enum ControlSequence {
     CtrlE, // Move to end of line
     CtrlK, // Kill to end of line
 
-    // Common keys
+    // Common keys.
     Tab,    // Autocomplete
     Enter,  // Newline
     Escape, // ESC key
     Backspace,
     Delete,
 
-    // Arrow keys (mode-aware)
+    // Arrow keys (mode-aware).
     ArrowUp,
     ArrowDown,
     ArrowLeft,
     ArrowRight,
 
-    // Navigation keys
+    // Navigation keys.
     Home,
     End,
     PageUp,
     PageDown,
 
-    // Function keys (F1-F12)
+    // Function keys (F1-F12).
     F(u8), // F(1) for F1, F(2) for F2, etc.
 
     // Raw escape sequence for advanced use cases.
@@ -84,11 +91,11 @@ pub enum ControlSequence {
 impl ControlSequence {
     /// Converts a control sequence to its byte representation based on cursor mode.
     ///
-    /// Returns a `Cow` to avoid unnecessary allocations for static sequences.
+    /// Returns a [`Cow`] to avoid unnecessary allocations for static sequences.
     #[must_use]
     pub fn to_bytes(&self, mode: CursorKeyMode) -> Cow<'static, [u8]> {
         match self {
-            // Control characters (mode-independent)
+            // Control characters (mode-independent).
             ControlSequence::CtrlC => Cow::Borrowed(&[0x03]),
             ControlSequence::CtrlD => Cow::Borrowed(&[0x04]),
             ControlSequence::CtrlZ => Cow::Borrowed(&[0x1A]),
@@ -98,14 +105,14 @@ impl ControlSequence {
             ControlSequence::CtrlE => Cow::Borrowed(&[0x05]),
             ControlSequence::CtrlK => Cow::Borrowed(&[0x0B]),
 
-            // Common keys (mode-independent)
+            // Common keys (mode-independent).
             ControlSequence::Tab => Cow::Borrowed(&[0x09]),
             ControlSequence::Enter => Cow::Borrowed(&[0x0D]), // CR, not LF
             ControlSequence::Escape => Cow::Borrowed(&[0x1B]),
             ControlSequence::Backspace => Cow::Borrowed(&[0x7F]),
             ControlSequence::Delete => Cow::Borrowed(&[0x1B, 0x5B, 0x33, 0x7E]), /* ESC[3~ */
 
-            // Arrow keys (mode-aware)
+            // Arrow keys (mode-aware).
             ControlSequence::ArrowUp => match mode {
                 CursorKeyMode::Normal => Cow::Borrowed(&[0x1B, 0x5B, 0x41]), // ESC[A
                 CursorKeyMode::Application => Cow::Borrowed(&[0x1B, 0x4F, 0x41]), /* ESC O A */
@@ -123,13 +130,13 @@ impl ControlSequence {
                 CursorKeyMode::Application => Cow::Borrowed(&[0x1B, 0x4F, 0x44]), /* ESC O D */
             },
 
-            // Navigation keys (mode-independent)
+            // Navigation keys (mode-independent).
             ControlSequence::Home => Cow::Borrowed(&[0x1B, 0x5B, 0x48]), // ESC[H
             ControlSequence::End => Cow::Borrowed(&[0x1B, 0x5B, 0x46]),  // ESC[F
             ControlSequence::PageUp => Cow::Borrowed(&[0x1B, 0x5B, 0x35, 0x7E]), // ESC[5~
             ControlSequence::PageDown => Cow::Borrowed(&[0x1B, 0x5B, 0x36, 0x7E]), /* ESC[6~ */
 
-            // Function keys (mode-independent)
+            // Function keys (mode-independent).
             ControlSequence::F(n) => {
                 match n {
                     1 => Cow::Borrowed(&[0x1B, 0x4F, 0x50]), // ESC O P
@@ -149,7 +156,7 @@ impl ControlSequence {
                 }
             }
 
-            // Raw sequence - pass through as-is (requires owned data)
+            // Raw sequence: pass through as-is (requires owned data).
             ControlSequence::RawSequence(bytes) => Cow::Owned(bytes.clone()),
         }
     }

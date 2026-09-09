@@ -1,40 +1,106 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CSI_START, ControlSequence, CursorKeyMode, FunctionKey, Key, KeyPress,
-            KeyState, LossyConvertToByte, ModifierKeysMask, SpecialKey, VPSize,
-            WideningCastToU32};
+//! # Convert [`KeyPress`] Events to Child Process [`stdin`] input
+//!
+//! This module translates high-level [`KeyPress`] events into [`PtyInputEvent`]s
+//! containing the exact byte sequences and escape codes expected by a child process
+//! running inside a [`PTY`] (such as `bash`, `vim`, or `nano`).
+//!
+//! ## Two Directions of Keyboard Flow
+//!
+//! Keyboard events flow through two distinct stages in an application:
+//!
+//! 1. **Host Input (User Keyboard → Application)**: The user types on their physical
+//!    keyboard into a host terminal (e.g., [`WezTerm`] or [`Alacritty`]). The host
+//!    terminal driver reads raw bytes from the host [`/dev/tty`] or [`stdin`] and parses
+//!    them into structured Rust [`KeyPress`] events:
+//!    * On **Linux**, [`TERMINAL_LIB_BACKEND`] selects [`direct_to_ansi`]'s input
+//!      pipeline ([`vt_100_terminal_input_parser`] and [`protocol_conversion`]). This
+//!      pipeline is pure [`VT-100`] and does not support [`Fixterms`]; incoming enhanced
+//!      keys (such as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by the parser.
+//!    * On **macOS and Windows**, [`TERMINAL_LIB_BACKEND`] selects [`Crossterm`], which
+//!      supports enhanced keyboard protocols.
+//!    * Enhanced keys can also be synthetically injected (e.g., in unit tests).
+//!
+//! 2. **Child Process Input (Application → Child Process [`stdin`])**: When the
+//!    application forwards keystrokes to a child process inside the [`PTY`], the child
+//!    process expects raw terminal bytes, not Rust structs. **This module**
+//!    (`key_press_generator`) is the outbound generator: it serializes those [`KeyPress`]
+//!    events into raw [`ANSI`] sequences, [`ASCII`] control codes, or [`CSI u`]
+//!    ([`Fixterms`]) sequences wrapped in [`PtyInputEvent`] to write directly to the
+//!    child's [`stdin`].
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────┐
+//! │ Host Terminal (User types on physical keyboard)        │
+//! └───────────────────────────┬────────────────────────────┘
+//!                             │ Raw ANSI bytes (e.g., "\x1B[A")
+//! ┌───────────────────────────▼────────────────────────────┐
+//! │ Host Backend (protocol_conversion.rs)                  │
+//! │ Parses bytes into InputEvent::Keyboard(KeyPress)       │
+//! └───────────────────────────┬────────────────────────────┘
+//!                             │ Structured KeyPress
+//! ┌───────────────────────────▼────────────────────────────┐
+//! │ Application / PTY Mux (keyboard_command.rs)            │
+//! │ Decides whether to intercept (scroll UI) or forward    │
+//! └───────────────────────────┬────────────────────────────┘
+//!                             │ key_press.into()
+//! ┌───────────────────────────▼────────────────────────────┐
+//! │ key_press_generator.rs (THIS MODULE)                   │
+//! │ Serializes KeyPress into escape codes & control bytes  │
+//! └───────────────────────────┬────────────────────────────┘
+//!                             │ PtyInputEvent::SendControl / Write
+//! ┌───────────────────────────▼────────────────────────────┐
+//! │ PTY Writer Thread → Child Process stdin (bash, vim)    │
+//! └────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Algorithmic [`CSI`] Encoding
+//!
+//! Instead of hundreds of hardcoded match arms for every modifier combination, this
+//! module algorithmically computes standard [`xterm`] modifier codes:
+//!
+//! | Code | Modifiers      |
+//! | :--- | :------------- |
+//! | 1    | none           |
+//! | 2    | shift          |
+//! | 3    | alt            |
+//! | 4    | alt+shift      |
+//! | 5    | ctrl           |
+//! | 6    | ctrl+shift     |
+//! | 7    | ctrl+alt       |
+//! | 8    | ctrl+alt+shift |
+//!
+//! For complex key combinations (such as `Ctrl+Shift+T` or modified Unicode), it
+//! generates standard [`CSI u`] ([`Fixterms`]) sequences
+//! (`\x1b[<codepoint>;<modifier>u`).
+//!
+//! [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`Crossterm`]: https://crates.io/crates/crossterm
+//! [`CSI u`]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+//! [`CSI`]: crate::CsiSequence
+//! [`direct_to_ansi`]: mod@crate::terminal_lib_backends::direct_to_ansi
+//! [`Fixterms`]: https://www.leonerd.org.uk/hacks/fixterms/
+//! [`KeyPress`]: crate::KeyPress
+//! [`protocol_conversion`]:
+//!     mod@crate::terminal_lib_backends::direct_to_ansi::input::protocol_conversion
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PtyInputEvent`]: crate::PtyInputEvent
+//! [`stdin`]: std::io::stdin
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+//! [`WezTerm`]: https://wezfurlong.org/wezterm/
+//! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 
-/// Input events that can be sent to an interactive [`PTY`] session.
-///
-/// These events allow your program to communicate with the child process running in
-/// the [`PTY`], from basic text input to terminal control sequences and window resizing.
-///
-/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[derive(Debug, Clone)]
-pub enum PtyInputEvent {
-    /// Send raw bytes to child process's stdin.
-    Write(Vec<u8>),
+use super::input::{ControlSequence, CursorKeyMode, PtyInputEvent};
+use crate::{CSI_START, FunctionKey, Key, KeyPress, KeyState, LossyConvertToByte,
+            ModifierKeysMask, SpecialKey, WideningCastToU32};
 
-    /// Send text with an automatic newline.
-    WriteLine(String),
-
-    /// Send a terminal control sequence (Ctrl-C, Arrow keys, Function keys, etc.).
-    /// Takes a [`ControlSequence`] and the current [`CursorKeyMode`].
-    SendControl(ControlSequence, CursorKeyMode),
-
-    /// Request a terminal window resize.
-    Resize(VPSize),
-
-    /// Explicit flush without writing new data.
-    ///
-    /// Forces any previously buffered data to be sent to the child process immediately.
-    Flush,
-
-    /// Close the input stream (EOF).
-    Close,
-}
-
-/// Clean modifier state representation
+/// Clean modifier state representation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ModifierState {
     ctrl: bool,
@@ -124,7 +190,7 @@ fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEv
     }
 }
 
-/// Algorithmically convert characters with modifiers
+/// Algorithmically convert characters with modifiers.
 fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyInputEvent {
     match modifiers {
         // Ctrl-only combinations.
@@ -134,7 +200,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             alt: false,
         } => convert_ctrl_character(ch),
 
-        // Alt-only combinations (simple meta sequences)
+        // Alt-only combinations (simple meta sequences).
         ModifierState {
             ctrl: false,
             shift: false,
@@ -152,7 +218,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             }
         }
 
-        // Shift-only for space (important for reverse direction in some apps)
+        // Shift-only for space (important for reverse direction in some apps).
         ModifierState {
             ctrl: false,
             shift: true,
@@ -179,8 +245,8 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                     CursorKeyMode::default(),
                 )
             } else if ch.is_ascii() {
-                // For other ASCII chars, send ESC + char (shift is handled by the char.
-                // itself)
+                // For other ASCII chars, send ESC + char (shift is handled by the char
+                // itself).
                 PtyInputEvent::SendControl(
                     ControlSequence::RawSequence(vec![0x1B, ch.to_u8_lossy()]),
                     CursorKeyMode::default(),
@@ -207,7 +273,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             }
         }
 
-        // Ctrl+Shift combinations (important for terminal tabs, Ctrl+Shift+T, etc.)
+        // Ctrl+Shift combinations (important for terminal tabs, Ctrl+Shift+T, etc.).
         ModifierState {
             ctrl: true,
             shift: true,
@@ -231,7 +297,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
     }
 }
 
-/// Convert Ctrl+letter combinations (a-z, A-Z)
+/// Convert Ctrl+letter combinations (a-z, A-Z).
 fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
     match ch {
         'a' | 'A' => {
@@ -271,10 +337,10 @@ fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
     }
 }
 
-/// Convert Ctrl+symbol combinations (space, punctuation, etc.)
+/// Convert Ctrl+symbol combinations (space, punctuation, etc.).
 fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
     match ch {
-        // Special cases for important symbols - multiple ways to send NUL.
+        // Special cases for important symbols: multiple ways to send NUL.
         ' ' | '`' => PtyInputEvent::SendControl(
             ControlSequence::RawSequence(vec![0x00]),
             CursorKeyMode::default(),
@@ -318,7 +384,7 @@ fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
     }
 }
 
-/// Convert Ctrl+number combinations (0-9)
+/// Convert Ctrl+number combinations (0-9).
 fn convert_ctrl_number(ch: char) -> PtyInputEvent {
     match ch {
         '2' => PtyInputEvent::SendControl(
@@ -354,7 +420,7 @@ fn convert_ctrl_number(ch: char) -> PtyInputEvent {
     }
 }
 
-/// Convert Ctrl+character combinations
+/// Convert Ctrl+character combinations.
 fn convert_ctrl_character(ch: char) -> PtyInputEvent {
     match ch {
         'a'..='z' | 'A'..='Z' => convert_ctrl_letter(ch),
@@ -363,12 +429,12 @@ fn convert_ctrl_character(ch: char) -> PtyInputEvent {
     }
 }
 
-/// Extended control code getter that handles more cases
+/// Extended control code getter that handles more cases.
 fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     match ch {
         // Lowercase letters.
         c @ 'a'..='z' => Some(c.to_u8_lossy() - b'a' + 1),
-        // Uppercase letters (same control codes as lowercase)
+        // Uppercase letters (same control codes as lowercase).
         c @ 'A'..='Z' => Some(c.to_u8_lossy() - b'A' + 1),
         _ => None,
     }
@@ -381,7 +447,7 @@ fn convert_special_key(
     special: SpecialKey,
     modifiers: ModifierState,
 ) -> Option<PtyInputEvent> {
-    // Plain special keys (no modifiers)
+    // Plain special keys (no modifiers).
     if modifiers
         == (ModifierState {
             ctrl: false,
@@ -453,7 +519,7 @@ fn convert_special_key(
         };
     }
 
-    // Modified special keys - use CSI sequences algorithmically.
+    // Modified special keys: use CSI sequences algorithmically.
     let (base_seq, key_code) = match special {
         SpecialKey::Up => ("A", 'A'.as_u32_widening()),
         SpecialKey::Down => ("B", 'B'.as_u32_widening()),
@@ -511,7 +577,7 @@ fn convert_function_key(
         ));
     }
 
-    // Modified function keys - use CSI sequences.
+    // Modified function keys: use CSI sequences.
     let (base_seq, key_code) = match func_num {
         1..=4 => {
             // F1-F4 use single letter sequences.
@@ -549,13 +615,13 @@ fn convert_function_key(
     ))
 }
 
-/// Generate [`CSI`] sequence: [`ESC`][key;modifier;letter or [`ESC`][key;modifier~
+/// Generate [`CSI`] sequence: `ESC [ <key>;<modifier>;<letter>` or `ESC [
+/// <key>;<modifier>~`
 ///
 /// [`CSI`]: crate::CsiSequence
-/// [`ESC`]: crate::EscSequence
 fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputEvent {
     if modifier == 1 {
-        // No modifier - use simple sequence.
+        // No modifier: use simple sequence.
         let seq = if suffix == "~" {
             format!("{CSI_START}{key_code}~")
         } else {
@@ -566,7 +632,7 @@ fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputE
             CursorKeyMode::default(),
         )
     } else {
-        // With modifier
+        // With modifier.
         let seq = if suffix == "~" {
             format!("{CSI_START}{key_code};{modifier}~")
         } else {
@@ -579,10 +645,9 @@ fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputE
     }
 }
 
-/// Generate [`CSI`] u sequence: [`ESC`][unicode;modifier;u
+/// Generate [`CSI`] u sequence: `ESC [ <unicode>;<modifier>u`
 ///
 /// [`CSI`]: crate::CsiSequence
-/// [`ESC`]: crate::EscSequence
 fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> PtyInputEvent {
     let seq = if modifier == 1 {
         format!("{CSI_START}{unicode}u")
@@ -649,7 +714,7 @@ mod tests {
 
     #[test]
     fn test_arrow_key_conversion() {
-        // Up arrow - Normal mode
+        // Up arrow: Normal mode.
         let key = KeyPress::Plain {
             key: Key::SpecialKey(crate::SpecialKey::Up),
         };
@@ -718,4 +783,42 @@ mod tests {
             _ => panic!("Expected SendControl event"),
         }
     }
+
+    #[test]
+    fn test_csi_u_combinations() {
+        // Ctrl+Shift+T -> CSI 84;6u
+        let key = KeyPress::WithModifiers {
+            key: Key::Character('t'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::Pressed,
+                ..Default::default()
+            },
+        };
+        let event: Option<PtyInputEvent> = key.into();
+        match event {
+            Some(PtyInputEvent::SendControl(ctrl, mode)) => {
+                assert_eq!(ctrl.to_bytes(mode).as_ref(), b"\x1b[84;6u");
+            }
+            _ => panic!("Expected SendControl event for Ctrl+Shift+T"),
+        }
+
+        // Ctrl+. -> CSI 46;5u
+        let key = KeyPress::WithModifiers {
+            key: Key::Character('.'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                ..Default::default()
+            },
+        };
+        let event: Option<PtyInputEvent> = key.into();
+        match event {
+            Some(PtyInputEvent::SendControl(ctrl, mode)) => {
+                assert_eq!(ctrl.to_bytes(mode).as_ref(), b"\x1b[46;5u");
+            }
+            _ => panic!("Expected SendControl event for Ctrl+."),
+        }
+    }
 }
+
+// cspell:words Fixterms

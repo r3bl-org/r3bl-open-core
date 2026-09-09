@@ -7,6 +7,12 @@ use crate::VPSize;
 
 /// Owns both halves of a [`PTY`] pair and manages the controlled side's lifecycle.
 ///
+/// A [`PTY`] (pseudoterminal) pair consists of a **controller [`fd`]** (held by your
+/// application to write input and read output) and a **controlled [`fd`]** (mapped by the
+/// OS kernel to the child process's [`stdin`], [`stdout`], and [`stderr`]). For the full
+/// architectural overview, visual conduit diagram, and kernel flow control, see the
+/// [[`PTY`] Core Concept] and [Backpressure Architecture].
+///
 /// # Do not use the [`portable_pty::PtyPair`] directly
 ///
 /// Use this wrapper instead, since it provides a safe API that programmatically prevents
@@ -20,13 +26,13 @@ use crate::VPSize;
 ///
 /// If the parent process fails to drop its bootstrapping copy, the kernel's reference
 /// count never reaches zero. Consequently, any blocking [`read()`] on the controller will
-/// hang indefinitely—even after the child has exited—as it waits for a signal that can
+/// hang indefinitely (even after the child has exited) as it waits for a signal that can
 /// never be delivered.
 ///
 /// [`PtyPair`] structurally eliminates this risk by wrapping the controlled side in an
 /// [`Option`] and programmatically closing it immediately after spawning. This ensures
 /// controlled side's only ones remaining, guaranteeing that the controller's reader
-/// receives a termination signal. The library's reader tasks and test fixtures (like
+/// receives a termination signal. The library's reader threads and test fixtures (like
 /// [`PtyTestChild::drain_and_wait()`]) then programmatically handle both [`EOF`]
 /// (`Ok(0)`) and [`EIO`] ([`Err`] with `errno` `5` on Linux) to ensure clean,
 /// cross-platform termination.
@@ -40,11 +46,11 @@ use crate::VPSize;
 /// For a visual representation of how these layers fit together, see the [3-layer
 /// Functional Stack].
 ///
-/// | [`PtyPair`]                                                    | [`PtySession`]                                   |
-/// | :------------------------------------------------------------- | :----------------------------------------------- |
-/// | Short-lived (initialization phase)                             | Long-lived (duration of the process)             |
-/// | Blocking ([`std::read()`], [`std::write()`], [`std::spawn()`]) | Non-blocking ([`tokio`] channels, [`select!`])   |
-/// | Prevents [`fd`] leaks and deadlocks                            | Manages task completion and cleanup              |
+/// | [`PtyPair`]                                                    | [`PtySession`]                                    |
+/// | :------------------------------------------------------------- | :------------------------------------------------ |
+/// | Short-lived (initialization phase)                             | Long-lived (duration of the process)              |
+/// | Blocking ([`std::read()`], [`std::write()`], [`std::spawn()`]) | Synchronous events ([`SyncSender`], [`Receiver`]) |
+/// | Prevents [`fd`] leaks and deadlocks                            | Manages thread completion and cleanup             |
 ///
 /// # [`PTY`] Primer
 ///
@@ -138,9 +144,9 @@ use crate::VPSize;
 /// └───────────────────┘     (Passwords / Input)      └───────────────┘
 /// ```
 ///
-/// In this codebase, [raw mode] uses this exact fallback mechanism to configure
-/// terminal settings (`tcsetattr`) on the active window even when input is redirected
-/// from a pipe.
+/// In this codebase, [raw mode] uses this exact fallback mechanism to configure terminal
+/// settings ([`tcsetattr`]) on the active window even when input is redirected from a
+/// pipe.
 ///
 /// ## How [`/dev/ptmx`] and [`/dev/pts/N`] work together
 ///
@@ -198,8 +204,8 @@ use crate::VPSize;
 /// ## Child process perspective
 ///
 /// When you spawn a process in a [`PTY`], the **child process** gets a [`/dev/pts/N`]
-/// device node—the same kind used by terminal emulators like [`xterm`], [`WezTerm`] or
-/// [`Alacritty`]. This allows it to:
+/// device node (the same kind used by terminal emulators like [`xterm`], [`WezTerm`] or
+/// [`Alacritty`]). This allows it to:
 /// - call [`isatty()`] and get `true`,
 /// - set [raw mode] with [`tcsetattr()`],
 /// - query window size with [`ioctl(TIOCGWINSZ)`],
@@ -217,11 +223,17 @@ use crate::VPSize;
 /// When [`portable_pty's spawn_command()`] creates the child process, it redirects each
 /// of its streams to the controlled [`fd`]. Here's how the streams are connected:
 ///
-/// | Stream     | [`fd`] | Direction                                                |
-/// | :--------- | :----- | :------------------------------------------------------- |
-/// | [`stdin`]  | `0`    | Child process reads its input from the controlled [`fd`] |
-/// | [`stdout`] | `1`    | Child process writes its output to the controlled [`fd`] |
-/// | [`stderr`] | `2`    | Child process writes its errors to the controlled [`fd`] |
+/// | Stream     | [`fd`] | Direction & Destination                                                                                             |
+/// | :--------- | :----- | :------------------------------------------------------------------------------------------------------------------ |
+/// | [`stdin`]  | `0`    | Child reads via [`std::io::stdin()`] (e.g., [`read_line`]); parent feeds this by writing to controller [`fd`]       |
+/// | [`stdout`] | `1`    | Child writes via [`std::io::stdout()`] (e.g., [`println!`]) into the **same merged stream** read by the controller  |
+/// | [`stderr`] | `2`    | Child writes via [`std::io::stderr()`] (e.g., [`eprintln!`]) into the **same merged stream** read by the controller |
+///
+/// **Why [`println!`] and [`eprintln!`] are indistinguishable:** Because both [`fd`] `1`
+/// ([`stdout`]) and [`fd`] `2` ([`stderr`]) map to the identical controlled device node,
+/// the OS kernel merges all emitted bytes chronologically into a single stream. The
+/// controller application reading from the [`PTY`] cannot differentiate between bytes
+/// output via [`println!`] versus [`eprintln!`] in the child.
 ///
 /// From the child process's perspective, it is talking to a real terminal, and it has no
 /// idea it is inside a [`PTY`] 🤯.
@@ -235,24 +247,26 @@ use crate::VPSize;
 ///
 /// The **parent process** (your application) is essentially doing what a terminal
 /// emulator does, but programmatically instead of with a GUI window (with user
-/// interaction). It uses the **controller** side to read from and write to the **child
-/// process** - writing to its input and reading from its output.
+/// interaction). It uses the **controller** side to interact with the **child process**,
+/// sending input to it and receiving its output.
 ///
 /// In [`PTY`] terminology, the parent process is your Rust application, the one that:
 /// 1. First calls [`openpty()`] [`syscall`] to create the [`PTY`].
 /// 2. Then calls [`portable_pty's spawn_command()`] to spawn the child process. The child
-///    process is the program spawned inside the [`PTY`] (e.g. the [`top`] binary or
+///    process is the program spawned inside the [`PTY`] (e.g., the [`top`] binary or
 ///    another Rust application binary).
 ///
-/// Each side of the [`PTY`] (the parent process and child process) gets an [`fd`].
-/// However, each side uses it differently:
+/// A [`PTY`] provides two connected [`fd`]s: one for the parent process and one for the
+/// child process. However, each side uses its [`fd`] differently:
 ///
-/// 1. The parent process (your Rust application) gets the **controller [`fd`]** - a
-///    single bidirectional [`fd`] that it reads from and writes to directly. No standard
-///    I/O stream ([`stdin`]/[`stdout`]/[`stderr`]) mapping occurs.
-/// 2. The child process (the spawned binary) gets the **controlled [`fd`]** - a single
-///    bidirectional [`fd`] that the kernel maps to the child's standard I/O streams
-///    ([`stdin`]/[`stdout`]/[`stderr`]).
+/// 1. The parent process (your Rust application) gets the **controller [`fd`]**. This is
+///    a single bidirectional [`fd`] that it reads from and writes to directly.
+///    - The parent does not redirect its own standard I/O streams
+///      ([`stdin`]/[`stdout`]/[`stderr`]) to this [`fd`]; it keeps its own terminal I/O
+///      and interacts with this descriptor directly.
+/// 2. The child process (the spawned binary) gets the **controlled [`fd`]**. This is a
+///    single bidirectional [`fd`] that the kernel maps to the child's standard I/O
+///    streams ([`stdin`]/[`stdout`]/[`stderr`]).
 ///    - The child process does not interact with the controller [`fd`] at all.
 ///    - However, the parent process also gets a copy of the controlled [`fd`] as a
 ///      bootstrapping artifact when it creates the child process. This artifact becomes
@@ -277,10 +291,10 @@ use crate::VPSize;
 ///
 /// ## What this struct does
 ///
-/// This is precisely what this [`PtyPair`] struct does - it drops the controlled [`fd`]
-/// so this deadlock condition can't occur, due to it's type design. By leveraging Rust
-/// type system to enforce this, we make this illegal state unrepresentable, and thus
-/// prevent the deadlock at compile time. 🙌
+/// This is precisely what this [`PtyPair`] struct does, it drops the controlled [`fd`] so
+/// this deadlock condition can't occur, due to its type design. By leveraging Rust's type
+/// system to enforce this, we make this illegal state unrepresentable, and thus prevent
+/// the deadlock at compile time. 🙌
 ///
 /// ## Kernel in the middle
 ///
@@ -604,6 +618,7 @@ use crate::VPSize;
 /// [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
+/// [`eprintln!`]: std::eprintln
 /// [`exec()`]: https://man7.org/linux/man-pages/man3/exec.3.html
 /// [`FD_CLOEXEC`]: https://man7.org/linux/man-pages/man2/fcntl.2.html
 /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
@@ -620,6 +635,7 @@ use crate::VPSize;
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
 /// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
 /// [`posix_openpt()`]: https://man7.org/linux/man-pages/man3/posix_openpt.3.html
+/// [`println!`]: std::println
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyPair::into_controller()`]: PtyPair::into_controller
 /// [`PtyPair::open_raw_pair()`]: Self::open_raw_pair
@@ -628,9 +644,14 @@ use crate::VPSize;
 /// [`PtySession`]: crate::PtySession
 /// [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
+/// [`read_line`]: std::io::Stdin::read_line
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+/// [`Receiver`]: std::sync::mpsc::Receiver
 /// [`select!`]: tokio::select
 /// [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`std::io::stderr()`]: std::io::stderr
+/// [`std::io::stdin()`]: std::io::stdin
+/// [`std::io::stdout()`]: std::io::stdout
 /// [`std::read()`]: std::io::Read::read
 /// [`std::spawn()`]: Self::open_and_spawn
 /// [`std::write()`]: std::io::Write::write
@@ -639,8 +660,10 @@ use crate::VPSize;
 /// [`stdout`]: std::io::stdout
 /// [`struct file`]:
 ///     https://elixir.bootlin.com/linux/v6.19.3/source/include/linux/fs.h#L1256
+/// [`SyncSender`]: std::sync::mpsc::SyncSender
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`tcsetattr()`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
+/// [`tcsetattr`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
 /// [`termios`]: https://man7.org/linux/man-pages/man3/termios.3.html
 /// [`tokio`]: tokio
 /// [`top`]: https://man7.org/linux/man-pages/man1/top.1.html
@@ -650,6 +673,7 @@ use crate::VPSize;
 /// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 /// [`Xenix`]: https://en.wikipedia.org/wiki/Xenix
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
+/// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
 /// [controlling terminal alias]: #controlling-terminal-alias-devtty
 /// [DEC video terminals]: https://vt100.net/shuford/terminal/dec.html
 /// [fork-exec]: https://en.wikipedia.org/wiki/Fork-exec
@@ -664,6 +688,7 @@ use crate::VPSize;
 /// [physical terminal]: https://en.wikipedia.org/wiki/Computer_terminal
 /// [portable_pty's `CommandBuilder`]: portable_pty::CommandBuilder
 /// [POSIX terminal API]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [PTY Core Concept]: crate::core::pty#the-pty-core-concept
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [Resource-leaking deadlock]: #resource-leaking-deadlock
 /// [terminal emulator]: https://en.wikipedia.org/wiki/Terminal_emulator

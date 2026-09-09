@@ -1,24 +1,24 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{reader_task::spawn_blocking_reader_task,
-            writer_task::spawn_blocking_writer_task};
+use super::{reader::spawn_pty_reader_thread, writer::spawn_pty_writer_thread};
 use crate::{ControlledChild, Controller, PtyControlledChildExitStatus, PtyInputEvent,
             PtyOrchestratorHandle, PtyOutputEvent, PtySessionConfig};
 use miette::miette;
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex,
+                mpsc::{Receiver, SyncSender}};
 
-/// Spawns the **Orchestrator Task** for a [`PtySession`].
+/// Spawns the **Orchestrator Thread** for a [`PtySession`].
 ///
-/// This task is the "Director" of the session. It:
+/// This thread is the "Director" of the session. It runs with the name
+/// `pty-orchestrator`. It:
 /// 1. Takes the writer and reader from [`Controller`].
 /// 2. Performs the Windows [`ConPTY`] initialization handshake (Windows only).
-/// 3. Spawns the **Reader Task**.
-/// 4. Spawns the **Writer Task**.
+/// 3. Spawns the **Reader Thread**.
+/// 4. Spawns the **Writer Thread**.
 /// 5. Waits for the child process to exit.
 /// 6. Destroys the pseudo-console controller ([`ClosePseudoConsole`] on Windows) to
 ///    unblock the reader.
-/// 7. Joins both background tasks.
+/// 7. Joins both background threads.
 /// 8. Sends the final [`PtyOutputEvent::Exit`] event.
 ///
 /// # Errors
@@ -27,6 +27,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 /// - Taking the writer from [`Controller`] fails.
 /// - Cloning the reader from [`Controller`] fails.
 /// - Performing the Windows [`ConPTY`] handshake fails (Windows only).
+/// - Spawning the orchestrator OS thread fails.
 ///
 /// For the complete lifecycle architecture, see the [Session Layer] documentation.
 ///
@@ -36,12 +37,12 @@ use tokio::sync::mpsc::{Receiver, Sender};
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 /// [`PtySession`]: crate::PtySession
 /// [Session Layer]: mod@crate::pty_session
-pub fn spawn_orchestrator_task(
+pub fn spawn_pty_orchestrator_thread(
     mut controlled_child: ControlledChild,
     controller: Controller,
-    input_event_ch_tx_half: Sender<PtyInputEvent>,
+    input_event_ch_tx_half: SyncSender<PtyInputEvent>,
     input_event_ch_rx_half: Receiver<PtyInputEvent>,
-    output_event_ch_tx_half: Sender<PtyOutputEvent>,
+    output_event_ch_tx_half: SyncSender<PtyOutputEvent>,
     arg_config: impl Into<PtySessionConfig>,
 ) -> miette::Result<PtyOrchestratorHandle> {
     // Take writer.
@@ -66,30 +67,31 @@ pub fn spawn_orchestrator_task(
         &controlled_child,
     )?;
 
-    let handle = tokio::spawn({
-        let config = arg_config.into();
-        let input_event_ch_tx_half_clone = input_event_ch_tx_half.clone();
-        async move {
+    let config = arg_config.into();
+    let input_event_ch_tx_half_clone = input_event_ch_tx_half.clone();
+
+    let handle = std::thread::Builder::new()
+        .name("pty-orchestrator".into())
+        .spawn(move || -> miette::Result<PtyControlledChildExitStatus> {
             let shared_controller = Arc::new(Mutex::new(Some(controller)));
 
-            // Spawn background tasks.
-            let output_reader_task_handle = spawn_blocking_reader_task(
+            // Spawn background threads.
+            let reader_thread_handle = spawn_pty_reader_thread(
                 controller_reader,
                 output_event_ch_tx_half.clone(),
                 config,
-            );
+            )?;
 
-            let input_writer_task_handle = spawn_blocking_writer_task(
+            let writer_thread_handle = spawn_pty_writer_thread(
                 controller_writer,
                 shared_controller.clone(),
                 input_event_ch_rx_half,
                 output_event_ch_tx_half.clone(),
-            );
+            )?;
 
             // Wait for the child process to exit.
-            let status = tokio::task::spawn_blocking(move || controlled_child.wait())
-                .await
-                .map_err(|e| miette!("Wait task failed: {}", e))?
+            let status = controlled_child
+                .wait()
                 .map_err(|e| miette!("Child process wait failed: {}", e))?;
 
             let status = PtyControlledChildExitStatus { inner: status };
@@ -97,29 +99,26 @@ pub fn spawn_orchestrator_task(
             // Child process has terminated. Destroy the pseudo-console controller.
             // On Windows, MasterPty::drop invokes ClosePseudoConsole(), which closes
             // the ConPTY output pipe and delivers EOF (0 bytes or BrokenPipe) to the
-            // reader task, allowing the reader task to exit cleanly.
+            // reader thread, allowing the reader thread to exit cleanly.
             if let Ok(mut guard) = shared_controller.lock() {
                 drop(guard.take());
             }
 
-            // Send Close event to signal writer task to stop (if not already stopped).
+            // Send Close event to signal writer thread to stop (if not already stopped).
             // We do this via the sender side (which we still have a clone of).
-            let _unused = input_event_ch_tx_half_clone
-                .send(PtyInputEvent::Close)
-                .await;
+            let _unused = input_event_ch_tx_half_clone.send(PtyInputEvent::Close);
 
-            // Wait for background tasks to finish.
-            drop(output_reader_task_handle.await);
-            drop(input_writer_task_handle.await);
+            // Wait for background threads to finish.
+            drop(reader_thread_handle.join());
+            drop(writer_thread_handle.join());
 
             // Send the exit event.
-            let _unused = output_event_ch_tx_half
-                .send(PtyOutputEvent::Exit(status.clone()))
-                .await;
+            let _unused =
+                output_event_ch_tx_half.send(PtyOutputEvent::Exit(status.clone()));
 
             Ok(status)
-        }
-    });
+        })
+        .map_err(|e| miette!("Failed to spawn pty-orchestrator thread: {e}"))?;
 
     Ok(handle)
 }

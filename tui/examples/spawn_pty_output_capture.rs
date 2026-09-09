@@ -27,19 +27,19 @@
 //! cargo run --example spawn_pty_output_capture
 //! ```
 //!
-//! See [`PtySessionConfigOption::CaptureOsc`] for the environment variables
+//! See [`PtySessionConfigToken::CaptureOsc`] for the environment variables
 //! required to trigger [`OSC`] emission from cargo.
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`PtySessionConfigOption::CaptureOsc`]:
-//!     crate::core::pty::PtySessionConfigOption::CaptureOsc
+//! [`PtySessionConfigToken::CaptureOsc`]:
+//!     crate::core::pty::PtySessionConfigToken::CaptureOsc
 
 use miette::IntoDiagnostic;
 use r3bl_tui::{OscEvent, SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR,
                SGR_FG_BRIGHT_YELLOW_STR, SGR_RESET_STR, assert_terminal_is_interactive,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
-                           PtySessionConfigOption},
+                           PtySessionConfigToken},
                ok, set_mimalloc_in_main};
 
 // ANSI color constants for terminal output.
@@ -57,8 +57,8 @@ async fn run_cargo_clean() -> miette::Result<()> {
 
     let mut session = PtySessionBuilder::new("cargo")
         .cli_args(["clean", "-q"])
-        .with_config(DefaultPtySessionConfig + PtySessionConfigOption::NoCaptureOutput)
-        .start()?;
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::NoCaptureOutput)
+        .start_async()?;
 
     // Wait for completion.
     tokio::select! {
@@ -91,8 +91,8 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     // Configure cargo build command with OSC sequences enabled.
     let mut session = PtySessionBuilder::new("cargo")
         .cli_args(["build"])
-        .with_config(DefaultPtySessionConfig + PtySessionConfigOption::CaptureOsc)
-        .start()?;
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc)
+        .start_async()?;
 
     // Track if we saw any progress updates.
     let mut saw_progress = false;

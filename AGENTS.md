@@ -261,6 +261,8 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 - **code-review** - Interactive chunk-by-chunk in-chat code review with explicit approval
   steps. Use when the user requests an interactive code review or runs `/code-review`.
 
+- **test-cross-platform** - Synchronize repository to the fleet (macOS, Windows) and run the full test suite across all platforms concurrently. Use via `/test-cross-platform`.
+
 ### Documentation
 
 - **write-documentation** - Consolidated documentation skill covering structure (inverted
@@ -359,6 +361,7 @@ via autocomplete in the Antigravity CLI.
 | `/release`                  | release-crate                              |
 | `/remove-crate-prefix`      | remove-crate-prefix                        |
 | `/review-pr`                | review-pr                                  |
+| `/test-cross-platform`      | test-cross-platform                        |
 | `/clippy`                   | run-clippy                                 |
 | `/docs`                     | write-documentation                        |
 | `/fix-intradoc-links`       | write-documentation (focused on links)     |

@@ -27,7 +27,7 @@
 //! - Why `+nightly`: Explicitly uses the nightly toolchain for compilation, ensuring
 //!   consistency
 //! - Progress display: Emits [`OSC`] escape sequences showing compilation percentage
-//!   (0-100%). See [`PtySessionConfigOption::CaptureOsc`] for the environment variables
+//!   (0-100%). See [`PtySessionConfigToken::CaptureOsc`] for the environment variables
 //!   that trigger this behavior.
 //! - Benefits: Uses the latest nightly features for optimal performance and newest
 //!   language capabilities
@@ -50,7 +50,7 @@
 //!   with a newer release published on crates.io.
 //!
 //! [`OSC`]: r3bl_tui::osc_codes::OscSequence
-//! [`PtySessionConfigOption::CaptureOsc`]: r3bl_tui::PtySessionConfigOption::CaptureOsc
+//! [`PtySessionConfigToken::CaptureOsc`]: r3bl_tui::PtySessionConfigToken::CaptureOsc
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 //! [`remove_toolchains.sh`]:
 //!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
@@ -62,7 +62,7 @@ use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevi
                TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
                cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
-                           PtySessionConfigOption},
+                           PtySessionConfigToken},
                inline_string,
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io, vp_height};
@@ -270,7 +270,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
     // Use Output mode to capture rustup's output for progress display.
     let mut session = PtySessionBuilder::new("rustup")
         .cli_args(["toolchain", "install", "nightly", "--force"])
-        .start()
+        .start_async()
         .map_err(Error::other)?;
 
     loop {
@@ -308,20 +308,20 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
 /// Runs `cargo +nightly install` in a [`PTY`] with [`OSC`] capture enabled, reporting
 /// real-time compilation progress to the spinner.
 ///
-/// See [`PtySessionConfigOption::CaptureOsc`] for the environment variables that
+/// See [`PtySessionConfigToken::CaptureOsc`] for the environment variables that
 /// trigger [`OSC`] 9;4 emission from cargo.
 ///
 /// [`OSC`]: r3bl_tui::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`PtySessionConfigOption::CaptureOsc`]: r3bl_tui::PtySessionConfigOption::CaptureOsc
+/// [`PtySessionConfigToken::CaptureOsc`]: r3bl_tui::PtySessionConfigToken::CaptureOsc
 async fn run_cargo_install_with_progress(
     crate_name: &str,
     spinner: Option<&Spinner>,
 ) -> Result<ExitStatus, Error> {
     let mut session = PtySessionBuilder::new("cargo")
         .cli_args(["+nightly", "install", crate_name])
-        .with_config(DefaultPtySessionConfig + PtySessionConfigOption::CaptureOsc)
-        .start()
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc)
+        .start_async()
         .map_err(Error::other)?;
 
     loop {

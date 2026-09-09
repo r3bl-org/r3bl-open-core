@@ -2,7 +2,6 @@
 name = "r3bl-build-infra"
 version = "0.0.5"
 edition = "2024"
-readme = "README.md"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 repository = "https://github.com/r3bl-org/r3bl-open-core"

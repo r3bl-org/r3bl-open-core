@@ -93,10 +93,10 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [add-academic-research-on-type-safety-at-scale.md](done/add-academic-research-on-type-safety-at-scale.md)
 - [x] [clean-command-result-handling.md](done/clean-command-result-handling.md)
 - [x] [fix-windows-tests-tui-term-api-and-mcp.md](done/fix-windows-tests-tui-term-api-and-mcp.md)
-- [ ] [task/make-pty-session-sync.md](make-pty-session-sync.md)
-- [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
+- [x] [make-pty-session-sync.md](done/make-pty-session-sync.md)
 - [ ] [spawny](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
 # [TODO] Unify rendering

@@ -3,8 +3,8 @@
 use super::cross_platform_commands;
 use crate::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionConfigOption};
 
-#[tokio::test]
-async fn test_unexpected_exit_reporting() {
+#[test]
+fn test_unexpected_exit_reporting() {
     let mut session = cross_platform_commands::sleep(10)
         .with_config(DefaultPtySessionConfig + PtySessionConfigOption::NoCaptureOutput)
         .start()
@@ -17,15 +17,16 @@ async fn test_unexpected_exit_reporting() {
         .expect("Failed to kill child");
 
     // 1. Wait for completion.
-    let status = (&mut session.orchestrator_task_handle)
-        .await
+    let status = session
+        .orchestrator_task_handle
+        .join()
         .expect("Join error")
         .expect("Session error");
     assert!(!status.success());
 
     // 2. Drain channel.
     // All events are already in the channel buffer: the completion handle
-    // joins the reader task and sends Exit before returning.
+    // joins the reader thread and sends Exit before returning.
     let mut exit_reported = false;
     while let Ok(event) = session.rx_output_event.try_recv() {
         match event {
