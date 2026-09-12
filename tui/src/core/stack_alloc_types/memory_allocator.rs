@@ -1,18 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// [`mimalloc`] is a replacement for the default global allocator. It's optimized for
-/// multi-threaded use cases where lots of small objects are created and destroyed.
-/// The default allocator is the system allocator that's optimized for single threaded
-/// use cases.
+/// [`mimalloc`] is a replacement for the default global allocator. It's optimized
+/// for multi-threaded use cases where lots of small objects are created and
+/// destroyed. The default allocator is the system allocator that's optimized for
+/// single threaded use cases.
+///
+/// # Why `pub use`?
+///
+/// This re-export is required by [`set_mimalloc_in_main`]. When downstream crates
+/// (such as `cmdr` binaries or external apps) invoke [`set_mimalloc_in_main`], the
+/// macro expands to `$crate::mimalloc::MiMalloc`. Re-exporting `mimalloc` publicly
+/// here makes it accessible via `r3bl_tui` without requiring downstream crates to
+/// declare their own direct dependency on `mimalloc` in `Cargo.toml`.
 ///
 /// [`mimalloc`] (by Microsoft):
 /// - <https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance>
 ///
 /// [`mimalloc`]: mimalloc
+/// [`set_mimalloc_in_main`]: crate::set_mimalloc_in_main
+pub use mimalloc;
+
 #[macro_export]
 macro_rules! set_mimalloc_in_main {
     () => {{
-        use mimalloc::MiMalloc;
+        use $crate::mimalloc::MiMalloc;
 
         #[global_allocator]
         static GLOBAL: MiMalloc = MiMalloc;

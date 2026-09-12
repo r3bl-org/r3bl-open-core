@@ -76,12 +76,21 @@ use tokio::{sync::broadcast, time::interval};
 /// # }
 /// ```
 ///
+/// # Structural Isolation & Deadlock Prevention
+///
+/// [`Spinner`] is structurally isolated from readline lock-inversion deadlocks. It only
+/// holds [`OutputDevice`] (Level 2 in the Coffman lock hierarchy) and lacks access to
+/// [`SafeLineState`] (Level 1). Because it cannot acquire Level 1 while holding Level 2,
+/// circular wait is mathematically impossible.
+///
 /// [`apply_event_to_line_state_and_render()`]:
 ///     super::readline_internal::apply_event_to_line_state_and_render()
+/// [`OutputDevice`]: crate::OutputDevice
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 /// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`safe_spinner_is_active`]: crate::Readline::safe_spinner_is_active
+/// [`SafeLineState`]: crate::SafeLineState
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout

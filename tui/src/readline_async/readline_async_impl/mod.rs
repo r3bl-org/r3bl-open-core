@@ -4,11 +4,13 @@
 pub mod line_state;
 pub mod readline;
 pub mod readline_history;
+pub mod readline_lock_manager;
 
 // Re-export.
 pub use line_state::*;
 pub use readline::*;
 pub use readline_history::*;
+pub use readline_lock_manager::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]

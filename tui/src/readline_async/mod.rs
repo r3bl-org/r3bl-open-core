@@ -93,13 +93,10 @@
 //! ## Pause and resume support
 //!
 //! The pause and resume functionality is implemented using:
-//! - [`LineState::is_paused`] - Used to check if the line state is paused and affects
-//!   rendering and input.
-//! - [`LineState::set_paused`] - Use to set the paused state via the
-//!   [`crate::SharedWriter`] below. This can't be called directly (outside the crate
-//!   itself).
+//! - [`PauseState`] - Enum holding the current suspension state on [`LineState`] to
+//!   determine whether keyboard input and rendering are suppressed.
 //! - [`crate::SharedWriter::line_state_control_channel_sender`] - Mechanism used to
-//!   manipulate the paused state.
+//!   manipulate the paused state asynchronously.
 //!
 //! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a
 //! [`line_state_control_channel`] to send and receive [`crate::LineStateControlSignal`]:
@@ -136,12 +133,8 @@
 //! - Ctrl+U: Erase the input before the cursor.
 //! - Ctrl+L: Clear the screen.
 //! - Ctrl+Left / Ctrl+Right: Move to previous/next whitespace.
-//! - Home: Jump to the start of the line.
-//!     - When the `"emacs"` feature (on by default) is enabled, Ctrl+A has the same
-//!       effect.
-//! - End: Jump to the end of the line.
-//!     - When the `"emacs"` feature (on by default) is enabled, Ctrl+E has the same
-//!       effect.
+//! - Home / Ctrl+A: Jump to the start of the line.
+//! - End / Ctrl+E: Jump to the end of the line.
 //! - Ctrl+C, Ctrl+D: Send an [`Eof`] event.
 //! - Ctrl+C: Send an `Interrupt` event.
 //!
@@ -292,9 +285,11 @@
 //! [`Eof`]: ReadlineEvent::Eof
 //! [`InputDevice`]: crate::InputDevice
 //! [`line_state_control_channel`]: field@crate::SharedWriter::line_state_control_channel_sender
+//! [`LineState`]: crate::readline_async::LineState
 //! [`OutputDevice::default()`]: crate::OutputDevice::new_stdout
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`panic!()`]: https://doc.rust-lang.org/std/panic/index.html
+//! [`PauseState`]: crate::readline_async::PauseState
 //! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
 //! [`read_line()`]: std::io::Stdin::read_line
 //! [`readline_async`]: mod@crate::readline_async

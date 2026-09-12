@@ -63,7 +63,9 @@ we adopt the robust `PauseState` and `TerminalLease` concepts from Approach B:
   `PauseState` enum with 4 explicit states: `NotPaused`, `PausedBySpinner`,
   `PausedByModal`, and `PausedByBoth`. This creates a rigorous state machine that
   flawlessly resolves overlapping suspension lifecycles (e.g., a background spinner
-  stopping while a modal is open). `is_paused()` is true for any state except `NotPaused`.
+  stopping while a modal is open). Transition methods on `PauseState` return
+  `PauseStateTransition` (`Paused`, `Resumed`, `Unchanged`), completely eliminating
+  boolean blindness and `is_paused()` / `is_not_paused()` conversions.
 - **RAII `TerminalLease` Guard:** A modal acquires a `TerminalLease` struct that
   transitions `LineState` to `PausedForModal` on creation, and restores it on `Drop`. This
   securely halts background flush signals during the lease.
@@ -100,58 +102,143 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
 
 ### Phase 1: Lock Ordering Normalization & PauseState in readline.rs
 
-- [ ] Refactor `LineState::is_paused` to use `PauseState` Enum:
-    - [ ] Replace `LineStateLiveness` with
+- [x] Refactor `LineState::is_paused` to use `PauseState` Enum:
+    - [x] Replace `LineStateLiveness` with
           `#[derive(Debug, Clone, Copy, PartialEq, Eq)] pub enum PauseState { NotPaused, PausedBySpinner, PausedByModal, PausedByBoth }`.
-    - [ ] Add
-          `impl PauseState { pub fn is_paused(&self) -> bool { !matches!(self, PauseState::NotPaused) } }`.
-    - [ ] Update `LineState` to hold `pause_state: PauseState`.
-- [ ] Implement `ReadlineLockManager` for Strict Hierarchy:
-    - [ ] Create `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs` and
+    - [x] Add transition methods on `PauseState` (`pause_spinner`, `resume_spinner`,
+          `pause_modal`, `resume_modal`) returning `PauseStateTransition` (`Paused`,
+          `Resumed`, `Unchanged`), and eliminate `is_paused` / `is_not_paused` in favor of
+          direct enum comparisons and transitions.
+    - [x] Update `LineState` to hold `pause_state: PauseState`.
+- [x] Eliminate boolean blindness on `LineState`:
+    - [x] Replace `should_print_line_on_enter: bool` with `PrintLineOnEnter` enum
+          (`Print`, `DoNotPrint`).
+    - [x] Replace `should_print_line_on_control_c: bool` with `PrintLineOnControlC` enum
+          (`Print`, `DoNotPrint`).
+    - [x] Replace `last_line_completed: bool` with `EndsWithNewline` enum (`Yes`, `No`).
+    - [x] Update `Readline::should_print_line_on` API to accept
+          `(PrintLineOnEnter, PrintLineOnControlC)` instead of `(bool, bool)`.
+    - [x] Model `prompt` and `prompt_width` as a dedicated `Prompt` struct:
+        - [x] Create `tui/src/readline_async/readline_async_impl/line_state/prompt.rs`
+              with `Prompt` struct (`raw: String`, `width: VPWidth`), keeping display
+              width in sync by construction.
+        - [x] Provide methods: `Prompt::new`, `Prompt::set`, `Prompt::as_str`,
+              `Prompt::width`, `Prompt::calculate_width`, plus `Display`, `Deref`,
+              `AsRef`, and `From` trait implementations.
+        - [x] Replace separate `pub prompt: String` and `pub prompt_width: VPWidth` on
+              `LineState` with `pub prompt: Prompt`.
+        - [x] Update call sites across `line_state` (`core.rs`, `cursor.rs`, `output.rs`,
+              `render.rs`, `event_handlers.rs`).
+        - [x] Re-export `Prompt` in `line_state/mod.rs` and update module docs table.
+        - [x] Add unit tests for `Prompt` in `prompt.rs` and verify all tests pass.
+    - [x] Update example in `tui/examples/readline_async.rs` to use new `PrintLineOnEnter`
+          and `PrintLineOnControlC` enums.
+    - [x] Deduplicate `CHA(1)` sequence on newline-terminated segments in
+          `LineState::print_data_and_flush` to prevent visual artifacts on raw terminal
+          emulators.
+    - [x] Eliminate obsolete `cluster_buffer` from `LineState`:
+        - [x] Remove `pub cluster_buffer: String` from `LineState` in `core.rs` and its
+              initialization in `LineState::new`.
+        - [x] Update `handle_char` in `event_handlers.rs` to detect grapheme cluster
+              additions via `line_state.line.segment_count()`.
+        - [x] Remove unused `UnicodeSegmentation` import in `event_handlers.rs`.
+        - [x] Add unit test `test_handle_char_combining_characters` in `event_handlers.rs`
+              verifying combining character input and middle-of-line insertion.
+    - [x] Rename `line_cursor_grapheme` to `cursor_position` and clarify grapheme
+          navigation:
+        - [x] Rename `pub line_cursor_grapheme: SegIndex` to
+              `pub cursor_position: SegIndex` on `LineState` in `core.rs`.
+        - [x] Rename `current_grapheme(&self)` to `grapheme_before_cursor(&self)` and
+              `next_grapheme(&self)` to `grapheme_at_cursor(&self)` in `cursor.rs`.
+        - [x] Update call sites across `cursor.rs`, `event_handlers.rs`, `readline.rs`,
+              `pty_editor_state_test.rs`, and `readline_async_pty_test_fixtures.rs`.
+    - [x] Clarify cursor painting vs logical movement and eliminate cached current_column:
+        - [x] In `cursor.rs`:
+            - [x] Rename `move_cursor(&mut self, isize) -> io::Result<()>` to infallible
+                  `shift_logical_cursor_by(&mut self, isize)`.
+            - [x] Add `move_logical_cursor_to_start(&mut self)`.
+            - [x] Add `move_logical_cursor_to_end(&mut self)`.
+            - [x] Replace cached `current_column` field with pure
+                  `calc_current_column(&self) -> VPCol`.
+            - [x] Rename `rewind_cursor_to_start` to `paint_cursor_rewind_to_start`.
+            - [x] Rename `position_cursor_at_current_column` to
+                  `paint_cursor_at_current_column`.
+            - [x] Rename `move_cursor_to_start_from` to `paint_cursor_to_start_from`.
+            - [x] Rename `move_cursor_from_start_to` to `paint_cursor_from_start_to`.
+        - [x] Update call sites in `core.rs`, `render.rs`, `output.rs`,
+              `event_handlers.rs`, and unit tests in `cursor.rs`.
+    - [x] Update link checking configuration:
+        - [x] Exclude stackexchange.com wildcard domains in `lychee.toml`.
+- [x] Implement `ReadlineLockManager` for Strict Hierarchy:
+    - [x] Create `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs` and
           define the `ReadlineLockManager` struct holding `line_state: SafeLineState` and
           `output_device: OutputDevice`.
-    - [ ] Provide `lock_both`, `lock_line_state`, and `lock_output_device` methods.
+    - [x] Provide `lock_both`, `lock_line_state`, and `lock_output_device` methods.
           `lock_both` must strictly acquire `SafeLineState` first, then `OutputDevice`,
           preventing lock inversion.
-    - [ ] Add `pub(crate) fn output_device_mut(&mut self) -> &mut OutputDevice` to allow
+    - [x] Add `pub(crate) fn output_device_mut(&mut self) -> &mut OutputDevice` to allow
           `TerminalLease` to yield the device.
-    - [ ] Replace `safe_line_state` and `output_device` fields in `Readline` with a single
+    - [x] Replace `safe_line_state` and `output_device` fields in `Readline` with a single
           `pub(crate) lock_manager: ReadlineLockManager`.
-- [ ] Add Rustdocs for Deadlock Prevention:
-    - [ ] Consolidate all deadlock prevention documentation into the struct-level rustdocs
+- [x] Add Rustdocs for Deadlock Prevention:
+    - [x] Consolidate all deadlock prevention documentation into the struct-level rustdocs
           for `ReadlineLockManager`. Explain the Coffman lock hierarchy, the purpose of
           `lock_both`, and explicitly document that single-lock closures (like
           `lock_output_device`) MUST be leaf operations.
-    - [ ] Add documentation to `Spinner` highlighting its "Structural Isolation"—because
+    - [x] Add documentation to `Spinner` highlighting its "Structural Isolation", because
           it only holds `OutputDevice` and lacks `SafeLineState`, it is structurally
           immune to lock inversions.
-- [ ] Refactor existing nested locks to use `ReadlineLockManager`:
-    - [ ] Refactor `Readline::readline(&mut self)` to use `lock_both` and pass
+- [x] Refactor existing nested locks to use `ReadlineLockManager`:
+    - [x] Refactor `Readline::readline(&mut self)` to use `lock_both` and pass
           `&mut LineState` directly to `apply_event_to_line_state_and_render`.
-    - [ ] Refactor `Readline::update_prompt(&mut self, prompt: &str)` to use `lock_both`.
-    - [ ] Refactor `Readline::clear(&mut self)` to use `lock_both`.
-    - [ ] Refactor `Readline::try_new` initial prompt render to use `lock_both`.
-- [ ] Invert lock acquisition in `Drop` for `Readline`:
-    - [ ] Acquire `self.lock_manager.line_state.lock_raw_poison_safe` first, then
+    - [x] Refactor `Readline::update_prompt(&mut self, prompt: &str)` to use `lock_both`.
+    - [x] Refactor `Readline::clear(&mut self)` to use `lock_both`.
+    - [x] Refactor `Readline::try_new` initial prompt render to use `lock_both`.
+- [x] Invert lock acquisition in `Drop` for `Readline`:
+    - [x] Acquire `self.lock_manager.line_state.lock_raw_poison_safe` first, then
           `self.lock_manager.output_device.lock_raw_poison_safe` second (requires
           providing internal access for `Drop` if needed). (cannot use standard traffic
           cop due to poison-safe requirements).
-- [ ] Optimize `process_line_control_signal` on `Flush`:
-    - [ ] Check `line_state.pause_state.is_paused()` before acquiring
+- [x] Optimize `process_line_control_signal` on `Flush`:
+    - [x] Check `line_state.pause_state != PauseState::NotPaused` before acquiring
           `output_device.write`. If true, return `Continuation::Continue` immediately
           without acquiring the device lock.
-- [ ] Update `process_line_control_signal` for `Pause` and `Resume`:
-    - [ ] On `Pause` (from Spinner), transition state via match:
-          `NotPaused -> PausedBySpinner`, `PausedByModal -> PausedByBoth`, and ignore
-          idempotent cases. Only trigger `clear_and_render_and_flush` if overall
-          `is_paused()` transitions from `false` to `true`.
-    - [ ] On `Resume` (from Spinner), transition state via match:
-          `PausedBySpinner -> NotPaused`, `PausedByBoth -> PausedByModal`, and ignore
-          idempotent cases. Only trigger `flush_internal` and restore prompt if overall
-          `is_paused()` transitions from `true` to `false`.
-- [ ] **Mandatory manual review:**
-    - [ ] `tui/src/readline_async/readline_async_impl/readline.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/line_state.rs`
+- [x] Update `process_line_control_signal` for `Pause` and `Resume`:
+    - [x] On `Pause` (from Spinner), use `pause_spinner()` and trigger
+          `clear_and_render_and_flush` only if it returns `PauseStateTransition::Paused`.
+    - [x] On `Resume` (from Spinner), use `resume_spinner()` and trigger `flush_internal`
+          only if it returns `PauseStateTransition::Resumed`.
+- [x] Clean up `gc_string_owned_editor_impl.rs`:
+    - [x] Merge all editor-specific `GCStringOwned` methods (`split_at_display_col`,
+          `insert_chunk_at_col`, `get_string_at`, etc.) natively into
+          `tui/src/core/graphemes/gc_string/owned/gc_string_owned.rs`.
+    - [x] Delete `gc_string_owned_editor_impl.rs` entirely and remove it from `mod.rs`
+          to flatten the file structure.
+    - [x] Add `get_byte_index` to `gc_string_owned.rs` to support
+          `calc_display_width_up_to_cursor` logic in `readline_async`.
+    - [x] Strip legacy inner modules (`at_display_col_index` and `mutate`) and their
+          deprecated migration notices.
+- [x] **Mandatory manual review:**
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/core.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/cursor.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/event_handlers.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/output.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/render.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/mod.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_state/prompt.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/mod.rs`
+    - [x] `tui/src/readline_async/spinner.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline.rs`
+    - [x] `tui/src/readline_async/readline_async_api.rs`
+    - [x] `tui/src/readline_async/mod.rs`
+    - [x] `tui/src/core/misc/calc_str_len.rs`
+    - [x] `tui/examples/readline_async.rs`
+    - [x] `tui/src/core/resilient_reactor_thread/rrt_integration_tests/double_panic_prevention_test.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_editor_state_test.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_readline_test.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/readline_async_pty_test_fixtures.rs`
+    - [x] `lychee.toml`
 
 ---
 

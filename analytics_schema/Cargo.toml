@@ -4,7 +4,7 @@ description = "Analytics schema definitions shared by r3bl-cmdr and r3bl-base"
 version = "0.0.3"
 edition = "2024"
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/analytics_schema"
-documentation = "https://docs.rs/analytics_schema"
+documentation = "https://docs.rs/r3bl_analytics_schema"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
@@ -22,9 +22,8 @@ workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# serde-json.
+# serde.
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
 
 # Uuid.
 uuid = { version = "1.18.1", features = [
@@ -33,11 +32,13 @@ uuid = { version = "1.18.1", features = [
   "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ] }
 
-# For smallstr & smallvec.
-smallstr = { version = "0.3.0", features = ["std", "union"] }
+# For smallvec.
 smallvec = { version = "1.15.0", features = [
   "union",
   "const_generics",
   "const_new",
   "serde",          # small needs `server` feature flag here, but not in other Cargo.toml files in this workspace.
 ] }
+
+[dev-dependencies]
+serde_json = "1.0.145"

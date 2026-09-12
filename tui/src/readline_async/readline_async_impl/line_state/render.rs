@@ -1,10 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{
-    early_return_if_paused, ok, vp_col, vp_width, CsiSequence, EraseDisplayMode,
-    LineStateLiveness, StringLength,
-};
+use crate::{CSI_ERASE_DISPLAY_TO_END, early_return_if_paused, ok, vp_col};
 use std::io::{self, Write};
 
 impl LineState {
@@ -16,14 +13,12 @@ impl LineState {
     pub fn clear(&self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
-        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
-        self.move_to_beginning(term, cursor_distance_from_start)?;
+        let cursor_distance_from_start =
+            self.calc_current_column().distance_from(vp_col(0));
+        self.paint_cursor_to_start_from(term, cursor_distance_from_start)?;
+
         // ED 0 = Erase from cursor to end of screen (CSI 0J).
-        term.write_all(
-            CsiSequence::EraseDisplay(EraseDisplayMode::FromCursorToEnd)
-                .to_string()
-                .as_bytes(),
-        )?;
+        term.write_all(CSI_ERASE_DISPLAY_TO_END.as_bytes())?;
 
         ok!()
     }
@@ -36,20 +31,18 @@ impl LineState {
     pub fn render_and_flush(&mut self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
-        let output = format!("{}{}", self.prompt, self.line.as_str());
-        write!(term, "{output}")?;
-
-        let prompt_len =
-            StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
+        term.write_all(self.prompt.as_bytes())?;
+        term.write_all(self.line.as_str().as_bytes())?;
 
         // Use pre-computed display width from GCStringOwned.
         let line_display_width = self.line.width();
 
-        let total_line_len = vp_width(prompt_len) + line_display_width;
+        let total_line_len = self.prompt.width() + line_display_width;
 
-        self.move_to_beginning(term, total_line_len)?;
-        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
-        self.move_from_beginning(term, cursor_distance_from_start)?;
+        self.paint_cursor_to_start_from(term, total_line_len)?;
+        let cursor_distance_from_start =
+            self.calc_current_column().distance_from(vp_col(0));
+        self.paint_cursor_from_start_to(term, cursor_distance_from_start)?;
 
         term.flush()?;
 

@@ -14,9 +14,9 @@
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
-            ByteLength, CCol, CIndex, CLength, CRow, CWidth, DocSeg, GCStringOwned,
-            GapBufferLine, LineMetadata, RangeExt, SegStringOwned, byte_len,
-            byte_offset, c_col, c_index, c_len, c_row, c_width,
+            ByteLength, CCol, CIndex, CLength, CRow, CWidth, CursorBoundsCheck, DocSeg,
+            GCStringOwned, GapBufferLine, LineMetadata, RangeExt, SegStringOwned,
+            byte_len, byte_offset, c_col, c_index, c_len, c_row, c_width,
             segment_builder::build_segments_for_str};
 use std::ops::Range;
 
@@ -186,7 +186,7 @@ impl ZeroCopyGapBuffer {
             let delete_res = self.delete_range(
                 row_index,
                 c_index(0u16),
-                c_index(grapheme_count.as_usize()),
+                grapheme_count.eol_cursor_position(),
             );
             if delete_res.is_err() {
                 return None;
@@ -332,7 +332,7 @@ impl ZeroCopyGapBuffer {
         let second_line_text = second_line_content.to_string();
 
         let line_info = self.get_line_info(base_row_index)?;
-        let append_pos = c_index(line_info.grapheme_count.as_usize());
+        let append_pos = line_info.grapheme_count.eol_cursor_position();
 
         let insert_result =
             self.insert_text_at_grapheme(base_row_index, append_pos, &second_line_text);
@@ -482,7 +482,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{byte_len, c_col, c_height, c_len};
+    use crate::{CursorBoundsCheck, byte_len, c_col, c_height, c_len};
 
     #[test]
     fn test_basic_line_operations() {

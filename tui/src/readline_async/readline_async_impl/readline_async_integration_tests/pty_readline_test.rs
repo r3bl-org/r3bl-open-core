@@ -179,7 +179,7 @@ mod test_pty_pause_resume {
                 .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
-            let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
+            let is_paused = readline.lock_manager.line_state().read(|ls| ls.pause_state);
             println!("IsPaused: {is_paused:?}");
 
             shared_writer
@@ -189,7 +189,7 @@ mod test_pty_pause_resume {
                 .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
-            let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
+            let is_paused = readline.lock_manager.line_state().read(|ls| ls.pause_state);
             println!("IsPaused: {is_paused:?}");
 
             println!("{MSG_SUCCESS}");
@@ -296,7 +296,7 @@ mod test_pty_pause_resume_with_output {
                 .expect("conversion error");
             tokio::time::sleep(Duration::from_millis(10)).await;
 
-            let is_paused = readline.safe_line_state.read(|ls| ls.is_paused);
+            let is_paused = readline.lock_manager.line_state().read(|ls| ls.pause_state);
             println!("IsPaused: {is_paused:?}");
 
             println!("{MSG_SUCCESS}");

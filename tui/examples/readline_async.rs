@@ -10,7 +10,8 @@ use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal, OsSt
                fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
                ok,
-               readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
+               readline_async::{PrintLineOnControlC, PrintLineOnEnter, Readline,
+                                ReadlineAsyncContext, ReadlineEvent, Spinner},
                rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
 use std::{fs,
@@ -69,8 +70,8 @@ fn get_info_message() -> String {
         fg_color(tui_color!(lizard_green), &format!("{commands:?}")).to_string()
     };
 
-    let info_message = &format!(
-        "try Ctrl+D, Up, Down, Left, Right, Ctrl+left, Ctrl+right, `{}`, `{}`, `{}`, `{}`, and `{}`",
+    let try_commands_message = format!(
+        "try `{}`, `{}`, `{}`, `{}`, and `{}`",
         Command::StartTask1,
         Command::Tree,
         Command::Spinner,
@@ -78,11 +79,35 @@ fn get_info_message() -> String {
         Command::StopPrintouts
     );
 
+    let shortcuts = [
+        "  Navigation:",
+        "    Left, Right             Move cursor left / right",
+        "    Home, Ctrl+A            Move cursor to start of line",
+        "    End, Ctrl+E             Move cursor to end of line",
+        "    Ctrl+Left, Alt+B        Move cursor back one word",
+        "    Ctrl+Right, Alt+F       Move cursor forward one word",
+        "    Up, Down                History previous / next",
+        "  Editing & Deletion:",
+        "    Backspace               Delete character before cursor",
+        "    Delete                  Delete character at cursor",
+        "    Ctrl+D                  EOF (if line is empty) / delete character at cursor",
+        "    Ctrl+C                  Cancel / interrupt line",
+        "    Ctrl+U                  Delete from start of line up to cursor",
+        "    Ctrl+W, Alt+Backspace   Delete word before cursor",
+        "    Alt+D                   Delete word after cursor",
+        "  Screen & Control:",
+        "    Ctrl+L                  Clear screen and redraw line",
+        "    Enter                   Submit line",
+    ]
+    .join("\n");
+
     format!(
-        "{a}: \n{b}\n{c}",
-        a = bold("Available commands"),
-        b = available_commands,
-        c = fg_color(tui_color!(frozen_blue), info_message)
+        "{available_commands_title}: \n{available_commands}\n{try_commands}\n\n{keybindings_title}:\n{keybindings}",
+        available_commands_title = bold("Available commands"),
+        available_commands = available_commands,
+        try_commands = fg_color(tui_color!(frozen_blue), &try_commands_message),
+        keybindings_title = bold("Active keyboard shortcuts"),
+        keybindings = fg_color(tui_color!(frozen_blue), &shortcuts),
     )
 }
 
@@ -307,11 +332,17 @@ mod process_input_event {
                 }
                 Command::StartPrintouts => {
                     writeln!(shared_writer, "Printouts started!").into_diagnostic()?;
-                    readline.should_print_line_on(true, true);
+                    readline.should_print_line_on(
+                        PrintLineOnEnter::Print,
+                        PrintLineOnControlC::Print,
+                    );
                 }
                 Command::StopPrintouts => {
                     writeln!(shared_writer, "Printouts stopped!").into_diagnostic()?;
-                    readline.should_print_line_on(false, false);
+                    readline.should_print_line_on(
+                        PrintLineOnEnter::DoNotPrint,
+                        PrintLineOnControlC::DoNotPrint,
+                    );
                 }
                 Command::Info => {
                     writeln!(shared_writer, "{}", get_info_message())

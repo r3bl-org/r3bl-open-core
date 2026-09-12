@@ -3,11 +3,12 @@
 use crate::{Button, ChannelCapacity, CommonResultWithError, Continuation,
             CursorBoundsCheck, CursorPositionBoundsStatus, GCStringOwned, History,
             InputDevice, InputEvent, Key, KeyPress, KeyState, LineState,
-            LineStateControlSignal, LineStateLiveness, ModifierKeysMask, MouseInput,
-            OutputDevice, PauseBuffer, SafeHistory, SafeLineState, SafePauseBuffer,
-            SegIndex, SendRawTerminal, SharedWriter, StdMutex, VPHeight, VPSize,
-            VPWidth, disable_raw_mode, execute_commands_no_lock, join, key_press, ok,
-            vp_col, vp_row};
+            LineStateControlSignal, ModifierKeysMask, MouseInput, OutputDevice,
+            PauseBuffer, PauseState, PauseStateTransition, PrintLineOnControlC,
+            PrintLineOnEnter, ReadlineLockManager, SafeHistory, SafeLineState,
+            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, StdMutex,
+            VPHeight, VPSize, VPWidth, disable_raw_mode, execute_commands_no_lock, join,
+            key_press, ok, vp_col, vp_row};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use miette::Report as ErrorReport;
@@ -32,10 +33,10 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///
 /// This is a replacement for a [`std::io::BufRead::read_line`] function. It is async. It
 /// supports other tasks concurrently writing to the terminal output (via
-/// [`SharedWriter`]s). It also supports being paused so that [`Spinner`] can
-/// display an indeterminate progress spinner. Then it can be resumed so that the user can
-/// type in the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is
-/// printed out.
+/// [`SharedWriter`]s). It also supports being paused so that [`Spinner`] can display an
+/// indeterminate progress spinner. Then it can be resumed so that the user can type in
+/// the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is printed
+/// out.
 ///
 /// For details on the underlying async orchestration, including [`Pin`] and [`Unpin`]
 /// requirements for [`tokio::select!`], see [Core Async Concepts].
@@ -54,24 +55,21 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///
 /// # How or when to terminate the session
 ///
-///
 /// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
 /// the terminal to come out of raw mode. And all the buffers will be flushed. However,
 /// there are 2 ways to use this [`Readline::readline()`] in a loop or just as a one-off.
 /// Each time this function is called, you have to `await` it to return the user input or
 /// `Interrupted` or `Eof` signal.
 ///
-/// When creating a new [`ReadlineAsyncContext`] instance, you can use this
-/// repeatedly before dropping it. This is because the [`SharedWriter`] is cloned,
-/// and the terminal is kept in `raw mode` until the associated [`Readline`] is
-/// dropped.
+/// When creating a new [`ReadlineAsyncContext`] instance, you can use this repeatedly
+/// before dropping it. This is because the [`SharedWriter`] is cloned, and the terminal
+/// is kept in `raw mode` until the associated [`Readline`] is dropped.
 ///
 /// To fully terminate the session, you can call
-/// [`ReadlineAsyncContext::request_shutdown`] on it's "enclosing context". Then
-/// wait for that to complete by calling
-/// [`ReadlineAsyncContext::await_shutdown`]. If a `readline()` function is
-/// currently running, it will stop and be dropped as well! This is the beauty of
-/// non-blocking terminal input support!
+/// [`ReadlineAsyncContext::request_shutdown`] on it's "enclosing context". Then wait for
+/// that to complete by calling [`ReadlineAsyncContext::await_shutdown`]. If a
+/// `readline()` function is currently running, it will stop and be dropped as well! This
+/// is the beauty of non-blocking terminal input support!
 ///
 /// # Inputs and dependency injection
 ///
@@ -108,8 +106,8 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// other indeterminate progress indicator. The user input from the terminal is not going
 /// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This
 /// ensures that the user can't enter any input while the terminal is paused. And output
-/// from a [`Spinner`] won't clobber the output from the [`SharedWriter`]s or from
-/// the user input prompt while [`Readline::readline()`] (or
+/// from a [`Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
+/// user input prompt while [`Readline::readline()`] (or
 /// [`ReadlineAsyncContext::read_line`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
@@ -146,11 +144,11 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// - While retrieving input with [`readline()`][Readline::readline].
 /// - By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [`SafeRawTerminal`], like
-/// [`OutputDevice`], via [dependency injection], so that you can mock terminal output for
-/// testing. You can also extend this struct to adapt your own terminal output using this
-/// mechanism. Essentially anything that compiles with `dyn std::io::Write + Send` trait
-/// bounds can be used.
+/// You can provide your own implementation of [`SafeRawTerminal`], like [`OutputDevice`],
+/// via [dependency injection], so that you can mock terminal output for testing. You can
+/// also extend this struct to adapt your own terminal output using this mechanism.
+/// Essentially anything that compiles with `dyn std::io::Write + Send` trait bounds can
+/// be used.
 ///
 /// # Poison Safety
 ///
@@ -161,9 +159,12 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
 /// [`Pin`]: std::pin::Pin
 /// [`PinnedInputStream`]: crate::core::PinnedInputStream
-/// [`ReadlineAsyncContext::await_shutdown`]: crate::readline_async::ReadlineAsyncContext::await_shutdown
-/// [`ReadlineAsyncContext::read_line`]: crate::readline_async::ReadlineAsyncContext::read_line
-/// [`ReadlineAsyncContext::request_shutdown`]: crate::readline_async::ReadlineAsyncContext::request_shutdown
+/// [`ReadlineAsyncContext::await_shutdown`]:
+///     crate::readline_async::ReadlineAsyncContext::await_shutdown
+/// [`ReadlineAsyncContext::read_line`]:
+///     crate::readline_async::ReadlineAsyncContext::read_line
+/// [`ReadlineAsyncContext::request_shutdown`]:
+///     crate::readline_async::ReadlineAsyncContext::request_shutdown
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
 /// [`Spinner`]: crate::readline_async::Spinner
@@ -173,14 +174,11 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(missing_debug_implementations)]
 pub struct Readline {
-    /// Device used to write rendered display output to (usually `stdout`).
-    pub output_device: OutputDevice,
+    /// Manages hierarchical locking between line state and output device.
+    pub(crate) lock_manager: ReadlineLockManager,
 
     /// Device used to get stream of events from user (usually `stdin`).
     pub input_device: InputDevice,
-
-    /// Current line.
-    pub safe_line_state: SafeLineState,
 
     /// Use to send history updates.
     pub history_sender: UnboundedSender<String>,
@@ -363,7 +361,7 @@ pub mod manage_shared_writer_output {
                 self_safe_line_state.write(|line_state| {
                     // Early return if paused. Push the line to pause_buffer, don't print
                     // it.
-                    if line_state.is_paused.is_paused() {
+                    if line_state.pause_state != PauseState::NotPaused {
                         self_safe_is_paused_buffer.write(|pause_buffer| {
                             pause_buffer.push(buf);
                         });
@@ -383,47 +381,46 @@ pub mod manage_shared_writer_output {
 
             // Pause the terminal.
             LineStateControlSignal::Pause => self_safe_line_state.write(|line_state| {
-                output_device
-                    .write(|term| {
-                        // Try to pause the terminal, so incoming output is buffered, not
-                        // printed.
-                        line_state
-                            .set_paused(LineStateLiveness::Paused, term)
-                            .map_err(|_| {
-                                ReadlineError::IO(io::Error::other(
-                                    "failed to pause terminal",
-                                ))
-                            })?;
-
-                        ok!()
-                    })
-                    .into()
+                if line_state.pause_state.pause_spinner() == PauseStateTransition::Paused
+                {
+                    output_device
+                        .write(|term| {
+                            line_state.clear_and_render_and_flush(term).map_err(
+                                |_| {
+                                    ReadlineError::IO(io::Error::other(
+                                        "failed to pause terminal",
+                                    ))
+                                },
+                            )?;
+                            ok!()
+                        })
+                        .into()
+                } else {
+                    Continuation::Continue
+                }
             }),
 
             // Resume the terminal.
             LineStateControlSignal::Resume => self_safe_line_state.write(|line_state| {
-                output_device
-                    .write(|term| {
-                        // Try to resume the terminal and flush any buffered output.
-                        line_state
-                            .set_paused(LineStateLiveness::NotPaused, term)
-                            .map_err(|_| {
-                                ReadlineError::IO(io::Error::other(
-                                    "failed to resume terminal",
-                                ))
-                            })?;
+                if line_state.pause_state.resume_spinner()
+                    == PauseStateTransition::Resumed
+                {
+                    output_device
+                        .write(|term| {
+                            // We don't care about the result of this operation.
+                            drop(flush_internal(
+                                &self_safe_is_paused_buffer,
+                                line_state.pause_state,
+                                line_state,
+                                term,
+                            ));
 
-                        // We don't care about the result of this operation.
-                        drop(flush_internal(
-                            &self_safe_is_paused_buffer,
-                            LineStateLiveness::NotPaused,
-                            line_state,
-                            term,
-                        ));
-
-                        ok!()
-                    })
-                    .into()
+                            ok!()
+                        })
+                        .into()
+                } else {
+                    Continuation::Continue
+                }
             }),
 
             LineStateControlSignal::ExitReadlineLoop => {
@@ -436,13 +433,15 @@ pub mod manage_shared_writer_output {
 
             // Handle a flush signal.
             LineStateControlSignal::Flush => self_safe_line_state.write(|line_state| {
-                let is_paused = line_state.is_paused;
+                if line_state.pause_state != PauseState::NotPaused {
+                    return Continuation::Continue;
+                }
                 output_device
                     .write(|term| {
                         // We don't care about the result of this operation.
                         drop(flush_internal(
                             &self_safe_is_paused_buffer,
-                            is_paused,
+                            line_state.pause_state,
                             line_state,
                             term,
                         ));
@@ -486,12 +485,12 @@ pub mod manage_shared_writer_output {
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn flush_internal(
         self_safe_is_paused_buffer: &SafePauseBuffer,
-        is_paused: LineStateLiveness,
+        pause_state: PauseState,
         line_state: &mut LineState,
         term: &mut SendRawTerminal,
     ) -> CommonResultWithError<(), ReadlineError> {
         // If paused, then return!
-        if is_paused.is_paused() {
+        if pause_state != PauseState::NotPaused {
             return ok!();
         }
 
@@ -534,17 +533,22 @@ impl Drop for Readline {
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) {
         // Use lock_raw_poison_safe() to bypass the ledger during drop (emergency
-        // restoration).
-        self.output_device.lock_raw_poison_safe(|term| {
-            self.safe_line_state.lock_raw_poison_safe(|line_state| {
-                // We don't care about the result of this operation.
-                drop(line_state.exit(term));
+        // restoration). Strictly acquire SafeLineState (Level 1) first, then
+        // OutputDevice (Level 2) second to preserve lock hierarchy.
+        self.lock_manager
+            .line_state()
+            .lock_raw_poison_safe(|line_state| {
+                self.lock_manager
+                    .output_device()
+                    .lock_raw_poison_safe(|term| {
+                        // We don't care about the result of this operation.
+                        drop(line_state.exit(term));
 
-                // We don't care about the result of this operation.
-                // disable_raw_mode() is also poison-safe.
-                drop(disable_raw_mode());
+                        // We don't care about the result of this operation.
+                        // disable_raw_mode() is also poison-safe.
+                        drop(disable_raw_mode());
+                    });
             });
-        });
     }
 }
 
@@ -629,11 +633,13 @@ impl Readline {
             shutdown_complete_sender.clone(),
         );
 
+        let lock_manager =
+            ReadlineLockManager::new(safe_line_state.clone(), output_device.clone());
+
         // Create the instance with all the supplied components.
         let readline = Readline {
-            output_device: output_device.clone(),
+            lock_manager,
             input_device,
-            safe_line_state: safe_line_state.clone(),
             history_sender,
             history_receiver,
             safe_history,
@@ -643,11 +649,9 @@ impl Readline {
         };
 
         // Print the prompt.
-        output_device.write(|term| {
-            readline
-                .safe_line_state
-                .write(|line_state| line_state.render_and_flush(term))
-        })?;
+        readline
+            .lock_manager
+            .lock_both(|line_state, term| line_state.render_and_flush(term))?;
 
         spawn({
             let output_device_clone = output_device.clone();
@@ -690,10 +694,8 @@ impl Readline {
         &mut self,
         prompt: &str,
     ) -> CommonResultWithError<(), ReadlineError> {
-        self.output_device.write(|term| {
-            self.safe_line_state
-                .write(|line_state| line_state.update_prompt(prompt, term))
-        })?;
+        self.lock_manager
+            .lock_both(|line_state, term| line_state.update_prompt(prompt, term))?;
         ok!()
     }
 
@@ -713,10 +715,9 @@ impl Readline {
     /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
-        self.output_device.write(|term| {
+        self.lock_manager.lock_both(|line_state, term| {
             term.queue(Clear(terminal::ClearType::All))?;
-            self.safe_line_state
-                .write(|line_state| line_state.clear_and_render_and_flush(term))?;
+            line_state.clear_and_render_and_flush(term)?;
             term.flush()?;
             Ok::<(), ReadlineError>(())
         })?;
@@ -744,13 +745,21 @@ impl Readline {
 
     /// Sets whether the input line should remain on the screen after events.
     ///
-    /// If `enter` is true, then when the user presses "Enter", the prompt and the text
-    /// they entered will remain on the screen, and the cursor will move to the next line.
-    /// If `enter` is false, the prompt & input will be erased instead.
-    /// The default value for this is `true`.
+    /// # Arguments
     ///
-    /// `control_c` similarly controls the behavior for when the user presses `Ctrl+C`.
-    /// The default value for this is `false`.
+    /// - `enter`:
+    ///     - [`PrintLineOnEnter::Print`]: when the user presses <kbd>Enter</kbd>, the
+    ///       prompt and the text they entered will remain on the screen, and the cursor
+    ///       will move to the next line.
+    ///     - [`PrintLineOnEnter::DoNotPrint`]: the prompt & input will be erased instead.
+    ///     - The default value for `enter` is [`PrintLineOnEnter::Print`].
+    ///
+    /// - `control_c`:
+    ///     - [`PrintLineOnControlC::Print`]: when the user presses <kbd>Ctrl+C</kbd>, the
+    ///       prompt and the text will remain on the screen.
+    ///     - [`PrintLineOnControlC::DoNotPrint`]: the prompt & input will be erased
+    ///       instead.
+    ///     - The default value for `control_c` is [`PrintLineOnControlC::DoNotPrint`].
     ///
     /// # Panics
     ///
@@ -758,12 +767,16 @@ impl Readline {
     ///
     /// # Poison Safety
     ///
-    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
-    /// in the crate root documentation for details.
-    pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
-        self.safe_line_state.write(|line_state| {
-            line_state.should_print_line_on_enter = enter;
-            line_state.should_print_line_on_control_c = control_c;
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in
+    /// the crate root documentation for details.
+    pub fn should_print_line_on(
+        &mut self,
+        enter: PrintLineOnEnter,
+        control_c: PrintLineOnControlC,
+    ) {
+        self.lock_manager.lock_line_state(|line_state| {
+            line_state.print_line_on_enter = enter;
+            line_state.print_line_on_control_c = control_c;
         });
     }
 
@@ -808,10 +821,10 @@ impl Readline {
                 //   pinned_input_stream isn't used, and the state isn't modified.
                 maybe_input_event = self.input_device.next() => {
                     if let Some(input_event) = maybe_input_event {
-                        let result = self.output_device.write(|term| {
+                        let result = self.lock_manager.lock_both(|line_state, term| {
                             readline_internal::apply_event_to_line_state_and_render(
                                 input_event,
-                                &self.safe_line_state,
+                                line_state,
                                 term,
                                 &self.safe_history,
                                 &self.safe_spinner_is_active,
@@ -869,8 +882,8 @@ impl Readline {
     /// [`segment_count()`]: GCStringOwned::segment_count
     #[must_use]
     pub fn get_buffer(&self) -> GCStringOwned {
-        self.safe_line_state
-            .read(|line_state| line_state.line.clone())
+        self.lock_manager
+            .lock_line_state(|line_state| line_state.line.clone())
     }
 
     /// Returns the cursor position as a type-safe grapheme segment index (0-based).
@@ -890,8 +903,8 @@ impl Readline {
     /// [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
     #[must_use]
     pub fn get_cursor_position(&self) -> SegIndex {
-        self.safe_line_state
-            .read(|line_state| line_state.line_cursor_grapheme)
+        self.lock_manager
+            .lock_line_state(|line_state| line_state.cursor_position)
     }
 
     /// Returns the cursor position status relative to the buffer content.
@@ -943,11 +956,11 @@ impl Readline {
     /// [`Within`]: CursorPositionBoundsStatus::Within
     #[must_use]
     pub fn get_cursor_position_status(&self) -> CursorPositionBoundsStatus {
-        self.safe_line_state.read(|line_state| {
+        self.lock_manager.lock_line_state(|line_state| {
             line_state
                 .line
                 .segment_count()
-                .check_cursor_position_bounds(line_state.line_cursor_grapheme)
+                .check_cursor_position_bounds(line_state.cursor_position)
         })
     }
 }
@@ -966,7 +979,7 @@ pub mod readline_internal {
     /// in the crate root documentation for details.
     pub fn apply_event_to_line_state_and_render(
         input_event: InputEvent,
-        self_line_state: &SafeLineState,
+        line_state: &mut LineState,
         term: &mut dyn Write,
         self_safe_history: &SafeHistory,
         self_safe_is_spinner_active: &Arc<StdMutex<Option<broadcast::Sender<()>>>>,
@@ -977,23 +990,21 @@ pub mod readline_internal {
             key_press!(@char ModifierKeysMask::new().with_ctrl(), 'd'),
         ]);
 
-        self_line_state.write(|line_state| {
-            // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
-            // active). And early return!
-            let is_spinner_active = self_safe_is_spinner_active.write(Option::take);
+        // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
+        // active). And early return!
+        let is_spinner_active = self_safe_is_spinner_active.write(Option::take);
 
-            if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
-                // Send signal to SharedWriter spinner shutdown channel.
-                // We don't care about the result of this operation.
-                spinner_shutdown_sender.send(()).ok();
-                return ReadlineControlFlow::Continue;
-            }
+        if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
+            // Send signal to SharedWriter spinner shutdown channel.
+            // We don't care about the result of this operation.
+            spinner_shutdown_sender.send(()).ok();
+            return ReadlineControlFlow::Continue;
+        }
 
-            // Regular readline event handling - use the canonical InputEvent directly
-            line_state
-                .apply_event_and_render(&input_event, term, self_safe_history)
-                .into()
-        })
+        // Regular readline event handling - use the canonical InputEvent directly
+        line_state
+            .apply_event_and_render(&input_event, term, self_safe_history)
+            .into()
     }
 
     /// Converts crossterm `KeyCode` to canonical `Key`
@@ -1315,7 +1326,7 @@ mod test_pause_and_resume_support {
             // Call the `flush_internal` function.
             let result = flush_internal(
                 &safe_is_paused_buffer,
-                LineStateLiveness::Paused,
+                PauseState::PausedBySpinner,
                 line_state,
                 &mut stdout_mock,
             );
@@ -1351,7 +1362,7 @@ mod test_pause_and_resume_support {
             // Call the `flush_internal` function.
             let result = flush_internal(
                 &safe_is_paused_buffer,
-                LineStateLiveness::NotPaused,
+                PauseState::NotPaused,
                 line_state,
                 &mut stdout_mock,
             );

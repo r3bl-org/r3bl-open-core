@@ -218,7 +218,7 @@ impl ReadlineAsyncContext {
     }
 
     pub fn clone_output_device(&mut self) -> OutputDevice {
-        self.readline.output_device.clone()
+        self.readline.lock_manager.output_device().clone()
     }
 
     /// Replacement for [`std::io::Stdin::read_line()`] (this is async and non-blocking).
