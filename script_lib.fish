@@ -179,10 +179,34 @@ function get_p_core_cpu_ids
     echo ""
 end
 
+# Cross-platform system memory detection helper.
+#
+# Rust Migration Note (cargo-monitor / build-infra):
+# Map this to system memory detection via sysinfo or /proc/meminfo on Linux, and
+# sysctl hw.memsize on macOS.
+#
+function get_system_ram_gib -d "Get total physical system RAM in GiB (cross-platform Linux/macOS)"
+    if test (uname -s) = "Darwin"
+        # macOS: sysctl -n hw.memsize returns memory in bytes
+        set -l bytes (sysctl -n hw.memsize 2>/dev/null)
+        if test -n "$bytes"
+            math "round($bytes / 1024 / 1024 / 1024)"
+            return 0
+        end
+    else
+        # Linux: /proc/meminfo MemTotal in kB
+        if test -r /proc/meminfo
+            set -l kb (awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null)
+            if test -n "$kb"
+                math "round($kb / 1024 / 1024)"
+                return 0
+            end
+        end
+    end
 
-
-
-# Cross-platform file watcher that monitors filesystem changes and runs commands.
+    # Safe fallback if detection fails
+    echo 32
+end
 #
 # This function provides a unified interface for file watching across macOS (fswatch)
 # and Linux (inotifywait). It continuously monitors a directory for changes and
