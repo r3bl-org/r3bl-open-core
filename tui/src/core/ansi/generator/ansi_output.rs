@@ -66,12 +66,12 @@
 use crate::{ColorTarget, SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING,
                                       BRACKETED_PASTE_MODE, CSI_ERASE_DISPLAY_ALL,
-                                      CSI_PARAM_SEPARATOR, CSI_START,
-                                      RCP_RESTORE_CURSOR_STR, SCP_SAVE_CURSOR_STR,
-                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_MOUSE_MODE,
-                                      SGR_RESET_STR, SGR_SET_GRAPHICS,
-                                      SGR_STRIKETHROUGH, SGR_UNDERLINE,
-                                      URXVT_MOUSE_EXTENSION},
+                                      CSI_ERASE_DISPLAY_TO_END, CSI_PARAM_SEPARATOR,
+                                      CSI_START, RCP_RESTORE_CURSOR_STR,
+                                      SCP_SAVE_CURSOR_STR, SGR_BOLD, SGR_DIM,
+                                      SGR_ITALIC, SGR_MOUSE_MODE, SGR_RESET_STR,
+                                      SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
+                                      SGR_UNDERLINE, URXVT_MOUSE_EXTENSION},
                           vt_100_pty_output_parser::CsiSequence},
                    coordinates::{TermCol, TermRow}}};
 
@@ -138,6 +138,13 @@ pub mod screen_clearing {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn clear_screen() -> &'static str { CSI_ERASE_DISPLAY_ALL }
+
+    /// Clear to end of screen
+    /// [`CSI`] 0J (Erase Display: 0 = cursor to end)
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[must_use]
+    pub fn clear_to_end_of_screen() -> &'static str { CSI_ERASE_DISPLAY_TO_END }
 
     /// Clear current line
     /// [`CSI`] 2K (Erase Line: 2 = entire line)

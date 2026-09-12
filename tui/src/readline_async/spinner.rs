@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
@@ -41,8 +41,8 @@ use tokio::{sync::broadcast, time::interval};
 ///   - It also gives a way to stop the spinner via the `shutdown_sender`.
 ///
 /// - When `Ctrl+C` or `Ctrl+D` is intercepted by [`ReadlineAsyncContext`] in
-///   [`apply_event_to_line_state_and_render()`], a `()` is sent to
-///   [`safe_spinner_is_active`], which shuts the spinner down.
+///   [`apply_event_to_line_state_and_render()`], a shutdown signal is sent to the active
+///   spinner (which can be checked via [`Readline::is_spinner_active()`]).
 ///
 /// # Usage Example
 ///
@@ -50,9 +50,9 @@ use tokio::{sync::broadcast, time::interval};
 ///
 /// ```no_run
 /// // This example requires terminal output for the spinner animation
-/// # use std::time::Duration;
-/// # use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
-/// # async fn example() -> miette::Result<()> {
+/// use std::time::Duration;
+/// use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
+/// async fn example() -> miette::Result<()> {
 ///     let mut spinner = match Spinner::try_start(
 ///         "Loading...",
 ///         "Done!",
@@ -72,38 +72,73 @@ use tokio::{sync::broadcast, time::interval};
 ///     spinner.request_shutdown();
 ///     // Wait for the spinner to completely shutdown
 ///     spinner.await_shutdown().await;
-/// # ok!()
-/// # }
+///     ok!()
+/// }
 /// ```
 ///
+/// # Deadlock Safety
+///
+/// [`Spinner`] only holds an [`OutputDevice`] and does not access [`SafeLineState`].
+/// Because it never acquires multiple locks, it cannot deadlock with active readline
+/// operations. For details on lock ordering, see [`ReadlineLockManager`'s lock
+/// hierarchy].
+///
 /// [`apply_event_to_line_state_and_render()`]:
-///     super::readline_internal::apply_event_to_line_state_and_render()
+///     crate::apply_event_to_line_state_and_render
+/// [`OutputDevice`]: crate::OutputDevice
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 /// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()
+/// [`Readline::is_spinner_active()`]: crate::Readline::is_spinner_active
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
-/// [`safe_spinner_is_active`]: crate::Readline::safe_spinner_is_active
+/// [`ReadlineLockManager`'s lock hierarchy]:
+///     crate::ReadlineLockManager#the-solution-level-1-and-level-2-locks
+/// [`SafeLineState`]: crate::SafeLineState
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
+/// [`tokio::sync::broadcast::Sender`]: tokio::sync::broadcast::Sender
 /// [interactive terminal application entry point]:
 ///     crate#interactive-terminal-application-entry-points
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 #[allow(missing_debug_implementations)]
 pub struct Spinner {
+    /// Duration between animation tick updates.
     pub tick_delay: Duration,
-    /// [`ANSI`] escape sequences are stripped from this before being assigned.
+
     /// Thread-safe message that can be updated during spinner animation.
+    ///
+    /// Any [`ANSI`] escape sequences are stripped before being assigned.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub interval_message: SafeInlineString,
+
+    /// Final message printed once when the spinner shuts down cleanly.
     pub final_message: InlineString,
+
+    /// Visual style and glyph set for the spinner animation.
     pub style: SpinnerStyle,
+
+    /// Terminal output device where spinner frames are rendered.
     pub output_device: OutputDevice,
+
+    /// Optional [`SharedWriter`] for coordinating terminal output with
+    /// [`ReadlineAsyncContext`] in embedded mode.
+    ///
+    /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+    /// [`SharedWriter`]: crate::SharedWriter
     pub maybe_shared_writer: Option<SharedWriter>,
+
+    /// Broadcast channel sender used to signal the background animation task to shut
+    /// down.
     pub shutdown_sender: broadcast::Sender<()>,
+
+    /// Thread-safe flag tracking whether shutdown has been requested.
     safe_is_shutdown: SafeBool,
-    /// This is used to signal when the task has completely shutdown. Use the
-    /// [`Self::wait_for_shutdown()`].
+
+    /// One-shot receiver used by [`Self::await_shutdown()`] to wait until the background
+    /// task has completely finished.
+    ///
+    /// [`Self::await_shutdown()`]: Self::await_shutdown
     maybe_shutdown_complete_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
@@ -112,11 +147,14 @@ impl Spinner {
     /// [`ANSI`] escape sequences then these will be stripped.
     ///
     /// # Returns
-    /// 1. This will return an error if the task is already running.
-    /// 2. If the terminal is not interactive then it will return
-    ///    [`TuiAvailability::NotAvailable`], and won't start the task.
-    /// 3. Otherwise, it will start the task and return a [`TuiAvailability::Available`]
-    ///    containing the [`Spinner`] instance.
+    ///
+    /// Returns a [`TuiAvailability`] containing the [`Spinner`] if the terminal is
+    /// interactive. This explicitly represents all possible states:
+    /// - [`Available`]: Terminal is interactive and the spinner task started
+    ///   successfully.
+    /// - [`NotAvailable`]: Terminal is not interactive (e.g., piped output), and won't
+    ///   start the task.
+    /// - [`Broken`]: Initialization failed.
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
@@ -129,7 +167,7 @@ impl Spinner {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
+    /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
     /// - The spinner task cannot be started
     /// - The communication channels fail to initialize
     ///
@@ -138,7 +176,10 @@ impl Spinner {
     /// See [interactive terminal application entry points].
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`Available`]: TuiAvailability::Available
+    /// [`Broken`]: TuiAvailability::Broken
     /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
+    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`stderr`]: std::io::stderr
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn try_start(
@@ -251,6 +292,7 @@ impl Spinner {
     /// - The spinner task cannot be spawned
     /// - The communication channels fail
     ///
+    /// [`tokio::sync::oneshot::channel`]: tokio::sync::oneshot::channel
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
@@ -446,3 +488,164 @@ impl Spinner {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{OutputDeviceExt, SGR_FG_RED_STR, SGR_RESET_STR};
+    use std::time::Duration;
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_spinner_standalone_lifecycle() {
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let (shutdown_sender, _) = broadcast::channel(1);
+
+        let mut spinner = Spinner {
+            interval_message: Arc::new(StdMutex::new("Starting...".into())),
+            final_message: "Complete!".into(),
+            tick_delay: Duration::from_millis(5),
+            style: SpinnerStyle::default(),
+            output_device,
+            maybe_shared_writer: None,
+            shutdown_sender,
+            safe_is_shutdown: Arc::new(StdMutex::new(false)),
+            maybe_shutdown_complete_rx: None,
+        };
+
+        let safe_is_shutdown = spinner.safe_is_shutdown.clone();
+
+        assert!(!spinner.is_shutdown());
+
+        spinner.try_start_task().await.unwrap();
+
+        // Allow at least one tick to execute.
+        tokio::time::sleep(Duration::from_millis(15)).await;
+
+        // Update message dynamically.
+        spinner.update_message("Working...");
+        assert_eq!(
+            spinner.interval_message.read(InlineString::to_string),
+            "Working..."
+        );
+
+        // Shut down cleanly.
+        spinner.request_shutdown();
+        spinner.await_shutdown().await;
+
+        assert!(safe_is_shutdown.read(|is_shutdown| *is_shutdown));
+
+        // Verify final message was written to the output device.
+        let output = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
+        assert!(output.contains("Complete!"));
+    }
+
+    #[test]
+    #[allow(clippy::needless_return)]
+    fn test_update_message_strips_ansi() {
+        let (output_device, _) = OutputDevice::new_mock();
+        let (shutdown_sender, _) = broadcast::channel(1);
+
+        let spinner = Spinner {
+            interval_message: Arc::new(StdMutex::new("Clean message".into())),
+            final_message: "Final".into(),
+            tick_delay: Duration::from_millis(50),
+            style: SpinnerStyle::default(),
+            output_device,
+            maybe_shared_writer: None,
+            shutdown_sender,
+            safe_is_shutdown: Arc::new(StdMutex::new(false)),
+            maybe_shutdown_complete_rx: None,
+        };
+
+        // Message with ANSI sequences should be stripped.
+        let ansi_msg = format!("{SGR_FG_RED_STR}Colored message{SGR_RESET_STR}");
+        spinner.update_message(ansi_msg);
+        assert_eq!(
+            spinner.interval_message.read(InlineString::to_string),
+            "Colored message"
+        );
+
+        // Regular message without ANSI sequences.
+        spinner.update_message("Plain text");
+        assert_eq!(
+            spinner.interval_message.read(InlineString::to_string),
+            "Plain text"
+        );
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_spinner_embedded_coordination_signals() {
+        let (output_device, _) = OutputDevice::new_mock();
+        let (mut line_rx, shared_writer) = SharedWriter::new_mock();
+        let (shutdown_sender, _) = broadcast::channel(1);
+
+        let mut spinner = Spinner {
+            interval_message: Arc::new(StdMutex::new("Embedded mode".into())),
+            final_message: "Embedded complete".into(),
+            tick_delay: Duration::from_millis(5),
+            style: SpinnerStyle::default(),
+            output_device,
+            maybe_shared_writer: Some(shared_writer),
+            shutdown_sender,
+            safe_is_shutdown: Arc::new(StdMutex::new(false)),
+            maybe_shutdown_complete_rx: None,
+        };
+
+        spinner.try_start_task().await.unwrap();
+
+        // 1. Verify start signals sent to SharedWriter channel:
+        // First signal: SpinnerActive
+        let sig1 = line_rx.recv().await.unwrap();
+        assert!(matches!(sig1, LineStateControlSignal::SpinnerActive(_)));
+
+        // Second signal: Pause
+        let sig2 = line_rx.recv().await.unwrap();
+        assert!(matches!(sig2, LineStateControlSignal::Pause));
+
+        // 2. Shut down and verify shutdown signals:
+        spinner.request_shutdown();
+        spinner.await_shutdown().await;
+
+        // Third signal: SpinnerInactive
+        let sig3 = line_rx.recv().await.unwrap();
+        assert!(matches!(sig3, LineStateControlSignal::SpinnerInactive));
+
+        // Fourth signal: Resume
+        let sig4 = line_rx.recv().await.unwrap();
+        assert!(matches!(sig4, LineStateControlSignal::Resume));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_try_start_non_interactive_fallback() {
+        let (output_device, _) = OutputDevice::new_mock();
+        // In unit test environment without a real terminal, try_start returns
+        // NotAvailable or Available.
+        let availability = Spinner::try_start(
+            "test",
+            "done",
+            Duration::from_millis(50),
+            SpinnerStyle::default(),
+            output_device,
+            None,
+        )
+        .await;
+
+        match availability {
+            TuiAvailability::NotAvailable(reason) => {
+                assert!(!reason.as_err_msg().is_empty());
+            }
+            TuiAvailability::Available(mut spinner) => {
+                spinner.request_shutdown();
+                spinner.await_shutdown().await;
+            }
+            TuiAvailability::Broken(err) => {
+                panic!("try_start should not fail with Broken error: {err:?}");
+            }
+        }
+    }
+}
+
+// cspell:words Coffman

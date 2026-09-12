@@ -69,7 +69,13 @@ impl TerminalWindow {
     /// # Returns
     ///
     /// Returns a [`TuiAvailability`] containing the [`MainEventLoopFuture`] if the
-    /// terminal is interactive. The future resolves to a [`CommonResult`] with:
+    /// terminal is interactive. This explicitly represents all possible states:
+    /// - [`Available`]: Terminal is interactive and initialization succeeded. Returns the
+    ///   future.
+    /// - [`NotAvailable`]: Terminal is not interactive.
+    /// - [`Broken`]: Initialization failed.
+    ///
+    /// The future resolves to a [`CommonResult`] with:
     /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
     /// * `event_stream` - The [`InputDevice`] used for input events.
     /// * `stdout` - The [`OutputDevice`] used for output.
@@ -103,6 +109,9 @@ impl TerminalWindow {
     ///
     /// # Errors
     ///
+    /// Returns a [`Broken`] variant containing a [`miette::Report`] if initialization
+    /// (e.g., getting terminal size) fails.
+    ///
     /// The returned future may produce [`miette::Error`] during:
     /// * Input/output device creation.
     /// * Event loop execution (input processing, rendering, signal handling).
@@ -113,8 +122,11 @@ impl TerminalWindow {
     /// See [interactive terminal application entry points].
     ///
     /// [`App`]: crate::tui::App
+    /// [`Available`]: TuiAvailability::Available
+    /// [`Broken`]: TuiAvailability::Broken
     /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
+    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,

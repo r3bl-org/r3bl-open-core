@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{BufReadExt, ColorSupport, FunctionComponent, GLYPH_CONTROLLER, Header,
             HowToChoose, ItemsOwned, MSG_SUCCESS, OutputDevice, OutputDeviceExt,

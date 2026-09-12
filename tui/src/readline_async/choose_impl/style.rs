@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{TuiStyle, new_style, tui_color};
 

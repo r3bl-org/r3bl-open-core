@@ -342,6 +342,7 @@
         "sdktrace",
         "seco",
         "secon",
+        "segs",
         "serialtest",
         "setclip",
         "shiki",
@@ -451,5 +452,5 @@
         "zcgb",
         "Zoey"
     ],
-    "rust-analyzer.cargo.target": "x86_64-pc-windows-gnu"
+    "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu"
 }

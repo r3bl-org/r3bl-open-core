@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Line editing state machine for async readline.
 //!
@@ -12,10 +12,11 @@
 //!
 //! | Module            | Responsibility                                               |
 //! | ----------------- | ------------------------------------------------------------ |
-//! | `core`            | [`LineState`] struct, [`LineStateLiveness`] enum, state      |
+//! | `core`            | [`LineState`] struct, [`PauseState`] enum, state             |
 //! | `cursor`          | Cursor movement, grapheme navigation, terminal positioning   |
 //! | `event_handlers`  | Keyboard event dispatch (Ctrl, Alt, regular keys)            |
 //! | `output`          | Data printing, prompt updates, exit handling                 |
+//! | `prompt`          | [`Prompt`] struct, display width calculation, [`ANSI`]       |
 //! | `render`          | Terminal clear/render operations with [`ANSI`] sequences     |
 //!
 //! # Type Safety
@@ -34,12 +35,14 @@
 //!
 //! [`LineState`] can be paused to allow spinners or other UI elements to take over
 //! the terminal. While paused, keyboard events are ignored and rendering is
-//! suppressed. See [`LineStateLiveness`] and [`LineState::set_paused`].
+//! suppressed. See [`PauseState`].
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
 //! [`bounds_check`]: crate::bounds_check
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+//! [`PauseState`]: crate::PauseState
+//! [`Prompt`]: crate::Prompt
 //! [`Readline`]: crate::Readline
 //! [`SegIndex`]: crate::SegIndex
 //! [`VPCol`]: crate::VPCol
@@ -52,7 +55,9 @@ mod core;
 mod cursor;
 mod event_handlers;
 mod output;
+mod prompt;
 mod render;
 
 // Public re-exports (expose stable API).
 pub use core::*;
+pub use prompt::*;

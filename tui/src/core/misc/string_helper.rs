@@ -2,7 +2,6 @@
 
 use crate::{CowInlineString, GCStringOwned, InlineString, VPWidth,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
-use std::fmt::Write;
 
 /// Tests whether the given text contains an [`ANSI`] escape sequence.
 ///
@@ -242,21 +241,30 @@ mod truncate_from_right_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle Unicode truncation from the right
+    /// Handle Unicode truncation from the right.
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
         display_width: VPWidth,
     ) -> CowInlineString<'static> {
         let postfix = ELLIPSIS_GLYPH;
         let postfix_gcs: GCStringOwned = postfix.into();
-        let postfix_display_width = postfix_gcs.display_width;
-        let string_display_width = string_gcs.display_width;
-        let truncate_cols_from_right = string_display_width - display_width;
-        let truncated_text =
-            string_gcs.trunc_end_by(truncate_cols_from_right + postfix_display_width);
 
+        if display_width < postfix_gcs.display_width {
+            return truncate_helper::handle_insufficient_width_for_ellipsis();
+        }
+
+        let truncated_text = {
+            let postfix_display_width = postfix_gcs.display_width;
+            let target_width = display_width - postfix_display_width;
+            string_gcs.trunc_end_to_fit(target_width)
+        };
+
+        let total_len = truncated_text.len() + postfix_gcs.string.len();
         let mut acc = InlineString::new();
-        write!(acc, "{}{}", truncated_text, postfix_gcs.string).ok();
+        acc.reserve(total_len);
+        acc.push_str(truncated_text);
+        acc.push_str(&postfix_gcs.string);
+
         CowInlineString::Owned(acc)
     }
 }
@@ -307,21 +315,31 @@ mod truncate_from_left_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle Unicode truncation from the left
+    /// Handle Unicode truncation from the left.
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
         display_width: VPWidth,
     ) -> CowInlineString<'static> {
         let prefix = ELLIPSIS_GLYPH;
         let prefix_gcs: GCStringOwned = prefix.into();
-        let prefix_display_width = prefix_gcs.display_width;
-        let string_display_width = string_gcs.display_width;
-        let truncate_cols_from_left = string_display_width - display_width;
-        let truncated_text =
-            string_gcs.trunc_start_by(truncate_cols_from_left + prefix_display_width);
 
+        if display_width < prefix_gcs.display_width {
+            return truncate_helper::handle_insufficient_width_for_ellipsis();
+        }
+
+        let truncated_text = {
+            let prefix_display_width = prefix_gcs.display_width;
+            let string_display_width = string_gcs.display_width;
+            let truncate_cols_from_left = string_display_width - display_width;
+            string_gcs.trunc_start_by(truncate_cols_from_left + prefix_display_width)
+        };
+
+        let total_len = prefix_gcs.string.len() + truncated_text.len();
         let mut acc = InlineString::new();
-        write!(acc, "{}{}", prefix_gcs.string, truncated_text).ok();
+        acc.reserve(total_len);
+        acc.push_str(&prefix_gcs.string);
+        acc.push_str(truncated_text);
+
         CowInlineString::Owned(acc)
     }
 }
@@ -426,6 +444,72 @@ mod tests {
         let unicode_string = "Hello, 世界!";
         let result = truncate_from_left(unicode_string, width, false);
         assert_eq!(result.as_ref(), "…lo, 世界!");
+    }
+
+    #[test]
+    fn test_remove_escaped_quotes() {
+        // String with debug escaped quotes.
+        let s = format!("{:?}", "Hello\", world!");
+        assert_eq!(remove_escaped_quotes(&s), "Hello, world!");
+
+        // String without quotes.
+        assert_eq!(remove_escaped_quotes("plain text"), "plain text");
+
+        // Empty string.
+        assert_eq!(remove_escaped_quotes(""), "");
+
+        // String with only quotes.
+        assert_eq!(remove_escaped_quotes("\"\""), "");
+    }
+
+    #[test]
+    fn test_truncate_insufficient_width_boundary() {
+        // ASCII width 0 is less than ellipsis width 1, so return empty string.
+        let result_right_ascii = truncate_from_right("Hello", vp_width(0), false);
+        assert_eq!(result_right_ascii.as_ref(), "");
+
+        let result_left_ascii = truncate_from_left("Hello", vp_width(0), false);
+        assert_eq!(result_left_ascii.as_ref(), "");
+
+        // Unicode width 0 is less than ellipsis width 1, so return empty string.
+        let result_right_unicode = truncate_from_right("世界", vp_width(0), false);
+        assert_eq!(result_right_unicode.as_ref(), "");
+
+        let result_left_unicode = truncate_from_left("世界", vp_width(0), false);
+        assert_eq!(result_left_unicode.as_ref(), "");
+    }
+
+    #[test]
+    fn test_truncate_unicode_padding_and_zero_copy() {
+        // Unicode padding from right: 世界 has display width 4, target 7 adds 3 trailing
+        // spaces.
+        let padded_right = truncate_from_right("世界", vp_width(7), true);
+        assert_eq!(padded_right.as_ref(), "世界   ");
+
+        // Unicode padding from left: 世界 has display width 4, target 7 adds 3 leading
+        // spaces.
+        let padded_left = truncate_from_left("世界", vp_width(7), true);
+        assert_eq!(padded_left.as_ref(), "   世界");
+
+        // Unicode zero copy when exact width matches with no padding or truncation
+        // needed.
+        let exact = truncate_from_right("世界", vp_width(4), true);
+        assert!(matches!(exact, CowInlineString::Borrowed(_)));
+        assert_eq!(exact.as_ref(), "世界");
+
+        // Unicode zero copy when width is shorter and pad is false.
+        let short_no_pad_right = truncate_from_right("世界", vp_width(10), false);
+        assert!(matches!(short_no_pad_right, CowInlineString::Borrowed(_)));
+        assert_eq!(short_no_pad_right.as_ref(), "世界");
+
+        let short_no_pad_left = truncate_from_left("世界", vp_width(10), false);
+        assert!(matches!(short_no_pad_left, CowInlineString::Borrowed(_)));
+        assert_eq!(short_no_pad_left.as_ref(), "世界");
+
+        // ASCII zero copy when exact width matches and pad is true.
+        let exact_ascii_left = truncate_from_left("12345", vp_width(5), true);
+        assert!(matches!(exact_ascii_left, CowInlineString::Borrowed(_)));
+        assert_eq!(exact_ascii_left.as_ref(), "12345");
     }
 }
 

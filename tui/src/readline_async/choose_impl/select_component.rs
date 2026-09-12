@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
@@ -178,7 +178,7 @@ mod render_helper {
         start_display_col_offset: usize,
     ) -> CommonResult {
         let mut header_text =
-            format!("{}{}", get_spaces(start_display_col_offset), header_text);
+            [get_spaces(start_display_col_offset).as_ref(), header_text].join("");
 
         header_text = clip_string_to_width_with_ellipsis(header_text, vp_width);
 
@@ -477,7 +477,7 @@ mod render_helper {
         data_style: &TuiStyle,
         vp_width: ChUnit,
     ) -> CommonResult {
-        let data_item = format!("{row_prefix}{}", row_context.data_item);
+        let data_item = [row_prefix, row_context.data_item.as_str()].join("");
         let data_item: String = clip_string_to_width_with_ellipsis(data_item, vp_width);
         let data_item_gcs = GCStringOwned::from(&data_item);
         let data_item_display_width: ChUnit = *data_item_gcs.display_width;

@@ -145,6 +145,40 @@ let Some(()) = buffer.delete_at_col(row, col) else { return None; };
 
 ---
 
+## Encapsulation & Testing Hygiene
+
+### Bad: Breaking Encapsulation for Tests
+
+Making fields or methods overly public (`pub` or `pub(crate)`) simply so they can be accessed in test code leaks internal state and breaks the encapsulation boundary for production code.
+
+```rust
+pub struct Connection {
+    // ❌ Bad: Made pub(crate) just so tests can inspect or manipulate it
+    pub(crate) internal_state: State, 
+}
+```
+
+### Good: Test-Only Accessors (`#[cfg(test)]`)
+
+Keep fields strictly scoped (e.g. private or `pub(in crate::my_module)`) for production code, and provide dedicated accessor methods annotated with `#[cfg(test)]`. This ensures the escape hatch is compiled completely out of the production binary while allowing tests to observe or manipulate internal state. Name these methods with a `_for_testing` suffix to make their intent explicit.
+
+```rust
+pub struct Connection {
+    // ✅ Good: Strictly encapsulated in production
+    internal_state: State,
+}
+
+impl Connection {
+    // ✅ Good: Explicit test-only escape hatch
+    #[cfg(test)]
+    pub(crate) fn state_for_testing(&self) -> &State {
+        &self.internal_state
+    }
+}
+```
+
+---
+
 ## Abstraction Patterns
 
 ### Bad: Abstraction Adds Complexity

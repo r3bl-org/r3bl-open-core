@@ -14,17 +14,18 @@
 //!
 //! ```rust
 //! use r3bl_tui::core::graphemes::word_boundaries::*;
+//! use r3bl_tui::{GCStringOwned, seg_index};
 //!
-//! let text = "hello-world foo";
+//! let line = GCStringOwned::from("hello-world foo");
 //! let cursor = 11; // After "hello-world"
 //!
 //! // Find start of previous word
-//! let prev_start = find_prev_word_start(text, cursor);
-//! assert_eq!(prev_start, 6); // Points to 'w' in "world"
+//! let prev_start = find_prev_word_start(&line, cursor);
+//! assert_eq!(prev_start, seg_index(6)); // Points to 'w' in "world"
 //!
 //! // Find end of next word
-//! let next_end = find_next_word_end(text, cursor);
-//! assert_eq!(next_end, 15); // After "foo"
+//! let next_end = find_next_word_end(&line, cursor);
+//! assert_eq!(next_end, seg_index(15)); // After "foo"
 //! ```
 //!
 //! ## Word Boundary Rules
