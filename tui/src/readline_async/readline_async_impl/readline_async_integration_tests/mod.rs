@@ -1,14 +1,17 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! System-level [`PTY`] tests - end-to-end validation of readline editing in real pseudoterminals.
+//! System-level [`PTY`] tests - end-to-end validation of readline editing in real
+//! pseudoterminals.
 //!
-//! These tests validate the complete readline editing stack in a real [`PTY`] environment:
+//! These tests validate the complete readline editing stack in a real [`PTY`]
+//! environment:
 //! - [`LineState`] async event handling and state management
 //! - Line editing operations (insert, delete, navigation)
 //! - Word boundary detection with Unicode support
 //! - Terminal rendering and cursor positioning
 //!
-//! All tests use **real keyboard input sequences** to verify the system handles actual user input correctly.
+//! All tests use **real keyboard input sequences** to verify the system handles actual
+//! user input correctly.
 //!
 //! Run with:
 //! ```bash
@@ -18,9 +21,12 @@
 //! # Testing Philosophy
 //!
 //! **[`PTY`] tests validate end-to-end behavior** because:
-//! - **Real-world testing**: Tests run in an actual pseudoterminal, matching production environment
-//! - **Integration validation**: Verifies the complete stack from keyboard input → line state → terminal output
-//! - **Unicode safety**: Validates multi-byte character handling in actual terminal environment
+//! - **Real-world testing**: Tests run in an actual pseudoterminal, matching production
+//!   environment
+//! - **Integration validation**: Verifies the complete stack from keyboard input → line
+//!   state → terminal output
+//! - **Unicode safety**: Validates multi-byte character handling in actual terminal
+//!   environment
 //!
 //! **Unit tests** (in [`line_state`]) validate individual handler logic with mocked I/O.
 //! **[`PTY`] tests** validate the full system works correctly in a real terminal.
@@ -71,6 +77,9 @@ pub mod pty_multiline_output_test;
 
 #[cfg(any(all(unix, doc), test))]
 pub mod pty_readline_test;
+
+#[cfg(any(all(unix, doc), test))]
+pub mod pty_concurrent_input_output_deadlock_test;
 
 #[cfg(any(all(unix, doc), test))]
 pub mod readline_async_pty_test_fixtures;

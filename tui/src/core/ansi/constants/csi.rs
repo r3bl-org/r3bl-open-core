@@ -13,18 +13,15 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [constants module design]: mod@crate::constants#design
 
-use crate::define_ansi_const;
-use crate::core::ansi;
+use crate::{core::ansi, define_ansi_const};
 
 // CSI sequence components.
 
 /// [`CSI`] Start: Sequence start: `ESC [`
 ///
 /// [`CSI`]: crate::CsiSequence
-pub const CSI_START: &str = const_format::formatcp!(
-    "{ESC_STR}[",
-    ESC_STR = ansi::constants::ESC_STR
-);
+pub const CSI_START: &str =
+    const_format::formatcp!("{ESC_STR}[", ESC_STR = ansi::constants::ESC_STR);
 
 /// Private Mode Prefix ([`CSI`]): Introduces [`DEC`] private mode parameters in [`CSI`]
 /// sequences.
@@ -777,6 +774,10 @@ pub const RCP_RESTORE_CURSOR_BYTES: &[u8] = b"\x1b[u";
 pub const RCP_RESTORE_CURSOR: char = 'u';
 
 // Erase Display (ED) Full Sequences.
+
+define_ansi_const!(@csi_str : CSI_ERASE_DISPLAY_TO_END = ["0J"] =>
+    "Erase Display to End (ED 0)" : "Erase from cursor to end of screen sequence string."
+);
 
 define_ansi_const!(@csi_str : CSI_ERASE_DISPLAY_ALL = ["2J"] =>
     "Erase Display All (ED 2)" : "Erase entire screen sequence string."

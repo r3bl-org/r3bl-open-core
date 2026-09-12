@@ -16,5 +16,6 @@ pub use fast_int_fmt::*;
 pub use into_existing::*;
 pub use items::*;
 pub use list_of::*;
+pub use memory_allocator::*;
 pub use render_list::*;
 pub use sizes::*;

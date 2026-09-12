@@ -1,15 +1,13 @@
-// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
             EventLoopResult, Header, InlineString, InputDevice, InputEvent, IntoErr,
-            ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
-            ModifierKeysMask, OutputDevice, SelectComponent, SharedWriter, SpecialKey,
-            State, StyleSheet, TerminalInteractiveStatus, TuiAvailability, VPHeight,
-            VPWidth, ch, check_is_terminal_interactive, enter_event_loop_async,
-            fg_green, get_size, inline_string,
+            ItemsOwned, Key, KeyPress, KeyState, ModifierKeysMask, OutputDevice,
+            SelectComponent, SpecialKey, State, StyleSheet, TerminalInteractiveStatus,
+            TuiAvailability, VPHeight, VPWidth, ch, check_is_terminal_interactive,
+            enter_event_loop_async, fg_green, get_size, inline_string,
             tui::md_parser::md_parser_constants::SPACE_CHAR, usize};
 use clap::ValueEnum;
-use miette::IntoDiagnostic;
 use std::{cmp::min, future::Future, pin::Pin};
 
 pub const DEFAULT_HEIGHT: usize = 5;
@@ -45,16 +43,21 @@ pub type ChooseFuture<'a> =
 /// * `how` - The selection mode.
 /// * `stylesheet` - The style to use for the list.
 /// * `io` - The input and output devices to use. Call
-///   [`DefaultIoDevices::as_mut_tuple()`] if you don't want to specify anything here.
+///   [`DefaultIoDevices::as_mut_tuple()`] if you don't want to specify anything here. Or
+///   pass [`ModalTerminalGuard::as_mut_tuple()`] if [`ReadlineAsyncContext`] is in use.
 ///   * `output_device` - The output device to use.
 ///   * `input_device` - The input device to use.
-///   * `maybe_shared_writer` - The shared writer to use, if `ReadlineAsyncContext` is in
-///     use, and the async stdout needs to be paused when this function is running.
 ///
 /// # Returns
 ///
-/// Returns a [`TuiAvailability`] containing a pinned boxed future that resolves to
-/// `Ok(ItemsOwned)` with the following behavior:
+/// Returns a [`TuiAvailability`] containing a pinned boxed future if the terminal is
+/// interactive. This explicitly represents all possible states:
+/// - [`Available`]: Terminal is interactive and initialization succeeded. Returns the
+///   future.
+/// - [`NotAvailable`]: Terminal is not interactive.
+/// - [`Broken`]: Initialization failed.
+///
+/// The future resolves to `Ok(ItemsOwned)` with the following behavior:
 /// * **Single selection mode** (`HowToChoose::Single`):
 ///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
 ///     selected item
@@ -64,16 +67,15 @@ pub type ChooseFuture<'a> =
 ///     containing all selected items
 ///   - If user presses Enter without selecting any items: returns an empty `ItemsOwned`
 ///   - If user cancels (Escape or Ctrl+C): returns an empty `ItemsOwned`
-/// * **Non-interactive terminal**: returns an empty `ItemsOwned`
 ///
 /// # Errors
 ///
-/// Returns [`miette::Error`] if there are communication errors with the shared writer's
-/// line state control channel when sending pause/resume signals. This can occur when:
-/// * The shared writer's channel receiver has been dropped
-/// * The channel is closed or disconnected
-/// * There are other async communication failures with the
-///   [`crate::ReadlineAsyncContext`] integration
+/// Returns a [`Broken`] variant containing a [`miette::Report`] if initialization (e.g.,
+/// getting terminal size) fails.
+///
+/// The returned future may produce [`miette::Error`] if the terminal event loop
+/// operations fail.
+///
 ///
 /// # Why return a pinned boxed future?
 ///
@@ -111,8 +113,13 @@ pub type ChooseFuture<'a> =
 ///
 /// See [interactive terminal application entry points].
 ///
+/// [`Available`]: TuiAvailability::Available
+/// [`Broken`]: TuiAvailability::Broken
 /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
+/// [`ModalTerminalGuard::as_mut_tuple()`]: crate::ModalTerminalGuard::as_mut_tuple
+/// [`NotAvailable`]: TuiAvailability::NotAvailable
+/// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`stderr`]: std::io::stderr
 /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
 pub fn choose<'a>(
@@ -122,11 +129,7 @@ pub fn choose<'a>(
     maybe_max_width: Option<VPWidth>,
     how: HowToChoose,
     stylesheet: StyleSheet,
-    io: (
-        &'a mut OutputDevice,
-        &'a mut InputDevice,
-        Option<SharedWriter>,
-    ),
+    io: (&'a mut OutputDevice, &'a mut InputDevice),
 ) -> TuiAvailability<ChooseFuture<'a>> {
     let from = arg_options_to_choose_from.into();
     let header = arg_header.into();
@@ -144,17 +147,7 @@ pub fn choose<'a>(
 
             TuiAvailability::Available(Box::pin(async move {
                 // Destructure the io tuple.
-                let (output_device, input_device, maybe_shared_writer) = io;
-
-                // For compatibility with ReadlineAsyncContext (if it is in use).
-                if let Some(ref shared_writer) = maybe_shared_writer {
-                    // Pause the shared writer while the user is choosing an item.
-                    shared_writer
-                        .line_state_control_channel_sender
-                        .send(LineStateControlSignal::Pause)
-                        .await
-                        .into_diagnostic()?;
-                }
+                let (output_device, input_device) = io;
 
                 // - If the max size is None, then set it to DEFAULT_HEIGHT.
                 // - If the max size is Some, then this is the max height of the viewport.
@@ -204,16 +197,6 @@ pub fn choose<'a>(
                     input_device,
                 )
                 .await;
-
-                // For compatibility with ReadlineAsyncContext (if it is in use).
-                if let Some(ref shared_writer) = maybe_shared_writer {
-                    // Resume the shared writer after the user has made their choice.
-                    shared_writer
-                        .line_state_control_channel_sender
-                        .send(LineStateControlSignal::Resume)
-                        .await
-                        .into_diagnostic()?;
-                }
 
                 match res_user_input {
                     Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
@@ -307,7 +290,6 @@ impl TuiAvailabilityChooseExt for TuiAvailability<ChooseFuture<'_>> {
 pub struct DefaultIoDevices {
     pub output_device: OutputDevice,
     pub input_device: InputDevice,
-    pub maybe_shared_writer: Option<SharedWriter>,
 }
 
 impl Default for DefaultIoDevices {
@@ -317,20 +299,13 @@ impl Default for DefaultIoDevices {
         DefaultIoDevices {
             output_device,
             input_device,
-            maybe_shared_writer: None,
         }
     }
 }
 
 impl DefaultIoDevices {
-    pub fn as_mut_tuple(
-        &mut self,
-    ) -> (&mut OutputDevice, &mut InputDevice, Option<SharedWriter>) {
-        (
-            &mut self.output_device,
-            &mut self.input_device,
-            self.maybe_shared_writer.clone(),
-        )
+    pub fn as_mut_tuple(&mut self) -> (&mut OutputDevice, &mut InputDevice) {
+        (&mut self.output_device, &mut self.input_device)
     }
 }
 

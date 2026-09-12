@@ -7,10 +7,10 @@
 //! grapheme segments, and display information.
 
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, CCol, CIndex,
-            CLength, CWidth, ContainsWideSegment, GCStringOwned, LengthOps,
-            NarrowingCastToU16, NumericValue, RangeBoundsExt, RangeBoundsResult,
-            RangeConstructExt, RangeExclusive, RangeValidityStatus, SegStringOwned,
-            byte_index, byte_len, c_index, c_width,
+            CLength, CWidth, ContainsWideSegment, CursorBoundsCheck, GCStringOwned,
+            LengthOps, NarrowingCastToU16, NumericValue, RangeBoundsExt,
+            RangeBoundsResult, RangeConstructExt, RangeExclusive, RangeValidityStatus,
+            SegStringOwned, byte_index, byte_len, c_index, c_width,
             core::coordinates::byte_index::ByteIndexRangeExt};
 
 /// Represents a grapheme cluster segment within a continuous document line.
@@ -259,11 +259,10 @@ impl LineMetadata {
         let seg_index: CIndex = arg_seg_index.into();
         if seg_index.is_zero() {
             byte_index(0)
-        } else if seg_index.as_usize() >= self.grapheme_segments.len() {
-            byte_index(self.content_byte_len.as_usize())
-        } else {
-            let segment = &self.grapheme_segments[seg_index.as_usize()];
+        } else if let Some(segment) = self.grapheme_segments.get(seg_index.as_usize()) {
             segment.start_byte_index
+        } else {
+            self.content_byte_len.eol_cursor_position()
         }
     }
 
@@ -279,21 +278,15 @@ impl LineMetadata {
             return c_index(self.grapheme_segments.len());
         }
 
-        for segment in &self.grapheme_segments {
-            if byte_index >= segment.start_byte_index
-                && byte_index < segment.end_byte_index
-            {
-                return segment.seg_index;
-            }
-        }
+        let idx = self.grapheme_segments.partition_point(|seg| {
+            let range = (seg.start_byte_index, seg.bytes_size).to_exclusive_range();
+            range.check_index_is_within(byte_index) == RangeBoundsResult::Overflowed
+        });
 
-        for segment in &self.grapheme_segments {
-            if byte_index < segment.start_byte_index {
-                return segment.seg_index;
-            }
-        }
-
-        c_index(self.grapheme_segments.len())
+        self.grapheme_segments.get(idx).map_or_else(
+            || c_index(self.grapheme_segments.len()),
+            |seg| seg.seg_index,
+        )
     }
 
     #[must_use]
@@ -302,35 +295,28 @@ impl LineMetadata {
         arg_col_index: impl Into<CCol>,
     ) -> Option<DocSeg> {
         let col_index: CCol = arg_col_index.into();
-        for seg in &self.grapheme_segments {
-            if seg.display_width > c_width(1) {
-                let range =
-                    (seg.start_display_col_index, seg.display_width).to_exclusive_range();
-
-                if range.check_index_is_within(col_index) == RangeBoundsResult::Within {
-                    if col_index != seg.start_display_col_index {
-                        return Some(*seg);
-                    }
-                    return None;
-                }
-            }
+        let seg = self.get_seg_containing(col_index)?;
+        if seg.display_width > c_width(1) && col_index != seg.start_display_col_index {
+            Some(seg)
+        } else {
+            None
         }
-
-        None
     }
 
     /// Returns the grapheme cluster segment containing `col_index` (i.e. `start <=
     /// col_index < start + width`).
     #[must_use]
     pub fn get_seg_containing(&self, col_index: CCol) -> Option<DocSeg> {
-        for segment in &self.grapheme_segments {
-            let range = (segment.start_display_col_index, segment.display_width)
-                .to_exclusive_range();
-            if range.check_index_is_within(col_index) == RangeBoundsResult::Within {
-                return Some(*segment);
-            }
-        }
-        None
+        let idx = self.grapheme_segments.partition_point(|seg| {
+            let range =
+                (seg.start_display_col_index, seg.display_width).to_exclusive_range();
+            range.check_index_is_within(col_index) == RangeBoundsResult::Overflowed
+        });
+        self.grapheme_segments.get(idx).copied().filter(|seg| {
+            let range =
+                (seg.start_display_col_index, seg.display_width).to_exclusive_range();
+            range.check_index_is_within(col_index) == RangeBoundsResult::Within
+        })
     }
 
     /// Gets the string slice for the grapheme cluster segment containing `col_index`.
@@ -374,12 +360,15 @@ impl LineMetadata {
     /// - **`col_index = 5`**: Interior column of wide grapheme → returns `None`
     #[must_use]
     pub fn get_seg_at(&self, col_index: CCol) -> Option<DocSeg> {
-        for segment in &self.grapheme_segments {
-            if segment.start_display_col_index == col_index {
-                return Some(*segment);
-            }
-        }
-        None
+        let skip_width = c_width(col_index.as_usize());
+        let idx = self.grapheme_segments.partition_point(|seg| {
+            seg.start_display_col_index.overflows(skip_width)
+                == ArrayOverflowResult::Within
+        });
+        self.grapheme_segments
+            .get(idx)
+            .copied()
+            .filter(|seg| seg.start_display_col_index == col_index)
     }
 
     /// Look ahead to the right of `col_index` for the next multi-column wide grapheme
@@ -404,18 +393,17 @@ impl LineMetadata {
     ) -> WideSegmentLookahead {
         let expected_adjacent_col = col_index + unicode_width_at_caret;
 
-        for segment in &self.grapheme_segments {
+        let col_limit = c_width(col_index.as_usize());
+        let start_idx = self.grapheme_segments.partition_point(|seg| {
+            col_limit.is_valid_cursor_position(seg.start_display_col_index)
+        });
+
+        for segment in &self.grapheme_segments[start_idx..] {
             if segment.display_width > c_width(1) {
-                let range = (segment.start_display_col_index, segment.display_width)
-                    .to_exclusive_range();
-                if range.check_index_is_within(col_index)
-                    == RangeBoundsResult::Underflowed
-                {
-                    if segment.start_display_col_index == expected_adjacent_col {
-                        return WideSegmentLookahead::ImmediatelyAdjacent(*segment);
-                    }
-                    return WideSegmentLookahead::Distant(*segment);
+                if segment.start_display_col_index == expected_adjacent_col {
+                    return WideSegmentLookahead::ImmediatelyAdjacent(*segment);
                 }
+                return WideSegmentLookahead::Distant(*segment);
             }
         }
 
@@ -506,19 +494,15 @@ impl LineMetadata {
     /// [`to_exclusive_range()`]: crate::RangeConstructExt::to_exclusive_range
     #[must_use]
     pub fn get_seg_at_left_of(&self, col_index: CCol) -> Option<DocSeg> {
-        let mut last_valid_segment: Option<&DocSeg> = None;
+        let count = self.grapheme_segments.partition_point(|seg| {
+            let range =
+                (seg.start_display_col_index, seg.display_width).to_exclusive_range();
+            range.check_index_is_within(col_index) == RangeBoundsResult::Overflowed
+        });
 
-        for segment in &self.grapheme_segments {
-            let range = (segment.start_display_col_index, segment.display_width)
-                .to_exclusive_range();
-            if range.check_index_is_within(col_index) == RangeBoundsResult::Overflowed {
-                last_valid_segment = Some(segment);
-            } else {
-                break;
-            }
-        }
-
-        last_valid_segment.copied()
+        count
+            .checked_sub(1)
+            .and_then(|idx| self.grapheme_segments.get(idx).copied())
     }
 
     /// Gets the string slice for the grapheme cluster segment strictly to the left of
@@ -564,55 +548,44 @@ impl LineMetadata {
                 .saturating_sub(col_range.start.as_usize()),
         );
 
-        if self.grapheme_segments.is_empty() || content.is_empty() {
+        if self.grapheme_segments.is_empty()
+            || content.is_empty()
+            || max_col_width.is_zero()
+        {
             return "";
         }
 
-        let string_start_byte_index = {
-            let mut byte_index = 0;
-            let mut skip_col_count = c_width(start_col_index.as_usize());
+        let skip_width = c_width(start_col_index.as_usize());
+        let start_seg_idx = self.grapheme_segments.partition_point(|seg| {
+            seg.start_display_col_index.overflows(skip_width)
+                == ArrayOverflowResult::Within
+        });
 
-            for seg in &self.grapheme_segments {
-                let seg_display_width = c_width(seg.display_width.as_usize());
-
-                if skip_col_count.is_zero() {
-                    break;
-                }
-
-                skip_col_count =
-                    c_width(skip_col_count.as_usize() - seg_display_width.as_usize());
-                byte_index += seg.bytes_size.as_usize();
-            }
-            byte_index
+        let Some(start_seg) = self.grapheme_segments.get(start_seg_idx) else {
+            return "";
         };
 
-        let string_end_byte_index = {
-            let mut byte_index = 0;
-            let mut avail_col_count = max_col_width;
-            let mut skip_col_count = c_width(start_col_index.as_usize());
+        let start_byte = start_seg.start_byte_index.as_usize();
+        let start_col = start_seg.start_display_col_index;
+        let max_col = start_col + max_col_width;
+        let max_width = c_width(max_col.as_usize());
 
-            for seg in &self.grapheme_segments {
-                let seg_display_width = c_width(seg.display_width.as_usize());
+        let fit_count = self.grapheme_segments[start_seg_idx..].partition_point(|seg| {
+            max_width
+                .is_valid_cursor_position(seg.start_display_col_index + seg.display_width)
+        });
 
-                if skip_col_count.is_zero() {
-                    if avail_col_count < seg_display_width {
-                        break;
-                    }
-                    byte_index += seg.bytes_size.as_usize();
-                    avail_col_count = c_width(
-                        avail_col_count.as_usize() - seg_display_width.as_usize(),
-                    );
-                } else {
-                    skip_col_count =
-                        c_width(skip_col_count.as_usize() - seg_display_width.as_usize());
-                    byte_index += seg.bytes_size.as_usize();
-                }
-            }
-            byte_index
+        let Some(last_seg) = fit_count
+            .checked_sub(1)
+            .and_then(|offset| self.grapheme_segments.get(start_seg_idx + offset))
+        else {
+            return "";
         };
+
+        let end_byte = last_seg.end_byte_index.as_usize();
 
         let byte_range: RangeExclusive<ByteIndex> =
-            byte_index(string_start_byte_index)..byte_index(string_end_byte_index);
+            byte_index(start_byte)..byte_index(end_byte);
 
         match byte_range.check_range_is_valid_for_length(byte_len(content.len())) {
             RangeValidityStatus::Valid => {
@@ -887,6 +860,210 @@ mod tests {
         assert_eq!(
             line_info.lookahead_wide_segment_to_right(c_col(2), c_width(2)),
             WideSegmentLookahead::None
+        );
+    }
+
+    #[test]
+    fn test_get_seg_at() {
+        let mut buffer = ZeroCopyGapBuffer::default();
+        buffer.add_line();
+
+        let empty_line = buffer.get_line(c_row(0)).expect("conversion error");
+        assert!(empty_line.info().get_seg_at(c_col(0)).is_none());
+
+        // Content: "Hi📦X"
+        // 'H' (col 0, width 1), 'i' (col 1, width 1), '📦' (cols 2..4, width 2), 'X' (col
+        // 4, width 1)
+        buffer
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .expect("conversion error");
+
+        let line = buffer.get_line(c_row(0)).expect("conversion error");
+        let line_info = line.info();
+
+        assert_eq!(
+            line_info
+                .get_seg_at(c_col(0))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(0))
+        );
+        assert_eq!(
+            line_info
+                .get_seg_at(c_col(1))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(1))
+        );
+        assert_eq!(
+            line_info
+                .get_seg_at(c_col(2))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(2))
+        );
+        // Col 3 is limbo / interior of '📦', not segment start.
+        assert!(line_info.get_seg_at(c_col(3)).is_none());
+        assert_eq!(
+            line_info
+                .get_seg_at(c_col(4))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(4))
+        );
+        assert!(line_info.get_seg_at(c_col(5)).is_none());
+    }
+
+    #[test]
+    fn test_get_seg_containing() {
+        let mut buffer = ZeroCopyGapBuffer::default();
+        buffer.add_line();
+
+        let empty_line = buffer.get_line(c_row(0)).expect("conversion error");
+        assert!(empty_line.info().get_seg_containing(c_col(0)).is_none());
+
+        // Content: "Hi📦X"
+        buffer
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .expect("conversion error");
+
+        let line = buffer.get_line(c_row(0)).expect("conversion error");
+        let line_info = line.info();
+
+        assert_eq!(
+            line_info
+                .get_seg_containing(c_col(0))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(0))
+        );
+        assert_eq!(
+            line_info
+                .get_seg_containing(c_col(1))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(1))
+        );
+        assert_eq!(
+            line_info
+                .get_seg_containing(c_col(2))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(2))
+        );
+        // Col 3 is interior of '📦', so it is contained in '📦'.
+        assert_eq!(
+            line_info
+                .get_seg_containing(c_col(3))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(2))
+        );
+        assert_eq!(
+            line_info
+                .get_seg_containing(c_col(4))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(4))
+        );
+        assert!(line_info.get_seg_containing(c_col(5)).is_none());
+    }
+
+    #[test]
+    fn test_check_is_in_middle_of_grapheme() {
+        let mut buffer = ZeroCopyGapBuffer::default();
+        buffer.add_line();
+
+        let empty_line = buffer.get_line(c_row(0)).expect("conversion error");
+        assert!(
+            empty_line
+                .info()
+                .check_is_in_middle_of_grapheme(c_col(0))
+                .is_none()
+        );
+
+        // Content: "Hi📦X"
+        buffer
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .expect("conversion error");
+
+        let line = buffer.get_line(c_row(0)).expect("conversion error");
+        let line_info = line.info();
+
+        // Narrow graphemes: cannot be in middle.
+        assert!(line_info.check_is_in_middle_of_grapheme(c_col(0)).is_none());
+        assert!(line_info.check_is_in_middle_of_grapheme(c_col(1)).is_none());
+
+        // Wide grapheme start: not in middle.
+        assert!(line_info.check_is_in_middle_of_grapheme(c_col(2)).is_none());
+
+        // Wide grapheme interior: in middle.
+        let middle_seg = line_info.check_is_in_middle_of_grapheme(c_col(3));
+        assert!(middle_seg.is_some());
+        assert_eq!(middle_seg.unwrap().start_display_col_index, c_col(2));
+
+        // Narrow grapheme at col 4 and past end.
+        assert!(line_info.check_is_in_middle_of_grapheme(c_col(4)).is_none());
+        assert!(line_info.check_is_in_middle_of_grapheme(c_col(5)).is_none());
+    }
+
+    #[test]
+    fn test_get_seg_at_left_of() {
+        let mut buffer = ZeroCopyGapBuffer::default();
+        buffer.add_line();
+
+        let empty_line = buffer.get_line(c_row(0)).expect("conversion error");
+        assert!(empty_line.info().get_seg_at_left_of(c_col(0)).is_none());
+
+        // Content: "Hi📦X"
+        buffer
+            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .expect("conversion error");
+
+        let line = buffer.get_line(c_row(0)).expect("conversion error");
+        let line_info = line.info();
+
+        // Col 0: no segment to left.
+        assert!(line_info.get_seg_at_left_of(c_col(0)).is_none());
+
+        // Col 1: 'H' (spans [0, 1)) is strictly to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(1))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(0))
+        );
+
+        // Col 2: 'i' (spans [1, 2)) is strictly to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(2))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(1))
+        );
+
+        // Col 3: '📦' (spans [2, 4)) is not completely to left, so 'i' is the last
+        // segment to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(3))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(1))
+        );
+
+        // Col 4: '📦' (spans [2, 4)) ends at 4, so it is strictly to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(4))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(2))
+        );
+
+        // Col 5: 'X' (spans [4, 5)) is strictly to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(5))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(4))
+        );
+
+        // Col 10: past end, 'X' is still the last segment strictly to left.
+        assert_eq!(
+            line_info
+                .get_seg_at_left_of(c_col(10))
+                .map(|s| s.start_display_col_index),
+            Some(c_col(4))
         );
     }
 }

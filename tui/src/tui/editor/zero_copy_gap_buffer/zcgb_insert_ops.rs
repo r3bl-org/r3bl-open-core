@@ -659,7 +659,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{c_index, c_row};
+    use crate::{CursorBoundsCheck, c_index, c_row};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -697,7 +697,7 @@ mod benches {
             buffer
                 .insert_text_at_grapheme(
                     c_row(0),
-                    c_index(end_count.as_usize()),
+                    end_count.eol_cursor_position(),
                     black_box(" more"),
                 )
                 .expect("conversion error");
@@ -705,7 +705,7 @@ mod benches {
             buffer
                 .delete_range(
                     c_row(0),
-                    c_index(end_count.as_usize()),
+                    end_count.eol_cursor_position(),
                     c_index(end_count.as_usize() + 5),
                 )
                 .expect("conversion error");
@@ -731,7 +731,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -811,14 +811,14 @@ mod benches {
             buffer
                 .insert_text_at_grapheme(
                     c_row(0),
-                    c_index(end_count.as_usize()),
+                    end_count.eol_cursor_position(),
                     black_box("x"),
                 )
                 .expect("conversion error");
 
             // Delete it to reset for next iteration.
             buffer
-                .delete_grapheme_at(c_row(0), c_index(end_count.as_usize()))
+                .delete_grapheme_at(c_row(0), end_count.eol_cursor_position())
                 .expect("conversion error");
         });
     }

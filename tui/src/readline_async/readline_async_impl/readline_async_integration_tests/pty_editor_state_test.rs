@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // cspell:words ONLCR
 
@@ -36,7 +36,9 @@ use crate::{ChannelCapacity, CursorPositionBoundsStatus, GCStringOwned, GLYPH_FA
             GLYPH_SUCCESS, History, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, ReadlineControlFlow, StdMutex,
-            generate_pty_test, readline_internal, seg_index, vp_height, vp_width};
+            apply_event_to_line_state_and_render,
+            convert_crossterm_event_to_input_event, generate_pty_test, seg_index,
+            vp_height, vp_width};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use std::{io::Write, sync::Arc};
 use tokio::sync::broadcast;
@@ -139,15 +141,15 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
 
     let safe_is_spinner_active = Arc::new(StdMutex::new(None));
     let history = History::new();
-    let safe_history = Arc::new(StdMutex::new(history.0));
+    let safe_history = Arc::new(StdMutex::new(history));
 
     // Simulate 'a'.
     let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
-    let input_event = readline_internal::convert_crossterm_event_to_input_event(event);
-    let control_flow = output_device.write(|term| {
-        readline_internal::apply_event_to_line_state_and_render(
+    let input_event = convert_crossterm_event_to_input_event(event);
+    let control_flow = readline.lock_manager.lock_both(|line_state, term| {
+        apply_event_to_line_state_and_render(
             input_event.expect("conversion error"),
-            &readline.safe_line_state,
+            line_state,
             term,
             &safe_history,
             &safe_is_spinner_active,
@@ -156,7 +158,8 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
 
     matches!(control_flow, ReadlineControlFlow::Continue)
         && readline
-            .safe_line_state
+            .lock_manager
+            .line_state_for_testing()
             .read(|line_state| line_state.line.as_str() == "a")
         && stdout_mock
             .get_copy_of_buffer_as_string_strip_ansi()
@@ -202,9 +205,9 @@ fn run_test_editor_state_with_content() -> bool {
     .expect("conversion error");
 
     {
-        readline.safe_line_state.write(|line_state| {
+        readline.lock_manager.lock_line_state(|line_state| {
             line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(5);
+            line_state.cursor_position = seg_index(5);
         });
     }
 
@@ -231,9 +234,9 @@ fn run_test_editor_state_cursor_at_start_with_content() -> bool {
     .expect("conversion error");
 
     {
-        readline.safe_line_state.write(|line_state| {
+        readline.lock_manager.lock_line_state(|line_state| {
             line_state.line = GCStringOwned::new("hello");
-            line_state.line_cursor_grapheme = seg_index(0);
+            line_state.cursor_position = seg_index(0);
         });
     }
 
