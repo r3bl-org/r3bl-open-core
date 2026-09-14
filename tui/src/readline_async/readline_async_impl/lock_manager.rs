@@ -61,8 +61,7 @@ use std::io::Write;
 /// [`lock_line_state()`]: Self::lock_line_state
 /// [`lock_output_device()`]: Self::lock_output_device
 /// [`OutputDevice`]: crate::OutputDevice
-/// [`process_line_control_signal`]:
-///     crate::manage_shared_writer_output::process_line_control_signal
+/// [`process_line_control_signal`]: crate::process_line_control_signal
 /// [`Readline::readline`]: crate::Readline::readline
 /// [`ReadlineLockManager`]: Self
 /// [`SafeLineState`]: crate::SafeLineState

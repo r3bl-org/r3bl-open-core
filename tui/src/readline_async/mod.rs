@@ -197,7 +197,7 @@
 //! - Lines written to the associated [`crate::SharedWriter`] while `readline()` is in
 //!   progress will be output to the screen above the input line.
 //!
-//! - When done, call [`crate::manage_shared_writer_output::flush_internal()`] to ensure
+//! - When done, call [`crate::flush_internal()`] to ensure
 //!   that all lines written to the [`crate::SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]

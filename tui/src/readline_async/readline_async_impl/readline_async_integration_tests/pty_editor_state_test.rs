@@ -36,7 +36,9 @@ use crate::{ChannelCapacity, CursorPositionBoundsStatus, GCStringOwned, GLYPH_FA
             GLYPH_SUCCESS, History, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, ReadlineControlFlow, StdMutex,
-            generate_pty_test, readline_internal, seg_index, vp_height, vp_width};
+            apply_event_to_line_state_and_render,
+            convert_crossterm_event_to_input_event, generate_pty_test, seg_index,
+            vp_height, vp_width};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use std::{io::Write, sync::Arc};
 use tokio::sync::broadcast;
@@ -143,9 +145,9 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
 
     // Simulate 'a'.
     let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
-    let input_event = readline_internal::convert_crossterm_event_to_input_event(event);
+    let input_event = convert_crossterm_event_to_input_event(event);
     let control_flow = readline.lock_manager.lock_both(|line_state, term| {
-        readline_internal::apply_event_to_line_state_and_render(
+        apply_event_to_line_state_and_render(
             input_event.expect("conversion error"),
             line_state,
             term,

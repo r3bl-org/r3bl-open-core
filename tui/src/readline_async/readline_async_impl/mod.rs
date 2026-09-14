@@ -1,16 +1,22 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Attach.
-pub mod line_state;
-pub mod readline;
-pub mod readline_history;
-pub mod readline_lock_manager;
+mod channel_monitor;
+mod event_conversion;
+mod history;
+mod line_state;
+mod lock_manager;
+mod readline_struct;
+mod types;
 
 // Re-export.
+pub use channel_monitor::*;
+pub use event_conversion::*;
+pub use history::*;
 pub use line_state::*;
-pub use readline::*;
-pub use readline_history::*;
-pub use readline_lock_manager::*;
+pub use lock_manager::*;
+pub use readline_struct::*;
+pub use types::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]

@@ -84,7 +84,7 @@ use tokio::{sync::broadcast, time::interval};
 /// hierarchy].
 ///
 /// [`apply_event_to_line_state_and_render()`]:
-///     super::readline_internal::apply_event_to_line_state_and_render()
+///     crate::apply_event_to_line_state_and_render
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 /// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()

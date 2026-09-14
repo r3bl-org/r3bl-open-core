@@ -308,9 +308,8 @@ impl ReadlineAsyncContext {
     /// This method performs an important task - it exits the readline loop gracefully.
     /// Here are the details of how it does this:
     ///
-    /// 1. it sends a [`LineStateControlSignal::ExitReadlineLoop`] signal to the [Readline]
-    ///    instance's
-    ///    [`crate::readline_async_impl::manage_shared_writer_output::spawn_task_to_monitor_line_control_channel`]
+    /// 1. it sends a [`LineStateControlSignal::ExitReadlineLoop`] signal to the
+    ///    [Readline] instance's [`crate::spawn_task_to_monitor_line_control_channel`]
     ///    task (aka "actor"). This makes the task shut itself down,
     /// 2. which then causes a message to be sent to the
     ///    [`ReadlineAsyncContext::shutdown_complete_sender`],

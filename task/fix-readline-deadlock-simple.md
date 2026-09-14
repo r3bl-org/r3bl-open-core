@@ -270,28 +270,32 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
 - [x] Update Downstream `cmdr` Consumers & Examples:
     - [x] Fix usages in `ui_templates.rs`, `branch_checkout_command.rs`, etc. to remove
           `Option<SharedWriter>` arguments and adapt to the strict API.
-- [ ] Modularize `readline_async_impl/` and Split `readline.rs`:
-    - [ ] Rename `tui/src/readline_async/readline_async_impl/readline_history.rs` to
+- [x] Modularize `readline_async_impl/` and Split `readline.rs`:
+    - [x] Rename `tui/src/readline_async/readline_async_impl/readline_history.rs` to
           `tui/src/readline_async/readline_async_impl/history.rs`.
-    - [ ] Rename `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs` to
+    - [x] Rename `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs` to
           `tui/src/readline_async/readline_async_impl/lock_manager.rs`.
-    - [ ] Extract `tui/src/readline_async/readline_async_impl/types.rs` from `readline.rs`
+    - [x] Extract `tui/src/readline_async/readline_async_impl/types.rs` from `readline.rs`
           containing `ReadlineEvent`, `ReadlineControlFlow`, `ReadlineError`, and timing
           constants.
-    - [ ] Extract `tui/src/readline_async/readline_async_impl/channel_monitor.rs` from
+    - [x] Extract `tui/src/readline_async/readline_async_impl/channel_monitor.rs` from
           `readline.rs` containing `spawn_task_to_monitor_line_control_channel`,
           `process_line_control_signal`, `flush_internal`, and pause/resume flush tests.
-    - [ ] Extract `tui/src/readline_async/readline_async_impl/event_conversion.rs` from
+    - [x] Extract `tui/src/readline_async/readline_async_impl/event_conversion.rs` from
           `readline.rs` containing `apply_event_to_line_state_and_render`, Crossterm event
           converter methods, and stream tests.
-    - [ ] Extract `tui/src/readline_async/readline_async_impl/readline_struct.rs` from
+    - [x] Extract `tui/src/readline_async/readline_async_impl/readline_struct.rs` from
           `readline.rs` containing `Readline` struct definition, `try_new`, `Drop`, and
           `readline` async event loop.
-    - [ ] Update `tui/src/readline_async/readline_async_impl/mod.rs` to re-export new
+    - [x] Update `tui/src/readline_async/readline_async_impl/mod.rs` to re-export new
           submodules via barrel export pattern, maintaining `manage_shared_writer_output`
           and `readline_internal` module aliases for compatibility.
-    - [ ] Delete `tui/src/readline_async/readline_async_impl/readline.rs`.
+    - [x] Delete `tui/src/readline_async/readline_async_impl/readline.rs`.
 - [ ] **Mandatory manual review:**
+    - [ ] `tui/src/readline_async/mod.rs`
+    - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
+    - [ ] `tui/src/readline_async/choose_api.rs`
+    - [ ] `tui/src/readline_async/readline_async_api.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/types.rs`
@@ -299,10 +303,6 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [ ] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/mod.rs`
-    - [ ] `tui/src/readline_async/readline_async_api.rs`
-    - [ ] `tui/src/readline_async/choose_api.rs`
-    - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
-    - [ ] `tui/src/readline_async/mod.rs`
     - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
     - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
     - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
@@ -318,7 +318,8 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [ ] Update `History::new()` to return `Self` without `UnboundedReceiver`. Implement
           `Default` for `History`.
     - [ ] Update unit tests in `history.rs`.
-- [ ] Refactor `Readline` in `tui/src/readline_async/readline_async_impl/readline_struct.rs`:
+- [ ] Refactor `Readline` in
+      `tui/src/readline_async/readline_async_impl/readline_struct.rs`:
     - [ ] Remove `history_sender: UnboundedSender<String>` and
           `history_receiver: UnboundedReceiver<String>` fields from `Readline`.
     - [ ] In `Readline::try_new`, construct `History::new()` directly without channel
@@ -356,8 +357,9 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
 
 ### Phase 5: Documentation & Final Workspace Verification
 
-- [ ] Update rustdoc comments in `readline_struct.rs` and `readline_async/mod.rs` documenting the
-      strict lock hierarchy (`SafeLineState` -> `OutputDevice` -> Leaf locks).
+- [ ] Update rustdoc comments in `readline_struct.rs` and `readline_async/mod.rs`
+      documenting the strict lock hierarchy (`SafeLineState` -> `OutputDevice` -> Leaf
+      locks).
 - [ ] Verify rustdoc links build cleanly: `./check.fish --quick-doc`.
 - [ ] Run full workspace validation: `./check.fish --full`.
 - [ ] **Mandatory manual review:**
