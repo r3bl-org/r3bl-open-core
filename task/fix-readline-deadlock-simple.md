@@ -316,19 +316,19 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
 
 ### Phase 4: Integration Tests & Deadlock Regression Stress Test
 
-- [ ] Update tests calling `apply_event_to_line_state_and_render` if signature changed:
-    - [ ] Check `pty_editor_state_test.rs` to ensure it passes `line_state` cleanly.
-- [ ] Add dedicated concurrent stress regression test:
-    - [ ] Create
+- [x] Update tests calling `apply_event_to_line_state_and_render` if signature changed:
+    - [x] Check `pty_editor_state_test.rs` to ensure it passes `line_state` cleanly.
+- [x] Add dedicated concurrent stress regression test:
+    - [x] Create
           `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`.
-    - [ ] Concurrently write multiple multiline blocks from background `SharedWriter`
+    - [x] Concurrently write multiple multiline blocks from background `SharedWriter`
           tasks while simultaneously typing keystrokes, Enter, and Ctrl+C.
-    - [ ] Assert process never freezes, output completes without corruption, and all input
+    - [x] Assert process never freezes, output completes without corruption, and all input
           events are received cleanly.
-- [ ] Run validation checks:
-    - [ ] `./check.fish --check`
-    - [ ] `./check.fish --test`
-    - [ ] `./check.fish --clippy`
+- [x] Run validation checks:
+    - [x] `./check.fish --check`
+    - [x] `./check.fish --test`
+    - [x] `./check.fish --clippy`
 - [ ] **Mandatory manual review:**
     - [ ] `tui/src/readline_async/mod.rs`
     - [ ] `tui/src/readline_async/modal_terminal_guard.rs`

@@ -79,4 +79,7 @@ pub mod pty_multiline_output_test;
 pub mod pty_readline_test;
 
 #[cfg(any(all(unix, doc), test))]
+pub mod pty_concurrent_input_output_deadlock_test;
+
+#[cfg(any(all(unix, doc), test))]
 pub mod readline_async_pty_test_fixtures;
