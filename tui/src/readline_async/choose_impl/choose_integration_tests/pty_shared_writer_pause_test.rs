@@ -1,12 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`PTY`]-based integration test verifying that [`choose()`] correctly sends [`Pause`]
-//! and [`Resume`] signals to the [`SharedWriter`].
+//! [`PTY`]-based integration test verifying that [`ModalTerminalGuard`] correctly manages
+//! terminal suspension and sends [`Flush`] when [`choose()`] completes.
 //!
-//! The controlled process runs [`choose()`] with real I/O devices in a real [`PTY`],
-//! collects the [`LineStateControlSignal`]s from the [`SharedWriter`], and prints them to
-//! [`stdout`]. The controller sends keystrokes via the [`PTY`] writer, reads the signal
-//! output, and asserts correctness.
+//! The controlled process runs [`choose()`] under [`ModalTerminalGuard`] with real I/O
+//! devices in a real [`PTY`], collects the [`LineStateControlSignal`]s from the lease,
+//! and prints them to [`stdout`]. The controller sends keystrokes via the [`PTY`] writer,
+//! reads the signal output, and asserts correctness.
 //!
 //! [`choose()`] handles switching in and out of [raw mode] on its own, which is why this
 //! test is run in [`PtyTestMode::Cooked`].
@@ -18,18 +18,17 @@
 //! ```
 //!
 //! [`choose()`]: crate::choose
+//! [`Flush`]: crate::LineStateControlSignal::Flush
 //! [`LineStateControlSignal`]: crate::LineStateControlSignal
-//! [`Pause`]: crate::LineStateControlSignal::Pause
+//! [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`Resume`]: crate::LineStateControlSignal::Resume
-//! [`SharedWriter`]: crate::SharedWriter
 //! [`stdout`]: std::io::stdout
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 
-use crate::{DefaultIoDevices, Header, MSG_CONTROLLED_READY, MSG_LINE_PREFIX,
-            MSG_SUCCESS, PtyTestContext, PtyTestMode, SharedWriter,
-            TuiAvailabilityChooseExt, choose, generate_keyboard_sequence,
-            generate_pty_test,
+use crate::{ChannelCapacity, Header, InputDevice, MSG_CONTROLLED_READY, MSG_LINE_PREFIX,
+            MSG_SUCCESS, ModalTerminalGuard, OutputDevice, PtyTestContext, PtyTestMode,
+            Readline, TuiAvailabilityChooseExt, choose, generate_keyboard_sequence,
+            generate_pty_test, vp_height, vp_width,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
 use std::io::Write;
@@ -44,12 +43,10 @@ generate_pty_test! {
 /// Controller: sends keystrokes, reads signal output, asserts correctness.
 ///
 /// Waits for the controlled process to signal readiness, sends key sequences
-/// via [`generate_keyboard_sequence()`], then verifies [`Pause`] and [`Resume`]
-/// signals were emitted.
+/// via [`generate_keyboard_sequence()`], then verifies [`Flush`] signal was emitted.
 ///
+/// [`Flush`]: crate::LineStateControlSignal::Flush
 /// [`generate_keyboard_sequence()`]: crate::generate_keyboard_sequence
-/// [`Pause`]: crate::LineStateControlSignal::Pause
-/// [`Resume`]: crate::LineStateControlSignal::Resume
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
@@ -100,60 +97,67 @@ fn controller(context: PtyTestContext) {
             .lines
             .first()
             .expect("conversion error")
-            .contains("Pause"),
-        "First signal should be Pause, got: {}",
+            .contains("Flush"),
+        "First signal should be Flush, got: {}",
         result.lines.first().expect("conversion error")
-    );
-    assert!(
-        result
-            .lines
-            .last()
-            .expect("conversion error")
-            .contains("Resume"),
-        "Last signal should be Resume, got: {}",
-        result.lines.last().expect("conversion error")
     );
 
     child.drain_and_wait(buf_reader, pty_pair);
 }
 
-/// Controlled: runs [`choose()`] with real I/O, collects [`SharedWriter`] signals, prints
-/// them to [`stdout`] for the controller to verify. The harness performs
-/// [`std::process::exit(0)`] after this function returns.
+/// Controlled: runs [`choose()`] under [`ModalTerminalGuard`] with real I/O, collects
+/// [`LineStateControlSignal`]s, prints them to [`stdout`] for the controller to verify.
+/// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`choose()`]: crate::choose
-/// [`SharedWriter`]: crate::SharedWriter
+/// [`LineStateControlSignal`]: crate::LineStateControlSignal
+/// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 /// [`stdout`]: std::io::stdout
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {
-        let (mut line_receiver, shared_writer) = SharedWriter::new_mock();
-        let mut io = DefaultIoDevices::default();
+        let (line_sender, mut line_receiver) =
+            tokio::sync::mpsc::channel::<crate::LineStateControlSignal>(10);
+        let output_device = OutputDevice::new_stdout();
+        let input_device = InputDevice::default();
+        let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
+        let test_size = vp_width(80) + vp_height(24);
+
+        let (mut readline, _) = Readline::try_new(
+            "> ".into(),
+            output_device,
+            input_device,
+            shutdown_sender,
+            ChannelCapacity::Minimal,
+            test_size,
+        )
+        .expect("conversion error");
+
+        // Intercept line_control_sender with our receiver to observe signals.
+        readline.line_control_sender = Some(line_sender);
 
         // Signal readiness to the controller.
         println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("conversion error");
 
-        // Run choose() with real I/O devices and the SharedWriter under test.
-        let _unused = choose(
-            Header::SingleLine("Choose:".into()),
-            &["one", "two", "three"],
-            None,
-            None,
-            crate::readline_async::HowToChoose::Single,
-            crate::readline_async::StyleSheet::default(),
-            (
-                &mut io.output_device,
-                &mut io.input_device,
-                Some(shared_writer),
-            ),
-        )
-        .get_first_result()
-        .await;
+        // Run choose() with real I/O devices under ModalTerminalGuard.
+        {
+            let mut guard = ModalTerminalGuard::acquire(&mut readline);
+            let _unused = choose(
+                Header::SingleLine("Choose:".into()),
+                &["one", "two", "three"],
+                None,
+                None,
+                crate::readline_async::HowToChoose::Single,
+                crate::readline_async::StyleSheet::default(),
+                guard.as_mut_tuple(),
+            )
+            .get_first_result()
+            .await;
+        }
 
         // Collect signals and print them for the controller.
-        line_receiver.close();
-        while let Some(signal) = line_receiver.recv().await {
+        if let Ok(signal) = line_receiver.try_recv() {
             println!("{MSG_LINE_PREFIX}{signal:?}");
             std::io::stdout().flush().expect("conversion error");
         }

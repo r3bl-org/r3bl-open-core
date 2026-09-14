@@ -103,7 +103,7 @@
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
             CursorBoundsCheck, LINE_FEED_BYTE, NULL_BYTE, RangeBoundsExt,
-            RangeValidityStatus, byte_index, c_len, ok};
+            RangeValidityStatus, c_len, ok};
 use miette::{Result, miette};
 use std::ops::Range;
 
@@ -363,7 +363,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CursorBoundsCheck, c_index, c_row};
+    use crate::{c_index, c_row};
 
     #[test]
     fn test_delete_at_grapheme() {
@@ -768,3 +768,5 @@ mod benches {
         });
     }
 }
+
+// cspell:words ello Helo

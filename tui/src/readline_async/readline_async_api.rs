@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringOwned,
-            InputDevice, LineStateControlSignal, OutputDevice,
+            InputDevice, LineStateControlSignal, ModalTerminalGuard, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
             ReadlineEvent, SegIndex, SharedWriter, TerminalInteractiveStatus,
             TuiAvailability, check_is_terminal_interactive,
@@ -30,17 +30,31 @@ use tokio::sync::broadcast;
 /// [`ReadlineAsyncContext::request_shutdown()`] it will exit a readline loop that might
 /// currently be running!
 ///
+/// # Pausing vs Modal Terminal Guard
+///
+/// While both [`ReadlineAsyncContext::pause()`] and
+/// [`ReadlineAsyncContext::acquire_modal_terminal()`] suspend background processing, they
+/// serve different purposes:
+///
+/// - [`ReadlineAsyncContext::pause()`]: A lightweight signal to pause background
+///   rendering (like spinners or shared writer output). It does *not* provide exclusive
+///   mutable access to the terminal devices and does not clear the prompt.
+/// - [`ReadlineAsyncContext::acquire_modal_terminal()`]: A heavyweight operation designed
+///   for modal UI elements. It clears the current prompt, takes a mutable borrow of the
+///   underlying readline instance, and returns a [`ModalTerminalGuard`] to grant the
+///   caller exclusive, mutable access to both the input and output devices.
+///
+/// For full architectural details on the suspension state machine, pause buffer, and
+/// concurrency coordination, see the [`Readline`] documentation.
+///
 /// # Example
 ///
-/// Here's an example of how to use this method:
+/// Here's an example of how to use [`ReadlineAsyncContext`]:
+///
 /// ```no_run
-/// // This example requires an interactive terminal for user input
-/// # async fn foo() -> miette::Result<()> {
-///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
-///     # use r3bl_tui::ChannelCapacity;
-///     # use r3bl_tui::TuiAvailability;
-///     # use r3bl_tui::IntoErr;
-///     # use r3bl_tui::ok;
+/// async fn foo() -> miette::Result<()> {
+///     use r3bl_tui::{readline_async::ReadlineAsyncContext, ChannelCapacity,
+///         TuiAvailability, IntoErr, ok};
 ///     let mut rl_ctx = match ReadlineAsyncContext::try_new(
 ///         Some("> "),
 ///         Some(ChannelCapacity::VeryLarge),
@@ -53,9 +67,13 @@ use tokio::sync::broadcast;
 ///     let user_input = rl.readline().await;
 ///     rl_ctx.request_shutdown(Some("Shutting down...")).await?;
 ///     rl_ctx.await_shutdown().await;
+///
 ///     ok!()
-/// # }
+/// }
 /// ```
+///
+/// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`Readline`]: crate::Readline
 #[allow(missing_debug_implementations)]
 pub struct ReadlineAsyncContext {
     pub readline: Readline,
@@ -213,12 +231,10 @@ impl ReadlineAsyncContext {
     #[must_use]
     pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
-    pub fn mut_input_device(&mut self) -> &mut InputDevice {
-        &mut self.readline.input_device
-    }
-
-    pub fn clone_output_device(&mut self) -> OutputDevice {
-        self.readline.lock_manager.output_device().clone()
+    /// Acquires an exclusive [`ModalTerminalGuard`] on the terminal, pausing readline
+    /// processing while the guard is held.
+    pub fn acquire_modal_terminal(&mut self) -> ModalTerminalGuard<'_> {
+        ModalTerminalGuard::acquire(&mut self.readline)
     }
 
     /// Replacement for [`std::io::Stdin::read_line()`] (this is async and non-blocking).
@@ -244,6 +260,14 @@ impl ReadlineAsyncContext {
             .ok();
     }
 
+    /// Pauses background rendering (like spinners or shared writer output).
+    ///
+    /// This is a lightweight signal that does *not* provide exclusive mutable access to
+    /// the terminal devices and does not clear the prompt. If you need full control over
+    /// the terminal (e.g., to render a modal UI), use [`acquire_modal_terminal()`]
+    /// instead.
+    ///
+    /// [`acquire_modal_terminal()`]: crate::ReadlineAsyncContext::acquire_modal_terminal
     pub async fn pause(&mut self) {
         // We don't care about the result of this operation.
         self.shared_writer

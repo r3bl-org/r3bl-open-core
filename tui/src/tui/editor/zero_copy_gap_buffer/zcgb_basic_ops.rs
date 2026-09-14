@@ -482,7 +482,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CursorBoundsCheck, byte_len, c_col, c_height, c_len};
+    use crate::{byte_len, c_col, c_height, c_len};
 
     #[test]
     fn test_basic_line_operations() {

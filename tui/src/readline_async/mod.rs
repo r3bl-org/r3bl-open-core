@@ -90,13 +90,16 @@
 //! echo "hello" | cargo run --examples readline_async
 //! ```
 //!
-//! ## Pause and resume support
+//! ## Pause, resume, and modal support
 //!
-//! The pause and resume functionality is implemented using:
-//! - [`PauseState`] - Enum holding the current suspension state on [`LineState`] to
-//!   determine whether keyboard input and rendering are suppressed.
-//! - [`crate::SharedWriter::line_state_control_channel_sender`] - Mechanism used to
+//! The pause, resume, and modal functionality is implemented using:
+//! - [`PauseState`]: Enum holding the current suspension state on [`LineState`] to
+//!   determine whether keyboard input and rendering are suppressed (supporting both
+//!   spinners and modal interfaces).
+//! - [`crate::SharedWriter::line_state_control_channel_sender`]: Mechanism used to
 //!   manipulate the paused state asynchronously.
+//! - [`ModalTerminalGuard`]: RAII guard granting exclusive mutable terminal access for
+//!   interactive modal components like [`crate::choose()`].
 //!
 //! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a
 //! [`line_state_control_channel`] to send and receive [`crate::LineStateControlSignal`]:
@@ -328,6 +331,7 @@ pub mod readline_async_impl;
 pub mod choose_api;
 pub mod spinner;
 pub mod spinner_impl;
+pub mod modal_terminal_guard;
 
 // Re-export the public API.
 pub use choose_api::*;
@@ -336,6 +340,7 @@ pub use readline_async_api::*;
 pub use spinner::*;
 pub use readline_async_impl::*;
 pub use spinner_impl::*;
+pub use modal_terminal_guard::*;
 
 // r3bl-open-core crates.
 use crate::{InlineString, StdMutex};

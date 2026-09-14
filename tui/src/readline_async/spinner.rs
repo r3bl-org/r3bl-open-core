@@ -41,8 +41,8 @@ use tokio::{sync::broadcast, time::interval};
 ///   - It also gives a way to stop the spinner via the `shutdown_sender`.
 ///
 /// - When `Ctrl+C` or `Ctrl+D` is intercepted by [`ReadlineAsyncContext`] in
-///   [`apply_event_to_line_state_and_render()`], a `()` is sent to
-///   [`safe_spinner_is_active`], which shuts the spinner down.
+///   [`apply_event_to_line_state_and_render()`], a shutdown signal is sent to the active
+///   spinner (which can be checked via [`Readline::is_spinner_active()`]).
 ///
 /// # Usage Example
 ///
@@ -50,9 +50,9 @@ use tokio::{sync::broadcast, time::interval};
 ///
 /// ```no_run
 /// // This example requires terminal output for the spinner animation
-/// # use std::time::Duration;
-/// # use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
-/// # async fn example() -> miette::Result<()> {
+/// use std::time::Duration;
+/// use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
+/// async fn example() -> miette::Result<()> {
 ///     let mut spinner = match Spinner::try_start(
 ///         "Loading...",
 ///         "Done!",
@@ -72,24 +72,26 @@ use tokio::{sync::broadcast, time::interval};
 ///     spinner.request_shutdown();
 ///     // Wait for the spinner to completely shutdown
 ///     spinner.await_shutdown().await;
-/// # ok!()
-/// # }
+/// ok!()
+/// }
 /// ```
 ///
-/// # Structural Isolation & Deadlock Prevention
+/// # Deadlock Safety
 ///
-/// [`Spinner`] is structurally isolated from readline lock-inversion deadlocks. It only
-/// holds [`OutputDevice`] (Level 2 in the Coffman lock hierarchy) and lacks access to
-/// [`SafeLineState`] (Level 1). Because it cannot acquire Level 1 while holding Level 2,
-/// circular wait is mathematically impossible.
+/// [`Spinner`] only holds an [`OutputDevice`] and does not access [`SafeLineState`].
+/// Because it never acquires multiple locks, it cannot deadlock with active readline
+/// operations. For details on lock ordering, see [`ReadlineLockManager`'s lock
+/// hierarchy].
 ///
 /// [`apply_event_to_line_state_and_render()`]:
 ///     super::readline_internal::apply_event_to_line_state_and_render()
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 /// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()
+/// [`Readline::is_spinner_active()`]: crate::Readline::is_spinner_active
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
-/// [`safe_spinner_is_active`]: crate::Readline::safe_spinner_is_active
+/// [`ReadlineLockManager`'s lock hierarchy]:
+///     crate::ReadlineLockManager#the-solution-level-1-and-level-2-locks
 /// [`SafeLineState`]: crate::SafeLineState
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
@@ -99,20 +101,43 @@ use tokio::{sync::broadcast, time::interval};
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 #[allow(missing_debug_implementations)]
 pub struct Spinner {
+    /// Duration between animation tick updates.
     pub tick_delay: Duration,
-    /// [`ANSI`] escape sequences are stripped from this before being assigned.
+
     /// Thread-safe message that can be updated during spinner animation.
+    ///
+    /// Any [`ANSI`] escape sequences are stripped before being assigned.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     pub interval_message: SafeInlineString,
+
+    /// Final message printed once when the spinner shuts down cleanly.
     pub final_message: InlineString,
+
+    /// Visual style and glyph set for the spinner animation.
     pub style: SpinnerStyle,
+
+    /// Terminal output device where spinner frames are rendered.
     pub output_device: OutputDevice,
+
+    /// Optional [`SharedWriter`] for coordinating terminal output with
+    /// [`ReadlineAsyncContext`] in embedded mode.
+    ///
+    /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+    /// [`SharedWriter`]: crate::SharedWriter
     pub maybe_shared_writer: Option<SharedWriter>,
+
+    /// Broadcast channel sender used to signal the background animation task to shut
+    /// down.
     pub shutdown_sender: broadcast::Sender<()>,
+
+    /// Thread-safe flag tracking whether shutdown has been requested.
     safe_is_shutdown: SafeBool,
-    /// This is used to signal when the task has completely shutdown. Use the
-    /// [`Self::wait_for_shutdown()`].
+
+    /// One-shot receiver used by [`Self::await_shutdown()`] to wait until the background
+    /// task has completely finished.
+    ///
+    /// [`Self::await_shutdown()`]: Self::await_shutdown
     maybe_shutdown_complete_rx: Option<tokio::sync::oneshot::Receiver<()>>,
 }
 
@@ -455,3 +480,5 @@ impl Spinner {
         });
     }
 }
+
+// cspell:words Coffman

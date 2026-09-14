@@ -4,10 +4,10 @@ use crate::{Button, ChannelCapacity, CommonResultWithError, Continuation,
             CursorBoundsCheck, CursorPositionBoundsStatus, GCStringOwned, History,
             InputDevice, InputEvent, Key, KeyPress, KeyState, LineState,
             LineStateControlSignal, ModifierKeysMask, MouseInput, OutputDevice,
-            PauseBuffer, PauseState, PauseStateTransition, PrintLineOnControlC,
-            PrintLineOnEnter, ReadlineLockManager, SafeHistory, SafeLineState,
-            SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter, StdMutex,
-            VPHeight, VPSize, VPWidth, disable_raw_mode, execute_commands_no_lock, join,
+            PaintMode, PauseBuffer, PauseState, PauseStateTransition,
+            PrintLineOnControlC, PrintLineOnEnter, ReadlineLockManager, SafeHistory,
+            SafeLineState, SafePauseBuffer, SegIndex, SendRawTerminal, SharedWriter,
+            StdMutex, VPHeight, VPSize, VPWidth, execute_commands_no_lock, join,
             key_press, ok, vp_col, vp_row};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
@@ -22,12 +22,6 @@ use tokio::{select, spawn,
                    mpsc::{self, UnboundedReceiver, UnboundedSender}},
             task::JoinHandle,
             time::sleep};
-
-/// This is an artificial delay amount that is added to hide the jank of displaying the
-/// cursor to the terminal when the prompt is first printed, after the terminal is put
-/// into raw mode.
-pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
-    Duration::from_millis(66);
 
 /// # Mental model and overview
 ///
@@ -99,36 +93,64 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// come from, it is probably due to the requirement for every part of this system to be
 /// testable (easily).
 ///
-/// # Pause and resume
+/// # Pause, resume, and modal architecture
 ///
-/// If the terminal is paused, then any output from the [`SharedWriter`]s will not be
-/// printed to the terminal. This is useful when you want to display a spinner, or some
-/// other indeterminate progress indicator. The user input from the terminal is not going
-/// to be accepted either. Only `Ctrl+C`, and `Ctrl+D` are accepted while paused. This
-/// ensures that the user can't enter any input while the terminal is paused. And output
-/// from a [`Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
-/// user input prompt while [`Readline::readline()`] (or
-/// [`ReadlineAsyncContext::read_line`]) is being awaited.
+/// When an interactive terminal application is running, background tasks may concurrently
+/// write output via [`SharedWriter`] instances while a user is typing at the readline
+/// prompt, or while a specialized sub-UI (like a [`Spinner`] or a modal dialog such as
+/// [`choose()`]) is active.
 ///
-/// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
-/// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
-/// method, which drains a buffer that holds any output that was generated while paused,
-/// of type [`PauseBuffer`]. The user input prompt will be displayed again, and the user
-/// can enter input.
+/// To prevent display corruption, screen clobbering, and input confusion, the readline
+/// subsystem provides an integrated suspension architecture.
 ///
-/// This is possible, because while paused, the
-/// [`manage_shared_writer_output::process_line_control_signal()`] method doesn't actually
-/// print anything to the display. When resumed, the
-/// [`manage_shared_writer_output::flush_internal()`] method is called, which drains the
-/// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
-/// lost!
+/// ## Core suspension mechanism
 ///
-/// References:
-/// - Review the [`LineState`] struct for more information on exactly how the terminal is
-///   paused and resumed, when it comes to accepting or rejecting user input, and
-///   rendering output or not.
-/// - Review the [`ReadlineAsyncContext`] module docs for more information on the mental
-///   mode and architecture of this.
+/// While the terminal is paused:
+/// 1. Any output written to [`SharedWriter`] instances is not printed to the display
+///    immediately. Instead, it is routed to an internal [`PauseBuffer`] where messages
+///    are queued safely.
+/// 2. User input from the terminal keyboard is suppressed. Only `Ctrl+C` (cancellation)
+///    and `Ctrl+D` (`Eof`) signals are processed.
+///
+/// When the terminal is resumed:
+/// 1. The [`manage_shared_writer_output::flush_internal()`] method is called.
+/// 2. It drains all queued messages from the [`PauseBuffer`] and flushes them to the
+///    display so no background output is lost.
+/// 3. The prompt is re-displayed and normal keyboard input handling resumes.
+///
+/// ## Two modes of suspension
+///
+/// There are two distinct ways to suspend the readline engine, tailored for different use
+/// cases:
+///
+/// 1. **Lightweight pause** ([`ReadlineAsyncContext::pause()`] / [`Spinner`]):
+///    - Background [`SharedWriter`] output is buffered and user typing is suppressed, but
+///      the prompt remains on the display.
+///    - Does not grant exclusive mutable access to the underlying I/O devices.
+///    - Ideal for non-interactive background operations, such as displaying an
+///      indeterminate progress [`Spinner`].
+///
+/// 2. **Modal pause** ([`ModalTerminalGuard`] /
+///    [`ReadlineAsyncContext::acquire_modal_terminal()`]):
+///    - Clears the current prompt from the display, pauses background writes into the
+///      [`PauseBuffer`], and takes exclusive control over the terminal.
+///    - Grants exclusive mutable access to `(InputDevice, OutputDevice)` via
+///      [`ModalTerminalGuard`].
+///    - Ideal for interactive full-terminal sub-applications (like [`choose()`]) that
+///      require dedicated ownership of keyboard input and screen rendering.
+///
+/// ## State machine ([`PauseState`])
+///
+/// Suspension state is tracked by the [`PauseState`] enum on [`LineState`]:
+/// - [`PauseState::NotPaused`]: Normal operation; input and output are active.
+/// - [`PauseState::PausedBySpinner`]: Suspended by an active [`Spinner`].
+/// - [`PauseState::PausedByModal`]: Suspended by an active [`ModalTerminalGuard`].
+/// - [`PauseState::PausedByBoth`]: Suspended concurrently by both a spinner and a modal
+///   guard.
+///
+/// The state machine guarantees that if a modal dialog opens while a spinner is active,
+/// closing the modal dialog returns the state safely to [`PauseState::PausedBySpinner`]
+/// rather than prematurely resuming background output or redrawing the prompt.
 ///
 /// # Usage details
 ///
@@ -155,18 +177,31 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
 /// crate root documentation for why this is designed to be poison-safe.
 ///
+/// [`choose()`]: crate::choose
 /// [`crossterm::event::EventStream`]:
 ///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// [`LineState`]: crate::readline_async::LineState
+/// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`PauseBuffer`]: crate::PauseBuffer
+/// [`PauseState::NotPaused`]: crate::PauseState::NotPaused
+/// [`PauseState::PausedByBoth`]: crate::PauseState::PausedByBoth
+/// [`PauseState::PausedByModal`]: crate::PauseState::PausedByModal
+/// [`PauseState::PausedBySpinner`]: crate::PauseState::PausedBySpinner
+/// [`PauseState`]: crate::PauseState
 /// [`Pin`]: std::pin::Pin
 /// [`PinnedInputStream`]: crate::core::PinnedInputStream
+/// [`ReadlineAsyncContext::acquire_modal_terminal()`]:
+///     crate::ReadlineAsyncContext::acquire_modal_terminal
 /// [`ReadlineAsyncContext::await_shutdown`]:
 ///     crate::readline_async::ReadlineAsyncContext::await_shutdown
+/// [`ReadlineAsyncContext::pause()`]: crate::ReadlineAsyncContext::pause
 /// [`ReadlineAsyncContext::read_line`]:
 ///     crate::readline_async::ReadlineAsyncContext::read_line
 /// [`ReadlineAsyncContext::request_shutdown`]:
 ///     crate::readline_async::ReadlineAsyncContext::request_shutdown
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
+/// [`SharedWriter`]: crate::SharedWriter
 /// [`Spinner`]: crate::readline_async::Spinner
 /// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
@@ -175,31 +210,51 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 #[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Manages hierarchical locking between line state and output device.
-    pub(crate) lock_manager: ReadlineLockManager,
+    pub(in crate::readline_async) lock_manager: ReadlineLockManager,
 
     /// Device used to get stream of events from user (usually `stdin`).
-    pub input_device: InputDevice,
+    pub(in crate::readline_async) input_device: InputDevice,
+
+    /// Sender to the line state control channel (for signals like
+    /// [`LineStateControlSignal::Flush`]).
+    pub(in crate::readline_async) line_control_sender:
+        Option<tokio::sync::mpsc::Sender<LineStateControlSignal>>,
 
     /// Use to send history updates.
-    pub history_sender: UnboundedSender<String>,
+    pub(in crate::readline_async) history_sender: UnboundedSender<String>,
+
     /// Use to receive history updates.
-    pub history_receiver: UnboundedReceiver<String>,
+    pub(in crate::readline_async) history_receiver: UnboundedReceiver<String>,
+
     /// Manages the history.
-    pub safe_history: SafeHistory,
+    pub(in crate::readline_async) safe_history: SafeHistory,
 
     /// Collects lines that are written to the terminal while the terminal is paused.
-    pub safe_is_paused_buffer: SafePauseBuffer,
+    #[allow(dead_code)]
+    pub(in crate::readline_async) safe_is_paused_buffer: SafePauseBuffer,
 
-    /// - Is [Some] if a [`Spinner`] is currently active. This works with the signal
-    ///   [`LineStateControlSignal::SpinnerActive`]; this is used to set the
-    ///   [`Spinner::shutdown_sender`]. Also works with the
-    ///   [`LineStateControlSignal::Pause`] signal.
-    /// - Is [None] if no [`Spinner`] is active. Also works with the
-    ///   [`LineStateControlSignal::Resume`] signal.
+    /// Thread-safe tracker and shutdown mechanism for an active [`Spinner`].
     ///
-    /// [`Spinner::shutdown_sender`]: crate::readline_async::Spinner::shutdown_sender
-    /// [`Spinner`]: crate::readline_async::Spinner
-    pub safe_spinner_is_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
+    /// This field coordinates terminal exclusivity between the readline input loop,
+    /// background loggers, and an active progress spinner. It prevents concurrent
+    /// spinners and provides a mechanism to cancel an active spinner via `Ctrl+C` or
+    /// `Ctrl+D`.
+    ///
+    /// - `Some(sender)`: A spinner is actively rendering. The `sender` can be used to
+    ///   broadcast a shutdown signal to instantly kill the spinner task. This state
+    ///   corresponds with the [`LineStateControlSignal::SpinnerActive`] and
+    ///   [`LineStateControlSignal::Pause`] signals, as normal terminal output must be
+    ///   buffered while the spinner renders.
+    /// - `None`: No spinner is active. Normal terminal output and input editing proceed
+    ///   as usual (corresponding to [`LineStateControlSignal::Resume`]).
+    ///
+    /// [`LineStateControlSignal::Pause`]: crate::LineStateControlSignal::Pause
+    /// [`LineStateControlSignal::Resume`]: crate::LineStateControlSignal::Resume
+    /// [`LineStateControlSignal::SpinnerActive`]:
+    ///     crate::LineStateControlSignal::SpinnerActive
+    /// [`Spinner`]: crate::Spinner
+    pub(in crate::readline_async) safe_spinner_is_active:
+        Arc<StdMutex<Option<broadcast::Sender<()>>>>,
 
     /// Shutdown channel.
     shutdown_complete_sender: broadcast::Sender<()>,
@@ -246,6 +301,12 @@ pub enum ReadlineEvent {
     /// The terminal was resized.
     Resized(VPSize),
 }
+
+/// This is an artificial delay amount that is added to hide the jank of displaying the
+/// cursor to the terminal when the prompt is first printed, after the terminal is put
+/// into raw mode.
+pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
+    Duration::from_millis(66);
 
 /// # Task creation, shutdown and cleanup
 ///
@@ -531,28 +592,21 @@ impl Drop for Readline {
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
-    fn drop(&mut self) {
-        // Use lock_raw_poison_safe() to bypass the ledger during drop (emergency
-        // restoration). Strictly acquire SafeLineState (Level 1) first, then
-        // OutputDevice (Level 2) second to preserve lock hierarchy.
-        self.lock_manager
-            .line_state()
-            .lock_raw_poison_safe(|line_state| {
-                self.lock_manager
-                    .output_device()
-                    .lock_raw_poison_safe(|term| {
-                        // We don't care about the result of this operation.
-                        drop(line_state.exit(term));
-
-                        // We don't care about the result of this operation.
-                        // disable_raw_mode() is also poison-safe.
-                        drop(disable_raw_mode());
-                    });
-            });
-    }
+    fn drop(&mut self) { self.lock_manager.poison_safe_terminal_restore_on_drop(); }
 }
 
 impl Readline {
+    #[cfg(test)]
+    pub(crate) fn lock_manager_for_testing(&self) -> &ReadlineLockManager {
+        &self.lock_manager
+    }
+
+    /// Checks if a spinner is currently active.
+    #[must_use]
+    pub fn is_spinner_active(&self) -> bool {
+        self.safe_spinner_is_active.read(Option::is_some)
+    }
+
     /// Creates a new instance with an associated [`SharedWriter`]. To customize the
     /// behavior of this instance, you can use the following methods:
     /// - [`Self::should_print_line_on`]
@@ -599,8 +653,11 @@ impl Readline {
             Ok::<(), miette::Report>(())
         })?;
 
-        // Enable raw mode. Drop will disable raw mode.
-        crate::enable_raw_mode()?;
+        // Enable raw mode (unless using a mock output device for testing). Drop will
+        // disable raw mode.
+        if output_device.paint_mode != PaintMode::Mock {
+            crate::enable_raw_mode()?;
+        }
 
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.
@@ -646,6 +703,7 @@ impl Readline {
             safe_is_paused_buffer,
             safe_spinner_is_active,
             shutdown_complete_sender,
+            line_control_sender: Some(line_control_channel_sender.clone()),
         };
 
         // Print the prompt.
@@ -748,15 +806,15 @@ impl Readline {
     /// # Arguments
     ///
     /// - `enter`:
-    ///     - [`PrintLineOnEnter::Print`]: when the user presses <kbd>Enter</kbd>, the
-    ///       prompt and the text they entered will remain on the screen, and the cursor
-    ///       will move to the next line.
+    ///     - [`PrintLineOnEnter::Print`]: when the user presses `Enter`, the prompt and
+    ///       the text they entered will remain on the screen, and the cursor will move to
+    ///       the next line.
     ///     - [`PrintLineOnEnter::DoNotPrint`]: the prompt & input will be erased instead.
     ///     - The default value for `enter` is [`PrintLineOnEnter::Print`].
     ///
     /// - `control_c`:
-    ///     - [`PrintLineOnControlC::Print`]: when the user presses <kbd>Ctrl+C</kbd>, the
-    ///       prompt and the text will remain on the screen.
+    ///     - [`PrintLineOnControlC::Print`]: when the user presses `Ctrl+C`, the prompt
+    ///       and the text will remain on the screen.
     ///     - [`PrintLineOnControlC::DoNotPrint`]: the prompt & input will be erased
     ///       instead.
     ///     - The default value for `control_c` is [`PrintLineOnControlC::DoNotPrint`].
@@ -780,14 +838,13 @@ impl Readline {
         });
     }
 
-    /// This function returns when <kbd>Ctrl+D</kbd>, <kbd>Ctrl+C</kbd>, or
-    /// <kbd>Enter</kbd> is pressed with some user input.
+    /// This function returns when `Ctrl+D`, `Ctrl+C`, or `Enter` is pressed with some
+    /// user input.
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / `request_shutdown`). The
-    /// [`ReadlineAsyncContext`] can be re-used, since the [`SharedWriter`]
-    /// is cloned, and the terminal is kept in `raw mode` until the associated
-    /// [`Readline`] is dropped.
+    /// [`ReadlineAsyncContext`] can be re-used, since the [`SharedWriter`] is cloned, and
+    /// the terminal is kept in `raw mode` until the associated [`Readline`] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [`ReadlineEvent`] or an [`ReadlineError`].
@@ -798,8 +855,8 @@ impl Readline {
     ///
     /// # Poison Safety
     ///
-    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
-    /// in the crate root documentation for details.
+    /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in
+    /// the crate root documentation for details.
     ///
     /// # Errors
     ///

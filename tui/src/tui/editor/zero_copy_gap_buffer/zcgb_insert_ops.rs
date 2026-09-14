@@ -101,7 +101,7 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CLength, CRow,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CRow,
             CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
             NULL_BYTE, byte_offset, c_len, ok};
 use miette::{Result, miette};
@@ -341,7 +341,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CursorBoundsCheck, INITIAL_LINE_SIZE, c_index, c_row};
+    use crate::{INITIAL_LINE_SIZE, c_index, c_row};
 
     #[test]
     fn test_insert_at_beginning() -> Result<()> {

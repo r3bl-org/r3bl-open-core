@@ -1,16 +1,18 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{LineState, OutputDevice, SafeLineState};
+use crate::{LineState, ModalGuardToken, OutputDevice, PaintMode, SafeLineState,
+            disable_raw_mode};
 use std::io::Write;
 
 /// This struct acts as a "Traffic Cop" to prevent lock-inversion deadlocks between the
 /// main keystroke event loop ([`Readline::readline`]) and the background channel
 /// processing task ([`process_line_control_signal`]). (Note: User-spawned tasks like
 /// logging or spinners do not cause deadlocks directly; they simply emit messages to the
-/// [`SharedWriter`], which are then consumed by the channel processing task).
-/// See [Coffman Conditions][1] for more details on deadlock conditions.
+/// [`SharedWriter`], which are then consumed by the channel processing task). See
+/// [Coffman Conditions][1] for more details on deadlock conditions.
 ///
 /// ## The Deadlock Story
+///
 /// To understand why this manager exists, you have to understand the two tasks that need
 /// to share the terminal, and why they inherently collide:
 ///
@@ -36,6 +38,7 @@ use std::io::Write;
 /// - Line Control task waits for [`OutputDevice`] (Deadlock).
 ///
 /// ## The Solution: Level 1 and Level 2 Locks
+///
 /// To mathematically prevent this "Hold and Wait" deadlock, all locks must be acquired in
 /// a strict hierarchical order:
 /// - **Level 1:** [`SafeLineState`]
@@ -46,6 +49,7 @@ use std::io::Write;
 /// which natively guarantees the correct Level 1 -> Level 2 acquisition order.
 ///
 /// ## WARNING: Single-Lock Closures
+///
 /// If you only need [`OutputDevice`] (e.g., for [`Spinner`]) or only [`SafeLineState`],
 /// you can use [`lock_output_device()`] or [`lock_line_state()`]. However, these MUST be
 /// leaf operations. You are strictly forbidden from dynamically capturing another lock
@@ -113,20 +117,63 @@ impl ReadlineLockManager {
         self.output_device.write(|term| f(term))
     }
 
-    /// Provides mutable access to the internal [`OutputDevice`].
+    /// Provides exclusive mutable access to the internal [`OutputDevice`].
     ///
-    /// Used when taking exclusive `&mut self` ownership of [`Readline`].
+    /// Used by [`ModalTerminalGuard`] to provide `(&mut OutputDevice, &mut InputDevice)`
+    /// to modal sub-applications (such as [`crate::choose()`]).
     ///
+    /// # Safety and Invariant Preservation
+    ///
+    /// Calling this method requires an exclusive `&mut self` borrow of
+    /// [`ReadlineLockManager`] (which in turn requires an exclusive `&mut Readline`
+    /// borrow) and a [`ModalGuardToken`] witness. This statically prevents concurrent
+    /// access from [`Readline::readline()`].
+    ///
+    /// [`ModalGuardToken`]: crate::ModalGuardToken
+    /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
     /// [`OutputDevice`]: crate::OutputDevice
+    /// [`Readline::readline()`]: crate::Readline::readline
     /// [`Readline`]: crate::Readline
-    #[allow(dead_code)]
-    pub(crate) fn output_device_mut(&mut self) -> &mut OutputDevice {
+    /// [`ReadlineLockManager`]: Self
+    pub(crate) fn exclusive_output_device(
+        &mut self,
+        _token: ModalGuardToken,
+    ) -> &mut OutputDevice {
         &mut self.output_device
     }
 
-    /// Provides reference to the internal [`SafeLineState`].
-    pub(crate) fn line_state(&self) -> &SafeLineState { &self.line_state }
+    /// Performs poison-safe emergency terminal restoration during [`Readline`] drop.
+    ///
+    /// Bypasses the lock ledger to avoid panicking on poisoned locks during stack
+    /// unwinding. Acquires [`SafeLineState`] (Level 1) first, then [`OutputDevice`]
+    /// (Level 2) second, strictly respecting the lock hierarchy.
+    ///
+    /// [`OutputDevice`]: crate::OutputDevice
+    /// [`Readline`]: crate::Readline
+    /// [`SafeLineState`]: crate::SafeLineState
+    pub(crate) fn poison_safe_terminal_restore_on_drop(&self) {
+        self.line_state.lock_raw_poison_safe(|line_state| {
+            self.output_device.lock_raw_poison_safe(|term| {
+                // We don't care about the result of this operation.
+                drop(line_state.exit(term));
 
-    /// Provides reference to the internal [`OutputDevice`].
-    pub(crate) fn output_device(&self) -> &OutputDevice { &self.output_device }
+                // We don't care about the result of this operation.
+                // disable_raw_mode() is also poison-safe.
+                if self.output_device.paint_mode != PaintMode::Mock {
+                    drop(disable_raw_mode());
+                }
+            });
+        });
+    }
+
+    /// Provides reference to the internal [`SafeLineState`].
+    ///
+    /// This method is only available for tests and documentation builds (e.g., simulating
+    /// mutex poisoning in double-panic prevention tests).
+    ///
+    /// [`SafeLineState`]: crate::SafeLineState
+    #[cfg(test)]
+    pub(crate) fn line_state_for_testing(&self) -> &SafeLineState { &self.line_state }
 }
+
+// cspell:words Coffman

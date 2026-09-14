@@ -407,7 +407,7 @@ mod long_running_task {
 
         let task_name = task_name.to_string();
 
-        if readline.safe_spinner_is_active.read(Option::is_some) {
+        if readline.is_spinner_active() {
             // We don't care about the result of this operation.
             writeln!(
                 shared_writer,

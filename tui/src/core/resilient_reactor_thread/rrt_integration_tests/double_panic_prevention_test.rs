@@ -154,7 +154,10 @@ fn controlled() {
 
         // 2. Poison the internal safe_line_state mutex.
         let join_handle = std::thread::spawn({
-            let safe_line_state = readline.lock_manager.line_state().clone();
+            let safe_line_state = readline
+                .lock_manager_for_testing()
+                .line_state_for_testing()
+                .clone();
             move || {
                 // Get the lock from mutex & hold it.
                 safe_line_state.write(|_| {
@@ -172,8 +175,8 @@ fn controlled() {
         // Verify mutex is poisoned.
         assert!(
             readline
-                .lock_manager
-                .line_state()
+                .lock_manager_for_testing()
+                .line_state_for_testing()
                 .lock_raw(|result| result.is_err())
         );
 

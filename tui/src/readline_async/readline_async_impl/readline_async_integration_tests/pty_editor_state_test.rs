@@ -157,7 +157,7 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
     matches!(control_flow, ReadlineControlFlow::Continue)
         && readline
             .lock_manager
-            .line_state()
+            .line_state_for_testing()
             .read(|line_state| line_state.line.as_str() == "a")
         && stdout_mock
             .get_copy_of_buffer_as_string_strip_ansi()
@@ -203,7 +203,7 @@ fn run_test_editor_state_with_content() -> bool {
     .expect("conversion error");
 
     {
-        readline.lock_manager.line_state().write(|line_state| {
+        readline.lock_manager.lock_line_state(|line_state| {
             line_state.line = GCStringOwned::new("hello");
             line_state.cursor_position = seg_index(5);
         });
@@ -232,7 +232,7 @@ fn run_test_editor_state_cursor_at_start_with_content() -> bool {
     .expect("conversion error");
 
     {
-        readline.lock_manager.line_state().write(|line_state| {
+        readline.lock_manager.lock_line_state(|line_state| {
             line_state.line = GCStringOwned::new("hello");
             line_state.cursor_position = seg_index(0);
         });

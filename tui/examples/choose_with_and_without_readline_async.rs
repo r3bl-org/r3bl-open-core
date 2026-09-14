@@ -34,7 +34,7 @@ async fn without_readline_async() -> miette::Result<()> {
         None,
         HowToChoose::Single,
         StyleSheet::sea_foam_style(),
-        (&mut output_device, &mut input_device, None),
+        (&mut output_device, &mut input_device),
     )
     .get_all_results()
     .await?;
@@ -82,9 +82,7 @@ async fn with_readline_async() -> miette::Result<()> {
 
     // Get the item selected by the user (or none).
     let maybe_user_choice = {
-        let sw_2 = rl_ctx.clone_shared_writer();
-        let mut output_device = rl_ctx.clone_output_device();
-        let input_device = rl_ctx.mut_input_device();
+        let mut lease = rl_ctx.acquire_modal_terminal();
         choose(
             Header::SingleLine("Choose one:".into()),
             &["one", "two", "three"],
@@ -92,7 +90,7 @@ async fn with_readline_async() -> miette::Result<()> {
             None,
             HowToChoose::Single,
             StyleSheet::hot_pink_style(),
-            (&mut output_device, input_device, Some(sw_2)),
+            lease.as_mut_tuple(),
         )
         .get_first_result()
         .await?
