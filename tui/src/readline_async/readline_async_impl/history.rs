@@ -3,30 +3,26 @@
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX, NarrowingCastToU16,
             VPIndex, vp_idx, vp_len};
 use std::collections::VecDeque;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-
 #[derive(Debug)]
 pub struct History {
     pub entries: VecDeque<String>,
     pub max_size: usize,
-    pub sender: UnboundedSender<String>,
     current_position: Option<VPIndex>,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        Self {
+            entries: VecDeque::default(),
+            max_size: HISTORY_SIZE_MAX,
+            current_position: Option::default(),
+        }
+    }
 }
 
 impl History {
     #[must_use]
-    pub fn new() -> (Self, UnboundedReceiver<String>) {
-        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<String>();
-        (
-            Self {
-                entries: VecDeque::default(),
-                max_size: HISTORY_SIZE_MAX,
-                sender,
-                current_position: Option::default(),
-            },
-            receiver,
-        )
-    }
+    pub fn new() -> Self { Self::default() }
 }
 
 impl History {
@@ -91,7 +87,7 @@ mod tests {
     #[test]
     #[allow(clippy::needless_return)]
     fn test_update() {
-        let (mut history, _) = History::new();
+        let mut history = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));
         assert_eq!(history.entries.front(), Some(&"test1".to_string()));
@@ -117,7 +113,7 @@ mod tests {
     #[test]
     #[allow(clippy::needless_return)]
     fn test_search_next() {
-        let (mut history, _) = History::new();
+        let mut history = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));
         history.update(Some("test2".into()));
@@ -132,7 +128,7 @@ mod tests {
     #[test]
     #[allow(clippy::needless_return)]
     fn test_search_previous() {
-        let (mut history, _) = History::new();
+        let mut history = History::new();
         history.max_size = 2;
         history.update(Some("test1".into()));
         history.update(Some("test2".into()));

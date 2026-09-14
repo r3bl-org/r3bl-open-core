@@ -361,7 +361,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         line.line = GCStringOwned::new("test");

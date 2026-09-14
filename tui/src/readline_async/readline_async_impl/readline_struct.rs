@@ -16,8 +16,7 @@ use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear}};
 use std::sync::Arc;
 use tokio::{select, spawn,
-            sync::{broadcast,
-                   mpsc::{self, UnboundedReceiver, UnboundedSender}},
+            sync::{broadcast, mpsc},
             time::sleep};
 
 /// # Mental model and overview
@@ -217,12 +216,6 @@ pub struct Readline {
     pub(in crate::readline_async) line_control_sender:
         Option<tokio::sync::mpsc::Sender<LineStateControlSignal>>,
 
-    /// Use to send history updates.
-    pub(in crate::readline_async) history_sender: UnboundedSender<String>,
-
-    /// Use to receive history updates.
-    pub(in crate::readline_async) history_receiver: UnboundedReceiver<String>,
-
     /// Manages the history.
     pub(in crate::readline_async) safe_history: SafeHistory,
 
@@ -349,8 +342,7 @@ impl Readline {
             line_state_control_channel;
 
         // History setup.
-        let (history, history_receiver) = History::new();
-        let history_sender = history.sender.clone();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Line state.
@@ -379,8 +371,6 @@ impl Readline {
         let readline = Readline {
             lock_manager,
             input_device,
-            history_sender,
-            history_receiver,
             safe_history,
             safe_is_paused_buffer,
             safe_spinner_is_active,
@@ -581,14 +571,6 @@ impl Readline {
                     }
                 },
 
-                // Poll for history updates.
-                // This branch is cancel safe because recv is cancel safe.
-                maybe_line = self.history_receiver.recv() => {
-                    self.safe_history.write(|history| {
-                        history.update(maybe_line);
-                    });
-                },
-
                 // Poll for shutdown signal.
                 _ = shutdown_complete_receiver.recv() => {
                     return Err(ReadlineError::Closed);
@@ -599,7 +581,10 @@ impl Readline {
 
     /// Adds a line to the input history.
     pub fn add_history_entry(&mut self, entry: String) -> Option<()> {
-        self.history_sender.send(entry).ok()
+        self.safe_history.write(|history| {
+            history.update(Some(entry));
+        });
+        Some(())
     }
 
     /// Returns a clone of the current buffer content with grapheme metadata.

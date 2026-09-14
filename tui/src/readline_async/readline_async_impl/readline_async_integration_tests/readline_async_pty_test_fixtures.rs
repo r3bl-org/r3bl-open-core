@@ -57,7 +57,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
     let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
     let mut debounced_state = DebouncedState::new(Duration::from_millis(10));
     let safe_output_terminal = Arc::new(StdMutex::new(StdoutMock::default()));
-    let (history, _) = crate::readline_async::readline_async_impl::History::new();
+    let history = crate::readline_async::readline_async_impl::History::new();
     let safe_history = Arc::new(StdMutex::new(history));
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

@@ -1,4 +1,5 @@
-# Task: Fix Readline Deadlock via Strict Lock Ordering Hierarchy (Approach A + Hybrid Features)
+Task: Fix Readline Deadlock via Strict Lock Ordering Hierarchy (Approach A + Hybrid
+Features)
 
 ## Reference
 
@@ -32,14 +33,13 @@ indefinitely.
 The deadlock is caused exclusively by an inversion in lock acquisition order between the
 interactive input thread and the background channel monitor thread.
 
-Deadlock requires four simultaneous [Coffman conditions][1]:
+Deadlock requires four simultaneous
+[Coffman conditions](https://en.wikipedia.org/wiki/Coffman_conditions):
 
 1. Mutual exclusion
 2. Hold and wait
 3. No preemption
 4. Circular wait
-
-[1]: https://en.wikipedia.org/wiki/Coffman_conditions
 
 By establishing and enforcing a strict, universal total ordering across all mutexes:
 
@@ -291,46 +291,26 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
           submodules via barrel export pattern, maintaining `manage_shared_writer_output`
           and `readline_internal` module aliases for compatibility.
     - [x] Delete `tui/src/readline_async/readline_async_impl/readline.rs`.
-- [ ] **Mandatory manual review:**
-    - [ ] `tui/src/readline_async/mod.rs`
-    - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
-    - [ ] `tui/src/readline_async/choose_api.rs`
-    - [ ] `tui/src/readline_async/readline_async_api.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/types.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/channel_monitor.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/mod.rs`
-    - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
-    - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_delete_ops.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_insert_ops.rs`
 
 ---
 
 ### Phase 3: History Channel Simplification
 
-- [ ] Refactor `History` in `tui/src/readline_async/readline_async_impl/history.rs`:
-    - [ ] Remove `sender: UnboundedSender<String>` field from `History`.
-    - [ ] Update `History::new()` to return `Self` without `UnboundedReceiver`. Implement
+- [x] Refactor `History` in `tui/src/readline_async/readline_async_impl/history.rs`:
+    - [x] Remove `sender: UnboundedSender<String>` field from `History`.
+    - [x] Update `History::new()` to return `Self` without `UnboundedReceiver`. Implement
           `Default` for `History`.
-    - [ ] Update unit tests in `history.rs`.
-- [ ] Refactor `Readline` in
+    - [x] Update unit tests in `history.rs`.
+- [x] Refactor `Readline` in
       `tui/src/readline_async/readline_async_impl/readline_struct.rs`:
-    - [ ] Remove `history_sender: UnboundedSender<String>` and
+    - [x] Remove `history_sender: UnboundedSender<String>` and
           `history_receiver: UnboundedReceiver<String>` fields from `Readline`.
-    - [ ] In `Readline::try_new`, construct `History::new()` directly without channel
+    - [x] In `Readline::try_new`, construct `History::new()` directly without channel
           setup.
-    - [ ] In `Readline::readline`, remove the `maybe_line = self.history_receiver.recv()`
+    - [x] In `Readline::readline`, remove the `maybe_line = self.history_receiver.recv()`
           branch from `tokio::select!`.
-    - [ ] In `Readline::add_history_entry`, update to mutate synchronously:
+    - [x] In `Readline::add_history_entry`, update to mutate synchronously:
           `self.safe_history.write(|h| h.update(Some(entry)))`.
-- [ ] **Mandatory manual review:**
-    - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
 
 ---
 
@@ -350,8 +330,24 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [ ] `./check.fish --test`
     - [ ] `./check.fish --clippy`
 - [ ] **Mandatory manual review:**
+    - [ ] `tui/src/readline_async/mod.rs`
+    - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
+    - [ ] `tui/src/readline_async/choose_api.rs`
+    - [ ] `tui/src/readline_async/readline_async_api.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/types.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/channel_monitor.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
+    - [ ] `tui/src/readline_async/readline_async_impl/mod.rs`
+    - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
+    - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
+    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
+    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_delete_ops.rs`
+    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_insert_ops.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`
-- [ ] Manual review via `tui/examples/demo/ex_app_with_spinner.rs` to verify visuals.
+- [ ] Manual testing via `tui/examples/demo/ex_app_with_spinner.rs` to verify visuals.
 
 ---
 
@@ -366,134 +362,4 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [ ] `tui/src/readline_async/mod.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
 
-<!-- cspell:words coffman -->
-
-## Appendix: ReadlineLockManager Rustdocs & Implementation
-
-The following is the required implementation and documentation for `ReadlineLockManager`
-to be added during Phase 1:
-
-```rust
-/// This struct acts as a "Traffic Cop" to prevent lock-inversion deadlocks between the
-/// main keystroke event loop ([`Readline::readline`]) and the background channel processing
-/// task ([`process_line_control_signal`]). (Note: User-spawned tasks like logging or
-/// spinners do not cause deadlocks directly; they simply emit messages to the
-/// [`SharedWriter`], which are then consumed by the channel processing task).
-/// See [Coffman Conditions][1] for more details on deadlock conditions.
-///
-/// ## The Deadlock Story
-/// To understand why this manager exists, you have to understand the two tasks that need to
-/// share the terminal, and why they inherently collide:
-///
-/// 1. **The Main Keystroke Task**: When the user presses a key, this task needs to mutate the
-///    prompt buffer (stored in [`SafeLineState`]) and then immediately draw the updated prompt
-///    to the screen (via [`OutputDevice`]).
-/// 2. **The Line Control Task**: When a background thread (like a logger or spinner) sends
-///    text to the [`SharedWriter`], this internal background task receives it and must write it
-///    to the screen. But to prevent the text from irreversibly corrupting the user's half-typed
-///    prompt, it must first *read* the current prompt (from [`SafeLineState`]), clear the screen,
-///    print the text (via [`OutputDevice`]), and then redraw the prompt below it.
-///
-/// Because both tasks need both locks to do their jobs, they are vulnerable to lock inversions.
-/// Historically, they acquired these locks in opposite orders:
-/// - The Keystroke Task locked [`OutputDevice`] first, then [`SafeLineState`] second.
-/// - The Line Control Task locked [`SafeLineState`] first, then [`OutputDevice`] second.
-///
-/// If a user typed a keystroke at the exact microsecond a background thread emitted text:
-/// - Keystroke task locks [`OutputDevice`].
-/// - Line Control task locks [`SafeLineState`].
-/// - Keystroke task waits for [`SafeLineState`] (Deadlock).
-/// - Line Control task waits for [`OutputDevice`] (Deadlock).
-///
-/// ## The Solution: Level 1 and Level 2 Locks
-/// To mathematically prevent this "Hold and Wait" deadlock, all locks must be acquired in
-/// a strict hierarchical order:
-/// - **Level 1:** [`SafeLineState`]
-/// - **Level 2:** [`OutputDevice`]
-///
-/// [`ReadlineLockManager`] enforces this by keeping the underlying [`Arc<Mutex>`] fields completely
-/// private. If a developer needs both locks, they *must* use [`lock_both()`], which natively
-/// guarantees the correct Level 1 -> Level 2 acquisition order.
-///
-/// ## WARNING: Single-Lock Closures
-/// If you only need [`OutputDevice`] (e.g., for [`Spinner`]) or only [`SafeLineState`], you can
-/// use [`lock_output_device()`] or [`lock_line_state()`]. However, these MUST be leaf operations.
-/// You are strictly forbidden from dynamically capturing another lock inside these closures.
-///
-/// [1]: https://en.wikipedia.org/wiki/Coffman_conditions
-/// [`Arc<Mutex>`]: std::sync::Arc
-/// [`lock_both()`]: Self::lock_both
-/// [`lock_line_state()`]: Self::lock_line_state
-/// [`lock_output_device()`]: Self::lock_output_device
-/// [`OutputDevice`]: crate::OutputDevice
-/// [`process_line_control_signal`]:
-///     crate::manage_shared_writer_output::process_line_control_signal
-/// [`Readline::readline`]: crate::Readline::readline
-/// [`ReadlineLockManager`]: Self
-/// [`SafeLineState`]: crate::SafeLineState
-/// [`SharedWriter`]: crate::SharedWriter
-/// [`Spinner`]: crate::Spinner
-pub struct ReadlineLockManager {
-    line_state: SafeLineState,
-    output_device: OutputDevice,
-}
-
-impl ReadlineLockManager {
-    pub fn new(line_state: SafeLineState, output_device: OutputDevice) -> Self {
-        Self {
-            line_state,
-            output_device,
-        }
-    }
-
-    /// Safely acquires both locks in the strictly correct [Coffman hierarchy][1]:
-    /// [`SafeLineState`] (Level 1) first, then [`OutputDevice`] (Level 2). See
-    /// [struct docs] for more details.
-    ///
-    /// [1]: https://en.wikipedia.org/wiki/Coffman_conditions
-    /// [`OutputDevice`]: crate::OutputDevice
-    /// [`SafeLineState`]: crate::SafeLineState
-    /// [struct docs]: Self
-    pub fn lock_both<R>(&self, f: impl FnOnce(&mut LineState, &mut dyn Write) -> R) -> R {
-        self.line_state.write(|line| {
-            self.output_device.write(|term| f(line, term))
-        })
-    }
-
-    /// Acquires only the [`SafeLineState`] lock.
-    ///
-    /// **WARNING:** This must be a leaf operation. Do not attempt to acquire
-    /// [`OutputDevice`] inside this closure.
-    ///
-    /// [`OutputDevice`]: crate::OutputDevice
-    /// [`SafeLineState`]: crate::SafeLineState
-    pub fn lock_line_state<R>(&self, f: impl FnOnce(&mut LineState) -> R) -> R {
-        self.line_state.write(f)
-    }
-
-    /// Acquires only the [`OutputDevice`] lock.
-    ///
-    /// **WARNING:** This must be a leaf operation. Do not attempt to acquire
-    /// [`SafeLineState`] inside this closure.
-    ///
-    /// [`OutputDevice`]: crate::OutputDevice
-    /// [`SafeLineState`]: crate::SafeLineState
-    pub fn lock_output_device<R>(&self, f: impl FnOnce(&mut dyn Write) -> R) -> R {
-        self.output_device.write(f)
-    }
-
-    /// Provides mutable access to the internal [`OutputDevice`].
-    ///
-    /// Used exclusively by [`TerminalLease`] when taking exclusive `&mut self`
-    /// ownership of [`Readline`].
-    ///
-    /// [`OutputDevice`]: crate::OutputDevice
-    /// [`Readline`]: crate::Readline
-    /// [`TerminalLease`]: crate::TerminalLease
-    pub(crate) fn output_device_mut(&mut self) -> &mut OutputDevice {
-        &mut self.output_device
-    }
-}
-```
-
-<!-- cspell:words stackexchange -->
+<!-- cspell:words coffman stackexchange -->

@@ -141,7 +141,7 @@ fn run_test_readline_internal_process_event_and_terminal_output() -> bool {
 
     let safe_is_spinner_active = Arc::new(StdMutex::new(None));
     let history = History::new();
-    let safe_history = Arc::new(StdMutex::new(history.0));
+    let safe_history = Arc::new(StdMutex::new(history));
 
     // Simulate 'a'.
     let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));

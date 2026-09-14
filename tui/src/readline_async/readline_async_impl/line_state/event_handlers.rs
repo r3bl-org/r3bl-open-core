@@ -44,7 +44,7 @@ impl LineState {
     /// // Setup
     /// let mut line_state = LineState::new(String::new(), vp_width(80) + vp_height(24));
     /// let mut stdout = StdoutMock::default();
-    /// let (history, _) = r3bl_tui::readline_async::readline_async_impl::History::new();
+    /// let history = r3bl_tui::readline_async::readline_async_impl::History::new();
     /// let safe_history = Arc::new(StdMutex::new(history));
     ///
     /// // Simulate typing "hello"
@@ -832,7 +832,7 @@ mod tests {
 
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -856,7 +856,7 @@ mod tests {
 
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -880,7 +880,7 @@ mod tests {
 
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -902,7 +902,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -928,7 +928,7 @@ mod tests {
         line.cursor_position = seg_index(1); // Cursor after 'a'
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -956,7 +956,7 @@ mod tests {
         line.cursor_position = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -984,7 +984,7 @@ mod tests {
         line.cursor_position = seg_index(15); // End of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1022,7 +1022,7 @@ mod tests {
         line.cursor_position = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1062,7 +1062,7 @@ mod tests {
         line.cursor_position = seg_index(13); // End of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1100,7 +1100,7 @@ mod tests {
         line.cursor_position = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1138,7 +1138,7 @@ mod tests {
         line.cursor_position = seg_index(0); // Start of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1170,7 +1170,7 @@ mod tests {
         line.cursor_position = seg_index(13); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1203,7 +1203,7 @@ mod tests {
         line.line = GCStringOwned::new("some input");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1228,7 +1228,7 @@ mod tests {
         line.line = GCStringOwned::new("test");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1256,7 +1256,7 @@ mod tests {
         line.cursor_position = seg_index(6); // After "hello "
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1284,7 +1284,7 @@ mod tests {
         line.cursor_position = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1311,7 +1311,7 @@ mod tests {
         line.cursor_position = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1337,7 +1337,7 @@ mod tests {
         line.line = GCStringOwned::new("hello");
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1360,7 +1360,7 @@ mod tests {
         line.cursor_position = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1383,7 +1383,7 @@ mod tests {
         line.cursor_position = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1405,7 +1405,7 @@ mod tests {
         line.cursor_position = seg_index(5); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1427,7 +1427,7 @@ mod tests {
         line.cursor_position = seg_index(11); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1449,7 +1449,7 @@ mod tests {
         line.cursor_position = seg_index(0); // At start
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -1469,7 +1469,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Add some history entries.
@@ -1506,7 +1506,7 @@ mod tests {
         line.cursor_position = seg_index(14); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1532,7 +1532,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1559,7 +1559,7 @@ mod tests {
         line.cursor_position = seg_index(9); // At end
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -1585,7 +1585,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Setup: "hello 世界 test"
@@ -1636,7 +1636,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Test all function keys F1-F12.
@@ -1678,7 +1678,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Test pass-through keys: Tab, BackTab, PageUp, PageDown, Insert.
@@ -1723,7 +1723,7 @@ mod tests {
         line.cursor_position = seg_index(2); // Middle of line
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // These keys modify state and return Ok(None).
@@ -1762,7 +1762,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Esc is not explicitly handled, so it should return UnhandledKey.
@@ -1784,7 +1784,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Type 'e'.
@@ -1842,7 +1842,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(80) + vp_height(24));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let new_size = vp_width(120) + vp_height(40);
@@ -1862,7 +1862,7 @@ mod tests {
         let mut line = LineState::new(String::new(), vp_width(100) + vp_height(100));
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Unhandled Ctrl key (e.g. Ctrl+K) returns Ok(None).
@@ -1920,7 +1920,7 @@ mod tests {
         line.cursor_position = seg_index(0);
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Backspace at index 0 is a no-op.
@@ -1999,7 +1999,7 @@ mod tests {
         line.pause_state = PauseState::PausedByModal;
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Character input while paused does not mutate line.
@@ -2030,7 +2030,7 @@ mod tests {
 
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -2059,7 +2059,7 @@ mod tests {
 
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         let event = InputEvent::Keyboard(KeyPress::Plain {
@@ -2084,7 +2084,7 @@ mod tests {
 
         let stdout_mock = StdoutMock::default();
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
-        let (history, _) = History::new();
+        let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
         // Ctrl+Left at index 0 is a no-op.
