@@ -232,7 +232,8 @@ impl ReadlineAsyncContext {
     pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
     /// Acquires an exclusive [`ModalTerminalGuard`] on the terminal, pausing readline
-    /// processing while the guard is held.
+    /// processing while the guard is held. Only one caller can hold this at any given
+    /// time due to `&mut self`.
     pub fn acquire_modal_terminal(&mut self) -> ModalTerminalGuard<'_> {
         ModalTerminalGuard::acquire(&mut self.readline)
     }

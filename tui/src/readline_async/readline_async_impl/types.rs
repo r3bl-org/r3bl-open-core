@@ -133,3 +133,45 @@ impl From<ErrorReport> for ReadlineError {
         ReadlineError::IO(io::Error::other(format!("{report}")))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use miette::miette;
+
+    #[test]
+    fn test_readline_control_flow_from_result() {
+        // Branch 1: Ok(Some(val)) -> ReturnOk.
+        let ok_some: Result<Option<i32>, &str> = Ok(Some(42));
+        assert_eq!(
+            ReadlineControlFlow::from(ok_some),
+            ReadlineControlFlow::ReturnOk(42)
+        );
+
+        // Branch 2: Ok(None) -> Continue.
+        let ok_none: Result<Option<i32>, &str> = Ok(None);
+        assert_eq!(
+            ReadlineControlFlow::from(ok_none),
+            ReadlineControlFlow::Continue
+        );
+
+        // Branch 3: Err(err) -> ReturnError.
+        let err: Result<Option<i32>, &str> = Err("test error");
+        assert_eq!(
+            ReadlineControlFlow::from(err),
+            ReadlineControlFlow::ReturnError("test error")
+        );
+    }
+
+    #[test]
+    fn test_readline_error_from_error_report() {
+        let report = miette!("custom diagnostic error");
+        let error = ReadlineError::from(report);
+        match error {
+            ReadlineError::IO(io_err) => {
+                assert!(io_err.to_string().contains("custom diagnostic error"));
+            }
+            ReadlineError::Closed => panic!("expected IO error variant"),
+        }
+    }
+}

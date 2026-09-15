@@ -173,9 +173,10 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [x] Create `tui/src/readline_async/readline_async_impl/readline_lock_manager.rs` and
           define the `ReadlineLockManager` struct holding `line_state: SafeLineState` and
           `output_device: OutputDevice`.
-    - [x] Provide `lock_both`, `lock_line_state`, and `lock_output_device` methods.
-          `lock_both` must strictly acquire `SafeLineState` first, then `OutputDevice`,
-          preventing lock inversion.
+    - [x] Provide `lock_both` and `lock_line_state` methods (`lock_output_device` removed
+          as unused since background components hold `OutputDevice` directly). `lock_both`
+          must strictly acquire `SafeLineState` first, then `OutputDevice`, preventing
+          lock inversion.
     - [x] Add `pub(crate) fn output_device_mut(&mut self) -> &mut OutputDevice` to allow
           `TerminalLease` to yield the device.
     - [x] Replace `safe_line_state` and `output_device` fields in `Readline` with a single
@@ -184,7 +185,7 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [x] Consolidate all deadlock prevention documentation into the struct-level rustdocs
           for `ReadlineLockManager`. Explain the Coffman lock hierarchy, the purpose of
           `lock_both`, and explicitly document that single-lock closures (like
-          `lock_output_device`) MUST be leaf operations.
+          `lock_line_state`) MUST be leaf operations.
     - [x] Add documentation to `Spinner` highlighting its "Structural Isolation", because
           it only holds `OutputDevice` and lacks `SafeLineState`, it is structurally
           immune to lock inversions.
@@ -330,23 +331,23 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [x] `./check.fish --test`
     - [x] `./check.fish --clippy`
 - [ ] **Mandatory manual review:**
-    - [ ] `tui/src/readline_async/mod.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/types.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
     - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
-    - [ ] `tui/src/readline_async/choose_api.rs`
-    - [ ] `tui/src/readline_async/readline_async_api.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/types.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/channel_monitor.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/mod.rs`
-    - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
-    - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
+    - [ ] `tui/src/readline_async/choose_api.rs`
+    - [ ] `tui/src/readline_async/readline_async_api.rs`
+    - [ ] `tui/src/readline_async/mod.rs`
     - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
     - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_delete_ops.rs`
     - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_insert_ops.rs`
+    - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
     - [ ] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`
+    - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
 - [ ] Manual testing via `tui/examples/demo/ex_app_with_spinner.rs` to verify visuals.
 
 ---

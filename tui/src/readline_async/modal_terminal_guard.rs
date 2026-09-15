@@ -3,8 +3,9 @@
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
 
-/// An RAII guard that grants exclusive access to the terminal devices ([`OutputDevice`]
-/// and [`InputDevice`]) by temporarily suspending [`Readline`] operations.
+/// An [`RAII`] guard that grants exclusive access to the terminal devices
+/// ([`OutputDevice`] and [`InputDevice`]) by temporarily suspending [`Readline`]
+/// operations.
 ///
 /// When a modal component (like [`crate::choose()`]) needs full control of the terminal,
 /// it acquires a [`ModalTerminalGuard`]. While the guard is held:
@@ -23,12 +24,35 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// For more details on the pause, resume, and modal architecture, see the [`Readline`]
 /// documentation.
 ///
+/// # Why We Use Lifetime Tether Instead of Strict Memory Lock
+///
+/// This guard acts primarily as a [**lifetime tether**][Lifetime Tether Pattern] and
+/// pause coordinator rather than an absolute memory lock:
+///
+/// - **Why not a [`MutexGuard`]?** Holding a lock across long-running `.await` points
+///   (such as [`choose()`]) is problematic in async Rust because it can cause deadlocks.
+/// - **Limitation:** Because [`OutputDevice`] is cloneable, cloning it can technically
+///   bypass this guard and write to the terminal concurrently, leading to display
+///   corruption.
+///
+/// For the complete design rationale, see the [Lifetime Tether Pattern] documentation in
+/// [`ReadlineLockManager`].
+///
+/// [`choose()`]: crate::choose
+/// [`InputDevice`]: crate::InputDevice
+/// [`LineStateControlSignal::Flush`]: crate::LineStateControlSignal::Flush
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`MutexGuard`]: std::sync::MutexGuard
+/// [`OutputDevice`]: crate::OutputDevice
 /// [`PauseState::NotPaused`]: crate::PauseState::NotPaused
 /// [`PauseState::PausedByBoth`]: crate::PauseState::PausedByBoth
 /// [`PauseState::PausedByModal`]: crate::PauseState::PausedByModal
 /// [`PauseState::PausedBySpinner`]: crate::PauseState::PausedBySpinner
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline`]: crate::Readline
+/// [`ReadlineLockManager`]: crate::ReadlineLockManager
+/// [Lifetime Tether Pattern]:
+///     crate::ReadlineLockManager#the-lifetime-tether-pattern
 #[allow(missing_debug_implementations)]
 pub struct ModalTerminalGuard<'a> {
     readline: &'a mut Readline,
@@ -52,7 +76,11 @@ impl<'a> ModalTerminalGuard<'a> {
 
     /// Provides mutable references to both the output device and input device as a tuple.
     ///
-    /// Designed for seamless use with [`crate::choose()`].
+    /// Designed for seamless use with [`crate::choose()`]. To understand why this yields
+    /// a `&mut OutputDevice` rather than a `MutexGuard`, see the [Lifetime Tether
+    /// Pattern].
+    ///
+    /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
     pub fn as_mut_tuple(&mut self) -> (&mut OutputDevice, &mut InputDevice) {
         (
             self.readline

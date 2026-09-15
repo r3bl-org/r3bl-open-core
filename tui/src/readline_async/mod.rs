@@ -2,17 +2,18 @@
 
 // cspell:words terminalasynctry spinnertry
 
-//! Readline async and choose modules
+//! # Readline Async, Choice Selection, and Spinner Modules
 //!
-//! This module provides readline async functionality, choice selection UI, and spinners
+//! This module provides asynchronous line editing, choice selection UI ([`choose()`]),
+//! modal terminal leases ([`ModalTerminalGuard`]), and animated spinners ([`Spinner`])
 //! for building interactive terminal applications.
 //!
 //! # Introduction
 //!
 //! The [`readline_async`] module lets your CLI program be asynchronous and interactive
 //! without blocking the main thread. Your spawned tasks can use it to concurrently write
-//! to the display output, pause and resume it. You can also display of colorful animated
-//! spinners ⌛🌈 for long running tasks. With it, you can create beautiful, powerful, and
+//! to the display output, pause and resume it. You can also display colorful animated
+//! spinners ⌛🌈 for long-running tasks. With it, you can create beautiful, powerful, and
 //! interactive REPLs (read execute print loops) with ease.
 //!
 //! 1. Because [`read_line()`] is blocking. And there is no way to terminate an OS thread
@@ -31,8 +32,8 @@
 //!    to display output to [`stdout`] concurrently, this poses some challenges.
 //!
 //!     - This is because the caret is moved by [`read_line()`] and it blocks.
-//!     - When another thread / task writes to [`stdout`] concurrently, it assumes that the
-//!       caret is at row `0` of a new line.
+//!     - When another thread / task writes to [`stdout`] concurrently, it assumes that
+//!       the caret is at row `0` of a new line.
 //!     - This results in output that doesn't look good since it clobbers the
 //!       [`read_line()`] output, which assumes that no other output will be produced,
 //!       while is blocking for user input, resulting in a bad user experience.
@@ -144,10 +145,13 @@
 //! # Examples
 //!
 //! See the `tui/examples` directory for comprehensive examples:
-//! - `readline_async` - Async readline with concurrent output
-//! - `spinner` - Animated progress indicators
-//! - `shell_async` - Interactive shell implementation
-//! - `choose` - Choice selection UI
+//! - `readline_async`: Async readline with concurrent output.
+//! - `spinner`: Animated progress indicators.
+//! - `shell_async`: Interactive shell implementation.
+//! - `choose_interactive`: Choice selection UI.
+//! - `choose_quiz_game`: Interactive choice quiz game.
+//! - `choose_with_and_without_readline_async`: Choice selection with concurrent
+//!   background readline.
 //!
 //! # How to use this module
 //!
@@ -197,8 +201,8 @@
 //! - Lines written to the associated [`crate::SharedWriter`] while `readline()` is in
 //!   progress will be output to the screen above the input line.
 //!
-//! - When done, call [`crate::flush_internal()`] to ensure
-//!   that all lines written to the [`crate::SharedWriter`] are output.
+//! - When done, call [`crate::flush_internal()`] to ensure that all lines written to the
+//!   [`crate::SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]
 //!
@@ -213,9 +217,9 @@
 //! **Embedded mode** (with [`ReadlineAsyncContext`]): Pass a [`SharedWriter`] to
 //! coordinate output. The spinner suspends output from all [`SharedWriter`] instances
 //! associated with the [`Readline`] instance, preventing clobbering in either direction.
-//! Cancellation support is available in this mode: Ctrl+C and Ctrl+D are directed to
-//! the spinner to cancel it. Spinners can also be checked for completion or cancellation
-//! by long running tasks, to ensure that they [`request_shutdown`] as a response to user
+//! Cancellation support is available in this mode: Ctrl+C and Ctrl+D are directed to the
+//! spinner to cancel it. Spinners can also be checked for completion or cancellation by
+//! long running tasks, to ensure that they [`request_shutdown`] as a response to user
 //! cancellation.
 //!
 //! Both the `readline_async.rs` and `spinner.rs` examples show embedded mode:
@@ -224,14 +228,16 @@
 //! cargo run --example spinner
 //! ```
 //!
+//! ## Styled prompts with [`ANSI`] escape sequences
 //!
-//! The third change is that [`ReadlineAsyncContext::try_new()`] now accepts prompts that
-//! can have [`ANSI`] escape sequences in them. Here's an example of this.
+//! [`ReadlineAsyncContext::try_new()`] supports styled prompts containing [`ANSI`] escape
+//! sequences (such as colors and text styling). Here is an example:
 //!
 //! ```
-//! # use r3bl_tui::readline_async::ReadlineAsyncContext;
-//! # use r3bl_tui::{fg_magenta, CliTextInline, ok, IntoErr, TuiAvailability};
-//! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
+//! use r3bl_tui::readline_async::ReadlineAsyncContext;
+//! use r3bl_tui::{fg_magenta, CliTextInline, ok, IntoErr, TuiAvailability};
+//!
+//! pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";
 //!         let prompt_seg_1 = fg_magenta("╭").bg_dark_gray().to_string();
@@ -244,7 +250,7 @@
 //!         it => return it.into_err()?,
 //!     };
 //!     ok!()
-//! # }
+//! }
 //! ```
 //!
 //! # Video tutorials
@@ -285,10 +291,13 @@
 //! - [Linux TTY and async Rust - Playlist on developerlife.com YT channel]
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`choose()`]: crate::choose
 //! [`Eof`]: ReadlineEvent::Eof
 //! [`InputDevice`]: crate::InputDevice
-//! [`line_state_control_channel`]: field@crate::SharedWriter::line_state_control_channel_sender
+//! [`line_state_control_channel`]:
+//!     field@crate::SharedWriter::line_state_control_channel_sender
 //! [`LineState`]: crate::readline_async::LineState
+//! [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 //! [`OutputDevice::default()`]: crate::OutputDevice::new_stdout
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`panic!()`]: https://doc.rust-lang.org/std/panic/index.html
@@ -299,27 +308,38 @@
 //! [`ReadlineAsyncContext::readline`]: field@ReadlineAsyncContext::readline
 //! [`request_shutdown`]: ReadlineAsyncContext::request_shutdown
 //! [`SharedWriter`]: crate::SharedWriter
+//! [`Spinner`]: crate::Spinner
 //! [`spinner`]: mod@crate::readline_async::spinner
 //! [`stderr`]: std::io::stderr
 //! [`stdout`]: std::io::stdout
-//! [`thread::spawn()` or `thread::spawn_blocking()`]: https://tokio.rs/tokio/tutorial/spawning
+//! [`thread::spawn()` or `thread::spawn_blocking()`]:
+//!     https://tokio.rs/tokio/tutorial/spawning
 //! [`tokio::sync::mpsc::channel`]: tokio::sync::mpsc::channel
 //! [`tokio`]: tokio
 //! [`tracing_setup.rs`]: crate::TracingConfig
 //! [`tracing`]: tracing
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-//! [Async readline and spinner playlist]: https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
-//! [Discussion: stdin, stdout redirection for spawned processes]: https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust
-//! [Discussion: Stopping a thread in Rust]: https://users.rust-lang.org/t/stopping-a-thread/6328/7
-//! [Discussion: Support for `Thread::cancel()`]: https://internals.rust-lang.org/t/thread-cancel-support/3056/16
+//! [Async readline and spinner playlist]:
+//!     https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
+//! [Discussion: stdin, stdout redirection for spawned processes]:
+//!     https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust
+//! [Discussion: Stopping a thread in Rust]:
+//!     https://users.rust-lang.org/t/stopping-a-thread/6328/7
+//! [Discussion: Support for `Thread::cancel()`]:
+//!     https://internals.rust-lang.org/t/thread-cancel-support/3056/16
 //! [Docs: tokio's `stdin`]: https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html
-//! [interactive terminal application entry point]: crate#interactive-terminal-application-entry-points
-//! [Linux TTY and async Rust - Article on developerlife.com]: https://developerlife.com/2024/08/20/tty-linux-async-rust/
-//! [Linux TTY and async Rust - Playlist on developerlife.com YT channel]: https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
-//! [Linux TTY programming playlist]: https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [interactive terminal application entry point]:
+//!     crate#interactive-terminal-application-entry-points
+//! [Linux TTY and async Rust - Article on developerlife.com]:
+//!     https://developerlife.com/2024/08/20/tty-linux-async-rust/
+//! [Linux TTY and async Rust - Playlist on developerlife.com YT channel]:
+//!     https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [Linux TTY programming playlist]:
+//!     https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
 //! [rustyline-async]: https://github.com/zyansheep/rustyline-async
-//! [this]: https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275
+//! [this]:
+//!     https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275
 
 // XMARK: Prevent rustfmt from reformatting entire file.
 #![rustfmt::skip]

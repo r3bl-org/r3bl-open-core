@@ -82,7 +82,7 @@ async fn with_readline_async() -> miette::Result<()> {
 
     // Get the item selected by the user (or none).
     let maybe_user_choice = {
-        let mut lease = rl_ctx.acquire_modal_terminal();
+        let mut terminal_guard = rl_ctx.acquire_modal_terminal();
         choose(
             Header::SingleLine("Choose one:".into()),
             &["one", "two", "three"],
@@ -90,7 +90,7 @@ async fn with_readline_async() -> miette::Result<()> {
             None,
             HowToChoose::Single,
             StyleSheet::hot_pink_style(),
-            lease.as_mut_tuple(),
+            terminal_guard.as_mut_tuple(),
         )
         .get_first_result()
         .await?

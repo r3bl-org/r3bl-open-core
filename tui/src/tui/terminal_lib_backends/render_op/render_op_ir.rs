@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Intermediate Representation operations for app/component layer.
+//! Intermediate Representation (IR) operations for app/component layer.
 //!
 //! # You Are Here: **Stage 1** (App/Component Layer)
 //!
@@ -20,8 +20,8 @@
 //!
 //! <div class="warning">
 //!
-//! **For the complete 6-stage rendering pipeline with visual diagrams and stage
-//! reference table**, see the [rendering pipeline overview].
+//! **For the complete 6-stage rendering pipeline with visual diagrams and stage reference
+//! table**, see the [rendering pipeline overview].
 //!
 //! </div>
 //!
@@ -32,16 +32,16 @@
 //! See [`render_op` mod docs] for shared architectural patterns and the rendering
 //! pipeline overview.
 //!
-//! Components produce [`RenderOpIR`] operations with built-in clipping info.
-//! These get processed by the Compositor (Stage 3) to populate the [`OfsBuf`].
+//! Components produce [`RenderOpIR`] operations with built-in clipping info. These get
+//! processed by the Compositor (Stage 3) to populate the [`OfsBuf`].
 //!
 //! # Type Safety & Semantic Boundary
 //!
 //! This enum type ensures only IR-appropriate operations are used in component code.
-//! Operations like `PaintTextWithAttributes` (which handles clipping) are IR-specific
-//! and cannot be accidentally used in backend code.
+//! Operations like `PaintTextWithAttributes` (which handles clipping) are IR-specific and
+//! cannot be accidentally used in backend code.
 //!
-//! ## Architectural Note
+//! ## Why IR Cannot Be Executed Directly
 //!
 //! `execute_all()` and execution methods do **not** exist on [`RenderOpIR`] or
 //! [`RenderOpIRVec`] to enforce a semantic boundary.
@@ -59,12 +59,14 @@
 //! - Managing Unicode and emoji display widths
 //! - Applying style information correctly
 //!
-//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::compositor_render_ops_to_ofs_buf
+//! [`compositor_render_ops_to_ofs_buf` mod docs]:
+//!     mod@crate::compositor_render_ops_to_ofs_buf
 //! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`render_op` mod docs]: mod@crate::render_op
 //! [`render_pipeline`]: mod@crate::render_pipeline
-//! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
+//! [rendering pipeline overview]:
+//!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::RenderOpCommon;
 use crate::{InlineString, TuiStyle, ok};
