@@ -14,9 +14,9 @@ use tokio::sync::broadcast;
 /// the shared writer, and the shutdown completion channel.
 ///
 /// The mental model for this is that you create a readline async context and then use it
-/// to read lines from the terminal. You can re-use the `Readline` to read as many lines
-/// as you want. The `SharedWriter` is used to write to the terminal. This context can be
-/// paused and resumed.
+/// to read lines from the terminal. You can re-use the [`Readline`] to read as many lines
+/// as you want. The [`SharedWriter`] is used to write to the terminal. This context can
+/// be paused and resumed.
 ///
 /// When you are done with the context, you should call
 /// [`ReadlineAsyncContext::request_shutdown()`] to request a shutdown. This will cause
