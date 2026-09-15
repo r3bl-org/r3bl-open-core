@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::{EndsWithNewline, LineState};
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, NarrowingCastToU16,

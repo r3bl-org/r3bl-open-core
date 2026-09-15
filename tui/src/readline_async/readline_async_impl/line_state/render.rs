@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
 use crate::{CSI_ERASE_DISPLAY_TO_END, early_return_if_paused, ok, vp_col};

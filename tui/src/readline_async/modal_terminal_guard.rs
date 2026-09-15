@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
@@ -51,8 +51,7 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline`]: crate::Readline
 /// [`ReadlineLockManager`]: crate::ReadlineLockManager
-/// [Lifetime Tether Pattern]:
-///     crate::ReadlineLockManager#the-lifetime-tether-pattern
+/// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
 #[allow(missing_debug_implementations)]
 pub struct ModalTerminalGuard<'a> {
     readline: &'a mut Readline,
@@ -68,7 +67,7 @@ impl<'a> ModalTerminalGuard<'a> {
     pub fn acquire(readline: &'a mut Readline) -> Self {
         readline.lock_manager.lock_both(|line_state, term| {
             if line_state.pause_state.pause_modal() == PauseStateTransition::Paused {
-                drop(line_state.clear_and_render_and_flush(term));
+                let _unused = line_state.clear_and_render_and_flush(term);
             }
         });
         Self { readline }
@@ -80,7 +79,13 @@ impl<'a> ModalTerminalGuard<'a> {
     /// a `&mut OutputDevice` rather than a `MutexGuard`, see the [Lifetime Tether
     /// Pattern].
     ///
+    /// Internally constructs a [`ModalGuardToken`] witness to prove to
+    /// [`ReadlineLockManager::exclusive_output_device`] that this guard is held.
+    ///
     /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
+    /// [`ModalGuardToken`]: crate::ModalGuardToken
+    /// [`ReadlineLockManager::exclusive_output_device`]:
+    ///     crate::ReadlineLockManager::exclusive_output_device
     pub fn as_mut_tuple(&mut self) -> (&mut OutputDevice, &mut InputDevice) {
         (
             self.readline
@@ -105,15 +110,50 @@ impl Drop for ModalTerminalGuard<'_> {
 
 // XMARK: Witness token usage to restrict access of a method w/out making it private
 
-/// A witness token that proves a [`ModalTerminalGuard`] is held.
+/// A [witness token] that proves a [`ModalTerminalGuard`] is held.
 ///
-/// This token cannot be constructed outside this module (its single tuple field is
-/// private). It is passed to `ReadlineLockManager::exclusive_output_device` to prove
-/// that the terminal is suspended.
+/// ## Proof and Lifecycle Chain
 ///
+/// 1. Lock Hierarchy & Guard Acquisition: To obtain a [`ModalTerminalGuard`] in the first
+///    place, a caller must call [`ModalTerminalGuard::acquire`], passing `&mut Readline`
+///    (which tethers the guard to an exclusive mutable borrow, meaning that the borrow
+///    checker only allows one caller to call this method at a time, and no other methods
+///    can be called on [`Readline`] until this guard is dropped).
+///    - Inside [`ModalTerminalGuard::acquire`], [`ReadlineLockManager::lock_both`] is
+///      called to acquire locks in strict hierarchical order (Level 1 [`SafeLineState`],
+///      then Level 2 [`OutputDevice`]).
+///    - Under these locks, [`Readline`] is transitioned to a modal-paused state, and the
+///      terminal prompt is cleared via a call to
+///      [`line_state.clear_and_render_and_flush(term)`].
+/// 2. Witness Token Creation: Once the guard is instantiated, only
+///    [`ModalTerminalGuard::as_mut_tuple`] has permission to construct
+///    [`ModalGuardToken`] (since its inner tuple field is private to this module).
+/// 3. Method Access: The token is passed to
+///    [`ReadlineLockManager::exclusive_output_device`] as compile-time proof that
+///    [`Readline`] is paused and exclusive access to the [`OutputDevice`] is safely held.
+/// 4. Guard Release & Resumption: When [`ModalTerminalGuard`] is dropped, its [`Drop`]
+///    implementation transitions [`PauseState`] back via [`PauseState::resume_modal`]
+///    (under the Level 1 [`SafeLineState`] lock) and flushes the prompt to restore normal
+///    [`Readline`] operation, concluding the token's validity lifecycle.
+///
+/// [`line_state.clear_and_render_and_flush(term)`]:
+///     crate::LineState::clear_and_render_and_flush
+/// [`ModalGuardToken`]: crate::ModalGuardToken
+/// [`ModalTerminalGuard::acquire`]: crate::ModalTerminalGuard::acquire
+/// [`ModalTerminalGuard::as_mut_tuple`]: crate::ModalTerminalGuard::as_mut_tuple
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`OutputDevice`]: crate::OutputDevice
+/// [`PauseState::resume_modal`]: crate::PauseState::resume_modal
+/// [`PauseState`]: crate::PauseState
+/// [`ReadlineLockManager::exclusive_output_device`]:
+///     crate::ReadlineLockManager::exclusive_output_device
+/// [`ReadlineLockManager::lock_both`]: crate::ReadlineLockManager::lock_both
+/// [`ReadlineLockManager`]: crate::ReadlineLockManager
+/// [`Readline`]: crate::Readline
+/// [`SafeLineState`]: crate::SafeLineState
+/// [witness token]: https://willcrichton.net/rust-api-type-patterns/witnesses.html
 #[derive(Debug)]
-pub struct ModalGuardToken(());
+pub struct ModalGuardToken(/* private */ ());
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{LineState, ModalGuardToken, OutputDevice, PaintMode, SafeLineState,
             disable_raw_mode};
@@ -199,9 +199,10 @@ impl ReadlineLockManager {
 
     /// Provides exclusive mutable access to the internal [`OutputDevice`].
     ///
-    /// Used **ONLY** by [`ModalTerminalGuard`] to provide `(&mut OutputDevice, &mut
-    /// InputDevice)` to modal sub-applications (such as [`crate::choose()`]). The
-    /// [`ModalGuardToken`] witness guarantees this method can't be called by anyone else.
+    /// Used **ONLY** by [`ModalTerminalGuard::as_mut_tuple`] to provide `(&mut
+    /// OutputDevice, &mut InputDevice)` to modal sub-applications (such as
+    /// [`crate::choose()`]). The [`ModalGuardToken`] witness guarantees this method can't
+    /// be called by anyone else.
     ///
     /// # Safety and Invariant Preservation
     ///
@@ -211,7 +212,7 @@ impl ReadlineLockManager {
     /// access from [`Readline::readline()`].
     ///
     /// [`ModalGuardToken`]: crate::ModalGuardToken
-    /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+    /// [`ModalTerminalGuard::as_mut_tuple`]: crate::ModalTerminalGuard::as_mut_tuple
     /// [`MutexGuard`]: std::sync::MutexGuard
     /// [`OutputDevice`]: crate::OutputDevice
     /// [`Readline::readline()`]: crate::Readline::readline

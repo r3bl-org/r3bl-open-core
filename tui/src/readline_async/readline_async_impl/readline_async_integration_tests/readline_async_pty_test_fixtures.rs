@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, CONTROL_C, DebouncedState, GLYPH_CONTROLLED,
             GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, InputDevice, KeyState,
