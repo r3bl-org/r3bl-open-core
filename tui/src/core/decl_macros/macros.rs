@@ -205,12 +205,21 @@ macro_rules! assert_eq2_og {
     };
 }
 
-/// A wrapper for `pretty_assertions::assert_eq!` macro.
+/// A wrapper for `pretty_assertions::assert_eq!` in tests, falling back to
+/// `std::assert_eq!` in non-test (e.g., documentation) builds so that
+/// `pretty_assertions` is only needed as a dev-dependency.
 #[macro_export]
 macro_rules! assert_eq2 {
-    ($($params:tt)*) => {
-        pretty_assertions::assert_eq!($($params)*)
-    };
+    ($($params:tt)*) => {{
+        #[cfg(test)]
+        {
+            pretty_assertions::assert_eq!($($params)*)
+        }
+        #[cfg(not(test))]
+        {
+            std::assert_eq!($($params)*)
+        }
+    }};
 }
 
 /// Sends a signal to the main thread of app to render. The two things to pass in this

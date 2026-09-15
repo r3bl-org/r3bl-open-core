@@ -41,8 +41,9 @@ exclude = [
     "^https?://api\\.star-history\\.com/",
     # Medium blocks scrapers.
     "^https?://medium\\.com/",
-    # Stack Overflow blocks automated link checkers (returns 403 to bots).
+    # Stack Overflow / Stack Exchange blocks automated link checkers (returns 403 to bots).
     "^https?://stackoverflow\\.com/",
+    "^https?://([a-z0-9-]+\\.)?stackexchange\\.com/",
     # GNU.org times out automated link checkers.
     "^https?://(www\\.)?gnu\\.org/",
 ]

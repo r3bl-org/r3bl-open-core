@@ -1,27 +1,59 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CsiSequence, CursorBoundsCheck,
-            NarrowingCastToU16, NumericValue, RangeExt, Seg, StringLength, TermCol,
-            TermColDelta, TermRowDelta, VPWidth, ok, seg_index, term_col_delta,
-            term_row_delta, vp_col, vp_width};
+            NarrowingCastToU16, NumericValue, Seg, TermCol, TermColDelta, TermRowDelta,
+            VPCol, VPWidth, inline_string, ok, seg_index, seg_length, term_col_delta,
+            term_row_delta, vp_col};
 use std::io::{self, Write};
 
 impl LineState {
-    /// Gets the number of lines wrapped (how many rows the text spans).
+    /// Moves the terminal cursor to the beginning of the input line.
+    ///
+    /// This is used before re-rendering or when the cursor position needs to be
+    /// recalculated from the start.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
+    pub fn paint_cursor_rewind_to_start(&self, term: &mut dyn Write) -> io::Result<()> {
+        let cursor_distance_from_start =
+            self.calc_current_column().distance_from(vp_col(0));
+        self.paint_cursor_to_start_from(term, cursor_distance_from_start)?;
+        ok!()
+    }
+
+    /// Moves the terminal cursor from the beginning to the current cursor position.
+    ///
+    /// This is typically called after [`paint_cursor_rewind_to_start`] to restore the
+    /// cursor to its logical position within the line.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
+    ///
+    /// [`paint_cursor_rewind_to_start`]: Self::paint_cursor_rewind_to_start
+    pub fn paint_cursor_at_current_column(&self, term: &mut dyn Write) -> io::Result<()> {
+        let cursor_distance_from_start =
+            self.calc_current_column().distance_from(vp_col(0));
+        self.paint_cursor_from_start_to(term, cursor_distance_from_start)?;
+        ok!()
+    }
+
+    /// Gets the row delta (how many wrapped rows down) from the start of the line.
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
     ///
     /// # Returns
     ///
-    /// A [`TermRowDelta`] representing how many rows down the position is.
-    /// Returns `None` if the calculated delta is zero (position is on the first line).
+    /// A [`TermRowDelta`] representing how many rows down the position is. Returns `None`
+    /// if the calculated delta is zero (position is on the first line).
     #[must_use]
-    pub fn line_height(&self, pos: VPWidth) -> Option<TermRowDelta> {
+    pub fn calc_row_delta_from_start_to(&self, pos: VPWidth) -> Option<TermRowDelta> {
         term_row_delta(pos / self.term_size.col_width)
     }
 
-    /// Gets the column offset within the current row.
+    /// Gets the column offset within the current row from the start of the line.
     ///
     /// The `pos` parameter is a display offset (column width) from the start of the line.
     ///
@@ -31,7 +63,7 @@ impl LineState {
     /// Returns `None` if the calculated delta is zero (position is at the start of a
     /// row).
     #[must_use]
-    pub fn line_column_offset(&self, pos: VPWidth) -> Option<TermColDelta> {
+    pub fn calc_col_delta_from_start_to(&self, pos: VPWidth) -> Option<TermColDelta> {
         term_col_delta(pos % self.term_size.col_width)
     }
 
@@ -43,26 +75,27 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn move_to_beginning(
+    pub fn paint_cursor_to_start_from(
         &self,
         term: &mut dyn Write,
         from: VPWidth,
     ) -> io::Result<()> {
         // Calculate row delta from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row.
-        let move_up = self.line_height(from);
+        let move_up = self.calc_row_delta_from_start_to(from);
 
         // Move to column 1 (CHA = Cursor Horizontal Absolute, 1-based).
         term.write_all(
-            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
-                .to_string()
+            inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                 .as_bytes(),
         )?;
 
         // Move up the calculated number of rows (CUU = Cursor Up).
         // Only emit if Some (non-zero) - guards against CSI zero bug.
         if let Some(delta) = move_up {
-            term.write_all(CsiSequence::CursorUp(delta).to_string().as_bytes())?;
+            term.write_all(
+                inline_string!("{}", CsiSequence::CursorUp(delta)).as_bytes(),
+            )?;
         }
 
         ok!()
@@ -75,84 +108,118 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn move_from_beginning(
+    pub fn paint_cursor_from_start_to(
         &self,
         term: &mut dyn Write,
         to: VPWidth,
     ) -> io::Result<()> {
         // Calculate deltas from position.
         // Position 80 on 80-col terminal is Row 1, Col 0: 80/80 = 1 row, 80%80 = 0 cols.
-        let rows_down = self.line_height(to);
-        let cols_right = self.line_column_offset(to);
+        let rows_down = self.calc_row_delta_from_start_to(to);
+        let cols_right = self.calc_col_delta_from_start_to(to);
 
         // Move down the calculated number of rows (CUD = Cursor Down).
         // Only emit if Some (non-zero) - guards against CSI zero bug.
         if let Some(delta) = rows_down {
-            term.write_all(CsiSequence::CursorDown(delta).to_string().as_bytes())?;
+            term.write_all(
+                inline_string!("{}", CsiSequence::CursorDown(delta)).as_bytes(),
+            )?;
         }
 
         // Move right to the column position (CUF = Cursor Forward).
         // Only emit if Some (non-zero) - guards against CSI zero bug where
         // CursorForward(0) is interpreted as CursorForward(1) by terminals.
         if let Some(delta) = cols_right {
-            term.write_all(CsiSequence::CursorForward(delta).to_string().as_bytes())?;
+            term.write_all(
+                inline_string!("{}", CsiSequence::CursorForward(delta)).as_bytes(),
+            )?;
         }
 
         ok!()
     }
 
-    /// Move cursor by one unicode grapheme either left (negative) or right (positive).
+    /// Shifts the logical cursor by the given number of unicode grapheme segments either
+    /// left (negative) or right (positive).
     ///
-    /// # Errors
+    /// This is an infallible, in-memory state update that does not perform any terminal
+    /// I/O. To update the physical terminal cursor after shifting, invoke
+    /// [`paint_cursor_at_current_column`].
     ///
-    /// Returns an error if I/O operations fail.
-    pub fn move_cursor(&mut self, change: isize) -> io::Result<()> {
-        if change > 0 {
+    /// [`paint_cursor_at_current_column`]: Self::paint_cursor_at_current_column
+    pub fn shift_logical_cursor_by(&mut self, seg_delta: isize) {
+        if seg_delta > 0 {
             let count = self.line.segment_count();
-
-            let change_u16 = change.as_u16_narrowing();
-            let new_position = self.line_cursor_grapheme + seg_index(change_u16);
+            let seg_delta_u16 = seg_delta.as_u16_narrowing();
+            let new_position = self.cursor_position + seg_index(seg_delta_u16);
             // Use CursorBoundsCheck for text cursor positioning (allows position ==
             // length).
-            self.line_cursor_grapheme = count.clamp_cursor_position(new_position);
+            self.cursor_position = count.clamp_cursor_position(new_position);
         } else {
-            // Use unsigned_abs() to convert negative change to
-            // positive amount to subtract.
-            let change_seg_idx = seg_index(change.unsigned_abs().as_u16_narrowing());
-            self.line_cursor_grapheme = if change_seg_idx
-                .overflows(self.line_cursor_grapheme.convert_to_seg_length())
+            // Use unsigned_abs() to convert negative seg_delta to positive amount to
+            // subtract.
+            let seg_delta_idx = seg_index(seg_delta.unsigned_abs().as_u16_narrowing());
+            self.cursor_position = if seg_delta_idx
+                .overflows(self.cursor_position.convert_to_seg_length())
                 == ArrayOverflowResult::Overflowed
             {
-                seg_index(0u16)
+                seg_index(0)
             } else {
-                self.line_cursor_grapheme - change_seg_idx
+                self.cursor_position - seg_delta_idx
             };
         }
-
-        // Calculate display width up to cursor position using segment metadata.
-        let line_display_width = self.calculate_display_width_up_to_cursor();
-
-        let prompt_len =
-            StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
-
-        self.current_column = vp_col(prompt_len + line_display_width.as_u16());
-
-        ok!()
     }
 
-    /// Calculate the display width of the line up to the current cursor position.
+    /// Moves the logical cursor to the beginning of the line buffer (position 0).
+    pub fn move_logical_cursor_to_start(&mut self) {
+        self.cursor_position = seg_index(0);
+    }
+
+    /// Moves the logical cursor to the end of the line buffer (after the last grapheme).
+    pub fn move_logical_cursor_to_end(&mut self) {
+        self.cursor_position = self.line.segment_count().eol_cursor_position();
+    }
+
+    /// Calculates the 0-based terminal column position for the physical cursor.
     ///
-    /// Uses pre-computed segment metadata for O(n) where n is segments up to cursor,
-    /// rather than re-parsing the entire string.
-    fn calculate_display_width_up_to_cursor(&self) -> VPWidth {
-        let mut total_width = vp_width(0);
-        let seg_range = ..self.line_cursor_grapheme;
-        for seg_idx in seg_range.as_index_iter() {
-            if let Some(seg) = self.line.get(seg_idx) {
-                total_width += seg.display_width;
-            }
+    /// The physical cursor column is derived by starting at the origin ([`vp_col(0)`])
+    /// and adding both the prompt width and the display width of the buffer content
+    /// preceding the logical cursor:
+    ///
+    /// ```text
+    /// [ prompt.width() ] [ calc_display_width_up_to_cursor() ]
+    /// 0 -----------------------------------------------------> current_column
+    /// ```
+    ///
+    /// Because grapheme clusters vary in display width (e.g. [`ASCII`] is 1 column, wide
+    /// characters and emojis are 2 columns, zero-width joiners are 0 columns), the
+    /// column position is computed in display cells rather than byte or segment indices.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`vp_col(0)`]: crate::vp_col
+    #[must_use]
+    pub fn calc_current_column(&self) -> VPCol {
+        let line_display_width = self.calc_display_width_up_to_cursor();
+        vp_col(0) + self.prompt.width() + line_display_width
+    }
+
+    /// Calculates the total display width of buffer content up to the current logical
+    /// cursor position.
+    ///
+    /// Uses pre-computed grapheme cluster segment metadata from [`GCStringOwned`] to
+    /// achieve an `O(1)` direct array lookup, rather than iterating or re-parsing the
+    /// underlying text.
+    ///
+    /// [`GCStringOwned`]: crate::GCStringOwned
+    fn calc_display_width_up_to_cursor(&self) -> VPWidth {
+        match self.line.get(self.cursor_position) {
+            // Cursor is positioned in front of an existing segment. The display width up
+            // to the cursor is the start column of this segment.
+            Some(seg) => seg.start_display_col_index.distance_from(vp_col(0)),
+
+            // Cursor is at or past the end of the line (or the line is empty). There is
+            // no segment at this index, so the display width is the full line width.
+            None => self.line.display_width(),
         }
-        total_width
     }
 
     /// Returns the grapheme cluster segment immediately before the cursor position.
@@ -162,13 +229,15 @@ impl LineState {
     /// # Returns
     ///
     /// A [`Seg`] containing byte offset, display width, and other segment metadata.
-    /// Use `seg.get_str(&self.line)` to get the actual grapheme string.
+    /// Use [`seg.get_str(&self.line)`] to get the actual grapheme string.
+    ///
+    /// [`seg.get_str(&self.line)`]: crate::Seg::get_str
     #[must_use]
-    pub fn current_grapheme(&self) -> Option<Seg> {
-        if self.line_cursor_grapheme.is_zero() {
+    pub fn grapheme_before_cursor(&self) -> Option<Seg> {
+        if self.cursor_position.is_zero() {
             return None;
         }
-        self.line.get(self.line_cursor_grapheme - seg_index(1u16))
+        self.line.get(self.cursor_position - seg_length(1))
     }
 
     /// Returns the grapheme cluster segment at the cursor position (to be deleted by
@@ -178,47 +247,17 @@ impl LineState {
     ///
     /// # Returns
     ///
-    /// A [`Seg`] containing byte offset, display width, and other segment metadata.
-    /// Use `seg.get_str(&self.line)` to get the actual grapheme string.
+    /// A [`Seg`] containing byte offset, display width, and other segment metadata. Use
+    /// [`seg.get_str(&self.line)`] to get the actual grapheme string.
+    ///
+    /// [`seg.get_str(&self.line)`]: crate::Seg::get_str
     #[must_use]
-    pub fn next_grapheme(&self) -> Option<Seg> {
+    pub fn grapheme_at_cursor(&self) -> Option<Seg> {
         let total = self.line.segment_count();
-        if self.line_cursor_grapheme.as_usize() >= total.as_usize() {
+        if self.cursor_position.overflows(total) == ArrayOverflowResult::Overflowed {
             return None;
         }
-        self.line.get(self.line_cursor_grapheme)
-    }
-
-    /// Moves the terminal cursor to the beginning of the input line.
-    ///
-    /// This is used before re-rendering or when the cursor position needs to be
-    /// recalculated from the start.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if writing to the terminal fails.
-    pub fn reset_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
-        self.move_to_beginning(term, cursor_distance_from_start)?;
-
-        ok!()
-    }
-
-    /// Moves the terminal cursor from the beginning to the current cursor position.
-    ///
-    /// This is typically called after [`reset_cursor`] to restore
-    /// the cursor to its logical position within the line.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if writing to the terminal fails.
-    ///
-    /// [`reset_cursor`]: Self::reset_cursor
-    pub fn set_cursor(&self, term: &mut dyn Write) -> io::Result<()> {
-        let cursor_distance_from_start = self.current_column.distance_from(vp_col(0));
-        self.move_from_beginning(term, cursor_distance_from_start)?;
-
-        ok!()
+        self.line.get(self.cursor_position)
     }
 }
 
@@ -282,7 +321,7 @@ mod tests {
     }
 
     // ========================================================================
-    // Terminal boundary regression tests for `move_from_beginning`.
+    // Terminal boundary regression tests for `paint_cursor_from_start_to`.
     //
     // On an 80-column terminal, positions that are exact multiples of 80
     // (80, 160, 240, 320) sit at column 0 of their respective rows.
@@ -310,12 +349,15 @@ mod tests {
     #[test_case(160, 2 ; "160 cols = 2 row boundary")]
     #[test_case(240, 3 ; "240 cols = 3 row boundary")]
     #[test_case(320, 4 ; "320 cols = 4 row boundary")]
-    fn test_move_from_beginning_at_row_boundary(position: u16, expected_rows: u16) {
+    fn test_paint_cursor_from_start_to_at_row_boundary(
+        position: u16,
+        expected_rows: u16,
+    ) {
         let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .paint_cursor_from_start_to(&mut stdout_mock, vp_width(position))
             .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
@@ -337,12 +379,12 @@ mod tests {
 
     /// Test position 0: should emit NO movement at all.
     #[test]
-    fn test_move_from_beginning_at_zero() {
+    fn test_paint_cursor_from_start_to_at_zero() {
         let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, vp_width(0))
+            .paint_cursor_from_start_to(&mut stdout_mock, vp_width(0))
             .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
@@ -360,12 +402,15 @@ mod tests {
     #[test_case(5, 5   ; "5 cols = just column movement")]
     #[test_case(40, 40 ; "40 cols = half row")]
     #[test_case(79, 79 ; "79 cols = last column before wrap")]
-    fn test_move_from_beginning_within_first_row(position: u16, expected_cols: u16) {
+    fn test_paint_cursor_from_start_to_within_first_row(
+        position: u16,
+        expected_cols: u16,
+    ) {
         let line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .paint_cursor_from_start_to(&mut stdout_mock, vp_width(position))
             .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
@@ -391,7 +436,7 @@ mod tests {
     #[test_case(120, 1, 40 ; "120 = 1 row + 40 cols")]
     #[test_case(200, 2, 40 ; "200 = 2 rows + 40 cols")]
     #[test_case(81, 1, 1   ; "81 = 1 row + 1 col (just past boundary)")]
-    fn test_move_from_beginning_row_and_column(
+    fn test_paint_cursor_from_start_to_row_and_column(
         position: u16,
         expected_rows: u16,
         expected_cols: u16,
@@ -400,7 +445,7 @@ mod tests {
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .move_from_beginning(&mut stdout_mock, vp_width(position))
+            .paint_cursor_from_start_to(&mut stdout_mock, vp_width(position))
             .unwrap_or_default();
 
         let output_str = stdout_mock.get_copy_of_buffer_as_string();
@@ -419,5 +464,75 @@ mod tests {
             output_str.contains(&expected_move_cursor_right),
             "position={position}: expected CursorForward({expected_cols}), got: {output_str:?}"
         );
+    }
+
+    #[test]
+    fn test_calc_display_width_up_to_cursor() {
+        let mut line_state = LineState::new(String::new(), vp_width(80) + vp_height(100));
+
+        // Empty line.
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(0));
+
+        // ASCII line: "hello" (5 chars, each 1 col).
+        line_state.line = "hello".into();
+        line_state.cursor_position = seg_index(0);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(0));
+        line_state.cursor_position = seg_index(2);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(2));
+        line_state.cursor_position = seg_index(5);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(5));
+        line_state.cursor_position = seg_index(10); // Beyond end.
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(5));
+
+        // Unicode line with wide characters: "📦🙏🏽" (each 2 cols).
+        line_state.line = "📦🙏🏽".into();
+        line_state.cursor_position = seg_index(0);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(0));
+        line_state.cursor_position = seg_index(1);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(2));
+        line_state.cursor_position = seg_index(2);
+        assert_eq!(line_state.calc_display_width_up_to_cursor(), vp_width(4));
+    }
+
+    #[test]
+    fn test_logical_cursor_movement() {
+        let mut line_state =
+            LineState::new("prompt> ".into(), vp_width(80) + vp_height(100));
+        line_state.line = "hello 🌍".into();
+
+        // Prompt is 8 display columns.
+        assert_eq!(line_state.calc_current_column(), vp_col(8));
+        assert_eq!(line_state.cursor_position, seg_index(0));
+
+        // Shift forward by 2 grapheme segments.
+        line_state.shift_logical_cursor_by(2);
+        assert_eq!(line_state.cursor_position, seg_index(2));
+        assert_eq!(line_state.calc_current_column(), vp_col(10));
+
+        // Shift beyond end clamps to end (7 segments: 'h','e','l','l','o',' ','🌍').
+        line_state.shift_logical_cursor_by(100);
+        assert_eq!(line_state.cursor_position, seg_index(7));
+        // "hello " is 6 cols + "🌍" is 2 cols = 8 cols + prompt (8) = 16.
+        assert_eq!(line_state.calc_current_column(), vp_col(16));
+
+        // Move to start.
+        line_state.move_logical_cursor_to_start();
+        assert_eq!(line_state.cursor_position, seg_index(0));
+        assert_eq!(line_state.calc_current_column(), vp_col(8));
+
+        // Move to end.
+        line_state.move_logical_cursor_to_end();
+        assert_eq!(line_state.cursor_position, seg_index(7));
+        assert_eq!(line_state.calc_current_column(), vp_col(16));
+
+        // Shift backward by 1.
+        line_state.shift_logical_cursor_by(-1);
+        assert_eq!(line_state.cursor_position, seg_index(6));
+        assert_eq!(line_state.calc_current_column(), vp_col(14));
+
+        // Shift backward past start clamps to 0.
+        line_state.shift_logical_cursor_by(-100);
+        assert_eq!(line_state.cursor_position, seg_index(0));
+        assert_eq!(line_state.calc_current_column(), vp_col(8));
     }
 }

@@ -90,6 +90,15 @@ Use Enums with Const Generics (Algebraic Data Type Const Params) to control beha
 - **Reduce Boilerplate**: Prefer `const` Enums over the Trait-based Strategy pattern. This centralizes logic and eliminates the need for multiple marker structs and trait implementations.
 - **Type-Level Identity**: Use this pattern when you want different behaviors to result in different types, enabling compile-time enforcement of safety rules.
 
+### 7. Strict Encapsulation & Testing Hygiene
+
+Maintain strict encapsulation boundaries in production code and do not leak internal state merely for the convenience of tests.
+
+**Guidelines:**
+
+- **No `pub` for tests**: Never make a field or method `pub` or `pub(crate)` if its only external caller is a test.
+- **Test-Only Accessors**: Keep production fields strictly scoped (private or `pub(in crate::...)`). If tests need to inspect or manipulate internal state, provide explicit accessor methods annotated with `#[cfg(test)]` (e.g., `pub(crate) fn internal_state_for_testing(&self)`). This cleanly compiles the escape hatch out of the production binary.
+
 ## Supporting Files
 
 - `patterns.md` - Detailed patterns with good/bad examples

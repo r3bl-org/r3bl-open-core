@@ -1,9 +1,9 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::core::LineState;
-use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, LineStateLiveness,
-            NarrowingCastToU16, ReadlineError, TermCol, TermColDelta, TermRowDelta,
-            early_return_if_paused, ok, vp_width};
+use super::core::{EndsWithNewline, LineState};
+use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, NarrowingCastToU16,
+            ReadlineError, TermCol, TermColDelta, TermRowDelta, early_return_if_paused,
+            inline_string, ok, vp_width};
 use std::io::Write;
 
 impl LineState {
@@ -30,76 +30,85 @@ impl LineState {
         self.clear(term)?;
 
         // If last written data was not newline, restore the cursor.
-        if !self.last_line_completed {
+        if self.ends_with_newline == EndsWithNewline::No {
             // Move up 1 row, to column 0, then right to the last position.
             term.write_all(
-                CsiSequence::CursorUp(TermRowDelta::ONE)
-                    .to_string()
-                    .as_bytes(),
+                inline_string!("{}", CsiSequence::CursorUp(TermRowDelta::ONE)).as_bytes(),
             )?;
             term.write_all(
-                CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
-                    .to_string()
+                inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                     .as_bytes(),
             )?;
             // Only emit CursorForward if the delta is non-zero (illegal states
             // unrepresentable).
             if let Some(cols_right) = TermColDelta::new(self.last_line_length.as_u16()) {
                 term.write_all(
-                    CsiSequence::CursorForward(cols_right)
-                        .to_string()
+                    inline_string!("{}", CsiSequence::CursorForward(cols_right))
                         .as_bytes(),
                 )?;
             }
         }
 
-        // Write data in a way that newlines also act as carriage returns.
-        // In raw mode, LF doesn't auto-CR, so we explicitly move to column 1 after
-        // every segment. This ensures multi-line output displays correctly.
+        // In raw mode, a Line Feed (LF, '\n') only moves the cursor down one row without
+        // performing an automatic Carriage Return (CR). To prevent a "staircase" effect
+        // where subsequent lines remain indented, we explicitly move the cursor back to
+        // column 1 after each newline using Cursor Horizontal Absolute: CHA(1) stored in
+        // variable `cha_1`.
         //
-        // For the last segment only: if it ends with newline, we skip the CHA(1)
-        // here since the subsequent CHA(1) before render_and_flush handles it.
-        // This avoids a redundant [LF][CHA(1)][CHA(1)] pattern that can cause
-        // visual artifacts (extra blank line) on some terminal emulators.
-        let col_0 = CsiSequence::CursorHorizontalAbsolute(TermCol::ONE).to_string();
+        // Deduping the final CHA(1): If the final segment ends with a newline, emitting
+        // CHA(1) here would be followed immediately by `render_and_flush()` emitting its
+        // own CHA(1) when redrawing the prompt. That back-to-back duplicate sequence: LF
+        // -> CHA(1) -> CHA(1), causes visual artifacts (such as an extra blank line) on
+        // some terminal emulators. Therefore, we skip emitting CHA(1) here on the last
+        // segment if it ends with a newline.
+        let cha_1 =
+            inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE));
         let segments: Vec<_> = data.split_inclusive(|b| *b == LINE_FEED_BYTE).collect();
         let last_idx = segments.len().saturating_sub(1);
         for (idx, line) in segments.into_iter().enumerate() {
             term.write_all(line)?;
-            // Emit CHA(1) after every segment EXCEPT the last one if it ends with
-            // newline. The final CHA(1) before render_and_flush handles that case.
+            // Emit CHA(1) after each segment, unless this is the final newline-terminated
+            // segment (which is positioned by the upcoming `render_and_flush()`).
             let is_last = idx == last_idx;
             let ends_with_newline = line.ends_with(&[LINE_FEED_BYTE]);
             if !(is_last && ends_with_newline) {
-                term.write_all(col_0.as_bytes())?;
+                term.write_all(cha_1.as_bytes())?;
             }
         }
 
-        self.last_line_completed = data.ends_with(&[LINE_FEED_BYTE]); // Set whether data ends with newline
+        // Set whether data ends with newline.
+        self.ends_with_newline = if data.ends_with(&[LINE_FEED_BYTE]) {
+            EndsWithNewline::Yes
+        } else {
+            EndsWithNewline::No
+        };
 
         // If data does not end with newline, save the cursor and write newline for
         // prompt. Usually data does end in newline due to the buffering of
         // SharedWriter, but sometimes it may not (i.e. if .flush() is called).
-        if self.last_line_completed {
-            self.last_line_length = vp_width(0);
-        } else {
-            // Add data length to last_line_length.
-            let new_len = self.last_line_length.as_usize() + data.len();
-            let term_width = self.term_size.col_width.as_usize();
-            // Make sure that last_line_length wraps around when doing multiple writes.
-            if new_len >= term_width {
-                self.last_line_length =
-                    vp_width((new_len % term_width).as_u16_narrowing());
-                writeln!(term)?;
-            } else {
-                self.last_line_length = vp_width((new_len).as_u16_narrowing());
+        match self.ends_with_newline {
+            EndsWithNewline::Yes => {
+                self.last_line_length = vp_width(0);
             }
-            writeln!(term)?; // Move to beginning of line and make new line
+            EndsWithNewline::No => {
+                // Add data length to last_line_length.
+                let new_len = self.last_line_length.as_usize() + data.len();
+                let term_width = self.term_size.col_width.as_usize();
+                // Make sure that last_line_length wraps around when doing multiple
+                // writes.
+                if new_len >= term_width {
+                    self.last_line_length =
+                        vp_width((new_len % term_width).as_u16_narrowing());
+                    term.write_all(&[LINE_FEED_BYTE])?;
+                } else {
+                    self.last_line_length = vp_width((new_len).as_u16_narrowing());
+                }
+                term.write_all(&[LINE_FEED_BYTE])?; // Move to beginning of line and make new line
+            }
         }
 
         term.write_all(
-            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
-                .to_string()
+            inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                 .as_bytes(),
         )?;
         self.render_and_flush(term)?;
@@ -144,11 +153,7 @@ impl LineState {
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
         self.clear(term)?;
-        self.prompt.clear();
-        self.prompt.push_str(prompt);
-
-        // Recalculates column.
-        self.move_cursor(0)?;
+        self.prompt.set(prompt);
         self.render_and_flush(term)?;
 
         ok!()
@@ -167,8 +172,7 @@ impl LineState {
         self.clear(term)?;
 
         term.write_all(
-            CsiSequence::CursorHorizontalAbsolute(TermCol::ONE)
-                .to_string()
+            inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                 .as_bytes(),
         )?;
         term.flush()?;
@@ -190,7 +194,7 @@ impl LineState {
     ) -> Result<(), ReadlineError> {
         early_return_if_paused!(self @Unit);
 
-        self.move_cursor(-100_000)?;
+        self.move_logical_cursor_to_start();
         self.clear_and_render_and_flush(term)?;
 
         ok!()
@@ -278,10 +282,11 @@ mod tests {
             .print_data_and_flush(b"line 1\n", &mut stdout_mock)
             .expect("conversion error");
 
-        // Verify last_line_completed is true.
-        assert!(
-            line_state.last_line_completed,
-            "last_line_completed should be true after newline-terminated data"
+        // Verify ends_with_newline is Yes.
+        assert_eq!(
+            line_state.ends_with_newline,
+            EndsWithNewline::Yes,
+            "ends_with_newline should be Yes after newline-terminated data"
         );
 
         // Clear buffer for second call.
@@ -330,10 +335,11 @@ mod tests {
             .print_data_and_flush(b"partial", &mut stdout_mock)
             .expect("conversion error");
 
-        // Verify last_line_completed is false.
-        assert!(
-            !line_state.last_line_completed,
-            "last_line_completed should be false after non-newline data"
+        // Verify ends_with_newline is No.
+        assert_eq!(
+            line_state.ends_with_newline,
+            EndsWithNewline::No,
+            "ends_with_newline should be No after non-newline data"
         );
 
         // Verify CHA(1) is emitted after the data for partial lines.
@@ -405,11 +411,12 @@ mod tests {
             .update_prompt("new> ", &mut stdout_mock)
             .expect("conversion error");
 
-        assert_eq!(line_state.prompt, "new> ");
+        assert_eq!(line_state.prompt.as_str(), "new> ");
+        assert_eq!(line_state.prompt.width(), vp_width(5));
     }
 
     #[test]
-    fn test_print_data_sets_last_line_completed() {
+    fn test_print_data_sets_ends_with_newline() {
         let mut line_state = LineState::new("$ ".into(), vp_width(80) + vp_height(24));
         let mut stdout_mock = StdoutMock::default();
 
@@ -417,12 +424,12 @@ mod tests {
         line_state
             .print_data_and_flush(b"hello\n", &mut stdout_mock)
             .expect("conversion error");
-        assert!(line_state.last_line_completed);
+        assert_eq!(line_state.ends_with_newline, EndsWithNewline::Yes);
 
         // Data not ending with newline.
         line_state
             .print_data_and_flush(b"world", &mut stdout_mock)
             .expect("conversion error");
-        assert!(!line_state.last_line_completed);
+        assert_eq!(line_state.ends_with_newline, EndsWithNewline::No);
     }
 }

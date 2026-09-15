@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, CONTROL_C, DebouncedState, GLYPH_CONTROLLED,
             GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, InputDevice, KeyState,
@@ -46,7 +46,7 @@ use std::{io::{Write, stdout},
 pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegIndex) {
     let mut line_state =
         LineState::new(initial_text.to_string(), vp_width(100) + vp_height(100));
-    line_state.line_cursor_grapheme = initial_cursor;
+    line_state.cursor_position = initial_cursor;
 
     let mut input_device = InputDevice::new();
 
@@ -57,7 +57,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
     let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
     let mut debounced_state = DebouncedState::new(Duration::from_millis(10));
     let safe_output_terminal = Arc::new(StdMutex::new(StdoutMock::default()));
-    let (history, _) = crate::readline_async::readline_async_impl::History::new();
+    let history = crate::readline_async::readline_async_impl::History::new();
     let safe_history = Arc::new(StdMutex::new(history));
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -109,7 +109,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
                                     debounced_state.set(format!(
                                         " {}, Cursor: {}",
                                         line_state.line,
-                                        line_state.line_cursor_grapheme
+                                        line_state.cursor_position
                                     ));
                                 }
                                 Ok(Some(readline_event)) => {

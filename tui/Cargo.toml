@@ -86,7 +86,6 @@ tracing-appender = "0.2.3"
 # Error handling.
 thiserror = "2.0.17"
 miette = { version = "7.6.0", features = ["fancy"] }
-pretty_assertions = "1.4.1"
 
 # For smallstr & smallvec.
 smallstr = { version = "0.3.0", features = ["std", "union"] }
@@ -181,12 +180,7 @@ signal-hook = "0.3"
 signal-hook-mio = { version = "0.2", features = ["support-v1_0"] }
 
 [dev-dependencies]
-# For assert_eq2! macro.
 serial_test = "3.2.0"
 pretty_assertions = "1.4.1"
 test-case = "3.3.1"
 wait-timeout = "0.2.1"
-
-[features]
-default = ["emacs"]
-emacs = []

@@ -145,16 +145,24 @@ mod impl_pty_mux_builder {
         /// # Returns
         ///
         /// Returns a [`TuiAvailability`] containing the [`PTYMux`] instance if the
-        /// terminal is interactive.
+        /// terminal is interactive. This explicitly represents all possible states:
+        /// - [`Available`]: Terminal is interactive and initialization succeeded. Returns
+        ///   the multiplexer.
+        /// - [`NotAvailable`]: Terminal is not interactive.
+        /// - [`Broken`]: Initialization failed.
         ///
         /// # Errors
         ///
-        /// Returns an error if:
+        /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
         /// - No processes are configured
         /// - More than [`MAX_PROCESSES`] processes are configured
+        /// - Fails to get the terminal size when not explicitly provided
         ///
+        /// [`Available`]: TuiAvailability::Available
+        /// [`Broken`]: TuiAvailability::Broken
         /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
         /// [`MAX_PROCESSES`]: super::MAX_PROCESSES
+        /// [`NotAvailable`]: TuiAvailability::NotAvailable
         #[must_use]
         pub fn build(self) -> TuiAvailability<PTYMux> {
             if self.process_configs.is_empty() {

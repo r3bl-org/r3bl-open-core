@@ -102,8 +102,8 @@
 
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
-            LINE_FEED_BYTE, NULL_BYTE, RangeBoundsExt, RangeValidityStatus, byte_index,
-            c_len, ok};
+            CursorBoundsCheck, LINE_FEED_BYTE, NULL_BYTE, RangeBoundsExt,
+            RangeValidityStatus, c_len, ok};
 use miette::{Result, miette};
 use std::ops::Range;
 
@@ -217,14 +217,14 @@ impl ZeroCopyGapBuffer {
             line_info.grapheme_segments[start_seg.as_usize()].start_byte_index
         } else {
             // Start is at end of line.
-            byte_index(line_info.content_byte_len.as_usize())
+            line_info.content_byte_len.eol_cursor_position()
         };
 
         let delete_end = if end_seg.as_usize() < line_info.grapheme_segments.len() {
             line_info.grapheme_segments[end_seg.as_usize()].start_byte_index
         } else {
             // End is at end of line.
-            byte_index(line_info.content_byte_len.as_usize())
+            line_info.content_byte_len.eol_cursor_position()
         };
 
         // Perform the actual deletion.
@@ -595,7 +595,7 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{c_index, c_row};
+    use crate::{CursorBoundsCheck, c_index, c_row};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -624,7 +624,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -652,7 +652,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -680,7 +680,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -708,7 +708,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -734,7 +734,7 @@ mod benches {
                 .delete_range(
                     c_row(0),
                     black_box(c_index(0)),
-                    black_box(c_index(count.as_usize())),
+                    black_box(count.eol_cursor_position()),
                 )
                 .expect("conversion error");
         });
@@ -763,8 +763,10 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), c_index(count.as_usize()))
+                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
 }
+
+// cspell:words ello Helo

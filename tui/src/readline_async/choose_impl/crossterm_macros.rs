@@ -1,4 +1,4 @@
-// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 /// This is a macro to queue commands to the output device. It locks the output device
 /// before queuing the commands, and unlocks it after. This is good for one and done
