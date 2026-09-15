@@ -34,8 +34,17 @@ set -g DEBOUNCE_WINDOW_SECS 1
 # Benefits: ~2-3x faster builds (tmpfs), no SSD wear, shared cache with IDE.
 #
 # PRIVATE TREE: check.fish-owned metadata and doc staging.
-# Always under /tmp for tmpfs performance. Independent of CARGO_TARGET_DIR.
-set -g CHECK_PROJECT_ROOT /tmp/check-fish-$project_name
+# Dynamic RAM-aware storage selection:
+# - On high-RAM systems (>= 48 GiB, e.g. 64GB/128GB workstations), use /tmp (RAM-backed tmpfs) for max speed.
+# - On lower-RAM systems (< 48 GiB, e.g. 32GB laptops), use /var/tmp (NVMe disk-backed) to prevent
+#   tmpfs exhaustion and out-of-memory collisions during background system updates.
+# /var/tmp is preferred over ~/.cache because it is disk-backed and systemd-tmpfiles handles automatic cleanup.
+set -l total_ram_gib (get_system_ram_gib)
+if test $total_ram_gib -ge 48
+    set -g CHECK_PROJECT_ROOT /tmp/check-fish-$project_name
+else
+    set -g CHECK_PROJECT_ROOT /var/tmp/check-fish-$project_name
+end
 
 # SHARED TREE: cargo build artifacts (shared between check.fish and IDE).
 # Respect user's CARGO_TARGET_DIR if set, otherwise default to isolated tmpfs path.

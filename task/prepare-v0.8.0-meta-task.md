@@ -95,9 +95,13 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [fix-windows-tests-tui-term-api-and-mcp.md](done/fix-windows-tests-tui-term-api-and-mcp.md)
 - [x] [make-pty-session-sync.md](done/make-pty-session-sync.md)
 - [ ] [spawny](build-infra-spawny.md)
+- [ ] [fix-readline-deadlock-issue](task/fix-readline-deadlock-simple.md)
+- [ ] [fix-shift-home-lockup.md](fix-shift-home-lockup.md)
+- [ ] [fast-stringify-write-to.md](fast-stringify-write-to.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
+- [ ] [migrate-copyright-headers-to-spdx-format.md](migrate-copyright-headers-to-spdx-format.md)
 
 # [TODO] Unify rendering
 
