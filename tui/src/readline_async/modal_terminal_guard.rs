@@ -80,12 +80,10 @@ impl<'a> ModalTerminalGuard<'a> {
     /// Pattern].
     ///
     /// Internally constructs a [`ModalGuardToken`] witness to prove to
-    /// [`ReadlineLockManager::exclusive_output_device`] that this guard is held.
+    /// `ReadlineLockManager::exclusive_output_device` that this guard is held.
     ///
-    /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
     /// [`ModalGuardToken`]: crate::ModalGuardToken
-    /// [`ReadlineLockManager::exclusive_output_device`]:
-    ///     crate::ReadlineLockManager::exclusive_output_device
+    /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
     pub fn as_mut_tuple(&mut self) -> (&mut OutputDevice, &mut InputDevice) {
         (
             self.readline
@@ -129,7 +127,7 @@ impl Drop for ModalTerminalGuard<'_> {
 ///    [`ModalTerminalGuard::as_mut_tuple`] has permission to construct
 ///    [`ModalGuardToken`] (since its inner tuple field is private to this module).
 /// 3. Method Access: The token is passed to
-///    [`ReadlineLockManager::exclusive_output_device`] as compile-time proof that
+///    `ReadlineLockManager::exclusive_output_device` as compile-time proof that
 ///    [`Readline`] is paused and exclusive access to the [`OutputDevice`] is safely held.
 /// 4. Guard Release & Resumption: When [`ModalTerminalGuard`] is dropped, its [`Drop`]
 ///    implementation transitions [`PauseState`] back via [`PauseState::resume_modal`]
@@ -145,11 +143,9 @@ impl Drop for ModalTerminalGuard<'_> {
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`PauseState::resume_modal`]: crate::PauseState::resume_modal
 /// [`PauseState`]: crate::PauseState
-/// [`ReadlineLockManager::exclusive_output_device`]:
-///     crate::ReadlineLockManager::exclusive_output_device
+/// [`Readline`]: crate::Readline
 /// [`ReadlineLockManager::lock_both`]: crate::ReadlineLockManager::lock_both
 /// [`ReadlineLockManager`]: crate::ReadlineLockManager
-/// [`Readline`]: crate::Readline
 /// [`SafeLineState`]: crate::SafeLineState
 /// [witness token]: https://willcrichton.net/rust-api-type-patterns/witnesses.html
 #[derive(Debug)]

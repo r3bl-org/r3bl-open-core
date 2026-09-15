@@ -8,7 +8,122 @@
 //! modal terminal leases ([`ModalTerminalGuard`]), and animated spinners ([`Spinner`])
 //! for building interactive terminal applications.
 //!
-//! # Introduction
+//! # Mental Model
+//!
+//! Unlike the GNU Readline C library ([`readline()`]) and Rust's
+//! [`std::io::Stdin::read_line()`], which synchronously block the calling OS thread until
+//! the user presses `Enter`, this module provides a **fully asynchronous and
+//! non-blocking** line editor (this is the thing in your Terminal Emulator that displays
+//! the prompt and you can type your input into).
+//!
+//! In traditional blocking readline implementations:
+//! - The calling thread is trapped waiting for user input and cannot be cancelled or
+//!   cleanly interrupted.
+//! - Any background thread writing to [`stdout`] clobbers the active prompt and corrupts
+//!   the cursor display.
+//!
+//! The [`readline_async`] module solves this by coordinating two concurrent operations on
+//! a single shared terminal:
+//!
+//! 1. **Interactive user input**: Live non-blocking line editing, cursor navigation,
+//!    history, and styled prompts.
+//! 2. **Concurrent background activity**: Spawned tasks writing logs, animated progress
+//!    spinners, or modal dialogs ([`choose()`]) without clobbering what the user is
+//!    typing.
+//!
+//! In this module, these responsibilities are divided between a high-level context, an
+//! async line editor, and thread-safe writers:
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────────────────────┐
+//! │                       Your Application Main Loop                       │
+//! ├────────────────────────────────────────────────────────────────────────┤
+//! │   let mut ctx = ReadlineAsyncContext::try_new(...).await?;             │
+//! │   let mut writer = ctx.clone_shared_writer(); // pass to tokio tasks   │
+//! │   loop {                                                               │
+//! │       let line = ctx.read_line().await?;                               │
+//! │       // Process input or break...                                     │
+//! │   }                                                                    │
+//! └───────────────────┬───────────────────────────────┬────────────────────┘
+//!                     │                               │
+//!         owns & orchestrates           calls .clone_shared_writer()
+//!                     ▼                               ▼
+//! ┌──────────────────────────────────────┐  ┌──────────────────────────────┐
+//! │ Readline (Engine & Event Loop)       │  │ SharedWriter (Cloneable IO)  │
+//! ├──────────────────────────────────────┤  ├──────────────────────────────┤
+//! │ • SafeLineState (Buffer, Cursor)     │  │ • Background tasks print     │
+//! │ • PauseState (Normal/Spinner/Modal)  │  │   concurrently above prompt  │
+//! │ • LineStateControlChannel            │  │ • Emits pause/resume/flush   │
+//! └───────────────────┬──────────────────┘  └──────────────┬───────────────┘
+//!                     │                                    │
+//!                     └─────────────────┬──────────────────┘
+//!                                       ▼
+//!                        ┌─────────────────────────────┐
+//!                        │ Raw Terminal (Stdout / PTY) │
+//!                        └─────────────────────────────┘
+//! ```
+//!
+//! ## Core Types at a Glance
+//!
+//! - [`ReadlineAsyncContext`]: **Top-level Orchestrator & Entry Point**. Start here for
+//!   almost all use cases. Manages the lifecycle of [`Readline`] and [`SharedWriter`].
+//! - [`SharedWriter`]: **Thread-Safe Concurrent Stdout Handle**. Clone this into spawned
+//!   async tasks (logging, background jobs) to print output cleanly above the prompt
+//!   without clobbering.
+//! - [`Readline`]: **Async Line Editing Engine**. The underlying actor that manages
+//!   keystrokes, history navigation, multiline editing, and channel signals. You probably
+//!   won't interact with this directly; [`ReadlineAsyncContext`] wraps and manages it.
+//! - [`LineState`]: **Active Line & Cursor State**. Holds the prompt text, grapheme
+//!   buffer, cursor position, and suspension state. Protected by Level 1 mutex.
+//! - [`ModalTerminalGuard`]: **Exclusive Terminal Lease (RAII)**. Acquire via
+//!   [`ReadlineAsyncContext::acquire_modal_terminal()`] when a full-screen or modal
+//!   component (like [`choose()`]) needs exclusive control of input and output.
+//! - [`Spinner`]: **Animated Progress Indicator**. Displays indeterminate progress during
+//!   long-running tasks. Automatically pauses background writers to avoid visual
+//!   glitching.
+//!
+//! ## Quick Start
+//!
+//! ```no_run
+//! use r3bl_tui::{readline_async::ReadlineAsyncContext, ReadlineEvent,
+//!     TuiAvailability, rla_println, ok};
+//!
+//! #[tokio::main]
+//! async fn main() -> miette::Result<()> {
+//!     // 1. Create context ONCE before entering the loop:
+//!     let mut ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
+//!         TuiAvailability::Available(ctx) => ctx,
+//!         it => return it.into_err(),
+//!     };
+//!
+//!     // 2. Clone writer into background tasks:
+//!     let mut writer = ctx.clone_shared_writer();
+//!     tokio::spawn(async move {
+//!         rla_println!(writer, "Background worker started!");
+//!     });
+//!
+//!     // 3. Repeatedly read lines from the same context in a loop:
+//!     loop {
+//!         match ctx.read_line().await? {
+//!             ReadlineEvent::Line(line) => {
+//!                 if line == "exit" {
+//!                     break;
+//!                 }
+//!                 rla_println!(writer, "You typed: {line}");
+//!             }
+//!             ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
+//!             _ => {}
+//!         }
+//!     }
+//!
+//!     // 4. Gracefully shutdown:
+//!     ctx.request_shutdown(Some("Goodbye!")).await?;
+//!     ctx.await_shutdown().await;
+//!     ok!()
+//! }
+//! ```
+//!
+//! # Why Async Readline? (The Problem Space)
 //!
 //! The [`readline_async`] module lets your CLI program be asynchronous and interactive
 //! without blocking the main thread. Your spawned tasks can use it to concurrently write
@@ -48,32 +163,32 @@
 //! 1. Read user input from the terminal line by line, while your program concurrently
 //!    writes lines to the same terminal.
 //!    - One [`Readline`] instance can be used to spawn many async [`stdout`] writers,
-//!      [`crate::SharedWriter`], that can write to the terminal concurrently.
+//!      [`SharedWriter`], that can write to the terminal concurrently.
 //!    - For most users the [`ReadlineAsyncContext`] struct is the simplest way to use
 //!      this module. You rarely have to access the underlying [`Readline`] or
-//!      [`crate::SharedWriter`] directly. But you can if you need to.
-//!    - [`crate::SharedWriter`] can be cloned and is thread-safe. However, there is only
-//!      one instance of [`Readline`] per [`ReadlineAsyncContext`] instance.
+//!      [`SharedWriter`] directly. But you can if you need to.
+//!    - [`SharedWriter`] can be cloned and is thread-safe. However, there is only one
+//!      instance of [`Readline`] per [`ReadlineAsyncContext`] instance.
 //!
 //! 2. Generate a spinner (indeterminate progress indicator). This spinner works
 //!    concurrently with the rest of your program. When the [`Spinner`] is active, it
-//!    automatically pauses output from all the [`crate::SharedWriter`] instances that are
+//!    automatically pauses output from all the [`SharedWriter`] instances that are
 //!    associated with one [`Readline`] instance. Typically a spawned task clones its own
-//!    [`crate::SharedWriter`] to generate its output. This is useful when you want to
-//!    show a spinner while waiting for a long-running task to complete. Please look at
-//!    the example to see this in action, by running:
+//!    [`SharedWriter`] to generate its output. This is useful when you want to show a
+//!    spinner while waiting for a long-running task to complete. Please look at the
+//!    example to see this in action, by running:
 //!    ```bash
 //!    cargo run --example readline_async
 //!    ```
 //!    Then type `starttask1`, press Enter. Then type `spinner`, press Enter.
 //!
 //! 3. Use [`tokio`] tracing with support for concurrently writing to [`stdout`]. If you
-//!    choose to log to [`stdout`] then the concurrent version [`crate::SharedWriter`]
-//!    from this crate will be used. This ensures that the concurrent output is supported
-//!    even for your tracing logs to [`stdout`].
+//!    choose to log to [`stdout`] then the concurrent version [`SharedWriter`] from this
+//!    crate will be used. This ensures that the concurrent output is supported even for
+//!    your tracing logs to [`stdout`].
 //!
 //! 4. You can also plug in your own terminal, like [`stdout`], or [`stderr`], or any
-//!    other terminal that implements [`crate::SendRawTerminal`] trait for more details.
+//!    other terminal that implements [`SafeRawTerminal`] trait for more details.
 //!
 //! This module can detect when your terminal is not in interactive mode. E.g.: when you
 //! pipe the output of your program to another program. In this case, the
@@ -97,25 +212,22 @@
 //! - [`PauseState`]: Enum holding the current suspension state on [`LineState`] to
 //!   determine whether keyboard input and rendering are suppressed (supporting both
 //!   spinners and modal interfaces).
-//! - [`crate::SharedWriter::line_state_control_channel_sender`]: Mechanism used to
-//!   manipulate the paused state asynchronously.
+//! - Control channel on [`SharedWriter`]: Mechanism used to manipulate the paused state
+//!   asynchronously.
 //! - [`ModalTerminalGuard`]: RAII guard granting exclusive mutable terminal access for
-//!   interactive modal components like [`crate::choose()`].
+//!   interactive modal components like [`choose()`].
 //!
-//! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a
-//! [`line_state_control_channel`] to send and receive [`crate::LineStateControlSignal`]:
+//! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a line control
+//! channel to send and receive [`LineStateControlSignal`]:
 //!
-//! 1. The sender end of this channel is moved to the [`crate::SharedWriter`]. So any
-//!    [`crate::SharedWriter`] can be used to send [`crate::LineStateControlSignal`]s to
-//!    the channel, which will be processed in the task started, just for this, in
-//!    [`Readline::try_new`]. This is the primary mechanism to switch between pause and
-//!    resume. Some helper functions are provided in [`ReadlineAsyncContext::pause`] and
-//!    [`ReadlineAsyncContext::resume`], though you can just send the signals directly to
-//!    the channel's sender via the
-//!    [`crate::SharedWriter::line_state_control_channel_sender`].
-//! 2. The receiver end of this [`tokio::sync::mpsc::channel`] is moved to the task that
-//!    is spawned by [`Readline::try_new`]. This is where the actual work is done when
-//!    signals are sent via the sender (described above).
+//! 1. The sender end of this channel is moved to the [`SharedWriter`]. Any
+//!    [`SharedWriter`] can send [`LineStateControlSignal`]s to the channel, which are
+//!    processed in the background actor task started in [`Readline::try_new`]. This is
+//!    the primary mechanism to switch between pause and resume. Helper methods are
+//!    provided in [`ReadlineAsyncContext::pause`] and [`ReadlineAsyncContext::resume`].
+//! 2. The receiver end of this [`tokio::sync::mpsc::channel`] is moved to the background
+//!    actor task spawned by [`Readline::try_new`]. This is where incoming signals are
+//!    processed.
 //!
 //! While the [Readline] is suspended, no input is possible, and only Ctrl+C and Ctrl+D
 //! are allowed to make it through, the rest of the keypresses are ignored.
@@ -159,15 +271,14 @@
 //!
 //! 1. To read user input, call [`ReadlineAsyncContext::read_line()`].
 //! 2. You can call [`ReadlineAsyncContext::clone_shared_writer()`] to get a
-//!    [`crate::SharedWriter`] instance that you can use to write to [`stdout`]
-//!    concurrently, using [`std::write!`] or [`std::writeln!`].
+//!    [`SharedWriter`] instance that you can use to write to [`stdout`] concurrently,
+//!    using [`std::write!`] or [`std::writeln!`].
 //! 3. If you use [`std::writeln!`] then there's no need to
 //!    [`ReadlineAsyncContext::flush()`] because the `\n` will flush the buffer. When
 //!    there's no `\n` in the buffer, or you are using [`std::write!`] then you might need
 //!    to call [`ReadlineAsyncContext::flush()`].
-//! 4. You can use the [`crate::rla_println`!] and [`crate::rla_println_prefixed`!]
-//!    methods to easily write concurrent output to the [`stdout`]
-//!    ([`crate::SharedWriter`]).
+//! 4. You can use the [`rla_println!`] and [`rla_println_prefixed!`] methods to easily
+//!    write concurrent output to the [`stdout`] ([`SharedWriter`]).
 //! 5. You can also get access to the underlying [`Readline`] via the
 //!    [`ReadlineAsyncContext::readline`] field. Details on this struct are listed below.
 //!    For most use cases you won't need to do this.
@@ -183,12 +294,12 @@
 //! - Terminal input is retrieved by calling [`Readline::readline()`], which returns each
 //!   complete line of input once the user presses Enter.
 //!
-//! - Each [`Readline`] instance is associated with one or more [`crate::SharedWriter`]
-//!   instances. Lines written to an associated [`crate::SharedWriter`] are output to the
-//!   raw terminal.
+//! - Each [`Readline`] instance is associated with one or more [`SharedWriter`]
+//!   instances. Lines written to an associated [`SharedWriter`] are output to the raw
+//!   terminal.
 //!
 //! - Call [`Readline::try_new()`] to create a [`Readline`] instance and associated
-//!   [`crate::SharedWriter`].
+//!   [`SharedWriter`].
 //!
 //! - Call [`Readline::readline()`] (most likely in a loop) to receive a line of input
 //!   from the terminal.  The user entering the line can edit their input using the key
@@ -198,11 +309,11 @@
 //!   the user can retrieve it while editing a later line), call
 //!   [`Readline::add_history_entry()`].
 //!
-//! - Lines written to the associated [`crate::SharedWriter`] while `readline()` is in
-//!   progress will be output to the screen above the input line.
+//! - Lines written to the associated [`SharedWriter`] while `readline()` is in progress
+//!   will be output to the screen above the input line.
 //!
-//! - When done, call [`crate::flush_internal()`] to ensure that all lines written to the
-//!   [`crate::SharedWriter`] are output.
+//! - When done, call [`flush_internal()`] to ensure that all lines written to the
+//!   [`SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]
 //!
@@ -266,8 +377,8 @@
 //! - Rearchitect the entire module from the ground up to operate in a totally different
 //!   manner than the original. All the underlying mental models are different, and
 //!   simpler. The main event loop is redone. And a task is used to monitor the line
-//!   channel for communication between multiple [`crate::SharedWriter`]s and the
-//!   [`Readline`], to properly support pause and resume, and other control functions.
+//!   channel for communication between multiple [`SharedWriter`]s and the [`Readline`],
+//!   to properly support pause and resume, and other control functions.
 //! - Drop support for all async runtimes other than [`tokio`]. Rewrite all the code for
 //!   this.
 //! - Drop crates like `pin-project`, `thingbuf` in favor of [`tokio`]. Rewrite all the
@@ -292,11 +403,11 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`choose()`]: crate::choose
-//! [`Eof`]: ReadlineEvent::Eof
+//! [`Eof`]: crate::ReadlineEvent::Eof
+//! [`flush_internal()`]: crate::flush_internal
 //! [`InputDevice`]: crate::InputDevice
-//! [`line_state_control_channel`]:
-//!     field@crate::SharedWriter::line_state_control_channel_sender
 //! [`LineState`]: crate::readline_async::LineState
+//! [`LineStateControlSignal`]: crate::LineStateControlSignal
 //! [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 //! [`OutputDevice::default()`]: crate::OutputDevice::new_stdout
 //! [`OutputDevice`]: crate::OutputDevice
@@ -304,12 +415,37 @@
 //! [`PauseState`]: crate::readline_async::PauseState
 //! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
 //! [`read_line()`]: std::io::Stdin::read_line
+//! [`readline()`]: https://man7.org/linux/man-pages/man3/readline.3.html
+//! [`Readline::add_history_entry()`]: crate::Readline::add_history_entry
+//! [`Readline::readline()`]: crate::Readline::readline
+//! [`Readline::try_new()`]: crate::Readline::try_new
+//! [`Readline::try_new`]: crate::Readline::try_new
 //! [`readline_async`]: mod@crate::readline_async
-//! [`ReadlineAsyncContext::readline`]: field@ReadlineAsyncContext::readline
-//! [`request_shutdown`]: ReadlineAsyncContext::request_shutdown
+//! [`Readline`]: crate::Readline
+//! [`ReadlineAsyncContext::acquire_modal_terminal()`]:
+//!     crate::ReadlineAsyncContext::acquire_modal_terminal
+//! [`ReadlineAsyncContext::clone_shared_writer()`]:
+//!     crate::ReadlineAsyncContext::clone_shared_writer
+//! [`ReadlineAsyncContext::flush()`]: crate::ReadlineAsyncContext::flush
+//! [`ReadlineAsyncContext::pause`]: crate::ReadlineAsyncContext::pause
+//! [`ReadlineAsyncContext::read_line()`]: crate::ReadlineAsyncContext::read_line
+//! [`ReadlineAsyncContext::readline`]: field@crate::ReadlineAsyncContext::readline
+//! [`ReadlineAsyncContext::resume`]: crate::ReadlineAsyncContext::resume
+//! [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
+//! [`ReadlineAsyncContext::try_new`]: crate::ReadlineAsyncContext::try_new
+//! [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
+//! [`ReadlineEvent`]: crate::ReadlineEvent
+//! [`request_shutdown`]: crate::ReadlineAsyncContext::request_shutdown
+//! [`rla_println!`]: macro@crate::rla_println
+//! [`rla_println_prefixed!`]: macro@crate::rla_println_prefixed
+//! [`SafeRawTerminal`]: crate::SafeRawTerminal
 //! [`SharedWriter`]: crate::SharedWriter
+//! [`Spinner::try_start()`]: crate::Spinner::try_start
 //! [`Spinner`]: crate::Spinner
 //! [`spinner`]: mod@crate::readline_async::spinner
+//! [`std::io::Stdin::read_line()`]: std::io::Stdin::read_line
+//! [`std::write!`]: std::write
+//! [`std::writeln!`]: std::writeln
 //! [`stderr`]: std::io::stderr
 //! [`stdout`]: std::io::stdout
 //! [`thread::spawn()` or `thread::spawn_blocking()`]:
@@ -337,6 +473,7 @@
 //!     https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
 //! [Linux TTY programming playlist]:
 //!     https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [Readline]: crate::Readline
 //! [rustyline-async]: https://github.com/zyansheep/rustyline-async
 //! [this]:
 //!     https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275
