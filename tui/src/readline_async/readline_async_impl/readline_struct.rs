@@ -76,6 +76,8 @@ use tokio::{select, spawn,
 /// - `prompt` - This prompt will be displayed to the user.
 /// - `shutdown_complete_sender` - This is a shutdown channel that is used to signal that
 ///   the shutdown process is complete.
+/// - `channel_capacity` - Capacity of the internal message channel used for signals.
+/// - `size` - The initial size of the terminal.
 ///
 /// # Support for testing
 ///
@@ -468,8 +470,7 @@ impl Readline {
     /// [`HISTORY_SIZE_MAX`]: crate::readline_async::HISTORY_SIZE_MAX
     pub fn set_max_history(&mut self, max_size: usize) {
         self.safe_history.write(|history| {
-            history.max_size = max_size;
-            history.entries.truncate(max_size);
+            history.set_max_size(max_size);
         });
     }
 

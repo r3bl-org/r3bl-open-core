@@ -22,9 +22,14 @@ use tokio::sync::broadcast;
 ///
 /// # Poison Safety
 ///
-/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section
-/// in the crate root documentation for details.
+/// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
+/// crate root documentation for details.
 ///
+/// [`InputEvent`]: crate::InputEvent
+/// [`LineState`]: crate::LineState
+/// [`ReadlineControlFlow`]: crate::ReadlineControlFlow
+/// [`ReadlineError`]: crate::ReadlineError
+/// [`ReadlineEvent`]: crate::ReadlineEvent
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 pub fn apply_event_to_line_state_and_render(
@@ -42,13 +47,14 @@ pub fn apply_event_to_line_state_and_render(
 
     // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
     // active). And early return!
-    let is_spinner_active = self_safe_is_spinner_active.write(Option::take);
-
-    if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
-        // Send signal to SharedWriter spinner shutdown channel.
-        // We don't care about the result of this operation.
-        spinner_shutdown_sender.send(()).ok();
-        return ReadlineControlFlow::Continue;
+    if is_ctrl_c_or_d {
+        let is_spinner_active = self_safe_is_spinner_active.write(Option::take);
+        if let Some(spinner_shutdown_sender) = is_spinner_active {
+            // Send signal to SharedWriter spinner shutdown channel.
+            // We don't care about the result of this operation.
+            spinner_shutdown_sender.send(()).ok();
+            return ReadlineControlFlow::Continue;
+        }
     }
 
     // Regular readline event handling - use the canonical InputEvent directly
@@ -57,7 +63,9 @@ pub fn apply_event_to_line_state_and_render(
         .into()
 }
 
-/// Converts crossterm `KeyCode` to canonical `Key`
+/// Converts [`crossterm::event::KeyCode`] to canonical [`Key`].
+///
+/// [`Key`]: crate::Key
 #[must_use]
 fn convert_key_code_to_key(code: KeyCode) -> Option<Key> {
     match code {
@@ -99,7 +107,9 @@ fn convert_key_code_to_key(code: KeyCode) -> Option<Key> {
     }
 }
 
-/// Converts crossterm modifiers to canonical modifier mask
+/// Converts [`crossterm::event::KeyModifiers`] to canonical [`ModifierKeysMask`].
+///
+/// [`ModifierKeysMask`]: crate::ModifierKeysMask
 #[must_use]
 fn convert_modifier_keys(modifiers: KeyModifiers) -> ModifierKeysMask {
     ModifierKeysMask {
@@ -121,7 +131,9 @@ fn convert_modifier_keys(modifiers: KeyModifiers) -> ModifierKeysMask {
     }
 }
 
-/// Converts crossterm mouse button to canonical button
+/// Converts [`crossterm::event::MouseButton`] to canonical [`Button`].
+///
+/// [`Button`]: crate::Button
 #[must_use]
 fn convert_mouse_button(button: MouseButton) -> Button {
     match button {
@@ -131,7 +143,9 @@ fn convert_mouse_button(button: MouseButton) -> Button {
     }
 }
 
-/// Converts `crossterm::event::Event` to canonical `InputEvent`
+/// Converts [`crossterm::event::Event`] to canonical [`InputEvent`].
+///
+/// [`InputEvent`]: crate::InputEvent
 #[must_use]
 pub fn convert_crossterm_event_to_input_event(event: Event) -> Option<InputEvent> {
     match event {
@@ -198,46 +212,255 @@ pub fn convert_crossterm_event_to_input_event(event: Event) -> Option<InputEvent
 }
 
 #[cfg(test)]
-pub mod readline_test_fixtures {
-    use crate::{CrosstermEventResult, InlineVec};
-    use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+mod tests {
+    use super::*;
+    use crate::{CrosstermEventResult, History, InlineVec,
+                core::test_fixtures::StdoutMock, vp_height, vp_width};
     use smallvec::smallvec;
 
-    pub(super) fn get_input_vec() -> InlineVec<CrosstermEventResult> {
+    fn get_input_vec() -> InlineVec<CrosstermEventResult> {
         smallvec![
-            // a
             Ok(Event::Key(KeyEvent::new(
                 KeyCode::Char('a'),
                 KeyModifiers::NONE,
             ))),
-            // b
             Ok(Event::Key(KeyEvent::new(
                 KeyCode::Char('b'),
                 KeyModifiers::NONE,
             ))),
-            // c
             Ok(Event::Key(KeyEvent::new(
                 KeyCode::Char('c'),
                 KeyModifiers::NONE,
             ))),
-            // enter
             Ok(Event::Key(KeyEvent::new(
                 KeyCode::Enter,
                 KeyModifiers::NONE,
             ))),
         ]
     }
-}
 
-#[cfg(test)]
-mod test_streams {
-    use super::*;
-    use crate::core::test_fixtures::gen_input_stream;
-    use test_streams::readline_test_fixtures::get_input_vec;
+    #[test]
+    #[allow(clippy::needless_return)]
+    fn test_convert_key_code_to_key() {
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Char('z')),
+            Some(Key::Character('z'))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::F(1)),
+            Some(Key::FunctionKey(FunctionKey::F1))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::F(12)),
+            Some(Key::FunctionKey(FunctionKey::F12))
+        );
+        assert_eq!(convert_key_code_to_key(KeyCode::F(13)), None);
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Up),
+            Some(Key::SpecialKey(SpecialKey::Up))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Down),
+            Some(Key::SpecialKey(SpecialKey::Down))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Left),
+            Some(Key::SpecialKey(SpecialKey::Left))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Right),
+            Some(Key::SpecialKey(SpecialKey::Right))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Home),
+            Some(Key::SpecialKey(SpecialKey::Home))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::End),
+            Some(Key::SpecialKey(SpecialKey::End))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::PageUp),
+            Some(Key::SpecialKey(SpecialKey::PageUp))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::PageDown),
+            Some(Key::SpecialKey(SpecialKey::PageDown))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Tab),
+            Some(Key::SpecialKey(SpecialKey::Tab))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::BackTab),
+            Some(Key::SpecialKey(SpecialKey::BackTab))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Delete),
+            Some(Key::SpecialKey(SpecialKey::Delete))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Insert),
+            Some(Key::SpecialKey(SpecialKey::Insert))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Enter),
+            Some(Key::SpecialKey(SpecialKey::Enter))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Backspace),
+            Some(Key::SpecialKey(SpecialKey::Backspace))
+        );
+        assert_eq!(
+            convert_key_code_to_key(KeyCode::Esc),
+            Some(Key::SpecialKey(SpecialKey::Esc))
+        );
+        assert_eq!(convert_key_code_to_key(KeyCode::Null), None);
+    }
+
+    #[test]
+    #[allow(clippy::needless_return)]
+    fn test_convert_modifier_keys() {
+        let none = convert_modifier_keys(KeyModifiers::NONE);
+        assert_eq!(none.shift_key_state, KeyState::NotPressed);
+        assert_eq!(none.ctrl_key_state, KeyState::NotPressed);
+        assert_eq!(none.alt_key_state, KeyState::NotPressed);
+
+        let all = convert_modifier_keys(
+            KeyModifiers::SHIFT | KeyModifiers::CONTROL | KeyModifiers::ALT,
+        );
+        assert_eq!(all.shift_key_state, KeyState::Pressed);
+        assert_eq!(all.ctrl_key_state, KeyState::Pressed);
+        assert_eq!(all.alt_key_state, KeyState::Pressed);
+    }
+
+    #[test]
+    #[allow(clippy::needless_return)]
+    fn test_convert_mouse_button() {
+        assert_eq!(convert_mouse_button(MouseButton::Left), Button::Left);
+        assert_eq!(convert_mouse_button(MouseButton::Right), Button::Right);
+        assert_eq!(convert_mouse_button(MouseButton::Middle), Button::Middle);
+    }
+
+    #[test]
+    #[allow(clippy::needless_return)]
+    fn test_convert_crossterm_event_to_input_event() {
+        // Plain keyboard event.
+        let key_event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        assert_eq!(
+            convert_crossterm_event_to_input_event(key_event),
+            Some(InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::Character('a')
+            }))
+        );
+
+        // Modified keyboard event.
+        let ctrl_c = Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
+        assert_eq!(
+            convert_crossterm_event_to_input_event(ctrl_c),
+            Some(InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('c'),
+                mask: ModifierKeysMask::new().with_ctrl(),
+            }))
+        );
+
+        // Mouse event.
+        let mouse_event = Event::Mouse(MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 10,
+            row: 5,
+            modifiers: KeyModifiers::NONE,
+        });
+        assert_eq!(
+            convert_crossterm_event_to_input_event(mouse_event),
+            Some(InputEvent::Mouse(MouseInput {
+                pos: vp_col(10) + vp_row(5),
+                kind: MouseInputKind::MouseDown(Button::Left),
+                maybe_modifier_keys: None,
+            }))
+        );
+
+        // Resize event.
+        let resize_event = Event::Resize(120, 40);
+        assert_eq!(
+            convert_crossterm_event_to_input_event(resize_event),
+            Some(InputEvent::Resize(VPSize {
+                col_width: vp_width(120),
+                row_height: vp_height(40),
+            }))
+        );
+
+        // Non-supported event.
+        assert_eq!(
+            convert_crossterm_event_to_input_event(Event::FocusGained),
+            None
+        );
+    }
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_apply_event_spinner_interception() {
+        let mut line_state =
+            LineState::new("> ".to_string(), vp_width(100) + vp_height(100));
+        let mut stdout_mock = StdoutMock::default();
+        let safe_history: SafeHistory = Arc::new(StdMutex::new(History::new()));
+        let (shutdown_tx, mut shutdown_rx) = broadcast::channel(1);
+        let safe_is_spinner_active = Arc::new(StdMutex::new(Some(shutdown_tx)));
+
+        // 1. Normal character 'x' while spinner active does NOT intercept spinner.
+        let char_event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character('x'),
+        });
+        let result = apply_event_to_line_state_and_render(
+            char_event,
+            &mut line_state,
+            &mut stdout_mock,
+            &safe_history,
+            &safe_is_spinner_active,
+        );
+        assert!(matches!(result, ReadlineControlFlow::Continue));
+        assert!(safe_is_spinner_active.read(Option::is_some));
+        assert_eq!(line_state.line.to_string(), "x");
+
+        // 2. Ctrl+C while spinner active DOES intercept spinner and cancel it.
+        let ctrl_c = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('c'),
+            mask: ModifierKeysMask::new().with_ctrl(),
+        });
+        let result = apply_event_to_line_state_and_render(
+            ctrl_c,
+            &mut line_state,
+            &mut stdout_mock,
+            &safe_history,
+            &safe_is_spinner_active,
+        );
+        assert!(matches!(result, ReadlineControlFlow::Continue));
+        // Spinner was taken and canceled.
+        assert!(safe_is_spinner_active.read(Option::is_none));
+        assert!(shutdown_rx.recv().await.is_ok());
+
+        // 3. Ctrl+C when spinner is NOT active triggers normal readline break.
+        let ctrl_c = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('c'),
+            mask: ModifierKeysMask::new().with_ctrl(),
+        });
+        let result = apply_event_to_line_state_and_render(
+            ctrl_c,
+            &mut line_state,
+            &mut stdout_mock,
+            &safe_history,
+            &safe_is_spinner_active,
+        );
+        assert!(matches!(
+            result,
+            ReadlineControlFlow::ReturnOk(ReadlineEvent::Interrupted)
+        ));
+    }
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_generate_event_stream_pinned() {
+        use crate::core::test_fixtures::gen_input_stream;
         use futures_util::StreamExt;
 
         let mut count = 0;

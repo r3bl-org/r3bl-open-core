@@ -3,9 +3,9 @@
 #![rustfmt::skip]
 
 // Attach.
-mod channel_monitor;
 mod event_conversion;
 mod history;
+mod line_control_task;
 mod lock_manager;
 mod readline_struct;
 mod types;
@@ -17,9 +17,9 @@ pub mod line_state;
 mod line_state;
 
 // Re-export.
-pub use channel_monitor::*;
 pub use event_conversion::*;
 pub use history::*;
+pub use line_control_task::*;
 pub use line_state::*;
 pub use lock_manager::*;
 pub use readline_struct::*;

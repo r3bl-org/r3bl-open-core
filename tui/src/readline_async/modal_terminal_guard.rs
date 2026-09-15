@@ -1,5 +1,7 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Contains both [`ModalTerminalGuard`] and [`ModalGuardToken`].
+
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
 

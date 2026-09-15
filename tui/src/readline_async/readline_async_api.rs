@@ -10,21 +10,21 @@ use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
-/// This is the context for the readline async API. It contains the [Readline] instance,
+/// This is the context for the readline async API. It contains the [`Readline`] instance,
 /// the shared writer, and the shutdown completion channel.
 ///
 /// The mental model for this is that you create a readline async context and then use it
-/// to read lines from the terminal. You can re-use the [`Readline`] to read as many lines
-/// as you want. The [`SharedWriter`] is used to write to the terminal. This context can
-/// be paused and resumed.
+/// to read lines from the terminal. You can re-use the [`ReadlineAsyncContext`] by
+/// calling [`ReadlineAsyncContext::read_line()`] to read as many lines as you want. The
+/// [`SharedWriter`] is used to write to the terminal. This context can be paused and
+/// resumed.
 ///
 /// When you are done with the context, you should call
 /// [`ReadlineAsyncContext::request_shutdown()`] to request a shutdown. This will cause
-/// the readline loop to exit and the context to be dropped. You should also call
-/// [`ReadlineAsyncContext::await_shutdown()`] to wait for the shutdown to complete. This
-/// is important because there is a lot of machinery that needs to be cleaned up and
-/// shutdown. This is done in a non-blocking way, so you can continue to use the context
-/// until the shutdown is complete.
+/// the readline loop to exit. You should also call
+/// [`ReadlineAsyncContext::await_shutdown()`] to wait for the shutdown to complete and
+/// drop the context. This is important because there is a lot of machinery that needs to
+/// be cleaned up and shutdown asynchronously without blocking the calling thread.
 ///
 /// Finally, another benefit of having a non-blocking readline, is that if you call
 /// [`ReadlineAsyncContext::request_shutdown()`] it will exit a readline loop that might
@@ -47,33 +47,14 @@ use tokio::sync::broadcast;
 /// For full architectural details on the suspension state machine, pause buffer, and
 /// concurrency coordination, see the [`Readline`] documentation.
 ///
-/// # Example
-///
-/// Here's an example of how to use [`ReadlineAsyncContext`]:
-///
-/// ```no_run
-/// async fn foo() -> miette::Result<()> {
-///     use r3bl_tui::{readline_async::ReadlineAsyncContext, ChannelCapacity,
-///         TuiAvailability, IntoErr, ok};
-///     let mut rl_ctx = match ReadlineAsyncContext::try_new(
-///         Some("> "),
-///         Some(ChannelCapacity::VeryLarge),
-///     ).await {
-///         TuiAvailability::Available(rl_ctx) => rl_ctx,
-///         it => return it.into_err(),
-///     };
-///
-///     let ReadlineAsyncContext { readline: ref mut rl, .. } = rl_ctx;
-///     let user_input = rl.readline().await;
-///     rl_ctx.request_shutdown(Some("Shutting down...")).await?;
-///     rl_ctx.await_shutdown().await;
-///
-///     ok!()
-/// }
-/// ```
+/// For a complete end-to-end example, see the [Quick Start] section in the
+/// [`readline_async`] module.
 ///
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`readline_async`]: mod@crate::readline_async
 /// [`Readline`]: crate::Readline
+/// [`SharedWriter`]: crate::SharedWriter
+/// [Quick Start]: mod@crate::readline_async#quick-start
 #[allow(missing_debug_implementations)]
 pub struct ReadlineAsyncContext {
     pub readline: Readline,
@@ -141,11 +122,16 @@ impl ReadlineAsyncContext {
     /// # Returns
     ///
     /// Returns a [`TuiAvailability`] containing the [`ReadlineAsyncContext`] if the
-    /// terminal is interactive.
+    /// terminal is interactive (checked via [`check_is_terminal_interactive()`]). This
+    /// explicitly represents all possible states:
+    /// - [`Available`]: Terminal is interactive and initialization succeeded.
+    /// - [`NotAvailable`]: Terminal is not interactive (e.g., piped input/output).
+    /// - [`Broken`]: Initialization failed.
     ///
     /// # Errors
     ///
-    /// Returns an error if:
+    /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
+    /// - Terminal size cannot be determined via [`get_size()`]
     /// - The terminal cannot be put into [raw mode]
     /// - The readline instance cannot be created
     ///
@@ -163,9 +149,13 @@ impl ReadlineAsyncContext {
     /// See [interactive terminal application entry points].
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`Available`]: TuiAvailability::Available
+    /// [`Broken`]: TuiAvailability::Broken
     /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`emit_stderr_redirection_disclaimer()`]:
     ///     crate::emit_stderr_redirection_disclaimer
+    /// [`get_size()`]: crate::get_size
+    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`stderr`]: std::io::stderr
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
@@ -240,12 +230,17 @@ impl ReadlineAsyncContext {
 
     /// Replacement for [`std::io::Stdin::read_line()`] (this is async and non-blocking).
     ///
+    /// Yields a [`ReadlineEvent`] containing user input, control keys (such as `Ctrl+C`
+    /// or `Ctrl+D`), navigation keys, or terminal resize events.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - The readline operation fails due to I/O errors
     /// - The terminal has been closed or disconnected
     /// - The readline loop has been shut down
+    ///
+    /// [`ReadlineEvent`]: crate::ReadlineEvent
     pub async fn read_line(&mut self) -> miette::Result<ReadlineEvent> {
         self.readline.readline().fuse().await.into_diagnostic()
     }
@@ -278,6 +273,9 @@ impl ReadlineAsyncContext {
             .ok();
     }
 
+    /// Resumes background rendering after being paused by [`pause()`].
+    ///
+    /// [`pause()`]: Self::pause
     pub async fn resume(&mut self) {
         // We don't care about the result of this operation.
         self.shared_writer
@@ -302,16 +300,15 @@ impl ReadlineAsyncContext {
     }
 
     /// Make sure to call this method when you are done with the [`ReadlineAsyncContext`]
-    /// instance. It will flush the buffer and print the message if provided. This
-    /// also consumes the [`ReadlineAsyncContext`] instance, so it can't be used after
-    /// this method is called.
+    /// instance. It will flush the buffer and print the message if provided. Then call
+    /// [`Self::await_shutdown()`] to wait for shutdown and consume the context.
     ///
     /// This method performs an important task - it exits the readline loop gracefully.
     /// Here are the details of how it does this:
     ///
-    /// 1. it sends a [`LineStateControlSignal::ExitReadlineLoop`] signal to the
-    ///    [Readline] instance's [`crate::spawn_task_to_monitor_line_control_channel`]
-    ///    task (aka "actor"). This makes the task shut itself down,
+    /// 1. It sends a [`LineStateControlSignal::ExitReadlineLoop`] signal to the
+    ///    [`Readline`] instance's [`spawn_task_to_monitor_line_control_channel()`] task
+    ///    (aka "actor"). This makes the task shut itself down,
     /// 2. which then causes a message to be sent to the
     ///    [`ReadlineAsyncContext::shutdown_complete_sender`],
     /// 3. which also causes the [`Readline::readline()`] method to shutdown (if it is
@@ -319,9 +316,10 @@ impl ReadlineAsyncContext {
     ///    This is a very powerful feature that is not available in synchronous blocking
     ///    `readline`.
     ///
-    /// If you don't call this method, when the underlying [Readline] instance is dropped,
-    /// it's [Drop] implementation will perform terminal-output related cleanup, but it
-    /// won't print any `request_shutdown` message or stop the readline loop.
+    /// If you don't call this method, when the underlying [`Readline`] instance is
+    /// dropped, its [`Drop`] implementation will perform terminal-output related
+    /// cleanup, but it won't print any `request_shutdown` message or stop the
+    /// readline loop.
     ///
     /// Make sure to call [`Self::await_shutdown()`], to ensure that the
     /// mechanism is cleanly shutdown.
@@ -331,6 +329,11 @@ impl ReadlineAsyncContext {
     /// Returns an error if:
     /// - The shutdown signal cannot be sent to the readline loop
     /// - The final message cannot be written to the terminal
+    ///
+    /// [`LineStateControlSignal::ExitReadlineLoop`]: crate::LineStateControlSignal::ExitReadlineLoop
+    /// [`Readline::readline()`]: crate::Readline::readline
+    /// [`Readline`]: crate::Readline
+    /// [`spawn_task_to_monitor_line_control_channel()`]: crate::spawn_task_to_monitor_line_control_channel
     pub async fn request_shutdown(&self, message: Option<&str>) -> CommonResult {
         // Process the request_shutdown message (if some).
         if let Some(message) = message {

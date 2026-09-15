@@ -85,8 +85,9 @@
 //! ## Quick Start
 //!
 //! ```no_run
-//! use r3bl_tui::{readline_async::ReadlineAsyncContext, ReadlineEvent,
+//! use r3bl_tui::{readline_async::ReadlineAsyncContext, IntoErr, ReadlineEvent,
 //!     TuiAvailability, rla_println, ok};
+//! use std::io::Write;
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -99,7 +100,7 @@
 //!     // 2. Clone writer into background tasks:
 //!     let mut writer = ctx.clone_shared_writer();
 //!     tokio::spawn(async move {
-//!         rla_println!(writer, "Background worker started!");
+//!         writeln!(writer, "Background worker started!").ok();
 //!     });
 //!
 //!     // 3. Repeatedly read lines from the same context in a loop:
@@ -109,7 +110,7 @@
 //!                 if line == "exit" {
 //!                     break;
 //!                 }
-//!                 rla_println!(writer, "You typed: {line}");
+//!                 rla_println!(ctx, "You typed: {line}");
 //!             }
 //!             ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
 //!             _ => {}

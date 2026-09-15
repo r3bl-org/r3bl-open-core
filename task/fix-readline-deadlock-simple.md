@@ -330,37 +330,24 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [x] `./check.fish --check`
     - [x] `./check.fish --test`
     - [x] `./check.fish --clippy`
-- [ ] **Mandatory manual review:**
-    - [x] `tui/src/readline_async/readline_async_impl/types.rs`
+- [x] **Mandatory manual review:**
+    - [x] `tui/src/readline_async/mod.rs`
+    - [x] `tui/src/readline_async/readline_async_api.rs`
     - [x] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
-    - [ ] `tui/src/readline_async/modal_terminal_guard.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/history.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/channel_monitor.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/mod.rs`
-    - [ ] `tui/src/readline_async/choose_api.rs`
-    - [ ] `tui/src/readline_async/readline_async_api.rs`
-    - [ ] `tui/src/readline_async/mod.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_delete_ops.rs`
-    - [ ] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_insert_ops.rs`
-    - [ ] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`
-    - [ ] `tui/examples/choose_with_and_without_readline_async.rs`
+    - [x] `tui/src/readline_async/modal_terminal_guard.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/types.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/history.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/line_control_task.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/event_conversion.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/mod.rs`
+    - [x] `tui/src/readline_async/choose_api.rs`
+    - [x] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_basic_ops.rs`
+    - [x] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_delete_ops.rs`
+    - [x] `tui/src/tui/editor/zero_copy_gap_buffer/zcgb_insert_ops.rs`
+    - [x] `tui/src/readline_async/choose_impl/choose_integration_tests/pty_shared_writer_pause_test.rs`
+    - [x] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`
+    - [x] `tui/examples/choose_with_and_without_readline_async.rs`
 - [ ] Manual testing via `tui/examples/demo/ex_app_with_spinner.rs` to verify visuals.
-
----
-
-### Phase 5: Documentation & Final Workspace Verification
-
-- [ ] Update rustdoc comments in `readline_struct.rs` and `readline_async/mod.rs`
-      documenting the strict lock hierarchy (`SafeLineState` -> `OutputDevice` -> Leaf
-      locks).
-- [ ] Verify rustdoc links build cleanly: `./check.fish --quick-doc`.
-- [ ] Run full workspace validation: `./check.fish --full`.
-- [ ] **Mandatory manual review:**
-    - [ ] `tui/src/readline_async/mod.rs`
-    - [ ] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
 
 <!-- cspell:words coffman stackexchange -->

@@ -101,14 +101,10 @@ impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
 ///
 /// # Implicit Conversions
 ///
-/// - **From Result**: Supports implicit conversion into the core [`Continuation`] type
-///   via [`.into()`] (useful for loop control flow).
 /// - **From Report**: Supports implicit conversion from [`miette::Report`] (via
 ///   [`From<ErrorReport>`]).
 ///
-/// [`.into()`]: Into::into
 /// [`.into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
-/// [`Continuation`]: crate::Continuation
 /// [`readline()`]: crate::Readline::readline
 #[derive(Debug, Error, miette::Diagnostic)]
 pub enum ReadlineError {

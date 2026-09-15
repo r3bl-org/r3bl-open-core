@@ -50,8 +50,14 @@ pub type ChooseFuture<'a> =
 ///
 /// # Returns
 ///
-/// Returns a [`TuiAvailability`] containing a pinned boxed future that resolves to
-/// `Ok(ItemsOwned)` with the following behavior:
+/// Returns a [`TuiAvailability`] containing a pinned boxed future if the terminal is
+/// interactive. This explicitly represents all possible states:
+/// - [`Available`]: Terminal is interactive and initialization succeeded. Returns the
+///   future.
+/// - [`NotAvailable`]: Terminal is not interactive.
+/// - [`Broken`]: Initialization failed.
+///
+/// The future resolves to `Ok(ItemsOwned)` with the following behavior:
 /// * **Single selection mode** (`HowToChoose::Single`):
 ///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
 ///     selected item
@@ -61,11 +67,15 @@ pub type ChooseFuture<'a> =
 ///     containing all selected items
 ///   - If user presses Enter without selecting any items: returns an empty `ItemsOwned`
 ///   - If user cancels (Escape or Ctrl+C): returns an empty `ItemsOwned`
-/// * **Non-interactive terminal**: returns an empty `ItemsOwned`
 ///
 /// # Errors
 ///
-/// Returns [`miette::Error`] if the terminal event loop operations fail.
+/// Returns a [`Broken`] variant containing a [`miette::Report`] if initialization (e.g.,
+/// getting terminal size) fails.
+///
+/// The returned future may produce [`miette::Error`] if the terminal event loop
+/// operations fail.
+///
 ///
 /// # Why return a pinned boxed future?
 ///
@@ -103,9 +113,12 @@ pub type ChooseFuture<'a> =
 ///
 /// See [interactive terminal application entry points].
 ///
+/// [`Available`]: TuiAvailability::Available
+/// [`Broken`]: TuiAvailability::Broken
 /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
 /// [`ModalTerminalGuard::as_mut_tuple()`]: crate::ModalTerminalGuard::as_mut_tuple
+/// [`NotAvailable`]: TuiAvailability::NotAvailable
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`stderr`]: std::io::stderr
 /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points

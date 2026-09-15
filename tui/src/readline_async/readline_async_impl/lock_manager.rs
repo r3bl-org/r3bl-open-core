@@ -143,7 +143,7 @@ use std::io::Write;
 /// [`stdout`]: std::io::stdout
 /// [`tokio::spawn`]: tokio::spawn
 /// [`tokio`]: tokio
-/// [channel processing task]: super::channel_monitor::process_line_control_signal
+/// [channel processing task]: super::line_control_task::process_line_control_signal
 #[allow(missing_debug_implementations)]
 pub struct ReadlineLockManager {
     /// Level 1 lock: prompt buffer, cursor coordinates, and line editor state.
