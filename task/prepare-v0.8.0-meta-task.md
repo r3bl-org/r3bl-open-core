@@ -99,6 +99,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
+- [ ] [migrate-copyright-headers-to-spdx-format.md](migrate-copyright-headers-to-spdx-format.md)
 
 # [TODO] Unify rendering
 
