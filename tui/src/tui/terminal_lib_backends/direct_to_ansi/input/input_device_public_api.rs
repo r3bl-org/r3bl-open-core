@@ -81,7 +81,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// 3. **Flawed [`ESC`] detection over [`SSH`].** Our original approach had flawed logic
 ///    for distinguishing the [`ESC`] key from escape sequences (like `ESC [ A` for Up
 ///    Arrow). It worked locally but failed over [`SSH`]. We now use [`crossterm`]'s
-///    `more` flag heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
+///    `more` flag heuristic (see [ESC Detection Limitations] in [`MaybeMore`]).
 ///
 /// ### The Solution
 ///
@@ -125,7 +125,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///    process.
 ///
 /// To solve the third problem for [`ESC`] detection, we use [`crossterm`]'s `more` flag
-/// heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
+/// heuristic (see [ESC Detection Limitations] in [`MaybeMore`]).
 ///
 /// ## Architecture Overview
 ///
@@ -361,9 +361,10 @@ use tokio::sync::broadcast::error::RecvError;
 /// │    ┌───────────────────────────────────────────────────────────────────┐  │
 /// │    │ loop {                                                            │  │
 /// │    │   poll.poll(&mut events, None)?;        // Wait for stdin/signal  │  │
-/// │    │   let n = stdin.read(&mut buffer)?;     // Read available bytes   │  │
-/// │    │   let more = n == TTY_BUFFER_SIZE;      // ESC disambiguation     │  │
-/// │    │   parser.advance(&buffer[..n], more);   // Parse with `more` flag │  │
+/// │    │   let bytes_read = stdin.read(&mut buffer)?; // Read available bytes│  │
+/// │    │   let maybe_more =                                                │  │
+/// │    │     MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE);│  │
+/// │    │   parser.advance(&buffer[..bytes_read], maybe_more);               │  │
 /// │    │   for event in parser { sender.send(Event(event))?; }             │  │
 /// │    │ }                                                                 │  │
 /// │    └───────────────────────────────────────────────────────────────────┘  │
@@ -383,12 +384,12 @@ use tokio::sync::broadcast::error::RecvError;
 /// Arrow = `ESC [ A`). When we see a lone `0x1B` byte, is it the [`ESC`] key or the start
 /// of an escape sequence?
 ///
-/// **The Solution**: We use crossterm's `more` flag pattern—a clever heuristic based on
+/// **The Solution**: We use crossterm's `more` flag pattern - a clever heuristic based on
 /// read buffer fullness:
 ///
 /// ```text
-/// let n = stdin.read(&mut buffer)?;  // Read available bytes
-/// let more = n == TTY_BUFFER_SIZE;   // true if buffer was filled completely
+/// let bytes_read = stdin.read(&mut buffer)?; // Read available bytes
+/// let more = bytes_read == STDIN_READ_BUFFER_SIZE; // true if buffer was filled completely
 ///
 /// // In parser:
 /// if buffer == [ESC] && more {
@@ -428,19 +429,17 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// ## SSH and High-Latency Connections
 ///
-/// Over SSH with network latency, bytes might arrive in separate packets. The `more` flag
-/// handles this correctly:
+/// Over high-latency or jittery SSH connections, TCP packet fragmentation can split
+/// multi-byte escape sequences across separate read operations:
+/// - **Split After Prefix**: If fragmentation occurs after `ESC [` or `ESC ]`, the parser
+///   recognizes an incomplete sequence and successfully reassembles it across `read()`
+///   calls.
+/// - **Split Immediately After [`ESC`]**: If a lone [`ESC`] byte arrives in a packet
+///   smaller than 1024 bytes, the stream appears drained and [`ESC`] is emitted
+///   immediately (the zero-latency trade-off).
 ///
-/// ```text
-/// First packet:  [ESC]       read() → 1 byte, more = false
-///                            BUT: next poll() wakes immediately when more data arrives
-/// Second packet: ['[', 'A']  read() → 2 bytes
-///                            Parser accumulates: [ESC, '[', 'A'] → Up Arrow ✓
-/// ```
-///
-/// The key insight: if bytes arrive separately, the next `mio::Poll` wake happens almost
-/// immediately when more data arrives. The parser accumulates bytes across reads, so
-/// escape sequences are correctly reassembled.
+/// See [ESC Detection Limitations] in [`MaybeMore`] for the complete architectural
+/// breakdown of all three packet fragmentation scenarios.
 ///
 /// ## Attribution
 ///
@@ -456,7 +455,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///    [`signal-hook-mio`] for [`SIGWINCH`] and we do the same.
 /// 3. **[`ESC`] disambiguation**: The `more` flag heuristic for distinguishing [`ESC`]
 ///    key from escape sequences without timeouts. We inherit both its benefits (zero
-///    latency) and limitations (see [ESC Detection Limitations] in [`MioPollWorker`]).
+///    latency) and limitations (see [ESC Detection Limitations] in [`MaybeMore`]).
 /// 4. **Process-lifetime cleanup**: They rely on OS cleanup at process exit rather than
 ///    explicit thread termination, and so do we.
 ///
@@ -485,6 +484,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`INTERNAL_EVENT_READER`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+/// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mio.rs`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
@@ -521,7 +521,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 /// [Architecture]: Self#architecture
 /// [Device Lifecycle]: Self#device-lifecycle
-/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
+/// [ESC Detection Limitations]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [How It Works]: super::mio_poller#how-it-works
 /// [inherent race condition]:
@@ -737,8 +737,11 @@ impl DirectToAnsiInputDevice {
     /// 2. Wait for events from [`stdin`] reader channel (yields until data ready)
     /// 3. Apply paste state machine and return event
     ///
-    /// Events arrive fully parsed from the reader thread. See [ESC key disambiguation]
-    /// for zero-latency [`ESC`] detection.
+    /// # Event Parsing & Disambiguation
+    ///
+    /// Events arrive fully parsed from the reader thread via [`StatefulInputParser`]. See
+    /// [ESC key disambiguation] and [`MaybeMore`] for details on zero-latency [`ESC`]
+    /// detection.
     ///
     /// # Cancel Safety
     ///
@@ -758,11 +761,13 @@ impl DirectToAnsiInputDevice {
     /// [`ESC`]: crate::EscSequence
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
+    /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`mio::Poll`]: mio::Poll
     /// [`RestartPolicy`]: crate::RestartPolicy
     /// [`Self::next()`]: Self::next
     /// [`ShutdownReason`]: crate::ShutdownReason
     /// [`SINGLETON`]: super::input_device_impl::global_input_resource::SINGLETON
+    /// [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
     /// [`stdin`]: std::io::stdin
     /// [`tokio::io::stdin()`]: tokio::io::stdin
     /// [`tokio::sync::broadcast::Receiver::recv`]: tokio::sync::broadcast::Receiver::recv

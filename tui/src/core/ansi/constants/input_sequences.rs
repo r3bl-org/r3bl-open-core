@@ -878,6 +878,54 @@ pub const CSI_PREFIX: &[u8] = b"\x1b[";
 /// [`CSI`]: crate::CsiSequence
 pub const CSI_PREFIX_LEN: usize = CSI_PREFIX.len();
 
+/// [`CSI`] Minimum Length: Minimum number of bytes for a valid [`CSI`] sequence (`ESC [`
+/// + final byte).
+///
+/// Derived from [`CSI_PREFIX_LEN`] + 1.
+///
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_MIN_LEN: usize = CSI_PREFIX_LEN + 1;
+
+/// [`CSI`] Default Parameter: Default numeric parameter value in ECMA-48 / [`ANSI`]
+/// [`CSI`] sequences (representing 1 repeat count or base key parameter).
+///
+/// Value: `1`.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_PARAM_DEFAULT: u16 = 1;
+
+/// [`CSI`] Zero Parameter: Zero parameter value in ECMA-48 / [`ANSI`] [`CSI`] sequences,
+/// which ECMA-48 treats as equivalent to default ([`CSI_PARAM_DEFAULT`]).
+///
+/// Value: `0`.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_PARAM_ZERO: u16 = 0;
+
+/// Single Shift 3 ([`SS3`]) Prefix: Two-byte introducer for [`SS3`] sequences.
+///
+/// Sequence: `ESC O` (`1B 4F` hex).
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_PREFIX: &[u8] = b"\x1bO";
+
+/// [`SS3`] Prefix Length: Number of bytes in the [`SS3_PREFIX`].
+///
+/// Derived from [`SS3_PREFIX`].
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_PREFIX_LEN: usize = SS3_PREFIX.len();
+
+/// [`SS3`] Sequence Length: Exact number of bytes in an [`SS3`] keyboard sequence (`ESC
+/// O` + command char).
+///
+/// Derived from [`SS3_PREFIX_LEN`] + 1.
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_SEQ_LEN: usize = SS3_PREFIX_LEN + 1;
+
 // ==================== DECCKM Cursor Key Mode Sequences ====================
 //
 // Complete byte sequences for detecting DECCKM mode changes in PTY output.
@@ -1091,5 +1139,17 @@ mod tests {
         assert_eq!(CONTROL_ENTER, b'\r');
         assert_eq!(CONTROL_ESC, 0x1B);
         assert_eq!(CONTROL_BACKSPACE, 0x08);
+    }
+
+    #[test]
+    fn test_sequence_prefixes_and_lengths() {
+        assert_eq!(CSI_PREFIX, b"\x1b[");
+        assert_eq!(CSI_PREFIX_LEN, 2);
+        assert_eq!(CSI_MIN_LEN, 3);
+        assert_eq!(CSI_PARAM_DEFAULT, 1);
+        assert_eq!(CSI_PARAM_ZERO, 0);
+        assert_eq!(SS3_PREFIX, b"\x1bO");
+        assert_eq!(SS3_PREFIX_LEN, 2);
+        assert_eq!(SS3_SEQ_LEN, 3);
     }
 }

@@ -101,6 +101,7 @@
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Getting started: Add `r3bl_tui` to your project](#getting-started-add-r3bl_tui-to-your-project)
 //! - [Run the demo locally](#run-the-demo-locally)
 //!   - [Prerequisites](#prerequisites)
 //!   - [Running examples](#running-examples)
@@ -492,6 +493,42 @@
 //!   [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
 //! - If you like consuming written content, here's our developer
 //!   [site](https://developerlife.com/).
+//!
+//! # Getting started: Add `r3bl_tui` to your project
+//!
+//! Add `r3bl_tui` as a dependency in your `Cargo.toml`. You can choose between the
+//! published crates.io release or the latest `main` branch on GitHub.
+//!
+//! ## Option 1: crates.io (stable release)
+//!
+//! Use this if you prefer stable, versioned releases:
+//!
+//! ```bash
+//! cargo add r3bl_tui
+//! ```
+//!
+//! Or in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! r3bl_tui = "0.7.8"
+//! ```
+//!
+//! ## Option 2: GitHub main branch (bleeding edge)
+//!
+//! Bug fixes and patches land on `main` immediately before being published to crates.io.
+//! If you need the latest fixes or rapid iteration:
+//!
+//! ```bash
+//! cargo add r3bl_tui --git https://github.com/r3bl-org/r3bl-open-core.git --branch main
+//! ```
+//!
+//! Or in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! r3bl_tui = { git = "https://github.com/r3bl-org/r3bl-open-core.git", branch = "main" }
+//! ```
 //!
 //! # Run the demo locally
 //!

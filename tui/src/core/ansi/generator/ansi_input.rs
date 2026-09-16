@@ -4,8 +4,8 @@
 
 //! [`ANSI`] escape sequence generator for terminal INPUT (test fixtures).
 //!
-//! Provides input sequence generation for testing. Creates symmetry with
-//! [`ansi_output`] for output sequences.
+//! Provides input sequence generation for testing. Creates symmetry with [`ansi_output`]
+//! for output sequences.
 //!
 //! ## Purpose
 //!
@@ -19,11 +19,18 @@
 //!
 //! ## Available Items
 //!
-//! | Category                      | Items                                                                                                                                                     |
-//! | :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-//! | Pre-computed constants        | [`SEQ_ARROW_UP`], [`SEQ_ARROW_DOWN`], [`SEQ_ARROW_RIGHT`], [`SEQ_ARROW_LEFT`], [`SEQ_HOME`], [`SEQ_END`], [`SEQ_BACKTAB`], [`SEQ_F1`]–[`SEQ_F4`]          |
-//! | Low-level builder functions   | [`csi`], [`ss3`], [`csi_tilde`], [`csi_modified`]                                                                                                         |
-//! | High-level generators         | [`generate_keyboard_sequence`], [`generate_mouse_sequence_bytes`], [`generate_resize_sequence`], [`generate_focus_sequence`], [`generate_paste_sequence`] |
+//! - Pre-computed constants:
+//!   - [`SEQ_ARROW_UP`], [`SEQ_ARROW_DOWN`], [`SEQ_ARROW_RIGHT`], [`SEQ_ARROW_LEFT`]
+//!   - [`SEQ_HOME`], [`SEQ_END`], [`SEQ_BACKTAB`]
+//!   - [`SEQ_F1`], [`SEQ_F2`], [`SEQ_F3`], [`SEQ_F4`]
+//! - Low-level builder functions:
+//!   - [`csi`], [`ss3`], [`csi_tilde`], [`csi_modified`]
+//! - High-level generators:
+//!   - [`generate_keyboard_sequence`]
+//!   - [`generate_mouse_sequence_bytes`]
+//!   - [`generate_resize_sequence`]
+//!   - [`generate_focus_sequence`]
+//!   - [`generate_paste_sequence`]
 //!
 //! [`ansi_output`]: super::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -373,9 +380,11 @@ mod keyboard {
             }
             VT100KeyCodeIR::Left => Some(generate_arrow_key(ARROW_LEFT_FINAL, modifiers)),
 
-            // Navigation keys: CSI H/F (no modifier support in this format)
-            VT100KeyCodeIR::Home => Some(generate_simple_csi(SPECIAL_HOME_FINAL)),
-            VT100KeyCodeIR::End => Some(generate_simple_csi(SPECIAL_END_FINAL)),
+            // Navigation keys: CSI [1;mod] H/F
+            VT100KeyCodeIR::Home => {
+                Some(generate_arrow_key(SPECIAL_HOME_FINAL, modifiers))
+            }
+            VT100KeyCodeIR::End => Some(generate_arrow_key(SPECIAL_END_FINAL, modifiers)),
 
             // Special keys: CSI n [;mod] ~
             VT100KeyCodeIR::Insert => {
@@ -404,7 +413,7 @@ mod keyboard {
         }
     }
 
-    /// Generate arrow key sequence: `CSI [1;mod] final`.
+    /// Generate arrow or navigation key sequence: `CSI [1;mod] final`.
     fn generate_arrow_key(final_byte: u8, modifiers: VT100KeyModifiersIR) -> Vec<u8> {
         let mut bytes = CSI_PREFIX.to_vec();
         if encoding::has_modifiers(modifiers) {

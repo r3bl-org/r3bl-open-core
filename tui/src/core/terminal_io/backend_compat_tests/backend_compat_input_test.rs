@@ -437,6 +437,14 @@ pub mod generate_test_sequences {
                 "Ctrl+Shift+Up",
                 csi_modified(MODIFIER_CTRL_SHIFT, ARROW_UP_FINAL),
             ),
+            // Navigation keys with modifiers: ESC [ 1 ; <mod+1> H/F.
+            (
+                "Shift+Home",
+                csi_modified(MODIFIER_SHIFT, SPECIAL_HOME_FINAL),
+            ),
+            ("Ctrl+Home", csi_modified(MODIFIER_CTRL, SPECIAL_HOME_FINAL)),
+            ("Shift+End", csi_modified(MODIFIER_SHIFT, SPECIAL_END_FINAL)),
+            ("Ctrl+End", csi_modified(MODIFIER_CTRL, SPECIAL_END_FINAL)),
         ]
     }
 }

@@ -6,7 +6,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{TermPos, VPWidth, VPHeight, terminal_io::KeyState};
+use crate::{TermPos, VPHeight, VPWidth, terminal_io::KeyState};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///

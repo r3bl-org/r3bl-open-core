@@ -450,6 +450,11 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `write-documentation` skill. This keeps rendered docs clean, validates real types on
    Linux, and compiles safely on macOS and Windows.
 
+8. **No `flowchart TD` in Diagrams (Global Rule)**: NEVER use `flowchart TD` (top-down) for
+   Mermaid diagrams in markdown, task files, documentation, or chat responses. It does
+   not work or render properly in the terminal. Prefer `flowchart LR` (left-to-right),
+   Markdown tables, or plain indented text lists instead.
+
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
 ### Constructor Conventions: `Default` over No-Arg `new()`
