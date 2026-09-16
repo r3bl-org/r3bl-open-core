@@ -300,6 +300,12 @@ impl EditorContent {
     pub fn get_selection_container(&self) -> &SelectionContainer { &self.selection }
 }
 
+/// Default line capacity pre-allocated for a newly initialized empty [`EditorBuffer`].
+///
+/// Pre-allocates enough buffer and metadata capacity for an initial screenful of text
+/// (e.g. 25 lines) to eliminate heap reallocations during initial interactive typing.
+pub const DEFAULT_NEW_EMPTY_LINES: usize = 25;
+
 mod construct {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -317,7 +323,7 @@ mod construct {
         #[must_use]
         pub fn new_empty<'a>(arg_config: impl Into<EditorBufferConfig<'a>>) -> Self {
             let config: EditorBufferConfig<'a> = arg_config.into();
-            let mut lines = ZeroCopyGapBuffer::default();
+            let mut lines = ZeroCopyGapBuffer::with_capacity(DEFAULT_NEW_EMPTY_LINES);
             lines.push_line("");
 
             let it = Self {

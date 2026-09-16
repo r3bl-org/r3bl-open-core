@@ -35,7 +35,7 @@ use crate::{GCStringOwned, ZeroCopyGapBuffer,
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
 #[must_use]
 pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
-    let mut buffer = ZeroCopyGapBuffer::default();
+    let mut buffer = ZeroCopyGapBuffer::with_capacity(lines.len());
 
     for line in lines {
         // Add a new line to the buffer.
@@ -74,30 +74,23 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
 #[must_use]
 pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
-    let mut buffer = ZeroCopyGapBuffer::default();
-
     // Handle empty string case.
     if text.is_empty() {
-        return buffer;
+        return ZeroCopyGapBuffer::default();
     }
 
-    // Split by newlines, preserving empty lines.
-    let lines: Vec<&str> = text.split(NEW_LINE_CHAR).collect();
-
-    // If the text ends with a newline, split will create an empty string at the end.
-    // We should process all lines in that case.
-    let total_lines = crate::c_len(lines.len());
-    let num_lines_to_process = if text.ends_with(NEW_LINE_CHAR) {
-        if total_lines.is_empty() {
-            0
-        } else {
-            total_lines.as_usize() - 1 // Skip the last empty element from split
-        }
+    // Count newlines to determine exact line capacity without allocating an intermediate
+    // Vec.
+    let newline_count = text.matches(NEW_LINE_CHAR).count();
+    let num_lines = if text.ends_with(NEW_LINE_CHAR) {
+        newline_count
     } else {
-        total_lines.as_usize() // Process all lines
+        newline_count + 1
     };
 
-    for line_text in lines.iter().take(num_lines_to_process) {
+    let mut buffer = ZeroCopyGapBuffer::with_capacity(num_lines);
+
+    for line_text in text.split(NEW_LINE_CHAR).take(num_lines) {
         // Add a new line to the buffer.
         let line_index = buffer.add_line();
 
