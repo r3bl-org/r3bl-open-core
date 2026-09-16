@@ -343,6 +343,7 @@ via autocomplete in the Antigravity CLI.
 | Command                     | Skill                                      |
 | :-------------------------- | :----------------------------------------- |
 | `/analyze-logs`             | analyze-log-files                          |
+| `/audit-task`               | audit-task                                 |
 | `/check-regression`         | analyze-performance                        |
 | `/batch-refactor`           | batch-refactor-with-sub-agents             |
 | `/check-bounds-safety`      | check-bounds-safety                        |
