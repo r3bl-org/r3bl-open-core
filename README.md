@@ -72,22 +72,12 @@ height="256px">
     - [AI (LLM) Coding Agent Integration (Optional)](#ai-llm-coding-agent-integration-optional)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
     - [Key Commands](#key-commands)
-    - [Cargo Target Directory Isolation for IDE/Tool Performance](#cargo-target-directory-isolation-for-idetool-performance)
-        - [The Problem: Cargo Lock Contention](#the-problem-cargo-lock-contention)
-        - [The Solution: Separate Build Artifacts](#the-solution-separate-build-artifacts)
-        - [Configuration by Tool](#configuration-by-tool)
-        - [Benefits](#benefits)
-        - [Example Workflow Setup](#example-workflow-setup)
-- [Terminal 2: File watcher with automatic tests](#terminal-2-file-watcher-with-automatic-tests)
-- [Terminal 3: Run AI (LLM) coding agent](#terminal-3-run-ai-llm-coding-agent)
-- [Terminal 4: Run bacon](#terminal-4-run-bacon)
-- [Result: All four run in parallel, zero blocking](#result-all-four-run-in-parallel-zero-blocking)
-    - [Disk Space Management](#disk-space-management)
-- [Clean individual tool builds](#clean-individual-tool-builds)
-- [Full cleanup (nuclear option)](#full-cleanup-nuclear-option)
-    - [Troubleshooting](#troubleshooting)
-- [VSCode: Check .vscode/settings.json](#vscode-check-vscodesettingsjson)
-- [Test with explicit path](#test-with-explicit-path)
+    - [Automatic Tmpfs Symlink Architecture & Git Worktree Isolation](#automatic-tmpfs-symlink-architecture--git-worktree-isolation)
+        - [1. Git Worktree Isolation](#1-git-worktree-isolation)
+        - [2. Smart RAM-Aware Storage Selection](#2-smart-ram-aware-storage-selection)
+        - [3. Directory Independence](#3-directory-independence)
+        - [4. Rsync & Auto-Healing Symlinks](#4-rsync--auto-healing-symlinks)
+        - [5. Cache Management & Cleaning (`--clean`)](#5-cache-management--cleaning---clean)
     - [Incremental Compilation Management](#incremental-compilation-management)
 - [Rebuild cleanly](#rebuild-cleanly)
     - [Bacon Development Tools](#bacon-development-tools)
@@ -867,155 +857,64 @@ fish run.fish
 > [PTY Testing Infrastructure](./tui/README.md#pty-testing-infrastructure) section in the
 > TUI README for details on writing and running TUI tests.
 
-### Cargo Target Directory Isolation for IDE/Tool Performance
+### Automatic Tmpfs Symlink Architecture & Git Worktree Isolation
 
-**Critical Optimization**: When multiple development tools run `cargo` simultaneously
-(IDE, terminal, file watcher, CI), they compete for locks on the shared `target/`
-directory. This causes severe responsiveness issues as each tool waits for others to
-complete. Isolating build artifacts by tool eliminates this bottleneck completely.
+**High-Performance Zero-Configuration Build Architecture**:
+`check.fish` dynamically provisions an isolated tmpfs target directory based on the
+repository and worktree location, and symlinks `./target` to that directory. This ensures
+blazing-fast RAM builds (~2-3x speedup) while completely eliminating lock contention across
+multiple terminals, IDE instances (`rust-analyzer`), and Git worktrees.
 
-#### The Problem: Cargo Lock Contention
+#### 1. Git Worktree Isolation
 
-When you have multiple `cargo` instances running:
+When working concurrently across multiple Git worktrees (e.g. `roc`, `roc-build-spawny`,
+`roc-fix-shift-home-lockup`), each worktree operates in its own isolated tmpfs workspace:
 
-- **VSCode rust-analyzer**: Runs `cargo check` continuously in background
-- **File watcher** (`check.fish`, `bacon`): Triggers `cargo` tests, doc builds, etc. on
-  every file save
-- **Terminal**: You run manual `cargo` commands, or optionally use an AI (LLM) coding
-  agent (such as `Antigravity CLI` (`agy`), etc.)
-
-All these access the same `target/` directory:
-
-```
-target/
-├── debug/
-├── release/
-└── .rustc_info.json  # ← Lock contention here
+```text
+/home/user/github/roc/target                       -> /tmp/check-fish-$USER-roc-<hash>/target
+/home/user/github/roc-build-spawny/target          -> /tmp/check-fish-$USER-roc-build-spawny-<hash>/target
+/home/user/github/roc-fix-shift-home-lockup/target -> /tmp/check-fish-$USER-roc-fix-shift-home-lockup-<hash>/target
 ```
 
-When one tool locks `target/`, all others wait. This cascades into a "traffic jam" where
-everything becomes unresponsive.
+- **Zero Lock Contention**: Each worktree has its own dedicated `.lock` file and build cache.
+- **Shared IDE & Terminal Cache**: Because `./target` is a native filesystem symlink,
+  `cargo`, `rust-analyzer`, `bacon`, and `check.fish` within the same worktree share the
+  exact same RAM cache seamlessly without requiring custom `CARGO_TARGET_DIR` environment variables.
 
-#### The Solution: Separate Build Artifacts
+#### 2. Smart RAM-Aware Storage Selection
 
-Configure each tool to use its own target directory. Rust supports this via the
-`CARGO_TARGET_DIR` environment variable:
+`check.fish` automatically inspects total physical system memory:
 
-```
-target/
-├── vscode/      # VSCode rust-analyzer builds
-├── agents/      # Optional AI (LLM) coding agent builds
-├── check/       # check.fish file watcher builds
-└── cli/         # Terminal manual builds (optional)
-```
+- **High-RAM Workstations (>= 48 GiB RAM)**: Uses `/tmp` (RAM-backed tmpfs) for maximum compilation speed.
+- **Lower-RAM Machines (< 48 GiB RAM)**: Automatically routes to `/var/tmp` (NVMe disk-backed storage) to prevent tmpfs exhaustion and out-of-memory crashes during large builds or background system updates.
 
-Now tools build in parallel without interfering with each other.
+#### 3. Directory Independence
 
-#### Configuration by Tool
+`check.fish` can be safely executed from any subfolder or crate directory (e.g. from
+`tui/`, `cmdr/`, etc.). It automatically resolves the repository root (`CHECK_REPO_ROOT`)
+and operates relative to the root project workspace.
 
-Generally speaking you can just add `CARGO_TARGET_DIR=target/XYZ` in the command. For
-example, you can run your AI (LLM) coding agent with the `CARGO_TARGET_DIR` environment
-variable set, and all the `cargo` commands spawned by it will have their own target
-directory to work with:
+#### 4. Rsync & Auto-Healing Symlinks
 
-```bash
-CARGO_TARGET_DIR=target/agents <agent-command>
-```
+When cloning, syncing, or copying repository folders via `rsync` (or across reboots where
+tmpfs is wiped):
 
-You can add this to an alias, add it to scripts (like `check.fish` does via
-`set -gx CARGO_TARGET_DIR target/check`) or you can configure settings in your tool of
-choice.
+- The backing store directory is automatically re-created.
+- Broken or misdirected `./target` symlinks are detected and auto-healed whenever
+  `check.fish` runs.
+- Simply execute `./check.fish --check` on any new machine or worktree to instantly
+  provision the build cache symlink.
 
-In VSCode, you can add the following to `.vscode/settings.json`:
+#### 5. Cache Management & Cleaning (`--clean`)
 
-```json
-{
-    "rust-analyzer.cargo.targetDir": true
-}
-```
+To clear the build cache:
 
-#### Benefits
-
-| Benefit              | Impact                                                                        |
-| -------------------- | ----------------------------------------------------------------------------- |
-| **Zero Contention**  | Tools run in parallel without waiting on locks                                |
-| **Responsive IDE**   | `rust-analyzer` completes checks while you code (not blocked by file watcher) |
-| **Faster Feedback**  | Terminal `cargo` commands complete instantly (not queued behind IDE checks)   |
-| **Parallel Testing** | `bacon` + `check.fish` both run, providing redundant test feedback            |
-| **Disk Space**       | ~2-3GB per tool (manageable with cleanup)                                     |
-
-#### Example Workflow Setup
-
-Here's a typical productive development workflow setup:
-
-```bash
-# Terminal 1: Running your IDE (VSCode with rust-analyzer)
-CARGO_TARGET_DIR=target/vscode code .
-
-# Terminal 2: File watcher with automatic tests
-check.fish --watch-test # Runs with: CARGO_TARGET_DIR=target/check
-
-# Terminal 3: Optional AI (LLM) coding agent (e.g. agy, or your tool of choice)
-CARGO_TARGET_DIR=target/agents <agent-command>
-
-# Terminal 4: Run bacon
-CARGO_TARGET_DIR=target/bacon bacon doc --headless
-
-# Result: All four run in parallel, zero blocking
-```
-
-Before this optimization, Terminal 3 would hang waiting for Terminal 1 & 2 to release the
-`target/` lock.
-
-#### Disk Space Management
-
-Each tool caches ~2-3GB of build artifacts. With 4 tools, expect ~10-12GB total. To
-manage:
-
-```bash
-# View size of each target directory
-du -sh target/*/
-
-# Clean individual tool builds
-rm -rf target/vscode
-rm -rf target/agents
-rm -rf target/check
-
-# Full cleanup (nuclear option)
-rm -rf target/
-```
-
-#### Troubleshooting
-
-**Syntax errors still appear in IDE but code works in terminal?**
-
-Your IDE and terminal are using different target directories. Verify `CARGO_TARGET_DIR`
-configuration:
-
-```bash
-# Check what each tool sees
-echo $CARGO_TARGET_DIR  # Terminal value
-# VSCode: Check .vscode/settings.json
-```
-
-**Build artifacts aren't being reused across tools?**
-
-Each tool has its own `target/` directory by design. This is correct - the slight disk
-space overhead is worth the responsiveness gain. If you need to share builds, unset
-`CARGO_TARGET_DIR` (not recommended for development).
-
-**"Target directory not found" error?**
-
-`cargo` automatically creates the directory. If you see this error, verify the path is
-writable and the environment variable is set correctly:
-
-```bash
-# Verify the variable is actually set
-env | grep CARGO_TARGET_DIR
-
-# Test with explicit path
-CARGO_TARGET_DIR=/tmp/test cargo build
-```
+- **`./check.fish --clean` (Recommended)**: Safely empties the backing tmpfs target directory
+  contents and staging directories, preserving the symlink structure and avoiding OS errors.
+- **`cargo clean`**: Standard cargo clean works normally through the symlink.
+- **`rm -rf target`**: If the `./target` symlink is manually deleted from the shell,
+  `check.fish` detects the missing symlink on the next run, wipes any orphaned backing store,
+  and re-provisions a fresh symlink.
 
 #### Incremental Compilation Management
 

@@ -46,7 +46,7 @@ function cleanup_oversized_target
         log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🧹 Managed dirs are "$size_gb"GiB (limit: "$MAX_TARGET_SIZE_GB"GiB), cleaning..."
         for dir in $managed_dirs
             if test -d "$dir"
-                command rm -rf "$dir"
+                find "$dir" -mindepth 1 -delete 2>/dev/null
             end
         end
     end
@@ -56,6 +56,8 @@ end
 # Removes build artifacts and caches to ensure a clean rebuild.
 # This is important because various parts of the cache (incremental, metadata, etc.)
 # can become corrupted and cause compiler panics or other mysterious failures.
+# Uses find -mindepth 1 -delete to empty the tmpfs backing directory without removing
+# the folder itself, preserving active symlinks and preventing OS error 20.
 #
 # Parameters (optional):
 #   $argv: Specific directories to clean. If none provided, cleans all 3 target dirs.
@@ -69,7 +71,7 @@ function cleanup_target_folder
     end
     for dir in $dirs_to_clean
         if test -d "$dir"
-            command rm -rf "$dir"
+            find "$dir" -mindepth 1 -delete 2>/dev/null
         end
     end
 end

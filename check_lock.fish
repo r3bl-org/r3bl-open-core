@@ -74,16 +74,16 @@ end
 # These can be left behind if the parent was killed with SIGKILL.
 # Supports both inotifywait (Linux) and fswatch (macOS).
 function kill_orphaned_watchers
-    # Kill orphaned inotifywait (Linux)
-    set -l inotify_pids (pgrep -f "inotifywait.*cmdr/src" 2>/dev/null)
+    # Kill orphaned inotifywait (Linux) for this specific worktree/repo root
+    set -l inotify_pids (pgrep -f "inotifywait.*$CHECK_REPO_ROOT/" 2>/dev/null)
     if test (count $inotify_pids) -gt 0
         for pid in $inotify_pids
             kill $pid 2>/dev/null
         end
     end
 
-    # Kill orphaned fswatch (macOS)
-    set -l fswatch_pids (pgrep -f "fswatch.*cmdr/src" 2>/dev/null)
+    # Kill orphaned fswatch (macOS) for this specific worktree/repo root
+    set -l fswatch_pids (pgrep -f "fswatch.*$CHECK_REPO_ROOT/" 2>/dev/null)
     if test (count $fswatch_pids) -gt 0
         for pid in $fswatch_pids
             kill $pid 2>/dev/null

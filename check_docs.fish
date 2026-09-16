@@ -72,7 +72,7 @@
 # Accepts optional --timeout=SECS for builds that need time limits.
 # All other arguments pass through to `cargo doc`.
 function run_cargo_doc
-    set -lx RUSTDOCFLAGS "--extend-css $PWD/docs/rustdoc/custom.css"
+    set -lx RUSTDOCFLAGS "--extend-css $CHECK_REPO_ROOT/docs/rustdoc/custom.css"
 
     set -l timeout_secs 0
     set -l cargo_args
@@ -128,10 +128,9 @@ function build_and_sync_quick_docs
     set -l staging_dir $argv[1]
     set -l serving_dir $argv[2]
 
-    set -lx CARGO_TARGET_DIR $staging_dir
     # Fast mode: --workspace --no-deps (~5-7s)
     # No external crate links - full build will fix them soon
-    run_cargo_doc --workspace --no-deps > /dev/null 2>&1
+    run_cargo_doc --target-dir $staging_dir --workspace --no-deps > /dev/null 2>&1
     set -l result $status
 
     if test $result -eq 0
@@ -154,11 +153,10 @@ function build_and_sync_full_docs
     set -l staging_dir $argv[1]
     set -l serving_dir $argv[2]
 
-    set -lx CARGO_TARGET_DIR $staging_dir
     if dep_docs_are_current $staging_dir
-        run_cargo_doc --no-deps > /dev/null 2>&1
+        run_cargo_doc --target-dir $staging_dir --no-deps > /dev/null 2>&1
     else
-        run_cargo_doc > /dev/null 2>&1
+        run_cargo_doc --target-dir $staging_dir > /dev/null 2>&1
     end
     set -l result $status
 
@@ -370,7 +368,7 @@ function run_full_doc_build_task
 
                 # Fork another full build to eventually fix the broken links
                 fish -c "
-                    cd $PWD
+                    cd $CHECK_REPO_ROOT
                     source script_lib.fish
                     source check_constants.fish
                     source check_docs.fish

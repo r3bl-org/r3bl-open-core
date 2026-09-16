@@ -28,32 +28,26 @@
 #    zombie processes or infinite hangs during macro expansion or compiler bugs.
 
 function check_cargo_check
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo check
 end
 
 function check_cargo_build
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo build
 end
 
 function check_clippy
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo clippy --all-targets -- -D warnings
 end
 
 function check_cargo_test
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo test --all-targets -q
 end
 
 function check_doctests
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo test --doc -q
 end
 
 function check_windows_build
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR
     ensure_windows_build_dependencies || return 1
     ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo rustc -p r3bl_tui --target x86_64-pc-windows-gnu -- --emit=metadata
 end
@@ -70,8 +64,7 @@ end
 # Quick doc check without dependencies (for --quick-doc and normal mode).
 # Builds to QUICK staging directory; callers rsync to serving dir after success.
 function check_docs_quick
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_QUICK
-    run_cargo_doc --timeout=$CHECK_TIMEOUT_SECS --no-deps
+    run_cargo_doc --target-dir $CHECK_TARGET_DIR_DOC_STAGING_QUICK --timeout=$CHECK_TIMEOUT_SECS --no-deps
 end
 
 # Full doc build with dep-doc caching (for --doc, --full, and watch modes).
@@ -92,8 +85,6 @@ end
 #
 # Rust migration: Query shared build daemon/state to await active doc compilation.
 function check_docs_full
-    set -lx CARGO_TARGET_DIR $CHECK_TARGET_DIR_DOC_STAGING_FULL
-
     # If a full doc build is ALREADY running (in background watch-doc or another terminal),
     # wait for it to finish instead of spawning a second concurrent cargo doc process!
     if is_background_doc_build_running
@@ -111,10 +102,10 @@ function check_docs_full
 
     if dep_docs_are_current $CHECK_TARGET_DIR_DOC_STAGING_FULL
         set -g DEP_DOCS_WERE_CACHED true
-        run_cargo_doc --timeout=$CHECK_TIMEOUT_SECS --no-deps
+        run_cargo_doc --target-dir $CHECK_TARGET_DIR_DOC_STAGING_FULL --timeout=$CHECK_TIMEOUT_SECS --no-deps
     else
         set -g DEP_DOCS_WERE_CACHED false
-        run_cargo_doc --timeout=$CHECK_TIMEOUT_SECS
+        run_cargo_doc --target-dir $CHECK_TARGET_DIR_DOC_STAGING_FULL --timeout=$CHECK_TIMEOUT_SECS
     end
 
     command rm -f $CHECK_FULL_DOC_PID_FILE 2>/dev/null

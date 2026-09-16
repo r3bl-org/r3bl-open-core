@@ -12,14 +12,21 @@
 # - ionice -c2 -n0: Highest I/O priority in best-effort class (no sudo needed).
 #   Note: Mainly affects SSD reads (source files); tmpfs writes bypass the block I/O layer.
 
+# Complete CARGO_TARGET_DIR eradication:
+# Strip any inherited CARGO_TARGET_DIR from stale shell environments so cargo
+# always uses the native ./target symlink without being hijacked by old exports.
+set -q CARGO_TARGET_DIR; and set -e CARGO_TARGET_DIR
+
 # Lock/PID file for single-instance enforcement.
 # Uses PID file with process liveness check - simpler and fish-compatible.
-# Project name for isolation.
-set -l project_name (basename $PWD)
-set -g CHECK_LOCK_FILE /tmp/check-fish-$project_name.pid
+# Scoped with user, project name, and repo path hash for complete worktree isolation.
+set -l project_name (basename "$CHECK_REPO_ROOT")
+set -l repo_hash (string sub -l 8 (echo -n "$CHECK_REPO_ROOT" | sha256sum | cut -d' ' -f1))
+set -l project_id "$project_name-$repo_hash"
+set -g CHECK_LOCK_FILE /tmp/check-fish-$USER-$project_id.pid
 
 # Project name (folder name) for notifications.
-set -g WORKSPACE_NAME (prompt_pwd)
+set -g WORKSPACE_NAME (basename "$CHECK_REPO_ROOT")
 
 # Sliding window debounce for watch mode (in seconds).
 # After detecting a file change, waits for this many seconds of "quiet" (no new changes)
@@ -41,22 +48,48 @@ set -g DEBOUNCE_WINDOW_SECS 1
 # /var/tmp is preferred over ~/.cache because it is disk-backed and systemd-tmpfiles handles automatic cleanup.
 set -l total_ram_gib (get_system_ram_gib)
 if test $total_ram_gib -ge 48
-    set -g CHECK_PROJECT_ROOT /tmp/check-fish-$project_name
+    set -g CHECK_PROJECT_ROOT /tmp/check-fish-$USER-$project_id
 else
-    set -g CHECK_PROJECT_ROOT /var/tmp/check-fish-$project_name
+    set -g CHECK_PROJECT_ROOT /var/tmp/check-fish-$USER-$project_id
 end
 
-# SHARED TREE: cargo build artifacts (shared between check.fish and IDE).
-# Respect user's CARGO_TARGET_DIR if set, otherwise default to isolated tmpfs path.
-# All doc modes build to staging dirs (private tree), then rsync to serving dir (shared tree).
-# This prevents browser tabs from seeing empty doc folders during builds.
-if set -q CARGO_TARGET_DIR; and test -n "$CARGO_TARGET_DIR"
-    set -g CHECK_TARGET_DIR $CARGO_TARGET_DIR
-else
-    set -g CHECK_TARGET_DIR $CHECK_PROJECT_ROOT/target
-    # Export so cargo picks it up (scoped to this process)
-    set -gx CARGO_TARGET_DIR $CHECK_TARGET_DIR
+# SHARED TREE: cargo build artifacts (shared between check.fish and IDE via ./target symlink).
+set -g CHECK_TARGET_DIR $CHECK_PROJECT_ROOT/target
+
+# Always ensure the tmpfs backing directories exist. This is critical for recovering
+# from a reboot (which clears tmpfs) or an rsync (which copies the symlink but not the tmpfs dir).
+mkdir -p "$CHECK_TARGET_DIR"
+mkdir -p "$CHECK_PROJECT_ROOT/staging-quick"
+mkdir -p "$CHECK_PROJECT_ROOT/staging-full"
+
+# Native Symlink Isolation (Zero env vars needed for cargo!)
+# Check and auto-heal the symlink:
+# - If target is a symlink but points to the wrong target or is broken, recreate it.
+# - If target is a physical directory or file, safely migrate contents and replace with symlink.
+# - If target does not exist (e.g. user ran rm -rf target to clear cache), wipe backing store too and recreate symlink.
+function ensure_target_symlink
+    mkdir -p "$CHECK_TARGET_DIR"
+    set -l local_target "$CHECK_REPO_ROOT/target"
+    if test -L "$local_target"
+        set -l link_target (readlink "$local_target")
+        if test "$link_target" != "$CHECK_TARGET_DIR"
+            rm -f "$local_target"
+            ln -s "$CHECK_TARGET_DIR" "$local_target"
+        end
+    else
+        if test -e "$local_target"
+            echo "Moving existing physical target directory to tmpfs..."
+            mv "$local_target"/* "$CHECK_TARGET_DIR"/ 2>/dev/null
+            rmdir "$local_target" 2>/dev/null; or rm -rf "$local_target"
+        else
+            # User nuked target/ to reset cache; wipe backing store too.
+            find "$CHECK_TARGET_DIR" -mindepth 1 -delete 2>/dev/null
+        end
+        ln -s "$CHECK_TARGET_DIR" "$local_target"
+    end
 end
+
+ensure_target_symlink
 
 # Derived paths for staging and metadata.
 set -g CHECK_TARGET_DIR_DOC_STAGING_QUICK $CHECK_PROJECT_ROOT/staging-quick

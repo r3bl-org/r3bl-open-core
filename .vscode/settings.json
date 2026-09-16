@@ -8,10 +8,6 @@
     },
     // https://rust-analyzer.github.io/book/configuration.html#cargo.targetDir
     // https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/
-    "rust-analyzer.cargo.targetDir": "/tmp/roc/target",
-    "terminal.integrated.env.linux": {
-        "CARGO_TARGET_DIR": "/tmp/roc/target"
-    },
     "cSpell.words": [
         "abcab",
         "abcaba",

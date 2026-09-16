@@ -35,6 +35,7 @@
 #   ./check.fish --doc        Build docs only (full, with deps, dep-doc caching)
 #   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)
 #   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)
+#   ./check.fish --clean      Clean target build cache (empties tmpfs backing store)
 #   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
 #   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
@@ -52,11 +53,15 @@
 #   check_orchestrators.fish   Check composition, result aggregation, retry with recovery
 #   check_watch.fish           Watch mode loop, sliding window debounce, check dispatch
 
-# Import shared utilities (resolve relative to this script, not cwd)
-source (dirname (status --current-filename))/script_lib.fish
+# Directory Independence: Always switch to repository root where this script lives
+set -g CHECK_REPO_ROOT (cd (dirname (status --current-filename)) && pwd)
+cd $CHECK_REPO_ROOT
+set -l __check_dir $CHECK_REPO_ROOT
+
+# Import shared utilities (resolve relative to repo root)
+source $CHECK_REPO_ROOT/script_lib.fish
 
 # Import check.fish modules (order matters: constants first, then utilities, then consumers)
-set -l __check_dir (dirname (status --current-filename))
 source $__check_dir/check_constants.fish       # Globals — must be first (sets vars used by all others)
 source $__check_dir/check_lock.fish            # Lock/PID — uses CHECK_LOCK_FILE
 source $__check_dir/check_cli.fish             # parse_arguments, show_help — uses constants in help text
@@ -134,6 +139,12 @@ function main
             purge_zombie_processes
 
             echo "✅ Cleanup complete"
+            return 0
+        case clean
+            echo "🧹 Cleaning target build cache ($CHECK_TARGET_DIR)..."
+            cleanup_target_folder
+            ensure_target_symlink
+            echo "✅ Target cache cleaned successfully"
             return 0
         case star-history
             echo ""

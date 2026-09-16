@@ -163,9 +163,15 @@ function watch_mode
         return 1
     end
 
-    # Use shared SRC_DIRS constant from script_lib.fish
-    # Make a local copy so we can modify it (add config files)
-    set -l watch_dirs $SRC_DIRS
+    # Construct watch_dirs using absolute paths rooted at $CHECK_REPO_ROOT
+    set -l watch_dirs
+    for dir in $SRC_DIRS
+        if string match -q "/*" $dir
+            set -a watch_dirs $dir
+        else
+            set -a watch_dirs "$CHECK_REPO_ROOT/$dir"
+        end
+    end
 
     # Verify directories exist
     for dir in $watch_dirs
@@ -178,8 +184,14 @@ function watch_mode
     # Add config files to watch list (for detecting config changes mid-session)
     # These are files, not directories, but inotifywait handles both
     for config_file in $CONFIG_FILES_TO_WATCH
-        if test -f $config_file
-            set watch_dirs $watch_dirs $config_file
+        set -l abs_config_file
+        if string match -q "/*" $config_file
+            set abs_config_file $config_file
+        else
+            set abs_config_file "$CHECK_REPO_ROOT/$config_file"
+        end
+        if test -f "$abs_config_file"
+            set -a watch_dirs "$abs_config_file"
         end
     end
 
@@ -250,14 +262,17 @@ function watch_mode
         wait_for_file_changes $TARGET_CHECK_INTERVAL_SECS $watch_dirs
         set -l wait_status $status
 
-        # Check if target/ directory is missing (regardless of event or timeout)
+        # Check if target/ symlink or target backing directory is missing (regardless of event or timeout)
         # This handles external deletions (cargo clean, manual rm -rf target/, etc.)
-        if not test -d "$CHECK_TARGET_DIR"
+        if not test -L "$CHECK_REPO_ROOT/target"; or not test -d "$CHECK_TARGET_DIR"
             echo ""
             set_color yellow
-            echo "["(timestamp)"] 📁 target/ missing, triggering rebuild..."
+            echo "["(timestamp)"] 📁 target/ symlink or backing directory missing (external clean detected), auto-healing and triggering rebuild..."
             set_color normal
             echo ""
+
+            # Auto-heal symlink now that deletion was detected
+            ensure_target_symlink
 
             run_checks_for_type $check_type
             set -l result $status
@@ -323,6 +338,9 @@ function watch_mode
         # PHASE 3: Run checks (quiet period detected)
         # ──────────────────────────────────────────────────────────────────────
 
+
+        # Ensure symlink integrity before running checks
+        ensure_target_symlink
 
         # Evict build cache if it has grown too large (prevents filling tmpfs)
         cleanup_oversized_target
@@ -480,7 +498,7 @@ function run_checks_for_type
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔀 Forking full build to background..."
 
             fish -c "
-                cd $PWD
+                cd $CHECK_REPO_ROOT
                 source script_lib.fish
                 source check_constants.fish
                 source check_docs.fish

@@ -5,7 +5,7 @@
 
 # Parse command line arguments and return the mode
 # Returns: "help", "check", "build", "clippy", "test", "doc", "quick-doc",
-#          "full", "watch", "watch-test", "watch-doc", or "normal"
+#          "full", "clean", "watch", "watch-test", "watch-doc", or "normal"
 function parse_arguments
     if test (count $argv) -eq 0
         echo "normal"
@@ -30,6 +30,9 @@ function parse_arguments
             return 0
         case --full
             echo "full"
+            return 0
+        case --clean
+            echo "clean"
             return 0
         case --watch -w
             echo "watch"
@@ -88,6 +91,7 @@ function show_help
     echo "  ./check.fish --doc        Build documentation only (full, with deps, dep-doc caching)"
     echo "  ./check.fish --quick-doc  Build docs (quick, --no-deps, staging + sync)"
     echo "  ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows + lychee)"
+    echo "  ./check.fish --clean      Clean target build cache (empties tmpfs backing store)"
     echo "  ./check.fish --watch      Watch mode: run default checks on changes"
     echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
     echo "  ./check.fish --watch-doc  Watch mode: run doc build (full with deps)"
@@ -112,6 +116,8 @@ function show_help
     echo "  ✓ Auto-recovery from ICE and stale build artifacts (cleans cache, retries)"
     echo "  ✓ Desktop notifications on toolchain changes"
     echo "  ✓ Target directory auto-recovery in watch modes"
+    echo "  ✓ Tmpfs target symlink isolation (worktree-scoped, zero CARGO_TARGET_DIR pollution)"
+    echo "  ✓ Dedicated cache cleaner (--clean empties backing tmpfs directory)"
     echo "  ✓ Orphan doc file cleanup (full builds detect and remove stale files)"
     echo "  ✓ Performance optimizations (tmpfs, ionice, parallel jobs)"
     echo "  ✓ Comprehensive logging (all modes log to $CHECK_LOG_FILE)"
@@ -132,6 +138,7 @@ function show_help
     echo "  --full        Runs ALL checks: check + build + clippy + tests + doctests + docs + windows + lychee"
     echo "                Auto-recovers from ICE (escalates to rust-toolchain-update.fish)"
     echo "                and stale build artifacts (cleans cache, retries)"
+    echo "  --clean       Cleans target build cache: empties $CHECK_TARGET_DIR tmpfs store"
     echo ""
 
     set_color yellow
@@ -355,7 +362,11 @@ function show_help
     echo "  # Watch for changes and auto-run doc build only"
     echo "  ./check.fish --watch-doc"
     echo ""
+    echo "  # Clean target build cache (empties tmpfs backing store)"
+    echo "  ./check.fish --clean"
+    echo ""
     echo "  # Show this help"
     echo "  ./check.fish --help"
     echo ""
 end
+

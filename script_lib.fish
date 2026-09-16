@@ -1709,7 +1709,7 @@ function check_config_changed
             echo "🧹 Cleaning $target_dir to avoid stale artifacts..."
             set_color normal
             if test -d "$target_dir"
-                command rm -rf "$target_dir"
+                find "$target_dir" -mindepth 1 -delete 2>/dev/null
             end
             echo $config_hash > $hash_file
             echo ""
@@ -1893,9 +1893,17 @@ end
 #
 # Keeping this as a single source of truth ensures consistency between
 # the watch loop and catch-up detection.
-#
-# Rust migration: This would be a const Vec<&str> or similar.
-set -g SRC_DIRS cmdr/src analytics_schema/src tui/src build-infra/src
+# Dynamically discovers all workspace crate source directories (*/src).
+set -g SRC_DIRS
+for crate_dir in */src
+    if test -d "$crate_dir"
+        set -a SRC_DIRS (string replace -r '/$' '' $crate_dir)
+    end
+end
+if test (count $SRC_DIRS) -eq 0
+    # Fallback to standard crate source dirs if not run from repo root
+    set -g SRC_DIRS cmdr/src analytics_schema/src tui/src build-infra/src rust-analyzer-mcp-server/src
+end
 
 # Checks if source files changed since a given epoch timestamp.
 #
