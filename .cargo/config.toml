@@ -2,15 +2,11 @@
 
 # Compiler and Linker Speedups:
 # 1. Parallel frontend compiler (`-Z threads=8`)
-# 2. fast `rust-lld` linker on Linux (`link-arg=-fuse-ld=lld)
+# 2. Fast bundled `rust-lld` linker (`-C linker-features=+lld`)
 # Requires nightly toolchain (see rust-toolchain.toml).
 # Tracking issue: https://github.com/rust-lang/rust/issues/113349
-[target.'cfg(target_os = "linux")']
-rustflags = ["-Z", "threads=8", "-C", "link-arg=-fuse-ld=lld"]
-
-[build]
-# Store build artifacts in tmpfs for maximum compile performance
-target-dir = "/tmp/roc/target"
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8", "-Z", "unstable-options", "-C", "linker-features=+lld"]
 
 [profile.dev]
 # Only disable to avoid rustc dep graph ICE on nightly which should not
