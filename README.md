@@ -352,6 +352,39 @@ need. `r3bl_tui` allows you to create application state that can be moved betwee
 There is just one main library crate in this workspace:
 [`r3bl_tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui).
 
+To add `r3bl_tui` to your own Rust project:
+
+**Option 1: crates.io (stable release)**
+
+Use this if you prefer stable, versioned releases:
+
+```bash
+cargo add r3bl_tui
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = "0.7.8"
+```
+
+**Option 2: GitHub main branch (bleeding edge)**
+
+Bug fixes and patches land on `main` immediately before being published to crates.io.
+If you need the latest fixes or rapid iteration:
+
+```bash
+cargo add r3bl_tui --git https://github.com/r3bl-org/r3bl-open-core.git --branch main
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = { git = "https://github.com/r3bl-org/r3bl-open-core.git", branch = "main" }
+```
+
 ### Main binary crate
 
 There is just one main binary crate that contains user facing apps that are built using

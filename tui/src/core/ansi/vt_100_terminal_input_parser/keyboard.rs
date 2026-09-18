@@ -248,49 +248,6 @@
 //! This dual approach gives us the best of both worlds: efficiency for simple cases
 //! (Alt+letter) and expressiveness for complex cases (Ctrl+Alt+Shift+Up).
 //!
-//! ## Parser Dispatch Priority Pipeline
-//!
-//! This module provides multiple parser functions that are invoked in a **predefined
-//! priority order** by the [`try_parse_input_event`] main routing function.
-//!
-//! ### [`CSI`] Sequences (`ESC [`...)
-//!
-//! When buffer starts with `ESC [`:
-//! 1. **`parse_keyboard_sequence()`** - Arrow keys, function keys, modified keys with
-//!    [`CSI`] format
-//!    - Examples: `ESC [A` (Up), `ESC [1;5A` (Ctrl+Up), `ESC [15~` (F5)
-//! 2. **`parse_mouse_sequence()`** - [`SGR`] mouse protocol for clicks, drags, scrolling
-//!    - Examples: `ESC [<0;10;20M` (left click), `ESC [<64;10;20M` (scroll up)
-//! 3. **`parse_terminal_event()`** - Window resize, focus gained/lost, paste markers
-//!    - Examples: `ESC [8;24;80t` (resize to 24x80), `ESC [I` (focus gained)
-//!
-//! ### SS3 Sequences (`ESC O`...)
-//!
-//! When buffer starts with `ESC O`:
-//! - **`parse_ss3_sequence()`** - Application mode keys (F1-F4, Home, End, arrows)
-//!   - Examples: `ESC OP` (F1), `ESC OA` (Up in app mode)
-//!
-//! ### [`ESC`] + Unknown Byte
-//!
-//! When buffer starts with [`ESC`] + (something other than `[` or `O`):
-//! - **`parse_alt_letter()`** - Alt+printable character combinations
-//!   - Examples: `ESC b` (Alt+B), `ESC 3` (Alt+3), `ESC ░` (Alt+Space)
-//!
-//! ### Non-[`ESC`] Sequences (Regular Input)
-//!
-//! When first byte is not [`ESC`]:
-//! 1. **`parse_terminal_event()`** - (Re-attempted for non-[`ESC`] input)
-//! 2. **`parse_mouse_sequence()`** - [`X10`]/[`RXVT`] mouse protocols (legacy)
-//! 3. **`parse_control_character()`** - Ctrl+A through Ctrl+Z (`0x00`-`0x1F`)
-//!    - Examples: `0x01` (Ctrl+A), `0x04` (Ctrl+D), `0x17` (Ctrl+W)
-//!    - **Must be tried before [`UTF-8`]** because control bytes are valid [`UTF-8`]
-//! 4. **`parse_utf8_text()`** - Regular text input and printable characters
-//!    - Examples: `a`, `ñ`, `日`, multi-byte [`UTF-8`] sequences
-//!
-//! **Critical**: Control characters must be parsed before [`UTF-8`] because bytes
-//! `0x00`-`0x1F` are technically valid [`UTF-8`] but represent Ctrl+letter combinations.
-//! Without this priority, Ctrl+A would be misinterpreted as incomplete [`UTF-8`].
-//!
 //! ## Ambiguous Control Character Handling
 //!
 //! **Design Decision**: Some control characters are ambiguous at the protocol level
@@ -499,7 +456,8 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, NarrowingCastToU8, WideningCastToU1
                                     ASCII_DIGIT_9, ASCII_LOWER_A, ASCII_LOWER_Z,
                                     ASCII_UPPER_A, ASCII_UPPER_Z, BACKTAB_FINAL,
                                     CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
-                                    CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
+                                    CONTROL_LF, CONTROL_NUL, CONTROL_TAB, CSI_MIN_LEN,
+                                    CSI_PARAM_DEFAULT, CSI_PARAM_ZERO, CSI_PREFIX_LEN,
                                     CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK,
                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
@@ -522,7 +480,7 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, NarrowingCastToU8, WideningCastToU1
                                     SS3_NUMPAD_8, SS3_NUMPAD_9, SS3_NUMPAD_COMMA,
                                     SS3_NUMPAD_DECIMAL, SS3_NUMPAD_DIVIDE,
                                     SS3_NUMPAD_ENTER, SS3_NUMPAD_MINUS,
-                                    SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS}};
+                                    SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS, SS3_SEQ_LEN}};
 
 /// Parse a control character (bytes `0x00`-`0x1F`) and convert to a Ctrl+key event.
 ///
@@ -530,9 +488,9 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, NarrowingCastToU8, WideningCastToU1
 /// [`UTF-8`] text because control bytes are valid [`UTF-8`] but represent Ctrl+letter
 /// combinations.
 ///
-/// See module docs [`Parser Dispatch Priority Pipeline`] for dispatch order and [`Control
-/// Key Combinations`] for complete byte mappings. Note: some bytes are treated as
-/// dedicated keys (Tab, Enter, Backspace, Escape) - see [`Ambiguous Control Character
+/// See [`Parser Dispatch Priority Pipeline`] in [`router`] for dispatch order and
+/// [`Control Key Combinations`] for complete byte mappings. Note: some bytes are treated
+/// as dedicated keys (Tab, Enter, Backspace, Escape) - see [`Ambiguous Control Character
 /// Handling`] for details.
 ///
 /// # Returns
@@ -544,7 +502,8 @@ use crate::{ASCII_DEL, ByteOffset, KeyState, NarrowingCastToU8, WideningCastToU1
 ///     mod@self#ambiguous-control-character-handling
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`ESC`]: crate::EscSequence
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Parser Dispatch Priority Pipeline`]: mod@super::router#parser-dispatch-priority-pipeline
+/// [`router`]: mod@super::router
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -643,8 +602,8 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 
 /// Parse Alt+key combination ([`ESC`] followed by printable [`ASCII`] or DEL).
 ///
-/// **Dispatch position**: Only parser for [`ESC`] + unknown byte. See module docs
-/// [`Parser Dispatch Priority Pipeline`] for dispatch order.
+/// **Dispatch position**: Only parser for [`ESC`] + unknown byte. See [`Parser Dispatch
+/// Priority Pipeline`] in [`router`] for dispatch order.
 ///
 /// Terminals send Alt+key as [`ESC`] (`0x1B`) + key byte. This parses two-byte sequences
 /// like Alt+B → (`0x1B`, `0x62`) or Alt+Backspace → (`0x1B`, `0x7F`).
@@ -660,7 +619,8 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`CSI`]: crate::CsiSequence
 /// [`ESC`]: crate::EscSequence
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Parser Dispatch Priority Pipeline`]: mod@super::router#parser-dispatch-priority-pipeline
+/// [`router`]: mod@super::router
 /// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
@@ -715,9 +675,9 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 
 /// Parses a [`CSI`] keyboard sequence and returns the parsed event with bytes consumed.
 ///
-/// **Dispatch position**: 1st parser for [`CSI`] sequences ([`ESC`] [). See module docs
-/// [`Parser Dispatch Priority Pipeline`] for dispatch order. Keyboard sequences are tried
-/// first because they're more common than mouse or terminal events.
+/// **Dispatch position**: 1st parser for [`CSI`] sequences ([`ESC`] [). See [`Parser
+/// Dispatch Priority Pipeline`] in [`router`] for dispatch order. Keyboard sequences are
+/// tried first because they're more common than mouse or terminal events.
 ///
 /// Handles arrow keys, function keys, and modified keys like Alt+Right, Ctrl+Up, etc.
 /// See [`CSI Sequences`] for format details.
@@ -730,33 +690,26 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
 /// [`CSI`]: crate::CsiSequence
 /// [`ESC`]: crate::EscSequence
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Parser Dispatch Priority Pipeline`]: mod@super::router#parser-dispatch-priority-pipeline
+/// [`router`]: mod@super::router
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
-    // Check minimum length: ESC [ + final byte
-    if buffer.len() < 3 {
-        return None;
+    match csi_decoder::classify_csi_buffer(buffer) {
+        csi_decoder::CsiBufferKind::SingleChar(final_byte) => {
+            let event = csi_decoder::parse_csi_single_char(final_byte)?;
+            Some((event, byte_offset(CSI_MIN_LEN)))
+        }
+        csi_decoder::CsiBufferKind::Parameterized(buf) => {
+            csi_decoder::parse_csi_parameters(buf)
+        }
+        csi_decoder::CsiBufferKind::Invalid => None,
     }
-
-    // Check for ESC [ sequence start
-    if buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET {
-        return None;
-    }
-
-    // Handle simple control keys first (single character after ESC [)
-    if buffer.len() == 3 {
-        return helpers::parse_csi_single_char(buffer[2])
-            .map(|event| (event, byte_offset(3)));
-    }
-
-    // Parse parameters and final byte for multi-character sequences
-    helpers::parse_csi_parameters(buffer)
 }
 
 /// Parses an SS3 keyboard sequence and returns the parsed event with bytes consumed.
 ///
-/// **Dispatch position**: Only parser for SS3 sequences ([`ESC`] O). See module docs
-/// [`Parser Dispatch Priority Pipeline`] for dispatch order.
+/// **Dispatch position**: Only parser for SS3 sequences ([`ESC`] O). See [`Parser
+/// Dispatch Priority Pipeline`] in [`router`] for dispatch order.
 ///
 /// SS3 sequences ([`ESC`] O + single char) are used in terminal application mode (vim,
 /// less, emacs) for arrow keys, function keys (F1-F4), Home, End, and numpad keys. Always
@@ -772,59 +725,77 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [`ESC`]: crate::EscSequence
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Parser Dispatch Priority Pipeline`]: mod@super::router#parser-dispatch-priority-pipeline
+/// [`router`]: mod@super::router
 /// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
 #[must_use]
 pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
-    // SS3 sequences must be exactly 3 bytes: ESC O + command_char
-    if buffer.len() < 3 {
-        return None;
+    match ss3::classify_ss3_buffer(buffer) {
+        ss3::Ss3BufferKind::Command(command_byte) => {
+            let code = ss3::parse_ss3_command(command_byte)?;
+            Some((
+                VT100InputEventIR::Keyboard {
+                    code,
+                    modifiers: VT100KeyModifiersIR::default(),
+                },
+                byte_offset(SS3_SEQ_LEN),
+            ))
+        }
+        ss3::Ss3BufferKind::Invalid => None,
     }
-
-    // Check for ESC O sequence start
-    if buffer[0] != ANSI_ESC || buffer[1] != ANSI_SS3_O {
-        return None;
-    }
-
-    // Parse the command character
-    let code = helpers::parse_ss3_command(buffer[2])?;
-
-    Some((
-        VT100InputEventIR::Keyboard {
-            code,
-            modifiers: VT100KeyModifiersIR::default(),
-        },
-        byte_offset(3),
-    ))
 }
 
-/// Private helper functions for keyboard sequence parsing.
-///
-/// This module contains internal parsing utilities that support the public API functions.
-/// Functions here handle lower-level sequence parsing and decoding tasks.
-mod helpers {
-    #![allow(clippy::wildcard_imports)]
+/// Private helper functions for SS3 sequence parsing.
+mod ss3 {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
+    /// Structural categorization of an incoming [`SS3`] byte slice.
+    ///
+    /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    pub enum Ss3BufferKind {
+        /// Starts with `ESC O` and contains a command byte.
+        Command(u8),
+        /// Does not start with `ESC O` or is shorter than [`SS3_SEQ_LEN`].
+        Invalid,
+    }
+
+    /// Classifies the buffer prefix and extracts the command character without raw
+    /// indexing.
+    pub fn classify_ss3_buffer(buffer: &[u8]) -> Ss3BufferKind {
+        match buffer {
+            // Starts with ESC O and has a command byte, i.e., at least 3 bytes, but it
+            // can have more trailing stream buffer bytes.
+            [ANSI_ESC, ANSI_SS3_O, command_char, /* 0 or more */ ..] => {
+                Ss3BufferKind::Command(*command_char)
+            }
+            _ => Ss3BufferKind::Invalid,
+        }
+    }
+
     /// Parse SS3 command character and return the corresponding [`VT100KeyCodeIR`].
-    pub(super) fn parse_ss3_command(byte: u8) -> Option<VT100KeyCodeIR> {
+    pub fn parse_ss3_command(byte: u8) -> Option<VT100KeyCodeIR> {
         match byte {
-            // Arrow keys
+            // Arrow keys.
             ARROW_UP_FINAL => Some(VT100KeyCodeIR::Up),
             ARROW_DOWN_FINAL => Some(VT100KeyCodeIR::Down),
             ARROW_RIGHT_FINAL => Some(VT100KeyCodeIR::Right),
             ARROW_LEFT_FINAL => Some(VT100KeyCodeIR::Left),
-            // Home and End keys
+
+            // Home and End keys.
             SPECIAL_HOME_FINAL => Some(VT100KeyCodeIR::Home),
             SPECIAL_END_FINAL => Some(VT100KeyCodeIR::End),
-            // Function keys F1-F4 (SS3 mode)
+
+            // Function keys F1-F4 (SS3 mode).
             SS3_F1_FINAL => Some(VT100KeyCodeIR::Function(1)),
             SS3_F2_FINAL => Some(VT100KeyCodeIR::Function(2)),
             SS3_F3_FINAL => Some(VT100KeyCodeIR::Function(3)),
             SS3_F4_FINAL => Some(VT100KeyCodeIR::Function(4)),
-            // Numpad keys in application mode
+
+            // Numpad keys in application mode.
             // Note: These send SS3 sequences instead of literal digits to allow
-            // applications to distinguish numpad from regular number keys
+            // applications to distinguish numpad from regular number keys.
             SS3_NUMPAD_0 => Some(VT100KeyCodeIR::Char('0')),
             SS3_NUMPAD_1 => Some(VT100KeyCodeIR::Char('1')),
             SS3_NUMPAD_2 => Some(VT100KeyCodeIR::Char('2')),
@@ -835,7 +806,8 @@ mod helpers {
             SS3_NUMPAD_7 => Some(VT100KeyCodeIR::Char('7')),
             SS3_NUMPAD_8 => Some(VT100KeyCodeIR::Char('8')),
             SS3_NUMPAD_9 => Some(VT100KeyCodeIR::Char('9')),
-            // Numpad operators and special keys
+
+            // Numpad operators and special keys.
             SS3_NUMPAD_ENTER => Some(VT100KeyCodeIR::Enter),
             SS3_NUMPAD_PLUS => Some(VT100KeyCodeIR::Char('+')),
             SS3_NUMPAD_MINUS => Some(VT100KeyCodeIR::Char('-')),
@@ -843,14 +815,206 @@ mod helpers {
             SS3_NUMPAD_DIVIDE => Some(VT100KeyCodeIR::Char('/')),
             SS3_NUMPAD_DECIMAL => Some(VT100KeyCodeIR::Char('.')),
             SS3_NUMPAD_COMMA => Some(VT100KeyCodeIR::Char(',')),
+
             _ => None,
         }
     }
+}
 
-    /// Parses single-character [`CSI`] sequences like `CSI A` (up arrow)
+/// Private helper functions for modifier parameter parsing.
+mod modifiers {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Extracts modifier parameter from [`CSI`] with type safety.
+    ///
+    /// Safe to cast u16→u8 because [`VT-100`] modifiers are always 1-8.
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub(super) fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    pub fn extract_modifier_parameter(param: u16) -> u8 {
+        debug_assert!(
+            param <= u8::MAX.as_u16_widening(),
+            "Modifier parameter out of range: {param}"
+        );
+        param.as_u8_narrowing()
+    }
+
+    /// Decode [`CSI`] modifier parameter (1-8) to [`VT100KeyModifiersIR`].
+    ///
+    /// [`CSI`] encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
+    /// See module docs [`Modifier Encoding`] for full table.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`Modifier Encoding`]: mod@super#why-each-modifier-uses-different-encoding
+    pub fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiersIR {
+        // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield).
+        let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
+
+        // Fast path: if no modifiers, return default (all NotPressed).
+        if bits == MODIFIER_NONE {
+            return VT100KeyModifiersIR::default();
+        }
+
+        VT100KeyModifiersIR {
+            shift: if (bits & MODIFIER_SHIFT) == MODIFIER_NONE {
+                KeyState::NotPressed
+            } else {
+                KeyState::Pressed
+            },
+            alt: if (bits & MODIFIER_ALT) == MODIFIER_NONE {
+                KeyState::NotPressed
+            } else {
+                KeyState::Pressed
+            },
+            ctrl: if (bits & MODIFIER_CTRL) == MODIFIER_NONE {
+                KeyState::NotPressed
+            } else {
+                KeyState::Pressed
+            },
+        }
+    }
+}
+
+/// Private helper functions for lexical scanning and parameter extraction from [`CSI`]
+/// sequences.
+///
+/// [`CSI`]: crate::CsiSequence
+mod csi_scanner {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Lexical token of a byte scanned inside a [`CSI`] parameter sequence.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    pub enum CsiByteToken {
+        /// Decimal digit with its numeric value `0..=9`.
+        Digit(u8),
+        /// Parameter separator `;` ([`ANSI_PARAM_SEPARATOR`]).
+        Separator,
+        /// Terminating character (`~` or [`ASCII`] letter).
+        ///
+        /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+        Terminator(u8),
+        /// Any byte that is invalid in a numeric [`CSI`] sequence.
+        ///
+        /// [`CSI`]: crate::CsiSequence
+        Invalid,
+    }
+
+    /// Classifies a raw byte in a [`CSI`] parameter sequence into a [`CsiByteToken`].
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    pub fn classify_csi_byte(byte: u8) -> CsiByteToken {
+        // IMPORTANT: We use if/else chains instead of match arms because Rust treats
+        // constants in match patterns as variable bindings, not value comparisons.
+        // This is a Rust language limitation documented in RFC 1445.
+        //
+        // Using named constants in match arms like:
+        //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
+        // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
+        // matching against the constant values. The if/else chain correctly compares
+        // against the constant values.
+        if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+            CsiByteToken::Digit(byte - ASCII_DIGIT_0)
+        } else if byte == ANSI_PARAM_SEPARATOR {
+            CsiByteToken::Separator
+        } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
+            || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
+            || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
+        {
+            CsiByteToken::Terminator(byte)
+        } else {
+            CsiByteToken::Invalid
+        }
+    }
+
+    /// Extracts numeric parameters, final byte, and scanned byte count from a [`CSI`]
+    /// buffer.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    pub fn extract_csi_params(buffer: &[u8]) -> Option<(Vec<u16>, u8, usize)> {
+        const DECIMAL_RADIX: u16 = 10;
+
+        let mut params = Vec::new();
+        let mut acc_numeric_param: u16 = 0;
+        let mut final_byte: Option<u8> = None;
+        let mut bytes_scanned = 0;
+
+        for &byte in &buffer[CSI_PREFIX_LEN..] {
+            bytes_scanned += 1;
+
+            match classify_csi_byte(byte) {
+                CsiByteToken::Digit(digit) => {
+                    acc_numeric_param = acc_numeric_param
+                        .saturating_mul(DECIMAL_RADIX)
+                        .saturating_add(digit.as_u16_widening());
+                }
+                CsiByteToken::Separator => {
+                    params.push(acc_numeric_param);
+                    acc_numeric_param = 0;
+                }
+                CsiByteToken::Terminator(terminator) => {
+                    params.push(acc_numeric_param);
+                    final_byte = Some(terminator);
+                    break;
+                }
+                CsiByteToken::Invalid => return None,
+            }
+        }
+
+        let final_byte = final_byte?;
+
+        Some((params, final_byte, bytes_scanned))
+    }
+}
+
+/// Private helper functions for decoding parsed [`CSI`] parameters and command bytes into
+/// keyboard events.
+///
+/// [`CSI`]: crate::CsiSequence
+mod csi_decoder {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Structural categorization of an incoming [`CSI`] byte slice.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[derive(Debug, PartialEq, Eq)]
+    pub enum CsiBufferKind<'a> {
+        /// Exactly 3 bytes: `ESC [ <final_byte>` (e.g. `ESC [ A`).
+        SingleChar(u8),
+
+        /// Multi-byte sequence: `ESC [ <params...> <final_byte>` (e.g. `ESC [ 1 ; 2 H`).
+        Parameterized(&'a [u8]),
+
+        /// Does not start with `ESC [` or is too short.
+        Invalid,
+    }
+
+    /// Classifies the buffer prefix into a [`CsiBufferKind`] without raw indexing.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    pub fn classify_csi_buffer(buffer: &[u8]) -> CsiBufferKind<'_> {
+        match buffer {
+            // Exactly 3 bytes starting with ESC [.
+            [ANSI_ESC, ANSI_CSI_BRACKET, final_byte] => {
+                CsiBufferKind::SingleChar(*final_byte)
+            }
+            // Starts with ESC [ and has at least 4 bytes (params + terminator) but can
+            // have more.
+            [ANSI_ESC, ANSI_CSI_BRACKET, _, _, /* 0 or more */ ..] => {
+                CsiBufferKind::Parameterized(buffer)
+            }
+            _ => CsiBufferKind::Invalid,
+        }
+    }
+
+    /// Parses single-character [`CSI`] sequences like `CSI A` (up arrow).
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    pub fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
         let code = match final_byte {
             ARROW_UP_FINAL => VT100KeyCodeIR::Up,
             ARROW_DOWN_FINAL => VT100KeyCodeIR::Down,
@@ -876,6 +1040,8 @@ mod helpers {
     ///
     /// # Examples
     ///
+    /// Note: `CSI = ESC [`
+    ///
     /// | Sequence         | Meaning                |
     /// | ---------------- | ---------------------- |
     /// | `CSI 5 ~`        | `PageUp`               |
@@ -889,111 +1055,118 @@ mod helpers {
     /// - Nothing if the sequence is invalid or incomplete.
     ///
     /// [`CSI`]: crate::CsiSequence
-    pub(super) fn parse_csi_parameters(
+    pub fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
-        // Extract the parameters and final byte
-        // Format: ESC [ [param;param;...] final_byte
-        let mut params = Vec::new();
-        let mut acc_numeric_param: u16 = 0;
-        let mut final_byte = 0u8;
-        let mut bytes_scanned = 0;
+        let (params, final_byte, bytes_scanned) =
+            csi_scanner::extract_csi_params(buffer)?;
 
-        for (idx, &byte) in buffer[2..].iter().enumerate() {
-            bytes_scanned = idx + 1; // Track position relative to buffer[2..]
+        // Total bytes consumed: ESC [ (CSI_PREFIX_LEN) + scanned bytes (includes
+        // final_byte).
+        let total_consumed = CSI_PREFIX_LEN + bytes_scanned;
 
-            // IMPORTANT: We use if/else chains instead of match arms because Rust treats
-            // constants in match patterns as variable bindings, not value comparisons.
-            // This is a Rust language limitation documented in RFC 1445.
-            //
-            // Using named constants in match arms like:
-            //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
-            // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
-            // matching against the constant values. The if/else chain correctly compares
-            // against the constant values.
-
-            if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
-                // Parse decimal digits without allocation: shift left by one decimal
-                // place (multiply by 10), then add the new digit. ASCII
-                // digits are sequential (b'0'=48..b'9'=57), so `byte -
-                // b'0'` converts to numeric value 0-9. Example: "123" →
-                // 0*10+1=1 → 1*10+2=12 → 12*10+3=123.
-                acc_numeric_param = acc_numeric_param
-                    .saturating_mul(10)
-                    .saturating_add((byte - ASCII_DIGIT_0).as_u16_widening());
-            } else if byte == ANSI_PARAM_SEPARATOR {
-                // Semicolon: parameter separator.
-                params.push(acc_numeric_param);
-                acc_numeric_param = 0;
-            } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
-                || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
-                || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
-            {
-                // Terminal character: end of sequence.
-                params.push(acc_numeric_param);
-                final_byte = byte;
-                break;
-            } else {
-                return None; // Invalid byte in sequence.
-            }
-        }
-
-        if final_byte == 0 {
-            return None; // No final byte found
-        }
-
-        // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
-        let total_consumed = 2 + bytes_scanned;
-
-        // Parse based on parameters and final byte
-        let event = match (params.len(), final_byte) {
-            // BackTab (Shift+Tab): CSI Z
-            (0, BACKTAB_FINAL) => Some(VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::BackTab,
-                modifiers: VT100KeyModifiersIR::default(),
-            }),
-            // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
-            (2, ARROW_UP_FINAL) if params[0] == 1 => {
-                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-                Some(VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Up,
-                    modifiers,
-                })
-            }
-            (2, ARROW_DOWN_FINAL) if params[0] == 1 => {
-                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-                Some(VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Down,
-                    modifiers,
-                })
-            }
-            (2, ARROW_RIGHT_FINAL) if params[0] == 1 => {
-                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-                Some(VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Right,
-                    modifiers,
-                })
-            }
-            (2, ARROW_LEFT_FINAL) if params[0] == 1 => {
-                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-                Some(VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Left,
-                    modifiers,
-                })
-            }
-            // Function keys and special keys: CSI n ~ or CSI n ; m ~
-            (1, ANSI_FUNCTION_KEY_TERMINATOR) => {
-                parse_function_or_special_key(params[0], VT100KeyModifiersIR::default())
-            }
-            (2, ANSI_FUNCTION_KEY_TERMINATOR) => {
-                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-                parse_function_or_special_key(params[0], modifiers)
-            }
-            // Other CSI sequences
-            _ => None,
-        }?;
+        // Parse based on parameters and final byte.
+        let event = decode_csi_event(&params, final_byte)?;
 
         Some((event, byte_offset(total_consumed)))
+    }
+
+    /// Parameter structure of a parsed [`CSI`] keyboard sequence.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    enum CsiParamShape {
+        /// Omitted (`CSI X`), zero-accumulator, or explicit default parameter 1 (`CSI 1
+        /// X`).
+        DefaultCount,
+
+        /// Modified key with base parameter 1: `CSI 1 ; <modifier> <final>`.
+        ModifiedKey { modifier: u8 },
+
+        /// Tilde key (function/special key): `CSI <code> ~` or `CSI <code> ; <modifier>
+        /// ~`.
+        TildeKey { code: u16, modifier: Option<u8> },
+
+        /// Any other unsupported parameter layout.
+        Unknown,
+    }
+
+    /// Classifies parsed [`CSI`] parameters and final byte into a [`CsiParamShape`].
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    fn classify_csi_params(params: &[u16], final_byte: u8) -> CsiParamShape {
+        if final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
+            match params {
+                // CSI <code> ~ (unmodified function/special key).
+                [code] => CsiParamShape::TildeKey {
+                    code: *code,
+                    modifier: None,
+                },
+                // CSI <code> ; <modifier> ~ (modified function/special key).
+                [code, modifier] => CsiParamShape::TildeKey {
+                    code: *code,
+                    modifier: Some(modifiers::extract_modifier_parameter(*modifier)),
+                },
+                _ => CsiParamShape::Unknown,
+            }
+        } else {
+            match params {
+                // CSI X, CSI 0 X, or CSI 1 X (default count / no modifiers).
+                [] | [CSI_PARAM_ZERO | CSI_PARAM_DEFAULT] => CsiParamShape::DefaultCount,
+                // CSI 1 ; <modifier> <final> (modified navigation/arrows/F1-F4).
+                [CSI_PARAM_DEFAULT, modifier] => CsiParamShape::ModifiedKey {
+                    modifier: modifiers::extract_modifier_parameter(*modifier),
+                },
+                _ => CsiParamShape::Unknown,
+            }
+        }
+    }
+
+    /// Decodes parsed [`CSI`] parameters and final byte into a [`VT100InputEventIR`].
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    fn decode_csi_event(params: &[u16], final_byte: u8) -> Option<VT100InputEventIR> {
+        match (classify_csi_params(params, final_byte), final_byte) {
+            // Default / unmodified single key (CSI A, CSI 1 A, CSI H, CSI 1 H, CSI Z,
+            // etc.).
+            (CsiParamShape::DefaultCount, final_byte) => {
+                parse_csi_single_char(final_byte)
+            }
+
+            // Modified arrow / navigation / F1-F4 keys (CSI 1 ; m A/B/C/D/H/F/P/Q/R/S).
+            (CsiParamShape::ModifiedKey { modifier }, final_byte) => {
+                let code = match final_byte {
+                    ARROW_UP_FINAL => VT100KeyCodeIR::Up,
+                    ARROW_DOWN_FINAL => VT100KeyCodeIR::Down,
+                    ARROW_RIGHT_FINAL => VT100KeyCodeIR::Right,
+                    ARROW_LEFT_FINAL => VT100KeyCodeIR::Left,
+                    SPECIAL_HOME_FINAL => VT100KeyCodeIR::Home,
+                    SPECIAL_END_FINAL => VT100KeyCodeIR::End,
+                    SS3_F1_FINAL => VT100KeyCodeIR::Function(1),
+                    SS3_F2_FINAL => VT100KeyCodeIR::Function(2),
+                    SS3_F3_FINAL => VT100KeyCodeIR::Function(3),
+                    SS3_F4_FINAL => VT100KeyCodeIR::Function(4),
+                    _ => return None,
+                };
+                Some(VT100InputEventIR::Keyboard {
+                    code,
+                    modifiers: modifiers::decode_modifiers(modifier),
+                })
+            }
+
+            // Tilde keys: function keys and special keys (CSI code ~ or CSI code ; m ~).
+            (
+                CsiParamShape::TildeKey { code, modifier },
+                ANSI_FUNCTION_KEY_TERMINATOR,
+            ) => {
+                let modifiers = modifier
+                    .map(modifiers::decode_modifiers)
+                    .unwrap_or_default();
+                parse_function_or_special_key(code, modifiers)
+            }
+
+            _ => None,
+        }
     }
 
     /// Parses function keys (F1-F12) and special keys (Insert, Delete, Home, End,
@@ -1008,7 +1181,7 @@ mod helpers {
         modifiers: VT100KeyModifiersIR,
     ) -> Option<VT100InputEventIR> {
         let key_code = match code {
-            // Function keys: map ANSI codes to F1-F12
+            // Function keys: map ANSI codes to F1-F12.
             FUNCTION_F1_CODE => VT100KeyCodeIR::Function(1),
             FUNCTION_F2_CODE => VT100KeyCodeIR::Function(2),
             FUNCTION_F3_CODE => VT100KeyCodeIR::Function(3),
@@ -1021,15 +1194,18 @@ mod helpers {
             FUNCTION_F10_CODE => VT100KeyCodeIR::Function(10),
             FUNCTION_F11_CODE => VT100KeyCodeIR::Function(11),
             FUNCTION_F12_CODE => VT100KeyCodeIR::Function(12),
-            // Special keys
-            // Home: Multiple alternative codes for different terminal implementations
+
+            // Special keys.
+            // Home: Multiple alternative codes for different terminal implementations.
             SPECIAL_HOME_ALT1_CODE | SPECIAL_HOME_ALT2_CODE => VT100KeyCodeIR::Home,
             SPECIAL_INSERT_CODE => VT100KeyCodeIR::Insert,
             SPECIAL_DELETE_CODE => VT100KeyCodeIR::Delete,
-            // End: Multiple alternative codes for different terminal implementations
+
+            // End: Multiple alternative codes for different terminal implementations.
             SPECIAL_END_ALT1_CODE | SPECIAL_END_ALT2_CODE => VT100KeyCodeIR::End,
             SPECIAL_PAGE_UP_CODE => VT100KeyCodeIR::PageUp,
             SPECIAL_PAGE_DOWN_CODE => VT100KeyCodeIR::PageDown,
+
             _ => return None,
         };
 
@@ -1037,54 +1213,6 @@ mod helpers {
             code: key_code,
             modifiers,
         })
-    }
-
-    /// Extracts modifier parameter from [`CSI`] with type safety.
-    ///
-    /// Safe to cast u16→u8 because [`VT-100`] modifiers are always 1-8.
-    ///
-    /// [`CSI`]: crate::CsiSequence
-    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    fn extract_modifier_parameter(param: u16) -> u8 {
-        debug_assert!(param <= 255, "Modifier parameter out of range: {param}");
-        param.as_u8_narrowing()
-    }
-
-    /// Decode [`CSI`] modifier parameter (1-8) to [`VT100KeyModifiersIR`].
-    ///
-    /// [`CSI`] encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
-    /// See module docs [`Modifier Encoding`] for full table.
-    ///
-    /// [`Modifier Encoding`]
-    ///
-    /// [`CSI`]: crate::CsiSequence
-    /// [`Modifier Encoding`]: mod@super#why-each-modifier-uses-different-encoding
-    fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiersIR {
-        // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)
-        let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
-
-        // Fast path: if no modifiers, return default (all NotPressed)
-        if bits == MODIFIER_NONE {
-            return VT100KeyModifiersIR::default();
-        }
-
-        VT100KeyModifiersIR {
-            shift: if (bits & MODIFIER_SHIFT) == MODIFIER_NONE {
-                KeyState::NotPressed
-            } else {
-                KeyState::Pressed
-            },
-            alt: if (bits & MODIFIER_ALT) == MODIFIER_NONE {
-                KeyState::NotPressed
-            } else {
-                KeyState::Pressed
-            },
-            ctrl: if (bits & MODIFIER_CTRL) == MODIFIER_NONE {
-                KeyState::NotPressed
-            } else {
-                KeyState::Pressed
-            },
-        }
     }
 }
 
@@ -1580,6 +1708,151 @@ mod tests {
             }
         ));
         assert_eq!(bytes_consumed.as_usize(), input.len());
+    }
+
+    #[test]
+    fn test_shift_home() {
+        let input = b"\x1b[1;2H";
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Shift+Home");
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
+                }
+            }
+        );
+        assert_eq!(bytes_consumed, byte_offset(6));
+    }
+
+    #[test]
+    fn test_ctrl_home() {
+        let input = b"\x1b[1;5H";
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Ctrl+Home");
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::NotPressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::Pressed,
+                }
+            }
+        );
+        assert_eq!(bytes_consumed, byte_offset(6));
+    }
+
+    #[test]
+    fn test_shift_end() {
+        let input = b"\x1b[1;2F";
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Shift+End");
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
+                }
+            }
+        );
+        assert_eq!(bytes_consumed, byte_offset(6));
+    }
+
+    #[test]
+    fn test_ctrl_end() {
+        let input = b"\x1b[1;5F";
+        let (event, bytes_consumed) =
+            parse_keyboard_sequence(input).expect("Should parse Ctrl+End");
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::NotPressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::Pressed,
+                }
+            }
+        );
+        assert_eq!(bytes_consumed, byte_offset(6));
+    }
+
+    #[test]
+    fn test_xterm_modified_f1_to_f4() {
+        let (event_f1, consumed_f1) =
+            parse_keyboard_sequence(b"\x1b[1;2P").expect("Should parse Shift+F1");
+        assert_eq!(
+            event_f1,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
+                }
+            }
+        );
+        assert_eq!(consumed_f1, byte_offset(6));
+
+        let (event_f4, consumed_f4) =
+            parse_keyboard_sequence(b"\x1b[1;5S").expect("Should parse Ctrl+F4");
+        assert_eq!(
+            event_f4,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(4),
+                modifiers: VT100KeyModifiersIR {
+                    shift: KeyState::NotPressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::Pressed,
+                }
+            }
+        );
+        assert_eq!(consumed_f4, byte_offset(6));
+    }
+
+    #[test]
+    fn test_single_param_home_end_backtab() {
+        let (event_home, consumed_home) =
+            parse_keyboard_sequence(b"\x1b[1H").expect("Should parse CSI 1 H");
+        assert_eq!(
+            event_home,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers: VT100KeyModifiersIR::default(),
+            }
+        );
+        assert_eq!(consumed_home, byte_offset(4));
+
+        let (event_end, consumed_end) =
+            parse_keyboard_sequence(b"\x1b[1F").expect("Should parse CSI 1 F");
+        assert_eq!(
+            event_end,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers: VT100KeyModifiersIR::default(),
+            }
+        );
+        assert_eq!(consumed_end, byte_offset(4));
+
+        let (event_backtab, consumed_backtab) =
+            parse_keyboard_sequence(b"\x1b[1Z").expect("Should parse CSI 1 Z");
+        assert_eq!(
+            event_backtab,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::BackTab,
+                modifiers: VT100KeyModifiersIR::default(),
+            }
+        );
+        assert_eq!(consumed_backtab, byte_offset(4));
     }
 
     #[test]

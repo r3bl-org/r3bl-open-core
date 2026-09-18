@@ -1,8 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words tcgetwinsize winsize EINTR SIGWINCH kqueue epoll wakeup eventfd bcast
-// cspell:words reinit
-
 //! Implementation details for [`DirectToAnsiInputDevice`].
 //!
 //! This module uses the **Resilient Reactor Thread (RRT)** infrastructure:
@@ -18,9 +15,54 @@
 //! See [`DirectToAnsiInputDevice`] for the big picture (architecture, lifecycle, I/O
 //! pipeline).
 //!
+//! ## Why Non-Blocking [`stdin`] & Edge-Triggered Polling?
+//!
+//! [`stdin`] (`fd 0`) is **blocking by default** on POSIX systems. We explicitly
+//! configure it to **non-blocking ([`O_NONBLOCK`])** and poll it via **edge-triggered
+//! readiness ([`EPOLLET`])**. This is why:
+//!
+//! 1. **Why Edge-Triggered (and not Level-Triggered)?** [`mio`] hardcodes edge-triggered
+//!    polling ([`EPOLLET`] on Linux, `EV_CLEAR` on macOS) to eliminate context-switch
+//!    overhead and thundering-herd wakeups. Level-triggered polling was completely
+//!    removed in modern [`mio`]. So we can't use it, and we shouldn't either since there
+//!    are problems with using level-triggering to detect bursts of events (like escape
+//!    sequences).
+//!
+//! 2. **Why Non-Blocking [`stdin`]?** Edge-triggered polling notifies the thread **only
+//!    once** on the transition from empty to data-ready. To prevent deadlocks, the poller
+//!    must drain the buffer in a loop until [`WouldBlock`].
+//!    - If [`stdin`] remained in blocking mode, the final read (which verifies the buffer
+//!      is empty) would freeze the thread indefinitely, blinding it to terminal resize
+//!      signals ([`SIGWINCH`]) and shutdown wakers.
+//!    - Non-blocking mode also prevents threads from freezing during standalone [`ESC`]
+//!      key detection.
+//!
+//! 3. **The [`stdout`] Side Effect:** On Linux, [`stdin`] (`fd 0`) and [`stdout`] (`fd
+//!    1`) share the same underlying Open File Description ([`OFD`]) for the controlling
+//!    terminal device ([`/dev/pts/N`]). Making [`stdin`] non-blocking silently makes
+//!    [`stdout`] non-blocking too, requiring [`BackpressureStdout`] to handle
+//!    [`WouldBlock`] during burst UI renders.
+//!
+//! 4. **Why [`RRT`]?** Because [`stdin`] is a single process-global resource with these
+//!    global side effects, it cannot be created or dropped casually by transient UI
+//!    components. The [`SINGLETON`] RRT manages this dedicated OS poller safely across
+//!    application lifecycles without losing unread keystrokes.
+//!
+//! [`/dev/pts/N`]:
+//!     crate::pty_engine::pty_pair::PtyPair#how-devptmx-and-devptsn-work-together
+//! [`BackpressureStdout`]: crate::BackpressureStdout
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
+//! [`EPOLLET`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`ESC`]: crate::EscSequence
+//! [`mio`]: mio
+//! [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
+//! [`OFD`]: https://en.wikipedia.org/wiki/Open_file_descriptor
 //! [`RRT`]: crate::RRT
+//! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`SINGLETON`]: global_input_resource::SINGLETON
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
+//! [`WouldBlock`]: std::io::ErrorKind::WouldBlock
 
 use super::mio_poller::MioPollWorker;
 use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
@@ -319,3 +361,6 @@ mod tests {
         assert_eq!(text, "");
     }
 }
+
+// cspell:words tcgetwinsize winsize EINTR SIGWINCH kqueue epoll wakeup eventfd bcast
+// cspell:words reinit EPOLLET NONBLOCK devptmx devptsn

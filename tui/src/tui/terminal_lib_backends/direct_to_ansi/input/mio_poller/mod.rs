@@ -299,7 +299,7 @@
 //!
 //! The parser handles three tricky cases:
 //! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be
-//!   waiting. If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is
+//!   waiting. If `bytes_read == STDIN_READ_BUFFER_SIZE`, we wait before deciding a lone [`ESC`] is
 //!   the [`ESC`] key.
 //! - **Chunked input**: The buffer accumulates bytes until a complete sequence is parsed.
 //! - **[`UTF-8`]**: Multi-byte characters can span multiple reads.
@@ -316,20 +316,26 @@
 //! provides a clean platform abstraction over [`epoll`] on Linux. See [Why Linux-Only?]
 //! for why this module doesn't support macOS.
 //!
-//! # [`ESC`] Detection Limitations
+//! # [`ESC`] Detection & Stream Availability Heuristics
 //!
-//! Both the [`ESC`] key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
-//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start
-//! of a sequence?
+//! Both the [`ESC`] key and escape sequences (like Up Arrow `ESC [ A`) start with the
+//! same byte (`0x1B`). When a lone [`ESC`] byte is read, is it the [`ESC`] key or the
+//! start of a multi-byte sequence?
 //!
-//! ## The `more` Flag Heuristic
+//! ## The [`MaybeMore`] Stream Availability Heuristic
 //!
-//! We use [`crossterm`]'s `more` flag pattern: `more = (read_count == buffer_size)`. The
-//! idea is that if [`read()`] fills the entire buffer, more data is probably waiting in
-//! the kernel. So:
+//! To eliminate fixed timer delays (like Vim's [100ms `ttimeoutlen` delay]), `mio_poller`
+//! evaluates stream availability at the OS boundary using [`MaybeMore::from_read_count()`]:
 //!
-//! - `more == true` + lone [`ESC`] → wait (might be start of escape sequence)
-//! - `more == false` + lone [`ESC`] → emit [`ESC`] key (no more data waiting)
+//! - `bytes_read == STDIN_READ_BUFFER_SIZE`: The OS read completely filled the buffer;
+//!   more bytes may be in-flight in the kernel [`PTY`] buffer
+//!   ([`MaybeMore::KernelMayHaveMore`]).
+//! - `bytes_read < STDIN_READ_BUFFER_SIZE`: The OS read was smaller than the buffer; all
+//!   input from the kernel queue has been drained ([`MaybeMore::Drained`]).
+//!
+//! This kernel heuristic is passed to [`StatefulInputParser::advance()`], which refines
+//! it per-byte and supplies it to [`try_parse_input_event()`]. See [`MaybeMore`] for the
+//! full architectural model and pipeline diagram.
 //!
 //! ## Why This is a Heuristic, Not a Guarantee
 //!
@@ -342,7 +348,7 @@
 //!   packet and `[ A` in the next (even microseconds later), we might incorrectly emit
 //!   [`ESC`].
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
-//!   chance of incorrect [`ESC`] detection.
+//!   chance of premature [`ESC`] detection.
 //!
 //! ## Why Not Use a Timeout Like `vim`?
 //!
@@ -350,7 +356,7 @@
 //! [`ESC`], it's the [`ESC`] key. This is more reliable but adds latency to every [`ESC`]
 //! keypress.
 //!
-//! We chose the `more` flag heuristic (following [`crossterm`]) because:
+//! We chose the [`MaybeMore`] stream availability heuristic because:
 //! - Zero latency for [`ESC`] key in the common case (local terminal).
 //! - Acceptable behavior for most [`SSH`] connections ([`TCP`] usually delivers related
 //!   bytes together). In our testing there were no issues over [`SSH`].
@@ -396,6 +402,13 @@
 //! [`Interest::WRITABLE`]: mio::Interest::WRITABLE
 //! [`Interest`]: mio::Interest
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`MaybeMore::Drained`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::Drained
+//! [`MaybeMore::from_read_count()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::from_read_count
+//! [`MaybeMore::KernelMayHaveMore`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+//! [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
@@ -436,6 +449,8 @@
 //! [`SourceKindReady`]: sources::SourceKindReady
 //! [`SourceRegistry`]: sources::SourceRegistry
 //! [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
+//! [`StatefulInputParser::advance()`]:
+//!     super::stateful_parser::StatefulInputParser::advance
 //! [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
 //! [`std::thread`]: std::thread
 //! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
@@ -456,6 +471,8 @@
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
 //! [`tokio`]: tokio
+//! [`try_parse_input_event()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 //! [`try_subscribe()`]: crate::RRT::try_subscribe
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
@@ -518,6 +535,7 @@ pub mod handler_software_interrupt;
 mod handler_software_interrupt;
 
 // Re-export public API.
+pub use handler_stdin::*;
 pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;
 pub use sources::*;
