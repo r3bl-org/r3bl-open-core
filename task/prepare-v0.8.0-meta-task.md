@@ -95,8 +95,11 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [fix-windows-tests-tui-term-api-and-mcp.md](done/fix-windows-tests-tui-term-api-and-mcp.md)
 - [x] [make-pty-session-sync.md](done/make-pty-session-sync.md)
 - [x] [support-worktree-in-check-script.md](support-worktree-in-check-script.md)
+- [ ] [fix-shift-home-lockup.md](fix-shift-home-lockup.md)
+- [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [build-infra-spawny.md](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [ ] TODO - dl article on eliminate off by one errors (for which we already have a video)
 - [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
 - [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 
@@ -112,31 +115,125 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] Release Verification & Publication
 
+Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-release.md).
+
+## Parallel Workstreams
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ Track A (Parallel - Available Now on main):            │
+│ 1. Create docs/release-notes/<crate>/ structure        │
+│ 2. Backfill historical 19 releases via gh release      │
+│ 3. Pre-draft v0.8.0 release notes & migration guides   │
+│ 4. Pre-draft CHANGELOG.md entries & update TOC         │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────┐
+│ Track B (Sequential - After worktree merge):           │
+│ 1. Complete & merge fix-shift-home-lockup to main      │
+│ 2. Update tui/src/lib.rs (SSOT) & generate README.md   │
+│ 3. Update root README.md & all workspace Cargo.tomls   │
+│ 4. Execute sequential multi-crate release DAG:         │
+│    r3bl_tui -> r3bl-build-infra -> cmdr -> mcp-server  │
+└────────────────────────────────────────────────────────┘
+```
+
+### Track A: Pre-Release Documentation, Release Notes & Changelogs (In Parallel Now)
+
 - [ ] [Mirror docs](mirror-3-ext-sites-to-docs-specs.md)
-- [ ] **Code Quality & Documentation**
-    - [ ] Run `./check.fish --full` to verify Linux builds, tests, clippy, and rustdoc
-          generation.
-    - [ ] Update `CHANGELOG.md` to comprehensively reflect this massive & breaking release
-          (e.g., PTY multiplexer, VT100 parser extraction, scrollback, timeout fixes).
-- [ ] **Cross-Platform Manual Verification**
-    - [ ] macOS: Run interactive PTY examples (e.g.,
-          `cargo run --example pty_mux_example`) and verify mouse input, scrollback, and
-          DA1 timeout fixes.
-    - [ ] Windows: Boot Windows VM/environment, verify compilation, and test interactive
-          TUI/PTY examples.
-- [ ] **Publication Workflow (via `/release` skill)**
-    - [ ] `r3bl_tui`
-        - [ ] Bump version numbers to `0.8.0` in `Cargo.toml` (workspace and/or crates).
-        - [ ] Run `cargo publish --dry-run`.
-        - [ ] Publish to crates.io.
-        - [ ] Create and push git tag `v0.8.0`.
-        - [ ] Draft and publish a GitHub Release using the updated changelog notes.
-    - [ ] `r3bl-build-infra`
-        - [ ] Bump version numbers to `???` in `Cargo.toml` (workspace and/or crates).
-        - [ ] Run `cargo publish --dry-run`.
-        - [ ] Publish to crates.io.
-        - [ ] Create and push git tag `v???`.
-        - [ ] Draft and publish a GitHub Release using the updated changelog notes.
+- [ ] **Create Release Notes Directory Structure**:
+    - `docs/release-notes/r3bl_tui/`
+    - `docs/release-notes/r3bl-cmdr/`
+    - `docs/release-notes/r3bl-build-infra/`
+    - `docs/release-notes/r3bl-rust-analyzer-mcp-server/` (starts at `v1.1.5.md`)
+    - `docs/release-notes/archived/`
+- [ ] **Backfill Historical 19 GitHub Releases**:
+    - Extract release bodies via
+      `gh release view <tag> --json body --jq .body > docs/release-notes/<crate>/<version>.md`.
+    - Commit explicitly:
+      `git add docs/release-notes/ && git commit -m "docs: backfill historical release notes"`.
+- [ ] **Pre-Draft Standalone Release Notes & Migration Guides**:
+    - [ ] `docs/release-notes/r3bl_tui/v0.8.0.md` (Discoverability intro, Migration Guide,
+          benchmarks, SIMD/Flat2DArray, FUNARCH type safety, link to `CHANGELOG.md`).
+    - [ ] `docs/release-notes/r3bl-build-infra/v0.0.6.md` (`cargo-rustdoc-fmt` technical
+          term linking).
+    - [ ] `docs/release-notes/r3bl-cmdr/v0.0.27.md` (`env-source`, `edi`, `giti`).
+    - [ ] `docs/release-notes/r3bl-rust-analyzer-mcp-server/v1.1.5.md` (Stdlib thread MCP
+          server, devlife article link).
+    - Commit explicitly:
+      `git add docs/release-notes/ && git commit -m "docs: pre-draft v0.8.0 standalone release notes"`.
+- [ ] **Pre-Draft `CHANGELOG.md` Entries**:
+    - [ ] Add `v0.8.0` for `r3bl_tui`, `v0.0.6` for `r3bl-build-infra`, `v0.0.27` for
+          `r3bl-cmdr`, `v1.1.5` for `r3bl-rust-analyzer-mcp-server`.
+    - [ ] Update TOC using `mktoc`.
+    - Commit explicitly:
+      `git add CHANGELOG.md && git commit -m "docs: pre-draft v0.8.0 changelog entries"`.
+- [ ] **Mandatory manual review:** Verify `docs/release-notes/` and `CHANGELOG.md` files
+      are complete and correctly formatted.
+
+### Track B: Release Execution (Post-Merge of `fix-shift-home-lockup`)
+
+- [ ] **Merge Worktree & Documentation SSOT Sync**:
+    - [ ] Merge `../roc-fix-shift-home-lockup` into `main`.
+    - [ ] Update `tui/src/lib.rs` (SSOT under `//! # Why R3BL?`) with Type Safety and
+          Systems Performance sections.
+    - [ ] Generate `tui/README.md`: `cd tui && cargo readme > README.md && cd ..`.
+    - [ ] Update root `README.md` and run `mktoc`.
+    - [ ] Update all `Cargo.toml` files (`tui` to `0.8.0`, others with
+          `r3bl_tui = "0.8.0"`).
+- [ ] **Cross-Platform Verification & Quality Checks**:
+    - [ ] Run `./check.fish --full` (Linux builds, tests, clippy, docs).
+    - [ ] macOS: Run interactive PTY examples (`cargo run --example pty_mux_example`).
+    - [ ] Windows: Verify compilation and interactive TUI/PTY examples.
+- [ ] **Sequential Multi-Crate Release (Detailed in
+      [make-0.8.0-release.md](make-0.8.0-release.md))**:
+    - [ ] **Step 1: Release `r3bl_tui` v0.8.0 (Core Library)**
+        - Perform dry run: `cd tui && cargo publish --dry-run --allow-dirty --no-verify`.
+        - User permission checkpoint.
+        - Commit & Tag (explicit):
+          `git add tui/ README.md Cargo.lock Cargo.toml build-infra/Cargo.toml cmdr/Cargo.toml rust-analyzer-mcp-server/Cargo.toml docs/release-guide.md && git commit -m "v0.8.0-tui" && git tag -a v0.8.0-tui -m "v0.8.0-tui"`.
+        - Publish to crates.io: `cd tui && cargo publish --no-verify --allow-dirty`.
+        - Verify live on crates.io: `cargo search r3bl_tui`.
+        - Push commit/tag and create GitHub release via
+          `--notes-file docs/release-notes/r3bl_tui/v0.8.0.md`.
+    - [ ] **Step 2: Release `r3bl-build-infra` v0.0.6 (Tooling Crate)**
+        - Generate README from SSOT: `cd build-infra && cargo readme > README.md`.
+        - Perform dry run:
+          `cd build-infra && cargo publish --dry-run --allow-dirty --no-verify`.
+        - User permission checkpoint.
+        - Commit & Tag (explicit):
+          `git add build-infra/ && git commit -m "v0.0.6-build-infra" && git tag -a v0.0.6-build-infra -m "v0.0.6-build-infra"`.
+        - Publish to crates.io:
+          `cd build-infra && cargo publish --no-verify --allow-dirty`.
+        - Push commit/tag, create GitHub release via `--notes-file`, and re-install binary
+          (`cargo install --path build-infra --force`).
+    - [ ] **Step 3: Release `r3bl-cmdr` v0.0.27 (CLI & Apps Crate)**
+        - Generate README from SSOT: `cd cmdr && cargo readme > README.md`.
+        - Perform dry run: `cd cmdr && cargo publish --dry-run --allow-dirty --no-verify`.
+        - User permission checkpoint.
+        - Commit & Tag (explicit):
+          `git add cmdr/ && git commit -m "v0.0.27-cmdr" && git tag -a v0.0.27-cmdr -m "v0.0.27-cmdr"`.
+        - Publish to crates.io: `cd cmdr && cargo publish --no-verify --allow-dirty`.
+        - Push commit/tag, create GitHub release via `--notes-file`, and re-install binary
+          (`cargo install --path cmdr --force`).
+    - [ ] **Step 4: Release `r3bl-rust-analyzer-mcp-server` v1.1.5 (MCP Server)**
+        - _Do NOT run cargo readme_ (README.md is hand-crafted SSOT for crates.io).
+        - Perform dry run:
+          `cd rust-analyzer-mcp-server && cargo publish --dry-run --allow-dirty --no-verify`.
+        - User permission checkpoint.
+        - Commit & Tag (explicit):
+          `git add rust-analyzer-mcp-server/ && git commit -m "v1.1.5-rust-analyzer-mcp-server" && git tag -a v1.1.5-rust-analyzer-mcp-server -m "v1.1.5-rust-analyzer-mcp-server"`.
+        - Publish to crates.io:
+          `cd rust-analyzer-mcp-server && cargo publish --no-verify --allow-dirty`.
+        - Push commit/tag, create GitHub release via `--notes-file`, and re-install binary
+          (`cargo install --path rust-analyzer-mcp-server --force`).
+- [ ] **Post-Release Housekeeping & Visibility**:
+    - [ ] Share release announcements across developer communities (Reddit `r/rust`,
+          Hacker News Show HN, and LinkedIn) for `r3bl_tui`, `r3bl-cmdr`,
+          `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`.
+    - [ ] Mark meta-tasks and release tasks complete.
+- [ ] **Mandatory manual review:** Verify all release steps across crates.io, GitHub
+      releases, and local binaries.
 
 # Future tasks
 

@@ -306,9 +306,9 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 
 ### Release
 
-- **release-crate** - Full crate release workflow: version bump, changelog, publish to
-  crates.io, git tag, GitHub release. Use when releasing a new version of any workspace
-  crate.
+- **release-crate** - Full crate release workflow: version bump, changelog, standalone release
+  notes in `docs/release-notes/`, publish to crates.io, git tag, GitHub release. Use when
+  releasing a new version of any workspace crate.
 
 - **review-pr** - Create a structured integration and review plan for a Pull Request. Use
   when the user wants to systematically integrate a community PR.

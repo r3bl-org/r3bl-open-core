@@ -10,13 +10,10 @@
       - [Key elements](#key-elements)
       - [Canonical examples](#canonical-examples)
       - [Crate-specific notes](#crate-specific-notes)
-  - [This Week in Rust submission](#this-week-in-rust-submission)
-    - [Link text format](#link-text-format)
-    - [Structure](#structure)
-    - [Length guidelines](#length-guidelines)
-    - [Personality words](#personality-words)
-    - [Abbreviations](#abbreviations)
-    - [Example PR](#example-pr)
+  - [Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)](#community-sharing--social-channels-hacker-news-reddit-linkedin)
+    - [Reddit (r/rust)](#1-reddit-rrust)
+    - [Hacker News (Show HN / Link)](#2-hacker-news-show-hn--link)
+    - [LinkedIn & Social Media](#3-linkedin--social-media)
   - [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -147,18 +144,16 @@ applied to each crate (`tui`, `cmdr`, `analytics_schema`):
 
 Then, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
-Finally, for the tag, make a GitHub release and use the tag that you just created. No binary
-artifacts are uploaded to the GitHub release, only the tag and the information from the
-`CHANGELOG.md` file is used to create the release notes. The purpose of the GitHub release is to
-notify users that a new release is available. This is useful if the user has signed up for GitHub
-notifications for the repository.
+Finally, for the tag, make a GitHub release using the standalone release note file in
+`docs/release-notes/<crate>/vX.Y.Z.md`. The release notes contain the standardized discoverability
+intro, highlights, migration guides, and a link back to the `CHANGELOG.md` entry.
 
-#### Release notes structure
+#### Release notes creation & publication
 
-Every release follows a consistent structure. Use `gh release create` or `gh release edit`:
+1. Create `docs/release-notes/<crate>/vX.Y.Z.md`:
 
 ```markdown
-[Crate description - same across all releases for this crate]. Install with `cargo install <crate>`.
+> [Standardized Crate Discoverability Intro Block]. Install with `cargo install <crate>`.
 
 - 📝 **tool-name** - Brief tool description.
 
@@ -181,7 +176,13 @@ Every release follows a consistent structure. Use `gh release create` or `gh rel
 
 ## Full Changelog
 
-- [crate vX.Y.Z](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#anchor)
+- [crate vX.Y.Z](https://github.com/r3bl-org/r3bl-open-core/blob/vX.Y.Z-<crate>/CHANGELOG.md#anchor)
+```
+
+2. Create the GitHub release via `--notes-file`:
+
+```bash
+gh release create vX.Y.Z-<crate> --title "vX.Y.Z-<crate>" --notes-file docs/release-notes/<crate>/vX.Y.Z.md
 ```
 
 #### Key elements
@@ -225,67 +226,39 @@ historical record.
 - **Avoid**:
   `https://github.com/r3bl-org/r3bl-open-core/blob/main/path/to/file`
 
-## This Week in Rust submission
+## Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)
 
-After publishing a release, submit it to [This Week in Rust](https://this-week-in-rust.org/) for
-visibility in the Rust community. Submit a PR to the
-[this-week-in-rust repo](https://github.com/rust-lang/this-week-in-rust) adding entries to the
-current draft file under `### Project/Tooling Updates`.
+> [!NOTE]
+> _This Week in Rust_ (TWiR) no longer accepts crate/library release submissions.
+> Announcements should be shared directly across developer communities: **Reddit (`r/rust`)**,
+> **Hacker News**, and **LinkedIn**.
 
-### Link text format
+After publishing a release, share the release announcement using the standalone release notes in
+`docs/release-notes/<crate>/vX.Y.Z.md` (which already contain standardized discoverability intro
+blocks, value propositions, code samples, benchmark metrics, and deep-dive links).
 
-Use descriptive one-liners, not just version numbers:
+### 1. Reddit (`r/rust`)
 
-```markdown
-- [r3bl_tui v0.7.7: modern async TUI lib — readline, md editor, flexbox, SSH-optimized rendering](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.7-tui)
-- [r3bl-cmdr v0.0.25: TUI productivity apps - giti (git helper) and edi (beautiful md editor)](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.25-cmdr)
-- [r3bl-build-infra v0.0.1: cargo-rustdoc-fmt — prettier md tables and ref-style links](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.1-build-infra)
-```
+- **Title format**: `[Release] <crate_name> vX.Y.Z: <Catchy One-Line Summary>`
+  - Example: `[Release] r3bl_tui v0.8.0: Async TUI library with 2D Canvas/Viewport coords, Flat2DArray SIMD layout, and 0ms ESC handling`
+- **Body content**: Copy the content from `docs/release-notes/<crate>/vX.Y.Z.md` (including the
+  standardized discoverability intro block, migration guide, performance uplift stats, and links to
+  articles/videos on `developerlife.com`).
 
-### Structure
+### 2. Hacker News (Show HN / Link)
 
-```
-crate vX.Y.Z: category — feature, feature, feature
-```
+- **Title format**: `Show HN: <crate_name> vX.Y.Z - <Concise Value Proposition>`
+  - Example: `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
+- **URL**: Link to the GitHub Release page
+  (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/vX.Y.Z-<crate>`) or architectural
+  deep-dive article on `developerlife.com`.
 
-- **Category first**: "modern async TUI lib", "TUI productivity apps", "cargo-rustdoc-fmt"
-- **Em dash separator** (—): Cleaner than "with" or "and"
-- **Feature list**: Comma-separated, most important first
+### 3. LinkedIn & Social Media
 
-### Length guidelines
-
-| Range  | Assessment                                    |
-| ------ | --------------------------------------------- |
-| 9-50   | Too terse — says nothing about the crate      |
-| 75-95  | Sweet spot — informative but scannable        |
-| 96-160 | Acceptable — TWiR has entries up to 160 chars |
-
-Check existing entries in recent TWiR issues for reference. Our entries should fit comfortably in
-the middle of the range (75-95 chars).
-
-### Personality words
-
-Add personality without being cheesy:
-
-| Word           | Effect                              |
-| -------------- | ----------------------------------- |
-| "modern"       | Signals fresh approach, not legacy  |
-| "beautiful"    | Evocative, appeals to aesthetics    |
-| "prettier"     | Playful nod to the famous formatter |
-| "productivity" | Aspirational, implies value         |
-
-### Abbreviations
-
-| Do                 | Don't                     |
-| ------------------ | ------------------------- |
-| "md" (in features) | "markdown" (wastes space) |
-| "lib"              | "library"                 |
-| "ref-style"        | "reference-style"         |
-| spell out "with"   | "w/" (too informal)       |
-
-### Example PR
-
-See [PR #7555](https://github.com/rust-lang/this-week-in-rust/pull/7555) for a complete example.
+- Share high-signal highlights:
+  - Key performance metrics (e.g., 2.3x rendering speedup, +-98% jitter elimination).
+  - Type-safety research foundations (Stanford CS 242 / FUNARCH typestate patterns).
+  - Links to the `developerlife.com` articles and YouTube video walkthroughs.
 
 ## Deprecated workflow for archived crates
 
