@@ -143,8 +143,6 @@ mental model crystal clear:
 - `spawny stateful start / stop <distro>`: Boots or halts the `systemd-nspawn` container
   daemon.
 
----
-
 ## Lifecycle Flowcharts & Mental Model
 
 ### 1. Storage & Zygote Mental Model
@@ -174,8 +172,6 @@ mental model crystal clear:
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-
----
 
 ### 2. Stateless Execution Flow (Clean-Room)
 
@@ -214,8 +210,6 @@ mental model crystal clear:
 │    - Leaves ZERO persistent disk pollution                                  │
 ╰─────────────────────────────────────────────────────────────────────────────╯
 ```
-
----
 
 ### 3. Stateful Execution Flow (Persistent Sandbox)
 
@@ -256,8 +250,6 @@ mental model crystal clear:
 ╰─────────────────────────────────────────────────────────────────────────────╯
 ```
 
----
-
 ### 4. Interactive TUI Launcher Flow
 
 ```text
@@ -277,8 +269,6 @@ mental model crystal clear:
 │ └───────────────────────────────────────────────────────────────┘           │
 ╰─────────────────────────────────────────────────────────────────────────────╯
 ```
-
----
 
 ## Architecture
 
@@ -351,8 +341,6 @@ spawny (cargo-spawny)
 - Supports standalone `--upgrade` CLI flag wired to the shared
   `r3bl_tui::core::script::upgrade` engine, ensuring `spawny` seamlessly self-upgrades
   alongside `cargo-rustdoc-fmt`.
-
----
 
 ## Implementation Plan
 
@@ -503,8 +491,6 @@ spawny (cargo-spawny)
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `task/build-infra-spawny.md`
-
----
 
 ## Verification Matrix
 

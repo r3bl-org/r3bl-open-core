@@ -220,8 +220,8 @@
 //! [`VPSize`]: crate::VPSize
 //! [`NumericValue`]: crate::core::NumericValue
 //! [`usize`]: prim@usize
-//! [FUNARCH 2023 paper]: https://doi.org/10.1145/3609025.3609477
-//! [FUNARCH 2026 paper]: https://doi.org/10.1145/3830438.3830958
+//! [FUNARCH 2023 paper]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
+//! [FUNARCH 2026 paper]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
 //! [Parse, don't validate]:
 //!     https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
 //! [Stanford CS 242]: https://stanford-cs242.github.io/f19/

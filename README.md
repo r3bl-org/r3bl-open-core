@@ -21,244 +21,316 @@ height="256px">
 ```
 <!-- prettier-ignore-end -->
 
-<!-- BEGIN mktoc -->
+<p align="left">
+  <a href="https://crates.io/crates/r3bl_tui"><img src="https://img.shields.io/badge/crates.io-2.7M%2B%20downloads-orange?logo=rust&style=flat-square" alt="Crates.io Total Downloads"></a>
+</p>
 
-- [r3bl-open-core](#r3bl-open-core)
-- [Why R3BL TUI?](#why-r3bl-tui)
-    - [The Problem with Existing Solutions](#the-problem-with-existing-solutions)
-    - [The R3BL Solution: Web and Desktop App Inspired Terminal Apps](#the-r3bl-solution-web-and-desktop-app-inspired-terminal-apps)
-    - [Built-from-Scratch Primitives](#built-from-scratch-primitives)
-    - [Advanced Rendering & Styling](#advanced-rendering--styling)
-    - [Rich Component Ecosystem](#rich-component-ecosystem)
-- [Welcome to the monorepo and workspace](#welcome-to-the-monorepo-and-workspace)
-- [This workspace contains crates for building TUI, CLI, TTY apps](#this-workspace-contains-crates-for-building-tui-cli-tty-apps)
-    - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-    - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
-    - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
-    - [Terminal multiplexer](#terminal-multiplexer)
-- [Power via composition](#power-via-composition)
-    - [Main library crate](#main-library-crate)
-    - [Main binary crate](#main-binary-crate)
-- [Interactive git workflows made easy.](#interactive-git-workflows-made-easy)
-- [Beautiful Markdown editor with advanced rendering and editing features.](#beautiful-markdown-editor-with-advanced-rendering-and-editing-features)
-- [Project Task Organization](#project-task-organization)
-    - [Task Management Files](#task-management-files)
-    - [Task File Format](#task-file-format)
-- [Implementation Plan](#implementation-plan)
-- [Step 0: Do Something [STATUS]](#step-0-do-something-status)
-    - [Step 0.0: Do Subtask [STATUS]](#step-00-do-subtask-status)
-    - [Step 0.1: Do Another Subtask [STATUS]](#step-01-do-another-subtask-status)
-- [Step 1: Do Something Else [STATUS]](#step-1-do-something-else-status)
-    - [Task Workflow Commands](#task-workflow-commands)
-    - [Workflow Connection](#workflow-connection)
-    - [Development Tools Integration](#development-tools-integration)
-- [Documentation and Planning](#documentation-and-planning)
-    - [Documentation Philosophy](#documentation-philosophy)
-    - [Release and Contribution Guides](#release-and-contribution-guides)
-    - [Technical Design Documents](#technical-design-documents)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
-- [Quick Start](#quick-start)
-    - [Automated Setup (Recommended)](#automated-setup-recommended)
-- [Run the bootstrap script](#run-the-bootstrap-script)
-    - [Manual Setup](#manual-setup)
-- [Install `fish` and `fzf` (via package manager)](#install-fish-and-fzf-via-package-manager)
-- [Ubuntu/Debian: sudo apt install fish fzf](#ubuntudebian-sudo-apt-install-fish-fzf)
-- [macOS: brew install fish fzf](#macos-brew-install-fish-fzf)
-- [Or run `./bootstrap.sh` for automatic detection](#or-run-bootstrapsh-for-automatic-detection)
-- [Install Rust development tools (after OS dependencies)](#install-rust-development-tools-after-os-dependencies)
-- [IDE Setup and Extensions](#ide-setup-and-extensions)
-    - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
-- [Install extensions (works with both VSCode and VSCode Insiders)](#install-extensions-works-with-both-vscode-and-vscode-insiders)
-    - [AI (LLM) Coding Agent Integration (Optional)](#ai-llm-coding-agent-integration-optional)
-- [Build the workspace and run tests](#build-the-workspace-and-run-tests)
-    - [Key Commands](#key-commands)
-    - [Automatic Tmpfs Symlink Architecture & Git Worktree Isolation](#automatic-tmpfs-symlink-architecture--git-worktree-isolation)
-        - [1. Git Worktree Isolation](#1-git-worktree-isolation)
-        - [2. Smart RAM-Aware Storage Selection](#2-smart-ram-aware-storage-selection)
-        - [3. Directory Independence](#3-directory-independence)
-        - [4. Rsync & Auto-Healing Symlinks](#4-rsync--auto-healing-symlinks)
-        - [5. Cache Management & Cleaning (`--clean`)](#5-cache-management--cleaning---clean)
-    - [Incremental Compilation Management](#incremental-compilation-management)
-- [Rebuild cleanly](#rebuild-cleanly)
-    - [Bacon Development Tools](#bacon-development-tools)
-    - [Automated Development Monitoring](#automated-development-monitoring)
-        - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
-- [Start watch mode](#start-watch-mode)
-- [Or run checks once (manual mode)](#or-run-checks-once-manual-mode)
-    - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
-    - [Tmux Development Dashboard](#tmux-development-dashboard)
-- [Reconnect to existing session from another terminal](#reconnect-to-existing-session-from-another-terminal)
-- [Kill the session when done](#kill-the-session-when-done)
-    - [Cross-Platform Verification (Windows)](#cross-platform-verification-windows)
-- [Or run directly:](#or-run-directly)
-    - [Rust Toolchain Management](#rust-toolchain-management)
-        - [Why mkdir for Locking?](#why-mkdir-for-locking)
-- [Only ONE process succeeds; all others fail](#only-one-process-succeeds-all-others-fail)
-    - [1. `rust-toolchain-update.fish` - Smart Validated Toolchain Updates](#1-rust-toolchain-updatefish---smart-validated-toolchain-updates)
-- [Or directly](#or-directly)
-    - [2. `rust-toolchain-sync-to-toml.fish` - Sync to Existing Config](#2-rust-toolchain-sync-to-tomlfish---sync-to-existing-config)
-- [Or directly](#or-directly-1)
-- [But you need to stay on nightly-2025-09-05 for testing a specific feature](#but-you-need-to-stay-on-nightly-2025-09-05-for-testing-a-specific-feature)
-- [Now rust-analyzer works for 09-05](#now-rust-analyzer-works-for-09-05)
-    - [3. `rust-toolchain-validate.fish` - Unified Toolchain Validation](#3-rust-toolchain-validatefish---unified-toolchain-validation)
-- [Complete mode: Full build+test validation (~5-10 minutes)](#complete-mode-full-buildtest-validation-~5-10-minutes)
-- [View detailed help](#view-detailed-help)
-    - [4. `remove_toolchains.sh` - Testing Utility](#4-remove_toolchainssh---testing-utility)
-- [Or](#or)
-    - [Log File Output](#log-file-output)
-- [Or review after completion](#or-review-after-completion)
-    - [Comprehensive Toolchain Management System](#comprehensive-toolchain-management-system)
-    - [Unified Script Architecture](#unified-script-architecture)
-- [Star History](#star-history)
-- [Archive](#archive)
+## Modernizing the Terminal: Taking Inspiration From Web and Desktop Apps
 
-<!-- END mktoc -->
+Despite the massive rise of AI/LLM coding agents & execution harnesses and cloud VM
+administration over SSH, terminal UI innovation has largely stagnated since the 1970s.
+Most CLI tools still rely on blocking single-threaded I/O, [curses]-era APIs, and fragile
+platform hacks - or rely on the heavy, fragile workaround of layering web stacks like
+[`Node.js`], [`React`], and [`ink`] onto the console. This introduces unreasonable memory
+bloat, high latency, broken keyboard shortcuts, and unpredictable instability that breaks
+down during long-horizon agentic workflows and sub-process orchestration.
 
-## Why R3BL TUI?
+**ROC (`r3bl-open-core`) moves the terminal forward (with love & respect) into 2026 and
+beyond. ❤️**
 
-After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/))
-embarked on a journey to create infrastructure for modern, powerful, async CLI and TUI
-experiences built from the ground up in Rust.
+R3BL brings modern web and desktop app design patterns to the terminal, turning it into a
+place of focused productivity to build delightful, ergonomic, and rich text user interface
+(TUI) experiences.
 
-The core architectural innovation: a purely async, immediate mode reactive UI (every state
-change triggers a render from scratch) where nothing blocks the main thread - unlike
-traditional approaches using platform-specific blocking operations like POSIX
-[`readline()`](https://man7.org/linux/man-pages/man3/readline.3.html) on Linux/macOS or
-Windows [`ReadConsole()`](https://learn.microsoft.com/en-us/windows/console/readconsole).
+Representing years of systems programming, performance optimization, and production-grade
+infrastructure design in Rust, R3BL re-imagines the terminal for the modern era - making
+rich, reactive TUI applications accessible over SSH to any terminal emulator across Linux,
+macOS, Windows, and Unix/BSDs (such as FreeBSD).
 
-R3BL TUI is fundamentally different from [`vim`](https://www.vim.org/),
-[`neovim`](https://neovim.io/), and [`ratatui`](https://ratatui.rs/) through its immediate
-mode reactive UI with clean separation between rendering and state mutation, and purely
-async nature.
+R3BL TUI is fundamentally different from [`vim`], [`neovim`], and [`ratatui`] through its
+immediate mode reactive UI, clean separation between rendering and state mutation, and
+purely async architecture - it never blocks the main thread, and natively embraces
+multithreaded execution and multi-process orchestration.
 
-This fully async, responsive framework works seamlessly across Linux, macOS, and Windows.
-It's optimized for use over SSH connections by painting only diffs, and handles complex
-concurrent operations with low latency while ensuring no thread blocking.
+### Primary Use Cases
 
-### The Problem with Existing Solutions
+ROC is designed to power four primary use cases:
 
-I initially tried [Node.js](https://nodejs.org/) with
-[ink](https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/), but
-encountered fundamental limitations:
+- 🤖 **AI/LLM Coding Agents & Execution Harnesses**: Building fast, interactive terminal
+  interfaces and execution harnesses for AI/LLM coding agents in pure Rust. While popular
+  agent tools are written in [`Node.js`] and [`ink`] (see [origin story]), Node-based
+  runtimes struggle with runaway memory consumption, fragile sub-process control, and
+  unstable PTY session management when orchestrating heavy, long-running tools in
+  sandboxed environments (containers, microVMs, systemd-nspawn machines, etc.).
+  Furthermore, Node-based runtimes struggle with terminal input decoding, frequently
+  dropping modifier keys, mangling keyboard chords, and introducing sluggish ESC key
+  disambiguation lag. ROC provides a rock-solid, pure Rust foundation engineered for
+  native PTY orchestration, zero-latency ANSI input decoding, deterministic process
+  lifecycles, flicker-free diff rendering, and minimal resource overhead.
 
-- Module incompatibilities and dependency conflicts
-- Limited control over keybindings and terminal behavior
-- High resource consumption for simple tasks
-- Screen flickering and poor rendering performance
+- ☁️ **DevOps & Cloud Workflows**: Administering modern cloud infrastructure shouldn't
+  feel like using stone-age tools to build a satellite. Juggling remote VMs, containers,
+  and multi-process server environments through bare terminal sessions is slow and
+  error-prone. ROC transforms terminal workflows into a rich, responsive workspace with
+  in-memory virtual terminal emulation, virtual tabs, 2D horizontal panning across wide
+  logs, and double-buffered diff rendering that stays lag-free even over high-latency SSH
+  connections.
 
-### The R3BL Solution: Web and Desktop App Inspired Terminal Apps
+- 📝 **Interactive Document & Markdown Workflows**: Rich interactive editing, syntax
+  highlighting, and real-time code block execution directly inside Markdown documents in
+  the terminal, bridging documentation directly with live operations.
 
-Our framework supports the full spectrum from CLI to hybrid TUI to full TUI experiences
-with deep system integration.
+- 🛠️ **Developer Productivity Infrastructure**: High-efficiency developer tooling and
+  composable terminal infrastructure to enhance knowledge capture, eliminate friction, and
+  streamline everyday command-line workflows.
 
-**Key Innovation: "Applets"** - A revolutionary state management system that allows
-processes to persist state across their lifecycle and share it with other instances or
-processes. And the underlying systems level infrastructure mechanisms that make this
-possible.
+The framework supports the full spectrum from CLI to inline dialogs to full-screen TUI and
+terminal multiplexing experiences with deep systems integration.
 
-### Built-from-Scratch Primitives
+### ROC Workspace Architecture: Core Engine, Productivity Apps & Build Tools
 
-**Async Readline**: Unlike POSIX readline which is single-threaded and blocking, our
-implementation is fully async, interruptable, and non-blocking.
+With over 2.7M downloads across crates.io, ROC (`r3bl-open-core`) provides
+production-grade systems infrastructure across five specialized crates:
 
-**Choose API**: Single-shot user interactions that enter raw mode without taking over the
-screen or disrupting the terminal's back buffer.
+| Crate                                 | Purpose                                                                       |
+| :------------------------------------ | :---------------------------------------------------------------------------- |
+| **[`r3bl_tui`]**                      | Core foundational async TUI engine, reactive runtime & PTY primitives         |
+| **[`r3bl-cmdr`]**                     | Suite of productivity apps (`giti`, `edi`, `env-source`)                      |
+| **[`r3bl-build-infra`]**              | Developer infrastructure & build tools (`cargo-rustdoc-fmt`, `spawny`)        |
+| **[`r3bl-rust-analyzer-mcp-server`]** | High-performance std-thread rust-analyzer MCP server for coding agents & IDEs |
+| **[`r3bl_analytics_schema`]**         | Shared schema for privacy-first analytics & upgrade checks                    |
 
-**Full TUI**: Complete raw mode with alternate screen support, fully async and
-non-destructive.
+### Built-from-Scratch Primitives: The Four Pillars of `r3bl_tui`
 
-All components are end-to-end testable using our:
+At the heart of ROC is **`r3bl_tui`**, which provides four foundational interaction
+primitives designed from the ground up in pure Rust:
 
-- `InputDevice` and `OutputDevice` types for `stdin`, `stdout`, and `stderr`.
-- `PTY` infrastructure.
-- `VT-100` parser / generator infrastructure.
+1. 📟 **CLI & REPLs (`readline_async`)**: Unlike GNU [`readline`] which is single-threaded
+   and blocking, our implementation is fully async, interruptable, and non-blocking,
+   allowing background spinners and tasks to print concurrently without pausing line
+   editing or blocking your main thread.
 
-### Advanced Rendering & Styling
+2. 📑 **Inline / Partial TUI (`choose`)**: Single-shot interactive multi-select dialogs
+   that enter raw mode and render inline in terminal scrollback without taking over the
+   screen or disrupting the back buffer (similar to `fzf` in spirit).
 
-- **`CSS`-like styling** with `JSX`-inspired declarative layouts
-- **Gradient color support** with automatic terminal capability detection
-- **Double-buffered compositor** for efficient rendering
-- **Comprehensive color support** that adapts to terminal capabilities (even handles macOS
-  Terminal.app's lack of truecolor support)
+3. 🖥️ **Full-Screen TUI**: Complete raw mode with alternate screen support, fully async
+   and panic-safe terminal restoration. Build [React] and [Elm] inspired apps with
+   [unidirectional data flow], [responsive] [flexbox] layouts, [declarative] [CSS-like]
+   styling, reactive state architecture, reusable modal dialogs with asynchronous
+   autocomplete, and a full-featured Markdown editor component with custom parser, custom
+   syntax highlighter, and fast zero-copy gap buffer.
 
-### Rich Component Ecosystem
+4. 🔀 **Terminal Multiplexing & PTY**: In-memory virtual terminals, virtual terminal tabs,
+   deterministic process orchestration, and multiplexing primitives (build your own
+   [`tmux`] or sandboxed AI/LLM coding agent execution harness) featuring 2D horizontal
+   viewport panning and decoupled throughput.
 
-- Beautiful Markdown parser with syntax highlighting
-- Rich text editor components
-- Dialog box support
-- Animation framework (in development)
-- Process orchestration via the "script" module
-- Async REPL infrastructure
+**Power via Composition**: Designed to be [loosely coupled and strongly coherent], you can
+pick and choose only what you need or compose them seamlessly within a single application.
+Transition smoothly from a non-blocking `readline_async` prompt into an inline `choose`
+menu, launch a full-screen TUI for complex tasks, or orchestrate background PTY
+subprocesses, all sharing application state without process restarts.
 
-R3BL TUI brings the ergonomics of modern web development (`React`, `flexbox`, `CSS`) to
-terminal applications in Rust, creating a new paradigm for command-line productivity
-tools.
+### Automated Headless Testing & Benchmarking
 
-We are building command line apps with rich text user interfaces (TUI). We want to lean
-into the terminal as a place of productivity, and build all kinds of delightful,
-ergonomic, and useful experiences for it.
+The entire framework across all 4 pillars is testable across Linux, macOS, and Windows.
+Powered by our own PTY pillar, real production code runs headlessly in an isolated virtual
+terminal environment, enabling end-to-end testing of interactive apps without requiring
+human interaction:
 
-1. 🔮 Instead of just building one app, we are building a library to enable any kind of
-   rich TUI development w/ a twist: taking concepts that work really well for the frontend
-   mobile and web development world and re-imagining them for TUI & Rust.
+- **PTY Automated Interactive Testing**: Enables end-to-end testing of interactive apps
+  via headless PTY subprocess orchestration with the `generate_pty_test!` macro. Automate
+  key sequences, window resizing, and screen output verification in completely isolated
+  child processes without someone having to sit and manually type at a keyboard.
+- **Visual UI Snapshot Testing**: Everything renders to an offscreen buffer (`OfsBuf`),
+  providing built-in visual snapshot testing. Easily diff and assert the actual rendered
+  terminal screen state headlessly generated in a real PTY environment.
+- **Sans-IO In-Memory Terminal**: Pure functional VT-100 parser verifying virtual terminal
+  screen buffers directly in RAM with zero OS syscalls.
+- **Decoupled I/O Devices**: `InputDevice` and `OutputDevice` abstract terminal I/O away
+  from physical `stdin` and `stdout`, allowing input events and output streams to be
+  driven and inspected directly in tests without taking over your terminal.
+- **Empirical Benchmarking & Flamegraph Profiling**: Continuous performance measurement
+  via Rust's built-in benchmarking suites and automated flamegraph profiling against
+  established baselines rather than guesswork.
 
-- Taking inspiration from things like [React](https://react.dev/),
-  [SolidJS](https://www.solidjs.com/), [Elm](https://guide.elm-lang.org/architecture/),
-  [iced-rs](https://docs.rs/iced/latest/iced/),
-  [Jetpack Compose](https://developer.android.com/compose),
-  [JSX](https://ui.dev/imperative-vs-declarative-programming),
-  [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be run
-  in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
-- Even the thread running the main event loop doesn't block since it is async.
-- Using macros to create DSLs to implement something inspired by
-  [CSS](https://www.w3.org/TR/CSS/#css) &
-  [JSX](https://ui.dev/imperative-vs-declarative-programming).
+### Engineered for Performance, Correctness & Reliability
 
-2. 🌎 We are building apps to enhance developer productivity & workflows.
+- 📐 **Zero-Cost Type-Proof Architecture & Mathematical Correctness**: Rather than relying on
+  ambiguous primitive integers (`usize`, `u16`) and runtime assertions, formal type theory
+  and trait hierarchies [make illegal states unrepresentable]:
+    - **The Newtype Pattern for Domain Separation & Coordinate Safety**: Replaces raw
+      primitive integers with zero-cost newtypes (`CRow`, `VPRow`, `CHeight`), eliminating
+      primitive obsession and transposition bugs with zero runtime memory or performance
+      overhead:
+        - **0-Index vs 1-Index Separation**: Strongly types the distinction between
+          0-based buffer positions (`IndexOps`: `VPRow`, `VPCol`, `CRow`, `CCol`), 1-based
+          terminal coordinates (`TermRow`, `TermCol`), and 1-based lengths (`LengthOps`:
+          `VPHeight`, `VPWidth`, `CHeight`, `CWidth`).
+        - **Safe Bidirectional Conversions**: Pairing traits provide explicit conversions
+          between 0-based and 1-based domains (`to_zero_based()`, `from_zero_based()`,
+          `convert_to_length()`).
+        - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
+          (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous
+          manual arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`),
+          negative underflow, and CSI zero-index terminal crashes (`TermRowDelta`,
+          `TermColDelta`).
+        - **Empirically Proven Zero-Cost Layout**: Newtypes share the identical memory
+          layout, size, and ABI of raw primitives (passed in CPU registers with zero heap
+          allocation or indirection) and are completely erased during LLVM compilation;
+          Criterion benchmarks confirm execution differences remain strictly within the
+          +/- 2% noise margin ([FUNARCH 2026][FUNARCH 2026 paper]).
+    - **Dual-Domain Coordinate Trait Hierarchy**: Strict trait boundaries isolate 64-bit
+      memory coordinates (`StorageCoordinate`, `usize`: `CPos`) from 16-bit visual
+      coordinates (`ScreenCoordinate`, `u16`: `VPPos`), requiring explicit camera viewport
+      transformations.
+    - **Explicit Narrowing/Widening Traits & Zero Raw `as` Casts**: Replaces dangerous,
+      silent primitive `as` casting across the codebase with explicit, type-safe traits
+      (`WideningCastTo` for lossless promotions and `NarrowingCastTo` for checked/clamped
+      reductions), preventing accidental truncations and sign-loss bugs.
+    - **Eliminating Boolean Blindness with Witness Enums**: Grounded in ACM research
+      ([FUNARCH 2023][FUNARCH 2023 paper] and [Parse, don't validate]), boundary and
+      bounds checks never return uninformative `bool` flags. Instead, they return
+      structured witness enums (`ArrayOverflowResult`, `RangeBoundsResult`), forcing
+      callers to exhaustively handle all boundary states at compile time.
 
-- The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a single
-  terminal window). Rather it is to build a set of integrated "apps" (or "tasks") that run
-  in the same process that renders to one terminal window.
-- Inside of this terminal window, we can implement things like "applet" switching,
-  routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI apps
-  (which are tightly integrated) that are running in the same process, in the same window.
-  So you can imagine that all these "applets" have shared application state. Each "applet"
-  may also have its own local application state.
-- You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case you
-  need. `r3bl_tui` allows you to create application state that can be moved between
-  various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
-- Here are some examples of the types of "app"s we plan to build (for which this
-  infrastructure acts as the open source engine):
-    1. Multi user text editors w/ syntax highlighting.
-    2. Integrations w/ github issues.
-    3. Integrations w/ calendar, email, contacts APIs.
+- 🦄 **First-Class Unicode & Complex Emoji Engine (`GCString`)**: Most terminal emulators and
+  TUI libraries break when handling "jumbo emojis", zero-width joiners (ZWJ), skin tone
+  modifiers, and wide characters (display width > 1), causing visual tearing, misaligned
+  borders, and string-slicing panics. ROC solves this from the ground up via
+  `GCStringOwned`:
+    - **Tri-Index Separation**: Strictly decouples memory position (`ByteIndex`, UTF-8
+      offset), logical editing position (`SegIndex`, user-perceived grapheme clusters),
+      and visual column position (`VPCol`, actual terminal display width).
+    - **Complex Emoji & Modifier Support**: Correctly measures and renders multi-codepoint
+      sequences (e.g., `👨🏾‍🤝‍👨🏿` spans 5 codepoints and 7 code units, but resolves to 1 logical
+      grapheme segment and 2 visual columns).
+    - **Panic-Proof Slicing & Boundary Safety**: Guarantees cursor navigation, backspace,
+      and substring slicing never split UTF-8 codepoints or mid-grapheme clusters,
+      eliminating runtime slicing panics across editors, line inputs, and diff rendering.
+
+- 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain attacks,
+  maintainer burnout, and abandonware, our explicit architectural goal is to **own our
+  Bill of Materials (BOM)**. Critical primitives (including our custom `direct_to_ansi`
+  terminal I/O backend, VT-100/ANSI parser, zero-copy gap buffer, and Markdown parser) are
+  engineered in-house in pure Rust. We strictly limit external dependencies to actively
+  funded, strongly supported, and battle-tested industry foundations (such as `tokio`,
+  `mio`, and `mimalloc`), safeguarding production applications against transitive bloat,
+  sudden deprecations, and upstream vulnerabilities.
+
+- 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native, first-class
+  support across platforms using the best backend for each OS:
+    - **Linux**: Our custom high-performance, Linux-native `direct_to_ansi` engine
+      (talking directly to the terminal device via `mio`/epoll for minimal latency and
+      maximum throughput, without the use of `crossterm`).
+    - **macOS, Windows & Unix/BSDs**: Currently powered by `crossterm`. We plan to expand
+      `direct_to_ansi` in the future to replace `crossterm` across all platforms.
+
+- 🚀 **SIMD Contiguous Memory Layout (`Flat2DArray`)**: Single contiguous 1D allocation
+  indexed as 2D, delivering 2.3x rendering speedups, SIMD chunk batching, and eliminating
+  pointer indirection ([implementation deep
+  dive][High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)] and [memory latency
+  theory][Rust, Memory performance & latency]).
+
+- 🧑‍🤝‍🧑 **Double-Buffered SSH-Optimized Diff Rendering**: Double-buffered compositor computes
+  minimal cell-level diffs between frames, painting only what changed for smooth,
+  flicker-free performance over high-latency SSH connections, with multi-layer Z-order
+  compositing for modal overlays and popups.
+
+- 🔀 **Terminal Multiplexing & PTY Architecture (`PTYMux`)**: Decouples physical display
+  constraints from subprocess execution via virtual terminals and process orchestration:
+    - **2D Viewport Panning in PTY Sessions (Horizontal Scrolling without Wrapping)**:
+      Traditional terminal emulators (like `xterm`, `Alacritty`, `Kitty`) lack horizontal
+      panning for standard CLI tools (like `cat`, `grep`, `git log`, `dmesg`), forcibly
+      hard-wrapping wide lines across rows and mangling tabular data, JSON, or stack
+      traces into unreadable spaghetti. When running any CLI program inside a ROC PTY
+      session (a concrete manifestation of which is [`pty_mux_example`], powered by
+      [`GrowableBuffer`] and [`PTYMux`]), ROC decouples the physical viewport from the
+      virtual terminal canvas width (e.g., 1,000+ columns). The child process writes into
+      this wide virtual canvas without line wrapping, allowing users to smoothly pan
+      horizontally (`Shift + Mouse Wheel` or trackpad gestures) across the output without
+      layout destruction.
+    - **Decoupled Throughput vs. Terminal Bottlenecks (Faster Than Bare `xterm`)**: In
+      traditional terminal emulators (like `xterm`), running a command that dumps
+      megabytes of text (e.g., `cat large.log`) blocks the process on `stdout` I/O while
+      the terminal synchronously parses escape codes, recalculates line wrapping, and
+      rasterizes every glyph. Counter-intuitively, running that same command inside a ROC
+      PTY session (such as [`pty_mux_example`]) running _inside_ `xterm` is often
+      significantly **faster than running the command directly in bare `xterm`**. ROC's
+      headless VT-100 parser (`OfsBufVT100`) acts as an in-memory shock absorber,
+      ingesting raw subprocess output at memory bus speeds, while double-buffered diff
+      rendering paints only the visible viewport to the host terminal at controlled
+      display intervals. Subprocesses drain `stdout` without stalling on terminal drawing
+      or network I/O backpressure.
+
+- 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy `terminfo` /
+  `termcap` databases and [ncurses] baggage by querying modern ANSI protocols directly at
+  runtime.
+
+- 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
+  [declarative] [CSS-like] styling inspired by [React] and [Elm].
+
+- 🎨 **Intelligent Color Degradation**: Automatically detects terminal capabilities and
+  gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 ANSI colors ->
+  Monochrome** (black & white). Gracefully handles environments lacking truecolor support
+  (such as pre-macOS 26 Tahoe `Terminal.app`, Linux virtual consoles, or headless CI
+  runners), complete with dynamic lolcat rainbow color-wheel palettes that automatically
+  adapt to terminal color capability.
+
+- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines Linux-native kernel
+  TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol state machine for
+  robust, zero-latency input handling across local terminals and SSH:
+    - **Linux-Native `direct_to_ansi` Driver**: Bypasses `crossterm` and `libc` FFI
+      wrappers on Linux by talking directly to `/dev/tty` via `mio`/`epoll(7)`,
+      eliminating thread-blocking reads and CPU-spinning loops.
+    - **Disambiguating Modifier Chords & Key Collisions**: Reliably decodes chords and
+      combinations that traditional terminal runtimes mangle or drop - such as
+      [`Shift+Enter`], `Ctrl+Enter`, `Ctrl+Tab`, `Ctrl+Number/Punctuation`, `Ctrl+I` vs
+      `Tab`, and `Alt+[` collisions.
+    - **Kitty Keyboard Protocol (`CSI u`) Progressive Enhancement**: Negotiates advanced
+      keyboard protocols with modern terminals ([Kitty keyboard protocol]), enabling full
+      modifier reporting, key-release events, and unambiguous key sequences with graceful
+      legacy fallback.
+    - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms timeout
+      heuristics with an internal state machine (`Drained`, `KernelMayHaveMore`,
+      `RemainingInReadBuffer`), achieving 0ms zero-latency ESC handling while correctly
+      reassembling multi-packet escape sequences across SSH.
+    - **OSC Terminal Query Absorption & SGR Mouse Reporting**: Frames and absorbs
+      background terminal responses (such as OSC 10/11 color queries and OSC 52 clipboard)
+      on `stdin` to prevent terminal text leakage, while supporting full SGR mouse
+      tracking (clicks, drags, scroll wheel).
+
+- 🧩 **Composable "Applet" Architecture & Shared State**: Enables multiple integrated TUI
+  experiences ("applets") to run within the same process and terminal window. Supports
+  shared application state across sub-apps alongside local view state, allowing seamless
+  transitions and routing between Full-Screen TUI views and inline Partial-TUI dialogs
+  without process restarts or lost context.
 
 ## Welcome to the monorepo and workspace
 
-All the crates in the `r3bl-open-core` [monorepo](https://en.wikipedia.org/wiki/Monorepo)
-provide lots of useful functionality to help you build TUI (text user interface) apps,
-along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+All the crates in the `r3bl-open-core` [monorepo] provide lots of useful functionality to
+help you build TUI (text user interface) apps, along with general niceties & ergonomics
+that all Rustaceans 🦀 can enjoy 🎉.
 
 Any top-level folder in this repository that contains a `Cargo.toml` file is a Rust
-project, also known as a
-[crate](https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html). These crates are
-likely published to [crates.io](https://crates.io/crates/r3bl_tui). Together, they form a
-[Rust workspace](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html).
+project, also known as a [crate]. These crates are likely published to [crates.io].
+Together, they form a [Rust workspace].
 
-Here's the [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md)
-for this monorepo containing a Rust workspace. The changelog is a great place to start to
-get familiar with what has changed recently in each of the crates in this Rust workspace.
+Here's the [changelog] for this monorepo containing a Rust workspace. The changelog is a
+great place to start to get familiar with what has changed recently in each of the crates
+in this Rust workspace.
 
 ## This workspace contains crates for building TUI, CLI, TTY apps
 
-The [`r3bl_tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui) crate is the
-main crate that contains the core functionality for building TUI apps. It allows you to
-build apps that range from "full" TUI to "partial" TUI, and everything in the middle.
+The [`r3bl_tui`] crate is the main crate that contains the core functionality for building
+TUI apps. It allows you to build apps that range from "full" TUI to "partial" TUI, and
+everything in the middle.
 
 Here are some videos that you can watch to get a better understanding of TTY programming.
 
-- [Build with Naz: TTY playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+- [Build with Naz: TTY playlist]
+- [Build with Naz: async readline]
 
 This crate provides five entry points for building interactive terminal applications. Each
 internalizes terminal availability and size checks, and returns a `TuiAvailability<T>`
@@ -274,17 +346,15 @@ enum:
 
 ### Full TUI (async, raw mode, full screen) for immersive TUI apps
 
-[`tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/src/tui) gives you "raw
-mode", "alternate screen" and "full screen" support, while being totally async. It
-provides a full-featured framework with:
+[`tui`] gives you "raw mode", "alternate screen" and "full screen" support, while being
+totally async. It provides a full-featured framework with:
 
 - **`App` trait**: Unidirectional data flow architecture.
 - **`FlexBox`**: Responsive layout engine.
 - **Component System**: Reusable UI elements (editors, dialogs, etc.).
 
-An example of this is the "Full TUI" app `edi` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
-install & run this with the following command:
+An example of this is the "Full TUI" app `edi` in the [`r3bl-cmdr`] crate. You can install
+& run this with the following command:
 
 ```bash
 cargo install r3bl-cmdr
@@ -293,12 +363,10 @@ edi
 
 ### Partial TUI (async, partial raw mode, async readline) for choice based user interaction
 
-[`choose`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/readline_async/choose_api.rs)
-allows you to build less interactive apps that ask a user user to make choices from a list
-of options and then use a decision tree to perform actions.
+[`choose`] allows you to build less interactive apps that ask a user to make choices from
+a list of options and then use a decision tree to perform actions.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`] crate. You can
 install & run this with the following command:
 
 ```bash
@@ -308,18 +376,16 @@ giti
 
 ### Partial TUI (async, partial raw mode, async readline) for async REPL
 
-[`readline_async`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/readline_async/readline_async_api.rs)
-gives you the ability to easily ask for user input in a line editor. You can customize the
-prompt, and other behaviors, like input history.
+[`readline_async`] gives you the ability to easily ask for user input in a line editor.
+You can customize the prompt, and other behaviors, like input history.
 
-Using this, you can build your own async shell programs using "async readline & stdout".
+Using this, you can build your own async shell programs using "async readline & `stdout`".
 Use advanced features like showing indeterminate progress spinners, and even write to
-stdout in an async manner, without clobbering the prompt / async readline, or the spinner.
-When the spinner is active, it pauses output to stdout, and resumes it when the spinner is
-stopped.
+`stdout` in an async manner, without clobbering the prompt / async readline, or the
+spinner. When the spinner is active, it pauses output to `stdout`, and resumes it when the
+spinner is stopped.
 
-An example of this is this "Partial TUI" app `giti` in the
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) crate. You can
+An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`] crate. You can
 install & run this with the following command:
 
 ```bash
@@ -329,17 +395,18 @@ giti
 
 Here are other examples of this:
 
-1. https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
-2. https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
+1. [`tcp-api-server`]: An interactive async REPL client demonstrating `readline_async`
+   with concurrent background tasks and progress spinners.
+2. [`tui/examples`]: Standalone examples in this workspace demonstrating async readline
+   (`readline_async.rs`), spinners (`spinner.rs`), shell (`shell_async.rs`), and PTY
+   orchestration.
 
 ### Terminal multiplexer
 
-[`PTYMux::run()`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/core/pty/pty_mux/mux.rs)
-lets you build a terminal multiplexer similar to `tmux`. It manages multiple child
-processes (each in its own PTY) with per-process virtual terminal buffers and instant
-switching. See the
-[`pty_mux_example`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs)
-for a working example that wraps `bash`, `htop`, and other CLI tools.
+[`PTYMux::run()`] lets you build a terminal multiplexer similar to `tmux`. It manages
+multiple child processes (each in its own PTY) with per-process virtual terminal buffers
+and instant switching. See the [`pty_mux_example`] for a working example that wraps
+`bash`, `htop`, and other CLI tools.
 
 ## Power via composition
 
@@ -349,19 +416,17 @@ need. `r3bl_tui` allows you to create application state that can be moved betwee
 
 ### Main library crate
 
-There is just one main library crate in this workspace:
-[`r3bl_tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui).
+There is just one main library crate in this workspace: [`r3bl_tui`].
 
 ### Main binary crate
 
 There is just one main binary crate that contains user facing apps that are built using
-the library crates:
-[`r3bl-cmdr`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr). This crate
-contains these apps:
+the library crates: [`r3bl-cmdr`]. This crate contains these apps:
 
 - `giti`: Interactive git workflows made easy.
 - `edi`: Beautiful Markdown editor with advanced rendering and editing features.
-- `env-source`: Fast cross-platform environment loader evaluating scripts across POSIX sh, Fish, PowerShell, and cmd.exe.
+- `env-source`: Fast cross-platform environment loader evaluating scripts across POSIX sh,
+  Fish, PowerShell, and cmd.exe.
 
 You can install & run this with the following command:
 
@@ -377,8 +442,7 @@ env-source --version
 
 ### Build infrastructure and developer tooling crate
 
-The [`r3bl-build-infra`](https://github.com/r3bl-org/r3bl-open-core/tree/main/build-infra)
-crate provides developer productivity tools:
+The [`r3bl-build-infra`] crate provides developer productivity tools:
 
 - `cargo-rustdoc-fmt`: Formats markdown tables and converts inline links to
   reference-style links in rustdoc comments.
@@ -398,8 +462,7 @@ using detailed task files with implementation plans in the `./task/` directory.
 
 ### Task Management Files
 
-- **[`./task/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/task)** - Directory
-  containing detailed task management files:
+- **[`./task/`]** - Directory containing detailed task management files:
     - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently
       in progress
     - **`pending/`**: Tasks queued for later work
@@ -411,8 +474,7 @@ using detailed task files with implementation plans in the `./task/` directory.
 
 ### Task File Format
 
-Detailed task files follow a structured format defined in
-[`./task/AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/task/AGENTS.md):
+Detailed task files follow a structured format defined in [`./task/AGENTS.md`]:
 
 **Structure:**
 
@@ -456,9 +518,8 @@ More detailed steps...
 
 ### Task Workflow Commands
 
-The `/r3bl-task` slash command (defined in
-[`AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md#task-tracking-system))
-manages the task lifecycle:
+The `/r3bl-task` slash command (defined in [`AGENTS.md: task-tracking-system`]) manages
+the task lifecycle:
 
 **Create a new task:**
 
@@ -512,9 +573,8 @@ R3BL provides IDE extensions to enhance your development workflow:
 **For VSCode Users**
 
 R3BL provides custom VSCode extensions including Task Spaces (organize editor tabs by
-context), theme, and enhanced syntax highlighting. See the
-[R3BL VSCode Extensions](#r3bl-vscode-extensions) section below for installation and
-detailed feature descriptions.
+context), theme, and enhanced syntax highlighting. See the [R3BL VSCode Extensions]
+section below for installation and detailed feature descriptions.
 
 **Workflow Integration:**
 
@@ -525,39 +585,31 @@ implementation progress.
 ## Documentation and Planning
 
 We invest heavily in documentation quality because it is the right thing to do. Also,
-[research shows](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md)
-it is the single most important factor developers consider when evaluating open source
-projects. In the Rust ecosystem specifically, documentation is the #1 crate evaluation
-criterion
-([RFC 1824](https://rust-lang.github.io/rfcs/1824-crates.io-default-ranking.html)), and
-91% of practitioners depend on documentation for adoption decisions
-([2024 study](https://arxiv.org/html/2403.03819v1)). Every public API has rustdoc comments
+[research shows] it is the single most important factor developers consider when
+evaluating open source projects. In the Rust ecosystem specifically, documentation is the
+#1 crate evaluation criterion ([RFC 1824]), and 91% of practitioners depend on
+documentation for adoption decisions ([2024 study]). Every public API has rustdoc comments
 with usage examples, and doc tests verify that every example compiles and runs.
 
-Our documentation standards are not aspirational - they are
-[machine-enforced](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md).
+Our documentation standards are not aspirational - they are [machine-enforced].
 Conventions for voice, structure, links, and formatting are codified as an AI (LLM) skill
 that runs during development, not a style guide that sits in a wiki collecting dust. We
-also operationalize inclusivity at the documentation level: our
-[Pedagogical Links for Inclusivity](https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md#pedagogical-links-for-inclusivity)
-rule requires linking domain-specific terms to external references so no reader is
-excluded by assumed knowledge - a concrete, measurable practice rather than a vague
-aspiration.
+also operationalize inclusivity at the documentation level: our [Pedagogical Links for
+Inclusivity] rule requires linking domain-specific terms to external references so no
+reader is excluded by assumed knowledge - a concrete, measurable practice rather than a
+vague aspiration.
 
-The [`docs/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs) folder contains
-comprehensive documentation for this project, including:
+The [`docs/`] folder contains comprehensive documentation for this project, including:
 
 ### Documentation Philosophy
 
-- [`why-good-docs-matter.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md) -
-  Research evidence for why we invest heavily in documentation quality
+- [`why-good-docs-matter.md`] - Research evidence for why we invest heavily in
+  documentation quality
 
 ### Release and Contribution Guides
 
-- [`release-guide.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/release-guide.md) -
-  Step-by-step guide for releasing new versions
-- [`contributing_guides/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/contributing_guides) -
-  Detailed contribution guidelines including:
+- [`release-guide.md`] - Step-by-step guide for releasing new versions
+- [`contributing_guides/`] - Detailed contribution guidelines including:
     - Branch naming conventions (`BRANCH.md`)
     - Commit message standards (`COMMIT_MESSAGE.md`)
     - Issue creation guidelines (`ISSUE.md`)
@@ -582,9 +634,8 @@ The `docs/` folder serves as the central repository for:
 
 To learn how we built this crate, please take a look at the following resources.
 
-- If you like consuming video content, here's our
-  [YT channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
+- If you like consuming video content, here's our [YT channel]. Please consider
+  [subscribing].
 
 ## Quick Start
 
@@ -601,8 +652,8 @@ cd r3bl-open-core
 ./bootstrap.sh
 ```
 
-The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)
-script handles **OS-level setup** with a clean main function structure and will:
+The [`bootstrap.sh`] script handles **OS-level setup** with a clean main function
+structure and will:
 
 - **Cross-Platform Support**: Works on **macOS** (Homebrew) and **Linux** including Ubuntu
   (apt), Fedora (dnf), Arch (pacman), openSUSE (zypper), and Alpine (apk)
@@ -611,8 +662,8 @@ script handles **OS-level setup** with a clean main function structure and will:
 - **Development Shell**: Install `Fish` shell and `fzf` for interactive development
 - **File Watching**: Install file watchers (`inotifywait` on Linux, `fswatch` on macOS)
 - **Development Utilities**: Install `htop`, `screen`, `tmux` for system monitoring
-- **Node.js Ecosystem**: Install `Node.js` and `npm` (for Markdown formatting via Prettier
-  and local documentation serving)
+- **Node.js Ecosystem**: Install [`Node.js`] and `npm` (for Markdown formatting via
+  Prettier and local documentation serving)
 - **AI (LLM) Integration (Optional)**: If you choose to use an AI coding agent, the repo
   supports `Antigravity CLI` (`agy`), or any tool of your choice
 - **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all
@@ -655,14 +706,15 @@ fish run.fish install-cargo-tools
 
 - **cmdr**: `edi`, `giti`, `rc`, `env-source` binaries (calls `run.fish install-cmdr`)
 - **build-infra**: `cargo-rustdoc-fmt` (calls `run.fish install-build-infra`)
-- **rust-analyzer-mcp-server**: `rust-analyzer-mcp-server` MCP binary (calls `run.fish install-rust-analyzer-mcp-server`)
+- **rust-analyzer-mcp-server**: `rust-analyzer-mcp-server` MCP binary (calls
+  `run.fish install-rust-analyzer-mcp-server`)
 
 **Features:**
 
 - **Smart Installation**: Uses `cargo-binstall` for speed with fallback to
   `cargo install --locked`
-- **Local Source Rebuild**: Always rebuilds `cmdr`, `build-infra`, and `rust-analyzer-mcp-server` from source with
-  current toolchain
+- **Local Source Rebuild**: Always rebuilds `cmdr`, `build-infra`, and
+  `rust-analyzer-mcp-server` from source with current toolchain
 - **Shared Utilities**: Leverages utility functions from `script_lib.fish` for consistency
 
 ## IDE Setup and Extensions
@@ -732,15 +784,14 @@ Our primary development experience is built around robust tools and scripts whic
 require LLMs. These tools are deterministic (not probabilistic), don't hallucinate, are
 fast & efficient, and only consume your local compute and energy resources:
 
-- [`./check.fish`](#automated-development-monitoring): Your go-to tool for builds, tests,
-  and linting.
-- [`run.fish`](#unified-script-architecture): Orchestrates workspace-wide commands.
-- [`bacon`](#bacon-development-tools): Provides real-time background feedback.
-- [`bootstrap.sh`](#automated-setup-recommended): Automated OS-level and toolchain setup.
-- **`cargo-rustdoc-fmt`**: Custom rustdoc formatter located in the
-  [`build-infra/`](build-infra/README.md) folder.
-- [R3BL VSCode extensions](#r3bl-vscode-extensions): Enhancements for the developer's
-  environment (Themes, Copyright management, etc).
+- [`./check.fish`]: Your go-to tool for builds, tests, and linting.
+- [`run.fish`][unified-script-architecture]: Orchestrates workspace-wide commands.
+- [`bacon`][bacon-development-tools]: Provides real-time background feedback.
+- [`bootstrap.sh`][automated-setup-recommended]: Automated OS-level and toolchain setup.
+- **`cargo-rustdoc-fmt`**: Custom rustdoc formatter located in the [`build-infra/`]
+  folder.
+- [R3BL VSCode Extensions]: Enhancements for the developer's environment (Themes,
+  Copyright management, etc).
 - **Core Rust Stack**: `rustup`, `cargo`, `rust-analyzer`, `clippy`, `rustfmt`.
 - **CLI Power Tools**: `fzf` (fuzzy finding), `btop` (monitoring), `tmux` (multiplexing),
   `flamegraph` (profiling), `inferno` (stack collapse), `lychee` (link checking).
@@ -755,22 +806,19 @@ that you can:
 1. Explore the existing codebase with confidence.
 2. Run tests, do profiling, and measure optimizations.
 3. Refactor code or generate new code that adheres to our engineering standards. There are
-   manual review steps and many other guardrails in place in the
-   [`skills`](.agents/skills/) themselves.
+   manual review steps and many other guardrails in place in the [`skills`] themselves.
 
 **How it works:**
 
-Using an AI coding agent is completely optional. If you do choose to use an AI (LLM)
-coding agent or harness (such as `Antigravity CLI` (`agy`), or any tool of your choice),
-point it to the instructions in
-[`AGENTS.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md). This file
-contains our design philosophy, coding standards, and crate-specific guidance.
+Using an AI coding agent is completely optional. If you do choose to use an AI/LLM coding
+agent (such as `Antigravity CLI` (`agy`), or any tool of your choice), point it to the
+instructions in [`AGENTS.md`]. This file contains our design philosophy, coding standards,
+and crate-specific guidance.
 
 To equip your AI coding agent with AST-aware code navigation, compiler diagnostics, and
 automated quick-fixes via `rust-analyzer`, connect it to our
-[`r3bl-rust-analyzer-mcp-server`](rust-analyzer-mcp-server/)
-([crates.io](https://crates.io/crates/r3bl-rust-analyzer-mcp-server)) Model Context
-Protocol (MCP) server.
+[`r3bl-rust-analyzer-mcp-server`] ([crates.io: r3bl-rust-analyzer-mcp-server]) Model
+Context Protocol (MCP) server.
 
 **Available Skills (`.agents/skills/`):**
 
@@ -791,21 +839,21 @@ When used, AI (LLM) coding agents can leverage the patterns and commands defined
 
 Invoke `skills` directly in your AI (LLM) coding agent:
 
-| Command               | Action                                                                  |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/check`              | Run comprehensive code quality checks                                   |
-| `/docs`               | Documentation build and formatting                                      |
-| `/clippy`             | Code style and linting                                                  |
-| `/fix-intradoc-links` | Fix rustdoc intra-doc links                                             |
-| `/check-regression`   | Detect performance regressions                                          |
-| `/analyze-logs`       | Analyze log files (strips ANSI codes)                                   |
-| `/r3bl-task`          | [Task management](#r3bl-vscode-extensions) (create, update, load, done) |
+| Command               | Action                                                                 |
+| --------------------- | ---------------------------------------------------------------------- |
+| `/check`              | Run comprehensive code quality checks                                  |
+| `/docs`               | Documentation build and formatting                                     |
+| `/clippy`             | Code style and linting                                                 |
+| `/fix-intradoc-links` | Fix rustdoc intra-doc links                                            |
+| `/check-regression`   | Detect performance regressions                                         |
+| `/analyze-logs`       | Analyze log files (strips ANSI codes)                                  |
+| `/r3bl-task`          | [Task management][R3BL VSCode Extensions] (create, update, load, done) |
 
 **AI (LLM) Coding Agent Synergy: R3BL VSCode Extensions**
 
-For the best experience, install the [R3BL VSCode Extensions](#r3bl-vscode-extensions).
-They boost your productivity whether you use them standalone or hand-in-hand with AI (LLM)
-coding agents. Here are some highlights:
+For the best experience, install the [R3BL VSCode Extensions]. They boost your
+productivity whether you use them standalone or hand-in-hand with AI (LLM) coding agents.
+Here are some highlights:
 
 | Extension                    | AI (LLM) Coding Agent Synergy                                                                                                                |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -815,12 +863,11 @@ coding agents. Here are some highlights:
 
 ## Build the workspace and run tests
 
-There's a unified [`fish`](https://fishshell.com/) script that you can use to run the
-build and release pipeline for this workspace, and more (local only operations).
+There's a unified [`fish`] script that you can use to run the build and release pipeline
+for this workspace, and more (local only operations).
 
 To get a list of available commands, you can review the `fish` script in the root of this
-repo [`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish). To see
-all available commands:
+repo [`run.fish`]. To see all available commands:
 
 ```bash
 fish run.fish
@@ -853,17 +900,16 @@ fish run.fish
 | `fish run.fish toolchain-remove`                           | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
 
 > **TUI Testing**: The `r3bl_tui` crate uses PTY-based testing for accurate terminal I/O
-> verification. See the
-> [PTY Testing Infrastructure](./tui/README.md#pty-testing-infrastructure) section in the
-> TUI README for details on writing and running TUI tests.
+> verification. See the [PTY Testing Infrastructure] section in the TUI README for details
+> on writing and running TUI tests.
 
 ### Automatic Tmpfs Symlink Architecture & Git Worktree Isolation
 
-**High-Performance Zero-Configuration Build Architecture**:
-`check.fish` dynamically provisions an isolated tmpfs target directory based on the
-repository and worktree location, and symlinks `./target` to that directory. This ensures
-blazing-fast RAM builds (~2-3x speedup) while completely eliminating lock contention across
-multiple terminals, IDE instances (`rust-analyzer`), and Git worktrees.
+**High-Performance Zero-Configuration Build Architecture**: `check.fish` dynamically
+provisions an isolated tmpfs target directory based on the repository and worktree
+location, and symlinks `./target` to that directory. This ensures blazing-fast RAM builds
+(~2-3x speedup) while completely eliminating lock contention across multiple terminals,
+IDE instances (`rust-analyzer`), and Git worktrees.
 
 #### 1. Git Worktree Isolation
 
@@ -876,17 +922,22 @@ When working concurrently across multiple Git worktrees (e.g. `roc`, `roc-build-
 /home/user/github/roc-fix-shift-home-lockup/target -> /tmp/check-fish-$USER-roc-fix-shift-home-lockup-<hash>/target
 ```
 
-- **Zero Lock Contention**: Each worktree has its own dedicated `.lock` file and build cache.
+- **Zero Lock Contention**: Each worktree has its own dedicated `.lock` file and build
+  cache.
 - **Shared IDE & Terminal Cache**: Because `./target` is a native filesystem symlink,
   `cargo`, `rust-analyzer`, `bacon`, and `check.fish` within the same worktree share the
-  exact same RAM cache seamlessly without requiring custom `CARGO_TARGET_DIR` environment variables.
+  exact same RAM cache seamlessly without requiring custom `CARGO_TARGET_DIR` environment
+  variables.
 
 #### 2. Smart RAM-Aware Storage Selection
 
 `check.fish` automatically inspects total physical system memory:
 
-- **High-RAM Workstations (>= 48 GiB RAM)**: Uses `/tmp` (RAM-backed tmpfs) for maximum compilation speed.
-- **Lower-RAM Machines (< 48 GiB RAM)**: Automatically routes to `/var/tmp` (NVMe disk-backed storage) to prevent tmpfs exhaustion and out-of-memory crashes during large builds or background system updates.
+- **High-RAM Workstations (>= 48 GiB RAM)**: Uses `/tmp` (RAM-backed tmpfs) for maximum
+  compilation speed.
+- **Lower-RAM Machines (< 48 GiB RAM)**: Automatically routes to `/var/tmp` (NVMe
+  disk-backed storage) to prevent tmpfs exhaustion and out-of-memory crashes during large
+  builds or background system updates.
 
 #### 3. Directory Independence
 
@@ -909,12 +960,13 @@ tmpfs is wiped):
 
 To clear the build cache:
 
-- **`./check.fish --clean` (Recommended)**: Safely empties the backing tmpfs target directory
-  contents and staging directories, preserving the symlink structure and avoiding OS errors.
+- **`./check.fish --clean` (Recommended)**: Safely empties the backing tmpfs target
+  directory contents and staging directories, preserving the symlink structure and
+  avoiding OS errors.
 - **`cargo clean`**: Standard cargo clean works normally through the symlink.
 - **`rm -rf target`**: If the `./target` symlink is manually deleted from the shell,
-  `check.fish` detects the missing symlink on the next run, wipes any orphaned backing store,
-  and re-provisions a fresh symlink.
+  `check.fish` detects the missing symlink on the next run, wipes any orphaned backing
+  store, and re-provisions a fresh symlink.
 
 #### Incremental Compilation Management
 
@@ -950,9 +1002,8 @@ safeguard.
 
 ### Bacon Development Tools
 
-This project includes [bacon](https://dystroy.org/bacon/) configuration for background
-code checking and testing. `bacon` provides real-time feedback on code changes with two
-distinct workflows:
+This project includes [bacon] configuration for background code checking and testing.
+`bacon` provides real-time feedback on code changes with two distinct workflows:
 
 **Interactive Workflow (Rich TUI with details):**
 
@@ -1233,8 +1284,8 @@ mismatches in platform-specific code) with minimal setup overhead.
 > **Platform Backends**: The TUI crate supports multiple backends: `Crossterm`
 > (cross-platform, default on macOS/Windows) and `DirectToAnsi` (provided by `r3bl_tui`
 > itself, Linux-native, ~18% better performance). We use cfg gates to ensure the selection
-> of the correct backend for supported platforms. See
-> [Platform-Specific Backends](./tui/README.md#platform-specific-backends) for details.
+> of the correct backend for supported platforms. See [Platform-Specific Backends] for
+> details.
 
 ### Rust Toolchain Management
 
@@ -1565,7 +1616,8 @@ implications and are prepared to reinstall toolchains.
 
 #### Log File Output
 
-All toolchain management scripts display detailed log file locations to stdout at startup:
+All toolchain management scripts display detailed log file locations to `stdout` at
+startup:
 
 ```
 📋 Detailed log: /home/nazmul/Downloads/rust-toolchain-sync-to-toml.log
@@ -1659,8 +1711,7 @@ scripts source this library and call shared functions, ensuring consistent behav
 eliminating code duplication. When a function like `install_windows_target` needs
 updating, it only needs to be changed in one place.
 
-**[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** -
-**OS-Level Setup**
+**[`bootstrap.sh`]** - **OS-Level Setup**
 
 - System package manager detection and OS dependencies
 - Rust toolchain installation via `rustup`
@@ -1668,8 +1719,7 @@ updating, it only needs to be changed in one place.
 - Cross-platform compatibility (**Linux**, **macOS**)
 - Calls `run.fish` for Rust-specific `cargo` tooling
 
-**[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish)** - **Rust
-Development Commands**
+**[`run.fish`]** - **Rust Development Commands**
 
 - **Workspace-wide commands** that operate on the entire project
 - **Cargo tool installation** (`install-cargo-tools` with `cargo-binstall`, `uv`, `bacon`,
@@ -1680,8 +1730,7 @@ Development Commands**
   (**macOS**)
 - **Smart log monitoring** that detects and manages log files from different workspaces
 
-**[`script_lib.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish)** -
-**Shared Utilities**
+**[`script_lib.fish`]** - **Shared Utilities**
 
 - Common functions used by both `bootstrap.sh` and `run.fish`
 - Utility functions: `install_if_missing`, `install_cargo_tool`
@@ -1695,11 +1744,35 @@ exactly one place with clear ownership.
 
 ![Star History](./.github/assets/star-history.svg)
 
+## Origin Story
+
+After leaving Google in 2021, I ([Nazmul Idris]) embarked on a journey to create
+infrastructure for modern, powerful, async CLI and TUI experiences.
+
+I initially tried [`Node.js`] with [`ink`], but encountered fundamental limitations:
+
+- Module incompatibilities and dependency conflicts.
+- Limited control over keybindings and terminal behavior.
+- High resource consumption for simple tasks.
+- Screen flickering and poor rendering performance.
+
+Since I couldn't find the framework and toolkit of my dreams, I decided to build it myself
+from scratch in Rust.
+
+The core architectural innovation: a purely async, immediate mode reactive UI (every state
+change triggers a render from scratch) where nothing blocks the main thread - unlike
+traditional approaches using platform-specific blocking operations like GNU [`readline`]
+on Linux/macOS or Windows [`ReadConsole()`].
+
+This fully async, responsive framework works seamlessly across Linux, macOS, and Windows.
+It's optimized for use over SSH connections by painting only diffs, and handles complex
+concurrent operations with low latency while ensuring no thread blocking.
+
 ## Archive
 
 As this repo grows, changes, and matures, pruning is necessary. The
-[`r3bl-open-core-archive`](https://github.com/r3bl-org/r3bl-open-core-archive) is where
-all the code and artifacts that are no longer needed are moved to.
+[`r3bl-open-core-archive`] is where all the code and artifacts that are no longer needed
+are moved to.
 
 This way nothing is "lost" and if you need to use some of the code that was removed, you
 can find it there.
@@ -1711,3 +1784,116 @@ know.
    makes sense.
 2. Or we can even work out and arrangements to move ownership of the code & crate to you
    if you would like to commit to maintaining it.
+
+<!-- Ref Def Links -->
+
+[Nazmul Idris]: https://developerlife.com/about-me/
+[`readline`]: https://man7.org/linux/man-pages/man3/readline.3.html
+[`ReadConsole()`]: https://learn.microsoft.com/en-us/windows/console/readconsole
+[`vim`]: https://www.vim.org/
+[`neovim`]: https://neovim.io/
+[`ratatui`]: https://ratatui.rs/
+[`Node.js`]: https://nodejs.org/
+[`ink`]: https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/
+[flexbox]:
+    https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox
+[declarative]: https://ui.dev/imperative-vs-declarative-programming
+[CSS-like]: https://www.w3.org/TR/CSS/#css
+[`React`]: https://react.dev/
+[React]: https://react.dev/
+[Elm]: https://guide.elm-lang.org/architecture/
+[CSS]: https://www.w3.org/TR/CSS/#css
+[SolidJS]: https://www.solidjs.com/
+[iced-rs]: https://docs.rs/iced/latest/iced/
+[Jetpack Compose]: https://developer.android.com/compose
+[JSX]: https://ui.dev/imperative-vs-declarative-programming
+[Tokio]: https://crates.io/crates/tokio
+[Build with Naz: TTY playlist]:
+    https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+[Build with Naz: async readline]:
+    https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
+[`r3bl_tui`]: tui/
+[`r3bl-cmdr`]: cmdr/
+[`r3bl-rust-analyzer-mcp-server`]: rust-analyzer-mcp-server/
+[`r3bl-build-infra`]: build-infra/
+[`r3bl_analytics_schema`]: analytics_schema/
+[origin story]: #origin-story
+[monorepo]: https://en.wikipedia.org/wiki/Monorepo
+[crate]: https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html
+[crates.io]: https://crates.io/crates/r3bl_tui
+[Rust workspace]: https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html
+[changelog]: https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md
+[`tui`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/src/tui
+[`choose`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/readline_async/choose_api.rs
+[`readline_async`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/readline_async/readline_async_api.rs
+[`tcp-api-server`]: https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
+[`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
+[`PTYMux`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/core/pty/pty_mux/mux.rs
+[`PTYMux::run()`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/core/pty/pty_mux/mux.rs
+[`GrowableBuffer`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/tui/terminal_lib_backends/ofs_buf/storage/impls/growable_buffer.rs
+[`pty_mux_example`]:
+    https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
+[`./task/`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/task
+[`./task/AGENTS.md`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/task/AGENTS.md
+[`AGENTS.md: task-tracking-system`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md#task-tracking-system
+[R3BL VSCode Extensions]: #r3bl-vscode-extensions
+[research shows]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md
+[RFC 1824]: https://rust-lang.github.io/rfcs/1824-crates.io-default-ranking.html
+[2024 study]: https://arxiv.org/html/2403.03819v1
+[machine-enforced]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md
+[Pedagogical Links for Inclusivity]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/.agents/skills/write-documentation/SKILL.md#pedagogical-links-for-inclusivity
+[`docs/`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/docs
+[`why-good-docs-matter.md`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/why-good-docs-matter.md
+[`release-guide.md`]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/release-guide.md
+[`contributing_guides/`]:
+    https://github.com/r3bl-org/r3bl-open-core/tree/main/docs/contributing_guides
+[YT channel]: https://www.youtube.com/@developerlifecom
+[subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+[`bootstrap.sh`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh
+[automated-setup-recommended]: #automated-setup-recommended
+[`./check.fish`]: #automated-development-monitoring
+[unified-script-architecture]: #unified-script-architecture
+[bacon-development-tools]: #bacon-development-tools
+[`build-infra/`]: build-infra/README.md
+[`skills`]: .agents/skills/
+[`AGENTS.md`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/AGENTS.md
+[crates.io: r3bl-rust-analyzer-mcp-server]:
+    https://crates.io/crates/r3bl-rust-analyzer-mcp-server
+[`fish`]: https://fishshell.com/
+[`run.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish
+[PTY Testing Infrastructure]: ./tui/README.md#pty-testing-infrastructure
+[bacon]: https://dystroy.org/bacon/
+[Platform-Specific Backends]: ./tui/README.md#platform-specific-backends
+[`script_lib.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish
+[`r3bl-open-core-archive`]: https://github.com/r3bl-org/r3bl-open-core-archive
+[curses]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+[ncurses]: https://en.wikipedia.org/wiki/Ncurses
+[`Shift+Enter`]:
+    https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
+[Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855
+[loosely coupled and strongly coherent]:
+    https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+[unidirectional data flow]: https://guide.elm-lang.org/architecture/
+[responsive]:
+    https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design
+[`tmux`]: https://github.com/tmux/tmux
+[FUNARCH 2023 paper]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
+[FUNARCH 2026 paper]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
+[Parse, don't validate]:
+    https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+[make illegal states unrepresentable]: https://corrode.dev/blog/illegal-state/
+[High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]:
+    https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/
+[Rust, Memory performance & latency]:
+    https://developerlife.com/2025/05/19/rust-mem-latency/

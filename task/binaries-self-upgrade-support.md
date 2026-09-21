@@ -89,8 +89,6 @@ application:
 - When passed, the binary bypasses normal application startup, executes the upgrade flow
   synchronously, and exits.
 
----
-
 ## Lifecycle Flowchart
 
 ```text
@@ -155,8 +153,6 @@ application:
 │     Print clean error with retry instructions: `<binary> --upgrade`          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ```
-
----
 
 ## Architecture
 
@@ -304,8 +300,6 @@ application:
       diagrams.
     - Clean up and modernize `../r3bl_website/css/styles.css` and root variable styling.
     - Provide fallback source compilation instructions (`cargo install <crate> --force`).
-
----
 
 ## Implementation Plan
 
@@ -498,8 +492,6 @@ application:
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `task/binaries-self-upgrade-support.md`
-
----
 
 ## Cross-Platform Test Matrix
 

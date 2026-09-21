@@ -6,7 +6,23 @@ version = "0.7.8"
 edition = "2024"
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
-description = "Fully async modern TUI framework for Rust. Flexbox layouts, CSS styling, reactive state, markdown editor, custom markdown renderer with syntax highlighting, gradient colors, emoji support, modal dialogs, mouse events, async readline (non-blocking POSIX alternative). Diff-based rendering optimized for SSH. Full VT100 I/O parsers, PTY testing (e2e & snapshot), PTY mux primitives (build your own tmux). Native Linux input via RRT/mio/epoll (no crossterm). Auto-detects terminal capabilities and gracefully degrades. Cross-platform (Linux, macOS, Windows). Built for performance."
+description = """
+A fully async TUI framework and toolkit spanning the entire terminal spectrum: \
+(1) CLI & REPLs: non-blocking async alternative to GNU readline (readline_async) \
+allowing background tasks and spinners to print concurrently. (2) Inline/Partial \
+TUI: interactive multi-select dialogs (choose) rendering inline without taking \
+over the screen. (3) Full-Screen TUI: React & Elm inspired apps with flexbox \
+layout, CSS styling, reactive state, animations, and a full-featured Markdown \
+editor component with custom parser, syntax highlighter, and zero-copy gap \
+buffer. (4) Terminal Multiplexing & PTY: in-memory virtual terminals, virtual \
+terminal tabs, process orchestration, and multiplexing primitives (build your own \
+tmux). Cross-platform (Linux, macOS, Windows) with a custom Linux-native engine \
+(direct_to_ansi replacing Crossterm). Works over SSH with double-buffered diff \
+rendering, degrades colors (truecolor to monochrome) without terminfo, and \
+delivers mathematically validated coordinate type safety, CPU cache-optimized \
+contiguous 2D buffers with SIMD, zero-allocation ANSI formatting, and a resilient \
+sans-IO input engine with 0ms ESC handling and Kitty protocol support.\
+"""
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "async", "terminal", "markdown", "pty"]
 categories = ["command-line-interface", "command-line-utilities"]
@@ -184,3 +200,5 @@ serial_test = "3.2.0"
 pretty_assertions = "1.4.1"
 test-case = "3.3.1"
 wait-timeout = "0.2.1"
+
+# cspell:words POLLOUT fcntl hdrhistogram

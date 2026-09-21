@@ -53,8 +53,6 @@ The article addresses and refutes the assumption that raw primitives are faster:
   building, non-blocking polling, memory layout), not from replacing primitives with
   newtypes.
 
----
-
 ## Implementation Plan
 
 ### Phase 1: Article Framing, Narrative Hook, and Problem Statement
@@ -153,10 +151,10 @@ The article addresses and refutes the assumption that raw primitives are faster:
 
 [Parse, don't validate]:
     https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
-[Type-Driven API Design in Rust]: https://doi.org/10.1145/3609025.3609477
+[Type-Driven API Design in Rust]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
 [The Typestate Pattern in Rust]:
     https://willcrichton.net/rust-api-type-patterns/typestate.html
-[Functional State Machines in Rust]: https://doi.org/10.1145/3830438.3830958
+[Functional State Machines in Rust]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
 [`CPos`]:
     file:///home/nazmul/github/roc/tui/src/core/coordinates/canvas/canvas_coords/c_pos.rs
 [`CRow`]:

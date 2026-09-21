@@ -62,15 +62,14 @@ style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
 style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
 style="color:#097BF2">t</span><span style="color:#057FF1">y</span>.
 
-Please read the main
-[README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of the
-`r3bl-open-core` monorepo and workspace to get a better understanding of the context
-in which this crate is meant to exist.
+Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
+a better understanding of the context in which this crate is meant to exist.
 
 ## Table of contents
 
 <!-- TOC -->
-- [Introduction](#introduction)
+- [Modernizing the Terminal: Taking Inspiration From Web and Desktop
+  Apps](#modernizing-the-terminal-taking-inspiration-from-web-and-desktop-apps)
 - [Framework highlights](#framework-highlights)
 - [Full TUI, Partial TUI, and async
   readline](#full-tui-partial-tui-and-async-readline)
@@ -218,104 +217,282 @@ in which this crate is meant to exist.
 - [Issues and PRs](#issues-and-prs)
 <!-- /TOC -->
 
-## Introduction
+## Modernizing the Terminal: Taking Inspiration From Web and Desktop Apps
 
-You can build fully async TUI (text user interface) apps with a modern API that brings
-the best of the web frontend development ideas to TUI apps written in Rust:
+Despite the massive rise of AI/LLM coding agents & execution harnesses and cloud VM
+administration over SSH, terminal UI innovation has largely stagnated since
+the 1970s. Most CLI tools still rely on blocking single-threaded I/O, [curses]-era
+APIs, and fragile platform hacks - or rely on the heavy, fragile workaround of
+layering web stacks like [`Node.js`], [`React`], and [`ink`] onto the console. This
+introduces unreasonable memory bloat, high latency, broken keyboard shortcuts, and
+unpredictable instability that breaks down during long-horizon agentic workflows and
+sub-process orchestration.
 
-- Reactive & unidirectional data flow architecture from frontend development
-  ([React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
-  [Elm](https://guide.elm-lang.org/architecture/),
-  [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
-  Compose](https://developer.android.com/compose)).
-- [Responsive
-  design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
-  with [CSS](https://www.w3.org/TR/CSS/#css),
-  [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
-  like concepts.
-- [Declarative style](https://ui.dev/imperative-vs-declarative-programming) of
-  expressing styling and layouts.
+**r3bl_tui moves the terminal forward (with love & respect) into 2026 and beyond. ❤️**
 
-And since this is using Rust and [Tokio](https://crates.io/crates/tokio) you get the
-advantages of concurrency and parallelism built-in. No blocking the main thread for
-user input, async middleware, or rendering.
+It brings the ergonomics of modern web development ([React], [flexbox], [CSS]) to the
+terminal, turning it into a place of focused productivity to build delightful,
+ergonomic, and rich text user interface (TUI) experiences.
 
-This framework is [loosely coupled and strongly
-coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-meaning that you can pick and choose whatever pieces you would like to use without
-having the cognitive load of having to grok all the things in the codebase. Its more
-like a collection of mostly independent modules that work well with each other, but
-know very little about each other.
+Representing years of systems programming, performance optimization, and
+production-grade infrastructure design in Rust, **r3bl_tui** re-imagines the terminal
+for the modern era - making rich, reactive TUI applications accessible over SSH to any
+terminal emulator across Linux, macOS, Windows, and Unix/BSDs (such as FreeBSD).
 
-This is the main crate that contains the core functionality for building TUI apps. It
-allows you to build apps that range from "full" TUI to "partial" TUI, and everything
-in the middle.
+**r3bl_tui** is fundamentally different from [`vim`], [`neovim`], and [`ratatui`]
+through its immediate mode reactive UI, clean separation between rendering and state
+mutation, and purely async architecture - it never blocks the main thread, and
+natively embraces multithreaded execution and multi-process orchestration.
 
-Here are some videos that you can watch to get a better understanding of TTY
-programming.
+### Primary Use Cases
 
-- [Build with Naz: TTY
-  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async
-  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+**r3bl_tui** is designed to power four primary use cases:
+
+- 🤖 **AI/LLM Coding Agents & Execution Harnesses**: Building fast, interactive
+  terminal interfaces and execution harnesses for AI/LLM coding agents in pure Rust.
+  While popular agent tools are written in [`Node.js`] and [`ink`] (see [origin
+  story]), Node-based runtimes struggle with runaway memory consumption, fragile
+  sub-process control, and unstable PTY session management when orchestrating heavy,
+  long-running tools in sandboxed environments (containers, microVMs, systemd-nspawn
+  machines, etc.). Furthermore, Node-based runtimes struggle with terminal input
+  decoding, frequently dropping modifier keys, mangling keyboard chords, and introducing
+  sluggish ESC key disambiguation lag. **r3bl_tui** provides a rock-solid, pure Rust
+  foundation engineered for native PTY orchestration, zero-latency ANSI input decoding,
+  deterministic process lifecycles, flicker-free diff rendering, and minimal resource
+  overhead.
+- ☁️ **DevOps & Cloud Workflows**: Administering modern cloud infrastructure
+  shouldn't feel like using stone-age tools to build a satellite. Juggling remote VMs,
+  containers, and multi-process server environments through bare terminal sessions is
+  slow and error-prone. **r3bl_tui** transforms terminal workflows into a rich,
+  responsive workspace with in-memory virtual terminal emulation, virtual tabs, 2D
+  horizontal panning across wide logs, and double-buffered diff rendering that stays
+  lag-free even over high-latency SSH connections.
+- 📝 **Interactive Document & Markdown Workflows**: Rich interactive editing, syntax
+  highlighting, and real-time code block execution directly inside Markdown documents
+  in the terminal, bridging documentation directly with live operations.
+- 🛠️ **Developer Productivity Infrastructure**: High-efficiency developer tooling and
+  composable terminal infrastructure to enhance knowledge capture, eliminate friction,
+  and streamline everyday command-line workflows.
+
+### Built-from-Scratch Primitives: The Four Pillars of `r3bl_tui`
+
+**`r3bl_tui`** provides four foundational interaction primitives designed from the
+ground up in pure Rust:
+
+1. 📟 **CLI & REPLs ([`readline_async`])**: Unlike GNU [`readline`] which is
+   single-threaded and blocking, our implementation is fully async, interruptable, and
+   non-blocking, allowing background tasks and spinners to print concurrently without
+   pausing line editing or blocking your main thread.
+2. 📑 **Inline / Partial TUI ([`choose()`])**: Single-shot interactive multi-select
+   dialogs that enter raw mode and render inline in terminal scrollback without
+   taking over the screen or disrupting the back buffer (similar to `fzf` in spirit).
+3. 🖥️ **Full-Screen TUI**: Complete raw mode with alternate screen support, fully async
+   and panic-safe terminal restoration. Build [React] and [Elm] inspired apps with
+   [unidirectional data flow], [responsive] [flexbox] layouts, [declarative]
+   [CSS-like] styling, reactive state architecture, reusable modal dialogs with
+   asynchronous autocomplete, and a full-featured Markdown editor component with
+   custom parser, custom syntax highlighter, and fast zero-copy gap buffer.
+4. 🔀 **Terminal Multiplexing & PTY**: In-memory virtual terminals, virtual terminal
+   tabs, deterministic process orchestration, and multiplexing primitives (build your
+   own [`tmux`] or sandboxed AI/LLM coding agent execution harness) featuring 2D
+   horizontal viewport panning and decoupled throughput.
+
+**Power via Composition**: Designed to be [loosely coupled and strongly coherent], you
+can pick and choose only what you need or compose them seamlessly within a single
+application. Transition smoothly from a non-blocking [`readline_async`] prompt into an
+inline [`choose()`] menu, launch a full-screen [`TUI`] for complex tasks, or
+orchestrate background PTY subprocesses in virtual [`PTYMux`] buffers, all sharing
+application state without process restarts.
 
 ## Framework highlights
 
-Here are some highlights of this library:
+### Automated Headless Testing & Benchmarking
 
-- Mathematically and empirically validated type safety: Coordinate systems and
-  viewport cameras eliminate off-by-one errors and invalid runtime states at compile
-  time using Typestate and "Parse, don't validate" patterns, with zero runtime
-  performance penalty as verified by Criterion benchmarks (see
-  [academic research on type safety at scale]).
-- It works over SSH without flickering, since it uses double buffering to paint the
-  UI, and diffs the output of renders, to only paint the parts of the screen that
-  changed.
-- It automatically detects terminal capabilities and gracefully degrades to the lowest
-  common denominator.
-- Uses very few dependencies. Almost all the code required for the core functionality
-  is written in Rust in this crate. This ensures that over time, as open source
-  projects get unfunded, and abandoned, there's minimized risk of this crate being
-  affected. Any dependencies that are used are well maintained and supported.
-- It is a modern & easy to use and approachable API that is inspired by React, JSX,
-  CSS, Elm. Lots of components and things are provided for you so you don't have to
-  build them from scratch. This is a full featured component library including:
-  - Elm like architecture with unidirectional data flow. The state is mutable. Async
-    middleware functions are supported, and they communicate with the main thread and
-    the [App] using an async `tokio::mpsc` channel and signals.
-  - CSS like declarative styling engine.
-  - CSS like flexbox like declarative layout engine which is fully responsive. You can
-    resize your terminal window and everything will be laid out correctly.
-  - A terminal independent underlying rendering and painting engine (can use Crossterm
-    or [`direct_to_ansi`] backends). The [`direct_to_ansi`] backend is part of this
-    crate and is the default on Linux, with no reliance on Crossterm at all. We plan
-    to roll this out to macOS and Windows.
-  - Markdown text editor with syntax highlighting support, metadata (tags, title,
-    author, date), smart lists. This uses a custom Markdown parser and custom syntax
-    highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
-  - Modal dialog boxes. And autocompletion dialog boxes.
-  - Lolcat (color gradients) implementation with a rainbow color-wheel palette. All
-    the color output is sensitive to the capabilities of the terminal. Colors are
-    gracefully downgraded from truecolor, to ANSI256, to grayscale.
-  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and
-    other Unicode characters in your TUI apps.
-  - Support for mouse events.
-- The entire TUI framework itself supports concurrency & parallelism (user input,
-  rendering, etc. are generally non blocking).
-- It is fast! There are no needless re-renders, or flickering. Animations and color
-  changes are smooth (check this out for yourself by running the examples). You can
-  even build your TUI in layers (like z-order in a browser's DOM).
+The entire framework across all 4 pillars is testable across Linux, macOS, and Windows.
+Powered by our own PTY pillar, real production code runs headlessly in an isolated
+virtual terminal environment, enabling end-to-end testing of interactive apps
+without requiring human interaction:
+
+- **PTY Automated Interactive Testing**: Enables end-to-end testing of interactive
+  apps via headless PTY subprocess orchestration with the `generate_pty_test!`
+  macro. Automate key sequences, window resizing, and screen output verification in
+  completely isolated child processes without someone having to sit and manually
+  type at a keyboard.
+- **Visual UI Snapshot Testing**: Everything renders to an offscreen buffer
+  ([`OfsBuf`]), providing built-in visual snapshot testing. Easily diff and assert
+  the actual rendered terminal screen state headlessly generated in a real PTY
+  environment.
+- **Sans-IO In-Memory Terminal**: Pure functional VT-100 parser verifies virtual
+  terminal screen state buffers directly in RAM with zero OS syscalls.
+- **Decoupled I/O Devices**: [`InputDevice`] and [`OutputDevice`] abstract terminal
+  I/O away from physical [`stdin`] and [`stdout`], allowing input events and output
+  streams to be driven and inspected directly in tests without taking over your
+  terminal.
+- **Empirical Benchmarking & Flamegraph Profiling**: Continuous performance measurement
+  via Rust's built-in benchmarking suites and automated flamegraph profiling against
+  established baselines rather than guesswork:
+  - **Built-in Benchmarking**: Rust's built-in benchmarking suites detect regressions
+    across memory allocations, SIMD traversals, and coordinate math.
+  - **Flamegraph Profiling**: Automated flamegraph profiling infrastructure to
+    establish performance baselines and eliminate CPU hotspots before code reaches
+    production.
+
+### Engineered for Production Performance, Robustness, Correctness and Reliability
+
+- 📐 **Zero-Cost Type-Proof Architecture & Mathematical Correctness**: Rather than
+  relying on ambiguous primitive integers (`usize`, `u16`) and runtime assertions,
+  formal type theory and trait hierarchies [make illegal states unrepresentable]:
+  - **The Newtype Pattern for Domain Separation & Coordinate Safety**: Replaces raw
+    primitive integers with zero-cost newtypes ([`CRow`], [`VPRow`], [`CHeight`]),
+    eliminating primitive obsession and transposition bugs with zero runtime memory
+    or performance overhead:
+    - **0-Index vs 1-Index Separation**: Strongly types the distinction between
+      0-based buffer positions (`IndexOps`: [`VPRow`], [`VPCol`], [`CRow`], [`CCol`]),
+      1-based terminal coordinates ([`TermRow`], [`TermCol`]), and 1-based lengths
+      (`LengthOps`: [`VPHeight`], [`VPWidth`], [`CHeight`], [`CWidth`]).
+    - **Safe Bidirectional Conversions**: Pairing traits provide explicit conversions
+      between 0-based and 1-based domains ([`TermRow::to_zero_based()`],
+      [`TermRow::from_zero_based()`], `convert_to_length()`).
+    - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
+      (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous manual
+      arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`), negative
+      underflow, and CSI zero-index terminal crashes ([`TermRowDelta`], [`TermColDelta`]).
+    - **Empirically Proven Zero-Cost Layout**: Newtypes share the identical memory
+      layout, size, and ABI of raw primitives (passed in CPU registers with zero heap
+      allocation or indirection) and are completely erased during LLVM compilation;
+      Criterion benchmarks confirm execution differences remain strictly within the
+      +/- 2% noise margin ([FUNARCH 2026 paper]).
+  - **Dual-Domain Coordinate Trait Hierarchy**: Strict trait boundaries isolate 64-bit
+    memory coordinates ([`StorageCoordinate`], `usize`: [`CPos`]) from 16-bit visual
+    coordinates ([`ScreenCoordinate`], `u16`: [`VPPos`]), requiring explicit camera
+    viewport transformations.
+  - **Explicit Narrowing/Widening Traits & Zero Raw `as` Casts**: Replaces dangerous,
+    silent primitive `as` casting across the codebase with explicit, type-safe traits
+    (`WideningCastTo` for lossless promotions and `NarrowingCastTo` for checked/clamped
+    reductions), preventing accidental truncations and sign-loss bugs.
+  - **Eliminating Boolean Blindness with Witness Enums**: Grounded in ACM research
+    ([FUNARCH 2023 paper] and [Parse, don't validate]), boundary and bounds checks
+    never return uninformative `bool` flags. Instead, they return structured witness
+    enums ([`ArrayOverflowResult`], [`RangeBoundsResult`]), forcing callers to
+    exhaustively handle all boundary states at compile time.
+- 🦄 **First-Class Unicode & Complex Emoji Engine ([`GCStringOwned`])**: Most terminal
+  emulators and TUI libraries break when handling "jumbo emojis", zero-width joiners
+  (ZWJ), skin tone modifiers, and wide characters (display width > 1), causing visual
+  tearing, misaligned borders, and string-slicing panics. ROC solves this from the
+  ground up via [`GCStringOwned`]:
+  - **Tri-Index Separation**: Strictly decouples memory position ([`ByteIndex`], UTF-8
+    offset), logical editing position ([`SegIndex`], user-perceived grapheme clusters),
+    and visual column position ([`VPCol`], actual terminal display width).
+  - **Complex Emoji & Modifier Support**: Correctly measures and renders multi-codepoint
+    sequences (e.g., `👨🏾‍🤝‍👨🏿` spans 5 codepoints and 7 code units, but resolves to 1 logical
+    grapheme segment and 2 visual columns).
+  - **Panic-Proof Slicing & Boundary Safety**: Guarantees cursor navigation, backspace,
+    and substring slicing never split UTF-8 codepoints or mid-grapheme clusters,
+    eliminating runtime slicing panics across editors, line inputs, and diff rendering.
+- 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain
+  attacks, maintainer burnout, and abandonware, our explicit architectural goal is to
+  **own our Bill of Materials (BOM)**. Critical primitives (including our custom
+  [`direct_to_ansi`] terminal I/O backend, VT-100/ANSI parser, zero-copy gap buffer,
+  and Markdown parser) are engineered in-house in pure Rust. We strictly limit
+  external dependencies to actively funded, strongly supported, and battle-tested
+  industry foundations (such as `tokio`, `mio`, and `mimalloc`), safeguarding
+  production applications against transitive bloat, sudden deprecations, and upstream
+  vulnerabilities.
+- 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native,
+  first-class support across platforms using the best backend for each OS:
+  - **Linux**: Our custom high-performance, Linux-native [`direct_to_ansi`] engine
+    (talking directly to the terminal device via `mio`/epoll for minimal latency and
+    maximum throughput, without the use of `crossterm`).
+  - **macOS, Windows & Unix/BSDs**: Currently powered by `crossterm`. We
+    plan to expand [`direct_to_ansi`] in the future to replace `crossterm` across all
+    platforms.
+- 🚀 **SIMD Contiguous Memory Layout ([`Flat2DArray`])**: Single contiguous 1D
+  allocation indexed as 2D, delivering 2.3x rendering speedups, SIMD chunk batching,
+  and eliminating pointer indirection ([implementation deep dive][High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]
+  and [memory latency theory][Rust, Memory performance & latency]).
+- 🧑‍🤝‍🧑 **Double-Buffered SSH-Optimized Diff Rendering**: Double-buffered compositor computes
+  minimal cell-level diffs between frames, painting only what changed for smooth,
+  flicker-free performance over high-latency SSH connections, with multi-layer Z-order
+  compositing for modal overlays and popups.
+- 🔀 **Terminal Multiplexing & PTY Architecture ([`PTYMux`])**: Decouples physical
+  display constraints from subprocess execution via virtual terminals and process
+  orchestration:
+  - **2D Viewport Panning in PTY Sessions (Horizontal Scrolling without Wrapping)**:
+    Traditional terminal emulators (`xterm`, `Alacritty`, `Kitty`) lack horizontal
+    panning for standard CLI tools (`cat`, `grep`, `git log`, `dmesg`), forcibly
+    hard-wrapping wide lines across rows and mangling tabular data, JSON, or stack
+    traces into unreadable spaghetti. When running any CLI program inside a ROC PTY
+    session (a concrete manifestation of which is [`pty_mux_example`], powered by
+    [`GrowableBuffer`] and [`PTYMux`]), **r3bl_tui** decouples the physical
+    viewport from the virtual terminal canvas width (e.g., 1,000+ columns). The
+    child process writes into this wide virtual canvas without line wrapping,
+    allowing users to smoothly pan horizontally (`Shift + Mouse Wheel` or trackpad
+    gestures) across the output without layout destruction.
+  - **Decoupled Throughput vs. Terminal Bottlenecks (Faster Than Bare `xterm`)**: In
+    traditional terminal emulators (like `xterm`), running a command that dumps
+    megabytes of text (e.g., `cat large.log`) blocks the process on [`stdout`] I/O
+    while the terminal synchronously parses escape codes, recalculates line
+    wrapping, and rasterizes every glyph. Counter-intuitively, running that same
+    command inside a ROC PTY session (such as [`pty_mux_example`]) running *inside*
+    `xterm` is often significantly **faster than running the command directly in bare
+    `xterm`**. **r3bl_tui**'s headless VT-100 parser ([`OfsBufVT100`]) acts as an
+    in-memory shock absorber, ingesting raw subprocess output at memory bus speeds,
+    while double-buffered diff rendering paints only the visible viewport to the
+    host terminal at controlled display intervals. Subprocesses drain [`stdout`]
+    without stalling on terminal drawing or network I/O backpressure.
+- 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy
+  `terminfo` / `termcap` databases and [ncurses] baggage by querying modern ANSI
+  protocols directly at runtime.
+- 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
+  [declarative] [CSS-like] styling inspired by [React] and [Elm].
+- 🎨 **Intelligent Color Degradation**: Automatically detects terminal capabilities and
+  gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 ANSI colors ->
+  Monochrome** (black & white). Gracefully handles environments lacking truecolor
+  support (such as pre-macOS 26 Tahoe `Terminal.app`, Linux virtual consoles, or
+  headless CI runners), complete with dynamic lolcat rainbow color-wheel palettes that
+  automatically adapt to terminal color capability.
+- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines
+  Linux-native kernel TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol
+  state machine for robust, zero-latency input handling across local terminals and SSH:
+  - **Linux-Native `direct_to_ansi` Driver**: Bypasses `crossterm` and `libc` FFI
+    wrappers on Linux by talking directly to `/dev/tty` via `mio`/`epoll(7)`,
+    eliminating thread-blocking reads and CPU-spinning loops.
+  - **Disambiguating Modifier Chords & Key Collisions**: Reliably decodes chords and
+    combinations that traditional terminal runtimes mangle or drop - such as
+    [`Shift+Enter`], `Ctrl+Enter`, `Ctrl+Tab`, `Ctrl+Number/Punctuation`, `Ctrl+I` vs
+    `Tab`, and `Alt+[` collisions.
+  - **Kitty Keyboard Protocol (`CSI u`) Progressive Enhancement**: Negotiates advanced
+    keyboard protocols with modern terminals ([Kitty keyboard protocol]), enabling full
+    modifier reporting, key-release events, and unambiguous key sequences with graceful
+    legacy fallback.
+  - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms timeout
+    heuristics with an internal state machine (`Drained`, `KernelMayHaveMore`,
+    `RemainingInReadBuffer`), achieving 0ms zero-latency ESC handling while correctly
+    reassembling multi-packet escape sequences across SSH.
+  - **OSC Terminal Query Absorption & SGR Mouse Reporting**: Frames and absorbs
+    background terminal responses (such as OSC 10/11 color queries and OSC 52 clipboard)
+    on `stdin` to prevent terminal text leakage, while supporting full SGR mouse
+    tracking (clicks, drags, scroll wheel).
+- 🧩 **Composable "Applet" Architecture & Shared State**: Enables multiple integrated
+  TUI experiences ("applets") to run within the same process and terminal window.
+  Supports shared application state across sub-apps alongside local view state,
+  allowing seamless transitions and routing between Full-Screen TUI views and inline
+  Partial-TUI dialogs without process restarts or lost context.
+
+### Learning Resources
+
+- **Build with Naz Video Playlists**:
+  - [Build with Naz: TTY playlist]
+  - [Build with Naz: async readline]
+- **Architectural Deep Dives**:
+  - [High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]
+  - [Rust, Memory performance & latency]
+  - [Loosely Coupled, Strongly Coherent Architecture]
 
 ## Full TUI, Partial TUI, and async readline
 
 This crate allows you to build apps that range from "full" TUI to "partial" TUI, and
-everything in the middle. Here are some videos that you can watch to get a better
-understanding of TTY programming.
-
-- [Build with Naz: TTY
-  playlist](https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
-- [Build with Naz: async
-  readline](https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+everything in the middle.
 
 ### Interactive terminal application entry points
 
@@ -337,7 +514,7 @@ Each internalizes terminal availability and size checks, and returns a
 | [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
 | [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
 
-[`Spinner::try_start()`] only checks stdout interactivity (not [`stdin`]), so it works
+[`Spinner::try_start()`] only checks [`stdout`] interactivity (not [`stdin`]), so it works
 with piped [`stdin`]. It can run standalone or embedded within a
 [`ReadlineAsyncContext`] session.
 
@@ -362,9 +539,9 @@ user input in a line editor. You can customize the prompt, and other behaviors, 
 input history.
 
 Using this, you can build your own async shell programs using "async readline &
-stdout". Use advanced features like showing indeterminate progress spinners, and even
-write to stdout in an async manner, without clobbering the prompt / async readline, or
-the spinner. When the spinner is active, it pauses output to stdout, and resumes it
+[`stdout`]". Use advanced features like showing indeterminate progress spinners, and even
+write to [`stdout`] in an async manner, without clobbering the prompt / async readline, or
+the spinner. When the spinner is active, it pauses output to [`stdout`], and resumes it
 when the spinner is stopped.
 
 An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
@@ -377,8 +554,11 @@ giti
 
 Here are other examples of this:
 
-- <https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server>
-- <https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples>
+1. [`tcp-api-server`]: An interactive async REPL client demonstrating `readline_async`
+   with concurrent background tasks and progress spinners.
+2. [`tui/examples`]: Standalone examples in this workspace demonstrating async
+   readline (`readline_async.rs`), spinners (`spinner.rs`), shell (`shell_async.rs`),
+   and PTY orchestration.
 
 ### Full TUI for immersive apps
 
@@ -461,23 +641,18 @@ various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
 
 ## Changelog
 
-Please check out the
-[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui)
-to see how the library has evolved over time.
+Please check out the [changelog] to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT
-  channel](https://www.youtube.com/@developerlifecom). Please consider
-  [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
-- If you like consuming written content, here's our developer
-  [site](https://developerlife.com/).
+- If you like consuming video content, here's our [YT channel]. Please consider
+  [subscribing].
+- If you like consuming written content, here's our developer [site].
 
 ## Run the demo locally
 
-Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder
-on your computer, follow these steps:
+Once you've cloned [the repo] to a folder on your computer, follow these steps:
 
 ### Prerequisites
 
@@ -495,7 +670,7 @@ This script above automatically installs:
 - All required cargo development tools
 
 For complete development setup and all available commands, see the [repository
-README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
+README].
 
 ### Running examples
 
@@ -518,9 +693,9 @@ cd tui/examples
 cargo run --release --example demo -- --no-log
 ```
 
-These examples cover the entire surface area of the TUI API. The unified
-[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish) script at
-the repository root provides all development commands for the entire workspace.
+These examples cover the entire surface area of the TUI API. The unified [`run.fish`]
+script at the repository root provides all development commands for the entire
+workspace.
 
 ## TUI Development Workflow
 
@@ -661,7 +836,10 @@ The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
 **Example test structure:**
 
 ```rust
-use r3bl_tui::{generate_pty_test, PtyTestMode, DirectToAnsiInputDevice, PtyPair, PtyTestChild, PtyTestContext};
+use r3bl_tui::{
+    generate_pty_test, PtyTestMode, DirectToAnsiInputDevice,
+    PtyPair, PtyTestChild, PtyTestContext
+};
 use std::io::{Write, BufRead};
 fn process_terminal_events(_: &DirectToAnsiInputDevice) {}
 generate_pty_test! {
@@ -675,7 +853,9 @@ generate_pty_test! {
             mut writer,
         } = context;
 
-        child.wait_for_ready(&mut buf_reader, "CONTROLLED_READY").expect("conversion error");
+        child
+            .wait_for_ready(&mut buf_reader, "CONTROLLED_READY")
+            .expect("conversion error");
 
         writer.write_all(b"\x1b[A").expect("conversion error");  // Send Up Arrow
         writer.flush().expect("conversion error");
@@ -724,7 +904,7 @@ For complete PTY test implementation details and examples, see:
 - Raw mode tests: [`raw_mode_integration_tests`]
 
 For complete development setup and all available commands, see the [repository
-README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
+README].
 
 ### Performance Analysis Features
 
@@ -798,8 +978,7 @@ reach production, and optimizations are quantified with real data.
 
 ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 
-Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr)
-app built using this TUI engine.
+Here's a video of a prototype of [R3BL CMDR] app built using this TUI engine.
 
 ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 
@@ -1058,9 +1237,9 @@ theory and confirmed by empirical benchmarks. For comprehensive details, see the
 #### Theoretical Foundations (Typestate & "Parse, Don't Validate")
 - **Will Crichton ([FUNARCH 2023 paper], [Stanford CS 242])**: Establishes how modern
   type systems like Rust implement Typestate, State Machines, and the Witness pattern.
-  The four core principles (State as Type, Restricted Transitions, Type Transformation,
-  and Invalidation via consuming `self`) prevent invalid coordinates and views from
-  ever being representable.
+  The four core principles (State as Type, Restricted Transitions, Type
+  Transformation, and Invalidation via consuming `self`) prevent invalid coordinates
+  and views from ever being representable.
 - **Alexis King ([Parse, don't validate])**: Raw coordinate inputs are parsed into
   strongly typed domain newtypes ([`CPos`], [`VPSize`]) at system boundaries, freeing
   downstream rendering and layout logic from defensive runtime checks.
@@ -1069,15 +1248,15 @@ theory and confirmed by empirical benchmarks. For comprehensive details, see the
 - **Heuer, Lu, and Haase ([FUNARCH 2026 paper])**: An empirical experience report
   verifying that combining Newtypes with "Parse, don't validate" elevates software
   faultlessness and eliminates invalid runtime states at low structural cost.
-- **Zero Runtime Performance Penalty**: Rigorous Criterion benchmarks demonstrate
-  that these compile-time safety abstractions incur zero runtime performance penalty
+- **Zero Runtime Performance Penalty**: Rigorous Criterion benchmarks demonstrate that
+  these compile-time safety abstractions incur zero runtime performance penalty
   (execution-time differences remained within the +/- 2% noise margin).
 - **Encapsulation vs Delegation**: Validates our strategy of using strict Newtypes
   (without [`Deref`]) to prevent arbitrary primitive math on Canvas storage, while
   using Decorators (with [`Deref`]) on Viewport coordinates to eliminate boilerplate.
 
-For full citations, empirical analysis, and module architecture, see the
-[`canvas`] module documentation ([academic research on type safety at scale]).
+For full citations, empirical analysis, and module architecture, see the [`canvas`]
+module documentation ([academic research on type safety at scale]).
 
 ## Zero-Allocation String Formatting
 
@@ -1392,7 +1571,7 @@ The current render pipeline flow is:
 - [`OfsBuf`] → Diffed with previous buffer → Generate diff chunks
 - Diff chunks → Converted back to [`RenderOpOutputVec`] for painting
 - [`RenderOpOutputVec`] execution → Each op routed through crossterm backend
-- Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
+- Crossterm → Converts to ANSI escape sequences → Queued to [`stdout`] → Flushed
 
 ```
 ╭───────────────────────────────────────────────╮
@@ -1448,11 +1627,10 @@ The current render pipeline flow is:
 Versions of this crate <= `0.3.10` used shared memory to communicate between the
 background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
 from tokio. The state storage, mutation, subscription (on change handlers) were all
-managed by the
-[`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux)
-crate. The use of the Redux pattern, inspired by React, brought with it a lot of
-overhead both mentally and in terms of performance (since state changes needed to be
-cloned every time a change was made, and `memcpy` or `clone` is expensive).
+managed by the [`r3bl_redux`] crate. The use of the Redux pattern, inspired by React,
+brought with it a lot of overhead both mentally and in terms of performance (since
+state changes needed to be cloned every time a change was made, and `memcpy` or
+`clone` is expensive).
 
 Versions > `0.3.10` use message passing to communicate between the background threads
 using the `tokio::mpsc` channel (also async). This is a much easier and more
@@ -1471,12 +1649,12 @@ synchronizing rendered output, or state.
 
 ## I/O devices for full TUI, choice, and REPL
 
-[Dependency injection](https://developerlife.com/category/DI) is used to inject the
-required resources into the `main_event_loop` function. This allows for easy testing
-and for modularity and extensibility in the codebase. The [`readline_async`] module
-shares the same infrastructure for input and output devices. In fact the
-[`crate::InputDevice`] and [`crate::OutputDevice`] structs are shared by both the full
-[`TUI`] and the [`readline_async`] module.
+[Dependency injection] is used to inject the required resources into the
+`main_event_loop` function. This allows for easy testing and for modularity and
+extensibility in the codebase. The [`readline_async`] module shares the same
+infrastructure for input and output devices. In fact the [`crate::InputDevice`] and
+[`crate::OutputDevice`] structs are shared by both the full [`TUI`] and the
+[`readline_async`] module.
 
 - The advantage of this approach is that for testing, test fixtures can be used to
   perform end-to-end testing of the TUI.
@@ -1485,11 +1663,10 @@ shares the same infrastructure for input and output devices. In fact the
   their components). This makes the entire UI composable, and removes the monolithic
   approaches to building complex UI and large apps that may consist of many reusable
   components and applets.
-- It is easy to swap out implementations of input and output devices away from `stdin`
-  and `stdout` while preserving all the existing code and functionality. This can
+- It is easy to swap out implementations of input and output devices away from [`stdin`]
+  and [`stdout`] while preserving all the existing code and functionality. This can
   produce some interesting headless apps in the future, where the UI might be
-  delegated to a window using [eGUI](https://github.com/emilk/egui) or
-  [iced-rs](https://iced.rs/) or [wgpu](https://wgpu.rs/).
+  delegated to a window using [eGUI] or [iced-rs] or [wgpu].
 
 ## Life of an input event for a Full TUI app
 
@@ -1781,7 +1958,7 @@ requiring explicit knowledge of the underlying rendering machinery.
 
 Interactive components (Path 2) use [`OutputDevice`] for coordinated terminal output:
 
-- Provides atomic write operations to stdout
+- Provides atomic write operations to [`stdout`]
 - Handles mutual exclusion between components to prevent interspersed output
 - Abstracts over raw [`std::io::Stdout`]
 - Integrates with both crossterm commands and raw ANSI bytes
@@ -2040,11 +2217,11 @@ table shows the various tasks that have to be performed in order to render to an
 (which includes [`TuiStyledText`] which is just plain text with a color). Syntax
 highlighted text is also just [`TuiStyledText`].
 
-| UTF-8 | Task                                                                                     |
-|:------|:-----------------------------------------------------------------------------------------|
-| Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OfsBuf`])                 |
-| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using [`paint_impl`] |
-| Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                 |
+| UTF-8 | Task                                                                                         |
+|:------|:---------------------------------------------------------------------------------------------|
+| Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OfsBuf`])                     |
+| Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to [`stdout`] using [`paint_impl`] |
+| Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                     |
 
 Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
 the terminal. But this process is really simple making it very easy to swap out other
@@ -2075,8 +2252,7 @@ The backend is selected **at compile time** via the [`TERMINAL_LIB_BACKEND`] con
 
 ### Crossterm backend (cross-platform)
 
-[Crossterm](https://github.com/crossterm-rs/crossterm) is a cross-platform terminal
-manipulation library. It provides:
+[Crossterm] is a cross-platform terminal manipulation library. It provides:
 
 - Works on Linux, macOS, and Windows
 - Handles platform differences automatically
@@ -2089,7 +2265,7 @@ manipulation library. It provides:
 terminal libraries. It provides:
 
 - **Output (all platforms)**: Generates raw ANSI escape sequences directly
-- **Input (Linux only)**: Uses [`mio`] for async stdin polling (macOS [`kqueue`]
+- **Input (Linux only)**: Uses [`mio`] for async [`stdin`] polling (macOS [`kqueue`]
   doesn't support PTY/tty polling)
 
 **Performance benefits** (measured on Linux with 8-second workload, 999Hz sampling):
@@ -2146,7 +2322,7 @@ that block on I/O operations. This powers the [`direct_to_ansi`] backend's
 ### The problem
 
 Async executors (like Tokio) use thread pools that shouldn't block. Terminal input
-requires blocking on stdin, which would starve other async tasks. RRT solves this by
+requires blocking on [`stdin`], which would starve other async tasks. RRT solves this by
 dedicating a thread to blocking I/O.
 
 ### How it works
@@ -2323,8 +2499,7 @@ echo so the application can read individual keystrokes and escape sequences.
 
 **Linux/macOS** (via [`rustix`]):
 
-Uses Rust's [`rustix`](https://docs.rs/rustix) crate for type-safe termios
-manipulation:
+Uses Rust's [`rustix`] crate for type-safe termios manipulation:
 
 <!-- It is ok to use ignore here - shows rustix API patterns, not a complete
 runnable example -->
@@ -2368,7 +2543,7 @@ use r3bl_tui::{TerminalModeController, OutputDevice};
 Raw mode settings are stored statically and restored on disable. The implementation
 handles:
 
-- **stdin redirection**: If stdin isn't a tty, falls back to `/dev/tty`.
+- **[`stdin`] redirection**: If [`stdin`] isn't a tty, falls back to `/dev/tty`.
 - **Panic safety**: [`RawModeGuard`] ensures restoration even on panic.
 - **Multiple enables**: Safe to call [`output_device.enter_raw_mode()`] multiple
   times.
@@ -2671,9 +2846,7 @@ functions:
 
 The parser was chosen after extensive benchmarking against alternatives (including
 `markdown-rs`):
-- **Streaming parser**: Built with [`nom`]
-  ([tutorial](https://developerlife.com/2023/02/20/guide-to-nom-parsing/)) for
-  efficient memory usage
+- **Streaming parser**: Built with [`nom`] ([nom tutorial]) for efficient memory usage
 - **Low CPU overhead**: No unnecessary allocations or copies
 - **Proven reliability**: Powers all markdown rendering in `r3bl_tui`
 
@@ -2688,9 +2861,8 @@ For comprehensive implementation details including:
 See:
 - The [`parse_markdown()`] function entry point
 - The detailed [`md_parser` module documentation](crate::tui::md_parser)
-- [Blog post: Building a Markdown Parser in
-  Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
-- [Video: Markdown Parser Deep Dive](https://youtu.be/SbwvSHZRb1E)
+- [Blog post: Building a Markdown Parser in Rust]
+- [Video: Markdown Parser Deep Dive]
 
 ## Terminal Multiplexer with `VT-100` ANSI Parsing
 
@@ -2820,8 +2992,8 @@ There are two ways of showing cursors which are quite different (each with very
 different constraints).
 
 - Using a global terminal cursor (we don't use this).
-  - [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html)
-    supports this. The cursor has lots of effects like blink, etc.
+  - [`crossterm::cursor`] supports this. The cursor has lots of effects like blink,
+    etc.
   - The downside is that there is one global cursor for any given terminal window. And
     this cursor is constantly moved around in order to paint anything (eg:
     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
@@ -2895,9 +3067,8 @@ When creating a new dialog box component, two callback functions are passed in:
 ### Async Autocomplete Provider
 
 So far we have covered the use case for a simple modal dialog box. The dialog system
-also supports **async autocomplete capabilities** through the
-[`DialogEngineConfig`] struct, which allows configuring the dialog in
-autocomplete mode.
+also supports **async autocomplete capabilities** through the [`DialogEngineConfig`]
+struct, which allows configuring the dialog in autocomplete mode.
 
 In autocomplete mode, you can provide an async autocomplete provider that performs
 long-running operations such as:
@@ -2942,9 +3113,8 @@ This [`crate::Lolcat`] that is returned by `build()` is safe to re-use.
 
 ## Issues and PRs
 
-Please report any issues to the [issue
-tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
-feature requests, feel free to add them there too 👍.
+Please report any issues to the [issue tracker]. And if you have any feature requests,
+feel free to add them there too 👍.
 
 <!-- Type references for documentation links -->
 
@@ -2978,6 +3148,9 @@ feature requests, feel free to add them there too 👍.
 [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 [`stdin`]: std::io::stdin
+[`stdout`]: std::io::stdout
+[`stderr`]: std::io::stderr
+[`stdio`]: std::io
 [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
 [`Available`]: crate::TerminalInteractiveStatus::Available
 [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
@@ -2987,6 +3160,9 @@ feature requests, feel free to add them there too 👍.
 [`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
 [`TuiAvailability<Spinner>`]: crate::TuiAvailability
 [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
+[`tcp-api-server`]:
+    https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
+[`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
 [`TuiAvailability<T>`]: crate::TuiAvailability
 [`Spinner::try_start()`]: crate::readline_async::Spinner::try_start
 [`tmux`]: https://github.com/tmux/tmux
@@ -3001,6 +3177,8 @@ feature requests, feel free to add them there too 👍.
 [Component]: crate::Component
 [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 [TerminalWindow]: crate::TerminalWindow
+[InputDevice]: crate::InputDevice
+[OutputDevice]: crate::OutputDevice
 [FlexBox]: crate::tui::FlexBox
 [Surface]: crate::tui::Surface
 [HasFocus]: crate::HasFocus
@@ -3040,6 +3218,8 @@ feature requests, feel free to add them there too 👍.
 [parse_smart_list]: crate::parse_smart_list
 [try_parse_and_highlight]: crate::try_parse_and_highlight
 [PTYMux]: crate::PTYMux
+[`PTYMux`]: crate::PTYMux
+[`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 [`pty_mux` module documentation]: mod@crate::pty_mux
 [CsiSequence]: crate::CsiSequence
 [EscSequence]: crate::EscSequence
@@ -3184,12 +3364,72 @@ feature requests, feel free to add them there too 👍.
     crate::core::coordinates::canvas#academic-research-on-type-safety-at-scale
 [theoretical foundations]: crate::core::coordinates::canvas#theoretical-foundations
 [empirical benchmarks]: crate::core::coordinates::canvas#empirical-benchmarks
-[FUNARCH 2023 paper]: https://doi.org/10.1145/3609025.3609477
-[FUNARCH 2026 paper]: https://doi.org/10.1145/3830438.3830958
+[FUNARCH 2023 paper]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
+[FUNARCH 2026 paper]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
 [Parse, don't validate]:
     https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
 [Stanford CS 242]: https://stanford-cs242.github.io/f19/
 [The Typestate Pattern in Rust]:
     https://willcrichton.net/rust-api-type-patterns/typestate.html
+[`Node.js`]: https://nodejs.org/
+[`ink`]: https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/
+[`React`]: https://react.dev/
+[React]: https://react.dev/
+[flexbox]:
+    https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox
+[CSS]: https://www.w3.org/TR/CSS/#css
+[CSS-like]: https://www.w3.org/TR/CSS/#css
+[loosely coupled and strongly coherent]:
+    https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+[Elm]: https://guide.elm-lang.org/architecture/
+[unidirectional data flow]: https://guide.elm-lang.org/architecture/
+[responsive]:
+    https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design
+[declarative]: https://ui.dev/imperative-vs-declarative-programming
+[Build with Naz: TTY playlist]:
+    https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+[Build with Naz: async readline]:
+    https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
+[High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]:
+    https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/
+[Rust, Memory performance & latency]:
+    https://developerlife.com/2025/05/19/rust-mem-latency/
+[Loosely Coupled, Strongly Coherent Architecture]:
+    https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+[`vim`]: https://www.vim.org/
+[`neovim`]: https://neovim.io/
+[`ratatui`]: https://ratatui.rs/
+[origin story]: https://github.com/r3bl-org/r3bl-open-core#origin-story
+[README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+[changelog]:
+    https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui
+[YT channel]: https://www.youtube.com/@developerlifecom
+[subscribing]:
+    https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+[site]: https://developerlife.com/
+[the repo]: https://github.com/r3bl-org/r3bl-open-core
+[repository README]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+[`run.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish
+[R3BL CMDR]: https://github.com/r3bl-org/r3bl-cmdr
+[`r3bl_redux`]: https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux
+[Dependency injection]: https://developerlife.com/category/DI
+[eGUI]: https://github.com/emilk/egui
+[iced-rs]: https://iced.rs/
+[wgpu]: https://wgpu.rs/
+[Crossterm]: https://github.com/crossterm-rs/crossterm
+[`rustix`]: https://docs.rs/rustix
+[nom tutorial]: https://developerlife.com/2023/02/20/guide-to-nom-parsing/
+[Blog post: Building a Markdown Parser in Rust]:
+    https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/
+[Video: Markdown Parser Deep Dive]: https://youtu.be/SbwvSHZRb1E
+[`crossterm::cursor`]: https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html
+[issue tracker]: https://github.com/r3bl-org/r3bl-rs-utils/issues
+[curses]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+[ncurses]: https://en.wikipedia.org/wiki/Ncurses
+[`Shift+Enter`]:
+    https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
+[Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855
+[`readline`]: https://man7.org/linux/man-pages/man3/readline.3.html
+[make illegal states unrepresentable]: https://corrode.dev/blog/illegal-state/
 
 License: Apache-2.0

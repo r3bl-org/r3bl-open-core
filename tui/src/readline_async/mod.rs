@@ -10,11 +10,10 @@
 //!
 //! # Mental Model
 //!
-//! Unlike the GNU Readline C library ([`readline()`]) and Rust's
-//! [`std::io::Stdin::read_line()`], which synchronously block the calling OS thread until
-//! the user presses `Enter`, this module provides a **fully asynchronous and
-//! non-blocking** line editor (this is the thing in your Terminal Emulator that displays
-//! the prompt and you can type your input into).
+//! Unlike GNU [`readline`] and Rust's [`std::io::Stdin::read_line()`], which
+//! synchronously block the calling OS thread until the user presses `Enter`, this module
+//! provides a **fully asynchronous and non-blocking** line editor (this is the thing in
+//! your Terminal Emulator that displays the prompt and you can type your input into).
 //!
 //! In traditional blocking readline implementations:
 //! - The calling thread is trapped waiting for user input and cannot be cancelled or
@@ -416,13 +415,13 @@
 //! [`PauseState`]: crate::readline_async::PauseState
 //! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
 //! [`read_line()`]: std::io::Stdin::read_line
-//! [`readline()`]: https://man7.org/linux/man-pages/man3/readline.3.html
 //! [`Readline::add_history_entry()`]: crate::Readline::add_history_entry
 //! [`Readline::readline()`]: crate::Readline::readline
 //! [`Readline::try_new()`]: crate::Readline::try_new
 //! [`Readline::try_new`]: crate::Readline::try_new
 //! [`readline_async`]: mod@crate::readline_async
 //! [`Readline`]: crate::Readline
+//! [`readline`]: https://man7.org/linux/man-pages/man3/readline.3.html
 //! [`ReadlineAsyncContext::acquire_modal_terminal()`]:
 //!     crate::ReadlineAsyncContext::acquire_modal_terminal
 //! [`ReadlineAsyncContext::clone_shared_writer()`]:

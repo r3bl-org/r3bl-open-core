@@ -258,3 +258,5 @@ Two commits:
 - **URL verification**: All 10 external base URLs return HTTP 200. All 4 fragment anchors
   (`#SIGWINCH`, `#SIGINT`, `#SIGTERM`, `#True_color_(24-bit)`) confirmed present on their
   respective pages.
+
+<!-- cspell:words Stdlib linkified regen -->

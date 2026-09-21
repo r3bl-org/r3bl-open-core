@@ -118,7 +118,7 @@ Follow these steps in exact sequential order. Reference `docs/release-guide.md` 
   4. Performance & Benchmark Highlights (with developerlife.com article/video links if applicable)
   5. Bi-directional link back to `CHANGELOG.md`:
      ```markdown
-     ## 📜 Full Changelog
+     ## 📄 Full Changelog
      - [<crate> vX.Y.Z Changelog Entry](https://github.com/r3bl-org/r3bl-open-core/blob/vX.Y.Z-<crate>/CHANGELOG.md#anchor)
      ```
 

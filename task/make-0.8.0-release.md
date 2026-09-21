@@ -144,12 +144,10 @@ in IDEs, or on GitHub:
    granular technical changelog entry (pinned to the release tag):
 
     ```markdown
-    ## 📜 Full Changelog
+    ## 📄 Full Changelog
 
     - [r3bl_tui v0.8.0 Changelog Entry](https://github.com/r3bl-org/r3bl-open-core/blob/v0.8.0-tui/CHANGELOG.md#v080-2026-09-18)
     ```
-
----
 
 ## 2. Publication Order DAG
 
@@ -163,8 +161,6 @@ Step 1: Publish r3bl_tui v0.8.0 (must be live on crates.io first)
            ▼                           ▼                           ▼
 Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-analyzer-mcp-server v1.1.5
 ```
-
----
 
 ## 3. Step-by-Step Implementation Plan
 
@@ -189,11 +185,10 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
 └────────────────────────────────────────────────────────┘
 ```
 
----
-
 ## Track A: Pre-Release Documentation, Release Notes & Changelogs (In Parallel Now)
 
-*This track can be executed immediately on `main` while work on `../roc-fix-shift-home-lockup` continues in parallel.*
+_This track can be executed immediately on `main` while work on
+`../roc-fix-shift-home-lockup` continues in parallel._
 
 ### Phase 1: Historical Release Notes Migration
 
@@ -213,24 +208,25 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
       the appropriate file:
       `gh release view <tag> --json body --jq .body > docs/release-notes/<crate>/<version>.md`
     - Historical release mapping:
-      - `r3bl_tui` (7 releases): `v0.7.2-tui` -> `docs/release-notes/r3bl_tui/v0.7.2.md`,
-        `v0.7.3-tui` -> `v0.7.3.md`, `v0.7.4-tui` -> `v0.7.4.md`, `v0.7.5-tui` ->
-        `v0.7.5.md`, `v0.7.6-tui` -> `v0.7.6.md`, `v0.7.7-tui` -> `v0.7.7.md`,
-        `v0.7.8-tui` -> `v0.7.8.md`
-      - `r3bl-cmdr` (7 releases): `v0.0.20-cmdr` -> `docs/release-notes/r3bl-cmdr/v0.0.20.md`,
-        `v0.0.21-cmdr` -> `v0.0.21.md`, `v0.0.22-cmdr` -> `v0.0.22.md`, `v0.0.23-cmdr` ->
-        `v0.0.23.md`, `v0.0.24-cmdr` -> `v0.0.24.md`, `v0.0.25-cmdr` -> `v0.0.25.md`,
-        `v0.0.26-cmdr` -> `v0.0.26.md`
-      - `r3bl-build-infra` (4 releases): `v0.0.1-build-infra` -> `docs/release-notes/r3bl-build-infra/v0.0.1.md`,
-        `v0.0.2-build-infra` -> `v0.0.2.md`, `v0.0.4-build-infra` -> `v0.0.4.md`,
-        `v0.0.5-build-infra` -> `v0.0.5.md`
-      - *Note on `r3bl-rust-analyzer-mcp-server`*: It has 0 historical releases in this
-        repository (it originated in a separate repository and was consolidated later). Since
-        Git does not track empty directories, its folder will be tracked once `v1.1.5.md` is
-        created in Phase 2.
+        - `r3bl_tui` (7 releases): `v0.7.2-tui` ->
+          `docs/release-notes/r3bl_tui/v0.7.2.md`, `v0.7.3-tui` -> `v0.7.3.md`,
+          `v0.7.4-tui` -> `v0.7.4.md`, `v0.7.5-tui` -> `v0.7.5.md`, `v0.7.6-tui` ->
+          `v0.7.6.md`, `v0.7.7-tui` -> `v0.7.7.md`, `v0.7.8-tui` -> `v0.7.8.md`
+        - `r3bl-cmdr` (7 releases): `v0.0.20-cmdr` ->
+          `docs/release-notes/r3bl-cmdr/v0.0.20.md`, `v0.0.21-cmdr` -> `v0.0.21.md`,
+          `v0.0.22-cmdr` -> `v0.0.22.md`, `v0.0.23-cmdr` -> `v0.0.23.md`, `v0.0.24-cmdr`
+          -> `v0.0.24.md`, `v0.0.25-cmdr` -> `v0.0.25.md`, `v0.0.26-cmdr` -> `v0.0.26.md`
+        - `r3bl-build-infra` (4 releases): `v0.0.1-build-infra` ->
+          `docs/release-notes/r3bl-build-infra/v0.0.1.md`, `v0.0.2-build-infra` ->
+          `v0.0.2.md`, `v0.0.4-build-infra` -> `v0.0.4.md`, `v0.0.5-build-infra` ->
+          `v0.0.5.md`
+        - _Note on `r3bl-rust-analyzer-mcp-server`_: It has 0 historical releases in this
+          repository (it originated in a separate repository and was consolidated later).
+          Since Git does not track empty directories, its folder will be tracked once
+          `v1.1.5.md` is created in Phase 2.
 - [x] Audit untracked files via `git status` to ensure all 18 files were populated.
-- [x] **Mandatory manual review:** Verify historical release notes are populated cleanly in
-      `docs/release-notes/`.
+- [x] **Mandatory manual review:** Verify historical release notes are populated cleanly
+      in `docs/release-notes/`.
     - [x] `docs/release-notes/r3bl_tui/` (7 files)
     - [x] `docs/release-notes/r3bl-cmdr/` (7 files)
     - [x] `docs/release-notes/r3bl-build-infra/` (4 files)
@@ -238,17 +234,16 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
     ```bash
     git add docs/release-notes/
     git commit -m "[docs] Backfill historical release notes
-
-Task: make-0.8.0-release.md"
     ```
 
----
+Task: make-0.8.0-release.md" ```
 
 ### Phase 2: Pre-Draft Standalone Release Notes & Migration Guides
 
-- [ ] Draft Release Notes in `docs/release-notes/r3bl_tui/v0.8.0.md`:
+- [x] Draft Release Notes in `docs/release-notes/r3bl_tui/v0.8.0.md`:
     - Include standardized **Discoverability Intro**:
-        ```markdown
+
+        ````markdown
         > **r3bl_tui** is a fully async, immediate-mode TUI framework for Rust inspired by
         > React, Elm, and web technologies. It features flexbox layouts, CSS-like styling,
         > reactive state architecture, a custom Markdown renderer with syntax
@@ -259,14 +254,20 @@ Task: make-0.8.0-release.md"
         > multiplexing primitives.
 
         Add to `Cargo.toml`:
+
         ```toml
         [dependencies]
         r3bl_tui = "0.8.0"
         ```
+        ````
 
         Read the architectural deep dive:
         [Build with Naz : High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)](https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/)
+
         ```
+
+        ```
+
     - Include the comprehensive **Migration Guide** (Before vs After code snippets for
       `VPPos`/`VPSize`, `App` trait, `RenderOpCommon`, and PTY sessions).
     - Include highlights: Mathematically & Empirically Validated Type Safety,
@@ -276,10 +277,12 @@ Task: make-0.8.0-release.md"
       introspection, +-98% jitter elimination).
     - Link to tag-pinned `CHANGELOG.md` anchor
       (`https://github.com/r3bl-org/r3bl-open-core/blob/v0.8.0-tui/CHANGELOG.md#v080-2026-09-18`).
-      *(Note: Update the date `2026-09-18` in the anchor and header to match the actual date of publication if different).*
+      _(Note: Update the date `2026-09-18` in the anchor and header to match the actual
+      date of publication if different)._
 
-- [ ] Draft Release Notes in `docs/release-notes/r3bl-build-infra/v0.0.6.md`:
+- [x] Draft Release Notes in `docs/release-notes/r3bl-build-infra/v0.0.6.md`:
     - Include standardized **Discoverability Intro**:
+
         ```markdown
         > **r3bl-build-infra** provides developer tools and utilities for Rust projects
         > and documentation automation.
@@ -290,33 +293,38 @@ Task: make-0.8.0-release.md"
 
         Install with: `cargo install r3bl-build-infra --force`
         ```
+
     - Include changelog highlights for `cargo-rustdoc-fmt` and dependency bump.
     - Link to tag-pinned `CHANGELOG.md` anchor
       (`https://github.com/r3bl-org/r3bl-open-core/blob/v0.0.6-build-infra/CHANGELOG.md#v006-2026-09-18`).
 
-- [ ] Draft Release Notes in `docs/release-notes/r3bl-cmdr/v0.0.27.md`:
+- [x] Draft Release Notes in `docs/release-notes/r3bl-cmdr/v0.0.27.md`:
     - Include standardized **Discoverability Intro**:
+
         ```markdown
         > **r3bl-cmdr** is a suite of fast, fully async TUI & CLI developer productivity
         > tools built on `r3bl_tui`.
         >
-        > - 🌿 **`giti`**: Interactive Git CLI with visual branch selection and
+        > - 😺 **`giti`**: Interactive Git CLI with visual branch selection and
         >   streamlined commit workflows.
-        > - 📝 **`edi`**: Terminal Markdown editor featuring syntax highlighting, gradient
+        > - 🦜 **`edi`**: Terminal Markdown editor featuring syntax highlighting, gradient
         >   colors, emoji support, SSH-optimized diff-rendering, and a high-performance
         >   zero-copy gap buffer.
-        > - ⚡ **`env-source`**: Cross-platform environment loader that evaluates shell
-        >   scripts across POSIX sh, Fish, PowerShell, and cmd.exe without blocking.
+        > - 📜 **`env-source`**: Blazing fast cross-platform environment loader. Direct
+        >   100x faster Rust replacement for Fish [`bass`] (`bass.py`) on Unix and
+        >   seamless `.bat` environment loader for PowerShell on Windows.
 
         Install with: `cargo install r3bl-cmdr --force`
         ```
+
     - Highlight new tool: `env-source`.
     - Highlight fixes and performance boosts in `edi` and `giti`.
     - Link to tag-pinned `CHANGELOG.md` anchor
       (`https://github.com/r3bl-org/r3bl-open-core/blob/v0.0.27-cmdr/CHANGELOG.md#v0027-2026-09-18`).
 
-- [ ] Draft Release Notes in `docs/release-notes/r3bl-rust-analyzer-mcp-server/v1.1.5.md`:
+- [x] Draft Release Notes in `docs/release-notes/r3bl-rust-analyzer-mcp-server/v1.1.5.md`:
     - Include standardized **Discoverability Intro**:
+
         ```markdown
         > **r3bl-rust-analyzer-mcp-server** is a high-performance Model Context Protocol
         > (MCP) server for `rust-analyzer`. Built with pure Rust standard library threads
@@ -329,28 +337,29 @@ Task: make-0.8.0-release.md"
 
         Install with: `cargo install r3bl-rust-analyzer-mcp-server --force`
         ```
+
     - Link to tag-pinned `CHANGELOG.md` anchor
       (`https://github.com/r3bl-org/r3bl-open-core/blob/v1.1.5-rust-analyzer-mcp-server/CHANGELOG.md#v115-2026-09-18`).
 
-- [ ] Audit diffs via `git diff docs/release-notes/` (or `git status`) to verify clean markdown generation.
-- [ ] **Mandatory manual review:** Verify all 4 drafted release note files in `docs/release-notes/`.
-    - [ ] `docs/release-notes/r3bl_tui/v0.8.0.md`
-    - [ ] `docs/release-notes/r3bl-build-infra/v0.0.6.md`
-    - [ ] `docs/release-notes/r3bl-cmdr/v0.0.27.md`
-    - [ ] `docs/release-notes/r3bl-rust-analyzer-mcp-server/v1.1.5.md`
-- [ ] Commit drafted release notes explicitly:
-    ```bash
-    git add docs/release-notes/
-    git commit -m "[docs] Pre-draft v0.8.0 standalone release notes
+- [x] Audit diffs via `git diff docs/release-notes/` (or `git status`) to verify clean
+      markdown generation.
 
-Task: make-0.8.0-release.md"
-    ```
-
----
+- [x] **Mandatory manual review:** Verify all 4 drafted release note files and aligned
+      core documentation.
+    - [x] `docs/release-notes/r3bl_tui/v0.8.0.md`
+    - [x] `docs/release-notes/r3bl-build-infra/v0.0.6.md`
+    - [x] `docs/release-notes/r3bl-cmdr/v0.0.27.md`
+    - [x] `docs/release-notes/r3bl-rust-analyzer-mcp-server/v1.1.5.md`
+    - [x] `README.md`
+    - [x] `tui/src/lib.rs`
+    - [x] `tui/README.md`
+    - [x] `tui/Cargo.toml`
+    - [x] `tui/src/readline_async/mod.rs`
+    - [x] `.vscode/settings.json`
 
 ### Phase 3: Pre-Draft `CHANGELOG.md` Entries
 
-- [ ] Update `CHANGELOG.md` for `r3bl_tui`:
+- [x] Update `CHANGELOG.md` for `r3bl_tui`:
     - Add section `### v0.8.0 (2026-09-18)` directly under `## r3bl_tui`.
     - Add GitHub release direct link callout:
       `> 🔗 **Release Notes & Migration Guide**: [v0.8.0-tui](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.8.0-tui)`
@@ -414,14 +423,14 @@ Task: make-0.8.0-release.md"
         - Zero-allocation string building throughout ANSI generation (`fast_strings`).
         - Initial memory allocation and capacity optimizations for `ZeroCopyGapBuffer`.
 
-- [ ] Update `CHANGELOG.md` for `r3bl-build-infra`:
+- [x] Update `CHANGELOG.md` for `r3bl-build-infra`:
     - Add section `### v0.0.6 (2026-09-18)`.
     - Add GitHub release direct link callout:
       `> 🔗 **Release Notes**: [v0.0.6-build-infra](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.6-build-infra)`
     - Document technical term auto-linking additions in `cargo-rustdoc-fmt`.
     - Document dependency bump to `r3bl_tui 0.8.0`.
 
-- [ ] Update `CHANGELOG.md` for `r3bl-cmdr`:
+- [x] Update `CHANGELOG.md` for `r3bl-cmdr`:
     - Add section `### v0.0.27 (2026-09-18)`.
     - Add GitHub release direct link callout:
       `> 🔗 **Release Notes**: [v0.0.27-cmdr](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.27-cmdr)`
@@ -430,67 +439,71 @@ Task: make-0.8.0-release.md"
       `ZeroCopyGapBuffer`, and new coordinate types.
     - Document Windows ConPTY EOF fix.
 
-- [ ] Update `CHANGELOG.md` for `r3bl-rust-analyzer-mcp-server`:
+- [x] Update `CHANGELOG.md` for `r3bl-rust-analyzer-mcp-server`:
     - Add section `### v1.1.5 (2026-09-18)`.
     - Add GitHub release direct link callout:
       `> 🔗 **Release Notes**: [v1.1.5-rust-analyzer-mcp-server](https://github.com/r3bl-org/r3bl-open-core/releases/tag/v1.1.5-rust-analyzer-mcp-server)`
     - Document dependency bump to `r3bl_tui 0.8.0`.
 
-- [ ] Update `CHANGELOG.md` Table of Contents at the top of the file:
+- [x] Update `CHANGELOG.md` Table of Contents at the top of the file:
     - Replace the legacy `doctoc` comment block (`<!-- START doctoc generated TOC ... -->`
       through `<!-- END doctoc generated TOC ... -->`) at the top of `CHANGELOG.md` with:
-      ```markdown
-      <!-- BEGIN mktoc -->
-      <!-- END mktoc -->
-      ```
+        ```markdown
+        <!-- BEGIN mktoc -->
+        <!-- END mktoc -->
+        ```
     - Run `mktoc CHANGELOG.md` to populate the new TOC between those markers.
 
-- [ ] Audit diffs via `git diff CHANGELOG.md` to ensure only the new sections and TOC were updated.
-- [ ] **Mandatory manual review:** Verify `CHANGELOG.md` entries and TOC.
-    - [ ] `CHANGELOG.md` entries for all 4 crates
-    - [ ] `mktoc` TOC update
-- [ ] Commit changelog entries explicitly and push Track A documentation commits to remote:
-    ```bash
-    git add CHANGELOG.md
-    git commit -m "[docs] Pre-draft v0.8.0 changelog entries
+- [x] Audit diffs via `git diff CHANGELOG.md` to ensure only the new sections and TOC were
+      updated.
 
-Task: make-0.8.0-release.md"
+- [x] **Mandatory manual review:** Verify `CHANGELOG.md` entries and TOC.
+    - [x] `CHANGELOG.md` entries for all 4 crates
+    - [x] `mktoc` TOC update
+
+- [x] Commit all Track A documentation changes explicitly and push to remote:
+
+    ```bash
+    git add docs/release-notes/ README.md tui/src/lib.rs tui/README.md tui/Cargo.toml tui/src/readline_async/mod.rs .vscode/settings.json CHANGELOG.md task/make-0.8.0-release.md
+    git commit -m "[docs] Pre-draft v0.8.0 release notes, CHANGELOG, and update core docs
+
+    Task: make-0.8.0-release.md"
     git push origin main
     ```
 
----
-
 ## Track B: Release Execution (Post-Merge of `fix-shift-home-lockup`)
 
-*Execute this track once the worktree branch `fix-shift-home-lockup` is fully completed and ready to merge.*
+_Execute this track once the worktree branch `fix-shift-home-lockup` is fully completed
+and ready to merge._
 
 ### Phase 4: Workspace Merge & Documentation SSOT Sync
 
-- [ ] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up worktree:
+- [ ] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
+      worktree:
     - Verify all checks pass on PR #490 and merge via rebase:
-      ```bash
-      gh pr merge 490 --rebase --delete-branch
-      ```
+        ```bash
+        gh pr merge 490 --rebase --delete-branch
+        ```
     - Clean up the local worktree and branch:
-      ```bash
-      git worktree remove ../roc-fix-shift-home-lockup
-      git branch -d fix-shift-home-lockup
-      git fetch --prune
-      ```
+        ```bash
+        git worktree remove ../roc-fix-shift-home-lockup
+        git branch -d fix-shift-home-lockup
+        git fetch --prune
+        ```
     - On `main` branch, pull latest rebased commits:
-      ```bash
-      git checkout main
-      git pull origin main
-      git status
-      ```
+        ```bash
+        git checkout main
+        git pull origin main
+        git status
+        ```
 - [ ] Update `tui/src/lib.rs` (Single Source of Truth under `//! # Why R3BL?`):
     - Add subsection `//! ## Mathematically & Empirically Validated Type Safety` detailing
       FUNARCH 2023 & 2026 academic research, typestate coordinate boundaries, and zero
-      runtime penalty (using `//! ##` so rustdoc navigation shows it cleanly and `cargo readme`
-      converts it to `###` in `README.md`).
-    - Add subsection `//! ## High-Performance Systems Architecture` detailing `Flat2DArray`
-      SIMD contiguous memory layout, `fast_strings` zero-alloc ANSI formatting, and
-      non-blocking epoll event loops, linking to
+      runtime penalty (using `//! ##` so rustdoc navigation shows it cleanly and
+      `cargo readme` converts it to `###` in `README.md`).
+    - Add subsection `//! ## High-Performance Systems Architecture` detailing
+      `Flat2DArray` SIMD contiguous memory layout, `fast_strings` zero-alloc ANSI
+      formatting, and non-blocking epoll event loops, linking to
       [Build with Naz : High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)](https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/).
 - [ ] Generate `tui/README.md` from `tui/src/lib.rs`:
     ```bash
@@ -506,7 +519,8 @@ Task: make-0.8.0-release.md"
       and `env-source`.
     - Run `mktoc` on root `README.md`.
 - [ ] Synchronize `r3bl_tui` dependency requirements across workspace `Cargo.toml` files
-      (keep dependent crate package versions at current versions until their respective release phases):
+      (keep dependent crate package versions at current versions until their respective
+      release phases):
     - In `tui/Cargo.toml`: Set `version = "0.8.0"`.
     - In `build-infra/Cargo.toml`: Keep package `version = "0.0.5"`, update dependency
       `r3bl_tui = { path = "../tui", version = "0.8.0" }`.
@@ -529,8 +543,10 @@ Task: make-0.8.0-release.md"
     ./check.fish --test
     ./check.fish --full
     ```
-- [ ] Run cross-platform verification via `/test-cross-platform` on macOS and Windows fleet.
-- [ ] Audit diffs line-by-line via `git diff` across all modified files to ensure zero collateral changes.
+- [ ] Run cross-platform verification via `/test-cross-platform` on macOS and Windows
+      fleet.
+- [ ] Audit diffs line-by-line via `git diff` across all modified files to ensure zero
+      collateral changes.
 - [ ] **Mandatory manual review:** Verify branch state, `tui/src/lib.rs`, `tui/README.md`,
       root `README.md`, all `Cargo.toml` updates, and cross-platform check results.
     - [ ] `tui/src/lib.rs` and `tui/README.md`
@@ -539,19 +555,19 @@ Task: make-0.8.0-release.md"
     - [ ] `docs/release-guide.md`
     - [ ] `./check.fish --full` and cross-platform tests pass cleanly
 
----
-
 ### Phase 5: Release `r3bl_tui` v0.8.0 (Core Library)
 
 - [ ] Perform dry-run publication:
     ```bash
     cd tui && cargo publish --dry-run --allow-dirty --no-verify && cd ..
     ```
-- [ ] Audit diff via `git diff tui/` to ensure dry run did not generate unwanted artifacts.
+- [ ] Audit diff via `git diff tui/` to ensure dry run did not generate unwanted
+      artifacts.
 - [ ] **Mandatory manual review:** Verify `tui` dry-run succeeds cleanly.
 - [ ] **User Permission Checkpoint**: Request user confirmation before publishing
       `r3bl_tui` to crates.io.
-- [ ] Create git commit and tag for `r3bl_tui` using explicit staging (stages `tui`, workspace manifests, and internal dependency updates):
+- [ ] Create git commit and tag for `r3bl_tui` using explicit staging (stages `tui`,
+      workspace manifests, and internal dependency updates):
     ```bash
     git add tui/ README.md Cargo.lock Cargo.toml build-infra/Cargo.toml cmdr/Cargo.toml rust-analyzer-mcp-server/Cargo.toml docs/release-guide.md
     git commit -m "v0.8.0-tui"
@@ -562,8 +578,11 @@ Task: make-0.8.0-release.md"
     cd tui && cargo publish --no-verify --allow-dirty && cd ..
     ```
 - [ ] Verify `r3bl_tui` 0.8.0 is live on crates.io:
-    - Query `cargo search r3bl_tui` or `curl -s https://crates.io/api/v1/crates/r3bl_tui | grep '"max_version":"0.8.0"'`.
-    - Note: crates.io sparse index caching can take a few minutes to reflect locally; running `cargo publish --dry-run` on downstream `build-infra` is a foolproof verification check.
+    - Query `cargo search r3bl_tui` or
+      `curl -s https://crates.io/api/v1/crates/r3bl_tui | grep '"max_version":"0.8.0"'`.
+    - Note: crates.io sparse index caching can take a few minutes to reflect locally;
+      running `cargo publish --dry-run` on downstream `build-infra` is a foolproof
+      verification check.
 - [ ] Push commit and tag to remote:
     ```bash
     git push origin main && git push origin v0.8.0-tui
@@ -578,8 +597,6 @@ Task: make-0.8.0-release.md"
     - [ ] crates.io: `https://crates.io/crates/r3bl_tui` shows `0.8.0`
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.8.0-tui`
-
----
 
 ### Phase 6: Release `r3bl-build-infra` v0.0.6 (Tooling Crate)
 
@@ -625,8 +642,6 @@ Task: make-0.8.0-release.md"
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.6-build-infra`
 
----
-
 ### Phase 7: Release `r3bl-cmdr` v0.0.27 (CLI & Apps Crate)
 
 - [ ] Bump package version in `cmdr/Cargo.toml`: Set `version = "0.0.27"`.
@@ -671,22 +686,23 @@ Task: make-0.8.0-release.md"
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.27-cmdr`
 
----
-
 ### Phase 8: Release `r3bl-rust-analyzer-mcp-server` v1.1.5 (MCP Server)
 
-- [ ] Bump package version in `rust-analyzer-mcp-server/Cargo.toml`: Set `version = "1.1.5"`.
-- [ ] *Do NOT run `cargo readme`*: `rust-analyzer-mcp-server/README.md` is hand-crafted and
-      maintained directly as the crates.io landing page.
+- [ ] Bump package version in `rust-analyzer-mcp-server/Cargo.toml`: Set
+      `version = "1.1.5"`.
+- [ ] _Do NOT run `cargo readme`_: `rust-analyzer-mcp-server/README.md` is hand-crafted
+      and maintained directly as the crates.io landing page.
 - [ ] Perform dry-run publication:
     ```bash
     cd rust-analyzer-mcp-server && cargo publish --dry-run --allow-dirty --no-verify && cd ..
     ```
 - [ ] Audit diff via `git diff rust-analyzer-mcp-server/` to verify version bump.
-- [ ] **Mandatory manual review:** Verify `rust-analyzer-mcp-server` dry-run succeeds cleanly.
+- [ ] **Mandatory manual review:** Verify `rust-analyzer-mcp-server` dry-run succeeds
+      cleanly.
 - [ ] **User Permission Checkpoint**: Request user confirmation before publishing
       `r3bl-rust-analyzer-mcp-server` to crates.io.
-- [ ] Create git commit and tag for `r3bl-rust-analyzer-mcp-server` using explicit staging:
+- [ ] Create git commit and tag for `r3bl-rust-analyzer-mcp-server` using explicit
+      staging:
     ```bash
     git add rust-analyzer-mcp-server/ Cargo.lock
     git commit -m "v1.1.5-rust-analyzer-mcp-server"
@@ -716,8 +732,6 @@ Task: make-0.8.0-release.md"
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v1.1.5-rust-analyzer-mcp-server`
 
----
-
 ### Phase 9: Community Visibility & Housekeeping
 
 - [ ] Share release announcements across developer communities following
@@ -736,3 +750,5 @@ Task: make-0.8.0-release.md"
 - [ ] **Mandatory manual review:** Verify all release tracking tasks are marked complete.
     - [ ] `task/prepare-v0.8.0-meta-task.md`
     - [ ] `task/make-0.8.0-release.md`
+
+<!-- cspell:words Falk Heuer Woldmann Haase developerlifecom DCACHE LINESIZE Workstreams SSOT -->
