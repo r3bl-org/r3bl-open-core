@@ -42,14 +42,14 @@
 //!
 //! The codebase uses three distinct coordinate systems that must never be mixed:
 //!
-//! | System                  | Base      | Primitive              | Use Case                                        |
-//! | ----------------------- | --------- | ---------------------- | ----------------------------------------------- |
-//! | **Viewport**            | 0-based   | [`ChUnit`] ([`u16`])   | Internal app logic, array indexing, crossterm   |
-//! | **[`VT-100`] [`ANSI`]** | 1-based   | [`NonZeroU16`]         | [`ANSI`] escape sequence parsing only           |
-//! | **Byte**                | 0-based   | [`usize`]              | [`UTF-8`] string/buffer byte positions          |
+//! | System                  | Base      | Primitive              | Use Case                                          |
+//! | ----------------------- | --------- | ---------------------- | ------------------------------------------------- |
+//! | **Viewport**            | 0-based   | [`ChUnit`] ([`u16`])   | Internal app logic, array indexing, [`crossterm`] |
+//! | **[`VT-100`] [`ANSI`]** | 1-based   | [`NonZeroU16`]         | [`ANSI`] escape sequence parsing only             |
+//! | **Byte**                | 0-based   | [`usize`]              | [`UTF-8`] string/buffer byte positions            |
 //!
 //! **Why this matters**: [`ANSI`] escape sequences like `ESC[5;10H` use 1-based indexing
-//! where `(1,1)` is the top-left corner. Internal data structures and crossterm use
+//! where `(1,1)` is the top-left corner. Internal data structures and [`crossterm`] use
 //! 0-based indexing where `(0,0)` is top-left. Byte positions must use [`usize`] for
 //! string slicing. Mixing these causes off-by-one errors.
 //!
@@ -94,7 +94,7 @@
 //! | Your Task                                             | Use These Types                                     |
 //! | ----------------------------------------------------- | --------------------------------------------------- |
 //! | **Index into [`OfsBuf`] or [`ZeroCopyGapBuffer`]**    | [`VPCol`], [`VPRow`], [`VPPos`]                     |
-//! | **Send cursor commands via crossterm**                | [`VPCol`], [`VPRow`] (convert to [`u16`])           |
+//! | **Send cursor commands via [`crossterm`]**            | [`VPCol`], [`VPRow`] (convert to [`u16`])           |
 //! | **Parse [`VT-100`] [`ANSI`] escape sequences**        | [`TermRow`], [`TermCol`]                            |
 //! | **Work with [`UTF-8`] byte positions in strings**     | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]       |
 //! | **Store dimensions/sizes**                            | [`VPWidth`], [`VPHeight`], [`VPSize`]               |
@@ -113,10 +113,10 @@
 //! | **Viewport positioning & manipulation**         | [`VPPos`], [`VPSize`], [`VPRow`], [`VPCol`]               | [`viewport_coords`]            |
 //! | **Type-safe bounds checking**                   | [`ArrayBoundsCheck`], [`CursorBoundsCheck`]               | [`bounds_check`]               |
 //! | **[`UTF-8`] byte-level operations**             | [`ByteIndex`], [`ByteLength`], [`ByteOffset`]             | [`byte`]                       |
-//! | **Terminal output (crossterm)**                 | [`VPRow::as_u16()`], [`VPCol::as_u16()`]                  | [`VPPos`], [`viewport_coords`] |
+//! | **Terminal output ([`crossterm`])**             | [`VPRow::as_u16()`], [`VPCol::as_u16()`]                  | [`VPPos`], [`viewport_coords`] |
 //!
 //! **Example: Complete [`VT-100`] to buffer workflow**
-//! ```rust
+//! ```
 //! use r3bl_tui::{TermRow, TermCol, VPRow, VPCol};
 //! use std::num::NonZeroU16;
 //!
@@ -150,7 +150,7 @@
 //!
 //! **Key conversion methods:**
 //! - [`TermRow::to_zero_based()`] → [`VPRow`] (1-based → 0-based)
-//! - [`VPRow::as_u16()`] → [`u16`] (for crossterm)
+//! - [`VPRow::as_u16()`] → [`u16`] (for [`crossterm`])
 //! - [`TermRow::from_zero_based(VPRow)`] → [`TermRow`] (0-based → 1-based)
 //!
 //! # Submodule Organization
@@ -180,6 +180,7 @@
 //! [`canvas`]: canvas
 //! [`CCaret`]: viewport_coords::CCaret
 //! [`ChUnit`]: primitives::ChUnit
+//! [`crossterm`]: crossterm
 //! [`CursorBoundsCheck`]: bounds_check::CursorBoundsCheck
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`OfsBuf`]: crate::tui::OfsBuf

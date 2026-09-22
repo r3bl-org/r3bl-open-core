@@ -14,7 +14,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// ## The Color Support Hierarchy
 ///
 /// Terminals support color at different levels:
-/// - **Truecolor/RGB**: Full 24-bit RGB support (16 million colors)
+/// - **Truecolor/[`RGB`]**: Full 24-bit [`RGB`] support (16 million colors)
 /// - **Ansi256**: 256-color palette (8-bit color)
 /// - **Grayscale**: Limited to grayscale representation
 /// - **`NoColor`**: No color support at all
@@ -24,7 +24,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///
 /// ## Key Design Principle
 ///
-/// Rather than having individual converters (crossterm, [`ANSI`] [`SGR`] codes, etc.)
+/// Rather than having individual converters ([`crossterm`], [`ANSI`] [`SGR`] codes, etc.)
 /// each handle their own color degradation logic, this module centralizes the algorithm.
 /// This ensures:
 /// - **Consistency**: All color output is degraded the same way
@@ -43,10 +43,10 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// - **Grayscale**: Convert to grayscale equivalent
 /// - **`NoColor`**: Convert to terminal default
 ///
-/// For **RGB Colors**:
-/// - **Truecolor**: Keep as-is (RGB)
+/// For **[`RGB`] Colors**:
+/// - **Truecolor**: Keep as-is ([`RGB`])
 /// - **Ansi256**: Downconvert to nearest ANSI256 color
-/// - **Grayscale**: Convert RGB to grayscale equivalent
+/// - **Grayscale**: Convert [`RGB`] to grayscale equivalent
 /// - **`NoColor`**: Convert to terminal default
 ///
 /// ## Usage Pattern
@@ -56,14 +56,14 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// 2. Detect terminal color support capabilities
 /// 3. Call `degrade_color(original_color, color_support)` to get a terminal-safe color
 /// 4. The result is now in a form safe for the terminal:
-///    - If Truecolor: RGB unchanged
+///    - If Truecolor: [`RGB`] unchanged
 ///    - If Ansi256: Converted to nearest [`ANSI`] palette color
 ///    - If Grayscale: Converted to grayscale equivalent
 ///    - If `NoColor`: Converted to default (black/reset)
 ///
 /// ## Integration Points
 ///
-/// - **crossterm converter**: `From<TuiColor> for crossterm::style::Color`
+/// - **[`crossterm`] converter**: `From<TuiColor> for crossterm::style::Color`
 /// - **[`ANSI`] output generator**: `PixelCharRenderer.color_to_sgr()`
 /// - **CLI text rendering**: `CliTextInline` and related structures
 ///
@@ -87,7 +87,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///
 /// # Examples
 ///
-/// For RGB color `(255, 0, 0)` (bright red):
+/// For [`RGB`] color `(255, 0, 0)` (bright red):
 /// - On **Ansi256** terminal: Returns `TuiColor::Ansi(9)` - bright red from [`ANSI`]
 ///   palette
 /// - On **Grayscale** terminal: Returns grayscale approximation
@@ -95,6 +95,8 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// - On **`NoColor`** terminal: Returns `TuiColor::Ansi(0)` - default/black
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`crossterm`]: crossterm
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
@@ -183,10 +185,10 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
     }
 }
 
-/// Converts a basic [`ANSI`] color index (0-15) to its RGB representation.
+/// Converts a basic [`ANSI`] color index (0-15) to its [`RGB`] representation.
 ///
 /// This allows us to convert basic colors to grayscale by first
-/// converting to RGB, then using the grayscale algorithm.
+/// converting to [`RGB`], then using the grayscale algorithm.
 ///
 /// # Standard [`ANSI`] Colors
 ///
@@ -210,6 +212,7 @@ fn degrade_basic_color(index: u8, color_support: ColorSupport) -> TuiColor {
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 fn basic_color_to_rgb(index: u8) -> RgbValue {
     match index {
         0 => (0, 0, 0).into(),        // Black

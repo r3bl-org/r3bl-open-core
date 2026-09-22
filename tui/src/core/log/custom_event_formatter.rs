@@ -11,8 +11,8 @@
 //!
 //! - **Rich visual formatting**: Produces colorized output with timestamps, log levels,
 //!   span context, and structured field content
-//! - **Terminal-aware**: Automatically adapts to terminal width and handles Unicode/emoji
-//!   content correctly
+//! - **Terminal-aware**: Automatically adapts to terminal width and handles
+//!   [`Unicode`]/emoji content correctly
 //! - **Two-line format**: Each log entry consists of a header line (timestamp, level,
 //!   message) and body lines (additional field content)
 //! - **Text wrapping**: Long content is intelligently wrapped to fit terminal width
@@ -56,7 +56,7 @@
 //!
 //! The formatter supports dynamic message composition using the special `message` field:
 //!
-//! ```rust
+//! ```
 //! use tracing::info;
 //! use r3bl_tui::inline_string;
 //!
@@ -106,7 +106,7 @@
 //!
 //! ### Basic registration example
 //!
-//! ```rust
+//! ```
 //! # use tracing_subscriber::{fmt::SubscriberBuilder, registry::LookupSpan};
 //! # use r3bl_tui::log::CustomEventFormatter;
 //! let subscriber = SubscriberBuilder::default()
@@ -133,6 +133,8 @@
 //! - The `message` field forms the colorful header line
 //! - Additional fields form key-value pairs in the body
 //! - Empty field values are skipped to avoid blank lines
+//!
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 
 use crate::{ColorWheel, GCStringOwned, InlineString, LruCache, OrderedMap, RgbValue,
             ThreadSafeLruCache, TuiColor, TuiStyle, VPWidth, cli_text_inline, fg_color,

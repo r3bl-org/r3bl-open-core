@@ -8,7 +8,7 @@
 //! from [`PTY`] output. This method is called by the [`PTY`] multiplexer after receiving
 //! bytes from a child process (like vim, bash, etc.) and updates the following in the
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{*, vp_height, vp_width};
 //!
 //! // Entry point: Process ANSI sequences from PTY output

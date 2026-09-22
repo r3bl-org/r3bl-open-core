@@ -67,7 +67,7 @@ pub enum CursorVisibilityMode {
 /// - If a child process requests *any* mouse tracking, we route those events back using
 ///   precise byte sequence format requested by the app.
 ///   - When an app requests basic tracking ([`1000`], [`1002`], or [`1003`]), it defaults
-///     to the [X10] format.
+///     to the [`X10`] format.
 ///   - It will only use the modern [Sgr] format if the app explicitly requests
 ///     [`PrivateModeType::SgrMouseMode`].
 ///
@@ -77,8 +77,8 @@ pub enum CursorVisibilityMode {
 /// [`PrivateModeType::SgrMouseMode`]: crate::PrivateModeType::SgrMouseMode
 /// [`PTYMux`]: crate::PTYMux
 /// [`SGR`]: crate::SgrCode
+/// [`X10`]: MouseTrackingFormat::X10
 /// [Sgr]: MouseTrackingFormat::Sgr
-/// [X10]: MouseTrackingFormat::X10
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MouseTrackingFormat {
     /// [`X10`] format (e.g. `\x1b[M...`)
@@ -121,17 +121,23 @@ pub enum RequestedScreenMode {
 }
 
 pub mod terminal_mode_state_todo {
-    /// Bracketed paste mode state.
+    /// [`Bracketed paste`] mode state.
     ///
     /// Controls whether text pasted into the terminal is bracketed by special escape
     /// sequences (`CSI 200 ~` and `CSI 201 ~`), allowing applications to distinguish
     /// pasted text from keyboard input.
+    ///
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[allow(dead_code)]
     pub enum BracketedPasteMode {
-        /// Bracketed paste mode enabled.
+        /// [`Bracketed paste`] mode enabled.
+        ///
+        /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
         Enabled,
-        /// Bracketed paste mode disabled.
+        /// [`Bracketed paste`] mode disabled.
+        ///
+        /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
         #[default]
         Disabled,
     }

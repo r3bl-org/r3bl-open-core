@@ -129,7 +129,7 @@ If clippy fixes modify behavior or you're unsure about changes:
 # (runs: cargo test --all-targets)
 ```
 
-Use the Task tool with `subagent_type='test-runner'` if tests fail.
+Use the Task tool or `invoke_subagent` with `subagent_type='test-runner'` and `Model: "inherit"` if tests fail.
 
 ### Step 6: Final Code Formatting
 

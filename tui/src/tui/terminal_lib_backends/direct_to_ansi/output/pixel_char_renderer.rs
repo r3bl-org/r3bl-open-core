@@ -331,9 +331,10 @@ impl PixelCharRenderer {
     /// Apply a foreground color to the output.
     ///
     /// This method converts a [`TuiColor`] to the appropriate [`ANSI`] escape sequence
-    /// based on the detected color support level (RGB, Ansi256, Grayscale).
+    /// based on the detected color support level ([`RGB`], Ansi256, Grayscale).
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     fn apply_fg_color(&mut self, color: TuiColor) {
         let sgr = Self::color_to_sgr(color, true);
         self.write_sgr(sgr);
@@ -351,12 +352,13 @@ impl PixelCharRenderer {
     ///
     /// This method uses the centralized color degradation logic from [`degrade_color`]
     /// to ensure consistent color downsampling across the codebase:
-    /// - **Truecolor support** → 24-bit RGB codes (passed through unchanged)
-    /// - **Ansi256 support** → 8-bit color codes (RGB downsampled if needed)
+    /// - **Truecolor support** → 24-bit [`RGB`] codes (passed through unchanged)
+    /// - **Ansi256 support** → 8-bit color codes ([`RGB`] downsampled if needed)
     /// - **Grayscale support** → converted to [`ANSI`] grayscale equivalent
     /// - **`NoColor` support** → black (converted by [`degrade_color`])
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     fn color_to_sgr(color: TuiColor, is_foreground: bool) -> SgrCode {
         let color_support = global_color_support::detect();
         let degraded = degrade_color(color, color_support);

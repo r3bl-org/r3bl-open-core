@@ -21,7 +21,7 @@ use std::num::NonZeroU16;
 ///
 /// Use [`TermPos::from_one_based()`] to construct from raw 1-based coordinate values:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::TermPos;
 ///
 /// let pos = TermPos::from_one_based(10, 5); // column 10, row 5
@@ -70,7 +70,7 @@ impl TermPos {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::TermPos;
     ///
     /// // Mouse event at column 10, row 5 (1-based coordinates)

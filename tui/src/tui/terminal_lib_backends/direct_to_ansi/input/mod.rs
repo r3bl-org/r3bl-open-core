@@ -58,7 +58,7 @@
 //! ## References
 //!
 //! - [mio issue] - "Polling from `/dev/tty` on macOS"
-//! - [crossterm issue] - "`/dev/tty` does not work on macOS with kqueue"
+//! - [crossterm issue] - "`/dev/tty` does not work on macOS with [`kqueue`]"
 //! - [macOS `/dev/tty` polling blog post] - Detailed technical explanation
 //!
 //! [`DirectToAnsi`]: super
@@ -70,13 +70,15 @@
 //! [`filedescriptor`]: https://docs.rs/filedescriptor
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`kqueue(2)`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
+//! [`mio`]: mio
 //! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`poll(2)`]: https://manpages.debian.org/poll.2
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`select(2)`]: https://manpages.debian.org/select.2
 //! [`signal-hook-mio`]: https://docs.rs/signal-hook-mio
 //! [`signal-hook`]: https://docs.rs/signal-hook
-//! [`SIGWINCH`]: https://manpages.debian.org/signal.7
+//! [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`tty`]: https://manpages.debian.org/tty.4
 //! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500

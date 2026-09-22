@@ -175,7 +175,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`file descriptors`]: https://manpages.debian.org/open.2
     /// [`interrupt_if_running()`]: super::ThreadLifecycleMonitor::interrupt_if_running
     /// [`InterruptHandle`]: super::InterruptHandle
-    /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
     /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext
     /// [`receiver_count`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`Restarting`]: ThreadState::Restarting

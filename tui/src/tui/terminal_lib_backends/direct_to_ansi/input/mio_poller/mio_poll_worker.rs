@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! mio-specific worker implementation for the Resilient Reactor Thread pattern.
+//! [`mio`]-specific worker implementation for the Resilient Reactor Thread pattern.
 //!
 //! This module provides [`MioPollWorker`], which implements [`RRTWorker`] for terminal
 //! input handling - including both resource creation
@@ -13,6 +13,7 @@
 //! [`block_until_ready_then_dispatch()`]:
 //!     crate::RRTWorker::block_until_ready_then_dispatch
 //! [`create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
+//! [`mio`]: mio
 //! [`RRTWorker`]: crate::RRTWorker
 
 // Imported specifically for the intra-doc links in the struct documentation.
@@ -49,11 +50,11 @@ const EVENTS_CAPACITY: usize = 8;
 ///
 /// | Resource              | Purpose                                    |
 /// | :-------------------- | :----------------------------------------- |
-/// | [`poll_handle`]       | Efficient I/O multiplexing via epoll       |
-/// | [`sources`]           | stdin and SIGWINCH signal handles          |
-/// | [`stdin_buffer`]      | Raw bytes read from stdin                  |
+/// | [`poll_handle`]       | Efficient I/O multiplexing via [`epoll`]   |
+/// | [`sources`]           | [`stdin`] and [`SIGWINCH`] signal handles  |
+/// | [`stdin_buffer`]      | Raw bytes read from [`stdin`]              |
 /// | [`parser`]            | [`VT-100`] input sequence parser           |
-/// | [`paste_state`]       | Bracketed paste mode state machine         |
+/// | [`paste_state`]       | [`Bracketed paste`] mode state machine     |
 ///
 /// ## How this affects [`stdout`] as well
 ///
@@ -65,12 +66,16 @@ const EVENTS_CAPACITY: usize = 8;
 ///
 /// [`BackpressureStdout`]: crate::core::terminal_io::BackpressureStdout
 /// [`block_until_ready_then_dispatch()`]: MioPollWorker::block_until_ready_then_dispatch
+/// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
+/// [`epoll`]: https://manpages.debian.org/epoll.7
 /// [`mio_poller::consume_stdin_input_with_sender`]:
 ///     super::handler_stdin::consume_stdin_input_with_sender
+/// [`mio`]: mio
 /// [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
 /// [`parser`]: field@MioPollWorker::vt_100_input_seq_parser
 /// [`paste_state`]: field@MioPollWorker::paste_collection_state
 /// [`poll_handle`]: field@MioPollWorker::poll_handle
+/// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
 /// [`sources`]: field@MioPollWorker::sources
 /// [`stdin_buffer`]: field@MioPollWorker::stdin_unparsed_byte_buffer
 /// [`stdin`]: std::io::stdin
@@ -83,15 +88,21 @@ const EVENTS_CAPACITY: usize = 8;
 #[derive(Debug)]
 pub struct MioPollWorker {
     /// [`mio`] poll instance for efficient I/O multiplexing.
+    ///
+    /// [`mio`]: mio
     pub poll_handle: Poll,
 
     /// Buffer for events returned by [`Poll::poll()`].
     pub ready_events_buffer: Events,
 
-    /// Registry of event sources (stdin, signals).
+    /// Registry of event sources ([`stdin`], signals).
+    ///
+    /// [`stdin`]: std::io::stdin
     pub sources: SourceRegistry,
 
-    /// Buffer for reading unparsed bytes from stdin.
+    /// Buffer for reading unparsed bytes from [`stdin`].
+    ///
+    /// [`stdin`]: std::io::stdin
     pub stdin_unparsed_byte_buffer: [u8; STDIN_READ_BUFFER_SIZE],
 
     /// Stateful [`VT-100`] input sequence framer.
@@ -113,14 +124,15 @@ impl RRTWorker for MioPollWorker {
     type Output = PollerEvent;
     type Interrupt = MioSoftwareInterrupt;
 
-    /// Creates a new mio poll worker and [`MioSoftwareInterrupt`] pair.
+    /// Creates a new [`mio`] poll worker and [`MioSoftwareInterrupt`] pair.
     ///
     /// This method:
     /// 1. Creates a new [`mio::Poll`] instance
     /// 2. Creates a [`MioSoftwareInterrupt`] from the poll's registry (for shutdown
     ///    signaling)
-    /// 3. Registers stdin and [`SIGWINCH`] with the poll (and crucially, sets stdin to
-    ///    non-blocking mode which is required by [`consume_stdin_input_with_sender()`])
+    /// 3. Registers [`stdin`] and [`SIGWINCH`] with the poll (and crucially, sets
+    ///    [`stdin`] to non-blocking mode which is required by
+    ///    [`consume_stdin_input_with_sender()`])
     /// 4. Returns both the worker (for the thread) and a [`MioSoftwareInterrupt`]
     ///    wrapping the [`mio::Waker`] (for the global state)
     ///
@@ -138,6 +150,9 @@ impl RRTWorker for MioPollWorker {
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
     /// [`mio::Poll`]: mio::Poll
     /// [`mio::Waker`]: mio::Waker
+    /// [`mio`]: mio
+    /// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
+    /// [`stdin`]: std::io::stdin
     /// [`trigger_software_interrupt()`]:
     ///     crate::RRTSoftwareInterrupt::trigger_software_interrupt
     fn create_and_register_os_sources(
@@ -229,13 +244,15 @@ impl MioPollWorker {
     /// # Returns
     ///
     /// - [`Continuation::Continue`]: Successfully processed or retryable error.
-    /// - [`Continuation::Stop`]: Worker-domain stop (e.g., EOF/fatal worker condition).
+    /// - [`Continuation::Stop`]: Worker-domain stop (e.g., [`EOF`]/fatal worker
+    ///   condition).
     /// - [`Continuation::Restart`]: OS resources corrupted (non-[`EINTR`] poll error).
     ///
     /// See [`EINTR` handling] for how interrupted syscalls are retried.
     ///
     /// [`EINTR` handling]: super#eintr-handling
     /// [`EINTR`]: super#eintr-handling
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`stdin`]: std::io::stdin
     pub fn block_until_ready_then_dispatch_impl(
         &mut self,
@@ -298,7 +315,10 @@ impl Drop for MioPollWorker {
 // │ Diagnostic error types for worker creation failures      │
 // ╰──────────────────────────────────────────────────────────╯
 
-/// Failed to create [`mio::Poll`] (epoll/kqueue creation failed).
+/// Failed to create [`mio::Poll`] ([`epoll`]/[`kqueue`] creation failed).
+///
+/// [`epoll`]: https://manpages.debian.org/epoll.7
+/// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 #[derive(Debug, thiserror::Error, Diagnostic)]
 #[error("Failed to create mio::Poll")]
 #[diagnostic(
@@ -307,7 +327,10 @@ impl Drop for MioPollWorker {
 )]
 pub struct PollCreationError(#[source] pub std::io::Error);
 
-/// Failed to register stdin with mio.
+/// Failed to register [`stdin`] with [`mio`].
+///
+/// [`mio`]: mio
+/// [`stdin`]: std::io::stdin
 #[derive(Debug, thiserror::Error, Diagnostic)]
 #[error("Failed to register stdin with mio")]
 #[diagnostic(
@@ -316,7 +339,9 @@ pub struct PollCreationError(#[source] pub std::io::Error);
 )]
 pub struct StdinRegistrationError(#[source] pub std::io::Error);
 
-/// Failed to create SIGWINCH signal handler.
+/// Failed to create [`SIGWINCH`] signal handler.
+///
+/// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
 #[derive(Debug, thiserror::Error, Diagnostic)]
 #[error("Failed to create SIGWINCH handler")]
 #[diagnostic(
@@ -325,7 +350,9 @@ pub struct StdinRegistrationError(#[source] pub std::io::Error);
 )]
 pub struct SignalCreationError(#[source] pub std::io::Error);
 
-/// Failed to register signals with mio.
+/// Failed to register signals with [`mio`].
+///
+/// [`mio`]: mio
 #[derive(Debug, thiserror::Error, Diagnostic)]
 #[error("Failed to register signals with mio")]
 #[diagnostic(code(r3bl_tui::mio::signal_registration))]

@@ -28,7 +28,7 @@
 #    zombie processes or infinite hangs during macro expansion or compiler bugs.
 
 function check_cargo_check
-    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo check
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo check -q --message-format=short
 end
 
 function check_cargo_build
@@ -36,7 +36,7 @@ function check_cargo_build
 end
 
 function check_clippy
-    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo clippy --all-targets -- -D warnings
+    ionice_wrapper timeout --foreground $CHECK_TIMEOUT_SECS cargo clippy -q --message-format=short --all-targets -- -D warnings
 end
 
 function check_cargo_test
@@ -161,8 +161,18 @@ function run_rustdoc_fmt
     cargo rustdoc-fmt
 end
 
-# Formats git-changed Rust (.rs) files using both cargo fmt and cargo rustdoc-fmt.
-# Collects staged, unstaged, and untracked .rs files.
+# Formats workspace code (`cargo fmt --all`) and git-changed rustdoc comments
+# (`cargo rustdoc-fmt $rs_files`).
+#
+# Design Note (for future Rust port):
+# 1. Early-exit if git has zero staged, unstaged, or untracked `.rs` files.
+# 2. `cargo fmt --all` uses Module-Graph Discovery (walks `mod` declarations from
+#    `Cargo.toml` entry points `lib.rs` / `bin/*.rs`), so it formats the workspace in
+#    <0.5s while naturally ignoring standalone `include_str!` fixtures in `test_data/`
+#    (and never failing on dangling `mod foo;` statements inside fixture files).
+# 3. `cargo rustdoc-fmt $rs_files` uses Filesystem/Git-Diff Discovery on the changed +
+#    untracked `.rs` files, relying on its built-in `--skip-folder-matches` (`test_data`)
+#    filter.
 function check_cargo_fmt_changed
     # Get git-modified files (staged + unstaged vs HEAD).
     set -l changed_files (git diff --name-only HEAD 2>/dev/null)
@@ -174,6 +184,13 @@ function check_cargo_fmt_changed
     set -a changed_files $untracked_files
 
     # Filter to deduplicated existing .rs files.
+    # Note: No manual `test_data` filtering is needed here:
+    # 1. `cargo fmt --all` resolves files by walking the Rust `mod` tree from crate
+    #    entry points (`lib.rs`, `main.rs`, `mod.rs`) rather than scanning the filesystem,
+    #    so standalone `include_str!` fixtures in `test_data/` are never visited
+    #    (whereas passing explicit paths via `cargo fmt -- $rs_files` would bypass module
+    #    resolution and force `rustfmt` onto standalone fixture files).
+    # 2. `cargo rustdoc-fmt` natively skips `test_data` paths via `--skip-folder-matches`.
     set -l rs_files
     for f in (string match -v '' $changed_files | sort -u)
         if test -f $f; and string match -q "*.rs" $f
@@ -186,8 +203,8 @@ function check_cargo_fmt_changed
         return 0
     end
 
-    echo "🎨 Running cargo fmt on changed files..."
-    cargo fmt -- $rs_files
+    echo "🎨 Running cargo fmt --all..."
+    cargo fmt --all
     set -l fmt_status $status
 
     echo "📚 Running cargo rustdoc-fmt on changed files..."

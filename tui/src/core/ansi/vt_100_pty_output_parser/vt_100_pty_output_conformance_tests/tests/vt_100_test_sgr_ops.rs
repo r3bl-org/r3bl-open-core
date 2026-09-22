@@ -660,7 +660,9 @@ pub mod sgr_styling {
         );
     }
 
-    /// Test semicolon-separated RGB color sequences (legacy format).
+    /// Test semicolon-separated [`RGB`] color sequences (legacy format).
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[test]
     fn test_sgr_extended_rgb_colors_semicolon_format() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();

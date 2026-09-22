@@ -108,14 +108,14 @@
 //! When your application enables raw mode, it becomes responsible for **all**
 //! keybinding handling. The kernel no longer processes `Ctrl+U` or even
 //! `Ctrl+C` (unless you explicitly leave signal handling enabled via the
-//! `isig` [termios] flag). This is why TUI frameworks typically include their
+//! `isig` [`termios`] flag). This is why TUI frameworks typically include their
 //! own line-editing functionality — just like Fish and Nushell do.
 //!
 //! ### The `stty` Command
 //!
 //! The `stty` (set terminal type) command is a Unix utility for inspecting and
 //! modifying terminal settings. It provides a command-line interface to the
-//! same **termios** settings that this module manipulates programmatically.
+//! same **[`termios`]** settings that this module manipulates programmatically.
 //!
 //! `stty` lets you control this line discipline.
 //!
@@ -172,9 +172,9 @@
 //! ### Connection to This Module
 //!
 //! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same underlying
-//! mechanism as `stty` — the POSIX [termios] API. On Unix systems, this module calls
+//! mechanism as `stty` — the POSIX [`termios`] API. On Unix systems, this module calls
 //! `tcgetattr()` and `tcsetattr()` (via the [`rustix`] crate) to manipulate the same
-//! terminal flags that `stty` controls. For details on the [termios] struct fields
+//! terminal flags that `stty` controls. For details on the [`termios`] struct fields
 //! (`c_iflag`, `c_lflag`, etc.) and why we use [`rustix`], see our [Unix
 //! implementation's termios section].
 //!
@@ -195,7 +195,7 @@
 //!
 //! Backend dispatch is based on [`TERMINAL_LIB_BACKEND`]:
 //!
-//! - **Linux** ([`DirectToAnsi`]): Uses [`rustix`]'s safe termios API (see
+//! - **Linux** ([`DirectToAnsi`]): Uses [`rustix`]'s safe [`termios`] API (see
 //!   [`raw_mode_unix`])
 //! - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal`] functions
 //!
@@ -234,9 +234,10 @@
 //! [`portable_pty` crate]: https://docs.rs/portable-pty
 //! [`PTY`]: crate::pty
 //! [`rustix`]: https://docs.rs/rustix
-//! [`SIGINT`]: https://manpages.debian.org/signal.7
+//! [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`Terminator`]: https://gnome-terminator.org/
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`VEOF`]: https://manpages.debian.org/termios.3
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
@@ -245,7 +246,6 @@
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
-//! [termios]: https://manpages.debian.org/termios.3
 //! [Unix implementation's termios section]: mod@crate::terminal_raw_mode::raw_mode_unix#the-termios-interface
 
 // Private modules (hide internal structure).

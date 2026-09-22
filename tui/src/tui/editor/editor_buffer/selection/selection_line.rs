@@ -106,13 +106,14 @@ impl SelectionLine {
     #[must_use]
     pub fn get_end(&self) -> CCol { self.col_range.end }
 
-    /// Clip a line to this selection range using [`crate::LineMetadata`] for Unicode-safe
-    /// clipping.
+    /// Clip a line to this selection range using [`crate::LineMetadata`] for
+    /// [`Unicode`]-safe clipping.
     ///
     /// This method extracts a substring from the line content based on this selection's
-    /// display column range, properly handling Unicode grapheme clusters and multi-width
-    /// characters. It delegates to [`crate::LineMetadata::clip_to_range()`] for the
-    /// actual Unicode-safe clipping.
+    /// display column range, properly handling [`Unicode`] [`grapheme`] clusters and
+    /// multi-width characters. It delegates to
+    /// [`crate::LineMetadata::clip_to_range()`] for the actual [`Unicode`]-safe
+    /// clipping.
     ///
     /// # Arguments
     /// * `line_with_info` - Line content and metadata from `get_line()`
@@ -121,7 +122,7 @@ impl SelectionLine {
     /// A string slice containing the selected text
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{c_col, c_row, c_sel_line, ZeroCopyGapBuffer};
     ///
     /// let mut buffer = ZeroCopyGapBuffer::default();
@@ -133,6 +134,9 @@ impl SelectionLine {
     /// let line = buffer.get_line(c_row(0)).expect("conversion error");
     /// let selected_text = selection.clip_to_range_str(line);
     /// ```
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[must_use]
     pub fn clip_to_range_str<'a>(&self, line: GapBufferLine<'a>) -> &'a str {
         let content = line.content();

@@ -71,7 +71,7 @@
 //! | 7    | ctrl+alt       |
 //! | 8    | ctrl+alt+shift |
 //!
-//! For complex key combinations (such as `Ctrl+Shift+T` or modified Unicode), it
+//! For complex key combinations (such as `Ctrl+Shift+T` or modified [`Unicode`]), it
 //! generates standard [`CSI u`] ([`Fixterms`]) sequences
 //! (`\x1b[<codepoint>;<modifier>u`).
 //!
@@ -91,6 +91,7 @@
 //! [`PtyInputEvent`]: crate::PtyInputEvent
 //! [`stdin`]: std::io::stdin
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/

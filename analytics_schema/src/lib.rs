@@ -51,10 +51,8 @@
 //! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
 //! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
-//! Please read the
-//! main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
-//! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
-//! context in which this crate is meant to exist.
+//! Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
+//! a better understanding of the context in which this crate is meant to exist.
 //!
 //! # Table of contents
 //!
@@ -79,23 +77,28 @@
 //! to deliver the best user experience to end users. And all the infrastructure supports
 //! opt-out of this anonymized telemetry data collection.
 //!
-//! Here are some other crates for which this crate is a dependency (run `rg
-//! "r3bl_analytics_schema" -g "Cargo.toml"` to get a list):
-//! 1. [`r3bl-cmdr`](https://crates.io/crates/r3bl_cmdr) crate.
-//! 1. The analytics backend for R3BL which is closed source.
+//! Here are some other crates for which this crate is a dependency. To get a full list
+//! run `rg "r3bl_analytics_schema" -g "Cargo.toml"` to get a list.
+//! 1. [`r3bl-cmdr`] crate.
+//! 2. The analytics backend for R3BL which is closed source.
 //!
 //! # Changelog
 //!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_analytics_schema)
-//! to see how the library has evolved over time.
+//! Please check out the [changelog] to see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
 //!
 //! To learn how we built this crate, please take a look at the following resources.
-//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
-//!   Please consider [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
-//! - If you like consuming written content, here's our developer [site](https://developerlife.com/).
+//! - If you like consuming video content, here's our [YT channel]. Please consider
+//!   [subscribing].
+//! - If you like consuming written content, here's our developer [site].
+//!
+//! [`r3bl-cmdr`]: https://crates.io/crates/r3bl_cmdr
+//! [changelog]: https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_analytics_schema
+//! [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+//! [site]: https://developerlife.com/
+//! [subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+//! [YT channel]: https://www.youtube.com/@developerlifecom
 
 //! # Analytics Schema
 //!
@@ -118,7 +121,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```
 //! use r3bl_analytics_schema::*;
 //!
 //! let mut record = AnalyticsRecord::default();

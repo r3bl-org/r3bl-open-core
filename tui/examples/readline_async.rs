@@ -241,7 +241,9 @@ async fn main() -> miette::Result<()> {
     ok!()
 }
 
-/// This task simply uses [`writeln`] and [`SharedWriter`] to print to stdout.
+/// This task simply uses [`writeln`] and [`SharedWriter`] to print to [`stdout`].
+///
+/// [`stdout`]: std::io::stdout
 mod task_1 {
     use super::{IntoDiagnostic, SharedWriter, State, Write};
     use r3bl_tui::ok;
@@ -259,7 +261,9 @@ mod task_1 {
     }
 }
 
-/// This task uses [tracing] to log to stdout (via [`SharedWriter`]).
+/// This task uses [tracing] to log to [`stdout`] (via [`SharedWriter`]).
+///
+/// [`stdout`]: std::io::stdout
 mod task_2 {
     use super::{SharedWriter, State, inline_string};
 

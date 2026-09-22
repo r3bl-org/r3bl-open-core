@@ -47,7 +47,7 @@ use std::ops::RangeInclusive;
 /// types ([`VPRow`], [`CRow`], etc.). For example, constructing a
 /// type-safe Viewport range from a 1-based [`VPHeight`]:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{vp_row, LengthOps, RangeConvertExt, VPHeight};
 ///
 /// let height = VPHeight::from(24);
@@ -215,7 +215,7 @@ use std::ops::RangeInclusive;
 /// ## Examples
 ///
 /// **Basic conversion:**
-/// ```rust
+/// ```
 /// use r3bl_tui::{RangeConvertExt, vp_row};
 ///
 /// // VT-100 scroll region: rows 2,3,4,5 (inclusive)
@@ -229,7 +229,7 @@ use std::ops::RangeInclusive;
 /// ```
 ///
 /// **Buffer operations:**
-/// ```rust
+/// ```
 /// use r3bl_tui::{RangeConvertExt, vp_row};
 ///
 /// // VT-100 scroll region from row 1 to row 4 (both inclusive)
@@ -240,7 +240,7 @@ use std::ops::RangeInclusive;
 /// ```
 ///
 /// **Single-element range:**
-/// ```rust
+/// ```
 /// # use r3bl_tui::{RangeConvertExt, vp_row};
 /// let single = vp_row(3)..=vp_row(3);  // Just row 3
 /// let exclusive = single.to_exclusive();  // vp_row(3)..vp_row(4)
@@ -313,7 +313,7 @@ pub trait RangeConvertExt {
     ///
     /// # Example Usage
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{RangeConvertExt, RangeExclusive, VPRow, vp_row};
     ///
     /// let inclusive = vp_row(2)..=vp_row(5);

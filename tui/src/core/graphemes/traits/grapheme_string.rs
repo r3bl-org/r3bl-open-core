@@ -4,11 +4,13 @@ use crate::{CCol, ChUnit, ContainsWideSegment, Seg, SegContent, SegIndex, SegLen
             VPCol, VPWidth};
 use std::fmt::Display;
 
-/// Single-line grapheme-aware string trait providing core operations
-/// for working with strings that are aware of grapheme cluster boundaries.
+/// Single-line [`grapheme`]-aware string trait providing core operations
+/// for working with strings that are aware of [`grapheme`] cluster boundaries.
 ///
 /// This trait is implemented by types that represent a single line of text
-/// with grapheme cluster awareness, such as `GCStringOwned` and `GapBufferLine`.
+/// with [`grapheme`] cluster awareness, such as `GCStringOwned` and `GapBufferLine`.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub trait GraphemeString {
     /// Associated type for iterator over segments.
     ///
@@ -43,7 +45,9 @@ pub trait GraphemeString {
     /// Gets the total display width of the string
     fn display_width(&self) -> VPWidth;
 
-    /// Gets the number of grapheme cluster segments
+    /// Gets the number of [`grapheme`] cluster segments
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     fn segment_count(&self) -> SegLength;
 
     /// Gets the size in bytes
@@ -54,7 +58,9 @@ pub trait GraphemeString {
     /// Gets a segment by index
     fn get_seg(&self, index: SegIndex) -> Option<Seg>;
 
-    /// Checks if a column position falls in the middle of a grapheme cluster
+    /// Checks if a column position falls in the middle of a [`grapheme`] cluster
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     fn check_is_in_middle_of_grapheme(&self, col: VPCol) -> Option<Seg>;
 
     // Zero-copy segment content access.

@@ -19,15 +19,16 @@ When triggered, you MUST follow these exact steps:
 1. **Information Gathering**
    - Run `gh pr view <number>` to read the PR description.
    - Run `gh pr diff <number>` to see the exact code changes and files touched.
-2. **Task File Generation**
-   - Create a new markdown task file at `task/pr-<number>-fix.md`.
+2. **Task File Generation (No Source Code Edits)**
+   - Create a new markdown task file at `task/pr-<number>-fix.md` with exact Rust struct/trait definitions and target file paths.
    - The file MUST follow the template structure below, organizing the PR into distinct,
      actionable chunks (phases/headings).
-3. **Format & Present**
+3. **Format, Present & Execute**
    - Automatically run `prettier --write task/pr-<number>-fix.md` to format the new file.
    - Run `antigravity-ide task/pr-<number>-fix.md` to open the file for the user.
    - Ask the user to **manually review and explicitly approve** the plan before any
      implementation begins.
+   - Once approved, execute each phase (in a clean or `/compact`-ed thread) and verify with `./check.fish --check` (`cargo check -q --message-format=short`).
 
 ## Task File Template
 

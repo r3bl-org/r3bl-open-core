@@ -4,36 +4,34 @@
 
 //! Rust documentation formatting tools.
 //!
-//! This module provides functionality to format markdown tables and
-//! convert links within Rust documentation comments.
+//! This module provides functionality to format Markdown tables, convert inline links
+//! to reference-style links, auto-link known technical terms, and normalize code fence
+//! language tags within Rust documentation comments.
 //!
-//! # Current Implementation
+//! # Architecture
 //!
-//! Uses `pulldown-cmark` for markdown parsing. This will be migrated to
-//! `r3bl_tui::md_parser` once table support is added to that parser.
+//! Uses a lossless two-level Concrete Syntax Tree ([`SourceFileCst`] and [`DocBlockCst`])
+//! to partition Rust source files and format Markdown tables, inline links, technical
+//! terms, and code fences within rustdoc comments (supporting both whole-file and
+//! surgical `--lines` / `--lines-force` formatting) while preserving untouched code and
+//! comments byte-for-byte.
 
 pub mod cli_arg;
-pub mod content_protector;
-pub mod extractor;
-pub mod link_converter;
+pub mod constants;
+pub mod cst;
+pub mod formatters;
 pub mod processor;
-pub mod table_formatter;
-pub mod technical_term_dictionary;
-pub mod technical_term_linker;
 pub mod types;
 pub mod ui_str;
 
 #[cfg(test)]
 pub mod validation_tests;
 
-// Re-export public API for flat module interface (like cmdr/).
+// Re-export public API for flat module interface.
 pub use cli_arg::*;
-pub use content_protector::*;
-pub use extractor::*;
-pub use link_converter::*;
+pub use constants::*;
+pub use cst::*;
+pub use formatters::*;
 pub use processor::*;
-pub use table_formatter::*;
-pub use technical_term_dictionary::*;
-pub use technical_term_linker::*;
 pub use types::*;
 pub use ui_str::*;

@@ -143,7 +143,7 @@ pub enum OscSequence {
     /// -> `OSC 10`).
     ///
     /// When emitted (e.g. via [`OscSender::send_color_query`]), the terminal emulator
-    /// responds asynchronously over `stdin`. That response is framed by
+    /// responds asynchronously over [`stdin`]. That response is framed by
     /// [`vt_100_terminal_input_parser`] and parsed by [`parse_osc_response`] into
     /// [`InputEvent::TerminalColorReport`].
     ///
@@ -157,6 +157,7 @@ pub enum OscSequence {
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
     /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
     /// [`parse_osc_response`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events::osc::parse_osc_response
+    /// [`stdin`]: std::io::stdin
     /// [`TerminalColorRole::Background`]: crate::TerminalColorRole::Background
     /// [`TerminalColorRole::Foreground`]: crate::TerminalColorRole::Foreground
     /// [`TerminalColorRole`]: crate::TerminalColorRole
@@ -185,12 +186,13 @@ impl OscSequence {
     ///   [`OscSequence::ColorReport`]
     /// - Color queries (`OSC 10..19 ; ?`) -> [`OscSequence::ColorQuery`]
     ///
-    /// Used by [`parse_osc_response`] to decode incoming terminal responses on `stdin`.
+    /// Used by [`parse_osc_response`] to decode incoming terminal responses on [`stdin`].
     ///
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
     /// [`OscSequence::ColorReport`]: crate::core::ansi::osc::OscSequence::ColorReport
     /// [`parse_osc_response`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events::osc::parse_osc_response
+    /// [`stdin`]: std::io::stdin
     #[must_use]
     pub fn try_parse(bytes: &[u8]) -> Option<Self> {
         let body = try_strip_osc_enclosure(bytes)?;

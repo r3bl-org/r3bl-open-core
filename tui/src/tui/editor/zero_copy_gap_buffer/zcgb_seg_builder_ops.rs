@@ -3,11 +3,11 @@
 //! Segment construction operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides centralized segment rebuilding functionality that maintains
-//! grapheme cluster metadata for lines after text modifications. It ensures:
+//! [`grapheme`] cluster metadata for lines after text modifications. It ensures:
 //!
 //! - **Content boundary correctness**: Only processes content up to `content_len`
 //! - **[`UTF-8`] safety**: Validates and handles [`UTF-8`] errors appropriately
-//! - **Metadata accuracy**: Updates segments, display width, and grapheme count
+//! - **Metadata accuracy**: Updates segments, display width, and [`grapheme`] count
 //! - **Performance**: Supports both single-line and batch rebuilding
 //!
 //! # Content Boundary Invariant
@@ -83,6 +83,7 @@
 //! the buffer is [`UTF-8`] validated, making subsequent operations safe.
 //!
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
@@ -93,7 +94,7 @@ use miette::{Result, miette};
 use std::str::from_utf8_unchecked;
 
 impl ZeroCopyGapBuffer {
-    /// Rebuild grapheme cluster segments for a single line.
+    /// Rebuild [`grapheme`] cluster segments for a single line.
     ///
     /// This method reconstructs the segment metadata for a line after its
     /// content has been modified. It:
@@ -145,6 +146,7 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
     /// [`delete_range()`]: ZeroCopyGapBuffer::delete_range
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn rebuild_line_segments(
@@ -202,7 +204,7 @@ impl ZeroCopyGapBuffer {
         ok!()
     }
 
-    /// Rebuild grapheme cluster segments for multiple lines.
+    /// Rebuild [`grapheme`] cluster segments for multiple lines.
     ///
     /// This method efficiently rebuilds segments for a batch of lines,
     /// useful for bulk operations that modify multiple lines at once.
@@ -250,6 +252,7 @@ impl ZeroCopyGapBuffer {
     /// In debug builds, panics if any line contains invalid [`UTF-8`]. This should
     /// not happen in normal operation as the buffer maintains [`UTF-8`] invariants.
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn rebuild_line_segments_batch(&mut self, line_indices: &[CRow]) -> Result<()> {

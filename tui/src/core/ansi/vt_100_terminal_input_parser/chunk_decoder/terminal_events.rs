@@ -53,7 +53,7 @@
 //! ## Bidirectional Terminal Communication & [`OSC`] Handling
 //!
 //! Modern terminal emulators write query responses (e.g., color reports, clipboard
-//! contents) directly into `stdin` starting with `ESC ]` (`0x1B 0x5D`, [`OSC`] prefix).
+//! contents) directly into [`stdin`] starting with `ESC ]` (`0x1B 0x5D`, [`OSC`] prefix).
 //!
 //! This module houses [`osc::try_disambiguate_or_alt_bracket()`], which inspects
 //! input buffers using [`OscScanResult::scan()`] to distinguish between human keystrokes
@@ -75,6 +75,7 @@
 //! [`osc::try_disambiguate_or_alt_bracket()`]: osc::try_disambiguate_or_alt_bracket
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
 //! [`OscScanResult::scan()`]: super::osc_scanner::OscScanResult::scan
+//! [`stdin`]: std::io::stdin
 //! [`TerminalColorReport`]: crate::TerminalColorReport
 //! [`TerminalColorRole`]: crate::TerminalColorRole
 //! [`utf8`]: mod@super::utf8
@@ -116,9 +117,10 @@ pub mod csi {
     /// - `ESC [ 8 ; 2 4 ; 8 0 t` - Window resize to 24 rows × 80 columns
     /// - `ESC [ I` - Terminal gained focus
     /// - `ESC [ O` - Terminal lost focus
-    /// - `ESC [ 2 0 0 ~` - Bracketed paste start
-    /// - `ESC [ 2 0 1 ~` - Bracketed paste end
+    /// - `ESC [ 2 0 0 ~` - [`Bracketed paste`] start
+    /// - `ESC [ 2 0 1 ~` - [`Bracketed paste`] end
     ///
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn parse(chunk: &[u8]) -> Option<ParsedInputEventIR> {
@@ -348,7 +350,7 @@ pub mod osc {
     ///
     /// - `OSC 10, 11, 12, 13, 14, 17, 19`: Decodes terminal color responses
     ///   ([`TerminalColorRole`]) into [`VT100InputEventIR::TerminalColorReport`]. These
-    ///   responses arrive asynchronously on `stdin` in reply to queries constructed via
+    ///   responses arrive asynchronously on [`stdin`] in reply to queries constructed via
     ///   [`OscSequence::ColorQuery`] or emitted via [`OscSender::send_color_query`].
     /// - `OSC 52`: Inbound clipboard responses are ignored
     ///   ([`VT100InputEventIR::Ignored`]).
@@ -358,6 +360,7 @@ pub mod osc {
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
     /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
+    /// [`stdin`]: std::io::stdin
     /// [`TerminalColorRole`]: crate::TerminalColorRole
     /// [`VT100InputEventIR::Ignored`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Ignored
     /// [`VT100InputEventIR::TerminalColorReport`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::TerminalColorReport

@@ -15,7 +15,7 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{CsiCount, CsiSequence};
 //!
 //! // Fallible construction - must handle the None case
@@ -47,7 +47,7 @@ use std::{fmt::{Display, Formatter},
 /// This type wraps [`NonZeroU16`] internally. A zero count **cannot exist**,
 /// preventing the [`CSI`] zero bug at compile time:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::CsiCount;
 ///
 /// // Fallible construction - returns None for zero
@@ -95,7 +95,7 @@ impl CsiCount {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::CsiCount;
     ///
     /// assert!(CsiCount::new(0).is_none());  // Zero not allowed
@@ -152,7 +152,7 @@ impl TryFrom<u16> for CsiCount {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::csi_count;
 ///
 /// assert!(csi_count(0).is_none());

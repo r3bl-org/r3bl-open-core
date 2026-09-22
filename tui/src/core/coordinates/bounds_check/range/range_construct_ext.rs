@@ -3,10 +3,9 @@
 //! Extension trait for constructing [`RangeExclusive`] and [`RangeInclusive`] objects
 //! directly from `(Index, Length)` coordinate tuple pairs (see [`RangeConstructExt`]).
 
-use crate::{
-    byte_index, c_col, c_row, vp_col, vp_idx, vp_row, ByteIndex, ByteLength, CCol,
-    CHeight, CRow, CWidth, VPCol, VPHeight, VPIndex, VPLength, VPRow, VPWidth,
-};
+use crate::{ByteIndex, ByteLength, CCol, CHeight, CRow, CWidth, VPCol, VPHeight,
+            VPIndex, VPLength, VPRow, VPWidth, byte_index, c_col, c_row, vp_col, vp_idx,
+            vp_row};
 use std::ops::{Range, RangeInclusive};
 
 /// Type alias for [`Range`] to explicitly signify exclusive interval semantics `[start,
@@ -32,8 +31,8 @@ pub type RangeExclusive<Idx> = Range<Idx>;
 ///
 /// # Purpose
 ///
-/// This trait answers the question: **"How do I construct a [`RangeExclusive`] or
-/// [`RangeInclusive`] directly from an origin index and a length?"**
+/// This trait answers the question: **How do I construct a [`RangeExclusive`] or
+/// [`RangeInclusive`] directly from an origin index and a length?**
 ///
 /// This trait eliminates repetitive manual conversion logic and off-by-one arithmetic
 /// errors by providing explicit, type-safe range construction methods.
@@ -108,7 +107,7 @@ pub type RangeExclusive<Idx> = Range<Idx>;
 ///
 /// # Example Usage
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{
 ///     CanvasRangeExt, RangeBoundsExt, RangeBoundsResult, RangeConstructExt, VPHeight,
 ///     VPRow, vp_height, vp_row,

@@ -1,0 +1,83 @@
+{
+  // Known terms registry - canonical link targets for technical terms in rustdoc comments.
+  //
+  // WHEN ADDING, REMOVING, OR CHANGING A TERM:
+  //
+  // 1. Update the seed term coverage test fixture:
+  //    - src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_seed_term_coverage.rs
+  //    Add/remove/change the term in all three sections (bare, backticked, already-linked).
+  //
+  // 2. Update the unit test that checks all seed terms are present:
+  //    - src/cargo_rustdoc_fmt/formatters/technical_term/technical_term_dictionary.rs -> test_all_seed_terms_present()
+  //
+  // 3. Regenerate golden files:
+  //    cargo test -p r3bl-build-infra --lib -- regen_golden_output_snapshot_files_for_input_files --ignored --nocapture
+  //
+  // 4. Run the full test suite to verify:
+  //    cargo test -p r3bl-build-infra --lib
+
+  // Internal Rust types
+  "CSI":  "crate::CsiSequence",
+  "SGR":  "crate::SgrCode",
+  "ESC":  "crate::EscSequence",
+  "DSR":  "crate::DsrSequence",
+  "OSC":  "crate::osc_codes::OscSequence",
+  "pty":  "crate::core::pty",
+
+  // Spec links (Wikipedia / VT100 sections)
+  // Convention: [`CSI`] links to crate code, [`CSI` spec] links to the spec.
+  "`CSI` spec":    "https://en.wikipedia.org/wiki/ANSI_escape_code#CSI",
+  "`SGR` spec":    "https://en.wikipedia.org/wiki/ANSI_escape_code#SGR",
+  "`ESC` spec":    "https://en.wikipedia.org/wiki/ANSI_escape_code#ESC",
+  "`DSR` spec":    "https://en.wikipedia.org/wiki/ANSI_escape_code#DSR",
+  "`OSC` spec":    "https://en.wikipedia.org/wiki/ANSI_escape_code#OSC",
+  "`VT-100` spec": "https://vt100.net/docs/vt100-ug/chapter3.html",
+
+  // Stdlib types
+  "stdout": "std::io::stdout",
+  "stderr": "std::io::stderr",
+  "stdin":  "std::io::stdin",
+  "stdio":  "std::io",
+
+  // Crate dependencies
+  "crossterm":    "crossterm",
+  "mio":          "mio",
+  "portable_pty": "portable_pty",
+  "tokio":        "tokio",
+
+  // External concepts & specifications
+  "ANSI":             "https://en.wikipedia.org/wiki/ANSI_escape_code",
+  "ASCII":            "https://en.wikipedia.org/wiki/ASCII",
+  "UTF-8":            "https://en.wikipedia.org/wiki/UTF-8",
+  "DCS":              "https://vt100.net/docs/vt510-rm/chapter4.html#S4.3.4",
+  "VT-100":           "https://vt100.net/docs/vt100-ug/chapter3.html",
+  "VT-220":           "https://en.wikipedia.org/wiki/VT220",
+  "DECSTBM":          "https://vt100.net/docs/vt510-rm/DECSTBM.html",
+  "DEC":              "https://en.wikipedia.org/wiki/Digital_Equipment_Corporation",
+  "xterm":            "https://en.wikipedia.org/wiki/Xterm",
+  "Alacritty":        "https://alacritty.org/",
+  "Kitty":            "https://sw.kovidgoyal.net/kitty/",
+  "RXVT":             "https://en.wikipedia.org/wiki/Rxvt",
+  "rxvt-unicode":     "https://en.wikipedia.org/wiki/Rxvt-unicode",
+  "urxvt":            "https://en.wikipedia.org/wiki/Rxvt-unicode",
+  "PTY":              "https://en.wikipedia.org/wiki/Pseudoterminal",
+  "ConPTY":           "https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session",
+  "gnome-terminal":   "https://en.wikipedia.org/wiki/GNOME_Terminal",
+  "ReGIS":            "https://en.wikipedia.org/wiki/ReGIS",
+  "Sixel":            "https://en.wikipedia.org/wiki/Sixel",
+  "X10":              "https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking",
+  "ITU-T Rec. T.416": "https://www.itu.int/rec/T-REC-T.416-199303-I",
+  "vte":              "https://docs.rs/vte",
+  "EOF":              "https://en.wikipedia.org/wiki/End-of-file",
+  "SIGWINCH":         "https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH",
+  "SIGINT":           "https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT",
+  "SIGTERM":          "https://en.wikipedia.org/wiki/Signal_(IPC)#SIGTERM",
+  "grapheme":         "https://unicode.org/reports/tr29/",
+  "Unicode":          "https://en.wikipedia.org/wiki/Unicode",
+  "RGB":              "https://en.wikipedia.org/wiki/RGB_color_model",
+  "epoll":            "https://manpages.debian.org/epoll.7",
+  "kqueue":           "https://en.wikipedia.org/wiki/Kqueue",
+  "Bracketed paste":  "https://en.wikipedia.org/wiki/Bracketed-paste",
+  "truecolor":        "https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)",
+  "termios":          "https://en.wikipedia.org/wiki/Termios"
+}

@@ -34,7 +34,7 @@
 //!    - Exercises 1-byte, 2-byte, 3-byte, and 4-byte boundaries as well as multi-byte
 //!      streaming sequences.
 //!    - Reads line-by-line event confirmation strings from the controlled child's
-//!      [`stdout`] and asserts that decoded Unicode characters and hex values match
+//!      [`stdout`] and asserts that decoded [`Unicode`] characters and hex values match
 //!      expected values.
 //!
 //! 2. **[`PTY`] Controlled (System Under Test / TUI Input Engine)**:
@@ -43,7 +43,7 @@
 //!    - Initializes [`DirectToAnsiInputDevice`].
 //!    - Behind the scenes, the background [`mio`] polling thread watches [`stdin`],
 //!      feeding raw bytes into [`ChunkFramer`] and the Sans-IO [`vt_100`] parser.
-//!    - Accurately reassembles multi-byte [`UTF-8`] sequences into discrete Unicode
+//!    - Accurately reassembles multi-byte [`UTF-8`] sequences into discrete [`Unicode`]
 //!      scalar values without splitting codepoints or dropping bytes.
 //!    - Runs a Tokio asynchronous event loop consuming from `input_device.next().await`.
 //!    - Maps parsed intermediate representation text events into domain
@@ -63,10 +63,11 @@
 //! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
 //! [`Key::Character`]: crate::Key::Character
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
 //! [`XTerm`]: https://invisible-island.net/xterm/

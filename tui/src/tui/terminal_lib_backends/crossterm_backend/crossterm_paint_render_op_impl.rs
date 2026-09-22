@@ -57,7 +57,9 @@ use crossterm::{cursor::{MoveTo, MoveToColumn, MoveToNextLine, MoveToPreviousLin
                 style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
 
-/// Executes a crossterm operation with optional mock support and debug logging.
+/// Executes a [`crossterm`] operation with optional mock support and debug logging.
+///
+/// [`crossterm`]: crossterm
 pub fn crossterm_op_with_mock<T>(
     is_mock: bool,
     log_msg: &str,
@@ -373,8 +375,10 @@ impl PaintRenderOpImplCrossterm {
         sanitize_and_save_abs_pos(cursor_pos_copy, window_size, render_local_data);
     }
 
-    /// Use [`crossterm::style::Color`] to set crossterm Colors.
+    /// Use [`crossterm::style::Color`] to set [`crossterm`] Colors.
     /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
+    ///
+    /// [`crossterm`]: crossterm
     pub fn apply_colors(
         maybe_style: Option<TuiStyle>,
         locked_output_device: LockedOutputDevice<'_>,

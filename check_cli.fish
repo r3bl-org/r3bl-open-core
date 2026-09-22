@@ -89,7 +89,7 @@ function show_help
     echo "  ./check.fish --check      Run typecheck only (cargo check)"
     echo "  ./check.fish --build      Run build only (cargo build)"
     echo "  ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)"
-    echo "  ./check.fish --fmt        Run formatting on changed files (cargo fmt + cargo-rustdoc-fmt)"
+    echo "  ./check.fish --fmt        Run formatting (cargo fmt --all + cargo-rustdoc-fmt on changed files)"
     echo "  ./check.fish --test       Run tests only (cargo test + doctests)"
     echo "  ./check.fish --doc        Build documentation only (full, with deps, dep-doc caching)"
     echo "  ./check.fish --quick-doc  Build docs (quick, --no-deps, staging + sync)"

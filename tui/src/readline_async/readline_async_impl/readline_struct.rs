@@ -202,7 +202,9 @@ pub struct Readline {
     /// Manages hierarchical locking between line state and output device.
     pub(in crate::readline_async) lock_manager: ReadlineLockManager,
 
-    /// Device used to get stream of events from user (usually `stdin`).
+    /// Device used to get stream of events from user (usually [`stdin`]).
+    ///
+    /// [`stdin`]: std::io::stdin
     pub(in crate::readline_async) input_device: InputDevice,
 
     /// Sender to the line state control channel (for signals like
@@ -575,9 +577,9 @@ impl Readline {
         Some(())
     }
 
-    /// Returns a clone of the current buffer content with grapheme metadata.
+    /// Returns a clone of the current buffer content with [`grapheme`] metadata.
     ///
-    /// The returned [`GCStringOwned`] includes pre-computed grapheme cluster
+    /// The returned [`GCStringOwned`] includes pre-computed [`grapheme`] cluster
     /// information such as [`segment_count()`] and [`display_width`], useful for
     /// cursor positioning and completion UI rendering.
     ///
@@ -591,6 +593,7 @@ impl Readline {
     /// in the crate root documentation for details.
     ///
     /// [`display_width`]: GCStringOwned::display_width
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`segment_count()`]: GCStringOwned::segment_count
     #[must_use]
     pub fn get_buffer(&self) -> GCStringOwned {
@@ -598,7 +601,7 @@ impl Readline {
             .lock_line_state(|line_state| line_state.line.clone())
     }
 
-    /// Returns the cursor position as a type-safe grapheme segment index (0-based).
+    /// Returns the cursor position as a type-safe [`grapheme`] segment index (0-based).
     ///
     /// The returned [`SegIndex`] can be used with [`ArrayBoundsCheck`] for safe
     /// comparisons against buffer length.
@@ -613,6 +616,7 @@ impl Readline {
     /// in the crate root documentation for details.
     ///
     /// [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_cursor_position(&self) -> SegIndex {
         self.lock_manager

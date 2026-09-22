@@ -1,17 +1,23 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! RGB (24-bit truecolor) color representation.
+//! [`RGB`] (24-bit [`truecolor`]) color representation.
 //!
 //! This is the most precise color representation supported by modern terminals.
+//!
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
 use super::{AnsiValue, convert::convert_rgb_into_ansi256};
 use crate::{TransformColor,
             common::{CommonError, CommonErrorType, CommonResult, LossyConvertToByte},
             tui_style::hex_color_parser::parse_hex_color};
 
-/// Represents a color in RGB (24-bit truecolor) format.
+/// Represents a color in [`RGB`] (24-bit [`truecolor`]) format.
 ///
 /// This is the most precise color representation supported by modern terminals.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
+/// [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct RgbValue {
     pub red: u8,
@@ -148,11 +154,12 @@ mod tests {
     }
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// RGB: #5f00ff rgb(95,0,255)
+    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`] value 57 = `BlueViolet`
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[test]
     fn test_rgb_to_ansi() {
         let rgb = RgbValue::from_u8(95, 0, 255);

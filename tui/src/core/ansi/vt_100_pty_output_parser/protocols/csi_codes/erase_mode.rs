@@ -16,7 +16,7 @@ use crate::WideningCastToU16;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{EraseDisplayMode, CsiSequence};
 ///
 /// // Clear from cursor to end of screen
@@ -98,7 +98,7 @@ impl From<u16> for EraseDisplayMode {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{EraseLineMode, CsiSequence};
 ///
 /// // Clear from cursor to end of line

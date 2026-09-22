@@ -63,7 +63,7 @@
 //!
 //! This stage works with [`RenderOpOutputVec`] (post-Compositor operations), not
 //! [`RenderOpIRVec`]. The Compositor has already applied all necessary transformations
-//! (clipping, Unicode handling, etc.) when these methods are called.
+//! (clipping, [`Unicode`] handling, etc.) when these methods are called.
 //!
 //! [`crossterm_backend` mod docs]: mod@crate::crossterm_backend
 //! [`diff_chunks`]: mod@crate::ofs_buf::diff_chunks
@@ -73,6 +73,7 @@
 //! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 //! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.

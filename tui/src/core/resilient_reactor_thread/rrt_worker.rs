@@ -99,7 +99,7 @@ use tokio::sync::broadcast::Sender;
 /// [`Arc`]: std::sync::Arc
 /// [`epoll`]: https://manpages.debian.org/epoll.7
 /// [`InterruptHandle`]: super::InterruptHandle
-/// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+/// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 /// [`lock()`]: super::ThreadLifecycleMonitor::lock
 /// [`mio::Waker`]: mio::Waker
 /// [`MioSoftwareInterrupt`]: crate::mio_poller::MioSoftwareInterrupt

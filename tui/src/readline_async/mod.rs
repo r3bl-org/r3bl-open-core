@@ -70,7 +70,7 @@
 //! - [`Readline`]: **Async Line Editing Engine**. The underlying actor that manages
 //!   keystrokes, history navigation, multiline editing, and channel signals. You probably
 //!   won't interact with this directly; [`ReadlineAsyncContext`] wraps and manages it.
-//! - [`LineState`]: **Active Line & Cursor State**. Holds the prompt text, grapheme
+//! - [`LineState`]: **Active Line & Cursor State**. Holds the prompt text, [`grapheme`]
 //!   buffer, cursor position, and suspension state. Protected by [`SafeLineState`]
 //!   (State lock, acquired 1st).
 //! - [`ModalTerminalGuard`]: **Exclusive Terminal Lease (RAII)**. Acquire via
@@ -239,7 +239,7 @@
 //! with the following key bindings:
 //!
 //! - Works on all OSes (Linux, Windows, macOS) on most modern terminal emulators.
-//! - Full Unicode Support (Including Grapheme Clusters).
+//! - Full [`Unicode`] Support (Including Grapheme Clusters).
 //! - Multiline Editing.
 //! - In-memory History.
 //! - Left, Right: Move cursor left/right.
@@ -404,6 +404,7 @@
 //! [`choose()`]: crate::choose
 //! [`Eof`]: crate::ReadlineEvent::Eof
 //! [`flush_internal()`]: crate::flush_internal
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`InputDevice`]: crate::InputDevice
 //! [`LineState`]: crate::readline_async::LineState
 //! [`LineStateControlSignal`]: crate::LineStateControlSignal
@@ -455,6 +456,7 @@
 //! [`tracing`]: tracing
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tty`]: https://manpages.debian.org/tty.4
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [Async readline and spinner playlist]:
 //!     https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
 //! [Discussion: stdin, stdout redirection for spawned processes]:

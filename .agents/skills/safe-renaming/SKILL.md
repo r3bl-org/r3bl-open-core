@@ -31,7 +31,7 @@ Perform the refactoring file-by-file using native file editing tools (`replace_f
 3. Beware of local variable shadowing (e.g. `let vp_width = ...` shadowing `vp_width(...)`).
 
 ### Step 3: Incremental Validation
-After modifying a batch of 3-5 files, run validation commands:
+After modifying a batch of 3-5 files, run fast type/lint validation directly and delegate long-running test/doc checks to a background subagent (`invoke_subagent` with `TypeName: "self", Model: "inherit"`):
 ```bash
 ./check.fish --check
 ./check.fish --clippy
@@ -40,7 +40,7 @@ After modifying a batch of 3-5 files, run validation commands:
 ```
 
 ### Step 4: Final Verification
-Run full workspace verification on the live repository to confirm 100% clean compilation, zero lint warnings, and all tests passing:
+Run full workspace verification on the live repository (via a `Model: "inherit"` background subagent) to confirm 100% clean compilation, zero lint warnings, and all tests passing:
 ```bash
 ./check.fish --full
 ```

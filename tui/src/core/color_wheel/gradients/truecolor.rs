@@ -1,14 +1,16 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! True color (RGB) gradient generation functionality.
+//! True color ([`RGB`]) gradient generation functionality.
 //!
 //! This module provides functions for generating smooth color gradients using
-//! true color (24-bit RGB) values:
+//! true color (24-bit [`RGB`]) values:
 //! - `generate_truecolor_gradient()` - Creates gradients from hex color stops
 //! - `generate_random_truecolor_gradient()` - Creates gradients with random colors
 //!
 //! Uses the `colorgrad` crate for smooth interpolation between color stops.
 //! Previously located in `color_wheel_core/truecolor_gradient.rs`.
+//!
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 
 use super::super::color_wheel_config::sizing::{StringHexColor, VecSteps};
 use crate::tui_color;

@@ -20,7 +20,7 @@ use crate::{LockedOutputDevice, VPSize};
 ///
 /// This prevents bypassing the compositor, which is essential for:
 /// - Handling text clipping to terminal width
-/// - Managing Unicode and emoji display widths
+/// - Managing [`Unicode`] and emoji display widths
 /// - Applying style information correctly
 /// - Avoiding redundant terminal commands
 ///
@@ -41,7 +41,7 @@ use crate::{LockedOutputDevice, VPSize};
 ///
 /// The Compositor is critical for:
 /// - Handling text clipping to terminal width
-/// - Managing Unicode and emoji display widths
+/// - Managing [`Unicode`] and emoji display widths
 /// - Applying style information correctly
 /// - Avoiding redundant terminal commands
 ///
@@ -69,6 +69,7 @@ use crate::{LockedOutputDevice, VPSize};
 /// [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 /// [`RenderOpOutput`]: crate::RenderOpOutput
 /// [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub trait RenderOpsExec {
     /// Executes all render operations in the collection sequentially.
     ///

@@ -59,7 +59,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent::BracketedPaste`]: crate::InputEvent::BracketedPaste
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout

@@ -45,7 +45,7 @@
 ///
 /// With explicit retry count:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::retry_until_success_test;
 ///
 /// retry_until_success_test!(5, {
@@ -56,7 +56,7 @@
 ///
 /// With default retry count (3):
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::retry_until_success_test;
 ///
 /// retry_until_success_test!({
@@ -90,7 +90,7 @@ macro_rules! retry_until_success_test {
 ///
 /// With explicit retry count:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::retry_until_success_test_async;
 ///
 /// # async fn test_async() {
@@ -103,7 +103,7 @@ macro_rules! retry_until_success_test {
 ///
 /// With default retry count (3):
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::retry_until_success_test_async;
 ///
 /// # async fn test_async() {
@@ -140,7 +140,7 @@ macro_rules! retry_until_success_test_async {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{retry_until_success, ok};
 ///
 /// let result = retry_until_success(3, || {

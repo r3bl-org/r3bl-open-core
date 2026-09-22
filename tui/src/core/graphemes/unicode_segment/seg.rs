@@ -4,58 +4,61 @@ use super::SegIndex;
 use crate::{ByteIndex, VPCol, VPLength, VPWidth, usize};
 use std::fmt::{Debug, Display, Formatter};
 
-/// A vector-like container for grapheme segments.
+/// A vector-like container for [`grapheme`] segments.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub type SegmentArray = Vec<Seg>;
 
-/// [`Seg`] represents a grapheme cluster segment within a [`crate::GCStringOwned`].
+/// [`Seg`] represents a [`grapheme`] cluster segment within a [`crate::GCStringOwned`].
 ///
-/// This struct is the bridge between the three types of indices used in Unicode text
+/// This struct is the bridge between the three types of indices used in [`Unicode`] text
 /// handling. Each [`Seg`] contains all the information needed to convert between
 /// [`ByteIndex`], [`SegIndex`], and [`VPCol`].
 ///
-/// A Unicode "grapheme" is a user-perceived character.
-/// - For [`UTF-8`] encoded text, a grapheme can be a single byte or up to 4 bytes.
-/// - A "grapheme cluster" can be multiple graphemes or code points or Unicode scalar
-///   values.
+/// A [`Unicode`] "[`grapheme`]" is a user-perceived character.
+/// - For [`UTF-8`] encoded text, a [`grapheme`] can be a single byte or up to 4 bytes.
+/// - A "[`grapheme`] cluster" can be multiple graphemes or code points or [`Unicode`]
+///   scalar values.
 ///
-/// - For example, the `😀` emoji is a single grapheme cluster, also represented by a
+/// - For example, the `😀` emoji is a single [`grapheme`] cluster, also represented by a
 ///   single code point.
 /// - However, the `🙏🏽` emoji is a jumbo emoji that is an amalgamation of multiple code
 ///   points `'🙏' + '🏽'`.
-/// - The single letter "A" (U+0041) is a grapheme cluster consisting of one code point.
+/// - The single letter "A" (U+0041) is a [`grapheme`] cluster consisting of one code
+///   point.
 /// - The letter "á" can be represented as a single code point (U+00E1) or as a
 ///   combination of "a" (U+0061) followed by a combining acute accent (U+0301). In the
-///   latter case, the grapheme cluster is the combination of the two code points "a" +
-///   "´".
+///   latter case, the [`grapheme`] cluster is the combination of the two code points "a"
+///   + "´".
 /// - Emoji like "👨‍👩‍👧‍👦" (family) are often represented by a sequence of multiple code points
 ///   (in this case, several characters joined by zero-width joiners). The entire sequence
-///   forms a single grapheme cluster.
+///   forms a single [`grapheme`] cluster.
 ///
 /// Let's take the example of `🙏🏽`. This is a jumbo emoji that is an amalgamation of
 /// multiple code points.
 /// - If you use [`str::chars()`] to parse this, you would get two separate [char]: `'🙏'`
 ///   + `'🏽'`.
 /// - However, [`unicode_segmentation::UnicodeSegmentation`] represents this as a single
-///   grapheme cluster. This is why we use [`unicode_segmentation::UnicodeSegmentation`]
-///   to handle grapheme clusters.
+///   [`grapheme`] cluster. This is why we use
+///   [`unicode_segmentation::UnicodeSegmentation`] to handle [`grapheme`] clusters.
 ///
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
 /// 2. The [`crate::GCStringOwned`] owns the memory, and this struct is a "view" into
-///    parts of it, where each part is a grapheme cluster, and each of them is represented
-///    by this struct.
+///    parts of it, where each part is a [`grapheme`] cluster, and each of them is
+///    represented by this struct.
 ///
-/// This struct provides information about a single grapheme cluster, including its byte
-/// indices within the original string, its display width, its logical index within the
-/// [`crate::GCStringOwned`], its byte size, and its starting display column index.
+/// This struct provides information about a single [`grapheme`] cluster, including its
+/// byte indices within the original string, its display width, its logical index within
+/// the [`crate::GCStringOwned`], its byte size, and its starting display column index.
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
 /// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`] range for this
 ///   segment. These are used when converting from `ByteIndex` to `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
-///   sequence of grapheme clusters.
+///   sequence of [`grapheme`] clusters.
 /// - `start_display_col_index`: The [`VPCol`] where this segment begins on screen.
 ///   Combined with `display_width`, this defines the `VPCol` range.
 /// - `display_width`: The number of terminal columns this segment occupies (as
@@ -65,17 +68,17 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// ## Purpose
 ///
-/// The [`Seg`] struct efficiently represents and manipulates grapheme clusters within a
-/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along with
-/// display width and position information. See the [module documentation] for
-/// comprehensive information about [`UTF-8`] encoding, grapheme clusters, and the three
-/// types of indices used in this system.
+/// The [`Seg`] struct efficiently represents and manipulates [`grapheme`] clusters within
+/// a [`crate::GCStringOwned`]. It provides access to the underlying string slice along
+/// with display width and position information. See the [module documentation] for
+/// comprehensive information about [`UTF-8`] encoding, [`grapheme`] clusters, and the
+/// three types of indices used in this system.
 ///
 /// ## Usage
 ///
 /// This struct is primarily used internally by the [`crate::GCStringOwned`] struct.
-/// However, it can also be used directly to access information about individual grapheme
-/// clusters.
+/// However, it can also be used directly to access information about individual
+/// [`grapheme`] clusters.
 ///
 /// ## Example
 ///
@@ -92,39 +95,51 @@ pub type SegmentArray = Vec<Seg>;
 /// }
 /// ```
 ///
-/// See the [module docs] for comprehensive information about Unicode handling, grapheme
-/// clusters, and the three types of indices used in this system.
+/// See the [module docs] for comprehensive information about [`Unicode`] handling,
+/// [`grapheme`] clusters, and the three types of indices used in this system.
 ///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module docs]: crate::graphemes
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
-    /// [`crate::GCStringOwned`] that this grapheme cluster represents.
+    /// [`crate::GCStringOwned`] that this [`grapheme`] cluster represents.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub start_byte_index: ByteIndex,
 
     /// The end index (bytes), in the string slice, used to generate the
-    /// [`crate::GCStringOwned`] that this grapheme cluster represents.
+    /// [`crate::GCStringOwned`] that this [`grapheme`] cluster represents.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub end_byte_index: ByteIndex,
 
-    /// Display width of the grapheme cluster calculated using
+    /// Display width of the [`grapheme`] cluster calculated using
     /// [`unicode_width::UnicodeWidthChar`]. The display width (aka `unicode_width`) may
     /// not be the same as the byte size [`Self::bytes_size`].
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub display_width: VPWidth,
 
     /// The index of this entry in the [`crate::GCStringOwned::segments`].
     pub seg_index: SegIndex,
 
-    /// The number of bytes this grapheme cluster occupies in the original string slice.
-    /// The display width, aka [`Self::display_width`], may not be the same as the byte
-    /// size.
+    /// The number of bytes this [`grapheme`] cluster occupies in the original string
+    /// slice. The display width, aka [`Self::display_width`], may not be the same as
+    /// the byte size.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub bytes_size: VPLength,
 
     /// Display col index [`VPCol`] (in the original string slice) at which this
-    /// grapheme cluster starts. The "offset" in the name means that this is relative
+    /// [`grapheme`] cluster starts. The "offset" in the name means that this is relative
     /// to the start of the original string slice.
     /// - It is used to determine whether a given display col index [`VPCol`] is within
-    ///   the bounds of this grapheme cluster or not.
+    ///   the bounds of this [`grapheme`] cluster or not.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub start_display_col_index: VPCol,
 }
 
@@ -152,8 +167,11 @@ impl Display for Seg {
 }
 
 impl Seg {
-    /// Gets the string slice for the grapheme cluster segment. The `string` parameter is
-    /// any type that can be converted into a `&str`, such as [`crate::GCStringOwned`].
+    /// Gets the string slice for the [`grapheme`] cluster segment. The `string` parameter
+    /// is any type that can be converted into a `&str`, such as
+    /// [`crate::GCStringOwned`].
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();
         let start_index = usize(self.start_byte_index);

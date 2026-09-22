@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! mio-specific software interrupt for the Resilient Reactor Thread pattern.
+//! [`mio`]-specific software interrupt for the Resilient Reactor Thread pattern.
 //!
 //! [`MioSoftwareInterrupt`] wraps a [`mio::Waker`] and implements
 //! [`RRTSoftwareInterrupt`] to interrupt the dedicated thread's [`mio::Poll::poll()`]
@@ -11,6 +11,7 @@
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Waker`]: mio::Waker
+//! [`mio`]: mio
 //! [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
 //! [`trigger_software_interrupt()`]: MioSoftwareInterrupt::trigger_software_interrupt
 //! [two-phase setup]: crate::core::resilient_reactor_thread#two-phase-setup

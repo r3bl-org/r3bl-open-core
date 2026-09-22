@@ -30,8 +30,8 @@
 //!    - Exercises disambiguated key sequences that traditionally collide in legacy
 //!      [`ANSI`] mode (such as `Alt+[` vs [`CSI`] prefix, and `Shift+Enter` vs carriage
 //!    - Sends [`PUA`] functional and navigation keys defined in the [[`Kitty`] Keyboard
-//!      Protocol] (such as `Shift+Home`, where `Home` is assigned Unicode PUA codepoint
-//!      `57366` / `0xE016`, represented by [`KITTY_PUA_HOME`]).
+//!      Protocol] (such as `Shift+Home`, where `Home` is assigned [`Unicode`] PUA
+//!      codepoint `57366` / `0xE016`, represented by [`KITTY_PUA_HOME`]).
 //!    - Injects release events (`:3`) to verify that the controlled child absorbs them
 //!      without leaking phantom keypresses, immediately followed by marker keystroke
 //!      `'Z'` to confirm stream responsiveness.
@@ -64,12 +64,13 @@
 //! [`KeyPress`]: crate::KeyPress
 //! [`KITTY_PUA_HOME`]: crate::KITTY_PUA_HOME
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PUA`]: https://en.wikipedia.org/wiki/Private_Use_Areas
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/

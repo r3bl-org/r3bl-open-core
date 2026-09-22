@@ -12,7 +12,7 @@
 //! Use `push_str()` when you have a `&str` that doesn't require formatting. This is the
 //! lightweight path that directly appends the string without any overhead:
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::InlineString;
 //! # let mut acc = InlineString::new();
 //! acc.push_str("Hello, world!");  // Direct append, no formatting overhead
@@ -37,7 +37,7 @@
 //! - Debug formatting: `write!(acc, "{:?}", value)`
 //! - Custom formatting: `write!(acc, "Value: {:.2}", 3.14159)`
 //!
-//! ```rust
+//! ```
 //! # use std::fmt::Write;
 //! # use r3bl_tui::InlineString;
 //! # let mut acc = InlineString::new();

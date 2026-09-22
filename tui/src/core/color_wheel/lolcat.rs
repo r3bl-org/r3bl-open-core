@@ -13,8 +13,7 @@
 //! the previously separate `lolcat_api.rs` and `lolcat_impl.rs` files.
 
 use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, color_wheel_helpers};
-use crate::{tui_color, tui_styled_text};
-use crate::{GCStringOwned, TuiStyle, TuiStyledTexts};
+use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
 use std::{borrow::Cow,
           fmt::{Debug, Formatter, Result}};
 
@@ -48,9 +47,11 @@ impl Debug for Lolcat {
 
 impl Lolcat {
     /// This function does not respect [`crate::global_color_support::detect()`]
-    /// (it will always colorize to truecolor regardless of terminal limitations). Use
+    /// (it will always colorize to [`truecolor`] regardless of terminal limitations). Use
     /// [`crate::ColorWheel`] if you want to respect
     /// [`crate::global_color_support::detect`].
+    ///
+    /// [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
     pub fn colorize_to_styled_texts(&mut self, us: &GCStringOwned) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 

@@ -12,7 +12,11 @@ pub enum McpServerError {
     #[error("Failed to spawn rust-analyzer process: {0}")]
     ProcessSpawn(String),
 
-    /// Failed to capture stdin, stdout, or stderr.
+    /// Failed to capture [`stdin`], [`stdout`], or [`stderr`].
+    ///
+    /// [`stderr`]: std::io::stderr
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
     #[error("Failed to capture I/O pipe for rust-analyzer: {0}")]
     ProcessPipe(String),
 
@@ -49,7 +53,9 @@ pub enum McpServerError {
     #[error("Communication channel closed: {0}")]
     ChannelClosed(String),
 
-    /// `stdio` error.
+    /// [`stdio`] error.
+    ///
+    /// [`stdio`]: std::io
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 

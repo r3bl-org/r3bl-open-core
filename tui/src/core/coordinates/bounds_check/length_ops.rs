@@ -6,7 +6,7 @@ use super::{index_ops::IndexOps, numeric_value::NumericValue,
             result_enums::ArrayOverflowResult};
 use crate::{ArrayBoundsCheck, VPLength, vp_len};
 use std::{cmp::{max, min},
-          ops::Sub};
+          ops::{Add, Sub}};
 
 /// Trait for 1-based size/length types, providing operations for working with sizes and
 /// measurements.
@@ -210,7 +210,7 @@ use std::{cmp::{max, min},
 ///
 /// This trait provides comprehensive size manipulation:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ArrayOverflowResult, LengthOps, vp_col, vp_len, vp_width};
 ///
 /// let container_width = vp_width(10);
@@ -271,7 +271,9 @@ use std::{cmp::{max, min},
 /// [`VPWidth`]: crate::VPWidth
 /// [module-level comparison table]:
 ///     super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
-pub trait LengthOps: NumericValue {
+pub trait LengthOps:
+    NumericValue + Add<Output = Self> + Sub<Output = Self> + Default
+{
     /// The corresponding index type for this length type.
     ///
     /// The constraint [`IndexOps<LengthType = Self>`] creates a bidirectional
@@ -375,10 +377,7 @@ pub trait LengthOps: NumericValue {
     ///
     /// [trait documentation]: Self
     #[must_use]
-    fn index_from_end(&self, arg_offset: impl Into<Self>) -> Self::IndexType
-    where
-        Self: Sub<Output = Self>,
-    {
+    fn index_from_end(&self, arg_offset: impl Into<Self>) -> Self::IndexType {
         let offset: Self = arg_offset.into();
         (*self - offset).convert_to_index()
     }
@@ -396,7 +395,7 @@ pub trait LengthOps: NumericValue {
     /// - [`ArrayOverflowResult::Overflowed`] if the index would exceed bounds
     ///
     /// # Examples
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{ArrayOverflowResult, LengthOps, vp_col, vp_width};
     ///
     /// let max_col = vp_width(10);
@@ -437,7 +436,7 @@ pub trait LengthOps: NumericValue {
     /// - If the index is at or beyond the boundary, returns `vp_len(0)`
     ///
     /// # Examples
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{LengthOps, vp_col, vp_len, vp_width};
     ///
     /// let max_width = vp_width(10);

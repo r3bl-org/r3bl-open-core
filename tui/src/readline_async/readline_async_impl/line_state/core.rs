@@ -8,16 +8,20 @@ use crate::{GCStringOwned, SegIndex, VPSize, VPWidth, seg_index, vp_width};
 /// pause and resume support.
 #[derive(Debug)]
 pub struct LineState {
-    /// The user's input line with pre-computed grapheme cluster metadata.
+    /// The user's input line with pre-computed [`grapheme`] cluster metadata.
     ///
-    /// Uses [`GCStringOwned`] for efficient Unicode handling: O(1) segment count,
+    /// Uses [`GCStringOwned`] for efficient [`Unicode`] handling: O(1) segment count,
     /// display width, and direct segment access by index. Mutations rebuild the
     /// segment array (acceptable for typical readline input lengths).
     ///
     /// [`GCStringOwned`]: crate::GCStringOwned
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub line: GCStringOwned,
 
-    /// Index of grapheme in line (0-based position within grapheme array).
+    /// Index of [`grapheme`] in line (0-based position within [`grapheme`] array).
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub cursor_position: SegIndex,
 
     /// The prompt string and its pre-computed display width.

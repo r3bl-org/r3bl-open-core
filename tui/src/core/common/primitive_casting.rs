@@ -104,7 +104,7 @@ mod impl_lossy_convert_to_byte {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::NarrowingCastToU16;
 ///
 /// let large_val: usize = 100_000;
@@ -564,7 +564,7 @@ mod impl_narrowing_cast_to_isize {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::NarrowingCastToU8;
 ///
 /// let large_val: usize = 1_000;
@@ -816,7 +816,7 @@ mod impl_narrowing_cast_to_u8 {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::NarrowingCastToUsize;
 ///
 /// let negative_val: i32 = -10;

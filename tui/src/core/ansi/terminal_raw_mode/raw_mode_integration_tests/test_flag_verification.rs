@@ -28,6 +28,7 @@
 //! [`make_raw()`]: rustix::termios::Termios::make_raw
 //! [`OPOST`]: https://manpages.debian.org/termios.3
 //! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [`VMIN`]: https://manpages.debian.org/termios.3
 //! [`VTIME`]: https://manpages.debian.org/termios.3
 //! [POSIX terminal API]: https://manpages.debian.org/termios.3
@@ -111,6 +112,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: enables raw mode and verifies specific [`termios`] flags. The
 /// harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");

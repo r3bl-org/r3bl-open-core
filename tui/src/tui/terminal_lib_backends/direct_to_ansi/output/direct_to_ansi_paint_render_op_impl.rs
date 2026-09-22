@@ -455,9 +455,10 @@ mod helpers {
 
     /// Flush the output device with logging.
     ///
-    /// This is the [`direct_to_ansi`] equivalent of the crossterm `flush_now!` macro,
+    /// This is the [`direct_to_ansi`] equivalent of the [`crossterm`] `flush_now!` macro,
     /// with proper `direct_to_ansi:` prefixed log messages.
     ///
+    /// [`crossterm`]: crossterm
     /// [`direct_to_ansi`]: crate::terminal_lib_backends::direct_to_ansi
     pub fn flush(locked_output_device: LockedOutputDevice<'_>, log_msg: &str) {
         match locked_output_device.flush() {

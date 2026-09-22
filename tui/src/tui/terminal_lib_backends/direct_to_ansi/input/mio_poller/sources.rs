@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Source registry and types for the [`mio`] poller event loop.
+//!
+//! [`mio`]: mio
 
 use mio::Token;
 use signal_hook_mio::v1_0::Signals;
@@ -41,6 +43,7 @@ use std::{fmt::{Debug, Formatter},
 /// [`handler_signals`]: mod@super::handler_signals
 /// [`handler_stdin`]: mod@super::handler_stdin
 /// [`HashMap<Token, Source>`]: std::collections::HashMap
+/// [`mio`]: mio
 /// [`MioPollWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
 /// [`pending()`]: signal_hook_mio::v1_0::Signals::pending
 /// [`Poll::poll()`]: mio::Poll::poll
@@ -48,8 +51,8 @@ use std::{fmt::{Debug, Formatter},
 /// [`read()`]: std::io::Read::read
 /// [`Signals`]: signal_hook_mio::v1_0::Signals
 /// [`signals`]: signal_hook_mio::v1_0::Signals
-/// [`Stdin`]: std::io::Stdin
 /// [`stdin`]: std::io::stdin
+/// [`Stdin`]: std::io::Stdin
 /// [`Token`]: mio::Token
 pub struct SourceRegistry {
     /// [`Stdin`] handle registered with [`mio::Poll`].
@@ -60,6 +63,7 @@ pub struct SourceRegistry {
     /// - **Handler**: [`consume_stdin_input_with_sender()`].
     ///
     /// [`consume_stdin_input_with_sender()`]: super::handler_stdin::consume_stdin_input_with_sender
+    /// [`mio`]: mio
     /// [`to_token()`]: SourceKindReady::to_token
     /// [What is a "Source"?]: SourceRegistry#what-is-a-source
     pub stdin: Stdin,
@@ -74,6 +78,7 @@ pub struct SourceRegistry {
     /// - **Handler**: [`consume_pending_signals_with_sender()`].
     ///
     /// [`consume_pending_signals_with_sender()`]: super::handler_signals::consume_pending_signals_with_sender
+    /// [`mio`]: mio
     /// [`signal_hook_mio`]: signal_hook_mio
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`to_token()`]: SourceKindReady::to_token
@@ -103,6 +108,7 @@ impl Debug for SourceRegistry {
 /// enum, then match on the variant to dispatch to the appropriate handler.
 ///
 /// [`from_token()`]: SourceKindReady::from_token
+/// [`mio`]: mio
 /// [`Poll::poll()`]: mio::Poll::poll
 /// [`Token`]: mio::Token
 /// [`Unknown`]: SourceKindReady::Unknown

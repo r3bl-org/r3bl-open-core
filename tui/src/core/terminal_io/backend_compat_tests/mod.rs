@@ -18,14 +18,14 @@
 //! ## Input Tests
 //!
 //! - A controller process writes [`ANSI`] bytes to the [`PTY`] controller
-//! - A controlled process reads from stdin ([`PTY`] controlled side) using the specific
-//!   backend
+//! - A controlled process reads from [`stdin`] ([`PTY`] controlled side) using the
+//!   specific backend
 //! - The parsed [`InputEvent`] is output for verification
 //!
 //! ## Output Tests
 //!
 //! - A controlled process executes [`RenderOpOutput`] via the specific backend
-//! - [`ANSI`] output is captured and written to stdout ([`PTY`] controlled side)
+//! - [`ANSI`] output is captured and written to [`stdout`] ([`PTY`] controlled side)
 //! - The main test applies both outputs to [`OfsBufVT100`] and compares
 //!
 //! # Platform Support
@@ -51,6 +51,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [`test_backend_compat_input_compare`]: mod@backend_compat_input_test
 //! [`test_backend_compat_output_compare`]: mod@backend_compat_output_test
 //! [`test_pty_backend_crossterm`]: mod@backend_compat_input_test

@@ -17,7 +17,7 @@ description: Run comprehensive Rust code quality checks including compilation, l
 Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`, `./check.fish --quick-doc`, and `./check.fish --full`) can take multiple minutes. To keep the primary conversation responsive and unblocked:
 
 1. **Fast Synchronous Checks**: Lightweight checks like `./check.fish --check` (fast typecheck) and `./check.fish --fmt` take only a few seconds and can run directly in the conversation.
-2. **Long-Running Checks via Subagent**: Delegate time-consuming checks to a background subagent (e.g., `invoke_subagent` with `TypeName: "self"`).
+2. **Long-Running Checks via Subagent**: Delegate time-consuming checks to a background subagent using `invoke_subagent` with `TypeName: "self", Model: "inherit"`.
 3. **Continuous Collaboration**: While the subagent runs tests or builds docs in the background, the primary agent remains completely free to converse, review diffs, answer questions, or plan next steps with the user.
 
 ## Quick Approach (Recommended)
@@ -178,7 +178,7 @@ For every source file that is modified in the current working tree, invoke the `
 Runs all tests (unit, integration, doctests).
 
 - **Test Scope Principle**: Ensure tests strictly target *our* codebase's branches, state transitions, and logic paths (see `organize-tests` skill). Do NOT write redundant tests that merely re-verify standard library or third-party crate behaviors.
-- If tests fail, use the Task tool with `subagent_type='test-runner'` to fix failures.
+- If tests fail, use the Task tool or `invoke_subagent` with `subagent_type='test-runner'` and `Model: "inherit"` to fix failures.
 
 ### 13. Stress Test (Optional - After Major Refactors)
 

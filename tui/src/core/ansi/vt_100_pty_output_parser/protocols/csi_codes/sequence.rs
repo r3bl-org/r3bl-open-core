@@ -52,7 +52,7 @@ use std::fmt::Formatter;
 /// Since all wrapper types use [`NonZeroU16`] internally, you are **forced** to handle
 /// the zero case at construction time:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TermRowDelta, CsiSequence};
 ///
 /// // Fallible construction - must handle the None case

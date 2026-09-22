@@ -47,8 +47,10 @@ fn controller(spawned_self_process_output: std::process::Output) {
     );
 }
 
-/// Controlled path: stderr is redirected, call disclaimer twice and exit. The
+/// Controlled path: [`stderr`] is redirected, call disclaimer twice and exit. The
 /// harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`stderr`]: std::io::stderr
 fn controlled() {
     // Call it twice to test idempotency.
     emit_stderr_redirection_disclaimer();

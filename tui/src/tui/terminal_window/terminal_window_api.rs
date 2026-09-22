@@ -78,7 +78,7 @@ impl TerminalWindow {
     /// The future resolves to a [`CommonResult`] with:
     /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
     /// * `event_stream` - The [`InputDevice`] used for input events.
-    /// * `stdout` - The [`OutputDevice`] used for output.
+    /// * [`stdout`] - The [`OutputDevice`] used for output.
     ///
     /// # Performance Note
     ///
@@ -127,6 +127,7 @@ impl TerminalWindow {
     /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`main_event_loop_impl()`]: crate::main_event_loop_impl()
     /// [`NotAvailable`]: TuiAvailability::NotAvailable
+    /// [`stdout`]: std::io::stdout
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub fn main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,

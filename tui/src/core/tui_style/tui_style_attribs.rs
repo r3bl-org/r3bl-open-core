@@ -16,7 +16,7 @@ use std::ops::{Add, AddAssign};
 ///
 /// ### Single Attribute
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib};
 ///
 /// // Create a single bold attribute
@@ -28,7 +28,7 @@ use std::ops::{Add, AddAssign};
 ///
 /// ### Combining Multiple Attributes with + Operator
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::{Bold, Italic, Underline}};
 ///
 /// // Combine two attributes
@@ -44,7 +44,7 @@ use std::ops::{Add, AddAssign};
 ///
 /// ### Using the Helper Function
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{tui_style_attribs, tui_style_attrib::{Bold, Dim, Reverse}};
 ///
 /// // More ergonomic for complex combinations
@@ -56,7 +56,7 @@ use std::ops::{Add, AddAssign};
 ///
 /// ### Using += Operator for Mutating
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::{Bold, Italic}};
 ///
 /// let mut attribs = TuiStyleAttribs::default();
@@ -66,7 +66,7 @@ use std::ops::{Add, AddAssign};
 ///
 /// ### Checking and Resetting State
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::Bold};
 ///
 /// let mut attribs = TuiStyleAttribs::from(Bold);
@@ -232,7 +232,7 @@ pub fn tui_style_attribs(arg: impl Into<TuiStyleAttribs>) -> TuiStyleAttribs {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TuiStyleAttribs, tui_style_attribs, tui_style_attrib::{Bold, Italic, Dim}};
 ///
 /// // 1. Single attribute.

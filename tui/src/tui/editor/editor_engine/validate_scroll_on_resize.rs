@@ -17,7 +17,7 @@ use crate::{CursorBoundsCheck, EditorArgsMut, Viewport, core::CanvasCameraExt};
 /// state:
 /// 1. Clamping (Bounds Enforcement): Ensures that neither the caret nor the viewport's
 ///    origin position ([`Viewport::get_origin_pos()`]) are placed past the actual end of
-///    the document (`EOF` or `EOL`/max line width). If the user shrinks the terminal or
+///    the document ([`EOF`] or `EOL`/max line width). If the user shrinks the terminal or
 ///    deletes text, this logic pulls the view and caret back into the valid document
 ///    area.
 /// 2. Alignment (Auto-Scrolling): Ensures that the canvas caret is always visible. If the
@@ -87,6 +87,7 @@ use crate::{CursorBoundsCheck, EditorArgsMut, Viewport, core::CanvasCameraExt};
 ///
 /// [`CPos`]: crate::CPos
 /// [`EditorContent::c_caret`]: crate::EditorBuffer::get_c_caret
+/// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`Viewport::get_origin_pos()`]: crate::Viewport::get_origin_pos
 /// [`Viewport::set_origin_pos()`]: crate::Viewport::set_origin_pos
 /// [`VPPos`]: crate::VPPos

@@ -56,12 +56,10 @@ user: "Are we starting:
 
 Follow this "slow and steady" workflow for all non-trivial changes:
 
-- **In-Chat Planning:** Research the problem and present a comprehensive plan in chat for
-  refinement. Use code examples and specifics.
-- **Task File Creation:** Once approved, formalize it via `/r3bl-task create <name>`.
+- **Phase 1: Architecture & Task File:** Write the spec/design directly to `task/<name>.md` (via `/plan`, `/fix-issue`, or `/r3bl-task create <name>`) with exact Rust struct/trait definitions and target file paths, or diagnose a root-cause bug. Do not edit source files during planning.
 - **Manual Review:** Wait for the user to manually review and **explicitly approve** the
   task file before starting implementation.
-- **Iterative Implementation:** Implement step-by-step, using `/r3bl-task update <name>`.
+- **Phase 2: Iterative Implementation:** In a clean or `/compact`-ed thread, load `task/<name>.md` (using `/r3bl-task update <name>`), write the code, run `./check.fish --check` (which runs `cargo check -q --message-format=short`), and write tests.
 
 ### 2. Existing Task
 
@@ -70,8 +68,7 @@ Follow this "slow and steady" workflow for all non-trivial changes:
 
 ### 3. One-off Work
 
-- For simple, isolated changes that do not require formal planning or task tracking,
-  proceed directly to research and implementation.
+- **Simple isolated edits or mid-sized features:** Execute directly without a formal `task/<name>.md` plan first, while still following the Progress & Review Guardrails below.
 
 ## Progress & Review Guardrails (Anti-Hallucination)
 
@@ -383,7 +380,7 @@ validation, and tmpfs/ionice optimizations, all of which are lost with direct ca
 | `./check.fish --check`     | `cargo check` (fast typecheck)                                             |
 | `./check.fish --build`     | `cargo build` (compile production)                                         |
 | `./check.fish --clippy`    | `cargo clippy --all-targets` (linting)                                     |
-| `./check.fish --fmt`       | `cargo fmt` + `cargo rustdoc-fmt` on git-changed files                     |
+| `./check.fish --fmt`       | `cargo fmt --all` + `cargo rustdoc-fmt` on git-changed files               |
 | `./check.fish --test`      | `cargo test` + doctests                                                    |
 | `./check.fish --doc`       | `cargo doc --workspace` (full, with dep-doc caching)                       |
 | `./check.fish --quick-doc` | `cargo doc --workspace --no-deps` (fastest, no staging/sync)               |
@@ -404,10 +401,22 @@ blocking the active conversation loop:
 - **Fast Checks**: Lightweight commands like `./check.fish --check` and
   `./check.fish --fmt` take only a few seconds and may run directly.
 - **Long-Running Checks**: Delegate time-consuming checks to a background subagent (e.g.,
-  using `invoke_subagent` with `TypeName: "self"`).
+  using `invoke_subagent` with `TypeName: "self", Model: "inherit"`).
+- **Subagent Model Rule**: Always use `Model: "inherit"` (or omit `Model`) when invoking
+  subagents so they inherit whatever model is currently set in `agy-cli`.
 - **Unblocked Collaboration**: While the subagent verifies build, test, or documentation
   status in the background, the primary agent remains interactive to discuss code,
   perform reviews, and plan next steps.
+
+### Output & Context Discipline
+
+- **Terse Communication**: Be terse. Skip greetings, pleasantries, and post-edit narrative
+  summaries. State code changes and 1-line root cause only.
+- **Cargo Output Hygiene**:
+  - Prefer the `./check.fish` wrapper over raw cargo calls.
+  - When running raw `cargo check` or `cargo clippy`, always pass `-q --message-format=short`
+    (e.g., `cargo check -q --message-format=short`) to prevent compiler stderr/stdout from
+    flooding the agent's context window.
 
 ## Rust Code Guidelines
 
@@ -471,9 +480,9 @@ When designing Rust types in this codebase:
 1. **No-Argument Constructors**: If a type requires no arguments for default construction, derive or implement `Default` (`#[derive(Default)]` or `impl Default for MyType`) and do **NOT** create a redundant `pub fn new() -> Self` method. Callers instantiate it via `MyType::default()` or `Default::default()`.
 2. **Parameterized Constructors**: If a constructor requires arguments (e.g., `with_capacity(capacity: usize)` or `new(arg: Type)`), use explicit constructor methods with parameters.
 
-### Mutator Return Conventions: Avoid Boolean Blindness (`Option<T>` / `Option<()>`)
+### Mutator Return Conventions: Avoid Boolean Blindness (`Option<T>` / `Option<()>` vs Domain Enums)
 
-When designing mutator methods taking `&mut self` that can fail due to invalid indices or out-of-bounds conditions:
+When designing mutator methods or functions taking `&mut self` / `&mut T`:
 
 1. **Why `&mut self` Mutators Must Heap-Allocate Text Payloads**:
    In Rust, a `&mut self` mutator that deletes or replaces text cannot return `Option<&str>` or zero-allocation byte offsets (`DocSeg`), because:
@@ -482,8 +491,17 @@ When designing mutator methods taking `&mut self` that can fail due to invalid i
    - Therefore, returning deleted/replaced text payload *unavoidably requires* an owned heap allocation (`Option<String>`).
 2. **Returning Removed/Replaced Payloads (`Option<T>`)**:
    Return a payload `Option<T>` (e.g., `Option<LineMetadata>` for zero-allocation structural metrics, or owned `Option<String>` for text) ONLY when callers genuinely consume the deleted payload.
-3. **Zero-Allocation Success/Failure (`Option<()>` over `bool`)**:
-   If callers do not consume the deleted text payload, do NOT incur speculative heap allocations (`Option<String>`). Instead, return `Option<()>` (`Some(())` for success, `None` for failure/out-of-bounds). `Option<()>` provides the exact same zero-allocation CPU-register performance as a raw `bool` while eliminating boolean blindness and supporting the `?` try operator.
+3. **Zero-Allocation Fallible Mutators (`Option<()>`: ONLY When Chaining with `?`)**:
+   If a mutator can fail due to preconditions (e.g., out-of-bounds index) and callers do not consume a removed payload, return `Option<()>` (`Some(())` for success, `None` for failure/out-of-bounds) **only when callers short-circuit or chain calls with `?`**.
+4. **Non-Short-Circuiting Mutators (Domain Enums over `Option<()>` and `bool`)**:
+   Using `Option<()>` is an **anti-pattern** when callers do **not** chain calls with `?` (for example, running sequential formatting/transformation passes where every pass must run regardless of whether the previous pass made changes). When both outcomes are valid domain states (such as `FormatStatus::Modified` vs `FormatStatus::Unchanged`), define a self-documenting domain enum instead of `Option<()>` or `bool`. Returning `Option<()>` without `?` forces callers into `.is_some()` checks (boolean blindness in disguise) and falsely models a valid no-op ("unchanged") as failure (`None`).
+5. **No `.is_*() -> bool` Helpers on Domain Enums**:
+   Do **NOT** add `pub fn is_modified(self) -> bool` or similar boolean conversion helpers onto domain enums. Callers must match on the enum or compare directly against the variant (e.g., `status == FormatStatus::Modified`).
+6. **When `bool` Is Acceptable (`std` & Third-Party Compatibility Only)**:
+   Raw `bool` is permitted **solely** when required for compatibility with `std`, `clippy`, or third-party crate contracts:
+   - `std` collection conventions: `pub fn is_empty(&self) -> bool` when paired with `pub fn len(&self)` (enforced by `clippy::len_without_is_empty`).
+   - `std` trait signatures and higher-order closures: implementing `PartialEq::eq` or passing predicate closures to `std` iterator/collection methods (`.filter(...)`, `.any(...)`, `.all(...)`, `.retain(...)`).
+   - Third-party derive macro contracts: struct fields required by derive macros such as `#[derive(clap::Parser)]` CLI switch flags (`#[arg(long)] pub verbose: bool`).
 
 ### Clean Imports over Inline Absolute Paths (Mandatory)
 

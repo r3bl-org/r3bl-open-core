@@ -70,7 +70,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, VPSize};
 /// # Multiple Implementations
 ///
 /// Different backends implement this trait independently:
-/// - **[`crossterm`]**: Uses `crossterm` library to queue [`ANSI`] commands
+/// - **[`crossterm`]**: Uses [`crossterm`] library to queue [`ANSI`] commands
 /// - **[`DirectToAnsi`]**: Generates [`ANSI`] sequences directly
 ///
 /// Each implementation handles its backend's specific command format while maintaining

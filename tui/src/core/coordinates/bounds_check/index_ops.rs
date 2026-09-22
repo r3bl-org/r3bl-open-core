@@ -153,7 +153,7 @@ use std::ops::RangeInclusive;
 ///
 /// This trait provides comprehensive position manipulation:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{IndexOps, vp_col, vp_width};
 ///
 /// let position = vp_col(5);

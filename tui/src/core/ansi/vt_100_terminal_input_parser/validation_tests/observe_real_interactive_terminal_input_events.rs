@@ -163,9 +163,11 @@ fn write_raw_message(stdout: &mut std::io::Stdout, message: &str) -> IoResult<()
 // Input Buffer Draining
 // ============================================================================
 
-/// Drain any buffered input from stdin to ensure fresh reads.
+/// Drain any buffered input from [`stdin`] to ensure fresh reads.
 /// Repeatedly reads with a short timeout until no more data arrives,
 /// clearing any queued events from previous tests.
+///
+/// [`stdin`]: std::io::stdin
 async fn drain_stdin_buffer<R: tokio::io::AsyncRead + Unpin>(
     stdin: &mut R,
     drain_timeout: Duration,
@@ -299,9 +301,10 @@ fn get_test_cases() -> Vec<TestCase> {
 // ============================================================================
 
 /// Enables raw mode and mouse tracking for terminal capture.
-/// Logs all [`ANSI`] codes being sent to stderr for diagnostic purposes.
+/// Logs all [`ANSI`] codes being sent to [`stderr`] for diagnostic purposes.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`stderr`]: std::io::stderr
 fn enable_terminal_capture_mode() -> IoResult<()> {
     use std::io::Write as _;
 

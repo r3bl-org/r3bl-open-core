@@ -2,7 +2,9 @@
 
 ## Why R3BL?
 
-<img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
+<img
+src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true"
+height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -40,47 +42,64 @@ style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
 style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
 style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 
-### Table of contents
+## Table of contents
 
 <!-- TOC -->
 
 - [Introduction](#introduction)
 - [cargo-rustdoc-fmt](#cargo-rustdoc-fmt)
-    - [Features](#features)
-    - [Installation](#installation)
-    - [Usage Examples](#usage-examples)
-    - [What It Does](#what-it-does)
-    - [Git Integration](#git-integration)
-    - [CI Integration](#ci-integration)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Usage Examples](#usage-examples)
+  - [What It Does](#what-it-does)
+  - [Git Integration](#git-integration)
+  - [CI Integration](#ci-integration)
 - [Architecture](#architecture)
-- [Implementation Notes](#implementation-notes)
 - [Changelog](#changelog)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Learn how these crates are built, provide
+  feedback](#learn-how-these-crates-are-built-provide-feedback)
 
 <!-- /TOC -->
 
 ## Introduction
 
-Build tools and utilities designed for R3BL projects, but usable in any Rust project. This
-crate provides `cargo-rustdoc-fmt`: a cargo subcommand that formats markdown tables and
-converts inline links to reference-style links in rustdoc comments.
+Build tools and utilities designed for R3BL projects, but usable in any Rust project.
+This crate provides `cargo-rustdoc-fmt`: a cargo subcommand that formats Markdown
+tables, converts inline links to reference-style links, auto-links known technical
+terms, and normalizes code fence language tags in rustdoc comments.
 
-Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get a
-better understanding of the context in which this crate is meant to exist.
+Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
+a better understanding of the context in which this crate is meant to exist.
 
 ## cargo-rustdoc-fmt
 
-A cargo subcommand that formats markdown tables and converts inline links to
-reference-style links within Rust documentation comments (`///` and `//!`).
+A cargo subcommand that formats Markdown tables, converts inline links to
+reference-style links, auto-links known technical terms, and normalizes code fence
+language tags within Rust documentation comments (`///` and `//!`).
 
 ### Features
 
-- **Table Formatting**: Aligns markdown table columns for readability
-- **Link Conversion**: Converts inline markdown links to reference-style links, keeping
-  documentation cleaner
+- **Table Formatting**: Aligns Markdown table columns and pads separator cells for
+  readability
+- **Link Conversion**: Converts inline Markdown links to sorted bottom-of-block
+  reference-style links, keeping documentation cleaner
+- **Technical Term Linking**: Automatically upgrades backticked technical terms
+  (e.g., `` `ANSI` ``, `` `CSI` ``, `` `PTY` ``) to reference-style links backed by the
+  embedded dictionary
+- **Code Fence Normalization**: Strips redundant `rust` language tags from opening
+  code fences (` ```rust ` → ` ``` ` and ` ```rust,<attr> ` → ` ```<attr> `) since
+  rustdoc treats unlabeled code fences as Rust by default
+- **Line-Range Formatting**: Surgically format only specific 1-based line ranges
+  (`--lines` / `--lines-force`) while leaving the rest of the file untouched
 - **Workspace Support**: Process entire Rust workspaces or specific files
-- **Check Mode**: Verify formatting without modifying files (useful for CI)
-- **Selective Formatting**: Choose to format only tables, only links, or both
+- **Check & Dry-Run Modes**: Verify formatting without modifying files (`--check` for
+  CI, `--dry-run` to preview which files would be processed)
+- **Selective Formatting**: Choose to format only tables (`--tables-only`), only links
+  (`--links-only`), only terms (`--terms-only`), only code fences (`--fences-only`),
+  or all passes
+- **Skip Controls**: Exclude files via in-file `// rustdoc-fmt: skip` directives or
+  `--skip-folder-matches`, and optionally skip the trailing `cargo fmt` pass with
+  `--skip-cargo-fmt`
 - **Git Integration**: Auto-detects changed files in git working tree
 
 ### Installation
@@ -100,55 +119,54 @@ cargo install --path build-infra --force
 ### Usage Examples
 
 **Format git-changed files** (default: auto-detects staged and unstaged changes):
-
 ```bash
 cargo rustdoc-fmt
 ```
 
 **Format entire workspace**:
-
 ```bash
 cargo rustdoc-fmt --workspace
 ```
 
 **Format specific files**:
-
 ```bash
 cargo rustdoc-fmt src/lib.rs src/main.rs
 ```
 
-**Format a directory**:
+**Surgically format specific 1-based line ranges** (bypassing `// rustdoc-fmt: skip`):
+```bash
+cargo rustdoc-fmt --lines-force 400-445 src/lib.rs
+```
 
+**Format a directory**:
 ```bash
 cargo rustdoc-fmt src/
 ```
 
 **Check formatting without modifying** (useful for CI):
-
 ```bash
 cargo rustdoc-fmt --check
 ```
 
-**Only format tables** (skip link conversion):
-
+**Show which files would be processed without making changes**:
 ```bash
-cargo rustdoc-fmt --tables-only
+cargo rustdoc-fmt --dry-run
 ```
 
-**Only convert links** (skip table formatting):
-
+**Selective formatting passes**:
 ```bash
+cargo rustdoc-fmt --tables-only
 cargo rustdoc-fmt --links-only
+cargo rustdoc-fmt --terms-only
+cargo rustdoc-fmt --fences-only
 ```
 
 **Verbose output**:
-
 ```bash
 cargo rustdoc-fmt --verbose
 ```
 
 **Combine options**:
-
 ```bash
 cargo rustdoc-fmt --check --verbose src/
 ```
@@ -157,10 +175,10 @@ cargo rustdoc-fmt --check --verbose src/
 
 **Table Formatting**
 
-Markdown tables in rustdoc comments are reformatted with consistent column widths.
+Markdown tables in rustdoc comments are reformatted with consistent column widths and
+space-padded separator cells.
 
 **Before:**
-
 ```rust
 //! | A | B |
 //! |---|---|
@@ -168,26 +186,24 @@ Markdown tables in rustdoc comments are reformatted with consistent column width
 ```
 
 **After:**
-
 ```rust
 //! | A     | B              |
-//! |-------|----------------|
+//! | ----- | -------------- |
 //! | Short | Very Long Text |
 ```
 
 **Link Conversion**
 
-Inline markdown links are converted to reference-style links using the link text as the
-reference identifier, reducing visual clutter in documentation.
+Inline Markdown links are converted to sorted reference-style links at the bottom of
+the doc block using the link text as the reference identifier, reducing visual clutter
+in documentation.
 
 **Before:**
-
 ```rust
 //! See [docs](https://example.com) and [Rust](https://rust-lang.org).
 ```
 
 **After:**
-
 ```rust
 //! See [docs] and [Rust].
 //!
@@ -195,10 +211,35 @@ reference identifier, reducing visual clutter in documentation.
 //! [Rust]: https://rust-lang.org
 ```
 
+**Technical Term Linking**
+
+Known backticked technical terms are automatically linked using the embedded
+technical term dictionary, keeping existing link targets fresh and canonical.
+
+**Before:**
+```rust
+//! Uses `ANSI` escape sequences over a `PTY`.
+```
+
+**After:**
+```rust
+//! Uses [`ANSI`] escape sequences over a [`PTY`].
+//!
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+```
+
+**Code Fence Normalization**
+
+Redundant `rust` language tags on opening code fences in rustdoc comments are stripped
+(` ```rust ` → ` ``` ` and ` ```rust,<attr> ` → ` ```<attr> `, such as
+` ```rust,no_run ` → ` ```no_run `) since rustdoc treats unlabeled code fences as Rust
+by default.
+
 ### Git Integration
 
-When run without arguments, `cargo-rustdoc-fmt` intelligently determines which files to
-format:
+When run without arguments, `cargo-rustdoc-fmt` intelligently determines which files
+to format:
 
 1. **If there are staged or unstaged changes**: Formats only those changed files
 2. **If working tree is clean**: Formats files from the most recent commit
@@ -225,29 +266,29 @@ Exits with code 1 if formatting is needed, allowing CI to fail the build.
 
 ## Architecture
 
-This crate provides the `cargo-rustdoc-fmt` binary.
+`cargo-rustdoc-fmt` is built around a lossless two-level Concrete Syntax Tree (CST)
+using direct byte/slice scanners (zero regex dependencies):
 
-**Module structure:**
+```
+.rs source file
+  └── Level 1: SourceFileCst (preserves LineEndings & TrailingNewline)
+        ├── FileChunk::NonDoc        ──► preserved 100% byte-for-byte
+        └── FileChunk::DocBlock      ──► Level 2: DocBlockCst
+              ├── DocNode::Paragraph             (link conversion & term linking)
+              ├── DocNode::Table                 (GFM column alignment & padding)
+              ├── DocNode::CodeFence             (fence tag normalization; body protected)
+              ├── DocNode::HtmlComment           (protected: e.g., <!-- TOC --> blocks)
+              ├── DocNode::ReferenceDefinitions  (collected, deduplicated & sorted at bottom)
+              └── DocNode::BlankLine
+```
 
-- `src/lib.rs`: Library root
-- `src/bin/cargo-rustdoc-fmt.rs`: Binary entry point for `cargo-rustdoc-fmt`
-- `src/cargo_rustdoc_fmt/`: `cargo-rustdoc-fmt` tool implementation
-    - `cli_arg.rs`: CLI argument parsing
-    - `extractor.rs`: Extract rustdoc blocks from source
-    - `table_formatter.rs`: Format markdown tables
-    - `link_converter.rs`: Convert inline to reference-style links
-    - `processor.rs`: Orchestrate file processing
-    - `ir_event_types/`: Intermediate representation type definitions
-    - `ui_str.rs`: User-facing UI and status strings
-- `src/common/`: Shared utilities
-    - `cargo_fmt_runner.rs`: Cargo fmt integration
-    - `workspace_utils.rs`: Workspace discovery and file finding
-
-## Implementation Notes
-
-Currently uses `pulldown-cmark` for markdown parsing. This will be migrated to
-`r3bl_tui::md_parser` once table support is added to that parser, achieving full R3BL
-infrastructure dogfooding.
+- **Byte-for-byte preservation**: Non-doc Rust code, fenced code block bodies, inline
+  code spans, HTML comment blocks, indentation prefixes, and `LF`/`CRLF` line endings
+  are never altered.
+- **Surgical line-range formatting**: Every CST node tracks its exact 0-based
+  `RangeInclusive<CRow>` line span in the source file, allowing `--lines` and
+  `--lines-force` to format only the nodes intersecting the requested range while
+  emitting all other nodes verbatim from their original raw lines.
 
 ## Changelog
 
@@ -256,7 +297,6 @@ Please check out the [changelog] to see how the crate has evolved over time.
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-
 - If you like consuming video content, here's our [YT channel]. Please consider
   [subscribing].
 - If you like consuming written content, here's our developer [site].
@@ -266,7 +306,8 @@ To learn how we built this crate, please take a look at the following resources.
 [crates.io]: https://crates.io/crates/r3bl-build-infra
 [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
 [site]: https://developerlife.com/
-[subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+[subscribing]:
+    https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
 [YT channel]: https://www.youtube.com/@developerlifecom
 
 License: Apache-2.0

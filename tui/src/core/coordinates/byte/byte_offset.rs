@@ -66,7 +66,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ByteIndex, ByteOffset, byte_index, byte_offset};
 ///
 /// // Line starts at byte 100 in buffer
@@ -109,7 +109,7 @@ impl ByteOffset {
     ///
     /// ## Accessing the final byte (e.g., terminator character)
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{ByteOffset, byte_offset};
     ///
     /// // Parse SGR mouse: ESC[<0;10;20M
@@ -121,7 +121,7 @@ impl ByteOffset {
     ///
     /// ## Creating ranges that exclude the terminator
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{ByteOffset, byte_offset};
     ///
     /// // Extract content between prefix and terminator
@@ -151,7 +151,7 @@ impl ByteOffset {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ByteOffset, byte_offset};
 ///
 /// let offset = byte_offset(42);
@@ -241,7 +241,7 @@ impl AddAssign<ByteOffset> for ByteIndex {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{ByteIndex, ByteOffset, byte_index, byte_offset};
     ///
     /// let mut position = byte_index(100);

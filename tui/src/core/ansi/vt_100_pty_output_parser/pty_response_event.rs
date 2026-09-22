@@ -26,7 +26,7 @@ use std::fmt::{self, Display};
 ///    by [`ProcessManager`]) drains this vector and receives the request event.
 /// 4. **Manager → [`PTY`] → Child process**: [`Process`] calls `.to_string()` on the
 ///    event and sends the resulting bytes back through the [`session.tx_input_event`]
-///    channel, which writes directly to the child process's `stdin`.
+///    channel, which writes directly to the child process's [`stdin`].
 ///
 /// This type implements [`Display`] which delegates to the appropriate sequence generator
 /// (like [`DsrSequence`] or [`DaSequence`]) for formatting.

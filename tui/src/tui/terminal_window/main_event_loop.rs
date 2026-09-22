@@ -47,7 +47,7 @@ use tokio::sync::mpsc;
 /// Returns a [`MainEventLoopFuture`] that resolves to a [`CommonResult`] containing:
 /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
 /// * `event_stream` - The [`InputDevice`] used for input events.
-/// * `stdout` - The [`OutputDevice`] used for output.
+/// * [`stdout`] - The [`OutputDevice`] used for output.
 ///
 /// # Errors
 ///
@@ -148,6 +148,7 @@ use tokio::sync::mpsc;
 /// [`Pin<Box<T>>`]: std::boxed::Box::pin
 /// [`Pin`]: std::pin::Pin
 /// [`select!`]: tokio::select
+/// [`stdout`]: std::io::stdout
 /// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`Unpin`]: std::marker::Unpin
 pub fn main_event_loop_impl<S, AS>(

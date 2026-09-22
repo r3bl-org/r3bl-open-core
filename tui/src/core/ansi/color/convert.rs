@@ -172,10 +172,11 @@ mod cube_mapping {
     }
 
     /// - [`ANSI`] 256 colors are represented as a `6×6×6` cube.
-    /// - On each axis, the six indices map to `[0, 95, 135, 175, 215, 255]` RGB component
-    ///   values.
+    /// - On each axis, the six indices map to `[0, 95, 135, 175, 215, 255]` [`RGB`]
+    ///   component values.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[must_use]
     pub const fn find_closest(
         value: u8,

@@ -23,7 +23,7 @@
 //! All bytes after the first must match the pattern `10xxxxxx` (`80`-`BF` hex). This is
 //! validated using [`UTF8_CONTINUATION_MASK`] and [`UTF8_CONTINUATION_PATTERN`]:
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::{UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN};
 //! let byte = 0x9F; // Example continuation byte
 //! assert_eq!(byte & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
@@ -37,7 +37,7 @@
 //!
 //! # Usage Example
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{UTF8_1BYTE_START_MAX, UTF8_2BYTE_START_MIN, UTF8_2BYTE_START_MAX};
 //! let first_byte = 0xC2; // Start of 2-byte sequence
 //!
@@ -140,11 +140,12 @@ pub const UTF8_4BYTE_START_MIN: u8 = 0b1111_0000;
 ///
 /// # [RFC 3629] Note
 ///
-/// Under [RFC 3629], `Unicode` codepoints are restricted to `U+10FFFF`. The maximum
+/// Under [RFC 3629], [`Unicode`] codepoints are restricted to `U+10FFFF`. The maximum
 /// valid 4-byte sequence starts with `0xF4` (`0xF4 0x8F 0xBF 0xBF` = `U+10FFFF`).
 /// Start bytes `0xF5..=0xF7` would encode codepoints `U+110000..=U+1FFFFF`, which are
 /// strictly illegal.
 ///
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [RFC 3629]: https://datatracker.ietf.org/doc/html/rfc3629
 pub const UTF8_4BYTE_START_MAX: u8 = 0b1111_0100;
@@ -178,7 +179,7 @@ pub const UTF8_CONTINUATION_MAX: u8 = 0b1011_1111;
 /// Bit pattern: `0b1100_0000` - `byte & mask` should equal `0b1000_0000` for valid
 /// continuation bytes.
 ///
-/// ```rust
+/// ```
 /// # use r3bl_tui::{UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN};
 /// let valid = 0x9F;
 /// assert_eq!(valid & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);

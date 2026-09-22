@@ -22,7 +22,7 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ByteIndex, byte_index, ByteIndexRangeExt};
 //!
 //! let text = "Hello 世界";

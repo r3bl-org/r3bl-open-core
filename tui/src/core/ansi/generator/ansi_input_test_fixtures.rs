@@ -259,7 +259,7 @@ pub fn csi_u(ch: char, modifier: u8) -> Vec<u8> {
     csi_u_codepoint(u32::from(ch), modifier)
 }
 
-/// Generate a [`Kitty`] Keyboard Protocol sequence for a Unicode codepoint:
+/// Generate a [`Kitty`] Keyboard Protocol sequence for a [`Unicode`] codepoint:
 /// `CSI <codepoint> ; <modifier> u`.
 ///
 /// Encodes the key according to the [Kitty Keyboard Protocol] specification.
@@ -268,6 +268,7 @@ pub fn csi_u(ch: char, modifier: u8) -> Vec<u8> {
 ///
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`MODIFIER_PARAMETER_OFFSET`]: crate::core::ansi::constants::MODIFIER_PARAMETER_OFFSET
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 #[must_use]
 pub fn csi_u_codepoint(codepoint: u32, modifier: u8) -> Vec<u8> {
@@ -332,7 +333,7 @@ pub fn alt_key(ch: char) -> Vec<u8> { format!("{ESC_STR}{ch}").into_bytes() }
 /// - **Keyboard**: All key codes with modifiers (arrows, function keys, special keys)
 /// - **Resize**: Window resize notifications (`CSI 8 ; rows ; cols t`)
 /// - **Focus**: Focus gained/lost events (`CSI I` / `CSI O`)
-/// - **Paste**: Bracketed paste mode (`CSI 200~` / `CSI 201~`)
+/// - **Paste**: [`Bracketed paste`] mode (`CSI 200~` / `CSI 201~`)
 /// - **Mouse**: [`SGR`] mouse format (`CSI < button ; col ; row M/m`)
 ///
 /// ## Returns
@@ -341,6 +342,7 @@ pub fn alt_key(ch: char) -> Vec<u8> { format!("{ESC_STR}{ch}").into_bytes() }
 /// - [`None`] for unsupported or invalid combinations
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
 /// [`CSI`]: crate::CsiSequence
 /// [`InputEvent`]: crate::InputEvent
 /// [`SGR`]: crate::SgrCode

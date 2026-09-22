@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! Complete file validation tests for cargo-rustdoc-fmt.
 //!
-//! These tests verify the full workflow: extracting rustdoc blocks from complete
-//! Rust files, formatting them, and reconstructing the files.
+//! These tests verify the full workflow: parsing complete Rust files into a lossless
+//! CST, formatting rustdoc blocks, and reconstructing the files.
 
 // Allow doc_markdown warnings in this test file - the doc comments intentionally
 // reference file names and identifiers without backticks as they describe test scenarios.
@@ -11,263 +13,238 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::cargo_rustdoc_fmt::{extractor, link_converter, processor,
-                                   table_formatter,
-                                   technical_term_dictionary::TechnicalTermDictionary,
-                                   types::{CommentType, FormatOptions}};
-    use std::fs;
+    use crate::cargo_rustdoc_fmt::{constants::{CRLF_LINE_ENDING, LF_LINE_ENDING,
+                                               RUST_FILE_EXTENSION},
+                                   formatters::TechnicalTermDictionary,
+                                   processor,
+                                   types::{FormatOptions, FormatStatus}};
+    use std::{fs, path::Path};
     use tempfile::TempDir;
 
-    /// Builds a deterministic registry from the embedded seed file (no workspace
-    /// scan) for golden-file tests.
+    /// Builds a deterministic registry from the embedded seed file for golden-file
+    /// tests.
     fn test_registry() -> TechnicalTermDictionary {
         TechnicalTermDictionary::from_seed(None).unwrap()
     }
 
     /// Normalize CRLF to LF for cross-platform test compatibility.
     ///
-    /// On Windows, `include_str!` loads files with `\r\n` (due to git autocrlf),
-    /// but the formatter produces `\n` output. On macOS/Linux, files already use
-    /// `\n` so this is a no-op early return.
-    fn normalize_line_endings(s: &str) -> String {
-        if !s.contains("\r\n") {
-            return s.to_owned();
+    /// On Windows, `include_str!` loads files with `\r\n` (due to git [`autocrlf`]), but
+    /// the formatter produces `\n` output. On macOS/Linux, files already use `\n` so this
+    /// is a no-op early return.
+    ///
+    /// [`autocrlf`](https://docs.github.com/en/get-started/getting-started-with-git/configuring-git-to-handle-line-endings)
+    fn normalize_line_endings(text: &str) -> String {
+        if !text.contains(CRLF_LINE_ENDING) {
+            return text.to_owned();
         }
-        s.replace("\r\n", "\n")
+        text.replace(CRLF_LINE_ENDING, LF_LINE_ENDING)
     }
 
-    /// Test that complex file with both tables and links can be processed.
-    #[test]
-    fn test_complex_file_processing() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_complex.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        assert!(!blocks.is_empty());
-
-        // Process the first block
-        let content = blocks[0].lines.join("\n");
-
-        // Format tables
-        let with_tables = table_formatter::format_tables(&content);
-        assert!(with_tables.contains("Character") || with_tables.contains("Byte size"));
-
-        // Convert links (should use link text as reference, not numbers)
-        let with_links = link_converter::convert_links(&with_tables);
-        assert!(
-            with_links.contains("[Grapheme clusters]:")
-                || with_links.contains("[UTF-8 String]:")
-        );
-    }
-
-    /// Test that we can extract rustdoc blocks from real files.
-    #[test]
-    fn test_extract_from_sample_table() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_table.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        assert!(!blocks.is_empty());
-        assert_eq!(blocks[0].comment_type, CommentType::Inner);
-
-        // Should contain the table
-        let content = blocks[0].lines.join("\n");
-        assert!(content.contains("| Aspect"));
-    }
-
-    /// Test table formatting on a real file.
-    #[test]
-    fn test_format_table_from_fixture() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_table.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        let table_content = blocks[0].lines.join("\n");
-        let formatted = table_formatter::format_tables(&table_content);
-
-        // Check that table is present in formatted output
-        assert!(formatted.contains("Aspect"));
-        assert!(formatted.contains("Protocol"));
-    }
-
-    /// Test link conversion on a real file.
-    #[test]
-    fn test_convert_links_from_fixture() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_links.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        // First block should have links
-        let content = blocks[0].lines.join("\n");
-        let converted = link_converter::convert_links(&content);
-
-        // Should have reference-style links (using link text as reference)
-        assert!(converted.contains("[Rust docs]:") || converted.contains("[GitHub]:"));
-    }
-
-    /// Test that mixed comment types (//! and ///) are handled correctly.
-    #[test]
-    fn test_mixed_comment_types() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_mixed_comments.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        // Should have multiple blocks
-        assert!(blocks.len() >= 2);
-
-        // Should have both Inner and Outer comment types
-        let has_inner = blocks.iter().any(|b| b.comment_type == CommentType::Inner);
-        let has_outer = blocks.iter().any(|b| b.comment_type == CommentType::Outer);
-        assert!(has_inner);
-        assert!(has_outer);
-    }
-
-    /// Test that indented rustdoc is preserved.
-    #[test]
-    fn test_indented_rustdoc() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_indented.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        assert!(!blocks.is_empty());
-
-        // Check that indentation is captured
-        let has_indented = blocks.iter().any(|b| !b.indentation.is_empty());
-        assert!(has_indented);
-    }
-
-    /// Test that files with no formatting needed are left unchanged.
-    #[test]
-    fn test_no_formatting_needed() {
-        let source = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_no_formatting_needed.rs"
-        ));
-        let blocks = extractor::extract_rustdoc_blocks(source);
-
-        for block in blocks {
-            let content = block.lines.join("\n");
-            let formatted_tables = table_formatter::format_tables(&content);
-            let formatted_links = link_converter::convert_links(&formatted_tables);
-
-            // Should remain unchanged
-            assert_eq!(content, formatted_links);
-        }
-    }
-
-    /// Test `FileProcessor` with a temporary file.
-    #[test]
-    fn test_file_processor_on_temp_file() {
+    /// Runs `FileProcessor` with default options and the seed registry on `input`,
+    /// writing to a temporary file so the git-tracked fixture on disk is not mutated.
+    fn run_default_processor_on_fixture(
+        file_name: &str,
+        input: &str,
+    ) -> (
+        TempDir,
+        std::path::PathBuf,
+        processor::ProcessingResult,
+        String,
+    ) {
         let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("test.rs");
+        let test_file = temp_dir.path().join(file_name);
+        fs::write(&test_file, input).unwrap();
 
-        // Write a test file with a table
-        let content = r"//! Test file
-//! | A   | B   |
-//! | --- | --- |
-//! | 1   | 2   |
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
+        let result = processor
+            .process_files(std::slice::from_ref(&test_file))
+            .pop()
+            .unwrap();
 
-fn main() {}";
-        fs::write(&test_file, content).unwrap();
-
-        // Process the file
-        let options = FormatOptions {
-            format_tables: true,
-            convert_links: false,
-            link_terms: false,
-            check_only: false,
-            verbose: false,
-        };
-
-        let processor = processor::FileProcessor::new(options);
-        let result = processor.process_file(&test_file);
-
-        // Check that processing succeeded
         assert!(
             result.errors.is_empty(),
-            "Processing errors: {:?}",
+            "Processing errors for {file_name}: {:?}",
             result.errors
+        );
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+        (temp_dir, test_file, result, formatted)
+    }
+
+    /// Runs `FileProcessor` 3 consecutive times on `input` and asserts that runs 2 and 3
+    /// produce output identical to run 1.
+    fn assert_fixture_idempotent(file_name: &str, input: &str) {
+        let (_temp_dir, test_file, _result, after_run_1) =
+            run_default_processor_on_fixture(file_name, input);
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
+
+        let r2 = processor
+            .process_files(std::slice::from_ref(&test_file))
+            .pop()
+            .unwrap();
+        assert_eq!(r2.status, FormatStatus::Unchanged);
+        let after_run_2 = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(
+            after_run_1, after_run_2,
+            "Run 2 should produce identical output to run 1 (idempotency)"
+        );
+
+        let r3 = processor
+            .process_files(std::slice::from_ref(&test_file))
+            .pop()
+            .unwrap();
+        assert_eq!(r3.status, FormatStatus::Unchanged);
+        let after_run_3 = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(
+            after_run_2, after_run_3,
+            "Run 3 should produce identical output to run 2 (idempotency)"
         );
     }
 
-    /// Test `FileProcessor` in check mode.
-    #[test]
-    fn test_file_processor_check_mode() {
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("test.rs");
+    /// Compares `actual_file` against `expected` using `git diff --no-index` for
+    /// readable diffs on large golden files across all platforms.
+    fn assert_git_diff_eq(temp_dir: &TempDir, actual_file: &Path, expected: &str) {
+        let expected_path = temp_dir.path().join("expected.rs");
+        fs::write(&expected_path, expected).unwrap();
 
-        let content = r"//! Test with link [docs](https://example.com)
+        let diff_output = std::process::Command::new("git")
+            .args(["diff", "--no-index", "--color=never"])
+            .arg(&expected_path)
+            .arg(actual_file)
+            .output()
+            .expect("Failed to run git diff");
 
-fn main() {}";
-        fs::write(&test_file, content).unwrap();
-
-        // Process in check mode
-        let options = FormatOptions {
-            format_tables: false,
-            convert_links: true,
-            link_terms: false,
-            check_only: true,
-            verbose: false,
-        };
-
-        let processor = processor::FileProcessor::new(options);
-        let result = processor.process_file(&test_file);
-
-        // Should detect modification but not write
-        if result.modified {
-            // File should still have original content
-            let after_content = fs::read_to_string(&test_file).unwrap();
-            assert_eq!(content, after_content);
+        if !diff_output.status.success() {
+            eprintln!(
+                "=== DIFF (expected vs formatted) ===\n{}",
+                String::from_utf8_lossy(&diff_output.stdout)
+            );
+            panic!("Formatted output does not match expected output");
         }
     }
 
-    /// End-to-end test: format a file with both tables and links.
+    /// Test that complex file with tables, inline links, and technical terms is
+    /// formatted to match its golden file.
     #[test]
-    fn test_end_to_end_formatting() {
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("test.rs");
+    fn test_complex_file_processing() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_complex.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_complex.rs"
+        )));
 
-        let content = r"//! Documentation with table and link.
-//! | Feature | Status                     |
-//! | ------- | -------------------------- |
-//! | Working | [Yes]                      |
-//!
-//! [Yes]: https://example.com
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_complex.rs", input);
 
-fn main() {}";
-        fs::write(&test_file, content).unwrap();
+        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(formatted, expected);
+    }
 
-        // Process the file with registry wired in.
-        let registry = test_registry();
-        let options = FormatOptions::default();
-        let processor = processor::FileProcessor::with_registry(options, &registry);
-        let result = processor.process_file(&test_file);
+    /// Test table formatting on `sample_table.rs` against its golden file.
+    #[test]
+    fn test_format_table_from_fixture() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_table.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_table.rs"
+        )));
 
-        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_table.rs", input);
 
-        // Read back and verify formatting
-        let formatted_content = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(formatted, expected);
+    }
 
-        // Should have formatted table (columns aligned)
-        assert!(formatted_content.contains("Feature"));
+    /// Test link conversion on `sample_links.rs` against its golden file.
+    #[test]
+    fn test_convert_links_from_fixture() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_links.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_links.rs"
+        )));
 
-        // Should have reference-style links (using link text, not numbers)
-        assert!(
-            formatted_content.contains("[Yes]:")
-                || formatted_content.contains("https://example.com")
-        );
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_links.rs", input);
+
+        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(formatted, expected);
+    }
+
+    /// Test that mixed comment types (`//!` and `///`) are formatted and match the
+    /// golden file.
+    #[test]
+    fn test_mixed_comment_types() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_mixed_comments.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_mixed_comments.rs"
+        )));
+
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_mixed_comments.rs", input);
+
+        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(formatted, expected);
+    }
+
+    /// Test that indented rustdoc blocks preserve their indentation and match the
+    /// golden file.
+    #[test]
+    fn test_indented_rustdoc() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_indented.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_indented.rs"
+        )));
+
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_indented.rs", input);
+
+        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(formatted, expected);
+    }
+
+    /// Test that files with no formatting needed are left unchanged and match the
+    /// golden file.
+    #[test]
+    fn test_no_formatting_needed() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_no_formatting_needed.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_no_formatting_needed.rs"
+        )));
+
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_no_formatting_needed.rs", input);
+
+        assert_eq!(result.status, FormatStatus::Unchanged);
+        assert_eq!(formatted, expected);
     }
 
     /// Comprehensive real-world test using keyboard.rs file.
@@ -276,47 +253,21 @@ fn main() {}";
     /// - Multiple heading levels (##, ###) that must be preserved
     /// - Markdown tables that need alignment
     /// - Inline links that should be converted to reference style
-    ///
-    /// This is a true end-to-end test that runs the actual CLI binary (which
-    /// includes `cargo fmt` at the end), matching real-world behavior.
-    ///
-    /// The test runs from the workspace directory, so `cargo fmt` uses the
-    /// workspace's `rustfmt.toml` configuration.
     #[test]
     fn test_real_world_file_complete_formatting() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/manual_snapshot/input/sample_real_world.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_real_world.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/manual_snapshot/expected_output/sample_real_world.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_real_world.rs"
         )));
 
-        // Create temp dir and copy input file
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_real_world.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_real_world.rs", input);
 
-        // Run the actual CLI binary for true e2e testing (includes cargo fmt).
-        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
-        let output = std::process::Command::new(&cargo)
-            .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
-            .arg("rustdoc-fmt")
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run cargo-rustdoc-fmt binary");
-
-        assert!(
-            output.status.success(),
-            "CLI failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        // Read the formatted result
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify heading levels are preserved
+        // Verify heading levels are preserved.
         assert!(
             formatted.contains("## Parser Dispatch Priority Pipeline"),
             "Level-2 heading should be preserved as ##, not changed to #"
@@ -330,7 +281,7 @@ fn main() {}";
             "Level-3 heading should be preserved as ###"
         );
 
-        // Verify tables are formatted (aligned)
+        // Verify tables are formatted (aligned).
         let h2_in_expected = expected.matches("## ").count();
         let h2_in_formatted = formatted.matches("## ").count();
         assert_eq!(
@@ -345,83 +296,57 @@ fn main() {}";
             "Number of level-3 headings (###) should be preserved"
         );
 
-        // Verify reference-style links are created
+        // Verify reference-style links are created.
         assert!(
             formatted.contains("]: mod@"),
             "Should have reference-style links"
         );
 
-        // Copy expected to temp dir for diff comparison
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, expected).unwrap();
-
-        // Use `git diff --no-index` for comparison — clearer than assert_eq
-        // for large files, and cross-platform (unlike `diff` which is not
-        // on the default PATH on Windows).
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
-    /// Test that files with `rustfmt_skip` attribute are correctly skipped.
+    /// Test that files with `rustfmt_skip` attribute ARE formatted by
+    /// `cargo-rustdoc-fmt`.
     ///
     /// This test uses a real-world file (mouse.rs) that has:
     /// - `#![cfg_attr(rustfmt, rustfmt_skip)]` at the top
-    /// - Content that would normally be formatted (inline links, scattered references)
+    /// - Content that should be formatted (inline links, scattered references, terms)
     ///
-    /// This verifies that the formatter correctly:
-    /// - Detects the `rustfmt_skip` attribute
-    /// - Skips processing entirely (does not modify the file)
-    /// - Leaves the file unchanged
+    /// Because `#![rustfmt::skip]` is decoupled from `cargo-rustdoc-fmt` (only
+    /// `// rustdoc-fmt: skip` skips rustdoc formatting), `FileProcessor` formats
+    /// the doc blocks normally while preserving `#![cfg_attr(rustfmt, rustfmt_skip)]`.
     #[test]
     fn test_real_world_file_2_complete_formatting() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_real_world_2.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_real_world_2.rs"
         ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_real_world_2.rs"
+        )));
 
-        // Use the actual FileProcessor to test the complete pipeline
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_real_world_2.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, result, output) =
+            run_default_processor_on_fixture("sample_real_world_2.rs", input);
 
-        // Process with default options (tables + links + terms)
-        let registry = test_registry();
-        let options = FormatOptions::default();
-        let processor = processor::FileProcessor::with_registry(options, &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-
-        // File should NOT be modified because it has rustfmt_skip
-        assert!(
-            !result.modified,
-            "File with rustfmt_skip should not be modified"
-        );
-
-        // Read the result - should be unchanged
-        let output = fs::read_to_string(&test_file).unwrap();
-
-        // Content should be exactly the same as input
+        // File SHOULD be modified because rustfmt_skip is decoupled from
+        // cargo-rustdoc-fmt.
         assert_eq!(
-            output, input,
-            "File with rustfmt_skip should remain unchanged"
+            result.status,
+            FormatStatus::Modified,
+            "File with rustfmt_skip should still have its rustdoc comments formatted"
         );
+
+        assert!(
+            output.contains("#![cfg_attr(rustfmt, rustfmt_skip)]"),
+            "rustfmt_skip attribute must be preserved"
+        );
+        assert!(
+            output.contains("//! [`VT100MouseAction`]: super::VT100MouseAction"),
+            "Scattered references should be preserved and aggregated"
+        );
+
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Test aggregation of scattered reference-style links.
@@ -433,52 +358,32 @@ fn main() {}";
     fn test_scattered_references_aggregation() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/manual_snapshot/input/sample_scattered_references.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_scattered_references.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/manual_snapshot/expected_output/sample_scattered_references.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_scattered_references.rs"
         )));
 
-        // Use the actual FileProcessor to test the complete pipeline
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_scattered_references.rs");
-        fs::write(&test_file, input).unwrap();
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_scattered_references.rs", input);
 
-        // Process with link conversion enabled
-        let options = FormatOptions {
-            format_tables: false,
-            convert_links: true,
-            link_terms: false,
-            check_only: false,
-            verbose: false,
-        };
-        let processor = processor::FileProcessor::new(options);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-        assert!(
-            result.modified,
+        assert_eq!(
+            result.status,
+            FormatStatus::Modified,
             "File should be modified (references need aggregation)"
         );
 
-        // Read the formatted result
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify references are at bottom of each block
+        // Verify references are at bottom of each block.
         assert!(
             formatted.contains("Navigate**:\n//! - ⬆️"),
             "Content should be preserved"
         );
 
-        // Verify alphabetical sorting in module doc block
+        // Verify case-insensitive alphabetical sorting in module doc block.
         let module_refs = formatted
             .lines()
-            .skip_while(|l| !l.contains("[`VT100MouseAction`]"))
+            .skip_while(|line| !line.starts_with("//! [`keyboard`]:"))
             .take(5)
             .collect::<Vec<_>>()
             .join("\n");
@@ -488,13 +393,12 @@ fn main() {}";
             "Module references should be sorted alphabetically"
         );
 
-        // Verify blank line before references for visual clarity
+        // Verify blank line before references for visual clarity.
         assert!(
-            formatted.contains("\n//!\n//! [`VT100MouseAction`]:"),
+            formatted.contains("\n//!\n//! [`keyboard`]:"),
             "Should have blank line before references"
         );
 
-        // The formatted result should match expected output
         assert_eq!(
             formatted, expected,
             "Formatted output should match expected output"
@@ -508,50 +412,35 @@ fn main() {}";
     /// - Reference-style links that may be reordered
     /// - Code blocks with `ignore` attribute
     ///
-    /// This verifies that `ContentProtector` correctly protects HTML comments
-    /// while still allowing link conversion in non-HTML parts.
+    /// Verifies that the CST parser preserves HTML comment blocks while allowing link
+    /// conversion and reference sorting in surrounding prose.
     #[test]
     fn test_html_comments_preserved_links_converted() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_html_comments.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_html_comments.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_html_comments.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_html_comments.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_html_comments.rs");
-        fs::write(&test_file, input).unwrap();
+        let (_temp_dir, _test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_html_comments.rs", input);
 
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify HTML comments are preserved
+        // Verify HTML comments are preserved.
         assert!(
             formatted.contains("<!-- It is ok to use ignore here -->"),
             "HTML comments should be preserved exactly"
         );
 
-        // Verify code blocks with ignore attribute are preserved
+        // Verify code blocks with ignore attribute are preserved.
         assert!(
             formatted.contains("```ignore"),
             "Code blocks should be preserved"
         );
 
-        // Verify references are sorted alphabetically at the bottom
-        // Looking for a reference that comes after another alphabetically
+        // Verify references are sorted alphabetically at the bottom.
         assert!(
             formatted.contains("[`epoll`]:"),
             "References should be present"
@@ -566,48 +455,35 @@ fn main() {}";
     /// Test code fences with comma-separated language tags (e.g., `rust,ignore`).
     ///
     /// This test verifies that:
-    /// - Code fences with `rust,ignore` are correctly protected (not mangled)
+    /// - Code fences with `rust,ignore` are normalized to `ignore` and their body is
+    ///   preserved verbatim as a `DocNode::CodeFence`
     /// - Reference definitions scattered throughout the rustdoc block are aggregated
     /// - References are sorted alphabetically at the bottom
-    ///
-    /// This was a regression where the regex `^```\w*$` didn't match commas,
-    /// causing `rust,ignore` fences to not be recognized as fence starts.
     #[test]
     fn test_code_fence_comma_language_tag() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_code_fence_comma.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_code_fence_comma.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_code_fence_comma.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_code_fence_comma.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_code_fence_comma.rs");
-        fs::write(&test_file, input).unwrap();
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_code_fence_comma.rs", input);
 
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-        assert!(
-            result.modified,
+        assert_eq!(
+            result.status,
+            FormatStatus::Modified,
             "File should be modified (references need aggregation)"
         );
 
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify code fence with rust,ignore is preserved correctly.
+        // Verify code fence with rust,ignore is normalized to ignore and body is
+        // preserved.
         assert!(
-            formatted.contains("```rust,ignore"),
-            "Code fence with rust,ignore should be preserved"
+            formatted.contains("```ignore"),
+            "Code fence with rust,ignore should be normalized to ignore"
         );
         assert!(
             formatted.contains("pub fn poll_impl"),
@@ -619,11 +495,11 @@ fn main() {}";
         let lines: Vec<&str> = formatted.lines().collect();
         let ref_start = lines
             .iter()
-            .position(|l| l.contains("[`DirectToAnsi`]: mod@super"))
+            .position(|line| line.contains("[`DirectToAnsi`]: mod@super"))
             .expect("Should find DirectToAnsi reference");
         let ref_einval = lines
             .iter()
-            .position(|l| l.contains("[`EINVAL`]:"))
+            .position(|line| line.contains("[`EINVAL`]:"))
             .expect("Should find EINVAL reference");
         assert!(
             ref_start < ref_einval,
@@ -633,7 +509,7 @@ fn main() {}";
         // Verify all references are at the end of the rustdoc block.
         let last_rustdoc_line = lines
             .iter()
-            .rposition(|l| l.starts_with("//!"))
+            .rposition(|line| line.starts_with("//!"))
             .expect("Should have rustdoc lines");
         assert!(
             lines[last_rustdoc_line].starts_with("//! ["),
@@ -658,39 +534,21 @@ fn main() {}";
     fn test_indented_table_preservation() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_indented_table.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_indented_table.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_indented_table.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_indented_table.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_indented_table.rs");
-        fs::write(&test_file, input).unwrap();
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_indented_table.rs", input);
 
-        // Process with table formatting only.
-        let options = FormatOptions {
-            format_tables: true,
-            convert_links: false,
-            link_terms: false,
-            check_only: false,
-            verbose: false,
-        };
-        let processor = processor::FileProcessor::new(options);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-        assert!(
-            result.modified,
+        assert_eq!(
+            result.status,
+            FormatStatus::Modified,
             "File should be modified (tables need formatting)"
         );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
 
         // Verify indented tables preserve their 4-space indentation.
         // These lines should start with "//!     |" (4 spaces after "//! ").
@@ -725,44 +583,25 @@ fn main() {}";
         );
     }
 
-    /// Regression test: generic type params in backtick spans must not be
-    /// falsely protected as HTML tags.
-    ///
-    /// Before the fix, `ContentProtector`'s HTML regex `<[^>]+>` matched
-    /// `<F::Waker>` and `<u8>` inside backtick spans like `` [`Option<F::Waker>`] ``,
-    /// causing references to be protected (hidden from the link converter). This
-    /// created empty lines in the reference section and wrong sort order.
+    /// Regression test: reference definitions with generic type params in backtick
+    /// spans (such as `` [`Option<F::Waker>`] `` and `` [`Vec<u8>`] ``) must be
+    /// recognized as `DocNode::ReferenceDefinitions` and sorted properly at the bottom
+    /// of the doc block without creating spurious blank lines.
     #[test]
     fn test_rrt_generic_type_refs_sorted_correctly() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_rrt.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_rrt.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_rrt.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_rrt.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_rrt.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_rrt.rs", input);
 
-        // Use FileProcessor (no cargo fmt needed - rrt.rs output is stable)
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // References with generic type params in backticks should be sorted,
-        // not pinned in place by false HTML protection
+        // References with generic type params in backticks should be sorted.
         assert!(
             formatted.contains("/// [`Arc<Mutex<Option<W::Waker>>>`]: std::sync::Arc"),
             "Generic-param reference should be present"
@@ -772,30 +611,7 @@ fn main() {}";
             "Generic-param reference should be present"
         );
 
-        // No PROTECTED_CONTENT placeholders should remain
-        assert!(
-            !formatted.contains("PROTECTED_CONTENT"),
-            "All placeholders should be restored"
-        );
-
-        // Full output comparison
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Idempotency test: running `rustdoc-fmt` on `rrt.rs` multiple times
@@ -809,90 +625,42 @@ fn main() {}";
     fn test_rrt_idempotent_across_multiple_runs() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_rrt.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_rrt.rs"
         ));
-
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_rrt.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-
-        // Run 1: initial formatting.
-        let _r1 = processor.process_file(&test_file);
-        let after_run_1 = fs::read_to_string(&test_file).unwrap();
-
-        // Run 2: should produce identical output.
-        let _r2 = processor.process_file(&test_file);
-        let after_run_2 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_1, after_run_2,
-            "Run 2 should produce identical output to run 1 (idempotency)"
-        );
-
-        // Run 3: belt and suspenders.
-        let _r3 = processor.process_file(&test_file);
-        let after_run_3 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_2, after_run_3,
-            "Run 3 should produce identical output to run 2 (idempotency)"
-        );
+        assert_fixture_idempotent("sample_rrt.rs", input);
     }
 
-    /// Regression test: inline link regex must not match across lines.
-    ///
-    /// Before the fix, `INLINE_LINK_REGEX` used `[^\]]+` for link text which
-    /// matched newlines. This allowed `[200~` in escape sequence text
-    /// (`` `ESC[200~` ``) to chain through other `[` chars across many lines
-    /// to reach a distant `]`, duplicating content.
+    /// Regression test: bracketed escape sequences inside backtick spans (such as
+    /// `` `ESC[200~` ``) must not chain across lines to distant `]` characters or
+    /// duplicate content during inline link conversion.
     #[test]
     fn test_input_event_no_cross_line_duplication() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_input_event.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_input_event.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_input_event.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_input_event.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_input_event.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_input_event.rs", input);
 
-        // Use FileProcessor (not CLI binary) to test the regex fix in isolation.
-        // The cross-line duplication bug is in INLINE_LINK_REGEX, not cargo fmt.
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // The escape sequence line must remain intact (not duplicated or mangled)
+        // The escape sequence line must remain intact (not duplicated or mangled).
         assert!(
             formatted.contains("sequences (`ESC[200~` text `ESC[201~`)"),
             "Escape sequence line should remain intact"
         );
 
-        // Content must appear exactly once (the key regression check)
+        // Content must appear exactly once (the key regression check).
         assert_eq!(
             formatted.matches("Clipboard Paste (Ctrl+V)").count(),
             1,
-            "Content must not be duplicated by cross-line regex match"
+            "Content must not be duplicated by cross-line link matching"
         );
 
-        // The inline link should be converted to reference-style
+        // The inline link should be converted to reference-style.
         assert!(
             formatted.contains("[`EnableBracketedPaste`]"),
             "Inline link should be converted to reference-style"
@@ -902,90 +670,28 @@ fn main() {}";
             "Reference definition should be appended"
         );
 
-        // No PROTECTED_CONTENT placeholders should remain
-        assert!(
-            !formatted.contains("PROTECTED_CONTENT"),
-            "All placeholders should be restored"
-        );
-
-        // Full output comparison
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
-    /// Regression test: resilient_reactor_thread/mod.rs reference sorting.
+    /// Regression test: `resilient_reactor_thread/mod.rs` reference sorting.
     ///
-    /// This is the full mod.rs file (larger than sample_resilient_reactor.rs which is
-    /// a snapshot). It exercises reference sorting across a large doc block with many
-    /// scattered references, verifying no empty lines or wrong ordering after the
-    /// ContentProtector backtick-span fix.
+    /// Exercises reference aggregation and sorting across a large doc block with many
+    /// scattered references, verifying no spurious blank lines or wrong ordering.
     #[test]
     fn test_rrt_mod_reference_sorting() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_rrt_mod.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_rrt_mod.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_rrt_mod.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_rrt_mod.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_rrt_mod.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, _result, _formatted) =
+            run_default_processor_on_fixture("sample_rrt_mod.rs", input);
 
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // No PROTECTED_CONTENT placeholders should remain
-        assert!(
-            !formatted.contains("PROTECTED_CONTENT"),
-            "All placeholders should be restored"
-        );
-
-        // Full output comparison
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Regression test: inline links inside backtick spans must not be converted.
@@ -1001,29 +707,15 @@ fn main() {}";
     fn test_backtick_inline_link_not_converted() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_backtick_inline_link.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_backtick_inline_link.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_backtick_inline_link.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_backtick_inline_link.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_backtick_inline_link.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_backtick_inline_link.rs", input);
 
         // Key regression check: backtick-wrapped inline link must be preserved.
         assert!(
@@ -1031,30 +723,7 @@ fn main() {}";
             "Inline link inside backticks must not be converted to reference-style"
         );
 
-        // No BTCK placeholders should remain.
-        assert!(
-            !formatted.contains("BTCK"),
-            "All backtick placeholders should be restored"
-        );
-
-        // Full output comparison.
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Regression test: URLs with balanced parentheses must be captured in full.
@@ -1069,29 +738,15 @@ fn main() {}";
     fn test_balanced_parens_url_not_truncated() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_balanced_parens_url.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_balanced_parens_url.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_balanced_parens_url.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_balanced_parens_url.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_balanced_parens_url.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_balanced_parens_url.rs", input);
 
         // Key regression check: URL with balanced parens must be captured in full.
         assert!(
@@ -1100,30 +755,7 @@ fn main() {}";
             "Reference URL must include the full `get_lines()` with parens"
         );
 
-        // No BTCK placeholders should remain.
-        assert!(
-            !formatted.contains("BTCK"),
-            "All backtick placeholders should be restored"
-        );
-
-        // Full output comparison.
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Regression test: reference definitions with nested brackets must not
@@ -1137,29 +769,15 @@ fn main() {}";
     fn test_nested_bracket_refs_no_spurious_blank_line() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_nested_bracket_refs.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_nested_bracket_refs.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_nested_bracket_refs.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_nested_bracket_refs.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_nested_bracket_refs.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_nested_bracket_refs.rs", input);
 
         // Key regression check: no blank line between reference definitions.
         assert!(
@@ -1169,73 +787,31 @@ fn main() {}";
             "No spurious blank line should appear between reference definitions"
         );
 
-        // Full output comparison.
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
-    /// Test that text diagrams (ASCII art) are preserved correctly.
+    /// Test that text diagrams (ASCII art) inside code fences are preserved verbatim.
     ///
-    /// This test uses the resilient_reactor_thread/mod.rs file which triggered
-    /// the PROTECTED_CONTENT bug. It contains:
+    /// This test uses a snapshot of `resilient_reactor_thread/mod.rs` containing:
     /// - Complex ASCII art diagrams inside code fences
     /// - Multiple markdown tables
     /// - HTML comments
     /// - Reference-style links scattered throughout
-    ///
-    /// This verifies that ContentProtector's Unicode arrow placeholders don't
-    /// get mangled by pulldown_cmark (the original `___` underscores were
-    /// interpreted as bold+italic markdown).
     #[test]
     fn test_resilient_reactor_text_diagrams() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_resilient_reactor.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_resilient_reactor.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_resilient_reactor.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_resilient_reactor.rs"
         )));
 
-        // Create temp dir and copy input file
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_resilient_reactor.rs");
-        fs::write(&test_file, input).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_resilient_reactor.rs", input);
 
-        // Run the actual CLI binary for true e2e testing (includes cargo fmt).
-        let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
-        let output = std::process::Command::new(&cargo)
-            .args(["run", "--bin", "cargo-rustdoc-fmt", "--"])
-            .arg("rustdoc-fmt")
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run cargo-rustdoc-fmt binary");
-
-        assert!(
-            output.status.success(),
-            "CLI failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        // Read the formatted result
-        let formatted = fs::read_to_string(&test_file).unwrap();
-
-        // Verify text diagrams are preserved (key test for the PROTECTED_CONTENT bug)
+        // Verify text diagrams are preserved.
         assert!(
             formatted.contains("Thread: poll()"),
             "ASCII diagram should be preserved"
@@ -1249,13 +825,7 @@ fn main() {}";
             "Box drawing characters should be preserved"
         );
 
-        // Verify NO PROTECTED_CONTENT placeholders remain
-        assert!(
-            !formatted.contains("PROTECTED_CONTENT"),
-            "All placeholders should be restored"
-        );
-
-        // Verify tables are preserved
+        // Verify tables are preserved.
         assert!(
             formatted.contains("| Component"),
             "Tables should be preserved"
@@ -1265,33 +835,13 @@ fn main() {}";
             "Table alignment markers should be preserved"
         );
 
-        // Verify reference-style links are present
+        // Verify reference-style links are present.
         assert!(
             formatted.contains("[`epoll`]:"),
             "Reference-style links should be present"
         );
 
-        // Copy expected to temp dir for diff comparison
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, expected).unwrap();
-
-        // Use `git diff --no-index` for comparison — clearer than assert_eq
-        // for large files, and cross-platform (unlike `diff` which is not
-        // on the default PATH on Windows).
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Tests readline_async/mod.rs golden file comparison.
@@ -1305,29 +855,15 @@ fn main() {}";
     fn test_readline_async_file_complete_formatting() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_readline_async.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_readline_async.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_readline_async.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_readline_async.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_readline_async.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let options = FormatOptions::default();
-        let processor = processor::FileProcessor::with_registry(options, &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_readline_async.rs", input);
 
         // Verify image link is preserved.
         assert!(
@@ -1348,24 +884,7 @@ fn main() {}";
             "Known term ANSI should be linked"
         );
 
-        // Compare full output with expected.
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Idempotency test for readline_async/mod.rs: run the formatter 3 times and
@@ -1374,38 +893,9 @@ fn main() {}";
     fn test_readline_async_idempotent_across_multiple_runs() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_readline_async.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_readline_async.rs"
         ));
-
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_readline_async.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-
-        // Run 1: initial formatting.
-        let _r1 = processor.process_file(&test_file);
-        let after_run_1 = fs::read_to_string(&test_file).unwrap();
-
-        // Run 2: should produce identical output.
-        let _r2 = processor.process_file(&test_file);
-        let after_run_2 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_1, after_run_2,
-            "Run 2 should produce identical output to run 1 (idempotency)"
-        );
-
-        // Run 3: belt and suspenders.
-        let _r3 = processor.process_file(&test_file);
-        let after_run_3 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_2, after_run_3,
-            "Run 3 should produce identical output to run 2 (idempotency)"
-        );
+        assert_fixture_idempotent("sample_readline_async.rs", input);
     }
 
     /// Verifies every seed term is correctly handled across three states: bare
@@ -1416,29 +906,15 @@ fn main() {}";
     fn test_seed_term_coverage() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_seed_term_coverage.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_seed_term_coverage.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_seed_term_coverage.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_seed_term_coverage.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_seed_term_coverage.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (temp_dir, test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_seed_term_coverage.rs", input);
 
         // Bare terms should be linkified.
         for term in [
@@ -1447,6 +923,13 @@ fn main() {}";
             "ESC",
             "DSR",
             "OSC",
+            "stdout",
+            "stderr",
+            "stdin",
+            "stdio",
+            "crossterm",
+            "mio",
+            "portable_pty",
             "ANSI",
             "ASCII",
             "VT-100",
@@ -1458,6 +941,18 @@ fn main() {}";
             "RXVT",
             "Sixel",
             "DEC",
+            "EOF",
+            "SIGWINCH",
+            "SIGINT",
+            "SIGTERM",
+            "grapheme",
+            "Unicode",
+            "RGB",
+            "epoll",
+            "kqueue",
+            "Bracketed paste",
+            "truecolor",
+            "termios",
         ] {
             assert!(
                 formatted.contains(&format!("[`{term}`]")),
@@ -1479,14 +974,18 @@ fn main() {}";
         }
 
         // Qualified paths must NOT be split.
-        assert!(
-            formatted.contains("tokio::io::stdin()"),
-            "Qualified path tokio::io::stdin() should not be split"
-        );
-        assert!(
-            formatted.contains("vte::Parser"),
-            "Qualified path vte::Parser should not be split"
-        );
+        for path in [
+            "tokio::io::stdin()",
+            "vte::Parser",
+            "std::io::stdout()",
+            "crossterm::event::read()",
+            "mio::Poll::new()",
+        ] {
+            assert!(
+                formatted.contains(path),
+                "Qualified path {path} should not be split"
+            );
+        }
 
         // Single colon after term must still linkify.
         assert!(
@@ -1504,6 +1003,118 @@ fn main() {}";
             "Qualified path inside code fence should not be touched"
         );
 
+        // Autolink URLs containing a known term must NOT be corrupted.
+        assert!(
+            formatted.contains(
+                "<https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>"
+            ),
+            "Term inside autolink URL should not be linkified"
+        );
+
+        // Standalone plain shortcut link [termios] must be upgraded to [`termios`],
+        // while multi-line bracketed link text must NOT have interior terms linkified.
+        assert!(
+            formatted.contains("The POSIX [`termios`] flag controls signal generation."),
+            "Standalone [termios] shortcut link should be upgraded to [`termios`]"
+        );
+        assert!(
+            formatted.contains(
+                "See our [Unix\n//! implementation's termios section] for details."
+            ),
+            "Multi-line bracketed link text should not have interior term linkified"
+        );
+
+        // Compound shortcut link starting with backtick must NOT have interior terms
+        // linkified.
+        assert!(
+            formatted
+                .contains("Controls debug logging for the [`VT-100` PTY output parser]."),
+            "Compound shortcut link starting with backtick must not have interior PTY linkified"
+        );
+
+        // Multi-line inline links in blockquotes and lists must produce single-line
+        // normalized ref defs.
+        assert!(
+            formatted.contains("/// [coordinates module documentation]: crate::coordinates#common-workflows"),
+            "Multi-line blockquote inline link should produce normalized single-line ref def"
+        );
+        assert!(
+            formatted
+                .contains("/// [Python-based alternatives]: https://github.com/edc/bass"),
+            "Multi-line indented inline link should produce normalized single-line ref def"
+        );
+
+        // Intra-doc backticked ref def must not be overwritten by duplicate plain URL ref
+        // def.
+        assert!(
+            formatted.contains("/// [`termios`]: rustix::termios"),
+            "Intra-doc backticked ref def should be preserved over plain external URL ref def"
+        );
+
+        // TOC block content must not be modified.
+        assert!(
+            formatted.contains("/// - [stdin and termios overview](#stdin-handling)"),
+            "Terms inside <!-- TOC --> block should not be linkified"
+        );
+
+        // Bold, hyphenated, parenthesized, and slash-separated terms must linkify
+        // cleanly.
+        assert!(
+            formatted.contains(
+                "/// Uses [`termios`] API and **[`termios`]** flags for [`Unicode`]-safe, [`grapheme`]-cluster-aware\n/// ([`stdin`]) reading and [`RGB`]/[`truecolor`] rendering."
+            ),
+            "Bold, hyphenated, parenthesized, and slash-separated terms should linkify cleanly"
+        );
+
+        // Heading with known term must be linked, and wrong external URL replaced by
+        // canonical.
+        assert!(
+            formatted.contains("/// # [`CSI`] Edge Cases"),
+            "Heading with known term should be linked"
+        );
+        assert!(
+            !formatted.contains("wrong-url.com"),
+            "Wrong external URL on known term should be replaced by canonical target"
+        );
+
+        // Image alt text, inline anchor links, full ref links, and converted inline links
+        // containing known terms must not have interior terms linkified.
+        assert!(
+            formatted.contains(
+                "/// Diagram: ![termios and stdin diagram](https://example.com/stdin.png) and\n/// [see the stdin section](#stdin-handling), [CSI overview][csi-ref], and\n/// [Linux TTY and CSI codes]."
+            ),
+            "Image alt text and links containing known terms should not be corrupted"
+        );
+
+        // Multi-backtick inline code span before backticked inline link and
+        // double-backticked term must not be converted.
+        assert!(
+            formatted.contains(
+                "/// Parses `` `code` `` and `[inline link inside code](https://example.com)` and\n/// `` `CSI` `` without converting code spans."
+            ),
+            "Backticked inline link and double-backticked term after multi-backtick span should not be converted"
+        );
+        assert!(
+            formatted.contains(
+                "/// - Bold (`**text**`), italic (`_text_`), inline code (`` `code` ``)\n/// - Images (`![alt](url)`), links (`[text](url)`)"
+            ),
+            "Backticked inline link after multi-backtick span (tui/src/lib.rs pattern) should not be converted"
+        );
+
+        // Single-line and multi-line code spans containing terms must not be modified.
+        assert!(
+            formatted.contains(
+                "/// - Code spans with terms: `cargo test -p CSI --lib foo -- --nocapture`, `cargo test -p r3bl_tui --lib CSI --\n///   --nocapture`, and ``cargo test CSI\n///   --nocapture``"
+            ),
+            "Single-line and multi-line code spans containing terms should not be modified"
+        );
+
+        // Table cells containing known terms must be linkified and columns aligned.
+        assert!(
+            formatted.contains("/// | [`stdin`] | [`SIGWINCH`] | [`epoll`] |"),
+            "Table cells containing known terms should be linkified and aligned"
+        );
+
         // Ref defs should be present for all seed terms.
         assert!(
             formatted.contains("[`CSI`]: crate::CsiSequence"),
@@ -1519,24 +1130,7 @@ fn main() {}";
             "ANSI ref def should be present"
         );
 
-        // Full golden file comparison.
-        let expected_path = temp_dir.path().join("expected.rs");
-        fs::write(&expected_path, &expected).unwrap();
-
-        let diff_output = std::process::Command::new("git")
-            .args(["diff", "--no-index", "--color=never"])
-            .arg(&expected_path)
-            .arg(&test_file)
-            .output()
-            .expect("Failed to run git diff");
-
-        if !diff_output.status.success() {
-            eprintln!(
-                "=== DIFF (expected vs formatted) ===\n{}",
-                String::from_utf8_lossy(&diff_output.stdout)
-            );
-            panic!("Formatted output does not match expected output");
-        }
+        assert_git_diff_eq(&temp_dir, &test_file, &expected);
     }
 
     /// Idempotency test: running the formatter multiple times on the seed term
@@ -1545,38 +1139,9 @@ fn main() {}";
     fn test_seed_term_coverage_idempotent() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_seed_term_coverage.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_seed_term_coverage.rs"
         ));
-
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_seed_term_coverage.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-
-        // Run 1: initial formatting.
-        let _r1 = processor.process_file(&test_file);
-        let after_run_1 = fs::read_to_string(&test_file).unwrap();
-
-        // Run 2: should produce identical output.
-        let _r2 = processor.process_file(&test_file);
-        let after_run_2 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_1, after_run_2,
-            "Run 2 should produce identical output to run 1 (idempotency)"
-        );
-
-        // Run 3: belt and suspenders.
-        let _r3 = processor.process_file(&test_file);
-        let after_run_3 = fs::read_to_string(&test_file).unwrap();
-
-        assert_eq!(
-            after_run_2, after_run_3,
-            "Run 3 should produce identical output to run 2 (idempotency)"
-        );
+        assert_fixture_idempotent("sample_seed_term_coverage.rs", input);
     }
 
     /// Regression test: multi-line plain (non-backticked) reference definitions
@@ -1587,36 +1152,22 @@ fn main() {}";
     /// [Inclusive Naming Initiative - Tier 1 Terms]:
     ///     https://inclusivenaming.org/word-lists/tier-1/
     /// ```
-    /// `split_off_ref_defs` combines them into a single string with `\n`.
-    /// `parse_ref_def` must handle this format (previously it only handled
-    /// backticked multi-line refs, not plain ones).
+    /// the CST parser groups the indented URL continuation line into the
+    /// `DocNode::ReferenceDefinitions` so that both the link converter and term linker
+    /// preserve it intact.
     #[test]
     fn test_multiline_plain_ref_def_preserved() {
         let input = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/input/sample_pty_types.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_pty_types.rs"
         ));
         let expected = normalize_line_endings(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/complete_file/expected_output/sample_pty_types.rs"
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_pty_types.rs"
         )));
 
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join("sample_pty_types.rs");
-        fs::write(&test_file, input).unwrap();
-
-        let registry = test_registry();
-        let processor =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
-        let result = processor.process_file(&test_file);
-
-        assert!(
-            result.errors.is_empty(),
-            "Should process without errors: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
+        let (_temp_dir, _test_file, _result, formatted) =
+            run_default_processor_on_fixture("sample_pty_types.rs", input);
 
         // Key regression check: multi-line plain ref def must be preserved.
         assert!(
@@ -1640,27 +1191,29 @@ fn main() {}";
     /// Auto-discovers all `.rs` files in `test_data/complete_file/input/` and
     /// regenerates the matching `expected_output/` files using the full pipeline
     /// (registry + default options).
-    ///
-    /// Tests that use non-standard processing (CLI binary, `link_terms: false`)
-    /// have their fixtures in `test_data/manual_snapshot/` instead, so they are
-    /// not affected by this utility.
     #[test]
     #[ignore = "utility for regenerating golden files on demand"]
     fn regen_golden_output_snapshot_files_for_input_files() {
         let manifest = env!("CARGO_MANIFEST_DIR");
         let registry = test_registry();
         let proc =
-            processor::FileProcessor::with_registry(FormatOptions::default(), &registry);
+            processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
 
-        let input_dir =
-            std::path::Path::new(manifest).join("test_data/complete_file/input");
-        let output_dir = std::path::Path::new(manifest)
-            .join("test_data/complete_file/expected_output");
+        let input_dir = std::path::Path::new(manifest)
+            .join("src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input");
+        let output_dir = std::path::Path::new(manifest).join(
+            "src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output",
+        );
 
         let mut entries: Vec<_> = fs::read_dir(&input_dir)
             .unwrap()
             .filter_map(Result::ok)
-            .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .is_some_and(|ext| ext == RUST_FILE_EXTENSION)
+            })
             .collect();
         entries.sort_by_key(std::fs::DirEntry::file_name);
 
@@ -1671,10 +1224,37 @@ fn main() {}";
             let temp_dir = TempDir::new().unwrap();
             let temp_file = temp_dir.path().join(name.as_ref());
             fs::write(&temp_file, &input).unwrap();
-            let _result = proc.process_file(&temp_file);
+            let _results = proc.process_files(std::slice::from_ref(&temp_file));
             let output = fs::read_to_string(&temp_file).unwrap();
             fs::write(output_dir.join(name.as_ref()), &output).unwrap();
             eprintln!("Regenerated: {name}");
         }
+    }
+
+    #[test]
+    fn test_fence_normalizer_strips_redundant_rust() {
+        let input = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_fence_normalizer.rs"
+        ));
+        let expected = normalize_line_endings(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_fence_normalizer.rs"
+        )));
+
+        let (_temp_dir, _test_file, result, formatted) =
+            run_default_processor_on_fixture("sample_fence_normalizer.rs", input);
+
+        assert_eq!(
+            result.status,
+            FormatStatus::Modified,
+            "File should be modified when redundant rust fence tags are stripped"
+        );
+
+        assert!(!formatted.contains("```rust"));
+        assert!(formatted.contains("//! ```ignore"));
+        assert!(formatted.contains("//! ```no_run"));
+        assert!(formatted.contains("//! ```text"));
+        assert_eq!(formatted, expected);
     }
 }

@@ -162,8 +162,8 @@ pub struct EditorBuffer {
 ///
 /// # Caret Position Diagrams
 ///
-/// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
-/// (byte-based) position (both are defined in [`graphemes_module`]).
+/// This is the "display" col index ([`grapheme`]-cluster-based) and not "logical" col
+/// index (byte-based) position (both are defined in [`graphemes_module`]).
 ///
 /// > Please review [`GCStringOwned`], specifically the methods in [`gc_string`] for more
 /// > details on how the conversion between "display" and "logical" indices is done.
@@ -174,8 +174,8 @@ pub struct EditorBuffer {
 /// >
 /// > Videos:
 /// >
-/// > - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?)
-/// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
+/// > - [Live coding video on Rust String]
+/// > - [UTF-8 encoding video]
 ///
 /// 1. It represents the current caret position (relative to the [`style_adjusted_bounds`]
 ///    of the enclosing [`FlexBox`]).
@@ -260,6 +260,7 @@ pub struct EditorBuffer {
 /// [`FlexBox`]: crate::tui::FlexBox
 /// [`gc_string`]: mod@crate::graphemes::gc_string
 /// [`GCStringOwned`]: crate::graphemes::GCStringOwned
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`graphemes_module`]: crate::graphemes
 /// [`MoveCursorPositionRelTo`]: crate::tui::RenderOpCommon::MoveCursorPositionRelTo
 /// [`SelectionContainer`]: crate::SelectionContainer
@@ -269,6 +270,8 @@ pub struct EditorBuffer {
 /// [`Viewport`]: crate::Viewport
 /// [`VPCaret`]: crate::VPCaret
 /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+/// [Live coding video on Rust String]: https://youtu.be/7I11degAElQ
+/// [UTF-8 encoding video]: https://youtu.be/wIVmDPc16wA
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
     /// A list of lines representing the document being edited ([`ZeroCopyGapBuffer`]).
@@ -484,8 +487,10 @@ mod content_near_caret {
             self.content.lines.get_line(row_index)
         }
 
-        /// Returns the grapheme segment ([`DocSeg`]) at the end of the line containing
-        /// the caret if the caret is at the end.
+        /// Returns the [`grapheme`] segment ([`DocSeg`]) at the end of the line
+        /// containing the caret if the caret is at the end.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_seg_at_end_of_line_at_c_caret(&self) -> Option<DocSeg> {
             let (line, _) = self.get_line_and_col_at_caret()?;
@@ -497,7 +502,10 @@ mod content_near_caret {
             line.info().get_seg_at_end()
         }
 
-        /// Returns the grapheme segment ([`DocSeg`]) directly to the right of the caret.
+        /// Returns the [`grapheme`] segment ([`DocSeg`]) directly to the right of the
+        /// caret.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_seg_to_right_of_caret(&self) -> Option<DocSeg> {
             let (line, col_index) = self.get_line_and_col_at_caret()?;
@@ -508,7 +516,10 @@ mod content_near_caret {
             }
         }
 
-        /// Returns the grapheme segment ([`DocSeg`]) directly to the left of the caret.
+        /// Returns the [`grapheme`] segment ([`DocSeg`]) directly to the left of the
+        /// caret.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_seg_to_left_of_caret(&self) -> Option<DocSeg> {
             let (line, col_index) = self.get_line_and_col_at_caret()?;
@@ -546,14 +557,18 @@ mod content_near_caret {
             Some((doc_seg, line))
         }
 
-        /// Returns the string slice of the grapheme cluster under the caret position.
+        /// Returns the string slice of the [`grapheme`] cluster under the caret position.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_str_at_caret(&self) -> Option<&str> {
             let (doc_seg, line) = self.get_seg_and_line_at_caret()?;
             Some(doc_seg.get_str(line.content()))
         }
 
-        /// Returns the grapheme segment ([`DocSeg`]) under the caret position.
+        /// Returns the [`grapheme`] segment ([`DocSeg`]) under the caret position.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_seg_at_caret(&self) -> Option<DocSeg> {
             let (doc_seg, _) = self.get_seg_and_line_at_caret()?;

@@ -18,12 +18,14 @@ pub enum EditorEvent {
     /// Inserts a string directly into the editor buffer.
     ///
     /// This event is used in two scenarios:
-    /// 1. **Bracketed paste**: When text is pasted via terminal (right-click,
+    /// 1. **[`Bracketed paste`]**: When text is pasted via terminal (right-click,
     ///    middle-click, etc.), the terminal provides the text directly through
     ///    [`InputEvent::BracketedPaste`].
     /// 2. **Programmatic insertion**: When code needs to insert multi-line text.
     ///
     /// For clipboard paste via Ctrl+V, see [`EditorEvent::Paste`].
+    ///
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     InsertString(String),
     InsertNewLine,
     Delete,

@@ -184,11 +184,12 @@ match buffer.get_syntax_highlight_pipeline() {
 }
 ```
 
-### Mutator Returns: `Option<T>` vs Zero-Allocation `Option<()>`
+### Mutator Returns: `Option<T>` vs `Option<()>` vs Domain Enums
 
 ```rust
 // ❌ Bad: Boolean blindness on mutator returns
 pub fn delete_at_col(&mut self, row: CRow, col: CCol) -> bool;
+pub fn format_table_node(node: &mut DocNode) -> bool;
 
 // ℹ️ Note: &mut self mutators that delete text CANNOT return borrowed slices (&str)
 // or metadata offsets (DocSeg) because the borrow checker forbids returning a &str
@@ -198,12 +199,49 @@ pub fn delete_at_col(&mut self, row: CRow, col: CCol) -> bool;
 // ✅ Good: Option<T> when payload is removed and genuinely consumed by callers
 pub fn remove_line(&mut self, row: CRow) -> Option<LineMetadata>;
 
-// ✅ Good: Zero-allocation Option<()> when callers do NOT consume the deleted payload
-// (Avoids speculative String allocations while maintaining type-safe Option semantics)
+// ✅ Good: Zero-allocation Option<()> ONLY when callers short-circuit/chain with `?`
 pub fn delete_at_col(&mut self, row: CRow, col: CCol) -> Option<()>;
 
-// Caller usage:
-let Some(()) = buffer.delete_at_col(row, col) else { return None; };
+// Caller usage (chaining with `?` or early return):
+buffer.delete_at_col(row, col)?;
+
+// ❌ Bad (Anti-Pattern): Returning Option<()> when callers do NOT chain with `?`
+// An unchanged CST node is not a failure (`None`), and sequential formatting passes
+// must not short-circuit!
+pub fn format_table_node(node: &mut DocNode) -> Option<()>;
+
+// ✅ Good: Domain Enum when callers do NOT chain with `?`
+// Do NOT add `.is_modified() -> bool` helpers on domain enums; compare directly!
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FormatStatus {
+    Modified,
+    Unchanged,
+}
+
+pub fn format_table_node(node: &mut DocNode) -> FormatStatus;
+
+if format_table_node(node) == FormatStatus::Modified {
+    // Handle modification explicitly
+}
+```
+
+### When `bool` Is Acceptable (`std` & Third-Party Compatibility Only)
+
+Raw `bool` is prohibited in domain logic and is only permitted at `std`, `clippy`, or third-party macro boundaries:
+
+```rust
+// ✅ Acceptable: std collection convention (paired with `len()`, required by clippy::len_without_is_empty)
+pub fn is_empty(&self) -> bool { self.len() == 0 }
+
+// ✅ Acceptable: std iterator adaptor closures (`filter`, `any`, `all`, `retain`)
+items.retain(|item| item.status == FormatStatus::Modified);
+
+// ✅ Acceptable: Third-party derive macro contracts (e.g. clap CLI flags)
+#[derive(clap::Parser)]
+pub struct CLIArg {
+    #[arg(long)]
+    pub verbose: bool,
+}
 ```
 
 ---

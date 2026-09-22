@@ -28,8 +28,8 @@
 //! The module is designed around a **per-process virtual terminal** architecture where
 //! each process maintains its own complete terminal state through an [`OfsBuf`]. This
 //! enables true terminal multiplexing similar to tmux, but with enhanced support for
-//! truecolor and TUI apps that frequently re-render their UI, with instant switching and
-//! universal compatibility.
+//! [`truecolor`] and TUI apps that frequently re-render their UI, with instant switching
+//! and universal compatibility.
 //!
 //! # Key Components:
 //!
@@ -142,6 +142,7 @@
 //! [`pty_mux`]: mod@crate::pty_mux
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`types.rs`]: crate::CanvasStorage
 //! [`VecDeque`]: std::collections::VecDeque

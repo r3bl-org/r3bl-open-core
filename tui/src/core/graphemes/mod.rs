@@ -9,14 +9,14 @@
 //! represented using the same single byte as in [`ASCII`]. So the character `H` is
 //! represented by the same byte value in [`UTF-8`] as it is in [`ASCII`]. This is why
 //! [`UTF-8`] is so popular, as it allows for the representation of all the characters in
-//! the Unicode standard, while still being able to represent [`ASCII`] characters in the
-//! same way.
+//! the [`Unicode`] standard, while still being able to represent [`ASCII`] characters in
+//! the same way.
 //!
-//! A grapheme cluster is a user-perceived character. Grapheme clusters can take up many
-//! more bytes, eg 4 bytes or 2 or 3, etc. Here are some examples:
+//! A [`grapheme`] cluster is a user-perceived character. Grapheme clusters can take up
+//! many more bytes, eg 4 bytes or 2 or 3, etc. Here are some examples:
 //! - `😃` takes up 4 bytes.
 //! - `📦` also takes up 4 bytes.
-//! - `🙏🏽` takes up 4 bytes, but it is a compound grapheme cluster.
+//! - `🙏🏽` takes up 4 bytes, but it is a compound [`grapheme`] cluster.
 //! - `H` takes up only 1 byte.
 //!
 //! Videos:
@@ -29,7 +29,7 @@
 //! - [Grapheme clusters]
 //! - [UTF-8 String]
 //!
-//! There is a discrepancy between how a [`String`] that contains grapheme clusters is
+//! There is a discrepancy between how a [`String`] that contains [`grapheme`] clusters is
 //! represented in memory and how it is rendered in a terminal. When writing a TUI editor
 //! it is necessary to have a caret (cursor position) that the user can move by pressing
 //! up, down, left, right, etc. For left, this is assumed to move the caret or cursor one
@@ -37,30 +37,30 @@
 //!
 //! - If we use byte boundaries in the [`String`] we can move the cursor one byte to the
 //!   left.
-//! - This falls apart when we have a grapheme cluster.
-//! - A grapheme cluster can take up more than one byte, and they don't fall cleanly into
-//!   byte boundaries.
+//! - This falls apart when we have a [`grapheme`] cluster.
+//! - A [`grapheme`] cluster can take up more than one byte, and they don't fall cleanly
+//!   into byte boundaries.
 //!
 //! # Grapheme Cluster Display Width Taxonomy
 //!
 //! There is a distinction between a character's **byte size in memory** and its
 //! **display width in terminal columns** (`display_width`):
 //!
-//! 1. **[`ASCII`] Characters**: [`ASCII`] characters ARE grapheme clusters, but they have
-//!    a single-column display width (`display_width == 1`).
-//! 2. **Single-Width Unicode Characters**: Many non-[`ASCII`] Unicode characters (such as
-//!    `é`, `α`, or `ñ`) are also grapheme clusters with single-column display width
-//!    (`display_width == 1`).
-//! 3. **Wide Grapheme Clusters**: Only multi-column grapheme clusters (such as jumbo
+//! 1. **[`ASCII`] Characters**: [`ASCII`] characters ARE [`grapheme`] clusters, but they
+//!    have a single-column display width (`display_width == 1`).
+//! 2. **Single-Width [`Unicode`] Characters**: Many non-[`ASCII`] [`Unicode`] characters
+//!    (such as `é`, `α`, or `ñ`) are also [`grapheme`] clusters with single-column
+//!    display width (`display_width == 1`).
+//! 3. **Wide Grapheme Clusters**: Only multi-column [`grapheme`] clusters (such as jumbo
 //!    emojis `🙏🏽` or [`CJK`] characters `汉`) have `display_width > 1` (wide segments).
 //!
-//! | Character Category                       | Example  | Byte size | Display width (cols) | Compound |
-//! | :--------------------------------------- | :------- | :-------- | :------------------- | :------- |
-//! | 1. Single-Width [`ASCII`]                | `H`      | 1         | 1                    | No       |
-//! | 2. Single-Width Non-[`ASCII`] Unicode    | `é`, `α` | 2         | 1                    | No       |
-//! | 3. Multi-Column (Wide) [`CJK`] Character | `汉`     | 3         | 2                    | No       |
-//! | 4. Multi-Column (Wide) Jumbo Emoji       | `😃`     | 4         | 2                    | No       |
-//! | 5. Multi-Column (Wide) Compound Emoji    | `🙏🏽`     | 8         | 2                    | Yes      |
+//! | Character Category                        | Example  | Byte size | Display width (cols) | Compound |
+//! | :---------------------------------------- | :------- | :-------- | :------------------- | :------- |
+//! | 1. Single-Width [`ASCII`]                 | `H`      | 1         | 1                    | No       |
+//! | 2. Single-Width Non-[`ASCII`] [`Unicode`] | `é`, `α` | 2         | 1                    | No       |
+//! | 3. Multi-Column (Wide) [`CJK`] Character  | `汉`     | 3         | 2                    | No       |
+//! | 4. Multi-Column (Wide) Jumbo Emoji        | `😃`     | 4         | 2                    | No       |
+//! | 5. Multi-Column (Wide) Compound Emoji     | `🙏🏽`     | 8         | 2                    | Yes      |
 //!
 //! > **Note**: For input parsing of [`UTF-8`] byte sequences from terminal input, see
 //! > [`mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::utf8`]. That
@@ -69,7 +69,7 @@
 //! > module handles display width calculation (determining how many terminal columns
 //! > a character occupies for rendering).
 //!
-//! Here are examples of compound grapheme clusters.
+//! Here are examples of compound [`grapheme`] clusters.
 //!
 //! ```text
 //! 🏽 + 🙏 = 🙏🏽
@@ -84,10 +84,11 @@
 //!
 //! To further complicate things, the output looks different on different terminals &
 //! OSes. The function `test_crossterm_grapheme_cluster_width_calc()` (shown below) uses
-//! crossterm commands to try and figure out what the width of a grapheme cluster is. When
-//! you run this in an SSH session to a macOS machine from Linux, it will work the same
-//! way it would locally on Linux. However, if you run the same program in locally via
-//! Terminal.app on macOS it works differently! So there are some serious issues.
+//! [`crossterm`] commands to try and figure out what the width of a [`grapheme`] cluster
+//! is. When you run this in an SSH session to a macOS machine from Linux, it will work
+//! the same way it would locally on Linux. However, if you run the same program in
+//! locally via Terminal.app on macOS it works differently! So there are some serious
+//! issues.
 //!
 //! ```no_run
 //! use crossterm::{self, *, terminal::*, style::*, cursor::*, event::*};
@@ -157,18 +158,18 @@
 //! index into the string (which isn't byte boundary based) as a "display" (or "physical")
 //! index into the rendered output of the string in a terminal.
 //!
-//! - Some parsing is necessary to get "logical" index into the string that is grapheme
-//!   cluster based (not byte boundary based).
+//! - Some parsing is necessary to get "logical" index into the string that is
+//!   [`grapheme`] cluster based (not byte boundary based).
 //!   - This is where [`unicode-segmentation`] crate comes in and allows us to split our
-//!     string into a vector of grapheme clusters.
+//!     string into a vector of [`grapheme`] clusters.
 //! - Some translation is necessary to get from the "logical" index to the physical index
 //!   and back again. This is where we can apply one of the following approaches:
-//!   - We can use the [`unicode-width`] crate to calculate the width of the grapheme
+//!   - We can use the [`unicode-width`] crate to calculate the width of the [`grapheme`]
 //!     cluster. This works on Linux, but doesn't work very well on macOS & I haven't
 //!     tested it on Windows. This crate will (on Linux) reliably tell us what the
-//!     displayed width of a grapheme cluster is.
+//!     displayed width of a [`grapheme`] cluster is.
 //!   - We can take the approach from the [`reedline`] crate's [`repaint_buffer()`] where
-//!     we split the string based on the "logical" index into the vector of grapheme
+//!     we split the string based on the "logical" index into the vector of [`grapheme`]
 //!     clusters. And then we print the 1st part of the string, then call `SavePosition`
 //!     to save the cursor at this point, then print the 2nd part of the string, then call
 //!     `RestorePosition` to restore the cursor to where it "should" be.
@@ -184,7 +185,7 @@
 //!
 //! # The Three Types of Indices
 //!
-//! When working with Unicode text in a terminal-based editor, we need three distinct
+//! When working with [`Unicode`] text in a terminal-based editor, we need three distinct
 //! types of indices to handle text correctly. This is because there's a fundamental
 //! mismatch between how text is stored in memory, how it's logically organized, and
 //! how it's displayed on screen.
@@ -203,8 +204,8 @@
 //!
 //! ## 2. `SegIndex` - Logical Position (Grapheme Clusters)
 //!
-//! [`SegIndex`] represents the index of a grapheme cluster (user-perceived character).
-//! This is essential for:
+//! [`SegIndex`] represents the index of a [`grapheme`] cluster (user-perceived
+//! character). This is essential for:
 //! - Cursor movement (users expect to move by visible characters)
 //! - Text editing operations (insert/delete should work on whole characters)
 //! - Logical text manipulation
@@ -256,10 +257,13 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`CJK`]: https://en.wikipedia.org/wiki/CJK_characters
+//! [`crossterm`]: crossterm
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`reedline`]: https://crates.io/crates/reedline
 //! [`repaint_buffer()`]: https://github.com/nushell/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129
 //! [`unicode-segmentation`]: unicode-segmentation
 //! [`unicode-width`]: unicode-width
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VPCol`]: crate::VPCol
 //! [Grapheme clusters]: https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries

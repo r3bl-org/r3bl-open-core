@@ -175,7 +175,9 @@ mod truncate_helper {
         string_len == display_width_usize || (!pad && string_len < display_width_usize)
     }
 
-    /// Checks if no processing is needed for Unicode strings
+    /// Checks if no processing is needed for [`Unicode`] strings
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn should_skip_processing_unicode(
         string_display_width: VPWidth,
         display_width: VPWidth,
@@ -241,7 +243,9 @@ mod truncate_from_right_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle Unicode truncation from the right.
+    /// Handle [`Unicode`] truncation from the right.
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
         display_width: VPWidth,
@@ -315,7 +319,9 @@ mod truncate_from_left_helper {
         CowInlineString::Owned(acc)
     }
 
-    /// Handle Unicode truncation from the left.
+    /// Handle [`Unicode`] truncation from the left.
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn handle_unicode_truncation(
         string_gcs: &GCStringOwned,
         display_width: VPWidth,

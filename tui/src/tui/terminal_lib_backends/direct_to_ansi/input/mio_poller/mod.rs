@@ -106,7 +106,7 @@
 //!    [`mio::Poll`] inside [`MioPollWorker`] with [`Interest::READABLE`] ([`EPOLLIN`]).
 //!    Because keyboard and mouse events arrive unpredictably, the background reactor
 //!    thread sleeps until the OS kernel signals that new bytes are ready.
-//! 2. **On-Demand Output (`stdout`)**: Output is handled synchronously on-demand via
+//! 2. **On-Demand Output ([`stdout`])**: Output is handled synchronously on-demand via
 //!    [`BackpressureStdout`]. Because [`stdout`] has buffer capacity 99.9% of the time,
 //!    registering it permanently in [`mio::Poll`] with [`Interest::WRITABLE`]
 //!    ([`EPOLLOUT`]) would trigger an immediate return on every iteration, causing a 100%
@@ -248,7 +248,7 @@
 //!
 //! <div class="warning">
 //!
-//! **Why not [`tokio`] for `stdin`?** Because [`tokio::io::stdin()`] uses a blocking
+//! **Why not [`tokio`] for [`stdin`]?** Because [`tokio::io::stdin()`] uses a blocking
 //! threadpool internally, and canceling a [`tokio::select!`] branch doesn't stop the
 //! underlying read - it keeps running as a "zombie", causing the problems described in
 //! [The Problems section in `DirectToAnsiInputDevice`].
@@ -264,7 +264,7 @@
 //! [`socket`], pipe, etc.). Two [`fd`] are registered with the [`mio`] registry so a
 //! single [`poll()`] call can wait on either becoming ready:
 //!
-//! **1. `stdin` [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input,
+//! **1. [`stdin`] [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input,
 //! obtained via [`std::io::stdin().as_raw_fd()`][as-raw-fd]. We wrap it in
 //! [`SourceFd`] so [`mio`] can poll it:
 //!
@@ -303,7 +303,7 @@
 //! The channel sends [`PollerEvent`] variants to the async side:
 //! - [`Stdin(Input(InputEvent))`] - parsed keyboard/mouse input
 //! - [`Signal(Resize)`] - terminal window changed size
-//! - [`Stdin(Eof)`] - `stdin` closed
+//! - [`Stdin(Eof)`] - [`stdin`] closed
 //! - [`Stdin(Error)`] - I/O error
 //!
 //! # Why [`mio`] Instead of Raw [`poll()`]?
@@ -398,7 +398,7 @@
 //! [`Interest::READABLE`]: mio::Interest::READABLE
 //! [`Interest::WRITABLE`]: mio::Interest::WRITABLE
 //! [`Interest`]: mio::Interest
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`MaybeMore::from_read_count()`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::from_read_count
 //! [`MaybeMore::KernelDrained`]:
@@ -449,8 +449,8 @@
 //! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
 //! [`Stdin(Error)`]: super::channel_types::StdinEvent::Error
 //! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
-//! [`Stdin`]: std::io::Stdin
 //! [`stdin`]: std::io::stdin
+//! [`Stdin`]: std::io::Stdin
 //! [`StdinEvent::Eof`]: super::channel_types::StdinEvent::Eof
 //! [`StdinEvent::Error`]: super::channel_types::StdinEvent::Error
 //! [`stdout`]: std::io::stdout

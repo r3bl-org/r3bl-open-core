@@ -11,6 +11,7 @@
     "typos.diagnosticSeverity": "Warning",
     // Harper grammar & spell checker settings.
     "harper.workspaceDictPath": "./.harper-dictionary.txt",
+    "harper.linters.Overall": false,
     "harper.linters.RightClick": false,
     "harper.linters.PronounKnew": false,
     "harper.linters.ExpandParameter": false,

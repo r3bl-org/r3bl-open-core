@@ -3,8 +3,10 @@
 use super::seg_index::SegIndex;
 use crate::{ChUnit, LengthOps, generate_length_type_impl};
 
-/// Represents a count of the number of grapheme segments inside of
+/// Represents a count of the number of [`grapheme`] segments inside of
 /// [`crate::GCStringOwned`]. The length is max index (zero based) + 1.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegLength(ChUnit);
 generate_length_type_impl!(SegLength, SegIndex, seg_length, seg_index);

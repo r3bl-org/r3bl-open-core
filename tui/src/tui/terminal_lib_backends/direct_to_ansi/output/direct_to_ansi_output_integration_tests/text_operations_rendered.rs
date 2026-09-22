@@ -10,7 +10,7 @@
 //!
 //! - Bold and other attributes are applied correctly
 //! - Plain text renders at correct positions
-//! - Unicode and emoji characters render correctly
+//! - [`Unicode`] and emoji characters render correctly
 //! - Styled text segments are positioned correctly
 //! - Foreground and background colors are applied correctly
 //!
@@ -34,6 +34,7 @@
 //! [`global_color_support::set_override`]: crate::global_color_support::set_override
 //! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`text_operations`]: super::text_operations
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 
 use super::test_helpers_rendered::*;
 use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor,
@@ -177,9 +178,10 @@ fn test_multiple_styled_text_segments_rendered() {
     }
 }
 
-/// Verify Unicode text (non-[`ASCII`]) renders correctly.
+/// Verify [`Unicode`] text (non-[`ASCII`]) renders correctly.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 fn test_paint_unicode_text_rendered() {
     // Paint Unicode text.
     let buffer =
@@ -241,7 +243,9 @@ fn test_styled_text_at_offset_position_rendered() {
     assert_empty_at(&buffer, 0, 0);
 }
 
-/// Verify RGB foreground color renders correctly.
+/// Verify [`RGB`] foreground color renders correctly.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 fn test_paint_text_with_rgb_foreground_rendered() {
     // Orange RGB: (255, 128, 0).
     let buffer = execute_ops_and_render(vec![
@@ -263,7 +267,9 @@ fn test_paint_text_with_rgb_foreground_rendered() {
     }
 }
 
-/// Verify RGB background color renders correctly.
+/// Verify [`RGB`] background color renders correctly.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 fn test_paint_text_with_rgb_background_rendered() {
     // Blue RGB: (0, 128, 255).
     let buffer = execute_ops_and_render(vec![
@@ -284,7 +290,9 @@ fn test_paint_text_with_rgb_background_rendered() {
     }
 }
 
-/// Verify combined RGB foreground and background colors.
+/// Verify combined [`RGB`] foreground and background colors.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 fn test_paint_text_with_rgb_combined_rendered() {
     // White on navy.
     let fg_color = TuiColor::Rgb(RgbValue::from_u8(255, 255, 255));
@@ -311,13 +319,14 @@ fn test_paint_text_with_rgb_combined_rendered() {
 ///
 /// This function runs tests in two phases:
 /// 1. **Ansi256 phase**: Tests using [`ANSIBasicColor`] (palette indices 0-15)
-/// 2. **Truecolor phase**: Tests using [`TuiColor::Rgb`] (24-bit RGB colors)
+/// 2. **Truecolor phase**: Tests using [`TuiColor::Rgb`] (24-bit [`RGB`] colors)
 ///
 /// Each phase sets the appropriate [`ColorSupport`] override. Individual test functions
 /// don't modify global state - they rely on this coordinator to set it up.
 ///
 /// [`ANSIBasicColor`]: crate::ANSIBasicColor
 /// [`ColorSupport`]: crate::ColorSupport
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`TuiColor::Rgb`]: crate::TuiColor::Rgb
 fn run_all_rendered_tests_sequentially() {
     // Run Ansi256 palette color tests (via ANSIBasicColor).

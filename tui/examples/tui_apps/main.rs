@@ -34,10 +34,11 @@ fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
 /// Main event loop for the TUI demo application.
 ///
 /// Creates a fresh [`ReadlineAsyncContext`] each loop iteration rather than reusing one.
-/// This prevents stdin competition between readline and the TUI examples, since both
-/// create their own [`InputDevice`] backed by the same stdin file descriptor.
+/// This prevents [`stdin`] competition between readline and the TUI examples, since both
+/// create their own [`InputDevice`] backed by the same [`stdin`] file descriptor.
 ///
 /// [`InputDevice`]: r3bl_tui::InputDevice
+/// [`stdin`]: std::io::stdin
 #[tokio::main]
 #[allow(clippy::needless_return)]
 async fn main_impl() -> CommonResult {

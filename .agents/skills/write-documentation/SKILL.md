@@ -1071,8 +1071,8 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 ```
 
 > [!TIP] **Run in a Subagent:** Building workspace documentation and running doctests can
-> take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) so the
-> active conversation with the user is not blocked.
+> take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) with
+> `Model: "inherit"` so the active conversation with the user is not blocked.
 
 ---
 

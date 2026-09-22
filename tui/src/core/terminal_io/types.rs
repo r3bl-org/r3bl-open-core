@@ -48,7 +48,9 @@ pub type SendRawTerminal = dyn std::io::Write + Send;
 /// Type alias for a `Send`-able raw terminal wrapped in an `Arc<StdMutex>`.
 pub type SafeRawTerminal = Arc<StdMutex<SendRawTerminal>>;
 
-/// Type alias for crossterm streaming (input) event result.
+/// Type alias for [`crossterm`] streaming (input) event result.
+///
+/// [`crossterm`]: crossterm
 pub type CrosstermEventResult = Result<Event, Error>;
 /// Type alias for a pinned stream that is async safe. `T` is usually
 /// [`CrosstermEventResult`].

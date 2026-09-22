@@ -10,11 +10,12 @@
 //!
 //! In both cases:
 //! 1. The source document comes from a [`crate::editor`] component, which is a [Vec] of
-//!    [`GCStringOwned`] (Unicode strings).
+//!    [`GCStringOwned`] ([`Unicode`] strings).
 //! 2. This intermediate type is [clipped] to the visible area of the editor component
 //!    (based on scroll state in the viewport). And finally that is converted to a
 //!    [`crate::TuiStyledTexts`].
 //!
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [clipped]: StyleUSSpanLine::clip
 
 use crate::{CCol, CPos, CharacterMatchResult, GCStringOwned, InlineString, ParseList,

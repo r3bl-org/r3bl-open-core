@@ -2,13 +2,15 @@
 
 //! Segment-related types and utilities.
 //!
-//! This module contains the core types for representing grapheme cluster segments
+//! This module contains the core types for representing [`grapheme`] cluster segments
 //! and utilities for building and manipulating them.
 //!
 //! See the [module docs] for
-//! comprehensive information about Unicode handling, grapheme clusters, and the three
-//! types of indices used in this system.
+//! comprehensive information about [`Unicode`] handling, [`grapheme`] clusters, and the
+//! three types of indices used in this system.
 //!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [module docs]: crate::graphemes
 
 pub mod seg;

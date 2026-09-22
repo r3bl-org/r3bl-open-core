@@ -112,10 +112,11 @@ pub const CHARSET_ASCII: u8 = b'B';
 ///
 /// Value: `48` dec, `30` hex.
 ///
-/// Used as: `ESC ( 0`. Maps [`ASCII`] characters to box-drawing Unicode characters.
+/// Used as: `ESC ( 0`. Maps [`ASCII`] characters to box-drawing [`Unicode`] characters.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub const CHARSET_DEC_GRAPHICS: u8 = b'0';
 
 // Other Character Sets (for future extension)

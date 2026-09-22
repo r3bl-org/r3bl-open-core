@@ -2,8 +2,10 @@
 
 //! Model Context Protocol (MCP) server subsystem for AI coding assistants.
 //!
-//! This module provides the `stdio` JSON-RPC 2.0 event loop, tool registry, tool
+//! This module provides the [`stdio`] JSON-RPC 2.0 event loop, tool registry, tool
 //! parameter parsing, execution dispatch, and diagnostics reporting.
+//!
+//! [`stdio`]: std::io
 
 mod protocol;
 mod server;

@@ -167,11 +167,14 @@ pub use da::*;
 pub use osc_constants::*;
 pub use mouse::*;
 
-/// Converts an ASCII [`u8`] byte to a [`char`] at compile time.
+/// Converts an [`ASCII`] [`u8`] byte to a [`char`] at compile time.
 ///
-/// Every `u8` byte (0..=255) maps directly to the ISO-8859-1 / ASCII range of Unicode
+/// Every `u8` byte (0..=255) maps directly to the ISO-8859-1 / [`ASCII`] range of [`Unicode`]
 /// (`U+0000`..`U+00FF`), which does not overlap with UTF-16 surrogates
 /// (`U+D800`..`U+DFFF`), making this conversion 100% sound.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 #[allow(clippy::as_conversions)]
 #[must_use]
 pub const fn ascii_byte_to_char(byte: u8) -> char {
@@ -179,10 +182,13 @@ pub const fn ascii_byte_to_char(byte: u8) -> char {
     byte as char
 }
 
-/// Converts a static ASCII byte slice to a [`&'static str`] at compile time.
+/// Converts a static [`ASCII`] byte slice to a [`&'static str`] at compile time.
 ///
 /// # Panics
-/// Panics at compile time if the input bytes are not valid UTF-8.
+/// Panics at compile time if the input bytes are not valid [`UTF-8`].
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub const fn ascii_byte_to_str(bytes: &'static [u8]) -> &'static str {
     match core::str::from_utf8(bytes) {

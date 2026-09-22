@@ -89,7 +89,7 @@ macro_rules! throws_with_return {
 /// # Example 2
 ///
 /// You can also use it in these other forms for terminal raw mode output. This will dump
-/// the output to stderr.
+/// the output to [`stderr`].
 ///
 /// ```
 /// use r3bl_tui::console_log;
@@ -103,7 +103,7 @@ macro_rules! throws_with_return {
 ///
 /// # Example 3
 ///
-/// This will dump the output to stdout.
+/// This will dump the output to [`stdout`].
 ///
 /// ```
 /// use r3bl_tui::console_log;
@@ -113,6 +113,9 @@ macro_rules! throws_with_return {
 /// ```
 ///
 /// <https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions>
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdout`]: std::io::stdout
 #[macro_export]
 macro_rules! console_log {
     (ERROR_RAW $msg:expr, $err:expr) => {{

@@ -17,12 +17,14 @@ use miette::IntoDiagnostic;
 /// - Alternate screen vs Main screen.
 /// - Visible cursor vs Hidden cursor.
 /// - Mouse events on vs off.
-/// - Bracketed paste on vs off.
+/// - [`Bracketed paste`] on vs off.
 ///
 /// These modes affect the interaction with:
 /// - The terminal emulator (e.g., `/dev/pts/X`), also called pseudo-terminals (PTYs).
 /// - Linux kernel virtual console (`/dev/tty`, like `Ctrl+Alt+F[1..4]`), also called
 ///   physical/virtual kernel TTYs.
+///
+/// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
 pub trait TerminalModeController {
     /// Enables terminal raw mode for direct control over input/output.
     ///

@@ -5,7 +5,7 @@
 //! For background on raw mode vs cooked mode, [`TTY`] history, line disciplines, and
 //! `stty`, see the [parent module's raw vs cooked section].
 //!
-//! # The termios Interface
+//! # The [`termios`] Interface
 //!
 //! [`termios`] is the POSIX standard API for controlling terminal I/O behavior. It
 //! defines a [`Termios`] struct containing flags that control:
@@ -56,7 +56,6 @@
 //! [Parent module documentation]: mod@crate::terminal_raw_mode
 //! [parent module's raw vs cooked section]:
 //!     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-//! [termios]: https://manpages.debian.org/termios.3
 
 use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, ScopedMutex, TtyStatus,
             is_tty_stdin, ok, scoped_mutex};
@@ -156,7 +155,7 @@ pub static SAVED_TERMIOS: LazyLock<
 /// [`cfmakeraw`]: https://manpages.debian.org/cfmakeraw.3
 /// [`crossterm-0.28/src/terminal/sys/unix.rs:124`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.28/src/terminal/sys/unix.rs#L124
-/// [`crossterm`]: https://docs.rs/crossterm
+/// [`crossterm`]: crossterm
 /// [`ECHO`]: https://manpages.debian.org/termios.3
 /// [`ECHONL`]: https://manpages.debian.org/termios.3
 /// [`ICANON`]: https://manpages.debian.org/termios.3
@@ -247,20 +246,22 @@ mod terminal_fd {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Represents either stdin or [`/dev/tty`] for terminal operations.
+    /// Represents either [`stdin`] or [`/dev/tty`] for terminal operations.
     ///
-    /// This enum allows us to handle both cases where stdin is a [`TTY`] (normal terminal
-    /// usage) and where stdin is redirected (e.g., piped input), requiring us to use
-    /// [`/dev/tty`].
+    /// This enum allows us to handle both cases where [`stdin`] is a [`TTY`] (normal
+    /// terminal usage) and where [`stdin`] is redirected (e.g., piped input),
+    /// requiring us to use [`/dev/tty`].
     ///
     /// [`/dev/tty`]: https://manpages.debian.org/tty.4
+    /// [`stdin`]: std::io::stdin
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
     pub enum TerminalFd {
         /// Using standard input (when it's a terminal)
         Stdin(io::Stdin),
-        /// Using [`/dev/tty`] (when stdin is redirected)
+        /// Using [`/dev/tty`] (when [`stdin`] is redirected)
         ///
         /// [`/dev/tty`]: https://manpages.debian.org/tty.4
+        /// [`stdin`]: std::io::stdin
         DevTty(File),
     }
 

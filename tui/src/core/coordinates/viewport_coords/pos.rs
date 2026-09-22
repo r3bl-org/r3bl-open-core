@@ -12,7 +12,7 @@ use std::{fmt::{Debug, Formatter},
 ///
 /// > 💡 **See also**: For complete workflows showing [`VPPos`] used with other coordinate
 /// > types (e.g., [`VT-100`] conversions, bounds checking), see the [coordinates module
-/// > documentation](crate::coordinates).
+/// > documentation].
 ///
 /// Here is a visual representation of how position and sizing work for the layout engine.
 ///
@@ -76,6 +76,7 @@ use std::{fmt::{Debug, Formatter},
 /// [`ChUnit`]: ChUnit
 /// [`vp_pos()`]: crate::vp_pos()
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [coordinates module documentation]: crate::coordinates
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct VPPos {
     /// Row index, 0-based.

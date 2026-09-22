@@ -116,11 +116,13 @@ impl OutputDevice {
         self.resource.lock_raw_poison_safe(fun)
     }
 
-    /// Flushes the internal writer (e.g. stdout) ensuring all buffered data is
+    /// Flushes the internal writer (e.g. [`stdout`]) ensuring all buffered data is
     /// written.
     ///
     /// # Errors
     /// Returns an error if the underlying I/O write fails.
+    ///
+    /// [`stdout`]: std::io::stdout
     pub fn flush(&self) -> miette::Result<()> {
         self.lock_raw_poison_safe(|writer| writer.flush().into_diagnostic())
     }

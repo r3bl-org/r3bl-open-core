@@ -8,6 +8,7 @@
 //!   overflow)
 //! - [`RangeValidityStatus`] - Results for validating range structure and bounds
 //!   correctness
+//! - [`RangeOverlapResult`]: Results for checking whether two coordinate ranges overlap
 //! - [`CursorPositionBoundsStatus`] - Results for cursor position bounds checking
 
 /// Result of simple array access bounds checking `[0, length)`.
@@ -55,7 +56,7 @@ pub enum ArrayOverflowResult {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ArrayBoundsCheck, ArrayUnderflowResult, vp_row};
 ///
 /// let min_row = vp_row(3);
@@ -89,7 +90,7 @@ pub enum ArrayUnderflowResult {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{RangeBoundsExt, RangeBoundsResult, vp_col};
 ///
 /// let index = vp_col(5);
@@ -131,7 +132,7 @@ pub enum RangeBoundsResult {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{RangeBoundsExt, RangeValidityStatus, vp_col, vp_width};
 ///
 /// let buffer_length = vp_width(10);
@@ -169,6 +170,32 @@ pub enum RangeValidityStatus {
     /// - For `Range<I>` (exclusive): end > `buffer_length`
     /// - For `RangeInclusive<I>` (inclusive): end >= `buffer_length`
     EndOutOfBounds,
+}
+
+/// Result of checking whether two coordinate ranges overlap (intersect).
+///
+/// Used with [`overlaps()`] on [`RangeBoundsExt`] to determine whether two ranges
+/// (`Range<I>` or `RangeInclusive<I>`) share at least one index in common.
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{RangeBoundsExt, RangeOverlapResult, c_row};
+///
+/// let span = c_row(10)..=c_row(20);
+/// assert_eq!(span.overlaps(&(c_row(15)..=c_row(25))), RangeOverlapResult::Overlaps);
+/// assert_eq!(span.overlaps(&(c_row(21)..=c_row(30))), RangeOverlapResult::Disjoint);
+/// ```
+///
+/// [`overlaps()`]: crate::RangeBoundsExt::overlaps
+/// [`RangeBoundsExt`]: crate::RangeBoundsExt
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum RangeOverlapResult {
+    /// The two ranges share at least one index in common.
+    Overlaps,
+
+    /// The two ranges do not share any indices (or at least one range is empty/inverted).
+    Disjoint,
 }
 
 /// Result of cursor position bounds checking operations.
@@ -364,6 +391,24 @@ mod tests {
             assert_eq!(
                 range.check_index_is_within(high_index),
                 RangeBoundsResult::Overflowed
+            );
+        }
+    }
+
+    mod range_overlap_result_tests {
+        use super::*;
+        use crate::{RangeBoundsExt, c_row};
+
+        #[test]
+        fn test_range_overlap_result_with_overlaps() {
+            let r = c_row(10)..=c_row(20);
+            assert_eq!(
+                r.overlaps(&(c_row(15)..=c_row(25))),
+                RangeOverlapResult::Overlaps
+            );
+            assert_eq!(
+                r.overlaps(&(c_row(21)..=c_row(30))),
+                RangeOverlapResult::Disjoint
             );
         }
     }

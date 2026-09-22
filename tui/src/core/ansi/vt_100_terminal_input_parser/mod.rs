@@ -79,7 +79,7 @@
 //!
 //! A modern TUI app often needs information about the environment. For example:
 //! - "Is the user running a dark theme or a light theme?"
-//! - "What is the exact hex RGB of the terminal's default background?"
+//! - "What is the exact hex [`RGB`] of the terminal's default background?"
 //! - "What is currently in the system clipboard?" (critical over SSH where X11/Wayland
 //!   are not available).
 //!
@@ -370,6 +370,7 @@
 //! [`process_incoming_bytes()`]: ChunkFramer::process_incoming_bytes
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`read()`]: https://manpages.debian.org/read.2
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`RRT`]: crate::RRT
 //! [`rxvt-unicode`]: https://en.wikipedia.org/wiki/Rxvt-unicode
 //! [`SGR`]: crate::SgrCode

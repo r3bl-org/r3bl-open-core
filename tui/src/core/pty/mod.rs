@@ -233,14 +233,14 @@
 //!
 //! ### Thread Coordination & Lifecycle
 //!
-//! | Step | Orchestrator Thread                          | Reader Thread                    | Writer Thread                          |
-//! | :--- | :------------------------------------------- | :------------------------------- | :------------------------------------- |
-//! | 0    | Spawn child process                          |                                  |                                        |
-//! | 1    | Spawn background threads                     | Start read loop                  | Start write loop                       |
-//! | 2    | Wait for child ([`ControlledChild::wait()`]) | Read [`PTY`], send events to App | Receive events, write to [`PTY`] stdin |
-//! | 3    | Wait for background threads to join          | Exit (on EOF)                    | Exit (on Close)                        |
-//! | 4    | Send exit event to App                       |                                  |                                        |
-//! | 5    | Return exit status                           |                                  |                                        |
+//! | Step | Orchestrator Thread                          | Reader Thread                    | Writer Thread                              |
+//! | :--- | :------------------------------------------- | :------------------------------- | :----------------------------------------- |
+//! | 0    | Spawn child process                          |                                  |                                            |
+//! | 1    | Spawn background threads                     | Start read loop                  | Start write loop                           |
+//! | 2    | Wait for child ([`ControlledChild::wait()`]) | Read [`PTY`], send events to App | Receive events, write to [`PTY`] [`stdin`] |
+//! | 3    | Wait for background threads to join          | Exit (on [`EOF`])                | Exit (on Close)                            |
+//! | 4    | Send exit event to App                       |                                  |                                            |
+//! | 5    | Return exit status                           |                                  |                                            |
 //!
 //! ### Channel Architecture
 //!
@@ -407,12 +407,10 @@
 //! [`AsyncPtySession`]: crate::AsyncPtySession
 //! [`bash`]: https://en.wikipedia.org/wiki/Bash_(Unix_shell)
 //! [`cargo`]: https://github.com/rust-lang/cargo
-//! [`ConPTY`]:
-//!     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
+//! [`ConPTY`]: https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
 //! [`DefaultSize::PtyChannelBufferSize`]: crate::DefaultSize::PtyChannelBufferSize
-//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]:
-//!     mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
+//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`EIO`]: https://manpages.debian.org/errno.3
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
@@ -421,7 +419,7 @@
 //! [`fd`]: https://manpages.debian.org/open.2
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
 //! [`isatty()`]: https://manpages.debian.org/isatty.3
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`MasterPty`]: portable_pty::MasterPty
 //! [`OSC 9`]: crate::osc_codes::OscSequence
 //! [`OSC`]: crate::osc_codes::OscSequence
@@ -457,7 +455,7 @@
 //! [`start()`]: [`PtySessionBuilder::start()`]
 //! [`start_async()`]: crate::PtySessionBuilder::start_async
 //! [`stderr`]: std::io::stderr
-//! [`stdin`]: std::io::Stdin
+//! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
 //! [`SyncSender::send()`]: std::sync::mpsc::SyncSender::send
 //! [`TASK_INTERRUPTIBLE`]: https://manpages.debian.org/ps.1#PROCESS_STATE_CODES

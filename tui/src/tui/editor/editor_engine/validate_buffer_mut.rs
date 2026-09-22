@@ -155,17 +155,18 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///    cycle using the [`Display`] trait, which relies on cached memory size
         ///    calculations.
         ///
-        /// 2. **Unicode Validation**: Runs validation checks to ensure that the buffer is
-        ///    in a valid state. Due to the nature of [`UTF-8`] and its variable width
-        ///    characters, where the memory size is not the same as display size. Eg: `a`
-        ///    is 1 byte and 1 display width (unicode segment width display). `😄` is 3
-        ///    bytes but it's display width is 2! To ensure that caret position and scroll
-        ///    offset positions are not in the middle of a unicode segment character, we
-        ///    need to run the validation checks using
+        /// 2. **[`Unicode`] Validation**: Runs validation checks to ensure that the
+        ///    buffer is in a valid state. Due to the nature of [`UTF-8`] and its variable
+        ///    width characters, where the memory size is not the same as display size.
+        ///    Eg: `a` is 1 byte and 1 display width (unicode segment width display). `😄`
+        ///    is 3 bytes but it's display width is 2! To ensure that caret position and
+        ///    scroll offset positions are not in the middle of a unicode segment
+        ///    character, we need to run the validation checks using
         ///    [`perform_validation_checks_after_mutation`].
         ///
         /// [`Display`]: std::fmt::Display
         /// [`main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
+        /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
         /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
         fn drop(&mut self) {
             // Invalidate the memory size cache since content may have changed.
@@ -249,9 +250,9 @@ fn adjust_caret_col_if_not_in_bounds_of_line(
 }
 
 /// Checks if the current [`Viewport::get_origin_pos()`]'s column index ([`CCol`]) lands
-/// in the middle of a multi-column grapheme cluster (limbo / no-man's land).
+/// in the middle of a multi-column [`grapheme`] cluster (limbo / no-man's land).
 ///
-/// If the origin position falls inside a wide grapheme (e.g. column 69 of a
+/// If the origin position falls inside a wide [`grapheme`] (e.g. column 69 of a
 /// wide emoji spanning columns 68..70), this function returns `Some(diff)`, where `diff`
 /// is the column width adjustment needed to shift [`Viewport::set_origin_pos()`] onto a
 /// valid segment boundary.
@@ -278,6 +279,7 @@ fn adjust_caret_col_if_not_in_bounds_of_line(
 ///   [`Viewport::set_origin_pos()`] should be shifted right by `1`.
 ///
 /// [`CCol`]: crate::CCol
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Viewport::get_origin_pos()`]: crate::Viewport::get_origin_pos
 /// [`Viewport::set_origin_pos()`]: crate::Viewport::set_origin_pos
 pub fn is_vp_origin_in_middle_of_grapheme_cluster(
@@ -300,7 +302,7 @@ pub fn is_vp_origin_in_middle_of_grapheme_cluster(
 }
 
 /// Adjusts [`Viewport::get_origin_pos()`]'s [`CCol`] and `c_caret.col_index` when the
-/// viewport origin lands in the middle of a wide grapheme cluster (limbo / no-man's
+/// viewport origin lands in the middle of a wide [`grapheme`] cluster (limbo / no-man's
 /// land).
 ///
 /// This function applies `diff` to shift [`Viewport::set_origin_pos()`] rightwards onto a
@@ -312,6 +314,7 @@ pub fn is_vp_origin_in_middle_of_grapheme_cluster(
 ///
 /// [`CCol`]: crate::CCol
 /// [`CWidth`]: crate::CWidth
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Viewport::get_origin_pos()`]: crate::Viewport::get_origin_pos
 /// [`Viewport::set_origin_pos()`]: crate::Viewport::set_origin_pos
 pub fn adjust_vp_origin_because_in_middle_of_grapheme_cluster(

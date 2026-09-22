@@ -273,13 +273,13 @@
 //!   terminal interfaces and execution harnesses for AI/LLM coding agents in pure Rust.
 //!   While popular agent tools are written in [`Node.js`] and [`ink`] (see [origin
 //!   story]), Node-based runtimes struggle with runaway memory consumption, fragile
-//!   sub-process control, and unstable PTY session management when orchestrating heavy,
+//!   sub-process control, and unstable [`PTY`] session management when orchestrating heavy,
 //!   long-running tools in sandboxed environments (containers, microVMs, systemd-nspawn
 //!   machines, etc.). Furthermore, Node-based runtimes struggle with terminal input
 //!   decoding, frequently dropping modifier keys, mangling keyboard chords, and
-//!   introducing sluggish ESC key disambiguation lag. **`r3bl_tui`** provides a
-//!   rock-solid, pure Rust foundation engineered for native PTY orchestration,
-//!   zero-latency ANSI input decoding, deterministic process lifecycles, flicker-free
+//!   introducing sluggish [`ESC`] key disambiguation lag. **`r3bl_tui`** provides a
+//!   rock-solid, pure Rust foundation engineered for native [`PTY`] orchestration,
+//!   zero-latency [`ANSI`] input decoding, deterministic process lifecycles, flicker-free
 //!   diff rendering, and minimal resource overhead.
 //!
 //! - ☁️ **DevOps & Cloud Workflows**: Administering modern cloud infrastructure shouldn't
@@ -319,7 +319,7 @@
 //!    asynchronous autocomplete, and a full-featured Markdown editor component with
 //!    custom parser, custom syntax highlighter, and fast zero-copy gap buffer.
 //!
-//! 4. 🔀 **Terminal Multiplexing & PTY**: In-memory virtual terminals, virtual terminal
+//! 4. 🔀 **Terminal Multiplexing & [`PTY`]**: In-memory virtual terminals, virtual terminal
 //!    tabs, deterministic process orchestration, and multiplexing primitives (build your
 //!    own [`tmux`] or sandboxed AI/LLM coding agent execution harness) featuring 2D
 //!    horizontal viewport panning and decoupled throughput.
@@ -328,7 +328,7 @@
 //! can pick and choose only what you need or compose them seamlessly within a single
 //! application. Transition smoothly from a non-blocking [`readline_async`] prompt into an
 //! inline [`choose()`] menu, launch a full-screen [`TUI`] for complex tasks, or
-//! orchestrate background PTY subprocesses in virtual [`PTYMux`] buffers, all sharing
+//! orchestrate background [`PTY`] subprocesses in virtual [`PTYMux`] buffers, all sharing
 //! application state without process restarts.
 //!
 //! # Framework highlights
@@ -336,20 +336,20 @@
 //! ## Automated Headless Testing & Benchmarking
 //!
 //! The entire framework across all 4 pillars is testable across Linux, macOS, and
-//! Windows. Powered by our own PTY pillar, real production code runs headlessly in an
+//! Windows. Powered by our own [`PTY`] pillar, real production code runs headlessly in an
 //! isolated virtual terminal environment, enabling end-to-end testing of interactive apps
 //! without requiring human interaction:
 //!
-//! - **PTY Automated Interactive Testing**: Enables end-to-end testing of interactive
-//!   apps via headless PTY subprocess orchestration with the `generate_pty_test!` macro.
-//!   Automate key sequences, window resizing, and screen output verification in
+//! - **[`PTY`] Automated Interactive Testing**: Enables end-to-end testing of interactive
+//!   apps via headless [`PTY`] subprocess orchestration with the [`generate_pty_test!`]
+//!   macro. Automate key sequences, window resizing, and screen output verification in
 //!   completely isolated child processes without someone having to sit and manually type
 //!   at a keyboard.
 //! - **Visual UI Snapshot Testing**: Everything renders to an offscreen buffer
 //!   ([`OfsBuf`]), providing built-in visual snapshot testing. Easily diff and assert the
-//!   actual rendered terminal screen state headlessly generated in a real PTY
+//!   actual rendered terminal screen state headlessly generated in a real [`PTY`]
 //!   environment.H
-//! - **Sans-IO In-Memory Terminal**: Pure functional VT-100 parser verifies virtual
+//! - **Sans-IO In-Memory Terminal**: Pure functional [`VT-100`] parser verifies virtual
 //!   terminal screen state buffers directly in RAM with zero OS syscalls.
 //! - **Decoupled I/O Devices**: [`InputDevice`] and [`OutputDevice`] abstract terminal
 //!   I/O away from physical [`stdin`] and [`stdout`], allowing input events and output
@@ -380,10 +380,10 @@
 //!     - **Safe Bidirectional Conversions**: Pairing traits provide explicit conversions
 //!       between 0-based and 1-based domains ([`TermRow::to_zero_based()`],
 //!       [`TermRow::from_zero_based()`], `convert_to_length()`).
-//!     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
+//!     - **Algebraic Identities & [`CSI`] Zero Protection**: Enforces algebraic laws
 //!       (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous
 //!       manual arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`),
-//!       negative underflow, and CSI zero-index terminal crashes ([`TermRowDelta`],
+//!       negative underflow, and [`CSI`] zero-index terminal crashes ([`TermRowDelta`],
 //!       [`TermColDelta`]).
 //!     - **Empirically Proven Zero-Cost Layout**: Newtypes share the identical memory
 //!       layout, size, and ABI of raw primitives (passed in CPU registers with zero heap
@@ -404,39 +404,40 @@
 //!     enums ([`ArrayOverflowResult`], [`RangeBoundsResult`]), forcing callers to
 //!     exhaustively handle all boundary states at compile time.
 //!
-//! - 🦄 **First-Class Unicode & Complex Emoji Engine ([`GCStringOwned`])**: Most terminal
-//!   emulators and TUI libraries break when handling "jumbo emojis", zero-width joiners
-//!   (ZWJ), skin tone modifiers, and wide characters (display width > 1), causing visual
-//!   tearing, misaligned borders, and string-slicing panics. ROC solves this from the
-//!   ground up via [`GCStringOwned`]:
-//!   - **Three Distinct Coordinate Spaces**: Strictly decouples memory position ([`ByteIndex`], UTF-8
-//!     offset), logical editing position ([`SegIndex`], user-perceived grapheme
-//!     clusters), and visual column position ([`VPCol`], actual terminal display width).
+//! - 🦄 **First-Class [`Unicode`] & Complex Emoji Engine ([`GCStringOwned`])**: Most
+//!   terminal emulators and TUI libraries break when handling "jumbo emojis", zero-width
+//!   joiners (ZWJ), skin tone modifiers, and wide characters (display width > 1), causing
+//!   visual tearing, misaligned borders, and string-slicing panics. ROC solves this from
+//!   the ground up via [`GCStringOwned`]:
+//!   - **Three Distinct Coordinate Spaces**: Strictly decouples memory position
+//!     ([`ByteIndex`], [`UTF-8`] offset), logical editing position ([`SegIndex`],
+//!     user-perceived [`grapheme`] clusters), and visual column position ([`VPCol`],
+//!     actual terminal display width).
 //!   - **Complex Emoji & Modifier Support**: Correctly measures and renders
 //!     multi-codepoint sequences (e.g., `👨🏾‍🤝‍👨🏿` spans 5 codepoints and 7 code
-//!     units, but resolves to 1 logical grapheme segment and 2 visual columns).
+//!     units, but resolves to 1 logical [`grapheme`] segment and 2 visual columns).
 //!   - **Panic-Proof Slicing & Boundary Safety**: Guarantees cursor navigation,
-//!     backspace, and substring slicing never split UTF-8 codepoints or mid-grapheme
-//!     clusters, eliminating runtime slicing panics across editors, line inputs, and diff
-//!     rendering.
+//!     backspace, and substring slicing never split [`UTF-8`] codepoints or
+//!     mid-[`grapheme`] clusters, eliminating runtime slicing panics across editors, line
+//!     inputs, and diff rendering.
 //!
 //! - 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain
 //!   attacks, maintainer burnout, and abandonware, our explicit architectural goal is to
 //!   **own our Bill of Materials (BOM)**. Critical primitives (including our custom
-//!   [`direct_to_ansi`] terminal I/O backend, VT-100/ANSI parser, zero-copy gap buffer,
-//!   and Markdown parser) are engineered in-house in pure Rust. We strictly limit
+//!   [`direct_to_ansi`] terminal I/O backend, [`VT-100`]/[`ANSI`] parser, zero-copy gap
+//!   buffer, and Markdown parser) are engineered in-house in pure Rust. We strictly limit
 //!   external dependencies to actively funded, strongly supported, and battle-tested
-//!   industry foundations (such as `tokio`, `mio`, and `mimalloc`), safeguarding
+//!   industry foundations (such as [`tokio`], [`mio`], and `mimalloc`), safeguarding
 //!   production applications against transitive bloat, sudden deprecations, and upstream
 //!   vulnerabilities.
 //!
 //! - 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native,
 //!   first-class support across platforms using the best backend for each OS:
 //!   - **Linux**: Our custom high-performance, Linux-native [`direct_to_ansi`] engine
-//!     (talking directly to the terminal device via `mio`/epoll for minimal latency and
-//!     maximum throughput, without the use of `crossterm`).
-//!   - **macOS, Windows & Unix/BSDs**: Currently powered by `crossterm`. We plan to
-//!     expand [`direct_to_ansi`] in the future to replace `crossterm` across all
+//!     (talking directly to the terminal device via [`mio`]/[`epoll`] for minimal latency
+//!     and maximum throughput, without the use of [`crossterm`]).
+//!   - **macOS, Windows & Unix/BSDs**: Currently powered by [`crossterm`]. We plan to
+//!     expand [`direct_to_ansi`] in the future to replace [`crossterm`] across all
 //!     platforms.
 //!
 //! - 🚀 **SIMD Contiguous Memory Layout ([`Flat2DArray`])**: Single contiguous 1D
@@ -450,70 +451,70 @@
 //!   changed for smooth, flicker-free performance over high-latency SSH connections, with
 //!   multi-layer Z-order compositing for modal overlays and popups.
 //!
-//! - 🔀 **Terminal Multiplexing & PTY Architecture ([`PTYMux`])**: Decouples physical
+//! - 🔀 **Terminal Multiplexing & [`PTY`] Architecture ([`PTYMux`])**: Decouples physical
 //!   display constraints from subprocess execution via virtual terminals and process
 //!   orchestration:
-//!   - **2D Viewport Panning in PTY Sessions (Horizontal Scrolling without Wrapping)**:
-//!     Traditional terminal emulators (`xterm`, `Alacritty`, `Kitty`) lack horizontal
-//!     panning for standard CLI tools (`cat`, `grep`, `git log`, `dmesg`), forcibly
-//!     hard-wrapping wide lines across rows and mangling tabular data, JSON, or stack
-//!     traces into unreadable spaghetti. When running any CLI program inside a ROC PTY
-//!     session (a concrete manifestation of which is [`pty_mux_example`], powered by
-//!     [`GrowableBuffer`] and [`PTYMux`]), **`r3bl_tui`** decouples the physical viewport
-//!     from the virtual terminal canvas width (e.g., 1,000+ columns). The child process
-//!     writes into this wide virtual canvas without line wrapping, allowing users to
-//!     smoothly pan horizontally (`Shift + Mouse Wheel` or trackpad gestures) across the
-//!     output without layout destruction.
-//!   - **Decoupled Throughput vs. Terminal Bottlenecks (Faster Than Bare `xterm`)**: In
-//!     traditional terminal emulators (like `xterm`), running a command that dumps
+//!   - **2D Viewport Panning in [`PTY`] Sessions (Horizontal Scrolling without
+//!     Wrapping)**: Traditional terminal emulators ([`xterm`], [`Alacritty`], [`Kitty`])
+//!     lack horizontal panning for standard CLI tools (`cat`, `grep`, `git log`,
+//!     `dmesg`), forcibly hard-wrapping wide lines across rows and mangling tabular data,
+//!     JSON, or stack traces into unreadable spaghetti. When running any CLI program
+//!     inside a ROC [`PTY`] session (a concrete manifestation of which is
+//!     [`pty_mux_example`], powered by [`GrowableBuffer`] and [`PTYMux`]), **`r3bl_tui`**
+//!     decouples the physical viewport from the virtual terminal canvas width (e.g.,
+//!     1,000+ columns). The child process writes into this wide virtual canvas without
+//!     line wrapping, allowing users to smoothly pan horizontally (`Shift + Mouse Wheel`
+//!     or trackpad gestures) across the output without layout destruction.
+//!   - **Decoupled Throughput vs. Terminal Bottlenecks (Faster Than Bare [`xterm`])**: In
+//!     traditional terminal emulators (like [`xterm`]), running a command that dumps
 //!     megabytes of text (e.g., `cat large.log`) blocks the process on [`stdout`] I/O
 //!     while the terminal synchronously parses escape codes, recalculates line wrapping,
 //!     and rasterizes every glyph. Counter-intuitively, running that same command inside
-//!     a ROC PTY session (such as [`pty_mux_example`]) running *inside* `xterm` is often
-//!     significantly **faster than running the command directly in bare `xterm`**.
-//!     **`r3bl_tui`**'s headless VT-100 parser ([`OfsBufVT100`]) acts as an in-memory
-//!     shock absorber, ingesting raw subprocess output at memory bus speeds, while
-//!     double-buffered diff rendering paints only the visible viewport to the host
+//!     a ROC [`PTY`] session (such as [`pty_mux_example`]) running *inside* [`xterm`] is
+//!     often significantly **faster than running the command directly in bare
+//!     [`xterm`]**. **`r3bl_tui`**'s headless [`VT-100`] parser ([`OfsBufVT100`]) acts as
+//!     an in-memory shock absorber, ingesting raw subprocess output at memory bus speeds,
+//!     while double-buffered diff rendering paints only the visible viewport to the host
 //!     terminal at controlled display intervals. Subprocesses drain [`stdout`] without
 //!     stalling on terminal drawing or network I/O backpressure.
 //!
 //! - 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy
-//!   `terminfo` / `termcap` databases and [`ncurses`] baggage by querying modern ANSI
+//!   `terminfo` / `termcap` databases and [`ncurses`] baggage by querying modern [`ANSI`]
 //!   protocols directly at runtime.
 //!
 //! - 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
 //!   [declarative] [CSS-like] styling inspired by [React] and [Elm].
 //!
 //! - 🎨 **Intelligent Color Degradation**: Automatically detects terminal capabilities
-//!   and gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 ANSI colors
-//!   -> Monochrome** (black & white). Gracefully handles environments lacking truecolor
-//!   support (such as pre-macOS 26 Tahoe `Terminal.app`, Linux virtual consoles, or
-//!   headless CI runners), complete with dynamic lolcat rainbow color-wheel palettes that
-//!   automatically adapt to terminal color capability.
+//!   and gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 [`ANSI`]
+//!   colors -> Monochrome** (black & white). Gracefully handles environments lacking
+//!   [`truecolor`] support (such as pre-macOS 26 Tahoe `Terminal.app`, Linux virtual
+//!   consoles, or headless CI runners), complete with dynamic lolcat rainbow color-wheel
+//!   palettes that automatically adapt to terminal color capability.
 //!
 //! - ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines Linux-native
 //!   kernel TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol state
 //!   machine for robust, zero-latency input handling across local terminals and SSH:
-//!   - **Linux-Native `direct_to_ansi` Driver**: Bypasses `crossterm` and `libc` FFI
-//!     wrappers on Linux by talking directly to `/dev/tty` via `mio`/`epoll(7)`,
+//!   - **Linux-Native `direct_to_ansi` Driver**: Bypasses [`crossterm`] and `libc` FFI
+//!     wrappers on Linux by talking directly to `/dev/tty` via [`mio`]/`epoll(7)`,
 //!     eliminating thread-blocking reads and CPU-spinning loops.
 //!   - **Disambiguating Modifier Chords & Key Collisions**: Reliably decodes chords and
 //!     combinations that traditional terminal runtimes mangle or drop - such as
 //!     [`Shift+Enter`], `Ctrl+Enter`, `Ctrl+Tab`, `Ctrl+Number/Punctuation`, `Ctrl+I` vs
 //!     `Tab`, and `Alt+[` collisions.
-//!   - **Kitty Keyboard Protocol (`CSI u`) Progressive Enhancement**: Negotiates advanced
-//!     keyboard protocols with modern terminals ([Kitty keyboard protocol]), enabling
-//!     full modifier reporting, key-release events, and unambiguous key sequences with
-//!     graceful legacy fallback.
-//!   - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms
+//!   - **[`Kitty`] Keyboard Protocol (`CSI u`) Progressive Enhancement**: Negotiates
+//!     advanced keyboard protocols with modern terminals ([Kitty keyboard protocol]),
+//!     enabling full modifier reporting, key-release events, and unambiguous key
+//!     sequences with graceful legacy fallback.
+//!   - **Zero-Latency [`ESC`] Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms
 //!     timeout heuristics with an internal state machine (`KernelDrained`,
-//!     `KernelMayHaveMore`), achieving 0ms zero-latency ESC handling while correctly
+//!     `KernelMayHaveMore`), achieving 0ms zero-latency [`ESC`] handling while correctly
 //!     reassembling multi-packet escape sequences across SSH.
-//!   - **OSC Terminal Query Absorption & SGR Mouse Reporting (Linux-native)**: Frames
-//!     and absorbs background terminal responses (such as OSC 10/11 color queries into
-//!     [`InputEvent::TerminalColorReport`] and OSC 52 clipboard) on [`stdin`] via the
-//!     [`direct_to_ansi`] engine to prevent terminal text leakage, while supporting full
-//!     SGR mouse tracking (clicks, drags, scroll wheel).
+//!   - **[`OSC`] Terminal Query Absorption & [`SGR`] Mouse Reporting (Linux-native)**:
+//!     Frames and absorbs background terminal responses (such as [`OSC`] 10/11 color
+//!     queries into [`InputEvent::TerminalColorReport`] and [`OSC`] 52 clipboard) on
+//!     [`stdin`] via the [`direct_to_ansi`] engine to prevent terminal text leakage,
+//!     while supporting full [`SGR`] mouse tracking (clicks, drags, scroll wheel).
 //!
 //! - 🧩 **Composable "Applet" Architecture & Shared State**: Enables multiple integrated
 //!   TUI experiences ("applets") to run within the same process and terminal window.
@@ -548,13 +549,13 @@
 //! Each internalizes terminal availability and size checks, and returns a
 //! [`TuiAvailability<T>`] enum.
 //!
-//! | Entry Point                           | Purpose                 | Returns                                   | Best For                                                               |
-//! |:--------------------------------------|:------------------------|:------------------------------------------|:-----------------------------------------------------------------------|
-//! | [`TerminalWindow::main_event_loop()`] | Full TUI framework      | [`TuiAvailability<MainEventLoopFuture>`]  | Complex, multi-component apps with layouts, dialogs, and custom logic. |
-//! | [`ReadlineAsyncContext::try_new()`]   | Async Readline          | [`TuiAvailability<ReadlineAsyncContext>`] | CLI-style line input, REPLs, and background logging.                   |
-//! | [`choose()`]                          | Interactive Selection   | [`TuiAvailability<ChooseFuture>`]         | Prompting user to select one or more items from a list.                |
-//! | [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
-//! | [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
+//! | Entry Point                             | Purpose                   | Returns                                     | Best For                                                                 |
+//! | :-------------------------------------- | :------------------------ | :------------------------------------------ | :----------------------------------------------------------------------- |
+//! | [`TerminalWindow::main_event_loop()`]   | Full TUI framework        | [`TuiAvailability<MainEventLoopFuture>`]    | Complex, multi-component apps with layouts, dialogs, and custom logic.   |
+//! | [`ReadlineAsyncContext::try_new()`]     | Async Readline            | [`TuiAvailability<ReadlineAsyncContext>`]   | CLI-style line input, REPLs, and background logging.                     |
+//! | [`choose()`]                            | Interactive Selection     | [`TuiAvailability<ChooseFuture>`]           | Prompting user to select one or more items from a list.                  |
+//! | [`PTYMuxBuilder::build()`]              | Terminal Multiplexer      | [`TuiAvailability<PTYMux>`]                 | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI.   |
+//! | [`Spinner::try_start()`]                | Indeterminate Progress    | [`TuiAvailability<Spinner>`]                | Long-running tasks needing visual feedback (standalone or embedded).     |
 //!
 //! [`Spinner::try_start()`] only checks [`stdout`] interactivity (not [`stdin`]), so it
 //! works with piped [`stdin`]. It can run standalone or embedded within a
@@ -600,7 +601,7 @@
 //!    with concurrent background tasks and progress spinners.
 //! 2. [`tui/examples`]: Standalone examples in this workspace demonstrating async
 //!    readline (`readline_async.rs`), spinners (`spinner.rs`), shell (`shell_async.rs`),
-//!    and PTY orchestration.
+//!    and [`PTY`] orchestration.
 //!
 //! ## Full TUI for immersive apps
 //!
@@ -636,13 +637,13 @@
 //!    - **Vertical (Up/Down) Scrollback:** Handled via `get_row_with_scrollback(row,
 //!      scrollback_amt)` and the underlying [`VecDeque`] history. Vertical scrolling is
 //!      applied externally during rendering ([`ScrollbackAmount`]) to prevent detaching
-//!      the VT-100 parser's writing cursor from the live bottom line.
+//!      the [`VT-100`] parser's writing cursor from the live bottom line.
 //!    - **Horizontal (Left/Right) Panning:** Handled natively via [`try_pan_viewport_to`]
 //!      by changing `origin_pos.col_index`, which is safe because shifting columns does
 //!      not affect line-appending.
 //!
 //! 2. **`terminfo` Bypassing & SSH Robustness:** The rendering engine speaks direct raw
-//!    ANSI, bypassing OS-level `terminfo` database dependencies. By masquerading as
+//!    [`ANSI`], bypassing OS-level `terminfo` database dependencies. By masquerading as
 //!    `xterm-256color` for child processes, it runs zero-config and deterministically
 //!    over SSH remote connections without requiring root access or custom `.terminfo`
 //!    file deployment on remote servers.
@@ -789,29 +790,29 @@
 //!
 //! ## TUI-Specific Commands
 //!
-//! | Command                                      | Description                                      |
-//! |:---------------------------------------------|:-------------------------------------------------|
-//! | `fish run.fish run-examples`                 | Run TUI examples interactively with options      |
-//! | `fish run.fish run-examples-flamegraph-svg`  | Generate SVG flamegraph for performance analysis |
-//! | `fish run.fish run-examples-flamegraph-fold` | Generate perf-folded format for analysis         |
-//! | `fish run.fish bench`                        | Run benchmarks with real-time output             |
-//! | `fish run.fish log`                          | Monitor log files with smart detection           |
+//! | Command                                        | Description                                        |
+//! | :--------------------------------------------- | :------------------------------------------------- |
+//! | `fish run.fish run-examples`                   | Run TUI examples interactively with options        |
+//! | `fish run.fish run-examples-flamegraph-svg`    | Generate SVG flamegraph for performance analysis   |
+//! | `fish run.fish run-examples-flamegraph-fold`   | Generate perf-folded format for analysis           |
+//! | `fish run.fish bench`                          | Run benchmarks with real-time output               |
+//! | `fish run.fish log`                            | Monitor log files with smart detection             |
 //!
 //! ## Testing and Development
 //!
-//! | Command                                          | Description                                                      |
-//! |:-------------------------------------------------|:-----------------------------------------------------------------|
-//! | `fish run.fish test`                             | Run all tests                                                    |
-//! | `fish run.fish cov <pkg> [test] [file] [--html]` | Run targeted `cargo-llvm-cov` with filtered output (or `--html`) |
-//! | `fish run.fish watch-all-tests`                  | Watch files, run all tests                                       |
-//! | `fish run.fish watch-one-test <pattern>`         | Watch files, run specific test                                   |
-//! | `fish run.fish clippy`                           | Run clippy with fixes                                            |
-//! | `fish run.fish watch-clippy`                     | Watch files, run clippy                                          |
-//! | `fish run.fish docs`                             | Generate documentation                                           |
+//! | Command                                            | Description                                                        |
+//! | :------------------------------------------------- | :----------------------------------------------------------------- |
+//! | `fish run.fish test`                               | Run all tests                                                      |
+//! | `fish run.fish cov <pkg> [test] [file] [--html]`   | Run targeted `cargo-llvm-cov` with filtered output (or `--html`)   |
+//! | `fish run.fish watch-all-tests`                    | Watch files, run all tests                                         |
+//! | `fish run.fish watch-one-test <pattern>`           | Watch files, run specific test                                     |
+//! | `fish run.fish clippy`                             | Run clippy with fixes                                              |
+//! | `fish run.fish watch-clippy`                       | Watch files, run clippy                                            |
+//! | `fish run.fish docs`                               | Generate documentation                                             |
 //!
-//! ### `VT-100` ANSI Conformance Testing
+//! ### [`VT-100`] [`ANSI`] Conformance Testing
 //!
-//! The TUI library includes comprehensive `VT-100`/ANSI escape sequence conformance tests
+//! The TUI library includes comprehensive [`VT-100`]/[`ANSI`] escape sequence conformance tests
 //! that validate the terminal emulation pipeline:
 //!
 //! ```bash
@@ -829,12 +830,12 @@
 //!   [`SgrCode`] builders instead of hardcoded escape strings
 //! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
 //!   with authentic 80x25 terminal dimensions
-//! - **[`VT-100` spec] compliance**: Comprehensive coverage of ANSI escape sequences with
+//! - **[`VT-100` spec] compliance**: Comprehensive coverage of [`ANSI`] escape sequences with
 //!   proper bounds checking and edge case handling
 //! - **Conformance data modules**: Organized sequence patterns for different terminal
 //!   applications and use cases
 //!
-//! The conformance tests ensure the ANSI parser correctly processes sequences from real
+//! The conformance tests ensure the [`ANSI`] parser correctly processes sequences from real
 //! terminal applications and maintains compatibility with [`VT-100` spec].
 //!
 //! ### Markdown Parser Conformance Testing
@@ -872,12 +873,12 @@
 //! The conformance tests ensure the parser correctly handles both standard markdown
 //! syntax and R3BL extensions while maintaining performance and reliability.
 //!
-//! ### Next-Level PTY-Based Integration Testing
+//! ### Next-Level [`PTY`]-Based Integration Testing
 //!
 //! The TUI library features **production-grade integration testing** using
 //! pseudoterminals (PTYs) that simulate real interactive terminal applications. Unlike
-//! traditional unit tests, these tests spawn the test binary itself in a PTY slave
-//! process and send raw byte sequences through the PTY master—exactly like a real
+//! traditional unit tests, these tests spawn the test binary itself in a [`PTY`] slave
+//! process and send raw byte sequences through the [`PTY`] master—exactly like a real
 //! terminal emulator would.
 //!
 //! **This is how we achieve "next level" testing:**
@@ -892,13 +893,14 @@
 //! Limited realism                Production-equivalent environment
 //! ```
 //!
-//! **Why PTY Testing is a Superpower:**
+//! **Why [`PTY`] Testing is a Superpower:**
 //!
-//! 1. **Realistic terminal interactions**: Tests interact with a real PTY device, not
+//! 1. **Realistic terminal interactions**: Tests interact with a real [`PTY`] device, not
 //!    mocks
-//! 2. **Raw mode testing**: Controlled process runs in raw mode with actual termios
+//! 2. **Raw mode testing**: Controlled process runs in raw mode with actual [`termios`]
 //!    settings
-//! 3. **Byte-level precision**: Send exact ANSI sequences as applications receive them
+//! 3. **Byte-level precision**: Send exact [`ANSI`] sequences as applications receive
+//!    them
 //! 4. **Full integration**: Tests the complete pipeline from input parsing to output
 //!    rendering
 //! 5. **Real-world behavior**: Catches issues that unit tests miss (race conditions,
@@ -906,8 +908,8 @@
 //!
 //! **Implementation powered by [`generate_pty_test!`] macro:**
 //!
-//! The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
-//! - Creates PTY pair with standard terminal dimensions (24x80)
+//! The [`generate_pty_test!`] macro handles [`PTY`] infrastructure automatically:
+//! - Creates [`PTY`] pair with standard terminal dimensions (24x80)
 //! - Spawns test binary as slave process with environment isolation
 //! - Routes execution to master (verification) or slave (interactive) code paths
 //! - Provides dependency injection pattern for flexible verification strategies
@@ -965,26 +967,28 @@
 //!
 //! The macro takes four parameters:
 //! - `test_fn`: Name of the generated test function
-//! - `controller`: Closure that runs in the PTY controller process (sends input, verifies
-//!   output)
-//! - `controlled`: Closure that runs in the PTY controlled process (interactive terminal)
+//! - `controller`: Closure that runs in the [`PTY`] controller process (sends input,
+//!   verifies output)
+//! - `controlled`: Closure that runs in the [`PTY`] controlled process (interactive
+//!   terminal)
 //! - `mode`: A `PtyTestMode` value (`Raw` or `Cooked`)
 //!
 //! For a complete working example, see the [`test_pty_input_device`] module which
 //! demonstrates:
 //! - Raw mode configuration in the slave process
 //! - Creating and using [`DirectToAnsiInputDevice`]
-//! - Writing ANSI sequences from the master process
+//! - Writing [`ANSI`] sequences from the master process
 //! - Reading and verifying parsed events
 //! - Proper process coordination and cleanup
 //!
 //! **Real-world applications:**
-//! - **Terminal input parsing**: [`input_parser_integration_tests`] validates `VT-100`
+//! - **Terminal input parsing**: [`input_parser_integration_tests`] validates [`VT-100`]
 //!   input sequences
-//! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
+//! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests [`termios`]
+//!   configuration
 //! - **Interactive applications**: Tests readline, editor, and TUI component interactions
 //!
-//! For complete PTY test implementation details and examples, see:
+//! For complete [`PTY`] test implementation details and examples, see:
 //! - Macro documentation: [`generate_pty_test!`]
 //! - Input parser tests: [`input_parser_integration_tests`]
 //! - Raw mode tests: [`raw_mode_integration_tests`]
@@ -1088,7 +1092,7 @@
 //!   position+size `[start, start+width)` - different use cases demand different
 //!   semantics
 //!
-//! ```rust,should_panic
+//! ```should_panic
 //! // Unsafe: raw integers hide these distinctions
 //! let cursor_row: usize = 5;        // Is this 0-based or 1-based?
 //! let vp_width: usize = 80;   // Is this a size or position?
@@ -1119,7 +1123,7 @@
 //!
 //! Use strongly-typed indices and lengths with semantic validation:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_row, vp_height, ArrayBoundsCheck, ArrayOverflowResult};
 //!
 //! let cursor_row = vp_row(5);          // VPRow (0-based index)
@@ -1152,7 +1156,7 @@
 //! ## Common Patterns
 //!
 //! **Array/buffer access** (strict bounds):
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_col, vp_width, ArrayBoundsCheck, ArrayOverflowResult};
 //! let buffer: Vec<char> = vec!['a'; 10];
 //! let index = vp_col(5);
@@ -1165,7 +1169,7 @@
 //! ```
 //!
 //! **Text cursor positioning** (allows end-of-line):
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_col, vp_width, CursorBoundsCheck, CursorPositionBoundsStatus};
 //! let cursor_col = vp_col(10);
 //! let line_width = vp_width(10);
@@ -1180,7 +1184,7 @@
 //! ```
 //!
 //! **Viewport visibility** (rendering optimization):
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_height, vp_row, ViewportBoundsCheck, RangeBoundsResult};
 //! let content_row = vp_row(15);
 //! let vp_start = vp_row(10);
@@ -1193,7 +1197,7 @@
 //! ```
 //!
 //! **Range boundary handling** (inclusive vs exclusive):
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_row, RangeConvertExt};
 //!
 //! // VT-100 scroll region: inclusive bounds [2, 5] means rows 2,3,4,5
@@ -1310,7 +1314,7 @@
 //! Rust type system prevents accidental mixing of Canvas and Viewport coordinates at
 //! compile time.
 //!
-//! For comprehensive details, design patterns, ASCII visual diagrams, and code examples,
+//! For comprehensive details, design patterns, [`ASCII`] visual diagrams, and code examples,
 //! see the detailed [`bounds_check`] and [`canvas`] module documentation.
 //!
 //! ## Academic Research on Type Safety at Scale
@@ -1347,7 +1351,7 @@
 //! # Zero-Allocation String Formatting
 //!
 //! When rendering terminal UIs, especially at high frame rates or when parsing
-//! high-volume `VT-100` PTY output, generating strings and formatting ANSI escape
+//! high-volume [`VT-100`] [`PTY`] output, generating strings and formatting [`ANSI`] escape
 //! sequences can quickly become a performance bottleneck due to excessive heap
 //! allocations and the overhead of the [`std::fmt::Formatter`] state machine.
 //!
@@ -1523,18 +1527,18 @@
 //!
 //! | Component                    | File                         | Implementation  | # Panics | # Poison Safety |
 //! | :--------------------------- | :--------------------------- | :-------------- | :------: | :-------------: |
-//! | [`OutputDevice::write()`]    | [`output_device.rs`]         | **Fail-Fast**   |    Y     |        Y        |
-//! | [`OutputDevice::lock_raw()`] | [`output_device.rs`]         | **Poison-Safe** |    N     |        Y        |
-//! | [`RawModeGuard::drop()`]     | [`raw_mode_core.rs`]         | **Poison-Safe** |    N     |        Y        |
-//! | [`Readline::drop()`]         | [`readline.rs`]              | **Poison-Safe** |    N     |        Y        |
-//! | [`TerminationGuard`]         | [`rrt_termination_guard.rs`] | **Poison-Safe** |    N     |        Y        |
-//! | [`SubscriberGuard`]          | [`rrt_subscriber_guard.rs`]  | **Poison-Safe** |    N     |        Y        |
-//! | [`ScopedMutex::read()`]      | [`scoped_mutex.rs`]          | **Fail-Fast**   |    Y     |        Y        |
-//! | [`ScopedMutex::lock_raw()`]  | [`scoped_mutex.rs`]          | **Poison-Safe** |    N     |        Y        |
-//! | [`Monitor::lock()`]          | [`monitor.rs`]               | **Fail-Fast**   |    Y     |        Y        |
-//! | [`rrt_monitor::lock()`]      | [`rrt_monitor.rs`]           | **Fail-Fast**   |    Y     |        Y        |
-//! | [`run_worker_loop()`]        | [`rrt_engine.rs`]            | **Fail-Fast**   |    Y     |        Y        |
-//! | [`Spinner`] methods          | [`spinner.rs`]               | **Fail-Fast**   |    Y     |        Y        |
+//! | [`OutputDevice::write()`]    | [`output_device.rs`]         | **Fail-Fast**   | Y        | Y               |
+//! | [`OutputDevice::lock_raw()`] | [`output_device.rs`]         | **Poison-Safe** | N        | Y               |
+//! | [`RawModeGuard::drop()`]     | [`raw_mode_core.rs`]         | **Poison-Safe** | N        | Y               |
+//! | [`Readline::drop()`]         | [`readline.rs`]              | **Poison-Safe** | N        | Y               |
+//! | [`TerminationGuard`]         | [`rrt_termination_guard.rs`] | **Poison-Safe** | N        | Y               |
+//! | [`SubscriberGuard`]          | [`rrt_subscriber_guard.rs`]  | **Poison-Safe** | N        | Y               |
+//! | [`ScopedMutex::read()`]      | [`scoped_mutex.rs`]          | **Fail-Fast**   | Y        | Y               |
+//! | [`ScopedMutex::lock_raw()`]  | [`scoped_mutex.rs`]          | **Poison-Safe** | N        | Y               |
+//! | [`Monitor::lock()`]          | [`monitor.rs`]               | **Fail-Fast**   | Y        | Y               |
+//! | [`rrt_monitor::lock()`]      | [`rrt_monitor.rs`]           | **Fail-Fast**   | Y        | Y               |
+//! | [`run_worker_loop()`]        | [`rrt_engine.rs`]            | **Fail-Fast**   | Y        | Y               |
+//! | [`Spinner`] methods          | [`spinner.rs`]               | **Fail-Fast**   | Y        | Y               |
 //!
 //! ## Key Poison-Safe Components
 //!
@@ -1548,24 +1552,24 @@
 //!
 //! # Grapheme support
 //!
-//! This crate provides comprehensive Unicode support through grapheme cluster handling,
-//! ensuring correct text manipulation regardless of character complexity.
+//! This crate provides comprehensive [`Unicode`] support through [`grapheme`] cluster
+//! handling, ensuring correct text manipulation regardless of character complexity.
 //!
 //! ## The Challenge
 //!
-//! Unicode text contains characters that may:
-//! - Occupy multiple bytes (UTF-8 encoding: 1-4 bytes per character)
+//! [`Unicode`] text contains characters that may:
+//! - Occupy multiple bytes ([`UTF-8`] encoding: 1-4 bytes per character)
 //! - Occupy multiple display columns (e.g., emoji take 2 columns, CJK characters)
 //! - Be composed of multiple codepoints (e.g., `👨🏾‍🤝‍👨🏿` is 5 codepoints combined)
 //!
 //! This creates a fundamental mismatch between:
-//! - **Memory layout** (byte indices in UTF-8)
+//! - **Memory layout** (byte indices in [`UTF-8`])
 //! - **Logical structure** (user-perceived characters)
 //! - **Visual display** (terminal column positions)
 //!
 //! Traditional string indexing fails with such text:
 //!
-//! ```rust,should_panic
+//! ```should_panic
 //! // Unsafe: byte indexing can split multi-byte characters
 //! let text = "Hello 👋🏽";  // Wave emoji with skin tone modifier
 //! let byte_len = text.len();        // 14 bytes (not 7 characters!)
@@ -1574,13 +1578,13 @@
 //!
 //! ## The Solution: Three Index Types
 //!
-//! The grapheme system uses three distinct index types to handle text correctly:
+//! The [`grapheme`] system uses three distinct index types to handle text correctly:
 //!
-//! - **[`ByteIndex`]** - Memory position (UTF-8 byte offset)
-//!    - For string slicing at valid UTF-8 boundaries
+//! - **[`ByteIndex`]** - Memory position ([`UTF-8`] byte offset)
+//!    - For string slicing at valid [`UTF-8`] boundaries
 //!    - Example: In "H😀!", 'H' at byte 0, '😀' at byte 1, '!' at byte 5
 //!
-//! - **[`SegIndex`]** - Logical position (grapheme cluster index)
+//! - **[`SegIndex`]** - Logical position ([`grapheme`] cluster index)
 //!    - For cursor movement and text editing
 //!    - Example: In "H😀!", 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
 //!
@@ -1605,9 +1609,9 @@
 //!
 //! ## Type-Safe String Handling
 //!
-//! Use [`GCStringOwned`] for grapheme-aware string operations:
+//! Use [`GCStringOwned`] for [`grapheme`]-aware string operations:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::*;
 //!
 //! let text = GCStringOwned::new("Hello 👋🏽");
@@ -1628,7 +1632,7 @@
 //!   - Accented letters: `é` (may be 1 or 2 codepoints)
 //!
 //! - **Display width calculation**: Accurately computes terminal column width
-//!   - ASCII: 'H' = 1 column
+//!   - [`ASCII`]: 'H' = 1 column
 //!   - Emoji: '😀' = 2 columns
 //!   - CJK: '中' = 2 columns
 //!
@@ -1647,17 +1651,17 @@
 //! - Complete API reference for [`GCStringOwned`]
 //!
 //! See the extensive and detailed [`graphemes` module
-//! documentation](mod@crate::core::graphemes) documentation.
+//! documentation] documentation.
 //!
 //! # Layout, rendering, and event handling
 //!
 //! The current render pipeline flow is:
-//! - Input Event → State generation → [App] renders to [`RenderOpIRVec`]
-//! - [`RenderOpIRVec`] → Rendered to [`OfsBuf`] ([`PixelChar`] grid)
-//! - [`OfsBuf`] → Diffed with previous buffer → Generate diff chunks
-//! - Diff chunks → Converted back to [`RenderOpOutputVec`] for painting
-//! - [`RenderOpOutputVec`] execution → Each op routed through crossterm backend
-//! - Crossterm → Converts to ANSI escape sequences → Queued to [`stdout`] → Flushed
+//! - Input Event → State generation → [App] renders to [`RenderOpIRVec`].
+//! - [`RenderOpIRVec`] → Rendered to [`OfsBuf`] ([`PixelChar`] grid).
+//! - [`OfsBuf`] → Diffed with previous buffer → Generate diff chunks.
+//! - Diff chunks → Converted back to [`RenderOpOutputVec`] for painting.
+//! - [`RenderOpOutputVec`] execution → Each op routed through [`crossterm`] backend.
+//! - Crossterm → Converts to [`ANSI`] escape sequences → Queued to [`stdout`] → Flushed.
 //!
 //! ```text
 //! ╭───────────────────────────────────────────────╮
@@ -1712,7 +1716,7 @@
 //!
 //! Versions of this crate <= `0.3.10` used shared memory to communicate between the
 //! background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
-//! from tokio. The state storage, mutation, subscription (on change handlers) were all
+//! from [`tokio`]. The state storage, mutation, subscription (on change handlers) were all
 //! managed by the [`r3bl_redux`] crate. The use of the Redux pattern, inspired by React,
 //! brought with it a lot of overhead both mentally and in terms of performance (since
 //! state changes needed to be cloned every time a change was made, and `memcpy` or
@@ -1965,7 +1969,7 @@
 //!   hierarchies
 //! - **Example**: Full-featured text editor, dashboard app, terminal multiplexer
 //! - **Pipeline**: [`RenderOpIRVec`] → [`OfsBuf`] → (diff) → [`RenderOpOutputVec`] →
-//!   [`PixelChar`] array → [`PixelCharRenderer`] → ANSI bytes → Terminal
+//!   [`PixelChar`] array → [`PixelCharRenderer`] → [`ANSI`] bytes → Terminal
 //! - **Benefits**:
 //!   - **High performance** through diff-based optimization (only changed pixels to
 //!     terminal)
@@ -1980,7 +1984,7 @@
 //! - **Use Case**: Simple interactive prompts, CLI tools with basic interaction,
 //!   partial-TUI
 //! - **Example**: Readline input, interactive selection menus ([`choose()`]), form inputs
-//! - **Pipeline**: [`CliTextInline`] → [`PixelChar`] array → [`PixelCharRenderer`] → ANSI
+//! - **Pipeline**: [`CliTextInline`] → [`PixelChar`] array → [`PixelCharRenderer`] → [`ANSI`]
 //!   bytes → Terminal
 //! - **Benefits**:
 //!   - **Simple, straightforward architecture** - easy to understand and maintain
@@ -1988,19 +1992,19 @@
 //!   - **Good for one-off interactions** - quick responses without composition overhead
 //! - **Trade-off**: Limited to simple interactive scenarios, no complex composition
 //!
-//! ## Unified ANSI Generation: [`PixelCharRenderer`]
+//! ## Unified [`ANSI`] Generation: [`PixelCharRenderer`]
 //!
-//! Both rendering paths ultimately need to convert styled text into ANSI escape
+//! Both rendering paths ultimately need to convert styled text into [`ANSI`] escape
 //! sequences. The [`PixelCharRenderer`] handles this conversion in a unified way across
 //! both paths:
 //!
-//! - **Input**: [`PixelChar`] (array of styled characters)
-//! - **Output**: Raw ANSI escape sequence bytes
+//! - **Input**: [`PixelChar`] (array of styled characters).
+//! - **Output**: Raw [`ANSI`] escape sequence bytes.
 //! - **Features**:
-//!   - Smart style diffing (~30% output reduction by only emitting ANSI codes when styles
-//!     change)
-//!   - Proper handling of Unicode/emoji width
-//!   - Used by both composed and direct rendering paths
+//!   - Smart style diffing (~30% output reduction by only emitting [`ANSI`] codes when styles
+//!     change).
+//!   - Proper handling of [`Unicode`]/emoji width.
+//!   - Used by both composed and direct rendering paths.
 //!
 //! This enables:
 //! - **Composed Path**: [`RenderOpOutputVec`] execution → [`PixelCharRenderer`] → bytes
@@ -2016,7 +2020,8 @@
 //! - **Separation of concerns**: Lifecycle operations are kept entirely separate from UI
 //!   components and the `RenderOp` queue.
 //! - **Implementations**: The main implementation is on [`OutputDevice`], which delegates
-//!   raw mode calls to [`terminal_raw_mode`] and writes ANSI mode-setting bytes directly.
+//!   raw mode calls to [`terminal_raw_mode`] and writes [`ANSI`] mode-setting bytes
+//!   directly.
 //! - **Panic-Safety**: Global setups like `enter_raw_mode` and alternate screen are
 //!   wrapped in [`RAII`] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
 //!   to ensure the terminal state is always correctly restored upon exit or panic.
@@ -2026,16 +2031,16 @@
 //! For direct rendering paths, [`CliTextInline`] represents a fragment of text with
 //! styling information:
 //!
-//! - Text content
-//! - Foreground color
-//! - Background color
-//! - Text attributes (bold, italic, underline, etc.)
-//! - Display-width aware (handles Unicode grapheme clusters correctly)
+//! - Text content.
+//! - Foreground color.
+//! - Background color.
+//! - Text attributes (bold, italic, underline, etc.).
+//! - Display-width aware (handles [`Unicode`] [`grapheme`] clusters correctly).
 //!
 //! When converted to a string (via the [`FastStringify`] trait), it automatically:
-//! - Converts to [`PixelChar`] array
-//! - Uses [`PixelCharRenderer`] to generate ANSI bytes
-//! - Automatically resets styles at the end
+//! - Converts to [`PixelChar`] array.
+//! - Uses [`PixelCharRenderer`] to generate [`ANSI`] bytes.
+//! - Automatically resets styles at the end.
 //!
 //! This hidden conversion enables ergonomic styling in interactive components without
 //! requiring explicit knowledge of the underlying rendering machinery.
@@ -2044,10 +2049,10 @@
 //!
 //! Interactive components (Path 2) use [`OutputDevice`] for coordinated terminal output:
 //!
-//! - Provides atomic write operations to [`stdout`]
-//! - Handles mutual exclusion between components to prevent interspersed output
-//! - Abstracts over raw [`std::io::Stdout`]
-//! - Integrates with both crossterm commands and raw ANSI bytes
+//! - Provides atomic write operations to [`stdout`].
+//! - Handles mutual exclusion between components to prevent interspersed output.
+//! - Abstracts over raw [`std::io::Stdout`].
+//! - Integrates with both [`crossterm`] commands and raw [`ANSI`] bytes.
 //!
 //! This allows multiple components to safely write to the terminal without race
 //! conditions or interleaved output.
@@ -2099,7 +2104,7 @@
 //!   terminals don't support emojis, so there's a discrepancy between the display width
 //!   of the character and its index in the string.
 //! - **Plain text**. This is a normal pixel which wraps a single character that maybe a
-//!   grapheme cluster segment. Styling information is encoded in each
+//!   [`grapheme`] cluster segment. Styling information is encoded in each
 //!   `PixelChar::PlainText` and is used to paint the screen via the diffing algorithm
 //!   which is smart enough to "stack" styles that appear beside each other for quicker
 //!   rendering in terminals.
@@ -2299,15 +2304,15 @@
 //! all rendering in the composed component pipeline (Path 1). Once the first render
 //! occurs, the [`OfsBuf`] that is generated is saved to [`GlobalData`]. The following
 //! table shows the various tasks that have to be performed in order to render to an
-//! [`OfsBuf`]. There is a different code path that is taken for ANSI text and plain text
+//! [`OfsBuf`]. There is a different code path that is taken for [`ANSI`] text and plain text
 //! (which includes [`TuiStyledText`] which is just plain text with a color). Syntax
 //! highlighted text is also just [`TuiStyledText`].
 //!
-//! | UTF-8 | Task                                                                                         |
-//! |:------|:---------------------------------------------------------------------------------------------|
-//! | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OfsBuf`])                     |
-//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to [`stdout`] using [`paint_impl`] |
-//! | Y     | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                     |
+//! | [`UTF-8`] | Task                                                                                           |
+//! | :-------- | :--------------------------------------------------------------------------------------------- |
+//! | Y         | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OfsBuf`])                       |
+//! | Y         | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to [`stdout`] using [`paint_impl`]   |
+//! | Y         | save the `List<List<`[`PixelChar`]`>>` to [`GlobalData`]                                       |
 //!
 //! Currently [`crossterm`] and [`direct_to_ansi`] are supported for actually painting to
 //! the terminal. But this process is really simple making it very easy to swap out other
@@ -2347,16 +2352,16 @@
 //!
 //! ## [`direct_to_ansi`] backend (Linux-native)
 //!
-//! [`direct_to_ansi`] is a pure-Rust ANSI sequence generator that bypasses external
+//! [`direct_to_ansi`] is a pure-Rust [`ANSI`] sequence generator that bypasses external
 //! terminal libraries. It provides:
 //!
-//! - **Output (all platforms)**: Generates raw ANSI escape sequences directly
+//! - **Output (all platforms)**: Generates raw [`ANSI`] escape sequences directly
 //! - **Input (Linux only)**: Uses [`mio`] for async [`stdin`] polling (macOS [`kqueue`]
-//!   doesn't support PTY/tty polling)
-//! - **OSC Support**: Outbound sequences (`stdout`) work cross-platform. Inbound query
-//!   replies (`stdin`) require [`direct_to_ansi`] on Linux; Crossterm on macOS/Windows
-//!   does not support OSC parsing. For details, see
-//!   [Platform & Backend Availability][osc-platform-support].
+//!   doesn't support [`PTY`]/tty polling)
+//! - **[`OSC`] Support**: Outbound sequences ([`stdout`]) work cross-platform. Inbound
+//!   query replies ([`stdin`]) require [`direct_to_ansi`] on Linux; Crossterm on
+//!   macOS/Windows does not support [`OSC`] parsing. For details, see [Platform & Backend
+//!   Availability][osc-platform-support].
 //!
 //! **Performance benefits** (measured on Linux with 8-second workload, 999Hz sampling):
 //!
@@ -2369,10 +2374,10 @@
 //! - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
 //! - **[`direct_to_ansi`]**: When targeting Linux and want maximum performance
 //!
-//! ## Terminal Input Capabilities: Legacy VT-100 vs. Kitty Keyboard Protocol
+//! ## Terminal Input Capabilities: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
 //!
 //! In terminal applications, input handling is inherently split between traditional
-//! legacy VT-100 conventions (which date back to 1978 and lack distinction for many key
+//! legacy [`VT-100`] conventions (which date back to 1978 and lack distinction for many key
 //! combinations) and modern enhanced protocols like the [Kitty Keyboard Protocol].
 //!
 //! ### Sans-IO Protocol Architecture
@@ -2394,38 +2399,31 @@
 //! The following matrix establishes the ground truth for input handling capabilities
 //! across both modes in `r3bl_tui`:
 //!
-//! | Keystroke / Protocol Event                         | Legacy VT-100 / xterm (Default)                  | Kitty Keyboard Protocol (`CSI u`)           | Technical Reason & Ambiguity                                   |
-//! | :------------------------------------------------- | :----------------------------------------------- | :------------------------------------------ | :------------------------------------------------------------- |
-//! | **Standard Characters (`a-z`, `0-9`, UTF-8)**      | Yes: Supported (`UTF-8` bytes)                  | Yes: Supported (`UTF-8` bytes)               | Unambiguous in both modes.                                     |
-//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**      | Yes: Supported (`0x01` .. `0x1A`)               | Yes: Supported                               | Standard ASCII control characters.                             |
-//! | **Enter / Return**                                 | Yes: Supported (`\r`, `0x0D`)                   | Yes: Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                      |
-//! | **`Shift + Enter`**                                | No:  **Collides with Enter** (`\r`)             | Yes: **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.               |
-//! | **Tab**                                            | Yes: Supported (`\t`, `0x09`)                   | Yes: Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                       |
-//! | **`Shift + Tab` (`BackTab`)**                      | Yes: Supported (`ESC [ Z`)                      | Yes: Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                        |
-//! | **`Ctrl + Tab`**                                   | No:  **Collides with Tab** (`\t`)               | Yes: **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.               |
-//! | **Distinct `Ctrl+I` vs. `Tab`**                    | No:  **Indistinguishable** (`0x09`)             | Yes: **Supported** (distinct codepoints)     | ASCII `Ctrl+I` is literally `0x09` (`Tab`).                    |
-//! | **Distinct `Ctrl+M` vs. `Enter`**                  | No:  **Indistinguishable** (`0x0D`)             | Yes: **Supported** (distinct codepoints)     | ASCII `Ctrl+M` is literally `0x0D` (`Enter`).                  |
-//! | **Standalone `Escape` Key**                        | Yes: Supported (0ms latency)                    | Yes: Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; Kitty is unambiguous.  |
-//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)** | Yes: Supported (`CSI` / `SS3`)                  | Yes: Supported (`CSI` / `CSI u`)             | Standard xterm / VT220 sequences.                              |
-//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**  | Yes: Supported (`ESC [ 1 ; <m> <final>`)        | Yes: Supported                               | Standard xterm parameter encoding.                             |
-//! | **Function Keys (`F1` .. `F12`)**                  | Yes: Supported (VT220 `~` / `SS3`)              | Yes: Supported                               | Standard escape encodings.                                     |
-//! | **`Alt + Key` (Letters & Digits)**                 | Yes: Supported (`ESC <char>`)                   | Yes: Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                   |
-//! | **`Alt + ]` (OSC Prefix Collision)**               | Yes: **Solved in Step 8** (`scan_osc_sequence`) | Yes: **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.   |
-//! | **`Alt + [` (CSI Prefix Collision)**               | No:  **Unresolvable in Legacy**                 | Yes: **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to `CSI` (`\x1b[`).  |
-//! | **Terminal OSC Query Replies (Theme, Clipboard)**  | Yes: **Solved in Step 8** (Framed & Absorbed)   | Yes: Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage (Linux `direct_to_ansi`). |
-//! | **OSC 52 Clipboard Copy (SSH & Headless)**         | Yes: **Solved in Step 10** (`Osc52Clipboard`)   | Yes: Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable. |
-//! | **Key Release & Repeat Events**                    | No: Unsupported by VT-100                       | Yes: Supported (via Kitty Flag 2)            | Legacy terminals only report key press down events.            |
+//! | Keystroke / Protocol Event                            | Legacy [`VT-100`] / [`xterm`] (Default)         | [`Kitty`] Keyboard Protocol (`CSI u`)        | Technical Reason & Ambiguity                                                            |
+//! | :---------------------------------------------------- | :---------------------------------------------- | :------------------------------------------- | :-------------------------------------------------------------------------------------- |
+//! | **Standard Characters (`a-z`, `0-9`, [`UTF-8`])**     | Yes: Supported ([`UTF-8`] bytes)                | Yes: Supported ([`UTF-8`] bytes)             | Unambiguous in both modes.                                                              |
+//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**         | Yes: Supported (`0x01` .. `0x1A`)               | Yes: Supported                               | Standard [`ASCII`] control characters.                                                  |
+//! | **Enter / Return**                                    | Yes: Supported (`\r`, `0x0D`)                   | Yes: Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                                               |
+//! | **`Shift + Enter`**                                   | No:  **Collides with Enter** (`\r`)             | Yes: **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.                                        |
+//! | **Tab**                                               | Yes: Supported (`\t`, `0x09`)                   | Yes: Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                                                |
+//! | **`Shift + Tab` (`BackTab`)**                         | Yes: Supported (`ESC [ Z`)                      | Yes: Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                                                 |
+//! | **`Ctrl + Tab`**                                      | No:  **Collides with Tab** (`\t`)               | Yes: **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.                                        |
+//! | **Distinct `Ctrl+I` vs. `Tab`**                       | No:  **Indistinguishable** (`0x09`)             | Yes: **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+I` is literally `0x09` (`Tab`).                                         |
+//! | **Distinct `Ctrl+M` vs. `Enter`**                     | No:  **Indistinguishable** (`0x0D`)             | Yes: **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+M` is literally `0x0D` (`Enter`).                                       |
+//! | **Standalone `Escape` Key**                           | Yes: Supported (0ms latency)                    | Yes: Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; [`Kitty`] is unambiguous.                       |
+//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)**    | Yes: Supported ([`CSI`] / `SS3`)                | Yes: Supported ([`CSI`] / `CSI u`)           | Standard [`xterm`] / VT220 sequences.                                                   |
+//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**     | Yes: Supported (`ESC [ 1 ; <m> <final>`)        | Yes: Supported                               | Standard [`xterm`] parameter encoding.                                                  |
+//! | **Function Keys (`F1` .. `F12`)**                     | Yes: Supported (VT220 `~` / `SS3`)              | Yes: Supported                               | Standard escape encodings.                                                              |
+//! | **`Alt + Key` (Letters & Digits)**                    | Yes: Supported (`ESC <char>`)                   | Yes: Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                                            |
+//! | **`Alt + ]` ([`OSC`] Prefix Collision)**              | Yes: **Solved in Step 8** (`scan_osc_sequence`) | Yes: **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.                            |
+//! | **`Alt + [` ([`CSI`] Prefix Collision)**              | No:  **Unresolvable in Legacy**                 | Yes: **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to [`CSI`] (`\x1b[`).                         |
+//! | **Terminal [`OSC`] Query Replies (Theme, Clipboard)** | Yes: **Solved in Step 8** (Framed & Absorbed)   | Yes: Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage (Linux `direct_to_ansi`). |
+//! | **[`OSC`] 52 Clipboard Copy (SSH & Headless)**        | Yes: **Solved in Step 10** (`Osc52Clipboard`)   | Yes: Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable.                          |
+//! | **Key Release & Repeat Events**                       | No: Unsupported by [`VT-100`]                   | Yes: Supported (via [`Kitty`] Flag 2)        | Legacy terminals only report key press down events.                                     |
 //!
 //! For deeper protocol architecture and parser implementation, see the
 //! [`vt_100_terminal_input_parser`] module.
 //!
-//! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
-//! [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
-//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`direct_to_ansi`]: crate::direct_to_ansi
-//! [`mio`]: https://docs.rs/mio
-//! [`pty_mux`]: crate::core::pty_mux
-//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
 //!
 //! ## Architecture
 //!
@@ -2445,12 +2443,12 @@
 //! consistent behavior across backends while allowing platform-specific optimizations.
 //!
 //! **Functional equivalence**: Both backends are verified to produce identical results
-//! through comprehensive PTY-based compatibility tests. The [`backend_compat_tests`]
+//! through comprehensive [`PTY`]-based compatibility tests. The [`backend_compat_tests`]
 //! module spawns controlled processes in real PTYs and compares:
 //!
 //! - **Input handling**: Both backends parse the same terminal input sequences
 //!   identically
-//! - **Output rendering**: Both backends generate equivalent ANSI escape sequences
+//! - **Output rendering**: Both backends generate equivalent [`ANSI`] escape sequences
 //!
 //! This ensures you can switch backends without changing application behavior — only
 //! performance characteristics differ.
@@ -2518,10 +2516,10 @@
 //! For comprehensive documentation including I/O backend compatibility, [`io_uring`]
 //! support, and implementation examples, see [`resilient_reactor_thread`].
 //!
-//! # `VT-100`/ANSI escape sequence handling
+//! # [`VT-100`]/[`ANSI`] escape sequence handling
 //!
-//! The TUI engine includes comprehensive `VT-100`/ANSI escape sequence parsing for both
-//! terminal input (keyboard, mouse events) and terminal output (PTY child processes).
+//! The TUI engine includes comprehensive [`VT-100`]/[`ANSI`] escape sequence parsing for both
+//! terminal input (keyboard, mouse events) and terminal output ([`PTY`] child processes).
 //!
 //! ## Input parsing
 //!
@@ -2542,19 +2540,19 @@
 //!
 //! **Supported input types:**
 //!
-//! | Module            | What It Parses                                          |
-//! | ----------------- | ------------------------------------------------------- |
-//! | `keyboard`        | Arrow keys, function keys, modifiers (Shift/Ctrl/Alt)   |
-//! | `mouse`           | SGR, X10, RXVT protocols; clicks, drags, scroll, motion |
-//! | `terminal_events` | Window resize, focus gained/lost, bracketed paste       |
-//! | `utf8`            | UTF-8 text between ANSI sequences                       |
+//! | Module            | What It Parses                                                      |
+//! | ----------------- | ------------------------------------------------------------------- |
+//! | `keyboard`        | Arrow keys, function keys, modifiers (Shift/Ctrl/Alt)               |
+//! | `mouse`           | [`SGR`], [`X10`], [`RXVT`] protocols; clicks, drags, scroll, motion |
+//! | `terminal_events` | Window resize, focus gained/lost, bracketed paste                   |
+//! | `utf8`            | [`UTF-8`] text between [`ANSI`] sequences                           |
 //!
 //! **Design principle**: The parser is **IO-free** — it processes byte slices without any
 //! I/O operations, making it easy to test and reuse across different backends.
 //!
 //! ## Output parsing
 //!
-//! The [`vt_100_pty_output_parser`] module processes ANSI sequences from PTY child
+//! The [`vt_100_pty_output_parser`] module processes [`ANSI`] sequences from [`PTY`] child
 //! processes (like `bash`, `vim`, etc.) and updates the terminal display state:
 //!
 //! ```text
@@ -2571,14 +2569,14 @@
 //! OfsBuf (cursor, text, styles)
 //! ```
 //!
-//! This enables the terminal multiplexer to correctly render output from any `VT-100`-
-//! compatible program running in a PTY.
+//! This enables the terminal multiplexer to correctly render output from any [`VT-100`]-
+//! compatible program running in a [`PTY`].
 //!
 //! ## In-memory terminal emulation
 //!
 //! [`OfsBuf`] can function as a **standalone in-memory terminal emulator**. By calling
-//! [`OfsBufVT100::apply_ansi_bytes()`], you can feed raw `VT-100` ANSI escape sequences
-//! directly into the buffer — no real terminal or PTY required:
+//! [`OfsBufVT100::apply_ansi_bytes()`], you can feed raw [`VT-100`] [`ANSI`] escape sequences
+//! directly into the buffer — no real terminal or [`PTY`] required:
 //!
 //! <!-- It is ok to use ignore here - demonstrates API usage with types not importable
 //! in doctests -->
@@ -2602,21 +2600,21 @@
 //! - **Diffing**: Compare output between backends or program versions
 //! - **Screen capture**: Snapshot terminal state at any point
 //! - **Terminal emulation**: Build terminal emulators using the same battle-tested
-//!   `VT-100` parser that powers the terminal multiplexer
+//!   [`VT-100`] parser that powers the terminal multiplexer
 //!
 //! **How `r3bl_tui` uses this for testing:**
 //!
 //! The [`backend_compat_tests`] use in-memory terminal emulation to verify that
 //! [`crossterm`] and [`direct_to_ansi`] backends produce identical output. Tests spawn
-//! controlled processes in real PTYs, capture their ANSI output, apply it to [`OfsBuf`]s,
+//! controlled processes in real PTYs, capture their [`ANSI`] output, apply it to [`OfsBuf`]s,
 //! and compare the resulting screen state — all without needing to visually inspect
 //! terminal output.
 //!
 //! This is the same mechanism that powers [`PTYMux`] — each managed process gets its own
-//! [`OfsBuf`] that continuously receives and renders ANSI output, enabling instant
+//! [`OfsBuf`] that continuously receives and renders [`ANSI`] output, enabling instant
 //! switching between processes with fully preserved screen state.
 //!
-//! ## Key `VT-100` references
+//! ## Key [`VT-100`] references
 //!
 //! - Input coordinates are **1-based** (terminal standard), converted to 0-based
 //!   internally
@@ -2636,18 +2634,18 @@
 //!
 //! ## Raw mode vs cooked mode
 //!
-//! | Aspect             | Cooked Mode (default)               | Raw Mode                          |
-//! | ------------------ | ----------------------------------- | --------------------------------- |
-//! | Input buffering    | Line-buffered (waits for Enter)     | Immediate byte-by-byte            |
-//! | Special characters | Interpreted (Ctrl+C sends `SIGINT`) | Pass through as bytes             |
-//! | Echo               | Typed characters appear on screen   | No automatic echo                 |
-//! | Use case           | Normal terminal interaction         | TUI apps, escape sequence parsing |
+//! | Aspect             | Cooked Mode (default)                 | Raw Mode                          |
+//! | ------------------ | ------------------------------------- | --------------------------------- |
+//! | Input buffering    | Line-buffered (waits for Enter)       | Immediate byte-by-byte            |
+//! | Special characters | Interpreted (Ctrl+C sends [`SIGINT`]) | Pass through as bytes             |
+//! | Echo               | Typed characters appear on screen     | No automatic echo                 |
+//! | Use case           | Normal terminal interaction           | TUI apps, escape sequence parsing |
 //!
 //! ## Platform implementations
 //!
 //! **Linux/macOS** (via [`rustix`]):
 //!
-//! Uses Rust's [`rustix`] crate for type-safe termios manipulation:
+//! Uses Rust's [`rustix`] crate for type-safe [`termios`] manipulation:
 //!
 //! <!-- It is ok to use ignore here - shows rustix API patterns, not a complete
 //! runnable example -->
@@ -2701,22 +2699,22 @@
 //! - [`terminal_raw_mode`] - Main documentation
 //! - [`raw_mode_unix`] - Linux/macOS impl
 //!
-//! # PTY testing infrastructure
+//! # [`PTY`] testing infrastructure
 //!
 //! Testing TUI applications is challenging because they interact with terminal I/O in
-//! complex ways. The PTY testing infrastructure provides controlled environments for
+//! complex ways. The [`PTY`] testing infrastructure provides controlled environments for
 //! accurate end-to-end testing.
 //!
-//! ## Why PTY testing?
+//! ## Why [`PTY`] testing?
 //!
 //! Traditional unit tests can't verify:
 //!
 //! - Raw mode behavior (requires actual terminal)
-//! - ANSI escape sequence round-trips
+//! - [`ANSI`] escape sequence round-trips
 //! - Terminal resize handling
 //! - Input/output synchronization
 //!
-//! PTY tests solve this by creating real pseudoterminals where tests act as both the
+//! [`PTY`] tests solve this by creating real pseudoterminals where tests act as both the
 //! "terminal emulator" (controller) and the "application" (controlled).
 //!
 //! ## Architecture
@@ -2750,7 +2748,7 @@
 //!
 //! ## The `generate_pty_test!` macro
 //!
-//! Use this macro for single-feature PTY tests:
+//! Use this macro for single-feature [`PTY`] tests:
 //!
 //! <!-- It is ok to use ignore here - macro invocation requires test context and
 //! controller/controlled functions -->
@@ -2770,7 +2768,7 @@
 //! The macro handles:
 //!
 //! 1. **Process routing**: Environment variable detects controller vs controlled role
-//! 2. **PTY setup**: Creates 24x80 PTY pair automatically
+//! 2. **[`PTY`] setup**: Creates 24x80 [`PTY`] pair automatically
 //! 3. **Child spawning**: Runs test binary as controlled process
 //!
 //! ## Controller and controlled functions
@@ -2779,27 +2777,27 @@
 //!
 //! - Receives [`PtyTestContext`] which bundles [`pty_pair`], [`child`], [`buf_reader`],
 //!   and [`writer`]
-//! - Sends input via PTY writer
-//! - Reads output via PTY reader
+//! - Sends input via [`PTY`] writer
+//! - Reads output via [`PTY`] reader
 //! - Performs assertions
 //! - Performs [`PtyTestChild::drain_and_wait()`] cleanup
 //!
 //! **Controlled** (runs in spawned child):
 //!
-//! - Executes test logic in PTY environment
+//! - Executes test logic in [`PTY`] environment
 //! - Must call `std::process::exit(0)` when done
 //! - Manages raw mode if needed
 //!
 //! ## When to use each approach
 //!
-//! | Scenario                                         | Tool                        |
-//! | ------------------------------------------------ | --------------------------- |
-//! | Testing a single feature in PTY environment      | `generate_pty_test!` macro  |
-//! | Comparing two backends produce identical results | `spawn_controlled_in_pty()` |
-//! | One test, one controlled process                 | `generate_pty_test!` macro  |
-//! | One test, multiple controlled processes          | `spawn_controlled_in_pty()` |
+//! | Scenario                                         | Tool                          |
+//! | ------------------------------------------------ | ----------------------------- |
+//! | Testing a single feature in [`PTY`] environment  | [`generate_pty_test!`] macro  |
+//! | Comparing two backends produce identical results | [`spawn_controlled_in_pty()`] |
+//! | One test, one controlled process                 | [`generate_pty_test!`] macro  |
+//! | One test, multiple controlled processes          | [`spawn_controlled_in_pty()`] |
 //!
-//! ## Running PTY tests
+//! ## Running [`PTY`] tests
 //!
 //! ```bash
 //! # Run a specific PTY test
@@ -2809,10 +2807,10 @@
 //! cargo test -p r3bl_tui integration_tests -- --nocapture
 //! ```
 //!
-//! **Note**: PTY tests run with `--nocapture` to see debug output from both controller
+//! **Note**: [`PTY`] tests run with `--nocapture` to see debug output from both controller
 //! and controlled processes.
 //!
-//! ## PTY testing examples
+//! ## [`PTY`] testing examples
 //!
 //! For complete implementations, see:
 //!
@@ -2869,19 +2867,19 @@
 //!
 //! **Zero-copy access**: Read operations return [`&str`] slices directly into the buffer
 //! without allocation or copying:
-//! - [`ZeroCopyGapBuffer::as_str()`] access: **0.19 ns** (essentially free)
-//! - [`ZeroCopyGapBuffer::get_line_content()`]: **0.37 ns** (direct pointer return)
-//! - Perfect for markdown parsing and text rendering hot paths
+//! - [`ZeroCopyGapBuffer::as_str()`] access: **0.19 ns** (essentially free).
+//! - [`ZeroCopyGapBuffer::get_line_content()`]: **0.37 ns** (direct pointer return).
+//! - Perfect for markdown parsing and text rendering hot paths.
 //!
-//! **Efficient Unicode handling**: All text operations are grapheme-cluster aware:
-//! - Handles emojis, combining characters, and complex scripts correctly
-//! - Insert operations: **88-408 ns** depending on content complexity
-//! - Delete operations: **128-559 ns** for various deletion scenarios
+//! **Efficient [`Unicode`] handling**: All text operations are [`grapheme`]-cluster aware:
+//! - Handles emojis, combining characters, and complex scripts correctly.
+//! - Insert operations: **88-408 ns** depending on content complexity.
+//! - Delete operations: **128-559 ns** for various deletion scenarios.
 //!
 //! **Scalable line management**: Dynamic growth with predictable performance:
-//! - Lines start at 256 bytes, grow in 256-byte pages as needed
-//! - Adding 100 lines: **~16 ns per line**
-//! - Line capacity extension: **12 ns**
+//! - Lines start at 256 bytes, grow in 256-byte pages as needed.
+//! - Adding 100 lines: **~16 ns per line**.
+//! - Line capacity extension: **12 ns**.
 //!
 //! ### Storage Architecture
 //!
@@ -2891,17 +2889,17 @@
 //! ```
 //!
 //! This enables:
-//! - **In-place editing**: No allocations for small edits
-//! - **Safe slicing**: Null padding ensures valid UTF-8 boundaries
-//! - **Zero-copy parsing**: Direct [`&str`] access for syntax highlighting and rendering
+//! - **In-place editing**: No allocations for small edits.
+//! - **Safe slicing**: Null padding ensures valid [`UTF-8`] boundaries.
+//! - **Zero-copy parsing**: Direct [`&str`] access for syntax highlighting and rendering.
 //!
-//! ### UTF-8 Safety Strategy
+//! ### [`UTF-8`] Safety Strategy
 //!
 //! The implementation uses a **"validate once, trust thereafter"** approach:
-//! - **Input validation**: Rust's [`&str`] type guarantees UTF-8 at API boundaries
+//! - **Input validation**: Rust's [`&str`] type guarantees [`UTF-8`] at API boundaries.
 //! - **Zero-copy reads**: `unsafe { from_utf8_unchecked() }` in hot paths for maximum
-//!   performance
-//! - **Debug validation**: Development builds verify UTF-8 invariants
+//!   performance.
+//! - **Debug validation**: Development builds verify [`UTF-8`] invariants.
 //!
 //! This provides both safety (through type system guarantees) and performance (zero
 //! validation overhead in production).
@@ -2909,8 +2907,8 @@
 //! ### Optimization: Append Detection
 //!
 //! End-of-line append operations are detected and optimized:
-//! - Single character append: **1.48 ns** (68x faster than full rebuild)
-//! - Word append: **2.91 ns** (94x faster than full rebuild)
+//! - Single character append: **1.48 ns** (68x faster than full rebuild).
+//! - Word append: **2.91 ns** (94x faster than full rebuild).
 //!
 //! This makes typing at the end of lines (the most common editing pattern) extremely
 //! fast.
@@ -2918,10 +2916,10 @@
 //! ### Learn More
 //!
 //! For comprehensive implementation details including:
-//! - Complete benchmark results across all operation types
-//! - Null-padding invariant and safety guarantees
-//! - Segment rebuilding strategies
-//! - Dynamic growth algorithms
+//! - Complete benchmark results across all operation types.
+//! - Null-padding invariant and safety guarantees.
+//! - Segment rebuilding strategies.
+//! - Dynamic growth algorithms.
 //!
 //! See the detailed and extensive [`zero_copy_gap_buffer` module documentation].
 //!
@@ -2933,10 +2931,10 @@
 //! ### Key Features
 //!
 //! **Standard markdown support**:
-//! - Headings, bold, italic, links, images
-//! - Ordered and unordered lists with smart indentation tracking
-//! - Fenced code blocks with syntax highlighting
-//! - Inline code, checkboxes
+//! - Headings, bold, italic, links, images.
+//! - Ordered and unordered lists with smart indentation tracking.
+//! - Fenced code blocks with syntax highlighting.
+//! - Inline code, checkboxes.
 //!
 //! **R3BL extensions** for enhanced document metadata:
 //! - `@title: <text>` - Document title metadata
@@ -2982,37 +2980,36 @@
 //!
 //! The parser works seamlessly with the editor's syntax highlighting through several key
 //! functions:
-//! - [`try_parse_and_highlight`] - Main entry point for parsing and syntax highlighting
-//! - [`parse_markdown()`] - Core parser that produces the [`MdDocument`] AST
+//! - [`try_parse_and_highlight`] - Main entry point for parsing and syntax highlighting.
+//! - [`parse_markdown()`] - Core parser that produces the [`MdDocument`] AST.
 //! - [`parse_smart_list`] - Specialized parser for multi-line list handling
-//! - Code blocks use [`syntect`] via
-//!   [`render_engine()`](crate::editor_engine::engine_public_api::render_engine) for
-//!   syntax highlighting
-//! - The styled content is rendered through the standard [`RenderPipeline`]
+//! - Code blocks use [`syntect`] via [`render_engine()`] for syntax highlighting.
+//! - The styled content is rendered through the standard [`RenderPipeline`].
 //!
 //! ### Performance Characteristics
 //!
 //! The parser was chosen after extensive benchmarking against alternatives (including
 //! `markdown-rs`):
-//! - **Streaming parser**: Built with [`nom`] ([nom tutorial]) for efficient memory usage
-//! - **Low CPU overhead**: No unnecessary allocations or copies
-//! - **Proven reliability**: Powers all markdown rendering in `r3bl_tui`
+//! - **Streaming parser**: Built with [`nom`] ([nom tutorial]) for efficient memory
+//!   usage.
+//! - **Low CPU overhead**: No unnecessary allocations or copies.
+//! - **Proven reliability**: Powers all markdown rendering in `r3bl_tui`.
 //!
 //! ### Learn More
 //!
 //! For comprehensive implementation details including:
-//! - Complete parser composition diagrams
-//! - Detailed explanation of the priority system
-//! - "Catch-all" parser edge case handling
-//! - Full conformance test suite documentation
+//! - Complete parser composition diagrams.
+//! - Detailed explanation of the priority system.
+//! - "Catch-all" parser edge case handling.
+//! - Full conformance test suite documentation.
 //!
 //! See:
-//! - The [`parse_markdown()`] function entry point
-//! - The detailed [`md_parser` module documentation](crate::tui::md_parser)
-//! - [Blog post: Building a Markdown Parser in Rust]
-//! - [Video: Markdown Parser Deep Dive]
+//! - The [`parse_markdown()`] function entry point.
+//! - The detailed [`md_parser` module documentation].
+//! - [Blog post: Building a Markdown Parser in Rust].
+//! - [Video: Markdown Parser Deep Dive].
 //!
-//! # Terminal Multiplexer with `VT-100` ANSI Parsing
+//! # Terminal Multiplexer with [`VT-100`] [`ANSI`] Parsing
 //!
 //! The [`PTYMux`] module provides tmux-like functionality with **universal
 //! compatibility** for all programs: TUI applications, interactive shells, and
@@ -3022,22 +3019,22 @@
 //!
 //! **Per-process virtual terminals**: Each process maintains its own [`OfsBuf`] that acts
 //! as a complete virtual terminal, enabling:
-//! - **Instant switching** between processes (F1-F9) - no delays or rendering artifacts
-//! - **Independent state**: Each process's screen state is fully preserved
+//! - **Instant switching** between processes (F1-F9) - no delays or rendering artifacts.
+//! - **Independent state**: Each process's screen state is fully preserved.
 //! - **True multiplexing**: All processes update their buffers continuously, only the
 //!   active one is displayed
 //!
 //! **Universal program support**:
-//! - Interactive shells (bash, zsh, fish)
-//! - TUI applications (vim, htop, any `r3bl_tui` app)
-//! - Command-line tools (compilers, build systems)
-//! - All programs that use terminal output
+//! - Interactive shells (bash, zsh, fish).
+//! - TUI applications (vim, htop, any `r3bl_tui` app).
+//! - Command-line tools (compilers, build systems).
+//! - All programs that use terminal output.
 //!
 //! **Advanced features**:
-//! - Dynamic keyboard shortcuts (F-keys based on process count)
-//! - Status bar with live process information
-//! - OSC sequence support for dynamic terminal titles
-//! - Clean resource management (PTY cleanup, raw mode handling)
+//! - Dynamic keyboard shortcuts (F-keys based on process count).
+//! - Status bar with live process information.
+//! - [`OSC`] sequence support for dynamic terminal titles.
+//! - Clean resource management ([`PTY`] cleanup, raw mode handling).
 //!
 //! ### Architecture: The Virtual Terminal Pipeline
 //!
@@ -3059,17 +3056,17 @@
 //!                                  ╰────────────────╯
 //! ```
 //!
-//! ### `VT-100` ANSI Parser Implementation
+//! ### [`VT-100`] [`ANSI`] Parser Implementation
 //!
-//! The parser provides comprehensive `VT-100` compliance using the [`vte`] crate (same as
-//! Alacritty):
+//! The parser provides comprehensive [`VT-100`] compliance using the [`vte`] crate (same as
+//! [`Alacritty`]):
 //!
 //! **Supported sequences**:
-//! - **CSI sequences**: Cursor movement, text styling, scrolling, device control
-//! - **ESC sequences**: Simple escape commands, character set selection
-//! - **OSC sequences**: Operating system commands (window titles, etc.)
+//! - **[`CSI`] sequences**: Cursor movement, text styling, scrolling, device control
+//! - **[`ESC`] sequences**: Simple escape commands, character set selection
+//! - **[`OSC`] sequences**: Operating system commands (window titles, etc.)
 //! - **Control characters**: Backspace, tab, line feed, carriage return
-//! - **SGR codes**: Text styling (colors, bold, italic, underline)
+//! - **[`SGR`] codes**: Text styling (colors, bold, italic, underline)
 //!
 //! **Three-layer architecture** for maintainability:
 //! ```text
@@ -3114,10 +3111,10 @@
 //! ### Learn More
 //!
 //! For comprehensive implementation details including:
-//! - Complete `VT-100` sequence support matrix
+//! - Complete [`VT-100`] sequence support matrix
 //! - Virtual terminal state management
 //! - Process lifecycle and resource cleanup
-//! - `VT-100` conformance test suite
+//! - [`VT-100`] conformance test suite
 //!
 //! See the detailed [`pty_mux` module documentation] and [`vt_100_pty_output_parser`]
 //! documentation.
@@ -3251,7 +3248,7 @@
 //!
 //! This [`crate::Lolcat`] that is returned by `build()` is safe to re-use.
 //! - The colors it cycles through are "stable" meaning that once constructed via the
-//!   [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
+//!   [builder] (which sets the speed, seed, and delta that
 //!   determine where the color wheel starts when it is used). For eg, when used in a
 //!   dialog box component that re-uses the instance, repeated calls to the `render()`
 //!   function of this component will produce the same generated colors over and over
@@ -3266,327 +3263,324 @@
 //!
 //! <!-- Type references for documentation links -->
 //!
-//! [Rule of Thumb for 1D vs 2D Memory Iteration]:
-//!     crate::core::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
-//! [`Flat1DSimd`]: crate::core::Flat1DSimd
-//! [SIMD]: https://en.wikipedia.org/wiki/SIMD
-//! [`fast_strings`]:
-//!     mod@crate::core::common::fast_strings#string-allocation-performance-strategy
-//! [`format_no_alloc`]: macro@crate::format_no_alloc
-//! [`FastStringify`]: crate::core::common::fast_strings::fast_stringify::FastStringify
-//! [`generate_impl_display_for_fast_stringify!`]:
-//!     macro@crate::generate_impl_display_for_fast_stringify
-//! [`BufTextStorage`]: crate::core::common::fast_strings::fast_stringify::BufTextStorage
-//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-//! [`TerminalModeController`]: crate::TerminalModeController
-//! [`FullScreenTuiModeGuard`]: crate::FullScreenTuiModeGuard
-//! [`RawModeGuard`]: crate::RawModeGuard
-//! [`terminal_raw_mode`]: crate::terminal_raw_mode
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-//! [`read()`]: ScopedMutex::read()
-//! [`write()`]: ScopedMutex::write()
-//! [`OutputDevice`]: crate::OutputDevice
-//! [`output_device.enter_raw_mode()`]: crate::OutputDevice::enter_raw_mode
-//! [`Readline`]: crate::Readline
-//! [`Monitor`]: crate::Monitor
-//! [`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor
-//! [`lock_raw()`]: crate::Monitor::lock_raw
-//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
-//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-//! [`stdin`]: std::io::stdin
-//! [`stdout`]: std::io::stdout
-//! [`stderr`]: std::io::stderr
-//! [`stdio`]: std::io
-//! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
+//! [`graphemes` module
+//! documentation]: mod@crate::core::graphemes
+//!
+//! [`&str`]: prim@str
+//! [`.as_u16_narrowing()`]: crate::NarrowingCastToU16::as_u16_narrowing
+//! [`.as_u32_widening()`]: crate::WideningCastToU32::as_u32_widening
+//! [`.as_usize_narrowing()`]: crate::NarrowingCastToUsize::as_usize_narrowing
+//! [`.as_usize_widening()`]: crate::WideningCastToUsize::as_usize_widening
+//! [`Alacritty`]: https://alacritty.org/
+//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`Available`]: crate::TerminalInteractiveStatus::Available
+//! [`backend_compat_tests`]: crate::backend_compat_tests
+//! [`bounds_check`]: mod@crate::bounds_check
+//! [`buf_reader`]: field@PtyTestContext::buf_reader
+//! [`BufTextStorage`]: crate::core::common::fast_strings::fast_stringify::BufTextStorage
+//! [`ByteIndex`]: crate::ByteIndex
+//! [`ByteLength`]: crate::ByteLength
+//! [`canvas`]: mod@crate::core::coordinates::canvas
+//! [`CanvasCameraExt::pan_to_keep_coord_in_view`]: crate::CanvasCameraExt::pan_to_keep_coord_in_view
+//! [`CBoundingBox`]: crate::CBoundingBox
+//! [`CCaret::to_viewport_caret`]: crate::CCaret::to_viewport_caret
+//! [`CCaret`]: crate::CCaret
+//! [`CCol`]: crate::CCol
+//! [`CHeight`]: crate::CHeight
+//! [`child`]: field@PtyTestContext::child
+//! [`choose()`]: crate::choose
+//! [`ChUnit`]: crate::ChUnit
+//! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
+//! [`Component::handle_event()`]: crate::Component::handle_event
+//! [`Component::render()`]: crate::Component::render
+//! [`Condvar::wait()`]: std::sync::Condvar::wait
+//! [`CPos`]: crate::CPos
+//! [`crossterm::cursor`]: https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html
+//! [`crossterm_backend`]: crate::crossterm_backend
+//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
+//! [`crossterm`]: crossterm
+//! [`CRow`]: crate::CRow
+//! [`CSI`]: crate::CsiSequence
+//! [`curses`]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+//! [`CWidth`]: crate::CWidth
+//! [`Deref`]: std::ops::Deref
+//! [`direct_to_ansi`]: crate::direct_to_ansi
+//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+//! [`disable_raw_mode()`]: crate::disable_raw_mode
+//! [`EditorBuffer`]: crate::EditorBuffer
+//! [`EditorEngine::apply_event()`]: crate::apply_event
+//! [`EditorEngine::render_engine()`]: crate::render_engine
+//! [`EditorEngine`]: crate::EditorEngine
+//! [`epoll`]: https://manpages.debian.org/epoll.7
+//! [`ESC`]: crate::EscSequence
+//! [`fast_strings`]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
+//! [`FastStringify`]: crate::core::common::fast_strings::fast_stringify::FastStringify
+//! [`Flat1DSimd`]: crate::core::Flat1DSimd
+//! [`Flat2DArray`]: crate::Flat2DArray
+//! [`format_no_alloc`]: macro@crate::format_no_alloc
+//! [`FullScreenTuiModeGuard`]: crate::FullScreenTuiModeGuard
+//! [`generate_impl_display_for_fast_stringify!`]: macro@crate::generate_impl_display_for_fast_stringify
+//! [`generate_pty_test!`]: crate::generate_pty_test
+//! [`get_row_with_scrollback`]: crate::tui::GrowableBuffer::get_row_with_scrollback
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`GrowableBuffer`]: crate::GrowableBuffer
+//! [`ink`]: https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/
+//! [`input_parser_integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+//! [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
+//! [`io_uring`]: https://manpages.debian.org/io_uring.7
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
+//! [`lock_raw()`]: crate::Monitor::lock_raw
+//! [`md_parser` module documentation]: crate::tui::md_parser
+//! [`mio_poller`]: crate::mio_poller
+//! [`mio`]: mio
+//! [`monitor.rs`]: crate::core::common::Monitor
+//! [`Monitor::lock()`]: crate::core::common::Monitor::lock
+//! [`Monitor`]: crate::Monitor
+//! [`NarrowingCastToU16`]: crate::NarrowingCastToU16
+//! [`NarrowingCastToUsize`]: crate::NarrowingCastToUsize
+//! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
+//! [`neovim`]: https://neovim.io/
+//! [`Node.js`]: https://nodejs.org/
+//! [`nom`]: nom
+//! [`OfsBufVT100::apply_ansi_bytes()`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
+//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
+//! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
+//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+//! [`OscSender`]: crate::core::ansi::osc::OscSender
+//! [`OscSequence`]: crate::core::ansi::osc::OscSequence
+//! [`output_device.enter_raw_mode()`]: crate::OutputDevice::enter_raw_mode
+//! [`output_device.rs`]: crate::OutputDevice
+//! [`OutputDevice::lock_raw()`]: crate::OutputDevice::lock_raw
+//! [`OutputDevice::write()`]: crate::OutputDevice::write
+//! [`OutputDevice`]: crate::OutputDevice
+//! [`paint()`]: fn@crate::paint
+//! [`paint_impl`]: mod@crate::terminal_lib_backends::ofs_buf::paint_impl
+//! [`paint`]: mod@crate::paint
+//! [`pty_mux_example`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
+//! [`pty_mux` module documentation]: mod@crate::pty_mux
+//! [`pty_mux`]: crate::core::pty_mux
+//! [`pty_pair`]: field@PtyTestContext::pty_pair
+//! [`pty_test_fixtures`]: crate::pty_test_fixtures
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`PTYMux::run()`]: crate::pty_mux::PTYMux::run
+//! [`PTYMux`]: crate::PTYMux
+//! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
+//! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
+//! [`PtyTestContext`]: crate::PtyTestContext
+//! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
+//! [`r3bl_redux`]: https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux
+//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
+//! [`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
+//! [`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within
+//! [`RangeBoundsResult`]: crate::RangeBoundsResult
+//! [`ratatui`]: https://ratatui.rs/
+//! [`raw_mode_core.rs`]: crate::RawModeGuard
+//! [`raw_mode_integration_tests`]: mod@crate::terminal_raw_mode::raw_mode_integration_tests
+//! [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
+//! [`RawModeGuard::drop()`]: crate::RawModeGuard::drop
+//! [`RawModeGuard`]: crate::RawModeGuard
+//! [`React`]: https://react.dev/
+//! [`read()`]: ScopedMutex::read()
+//! [`readline.rs`]: crate::Readline
+//! [`Readline::drop()`]: crate::Readline::drop
+//! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`Readline`]: crate::Readline
+//! [`readline`]: https://manpages.debian.org/readline.3
+//! [`ReadlineAsyncContext::try_new()`]: crate::readline_async::ReadlineAsyncContext::try_new
+//! [`render_engine()`]: crate::editor_engine::engine_public_api::render_engine
+//! [`RenderOpCommon`]: crate::tui::RenderOpCommon
+//! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
+//! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
+//! [`resilient_reactor_thread`]: crate::resilient_reactor_thread
+//! [`rrt_engine.rs`]: crate::resilient_reactor_thread::run_worker_loop
+//! [`rrt_monitor.rs`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor
+//! [`rrt_monitor::lock()`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor::lock
+//! [`rrt_subscriber_guard.rs`]: crate::resilient_reactor_thread::SubscriberGuard
+//! [`rrt_termination_guard.rs`]: crate::resilient_reactor_thread::TerminationGuard
+//! [`RRT`]: crate::RRT
+//! [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
+//! [`RRTWorker`]: crate::RRTWorker
+//! [`run.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish
+//! [`run_worker_loop()`]: crate::resilient_reactor_thread::run_worker_loop
+//! [`rustix`]: https://docs.rs/rustix
+//! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
+//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+//! [`scoped_mutex.rs`]: crate::core::common::ScopedMutex
+//! [`ScreenCoordinate`]: crate::ScreenCoordinate
+//! [`ScrollbackAmount`]: crate::ScrollbackAmount
+//! [`SegIndex`]: crate::SegIndex
+//! [`SegLength`]: crate::SegLength
+//! [`SGR`]: crate::SgrCode
+//! [`Shift+Enter`]: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
+//! [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
+//! [`spinner.rs`]: crate::readline_async::Spinner
+//! [`Spinner::try_start()`]: crate::readline_async::Spinner::try_start
+//! [`Spinner`]: crate::readline_async::Spinner
+//! [`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
+//! [`stderr`]: std::io::stderr
+//! [`stdin`]: std::io::stdin
+//! [`stdio`]: std::io
+//! [`stdout`]: std::io::stdout
+//! [`StorageCoordinate`]: crate::StorageCoordinate
+//! [`SubscriberGuard`]: crate::SubscriberGuard
+//! [`syntect`]: syntect
+//! [`tcp-api-server`]: https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
+//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+//! [`terminal_lib_backends`]: crate::terminal_lib_backends
+//! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`TerminalModeController`]: crate::TerminalModeController
 //! [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TerminationGuard`]: crate::resilient_reactor_thread::TerminationGuard
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
+//! [`test_pty_input_device`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
+//! [`ThreadLifecycleMonitor`]: crate::ThreadLifecycleMonitor
+//! [`tmux`]: https://github.com/tmux/tmux
+//! [`tokio`]: tokio
+//! [`tracing::error!`]: tracing::error
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
+//! [`try_pan_viewport_to`]: crate::CanvasStorage::try_pan_viewport_to
+//! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+//! [`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
+//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`TuiAvailability<ChooseFuture>`]: crate::TuiAvailability
 //! [`TuiAvailability<MainEventLoopFuture>`]: crate::TuiAvailability
 //! [`TuiAvailability<PTYMux>`]: crate::TuiAvailability
 //! [`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
 //! [`TuiAvailability<Spinner>`]: crate::TuiAvailability
-//! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
-//! [`tcp-api-server`]:
-//!     https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
-//! [`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
 //! [`TuiAvailability<T>`]: crate::TuiAvailability
-//! [`Spinner::try_start()`]: crate::readline_async::Spinner::try_start
-//! [`tmux`]: https://github.com/tmux/tmux
-//! [`ReadlineAsyncContext::try_new()`]:
-//!     crate::readline_async::ReadlineAsyncContext::try_new
-//! [`PTYMux::run()`]: crate::pty_mux::PTYMux::run
-//! [`choose()`]: crate::choose
-//! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
-//! [`stderr` redirection disclaimers]: crate::emit_stderr_redirection_disclaimer
-//! [App]: crate::tui::App
-//! [Component]: crate::Component
-//! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
-//! [TerminalWindow]: crate::TerminalWindow
-//! [InputDevice]: crate::InputDevice
-//! [OutputDevice]: crate::OutputDevice
-//! [FlexBox]: crate::tui::FlexBox
-//! [Surface]: crate::tui::Surface
-//! [HasFocus]: crate::HasFocus
-//! [ComponentRegistry]: crate::ComponentRegistry
-//! [ComponentRegistryMap]: crate::ComponentRegistryMap
-//! [GlobalData]: crate::GlobalData
-//! [EventPropagation]: crate::EventPropagation
-//! [`RenderOpCommon`]: crate::tui::RenderOpCommon
-//! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
-//! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
-//! [RenderPipeline]: crate::RenderPipeline
-//! [OfsBuf]: crate::tui::OfsBuf
-//! [PixelChar]: crate::tui::PixelChar
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VecDeque`]: std::collections::VecDeque
-//! [`try_pan_viewport_to`]: crate::CanvasStorage::try_pan_viewport_to
-//! [`get_row_with_scrollback`]: crate::tui::GrowableBuffer::get_row_with_scrollback
-//! [`ScrollbackAmount`]: crate::ScrollbackAmount
-//! [ZOrder]: crate::tui::ZOrder
-//! [`paint`]: mod@crate::paint
-//! [`paint()`]: fn@crate::paint
-//! [`paint_impl`]: mod@crate::terminal_lib_backends::ofs_buf::paint_impl
-//! [EditorComponent]: crate::EditorComponent
-//! [EditorEngine]: crate::EditorEngine
-//! [EditorBuffer]: crate::EditorBuffer
-//! [HasEditorBuffers]: crate::HasEditorBuffers
-//! [ZeroCopyGapBuffer]: crate::ZeroCopyGapBuffer
+//! [`vim`]: https://www.vim.org/
+//! [`VPBoundingBox`]: crate::VPBoundingBox
+//! [`VPCaret`]: crate::VPCaret
+//! [`VPCol`]: crate::VPCol
+//! [`VPHeight`]: crate::VPHeight
+//! [`VPPos`]: crate::VPPos
+//! [`VPRow`]: crate::VPRow
+//! [`VPSize`]: crate::VPSize
+//! [`VPWidth`]: crate::VPWidth
+//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+//! [`vte`]: https://docs.rs/vte
+//! [`WideningCastToU32`]: crate::WideningCastToU32
+//! [`WideningCastToUsize`]: crate::WideningCastToUsize
+//! [`write()`]: ScopedMutex::write()
+//! [`writer`]: field@PtyTestContext::writer
+//! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+//! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 //! [`zero_copy_gap_buffer` module documentation]: mod@crate::zero_copy_gap_buffer
 //! [`ZeroCopyGapBuffer::as_str()`]: crate::ZeroCopyGapBuffer::as_str
 //! [`ZeroCopyGapBuffer::get_line_content()`]: crate::ZeroCopyGapBuffer::get_line_content
-//! [`&str`]: prim@str
-//! [`Component::handle_event()`]: crate::Component::handle_event
-//! [`Component::render()`]: crate::Component::render
-//! [`EditorEngine::apply_event()`]: crate::apply_event
-//! [`EditorEngine::render_engine()`]: crate::render_engine
-//! [MdDocument]: crate::MdDocument
-//! [parse_markdown()]: crate::parse_markdown()
-//! [parse_smart_list]: crate::parse_smart_list
-//! [try_parse_and_highlight]: crate::try_parse_and_highlight
-//! [PTYMux]: crate::PTYMux
-//! [`PTYMux`]: crate::PTYMux
-//! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
-//! [`pty_mux` module documentation]: mod@crate::pty_mux
-//! [CsiSequence]: crate::CsiSequence
-//! [EscSequence]: crate::EscSequence
-//! [SgrCode]: crate::SgrCode
-//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-//! [VPRow]: crate::VPRow
-//! [VPCol]: crate::VPCol
-//! [VPWidth]: crate::VPWidth
-//! [VPHeight]: crate::VPHeight
-//! [IndexOps]: crate::IndexOps
-//! [LengthOps]: crate::LengthOps
-//! [ArrayBoundsCheck]: crate::core::ArrayBoundsCheck
-//! [CursorBoundsCheck]: crate::CursorBoundsCheck
-//! [ViewportBoundsCheck]: crate::ViewportBoundsCheck
-//! [RangeBoundsExt]: crate::RangeBoundsExt
-//! [RangeConvertExt]: crate::RangeConvertExt
-//! [`RangeBoundsResult`]: crate::RangeBoundsResult
-//! [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
-//! [`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
-//! [`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within
-//! [ByteIndex]: crate::ByteIndex
-//! [SegIndex]: crate::SegIndex
-//! [GCStringOwned]: crate::GCStringOwned
-//! [HasDialogBuffers]: crate::HasDialogBuffers
-//! [DialogEngineConfig]: crate::DialogEngineConfig
-//! [`generate_pty_test!`]: crate::generate_pty_test
-//! [`PtyTestContext`]: crate::PtyTestContext
-//! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
-//! [`pty_pair`]: field@PtyTestContext::pty_pair
-//! [`child`]: field@PtyTestContext::child
-//! [`buf_reader`]: field@PtyTestContext::buf_reader
-//! [`writer`]: field@PtyTestContext::writer
-//! [`input_parser_integration_tests`]:
-//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
-//! [`raw_mode_integration_tests`]:
-//!     mod@crate::terminal_raw_mode::raw_mode_integration_tests
-//! [`test_pty_input_device`]:
-//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
-//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`pty_test_fixtures`]: crate::pty_test_fixtures
-//! [`backend_compat_tests`]: crate::backend_compat_tests
-//! [`terminal_lib_backends`]: crate::terminal_lib_backends
-//! [`direct_to_ansi`]: crate::direct_to_ansi
-//! [`crossterm_backend`]: crate::crossterm_backend
-//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
-//! [`OutputDevice::write()`]: crate::OutputDevice::write
-//! [`OutputDevice::lock_raw()`]: crate::OutputDevice::lock_raw
-//! [`RawModeGuard::drop()`]: crate::RawModeGuard::drop
-//! [`output_device.rs`]: crate::OutputDevice
-//! [`raw_mode_core.rs`]: crate::RawModeGuard
-//! [`readline.rs`]: crate::Readline
-//! [`rrt_termination_guard.rs`]: crate::resilient_reactor_thread::TerminationGuard
-//! [`rrt_subscriber_guard.rs`]: crate::resilient_reactor_thread::SubscriberGuard
-//! [`monitor.rs`]: crate::core::common::Monitor
-//! [`scoped_mutex.rs`]: crate::core::common::ScopedMutex
-//! [`rrt_monitor.rs`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor
-//! [`rrt_engine.rs`]: crate::resilient_reactor_thread::run_worker_loop
-//! [`spinner.rs`]: crate::readline_async::Spinner
-//! [`Readline::drop()`]: crate::Readline::drop
-//! [`TerminationGuard`]: crate::resilient_reactor_thread::TerminationGuard
-//! [`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
-//! [`Monitor::lock()`]: crate::core::common::Monitor::lock
-//! [`rrt_monitor::lock()`]: crate::resilient_reactor_thread::ThreadLifecycleMonitor::lock
-//! [`run_worker_loop()`]: crate::resilient_reactor_thread::run_worker_loop
-//! [`Spinner`]: crate::readline_async::Spinner
-//! [`RawModeGuard`]: crate::RawModeGuard
-//! [`terminal_raw_mode`]: crate::terminal_raw_mode
-//! [`raw_mode_unix`]: crate::terminal_raw_mode::raw_mode_unix
-//! [`OfsBufVT100::apply_ansi_bytes()`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
-//! [`RRT`]: crate::RRT
-//! [`SubscriberGuard`]: crate::SubscriberGuard
-//! [`RRTWorker`]: crate::RRTWorker
-//! [`RRTSoftwareInterrupt`]: crate::RRTSoftwareInterrupt
-//! [`resilient_reactor_thread`]: crate::resilient_reactor_thread
-//! [`mio_poller`]: crate::mio_poller
-//! [`io_uring`]: https://manpages.debian.org/io_uring.7
-//! [`bounds_check`]: mod@crate::bounds_check
-//! [`canvas`]: mod@crate::core::coordinates::canvas
-//! [`CPos`]: crate::CPos
-//! [`CCaret`]: crate::CCaret
-//! [`CCol`]: crate::CCol
-//! [`CRow`]: crate::CRow
-//! [`CWidth`]: crate::CWidth
-//! [`CHeight`]: crate::CHeight
-//! [`CBoundingBox`]: crate::CBoundingBox
-//! [`VPRow`]: crate::VPRow
-//! [`VPCol`]: crate::VPCol
-//! [`VPHeight`]: crate::VPHeight
-//! [`VPWidth`]: crate::VPWidth
-//! [`VPSize`]: crate::VPSize
-//! [`VPPos`]: crate::VPPos
-//! [`VPCaret`]: crate::VPCaret
-//! [`VPBoundingBox`]: crate::VPBoundingBox
-//! [`ChUnit`]: crate::ChUnit
-//! [`ByteIndex`]: crate::ByteIndex
-//! [`ByteLength`]: crate::ByteLength
-//! [`SegIndex`]: crate::SegIndex
-//! [`SegLength`]: crate::SegLength
-//! [`NarrowingCastToU16`]: crate::NarrowingCastToU16
-//! [`NarrowingCastToUsize`]: crate::NarrowingCastToUsize
-//! [`WideningCastToUsize`]: crate::WideningCastToUsize
-//! [`WideningCastToU32`]: crate::WideningCastToU32
-//! [`.as_usize_widening()`]: crate::WideningCastToUsize::as_usize_widening
-//! [`.as_u32_widening()`]: crate::WideningCastToU32::as_u32_widening
-//! [`.as_u16_narrowing()`]: crate::NarrowingCastToU16::as_u16_narrowing
-//! [`.as_usize_narrowing()`]: crate::NarrowingCastToUsize::as_usize_narrowing
-//! [`tracing::error!`]: tracing::error
-//! [`ScreenCoordinate`]: crate::ScreenCoordinate
-//! [`StorageCoordinate`]: crate::StorageCoordinate
-//! [`Flat2DArray`]: crate::Flat2DArray
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-//! [`GrowableBuffer`]: crate::GrowableBuffer
-//! [`EditorEngine`]: crate::EditorEngine
-//! [`EditorBuffer`]: crate::EditorBuffer
-//! [`CanvasCameraExt::pan_to_keep_coord_in_view`]:
-//!     crate::CanvasCameraExt::pan_to_keep_coord_in_view
-//! [`CCaret::to_viewport_caret`]: crate::CCaret::to_viewport_caret
-//! [`crossterm`]: crossterm
-//! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
-//! [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
-//! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
-//! [`OSC`]: crate::core::ansi::osc::OscSequence
-//! [`OscSender`]: crate::core::ansi::osc::OscSender
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
-//! [`OscSequence`]: crate::core::ansi::osc::OscSequence
-//! [osc-platform-support]: mod@crate::core::ansi::osc#platform--backend-availability
-//! [`mio`]: mio
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
-//! [`nom`]: nom
-//! [`rustix`]: rustix
-//! [`syntect`]: syntect
-//! [`vte`]: vte
-//! [`RenderOpOutput`]: crate::RenderOpOutput
-//! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+//! [academic research on type safety at scale]: crate::core::coordinates::canvas#academic-research-on-type-safety-at-scale
+//! [ANSI X3.64 Standard]: https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//! [App]: crate::tui::App
 //! [Architecture Overview]: crate::resilient_reactor_thread#architecture-overview
-//! [ANSI X3.64 Standard]:
-//!     https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-//! [Inter-process communication]:
-//!     https://en.wikipedia.org/wiki/Inter-process_communication
-//! [Message passing]: https://en.wikipedia.org/wiki/Message_passing
-//! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT-100` User Guide]: https://vt100.net/docs/vt100-ug/
-//! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-//! [`pty_mux_example`]:
-//!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
-//! [`Condvar::wait()`]: std::sync::Condvar::wait
-//! [`Deref`]: std::ops::Deref
-//! [Parameters]: crate::ScopedMutex#parameters
-//! [academic research on type safety at scale]:
-//!     crate::core::coordinates::canvas#academic-research-on-type-safety-at-scale
-//! [theoretical foundations]: crate::core::coordinates::canvas#theoretical-foundations
+//! [ArrayBoundsCheck]: crate::core::ArrayBoundsCheck
+//! [Blog post: Building a Markdown Parser in Rust]: https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/
+//! [Build with Naz: async readline]: https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
+//! [Build with Naz: TTY playlist]: https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
+//! [builder]: crate::LolcatBuilder
+//! [ByteIndex]: crate::ByteIndex
+//! [changelog]: https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui
+//! [Component]: crate::Component
+//! [ComponentRegistry]: crate::ComponentRegistry
+//! [ComponentRegistryMap]: crate::ComponentRegistryMap
+//! [Crossterm]: https://github.com/crossterm-rs/crossterm
+//! [CsiSequence]: crate::CsiSequence
+//! [CSS-like]: https://www.w3.org/TR/CSS/#css
+//! [CSS]: https://www.w3.org/TR/CSS/#css
+//! [CursorBoundsCheck]: crate::CursorBoundsCheck
+//! [declarative]: https://ui.dev/imperative-vs-declarative-programming
+//! [Dependency injection]: https://developerlife.com/category/DI
+//! [DialogEngineConfig]: crate::DialogEngineConfig
+//! [EditorBuffer]: crate::EditorBuffer
+//! [EditorComponent]: crate::EditorComponent
+//! [EditorEngine]: crate::EditorEngine
+//! [eGUI]: https://github.com/emilk/egui
+//! [Elm]: https://guide.elm-lang.org/architecture/
 //! [empirical benchmarks]: crate::core::coordinates::canvas#empirical-benchmarks
+//! [EscSequence]: crate::EscSequence
+//! [EventPropagation]: crate::EventPropagation
+//! [FlexBox]: crate::tui::FlexBox
+//! [flexbox]: https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox
 //! [FUNARCH 2023 paper]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
 //! [FUNARCH 2026 paper]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
-//! [Parse, don't validate]:
-//!     https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
-//! [Stanford CS 242]: https://stanford-cs242.github.io/f19/
-//! [The Typestate Pattern in Rust]:
-//!     https://willcrichton.net/rust-api-type-patterns/typestate.html
-//! [`Node.js`]: https://nodejs.org/
-//! [`ink`]: https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/
-//! [`React`]: https://react.dev/
-//! [React]: https://react.dev/
-//! [flexbox]:
-//!     https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox
-//! [CSS]: https://www.w3.org/TR/CSS/#css
-//! [CSS-like]: https://www.w3.org/TR/CSS/#css
-//! [loosely coupled and strongly coherent]:
-//!     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
-//! [Elm]: https://guide.elm-lang.org/architecture/
-//! [unidirectional data flow]: https://guide.elm-lang.org/architecture/
-//! [responsive]:
-//!     https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design
-//! [declarative]: https://ui.dev/imperative-vs-declarative-programming
-//! [Build with Naz: TTY playlist]:
-//!     https://www.youtube.com/playlist?list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3
-//! [Build with Naz: async readline]:
-//!     https://www.youtube.com/playlist?list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE
-//! [High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]:
-//!     https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/
-//! [Rust, Memory performance & latency]:
-//!     https://developerlife.com/2025/05/19/rust-mem-latency/
-//! [Loosely Coupled, Strongly Coherent Architecture]:
-//!     https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
-//! [`vim`]: https://www.vim.org/
-//! [`neovim`]: https://neovim.io/
-//! [`ratatui`]: https://ratatui.rs/
-//! [origin story]: https://github.com/r3bl-org/r3bl-open-core#origin-story
-//! [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
-//! [changelog]:
-//!     https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui
-//! [YT channel]: https://www.youtube.com/@developerlifecom
-//! [subscribing]:
-//!     https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
-//! [site]: https://developerlife.com/
-//! [the repo]: https://github.com/r3bl-org/r3bl-open-core
-//! [repository README]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
-//! [`run.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish
-//! [R3BL CMDR]: https://github.com/r3bl-org/r3bl-cmdr
-//! [`r3bl_redux`]: https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux
-//! [Dependency injection]: https://developerlife.com/category/DI
-//! [eGUI]: https://github.com/emilk/egui
+//! [GCStringOwned]: crate::GCStringOwned
+//! [GlobalData]: crate::GlobalData
+//! [HasDialogBuffers]: crate::HasDialogBuffers
+//! [HasEditorBuffers]: crate::HasEditorBuffers
+//! [HasFocus]: crate::HasFocus
+//! [High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]: https://developerlife.com/2026/07/14/build-high-performance-flat-2d-arrays-in-rust/
 //! [iced-rs]: https://iced.rs/
-//! [wgpu]: https://wgpu.rs/
-//! [Crossterm]: https://github.com/crossterm-rs/crossterm
-//! [`rustix`]: https://docs.rs/rustix
-//! [nom tutorial]: https://developerlife.com/2023/02/20/guide-to-nom-parsing/
-//! [Blog post: Building a Markdown Parser in Rust]:
-//!     https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/
-//! [Video: Markdown Parser Deep Dive]: https://youtu.be/SbwvSHZRb1E
-//! [`crossterm::cursor`]: https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html
+//! [IndexOps]: crate::IndexOps
+//! [InputDevice]: crate::InputDevice
+//! [Inter-process communication]: https://en.wikipedia.org/wiki/Inter-process_communication
 //! [issue tracker]: https://github.com/r3bl-org/r3bl-rs-utils/issues
-//! [`curses`]: https://en.wikipedia.org/wiki/Curses_(programming_library)
-//! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
-//! [`Shift+Enter`]:
-//!     https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
 //! [Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855
-//! [`readline`]: https://manpages.debian.org/readline.3
+//! [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+//! [LengthOps]: crate::LengthOps
+//! [loosely coupled and strongly coherent]: https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
+//! [Loosely Coupled, Strongly Coherent Architecture]: https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/
 //! [make illegal states unrepresentable]: https://corrode.dev/blog/illegal-state/
+//! [MdDocument]: crate::MdDocument
+//! [Message passing]: https://en.wikipedia.org/wiki/Message_passing
+//! [nom tutorial]: https://developerlife.com/2023/02/20/guide-to-nom-parsing/
+//! [OfsBuf]: crate::tui::OfsBuf
+//! [origin story]: https://github.com/r3bl-org/r3bl-open-core#origin-story
+//! [osc-platform-support]: mod@crate::core::ansi::osc#platform--backend-availability
+//! [OutputDevice]: crate::OutputDevice
+//! [Parameters]: crate::ScopedMutex#parameters
+//! [Parse, don't validate]: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+//! [parse_markdown()]: crate::parse_markdown()
+//! [parse_smart_list]: crate::parse_smart_list
+//! [PixelChar]: crate::tui::PixelChar
+//! [PTYMux]: crate::PTYMux
+//! [R3BL CMDR]: https://github.com/r3bl-org/r3bl-cmdr
+//! [RangeBoundsExt]: crate::RangeBoundsExt
+//! [RangeConvertExt]: crate::RangeConvertExt
+//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [React]: https://react.dev/
+//! [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+//! [RenderPipeline]: crate::RenderPipeline
+//! [repository README]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+//! [responsive]: https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design
+//! [Rule of Thumb for 1D vs 2D Memory Iteration]: crate::core::Flat1DSimd#rule-of-thumb-for-1d-vs-2d-memory-iteration
+//! [Rust, Memory performance & latency]: https://developerlife.com/2025/05/19/rust-mem-latency/
+//! [SegIndex]: crate::SegIndex
+//! [SgrCode]: crate::SgrCode
+//! [SIMD]: https://en.wikipedia.org/wiki/SIMD
+//! [site]: https://developerlife.com/
+//! [Stanford CS 242]: https://stanford-cs242.github.io/f19/
+//! [subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+//! [Surface]: crate::tui::Surface
+//! [TerminalWindow]: crate::TerminalWindow
+//! [the repo]: https://github.com/r3bl-org/r3bl-open-core
+//! [The Typestate Pattern in Rust]: https://willcrichton.net/rust-api-type-patterns/typestate.html
+//! [theoretical foundations]: crate::core::coordinates::canvas#theoretical-foundations
+//! [try_parse_and_highlight]: crate::try_parse_and_highlight
+//! [unidirectional data flow]: https://guide.elm-lang.org/architecture/
+//! [Video: Markdown Parser Deep Dive]: https://youtu.be/SbwvSHZRb1E
+//! [ViewportBoundsCheck]: crate::ViewportBoundsCheck
+//! [VPCol]: crate::VPCol
+//! [VPHeight]: crate::VPHeight
+//! [VPRow]: crate::VPRow
+//! [VPWidth]: crate::VPWidth
+//! [wgpu]: https://wgpu.rs/
+//! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+//! [YT channel]: https://www.youtube.com/@developerlifecom
+//! [ZeroCopyGapBuffer]: crate::ZeroCopyGapBuffer
+//! [ZOrder]: crate::tui::ZOrder
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]

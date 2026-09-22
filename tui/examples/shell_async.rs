@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! This program uses the `r3bl_tui` crate to provide a prompt and get user
-//! input, pass that to the `stdin` of a `bash` child process, and then display the output
-//! from the child process in the terminal.
+//! input, pass that to the [`stdin`] of a `bash` child process, and then display the
+//! output from the child process in the terminal.
 //!
 //! # `YouTube` video of live coding this example
 //!
@@ -22,7 +22,7 @@
 //!   This child process lives as long as the `main` function and exits when the user
 //!   chooses to `request_shutdown` the program.
 //!   - The [`tokio::process::Command`] starts `bash`.
-//!   - Both `stdin` and `stdout` are piped using [`std::process::Stdio::piped`].
+//!   - Both [`stdin`] and [`stdout`] are piped using [`std::process::Stdio::piped`].
 //!
 //! # 🧵 The main event loop simply waits for the following (on the current thread)
 //!
@@ -77,6 +77,8 @@
 //! └───────────────────────────────┘
 //! ```
 //!
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [Build with Naz : Create an async shell in Rust]: https://youtu.be/jXzFCDIJQag
 //! [YouTube channel]: https://www.youtube.com/@developerlifecom?sub_confirmation=1
 
@@ -338,8 +340,12 @@ pub mod child_process_constructor {
     ///
     /// Returns an error if:
     /// - The process spawn fails
-    /// - The stdin/stdout/stderr cannot be accessed
+    /// - The [`stdin`]/[`stdout`]/[`stderr`] cannot be accessed
     /// - The process ID cannot be retrieved
+    ///
+    /// [`stderr`]: std::io::stderr
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
     pub fn new(program: &str) -> miette::Result<ChildProcessHandle> {
         let mut child: tokio::process::Child = tokio::process::Command::new(program)
             .stdin(std::process::Stdio::piped())

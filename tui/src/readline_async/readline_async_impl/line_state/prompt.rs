@@ -8,13 +8,15 @@ use std::{fmt::{self, Display, Formatter},
 /// width.
 ///
 /// May contain [`ANSI`] escape codes for styling (colors, bold, etc.). Display width
-/// is calculated by stripping escape sequences and measuring the resulting Unicode
-/// grapheme cluster width.
+/// is calculated by stripping escape sequences and measuring the resulting [`Unicode`]
+/// [`grapheme`] cluster width.
 ///
 /// Encapsulating both the raw string and pre-computed width guarantees the invariant
 /// that [`Prompt::width`] is always in sync with [`Prompt::as_str`].
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`grapheme`]: https://unicode.org/reports/tr29/
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Prompt {
     /// Raw prompt string, possibly containing [`ANSI`] escape codes.

@@ -38,7 +38,7 @@
 //!
 //! ## Extended Color Format: Semicolons vs Colons
 //!
-//! For 256-color and `RGB` (truecolor) sequences, there are two formats:
+//! For 256-color and [`RGB`] ([`truecolor`]) sequences, there are two formats:
 //!
 //! - **Semicolon format** ([`xterm`]-compatible): `ESC [ 38 ; 2 ; r ; g ; b m` - de-facto
 //!   standard
@@ -66,6 +66,8 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm backend`]: crate::crossterm_backend
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 use crate::{ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR,

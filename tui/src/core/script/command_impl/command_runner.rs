@@ -191,7 +191,7 @@ macro_rules! bail_command_ran_and_failed {
     }
 
 /// This command is not allowed to have user interaction. It does not inherit the
-/// `stdin`, `stdout`, `stderr` from the parent (aka current) process.
+/// [`stdin`], [`stdout`], [`stderr`] from the parent (aka current) process.
 ///
 /// See the tests for examples of how to use this.
 ///
@@ -201,6 +201,10 @@ macro_rules! bail_command_ran_and_failed {
 /// - The command program does not exist or cannot be executed
 /// - The command fails with a non-zero exit status
 /// - I/O errors occur during command execution
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
     let cmd_output_result = command
@@ -221,8 +225,8 @@ pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
     }
 }
 
-/// This command is allowed to have full user interaction. It inherits the `stdin`,
-/// `stdout`, `stderr` from the parent (aka current) process.
+/// This command is allowed to have full user interaction. It inherits the [`stdin`],
+/// [`stdout`], [`stderr`] from the parent (aka current) process.
 ///
 /// See the tests for examples of how to use this.
 ///
@@ -244,6 +248,10 @@ pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// - The command program does not exist or cannot be executed
 /// - The command fails with a non-zero exit status
 /// - I/O errors occur during command execution
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
     let cmd_output_result = command
@@ -271,7 +279,7 @@ pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// - If either command fails, an error is returned.
 ///
 /// Only `command_one` is allowed to have any user interaction. It is set to inherit
-/// the `stdin`, `stdout`, `stderr` from the parent (aka current) process. Here's an
+/// the [`stdin`], [`stdout`], [`stderr`] from the parent (aka current) process. Here's an
 /// example which will block on user input from an interactive terminal if executed:
 ///
 /// ```
@@ -289,6 +297,10 @@ pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
 /// - Either command program does not exist or cannot be executed
 /// - Either command fails with a non-zero exit status
 /// - I/O errors occur during command execution or piping
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 pub async fn pipe(
     command_one: &mut Command,
     command_two: &mut Command,

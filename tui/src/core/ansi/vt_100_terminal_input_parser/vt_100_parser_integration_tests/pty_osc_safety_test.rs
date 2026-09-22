@@ -47,7 +47,7 @@
 //!      cause memory leaks, unbounded heap growth, or parser hangs, and that expected
 //!      [`InputEvent::Keyboard`] events arrive cleanly.
 //!    - Sends phase synchronization and confirmation signals back to the test driver over
-//!      stdout.
+//!      [`stdout`].
 //!
 //! # Test Scenarios
 //!
@@ -90,6 +90,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`Sans-IO`]: https://sans-io.readthedocs.io/
 //! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [`VT100InputEventIR::Ignored`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Ignored
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [process roles documentation]: mod@super#architecture-and-process-roles

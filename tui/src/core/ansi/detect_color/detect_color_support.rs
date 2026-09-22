@@ -36,7 +36,7 @@ use std::{env,
 ///
 /// ## Correct Usage (Performance Optimized)
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{global_color_support, ColorSupport};
 ///
 /// // CORRECT: Use the cached detect() function
@@ -50,7 +50,7 @@ use std::{env,
 ///
 /// ## Incorrect Usage (Performance Killer)
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{examine_env_vars_to_determine_color_support, Stream};
 ///
 /// // WRONG: Direct calls bypass caching and kill performance

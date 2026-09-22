@@ -94,7 +94,7 @@ impl OfsBufVT100 {
     ///
     /// You can pass a [`VPSize`] to create a terminal with default settings:
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::OfsBufVT100;
     /// use r3bl_tui::{vp_height, vp_width};
     /// let size = vp_height(24) + vp_width(80);
@@ -104,7 +104,7 @@ impl OfsBufVT100 {
     /// Or pass a tuple of `(`[`VPSize`]`, `[`StorageLineLimit`]`)` to configure it
     /// explicitly:
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{OfsBufVT100, StorageLineLimit, VPSize};
     /// let size = VPSize::default();
     /// let state = OfsBufVT100::new_empty(

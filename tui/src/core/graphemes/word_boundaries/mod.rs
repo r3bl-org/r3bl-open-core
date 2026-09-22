@@ -2,17 +2,17 @@
 
 //! Word boundary detection for text editing operations.
 //!
-//! This module provides Unicode-safe word boundary detection for use in text editing
+//! This module provides [`Unicode`]-safe word boundary detection for use in text editing
 //! components like readline and editor. It handles:
 //!
 //! - **Whitespace boundaries**: spaces, tabs, newlines
 //! - **Punctuation boundaries**: common punctuation characters
-//! - **Unicode safety**: Works correctly with emoji, combining characters, and multi-byte
-//!   sequences
+//! - **[`Unicode`] safety**: Works correctly with emoji, combining characters, and
+//!   multi-byte sequences
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::core::graphemes::word_boundaries::*;
 //! use r3bl_tui::{GCStringOwned, seg_index};
 //!
@@ -46,6 +46,7 @@
 //! ```
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 
 mod word_boundary_detection;
 

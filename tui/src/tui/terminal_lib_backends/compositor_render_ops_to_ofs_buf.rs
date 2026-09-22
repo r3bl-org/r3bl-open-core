@@ -48,7 +48,8 @@
 //! ### Key Responsibilities
 //! - **Execute Operations**: Process [`RenderOpIR`] sequentially in Z-order
 //! - **Apply Clipping**: Respect bounds to prevent off-screen writes
-//! - **Handle Unicode**: Correctly calculate display width for emoji and wide characters
+//! - **Handle [`Unicode`]**: Correctly calculate display width for emoji and wide
+//!   characters
 //! - **Manage State**: Track cursor position, colors, and terminal modes
 //! - **Write Pixels**: Store styled characters in the [`OfsBuf`]
 //!
@@ -68,6 +69,7 @@
 //! [`direct_to_ansi` mod docs]: mod@crate::direct_to_ansi
 //! [`ofs_buf::paint_impl` mod docs]: mod@crate::ofs_buf::paint_impl
 //! [`render_pipeline`]: mod@crate::render_pipeline
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{OfsBuf, RenderOpCommon, RenderOpIR, RenderPipeline,
@@ -82,11 +84,12 @@ use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOS
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
     ///
-    /// 1. This does not require any specific implementation of crossterm or termion.
+    /// 1. This does not require any specific implementation of [`crossterm`] or termion.
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
     ///    to turn this IR into actual paint commands for the terminal, you must use the
     ///    [`paint_impl`] functions.
     ///
+    /// [`crossterm`]: crossterm
     /// [`paint_impl`]: crate::terminal_lib_backends::ofs_buf::paint_impl
     pub fn compose_render_ops_into_ofs_buf(
         &self,
@@ -290,18 +293,19 @@ fn process_common_render_op(
     }
 }
 
-/// Render text with optional styling to an offscreen buffer with Unicode-aware handling.
+/// Render text with optional styling to an offscreen buffer with [`Unicode`]-aware
+/// handling.
 ///
 /// This function is the core text rendering primitive for the TUI system, responsible for
 /// converting text strings into [`PixelChar`] elements in the offscreen buffer. It
-/// handles both plain text and styled text, with comprehensive support for Unicode
-/// grapheme clusters, wide characters (like emoji), and terminal-specific display width
-/// calculations.
+/// handles both plain text and styled text, with comprehensive support for [`Unicode`]
+/// [`grapheme`] clusters, wide characters (like emoji), and terminal-specific display
+/// width calculations.
 ///
 /// # Core Functionality
 ///
-/// - **Unicode-safe rendering**: Proper handling of grapheme clusters, emoji, and wide
-///   characters
+/// - **[`Unicode`]-safe rendering**: Proper handling of [`grapheme`] clusters, emoji, and
+///   wide characters
 /// - **Style composition**: Merges provided styles with buffer-level colors
 /// - **Intelligent clipping**: Two-stage clipping system for optimal text fitting
 /// - **Position tracking**: Updates buffer position based on actual rendered width
@@ -347,7 +351,9 @@ fn process_common_render_op(
 /// `ofs_buf.my_pos.row_index` is greater than or equal to the number of rows
 /// in `ofs_buf`).
 ///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Seg`]: crate::core::Seg
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub fn print_text_with_attributes(
     string: &str,
     maybe_style_ref: Option<&TuiStyle>,
@@ -474,7 +480,7 @@ mod print_text_with_attributes_helper {
     use super::*;
 
     /// Clips the input string based on max display column count and window bounds.
-    /// Returns the final clipped string as a grapheme cluster string.
+    /// Returns the final clipped string as a [`grapheme`] cluster string.
     ///
     /// # Performance Considerations
     ///
@@ -504,8 +510,11 @@ mod print_text_with_attributes_helper {
     /// significant improvements:
     /// - No clipping needed: 64.8% faster (2.84x speedup)
     /// - With clipping: 7.8% faster
-    /// - Unicode content: 19.3% faster
+    /// - [`Unicode`] content: 19.3% faster
     /// - Repeated calls: 32.1% faster
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn clip_text_to_bounds(
         string: &str,
         display_col_index: usize,

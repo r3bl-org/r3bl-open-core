@@ -61,18 +61,18 @@ pub struct TerminalModeState {
     /// Mouse tracking enabled/disabled state.
     pub mouse_tracking_mode: MouseTrackingMode,
 
-    /// Mouse tracking encoding format requested by the app - [X10] or [Sgr].
+    /// Mouse tracking encoding format requested by the app - [`X10`] or [Sgr].
     ///
     /// See the [implementation note] in [`MouseTrackingFormat`] for exact details on how
     /// events are routed and formatted based on the app's requested protocols.
     ///
     /// [`MouseTrackingFormat`]: crate::MouseTrackingFormat
+    /// [`X10`]: MouseTrackingFormat::X10
     /// [implementation note]: crate::MouseTrackingFormat#implementation-note
     /// [Sgr]: MouseTrackingFormat::Sgr
-    /// [X10]: MouseTrackingFormat::X10
     pub mouse_tracking_format: MouseTrackingFormat,
 
-    /// Bracketed paste mode status.
+    /// [`Bracketed paste`] mode status.
     ///
     /// **TODO**: The parser currently ignores this [`VT-100`] sequence
     /// (`vt_100_shim_mode_ops.rs`) because the [`PTY`] multiplexer does not yet route
@@ -80,6 +80,7 @@ pub struct TerminalModeState {
     /// [`ANSI`] parser and the `dead_code` allowance removed.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[allow(dead_code)]

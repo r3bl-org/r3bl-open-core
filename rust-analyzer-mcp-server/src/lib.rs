@@ -18,15 +18,14 @@
 //!       tool provider (via its MCP settings or configuration file).
 //! 3. **User Prompts the Agent**
 //!     - In an active coding session, the user issues a prompt requiring Rust semantic
-//!       analysis (e.g., _"Find all references to `MyStruct` and refactor its
-//!       constructor"_).
+//!       analysis, like "Find all references to `MyStruct` and refactor its constructor".
 //! 4. **Agent Spawns Bridge Process**
 //!     - To execute the requested tools, the AI / LLM coding agent spawns
 //!       `rust-analyzer-mcp-server` as a dedicated 1:1 child process communicating over
-//!       `stdio` (`stdin` and `stdout`).
+//!       [`stdio`] ([`stdin`] and [`stdout`]).
 //! 5. **Bridge Translates MCP to LSP**
-//!     - The MCP server receives JSON-RPC tool calls over `stdin`, converts them into LSP
-//!       queries for `rust-analyzer`, and writes formatted responses to `stdout`:
+//!     - The MCP server receives JSON-RPC tool calls over [`stdin`], converts them into
+//!       LSP queries for `rust-analyzer`, and writes formatted responses to [`stdout`]:
 //!
 //! ```text
 //! ┌────────────────────────────────────────────────────────┐
@@ -137,7 +136,7 @@
 //! ## 1. Dynamic Tool Discovery (`tools/list`)
 //!
 //! When the AI / LLM coding agent (e.g. `agy`) spawns our MCP server, it queries
-//! available tools by sending an MCP `tools/list` request over `stdin`:
+//! available tools by sending an MCP `tools/list` request over [`stdin`]:
 //!
 //! ```json
 //! {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
@@ -150,7 +149,7 @@
 //! > ([`get_tools`]).
 //!
 //! Our MCP server writes this JSON-RPC response back to the AI / LLM coding agent over
-//! `stdout`:
+//! [`stdout`]:
 //!
 //! ```json
 //! {
@@ -187,7 +186,7 @@
 //! ## 2. Tool Execution (`tools/call`)
 //!
 //! When the LLM decides to inspect a symbol at line 42, character 10, the coding agent
-//! sends a standard MCP `tools/call` request to our MCP server's `stdin`:
+//! sends a standard MCP `tools/call` request to our MCP server's [`stdin`]:
 //!
 //! ```json
 //! {
@@ -247,39 +246,40 @@
 //! The coding agent passes this text directly back into the LLM context so it can
 //! continue reasoning.
 //!
-//! ## Why Asynchronous Request Multiplexing is Unnecessary Over `stdio`
+//! ## Why Asynchronous Request Multiplexing is Unnecessary Over [`stdio`]
 //!
 //! Neither JSON-RPC 2.0 nor the MCP specification dictates the transport layer. You can
-//! run JSON-RPC over `WebSockets`, TCP, Unix domain sockets, or `stdio`. Over network
+//! run JSON-RPC over `WebSockets`, TCP, Unix domain sockets, or [`stdio`]. Over network
 //! sockets (such as TCP or `WebSockets`), async request multiplexing makes complete
 //! sense: thousands of remote clients connect to a single daemon, each over its own
 //! independent socket connection.
 //!
 //! However, when an AI / LLM coding agent launches our MCP server locally, communication
-//! relies on **OS anonymous pipes** (`stdin` and `stdout`). An OS pipe is a
+//! relies on **OS anonymous pipes** ([`stdin`] and [`stdout`]). An OS pipe is a
 //! unidirectional, in-memory FIFO buffer in the kernel (typically 64 KiB on Linux).
 //! Because these are single serialized byte streams, communication between the coding
 //! agent and our server is inherently sequential by design:
 //!
-//! 1. **`stdin` (Accepting Requests from the Coding Agent):** The coding agent writes MCP
-//!    JSON-RPC requests into our MCP server's `stdin` pipe, delimited by newlines (`\n`).
-//!    Reading from `stdin` must be serialized: multiple concurrent reader threads would
-//!    race to consume chunks from the byte stream, splitting JSON lines in half and
-//!    breaking JSON parsing. A single synchronous reader loop in our main thread
+//! 1. **[`stdin`] (Accepting Requests from the Coding Agent):** The coding agent writes
+//!    MCP JSON-RPC requests into our MCP server's [`stdin`] pipe, delimited by newlines
+//!    (`\n`). Reading from [`stdin`] must be serialized: multiple concurrent reader
+//!    threads would race to consume chunks from the byte stream, splitting JSON lines in
+//!    half and breaking JSON parsing. A single synchronous reader loop in our main thread
 //!    naturally consumes incoming requests line-by-line with zero synchronization
 //!    overhead.
 //!
-//! 2. **`stdout` (Returning Responses to the Coding Agent):** Our MCP server writes
-//!    JSON-RPC tool responses back to the coding agent over `stdout`. Multiple concurrent
-//!    threads or tasks cannot write to `stdout` simultaneously without garbling the
-//!    response stream. Even if a multi-threaded async runtime executes tool queries
-//!    concurrently, all tasks must ultimately synchronize on a mutex to write their
-//!    responses line-by-line. An async runtime cannot provide parallel I/O throughput
-//!    over a single pipe; it simply adds mutex contention and task scheduling overhead.
+//! 2. **[`stdout`] (Returning Responses to the Coding Agent):** Our MCP server writes
+//!    JSON-RPC tool responses back to the coding agent over [`stdout`]. Multiple
+//!    concurrent threads or tasks cannot write to [`stdout`] simultaneously without
+//!    garbling the response stream. Even if a multi-threaded async runtime executes tool
+//!    queries concurrently, all tasks must ultimately synchronize on a mutex to write
+//!    their responses line-by-line. An async runtime cannot provide parallel I/O
+//!    throughput over a single pipe; it simply adds mutex contention and task scheduling
+//!    overhead.
 //!
 //! 3. **Turn-Based Agent Structure:** LLM workflows operate in discrete conversational
 //!    turns. When the LLM generates a tool call, the coding agent writes the request to
-//!    our MCP server's `stdin` and waits for the tool output before prompting the model
+//!    our MCP server's [`stdin`] and waits for the tool output before prompting the model
 //!    for the next reasoning step. Because AST tool execution is so fast (1 to 10 ms)
 //!    compared to LLM inference (500 to 3,000 ms), sequential execution latency is
 //!    completely imperceptible to the user.
@@ -288,7 +288,7 @@
 //!    [`RustAnalyzerMCPServer::enter_main_event_loop`], the main thread runs a
 //!    single-threaded line reader with no lock contention. Each MCP request is consumed,
 //!    translated into an LSP request, synchronously resolved against [`rust-analyzer`],
-//!    and the response is written back to `stdout` before the next line is read.
+//!    and the response is written back to [`stdout`] before the next line is read.
 //!    - This doesn't add perceptible latency in agent loops. LLM inference (e.g. Claude,
 //!      Gemini, etc.) may take 500 ms to 3,000 ms+ per conversational turn to reason and
 //!      generate tokens. A tool execution latency of 1 to 10 ms represents less than 1%
@@ -298,26 +298,27 @@
 //!
 //! # Threading Model
 //!
-//! Because [`rust-analyzer`] communicates asynchronously over `stdio` with
-//! out-of-order responses and unprompted notifications (such as compiler diagnostics),
-//! the server utilizes exactly 3 threads:
+//! Because [`rust-analyzer`] communicates asynchronously over [`stdio`] with out-of-order
+//! responses and unprompted notifications (such as compiler diagnostics), the server
+//! utilizes exactly 3 threads:
 //!
 //! 1. Main Thread (`main`):
 //!    - Spawned by: OS (Process entry).
 //!    - Function: [`RustAnalyzerMCPServer::enter_main_event_loop`].
 //!    - Purpose: Drives the MCP event loop: reads newline-delimited MCP requests from
-//!      client `stdin`, translates them to LSP requests, writes to [`rust-analyzer`]
-//!      `stdin`, waits on reply channels, and writes MCP responses to client `stdout`.
+//!      client [`stdin`], translates them to LSP requests, writes to [`rust-analyzer`]
+//!      [`stdin`], waits on reply channels, and writes MCP responses to client
+//!      [`stdout`].
 //! 2. Stdout Reader Thread (`lsp-stdout-reader`):
 //!    - Spawned by: [`RustAnalyzerClient::start`].
 //!    - Function: [`spawn_stdout_reader_thread`].
 //!    - Purpose: Continuously reads `Content-Length` framed JSON-RPC from
-//!      [`rust-analyzer`]'s `stdout`: dispatches response payloads to the waiting main
+//!      [`rust-analyzer`]'s [`stdout`]: dispatches response payloads to the waiting main
 //!      thread via `pending_requests`, and stores compiler diagnostics in `diagnostics`.
 //! 3. Stderr Reader Thread (`lsp-stderr-reader`):
 //!    - Spawned by: [`RustAnalyzerClient::start`].
 //!    - Function: [`spawn_stderr_reader_thread`].
-//!    - Purpose: Continuously drains [`rust-analyzer`]'s `stderr` pipe to prevent OS
+//!    - Purpose: Continuously drains the [`rust-analyzer`] [`stderr`] pipe to prevent OS
 //!      kernel pipe buffer deadlocks (64 KiB limit), and outputs structured logs when
 //!      [`DEBUG_LSP_CLIENT`] is active.
 //!
@@ -327,9 +328,9 @@
 //! 1. A single-use [`sync_channel(1)`] pair is created.
 //! 2. The transmitter (`SyncSender`) is registered in the `pending_requests` [`HashMap`]
 //!    keyed by the unique `request_id`.
-//! 3. The request is written to [`rust-analyzer`]'s `stdin`.
+//! 3. The request is written to the [`rust-analyzer`] [`stdin`].
 //! 4. The main thread blocks waiting on the receiver with a timeout.
-//! 5. When [`rust-analyzer`] writes the response to `stdout`, the `lsp-stdout-reader`
+//! 5. When [`rust-analyzer`] writes the response to [`stdout`], the `lsp-stdout-reader`
 //!    thread matches the `request_id`, removes the transmitter from `pending_requests`,
 //!    and delivers the payload to unblock the main thread.
 //!
@@ -390,7 +391,7 @@
 //!   conversions.
 //! - [`lsp`]: Subprocess management, framing, AST queries, diagnostics, and server
 //!   readiness monitor.
-//! - [`mcp`]: `stdio` JSON-RPC event loop, tool registry, and MCP wire envelopes.
+//! - [`mcp`]: [`stdio`] JSON-RPC event loop, tool registry, and MCP wire envelopes.
 //! - [`value_ext`]: Extension trait on [`serde_json::Value`] for parameter extraction.
 //!
 //! [`cli_arg`]: crate::cli_arg
@@ -403,13 +404,14 @@
 //! [`McpServerError`]: crate::error::McpServerError
 //! [`rust-analyzer`]: https://rust-analyzer.github.io/
 //! [`RustAnalyzerClient::start`]: crate::lsp::RustAnalyzerClient::start
-//! [`RustAnalyzerMCPServer::enter_main_event_loop`]:
-//!     crate::mcp::RustAnalyzerMCPServer::enter_main_event_loop
+//! [`RustAnalyzerMCPServer::enter_main_event_loop`]: crate::mcp::RustAnalyzerMCPServer::enter_main_event_loop
 //! [`ServerReadinessMonitor`]: crate::lsp::ServerReadinessMonitor
-//! [`spawn_stderr_reader_thread`]:
-//!     crate::lsp::RustAnalyzerClient::spawn_stderr_reader_thread
-//! [`spawn_stdout_reader_thread`]:
-//!     crate::lsp::RustAnalyzerClient::spawn_stdout_reader_thread
+//! [`spawn_stderr_reader_thread`]: crate::lsp::RustAnalyzerClient::spawn_stderr_reader_thread
+//! [`spawn_stdout_reader_thread`]: crate::lsp::RustAnalyzerClient::spawn_stdout_reader_thread
+//! [`stderr`]: std::io::stderr
+//! [`stdin`]: std::io::stdin
+//! [`stdio`]: std::io
+//! [`stdout`]: std::io::stdout
 //! [`sync_channel(1)`]: std::sync::mpsc::sync_channel
 //! [`value_ext`]: crate::value_ext
 

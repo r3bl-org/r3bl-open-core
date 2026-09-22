@@ -202,7 +202,7 @@ pub const ANSI_ST_FINAL: u8 = b'\\';
 ///    - In [`UTF-8`], every byte in the range `0x80`..=`0xBF` is a continuation byte
 ///      (`0b10xx_xxxx`).
 ///    - `0x9C` (`0b1001_1100`) falls directly in the middle of this continuation range.
-///    - Common Unicode characters like `✓` (`0xE2 0x9C 0x93`) and `£` (`0xC2 0x9C`)
+///    - Common [`Unicode`] characters like `✓` (`0xE2 0x9C 0x93`) and `£` (`0xC2 0x9C`)
 ///      contain `0x9C` as their continuation byte.
 ///    - If modern terminal emulators treated `0x9C` as a control character, any [`OSC`]
 ///      payload (such as clipboard text in [`OSC`] 52 or window titles in [`OSC`] 0/2)
@@ -223,6 +223,7 @@ pub const ANSI_ST_FINAL: u8 = b'\\';
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`UART`]: https://en.wikipedia.org/wiki/UART
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [ECMA-48]: https://en.wikipedia.org/wiki/ECMA-48
 /// [ISO 6429]: https://en.wikipedia.org/wiki/ISO/IEC_6429

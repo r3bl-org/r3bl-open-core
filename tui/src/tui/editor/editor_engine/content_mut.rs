@@ -488,8 +488,8 @@ mod insert_new_line_at_caret_helper {
 /// Deletes a single character forward (to the right of the caret) or merges lines.
 ///
 /// **Deletion Behaviors**
-/// - **Middle/Start of line**: Deletes the grapheme cluster immediately at the caret's
-///   column position without moving the caret.
+/// - **Middle/Start of line**: Deletes the [`grapheme`] cluster immediately at the
+///   caret's column position without moving the caret.
 /// - **End of line**: Merges the current line with the contents of the line below it.
 ///
 /// ```text
@@ -519,6 +519,7 @@ mod insert_new_line_at_caret_helper {
 ///
 /// [`EditorBuffer`]: crate::EditorBuffer
 /// [`EditorEngine`]: crate::EditorEngine
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub fn delete_at_caret(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -600,8 +601,8 @@ mod delete_at_caret_helper {
 /// previous line.
 ///
 /// **Backspace Behaviors**
-/// - **Middle/End of line**: Deletes the grapheme cluster immediately to the left of the
-///   caret and moves the caret column backward.
+/// - **Middle/End of line**: Deletes the [`grapheme`] cluster immediately to the left of
+///   the caret and moves the caret column backward.
 /// - **Start of line**: Merges the current line into the end of the previous line above
 ///   it, moving the caret to the join position.
 ///
@@ -632,6 +633,7 @@ mod delete_at_caret_helper {
 ///
 /// [`EditorBuffer`]: crate::EditorBuffer
 /// [`EditorEngine`]: crate::EditorEngine
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub fn backspace_at_caret(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,

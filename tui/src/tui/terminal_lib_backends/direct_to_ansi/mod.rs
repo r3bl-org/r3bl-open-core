@@ -2,7 +2,7 @@
 
 //! # [`DirectToAnsi`] Terminal Backend
 //!
-//! Pure-Rust [`ANSI`] sequence generation without crossterm dependencies.
+//! Pure-Rust [`ANSI`] sequence generation without [`crossterm`] dependencies.
 //!
 //! # You Are Here: **Stage 5 Alternative** (Backend Executor)
 //!
@@ -25,12 +25,12 @@
 //! operation abstraction layer.
 //!
 //! ## Navigation
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
-//! - **Previous stage**: [`ofs_buf::paint_impl` mod docs] (Stage 4: Backend
-//!   Converter - shared by both Crossterm and `DirectToAnsi`)
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth).
+//! - **Previous stage**: [`ofs_buf::paint_impl` mod docs] (Stage 4: Backend Converter,
+//!   shared by both Crossterm and [`DirectToAnsi`]).
 //! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod
-//!   docs] (Crossterm-based executor)
-//! - **Next stage**: Terminal output (Stage 6)
+//!   docs] (Crossterm-based executor).
+//! - **Next stage**: Terminal output (Stage 6).
 //!
 //! <div class="warning">
 //!
@@ -46,9 +46,9 @@
 //! [`libc`] on UNIX and [`winapi`] on Windows), [`DirectToAnsi`] generates pure [`ANSI`]
 //! escape sequences in Rust.
 //!
-//! - **Input**: [`RenderOpOutputVec`] from the Backend Converter
-//! - **Output**: [`ANSI`] escape sequences written to terminal
-//! - **Dependencies**: None (pure Rust)
+//! - **Input**: [`RenderOpOutputVec`] from the Backend Converter.
+//! - **Output**: [`ANSI`] escape sequences written to terminal.
+//! - **Dependencies**: None (pure Rust).
 //!
 //! ## Architecture Note: Bypassing [`terminfo`]
 //!
@@ -108,7 +108,7 @@
 //! ## Protocol Navigation Matrix
 //!
 //! 1. **[`Kitty`] Keyboard Protocol (`CSI u`)**:
-//!    - **Direction**: 🛬 Inbound (`stdin`) & Outbound (`stdout`)
+//!    - **Direction**: 🛬 Inbound ([`stdin`]) & Outbound ([`stdout`])
 //!    - **Source of Truth**: [`vt_100_terminal_input_parser`]
 //!    - **Highlights**:
 //!      - Zero-latency progressive enhancement (`CSI > 1 u`).
@@ -116,7 +116,7 @@
 //!      - See [Legacy vs Kitty Capability Matrix].
 //!
 //! 2. **[`OSC`] 52 In-Band Clipboard**:
-//!    - **Direction**: 🛫 Outbound (`stdout`)
+//!    - **Direction**: 🛫 Outbound ([`stdout`])
 //!    - **Source of Truth**: [`ClipboardService`] & [`Osc52Clipboard`]
 //!    - **Highlights**:
 //!      - Automatic fallback when desktop display server (`$DISPLAY` / `$WAYLAND_DISPLAY`)
@@ -125,14 +125,14 @@
 //!      - Works seamlessly in headless and Docker environments.
 //!
 //! 3. **[`DEC`] 2004 Bracketed Paste**:
-//!    - **Direction**: 🛬 Inbound (`stdin`)
+//!    - **Direction**: 🛬 Inbound ([`stdin`])
 //!    - **Source of Truth**: [`paste_state_machine`] & [`terminal_events`]
 //!    - **Highlights**:
 //!      - Asynchronous paste handling (`CSI 200 ~` / `CSI 201 ~`).
 //!      - Eliminates need for insecure synchronous [`OSC`] 52 queries.
 //!
 //! 4. **Inbound [`OSC`] Framing & `Alt+]` Disambiguation**:
-//!    - **Direction**: 🛬 Inbound (`stdin`)
+//!    - **Direction**: 🛬 Inbound ([`stdin`])
 //!    - **Source of Truth**: [`terminal_events`] & [`osc_scanner`]
 //!    - **Highlights**:
 //!      - 2-phase lexical scanner distinguishing human `Alt+]` from terminal [`OSC`]
@@ -141,7 +141,7 @@
 //!      - 1 MiB runaway sequence safety drain via [`OscCircuitBreaker`].
 //!
 //! 5. **Outbound [`OSC`] Codes & Formatting**:
-//!    - **Direction**: 🛫 Outbound (`stdout`)
+//!    - **Direction**: 🛫 Outbound ([`stdout`])
 //!    - **Source of Truth**: [`core::osc`] & [`OscSender`]
 //!    - **Highlights**:
 //!      - Type-safe enum builder ([`OscSequence`]).
@@ -182,27 +182,28 @@
 //!
 //! Integration tests are organized by component:
 //!
-//! - **Output**: [`output::direct_to_ansi_output_integration_tests`] —
-//!   [`StdoutMock`]-based [`ANSI`] sequence verification (cross-platform)
-//! - **Input**: [`input::integration_tests_stub`] — documentation module pointing to
+//! - **Output**: [`output::direct_to_ansi_output_integration_tests`]:
+//!   [`StdoutMock`]-based [`ANSI`] sequence verification (cross-platform).
+//! - **Input**: [`input::integration_tests_stub`]: documentation module pointing to
 //!   [`PTY`]-based parser tests in
 //!   [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`] (Linux-only).
 //!
 //! [`Alacritty`]: https://alacritty.org/
-//! [`ansi_output`]: crate::ansi_output
+//! [`ansi_output`]: mod@crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ClipboardService`]: crate::ClipboardService
 //! [`core::osc`]: mod@crate::core::osc
 //! [`core::pty`]: mod@crate::core::pty
 //! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
+//! [`crossterm`]: crossterm
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 //! [`DirectToAnsi`]: self
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
 //! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
+//! [`input`]: mod@crate::terminal_lib_backends::direct_to_ansi::input
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-//! [`Legacy vs Kitty Capability Matrix`]: mod@crate::core::ansi::vt_100_terminal_input_parser#terminal-input-capability-matrix-legacy-vt-100-vs-kitty-keyboard-protocol
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`libc`]: https://crates.io/crates/libc
 //! [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 //! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
@@ -226,6 +227,8 @@
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`RenderToAnsi`]: crate::RenderToAnsi
 //! [`Sans-IO`]: https://sans-io.readthedocs.io/
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [`StdoutMock`]: crate::StdoutMock
 //! [`terminal_events`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
@@ -237,6 +240,7 @@
 //! [`wezterm.terminfo`]: https://wezterm.org/faq.html
 //! [`WezTerm`]: https://wezterm.org/
 //! [`winapi`]: https://crates.io/crates/winapi
+//! [Legacy vs Kitty Capability Matrix]: mod@crate#terminal-input-capabilities-legacy-vt-100-vs-kitty-keyboard-protocol
 
 #![rustfmt::skip]
 

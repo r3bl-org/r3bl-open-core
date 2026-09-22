@@ -2,9 +2,9 @@
 
 //! [`PTY`]-based integration test for thread reuse (fast path).
 //!
-//! Tests that the mio-poller thread is **reused** (not relaunched) when a new subscriber
-//! appears while the thread is still alive. This validates the fast-path behavior
-//! documented in [`RRT::try_subscribe()`].
+//! Tests that the [`mio`]-poller thread is **reused** (not relaunched) when a new
+//! subscriber appears while the thread is still alive. This validates the fast-path
+//! behavior documented in [`RRT::try_subscribe()`].
 //!
 //! **Companion test**: [`pty_mio_poller_thread_lifecycle_test`] validates the opposite
 //! scenario -- thread exit and relaunch (slow path).
@@ -18,9 +18,9 @@
 //! ## Strategy: Overlapping Subscriptions
 //!
 //! The original test tried to race `drop(device_a)` against
-//! [`DirectToAnsiInputDevice::new()`] for device B. Under CPU load, the mio-poller thread
-//! could wake and see `receiver_count() == 0` before the subscribe completed, causing it
-//! to exit (flaky failure).
+//! [`DirectToAnsiInputDevice::new()`] for device B. Under CPU load, the [`mio`]-poller
+//! thread could wake and see `receiver_count() == 0` before the subscribe completed,
+//! causing it to exit (flaky failure).
 //!
 //! The fix uses a temporary subscription via [`RRT::try_subscribe()`] (which we
 //! immediately drop once Device B is ready). This ensures the `receiver_count` stays
@@ -32,6 +32,7 @@
 //! cargo test -p r3bl_tui test_pty_mio_poller_thread_reuse -- --nocapture
 //! ```
 //!
+//! [`mio`]: mio
 //! [`pty_mio_poller_thread_lifecycle_test`]: super::pty_mio_poller_thread_lifecycle_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RRT::try_subscribe()`]: crate::core::resilient_reactor_thread::RRT::try_subscribe

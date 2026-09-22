@@ -3,27 +3,27 @@
 //! Line editing state machine for async readline.
 //!
 //! This module implements the core line editing functionality that powers
-//! [`Readline`]. It handles Unicode text input, cursor movement, terminal rendering,
+//! [`Readline`]. It handles [`Unicode`] text input, cursor movement, terminal rendering,
 //! and keyboard event processing with pause/resume support.
 //!
 //! # Architecture
 //!
 //! The module is organized by functional responsibility:
 //!
-//! | Module            | Responsibility                                               |
-//! | ----------------- | ------------------------------------------------------------ |
-//! | `core`            | [`LineState`] struct, [`PauseState`] enum, state             |
-//! | `cursor`          | Cursor movement, grapheme navigation, terminal positioning   |
-//! | `event_handlers`  | Keyboard event dispatch (Ctrl, Alt, regular keys)            |
-//! | `output`          | Data printing, prompt updates, exit handling                 |
-//! | `prompt`          | [`Prompt`] struct, display width calculation, [`ANSI`]       |
-//! | `render`          | Terminal clear/render operations with [`ANSI`] sequences     |
+//! | Module            | Responsibility                                                 |
+//! | ----------------- | -------------------------------------------------------------- |
+//! | `core`            | [`LineState`] struct, [`PauseState`] enum, state               |
+//! | `cursor`          | Cursor movement, [`grapheme`] navigation, terminal positioning |
+//! | `event_handlers`  | Keyboard event dispatch (Ctrl, Alt, regular keys)              |
+//! | `output`          | Data printing, prompt updates, exit handling                   |
+//! | `prompt`          | [`Prompt`] struct, display width calculation, [`ANSI`]         |
+//! | `render`          | Terminal clear/render operations with [`ANSI`] sequences       |
 //!
 //! # Type Safety
 //!
 //! This module uses the [`bounds_check`] system for type-safe cursor positioning:
 //!
-//! - [`SegIndex`]: 0-based grapheme cursor position within the line
+//! - [`SegIndex`]: 0-based [`grapheme`] cursor position within the line
 //! - [`VPCol`]: 0-based terminal column position
 //! - [`VPWidth`]: Display width for terminal cursor movement
 //!
@@ -41,10 +41,12 @@
 //! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
 //! [`bounds_check`]: crate::bounds_check
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`PauseState`]: crate::PauseState
 //! [`Prompt`]: crate::Prompt
 //! [`Readline`]: crate::Readline
 //! [`SegIndex`]: crate::SegIndex
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`VPCol`]: crate::VPCol
 //! [`VPWidth`]: crate::VPWidth
 

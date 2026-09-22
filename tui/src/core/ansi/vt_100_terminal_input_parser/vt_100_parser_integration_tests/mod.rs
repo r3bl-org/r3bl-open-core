@@ -87,7 +87,7 @@
 //! [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
 //! [`InputEvent`]: crate::InputEvent
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SGR`]: crate::SgrCode
 //! [`stdin`]: std::io::stdin

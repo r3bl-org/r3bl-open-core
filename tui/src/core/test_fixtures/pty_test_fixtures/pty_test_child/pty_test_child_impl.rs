@@ -65,8 +65,8 @@ use std::io::{BufRead, BufReader, Read};
 /// [`pty_terminal_events_test.rs`]:
 ///     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_terminal_events_test
 /// [`PTY`]: crate::core::pty
-/// [`stdin`]: std::io::Stdin
-/// [`stdout`]: std::io::Stdout
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 /// [`wait()`]: portable_pty::Child::wait
 #[allow(missing_debug_implementations)]
 pub struct PtyTestChild {
@@ -99,7 +99,7 @@ impl PtyTestChild {
     /// single-threaded tests**.
     ///
     /// This function solves a [`PTY`] buffer deadlock that occurs on macOS (and
-    /// occasionally on Linux) when a controlled process writes to stderr after the
+    /// occasionally on Linux) when a controlled process writes to [`stderr`] after the
     /// controller has stopped reading. The sequence that causes the deadlock:
     ///
     /// 1. Controller reads [`PTY`] until a marker (e.g., `SUCCESS`, `CONTROLLED_DONE`).
@@ -167,6 +167,7 @@ impl PtyTestChild {
     /// [`PtyPair`]: crate::PtyPair
     /// [`read()`]: https://manpages.debian.org/read.2
     /// [`std::process::exit(0)`]: std::process::exit
+    /// [`stderr`]: std::io::stderr
     /// [`stdio`]: std::io
     /// [Two Types of Deadlocks]: crate::PtyPair#two-types-of-pty-deadlocks
     #[allow(clippy::needless_continue)]
@@ -310,8 +311,8 @@ impl PtyTestChild {
     ///
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
-    /// [`stderr`]: std::io::Stderr
-    /// [`stdout`]: std::io::Stdout
+    /// [`stderr`]: std::io::stderr
+    /// [`stdout`]: std::io::stdout
     pub fn read_line_state<R: BufRead>(
         &self,
         buf_reader: &mut R,
@@ -445,7 +446,7 @@ impl PtyTestChild {
     /// [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`]: crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
     /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
     /// [`DSR`]: crate::DsrSequence
-    /// [`stdout`]: std::io::Stdout
+    /// [`stdout`]: std::io::stdout
     pub fn get_writer_with_handshake<R: Read>(
         &self,
         pty_pair: &PtyPair,
@@ -498,7 +499,7 @@ impl PtyTestChild {
     ///
     /// > On POSIX systems, when a child process exits or panics, the operating system
     /// > closes the replica pseudoterminal file descriptors, causing the controller's
-    /// > `reader.read()` to return immediately with `EOF` or `EIO`.
+    /// > `reader.read()` to return immediately with [`EOF`] or `EIO`.
     ///
     /// To fail fast in milliseconds instead of hanging for 60 seconds, this method
     /// queries [`Self::is_child_terminated_windows()`] before reading and between buffer
@@ -513,6 +514,7 @@ impl PtyTestChild {
     /// [`DSR_CURSOR_POSITION_ORIGIN_RESPONSE`]:
     ///     crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
     /// [`DSR_CURSOR_POSITION_REQUEST`]: crate::DSR_CURSOR_POSITION_REQUEST
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`portable_pty`]: portable_pty
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog

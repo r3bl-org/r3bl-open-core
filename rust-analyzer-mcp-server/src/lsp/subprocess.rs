@@ -71,12 +71,14 @@ impl RustAnalyzerClient {
         }
     }
 
-    /// Spawns the `rust-analyzer` child process with piped `stdio` streams in the
+    /// Spawns the `rust-analyzer` child process with piped [`stdio`] streams in the
     /// workspace directory.
     ///
     /// # Errors
     ///
     /// Returns [`McpServerError::ProcessSpawn`] if spawning the child process fails.
+    ///
+    /// [`stdio`]: std::io
     pub fn spawn_rust_analyzer_child_process(
         &self,
         ra_path: &Path,
@@ -114,14 +116,16 @@ impl RustAnalyzerClient {
         Ok(child)
     }
 
-    /// Spawns a background thread that drains `stderr` from `rust-analyzer`.
+    /// Spawns a background thread that drains [`stderr`] from `rust-analyzer`.
     ///
-    /// Draining stderr continuously is critical to prevent operating system pipe buffer
-    /// deadlocks (typically 64 KiB limit on Linux).
+    /// Draining [`stderr`] continuously is critical to prevent operating system pipe
+    /// buffer deadlocks (typically 64 KiB limit on Linux).
     ///
     /// # Panics
     ///
     /// Panics if the OS fails to spawn the thread.
+    ///
+    /// [`stderr`]: std::io::stderr
     #[must_use]
     pub fn spawn_stderr_reader_thread(
         stderr: impl Read + Send + 'static,
@@ -156,7 +160,7 @@ impl RustAnalyzerClient {
     }
 
     /// Spawns a background thread that continuously reads and frames `Content-Length`
-    /// JSON-RPC messages from `rust-analyzer`'s `stdout`.
+    /// JSON-RPC messages from `rust-analyzer`'s [`stdout`].
     ///
     /// Dispatches response payloads to waiting request channels and caches published
     /// compiler diagnostics.
@@ -164,6 +168,8 @@ impl RustAnalyzerClient {
     /// # Panics
     ///
     /// Panics if the OS fails to spawn the thread.
+    ///
+    /// [`stdout`]: std::io::stdout
     #[must_use]
     pub fn spawn_stdout_reader_thread(
         stdout: impl Read + Send + 'static,

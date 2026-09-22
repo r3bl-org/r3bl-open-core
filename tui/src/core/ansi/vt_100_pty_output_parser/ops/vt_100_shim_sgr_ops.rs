@@ -201,9 +201,9 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 ///
 /// # Extended Color Format Handling
 ///
-/// Extended colors (256-color and RGB) can be formatted two ways:
+/// Extended colors (256-color and [`RGB`]) can be formatted two ways:
 ///
-/// - **Colon format** ([ITU-T Rec. T.416]): `ESC [ 38 : 5 : 196 m` - [`VTE`] groups as
+/// - **Colon format** ([`ITU-T Rec. T.416`]): `ESC [ 38 : 5 : 196 m` - [`VTE`] groups as
 ///   `[[38, 5, 196]]`
 /// - **Semicolon format** (legacy): `ESC [ 38 ; 5 ; 196 m` - [`VTE`] parses as `[[38],
 ///   [5], [196]]`
@@ -213,9 +213,10 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// positions.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ITU-T Rec. T.416`]: https://www.itu.int/rec/T-REC-T.416-199303-I
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SGR`]: crate::SgrCode
 /// [`VTE`]: mod@vte
-/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0u16;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {

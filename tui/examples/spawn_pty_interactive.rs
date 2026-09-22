@@ -7,7 +7,7 @@
 //! - Sending Python code to the interpreter
 //! - Receiving and displaying output
 //! - Handling control characters (Ctrl-D for exit)
-//! - Processing both stdout and stderr combined
+//! - Processing both [`stdout`] and [`stderr`] combined
 //!
 //! # Usage
 //!
@@ -17,6 +17,8 @@
 //! ```
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`stderr`]: std::io::stderr
+//! [`stdout`]: std::io::stdout
 
 use miette::IntoDiagnostic;
 use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,

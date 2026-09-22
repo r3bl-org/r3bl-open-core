@@ -5,9 +5,10 @@
 //!
 //! [`Range`]: std::ops::Range
 
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck,
-            CursorPositionBoundsStatus, IndexOps, LengthOps, NumericValue,
-            RangeBoundsResult, RangeExclusive, RangeValidityStatus};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ArrayUnderflowResult,
+            CursorBoundsCheck, CursorPositionBoundsStatus, IndexOps, LengthOps,
+            NumericValue, RangeBoundsResult, RangeExclusive, RangeOverlapResult,
+            RangeValidityStatus};
 use std::ops::{Add, RangeInclusive};
 
 /// Extension trait for [`RangeExclusive<Index>`] and [`RangeInclusive<Index>`] validation for
@@ -77,6 +78,9 @@ use std::ops::{Add, RangeInclusive};
 /// - [`check_index_is_within()`] - Check if an index is within the range's bounds
 /// - [`clamp_range_to()`] - Ensure range fits within content bounds (preserving
 ///   semantics)
+/// - [`overlaps()`]: Check if two ranges share at least one index in common
+/// - [`to_len()`]: Compute the number of elements covered by the range as
+///   [`Self::LengthType`]
 ///
 /// For detailed information on each method's behavior, see the method documentation.
 ///
@@ -221,11 +225,13 @@ use std::ops::{Add, RangeInclusive};
 /// [`clamp_range_to()`]: RangeBoundsExt::clamp_range_to
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`IndexOps`]: crate::IndexOps
+/// [`overlaps()`]: RangeBoundsExt::overlaps
 /// [`Range`]: std::ops::Range
 /// [`RangeConvertExt`]: crate::RangeConvertExt
 /// [`RangeExclusive<Index>`]: std::ops::Range
 /// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`RangeInclusive`]: std::ops::RangeInclusive
+/// [`to_len()`]: RangeBoundsExt::to_len
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [Interval Notation]: mod@crate::bounds_check#interval-notation
@@ -279,6 +285,33 @@ where
     /// - [`RangeBoundsResult::Within`] if index is within bounds
     /// - [`RangeBoundsResult::Overflowed`] if index is beyond bounds
     fn check_index_is_within(&self, index: Self::IndexType) -> RangeBoundsResult;
+
+    /// Checks if this range overlaps (shares at least one index) with `other`.
+    ///
+    /// Empty exclusive ranges (`start >= end`) or inverted inclusive ranges (`start >
+    /// end`) contain no indices and therefore always return
+    /// [`RangeOverlapResult::Disjoint`].
+    ///
+    /// # Returns
+    /// - [`RangeOverlapResult::Overlaps`] if the ranges share at least one index.
+    /// - [`RangeOverlapResult::Disjoint`] if the ranges do not overlap or either is empty.
+    #[must_use]
+    fn overlaps(&self, other: &Self) -> RangeOverlapResult;
+
+    /// Returns the number of elements covered by this range as [`Self::LengthType`].
+    ///
+    /// Automatically accounts for exclusive vs. inclusive endpoint semantics:
+    /// - For [`RangeExclusive<I>`] (`start..end`):
+    ///   - `end - start`, or
+    ///   - `0` if `start >= end`.
+    /// - For [`RangeInclusive<I>`] (`start..=end`):
+    ///   - `(end - start) + 1`, or
+    ///   - `0` if `start > end`.
+    ///
+    /// [`RangeExclusive<I>`]: std::ops::Range
+    /// [`RangeInclusive<I>`]: std::ops::RangeInclusive
+    #[must_use]
+    fn to_len(&self) -> Self::LengthType;
 }
 
 /// Implementation of range operations for [`RangeExclusive<IndexType>`].
@@ -377,6 +410,33 @@ where
             RangeBoundsResult::Within
         }
     }
+
+    fn overlaps(&self, other: &Self) -> RangeOverlapResult {
+        let self_non_empty = self.start < self.end;
+        let other_non_empty = other.start < other.end;
+        let start_before_other_end = self.start < other.end;
+        let other_start_before_end = other.start < self.end;
+
+        if self_non_empty
+            && other_non_empty
+            && start_before_other_end
+            && other_start_before_end
+        {
+            RangeOverlapResult::Overlaps
+        } else {
+            RangeOverlapResult::Disjoint
+        }
+    }
+
+    fn to_len(&self) -> Self::LengthType {
+        if self.end.underflows(self.start) == ArrayUnderflowResult::Underflowed
+            || self.start == self.end
+        {
+            Self::LengthType::default()
+        } else {
+            self.end.convert_to_length() - self.start.convert_to_length()
+        }
+    }
 }
 
 /// Implementation of range operations for [`RangeInclusive<IndexType>`].
@@ -471,6 +531,37 @@ where
             RangeBoundsResult::Overflowed
         } else {
             RangeBoundsResult::Within
+        }
+    }
+
+    fn overlaps(&self, other: &Self) -> RangeOverlapResult {
+        let self_valid =
+            self.end().underflows(*self.start()) == ArrayUnderflowResult::Within;
+        let other_valid =
+            other.end().underflows(*other.start()) == ArrayUnderflowResult::Within;
+        let start_within_other_end =
+            self.start().overflows(other.end().convert_to_length())
+                == ArrayOverflowResult::Within;
+        let end_within_other_start =
+            self.end().underflows(*other.start()) == ArrayUnderflowResult::Within;
+
+        if self_valid
+            && other_valid
+            && start_within_other_end
+            && end_within_other_start
+        {
+            RangeOverlapResult::Overlaps
+        } else {
+            RangeOverlapResult::Disjoint
+        }
+    }
+
+    fn to_len(&self) -> Self::LengthType {
+        if self.end().underflows(*self.start()) == ArrayUnderflowResult::Underflowed {
+            Self::LengthType::default()
+        } else {
+            let one = I::default().convert_to_length();
+            (self.end().convert_to_length() - self.start().convert_to_length()) + one
         }
     }
 }
@@ -952,7 +1043,7 @@ mod tests_compare_exclusive_vs_inclusive {
 #[cfg(test)]
 mod tests_range_membership {
     use super::*;
-    use crate::{vp_col, vp_idx, vp_row};
+    use crate::{c_row, vp_col, vp_idx, vp_row};
 
     #[test]
     fn test_check_index_is_within_exclusive() {
@@ -1129,5 +1220,111 @@ mod tests_range_membership {
             RangeBoundsResult::Overflowed,
             "Index 21 should overflow [10, 20]"
         );
+    }
+
+    #[test]
+    fn test_range_overlaps_inclusive() {
+        let r = c_row(9)..=c_row(19);
+
+        // Partial overlap at start, full match, partial overlap at end, superset.
+        assert_eq!(
+            r.overlaps(&(c_row(4)..=c_row(9))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(c_row(9)..=c_row(19))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(c_row(14)..=c_row(24))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(c_row(4)..=c_row(24))),
+            RangeOverlapResult::Overlaps
+        );
+
+        // Single-element touching boundary.
+        assert_eq!(
+            r.overlaps(&(c_row(9)..=c_row(9))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(c_row(19)..=c_row(19))),
+            RangeOverlapResult::Overlaps
+        );
+
+        // Disjoint before and after.
+        assert_eq!(
+            r.overlaps(&(c_row(0)..=c_row(8))),
+            RangeOverlapResult::Disjoint
+        );
+        assert_eq!(
+            r.overlaps(&(c_row(20)..=c_row(29))),
+            RangeOverlapResult::Disjoint
+        );
+
+        // Inverted inclusive range is always disjoint.
+        let inverted = c_row(20)..=c_row(10);
+        assert_eq!(r.overlaps(&inverted), RangeOverlapResult::Disjoint);
+        assert_eq!(inverted.overlaps(&r), RangeOverlapResult::Disjoint);
+    }
+
+    #[test]
+    fn test_range_overlaps_exclusive() {
+        let r = vp_col(5)..vp_col(10);
+
+        // Overlapping exclusive ranges.
+        assert_eq!(
+            r.overlaps(&(vp_col(0)..vp_col(6))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(vp_col(5)..vp_col(10))),
+            RangeOverlapResult::Overlaps
+        );
+        assert_eq!(
+            r.overlaps(&(vp_col(9)..vp_col(15))),
+            RangeOverlapResult::Overlaps
+        );
+
+        // Adjacent exclusive ranges [0, 5) and [5, 10) do NOT overlap!
+        assert_eq!(
+            r.overlaps(&(vp_col(0)..vp_col(5))),
+            RangeOverlapResult::Disjoint
+        );
+        assert_eq!(
+            r.overlaps(&(vp_col(10)..vp_col(15))),
+            RangeOverlapResult::Disjoint
+        );
+
+        // Empty or inverted exclusive ranges are always disjoint.
+        let empty = vp_col(7)..vp_col(7);
+        let inverted = vp_col(9)..vp_col(6);
+        assert_eq!(r.overlaps(&empty), RangeOverlapResult::Disjoint);
+        assert_eq!(r.overlaps(&inverted), RangeOverlapResult::Disjoint);
+    }
+
+    #[test]
+    fn test_range_to_len_inclusive_and_exclusive() {
+        use crate::{byte_index, byte_len, c_height, c_row, vp_width};
+
+        // Inclusive CRow range -> CHeight (+1 included).
+        assert_eq!((c_row(14)..=c_row(24)).to_len(), c_height(11));
+        assert_eq!((c_row(0)..=c_row(4)).to_len(), c_height(5));
+        assert_eq!((c_row(5)..=c_row(5)).to_len(), c_height(1));
+        // Inverted inclusive range -> 0.
+        assert_eq!((c_row(10)..=c_row(5)).to_len(), c_height(0));
+
+        // Exclusive VPCol range -> VPWidth (end - start).
+        assert_eq!((vp_col(2)..vp_col(7)).to_len(), vp_width(5));
+        assert_eq!((vp_col(0)..vp_col(5)).to_len(), vp_width(5));
+        // Empty and inverted exclusive range -> 0.
+        assert_eq!((vp_col(5)..vp_col(5)).to_len(), vp_width(0));
+        assert_eq!((vp_col(8)..vp_col(3)).to_len(), vp_width(0));
+
+        // ByteIndex ranges -> ByteLength.
+        assert_eq!((byte_index(2)..=byte_index(6)).to_len(), byte_len(5));
+        assert_eq!((byte_index(2)..byte_index(6)).to_len(), byte_len(4));
     }
 }

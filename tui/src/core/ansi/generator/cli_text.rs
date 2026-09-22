@@ -29,7 +29,7 @@ use strum_macros::EnumCount;
 /// Once created, either directly or using constructor functions like [`fg_red`], you
 /// can then use [`bg_dark_gray`] to add a background color to the text.
 /// If you want even more flexibility you can use constructor function [`fg_color`]
-/// and [`bg_color`] to create a styled text with a specific RGB color.
+/// and [`bg_color`] to create a styled text with a specific [`RGB`] color.
 ///
 /// # Example usage:
 ///
@@ -86,6 +86,7 @@ use strum_macros::EnumCount;
 /// [`fg_color`]: crate::fg_color
 /// [`fg_green`]: crate::fg_green
 /// [`fg_red`]: crate::fg_red
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`text`]: Self::text
 /// [`TuiStyleAttribs`]: crate::TuiStyleAttribs
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,7 +160,8 @@ pub mod impl_cli_text_inline {
     /// Options for converting or clipping [`CliTextInline`] to a range.
     ///
     /// Uses (start, width) semantics with display-width awareness to correctly handle
-    /// Unicode characters of varying widths (e.g., CJK characters that occupy 2 columns):
+    /// [`Unicode`] characters of varying widths (e.g., CJK characters that occupy 2
+    /// columns):
     /// - `start`: Display column index where to start (0-based)
     /// - `width`: Display width in columns to include, or None for "to end of text"
     ///
@@ -177,6 +179,7 @@ pub mod impl_cli_text_inline {
     ///   - `start=2, width=4` → "好世" (starts at col 2, takes 4 cols)
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct CliTextConvertOptions {
         pub start: CCol,
@@ -222,9 +225,10 @@ pub mod impl_cli_text_inline {
         /// - `width`: Number of characters to include, or None for "to end of text"
         ///
         /// This is optimized to avoid the wasteful [`convert()`] call by directly slicing
-        /// the text using grapheme clustering.
+        /// the text using [`grapheme`] clustering.
         ///
         /// [`convert()`]: Self::convert
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn clip(
             &self,
@@ -294,10 +298,11 @@ pub mod impl_cli_text_inline {
         /// # Display Width Handling
         ///
         /// This method uses display-width-aware clipping to correctly handle:
-        /// - Wide Unicode characters (e.g., CJK characters that occupy 2 columns)
+        /// - Wide [`Unicode`] characters (e.g., CJK characters that occupy 2 columns)
         /// - Zero-width characters (combining marks, ZWJ sequences)
         /// - Accurate terminal rendering positioning
         ///
+        /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
         /// [`width`]: CliTextConvertOptions::width
         pub fn convert(
             &self,

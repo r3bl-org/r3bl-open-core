@@ -29,14 +29,14 @@ use std::ops::Add;
 ///
 /// # Why These Conversions Are Essential
 ///
-/// These conversion operators are the heart of Unicode text handling in the editor:
+/// These conversion operators are the heart of [`Unicode`] text handling in the editor:
 ///
 /// 1. **[`ByteIndex`] → [`SegIndex`]**: When we have a byte position (e.g., from a file
-///    offset or string slice operation), we need to find which grapheme cluster it
+///    offset or string slice operation), we need to find which [`grapheme`] cluster it
 ///    belongs to. This is crucial for ensuring we never split a multi-byte character.
 ///
 /// 2. **[`VPCol`] → [`SegIndex`]**: When the user clicks at a screen position or we need
-///    to render at a specific column, we must find which grapheme cluster is at that
+///    to render at a specific column, we must find which [`grapheme`] cluster is at that
 ///    display position. This handles wide characters correctly.
 ///
 /// 3. **[`SegIndex`] → [`VPCol`]**: When we have a logical character position and need to
@@ -57,19 +57,26 @@ use std::ops::Add;
 /// ColIndex 2 → SegIndex 1 ('😀' spans columns 1-2)
 /// ColIndex 3 → SegIndex 2 ('b' at column 3)
 /// ```
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub mod convert {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Converts a [`ByteIndex`] to a [`SegIndex`].
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a grapheme index
+    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a [`grapheme`] index
     /// [`SegIndex`].
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     impl Add<ByteIndex> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
-        /// Finds the grapheme cluster segment (index) that is at the `byte_index` of the
-        /// underlying string.
+        /// Finds the [`grapheme`] cluster segment (index) that is at the `byte_index` of
+        /// the underlying string.
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         fn add(self, byte_index: ByteIndex) -> Self::Output {
             let byte_index = byte_index.as_usize();
             for seg in &self.segments {
@@ -86,14 +93,17 @@ pub mod convert {
     /// Converts a [`VPCol`] to a [`SegIndex`].
     ///
     /// Try and convert a [`GCStringOwned`] + [`VPCol`] (display column index) to a
-    /// grapheme index [`SegIndex`].
+    /// [`grapheme`] index [`SegIndex`].
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     impl Add<VPCol> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
-        /// Finds the grapheme cluster segment (index) that can be displayed at the
+        /// Finds the [`grapheme`] cluster segment (index) that can be displayed at the
         /// [`display_col_index`] of the terminal.
         ///
         /// [`display_col_index`]: VPCol
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         fn add(self, display_col_index: VPCol) -> Self::Output {
             self.segments
                 .iter()
@@ -115,9 +125,10 @@ pub mod convert {
     impl Add<SegIndex> for &GCStringOwned {
         type Output = Option<VPCol>;
 
-        /// Finds the display column index that corresponds to the grapheme cluster
+        /// Finds the display column index that corresponds to the [`grapheme`] cluster
         /// segment at the [`seg_index`].
         ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         /// [`seg_index`]: SegIndex
         fn add(self, seg_index: SegIndex) -> Self::Output {
             self.get(seg_index).map(|seg| seg.start_display_col_index)
@@ -125,8 +136,10 @@ pub mod convert {
     }
 }
 
-/// Methods for easily truncating grapheme cluster segments (at the end) for common TUI
-/// use cases.
+/// Methods for easily truncating [`grapheme`] cluster segments (at the end) for common
+/// TUI use cases.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub mod trunc_end {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -233,8 +246,10 @@ pub mod trunc_end {
     }
 }
 
-/// Methods for easily truncating grapheme cluster segments (from the start) for common
-/// TUI use cases.
+/// Methods for easily truncating [`grapheme`] cluster segments (from the start) for
+/// common TUI use cases.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub mod trunc_start {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -288,7 +303,9 @@ pub mod trunc_start {
     }
 }
 
-/// Methods for easily padding grapheme cluster segments for common TUI use cases.
+/// Methods for easily padding [`grapheme`] cluster segments for common TUI use cases.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 mod pad {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -411,7 +428,9 @@ mod pad {
     }
 }
 
-/// Methods for easily clipping grapheme cluster segments for common TUI use cases.
+/// Methods for easily clipping [`grapheme`] cluster segments for common TUI use cases.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 mod clip {
     #[allow(clippy::wildcard_imports)]
     use super::*;

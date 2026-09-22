@@ -75,7 +75,7 @@
 //! 1. **No Line Buffering**: Characters become available immediately as bytes arrive
 //!    without waiting for a carriage return or newline.
 //! 2. **No Special Character Processing**: Control characters (such as [`ESC`]) pass
-//!    through verbatim rather than triggering terminal signals (like `SIGINT` on
+//!    through verbatim rather than triggering terminal signals (like [`SIGINT`] on
 //!    `Ctrl+C`).
 //! 3. **Non-Blocking Async Read**: The asynchronous reader retrieves discrete chunks as
 //!    they arrive, enabling continuous Sans-IO parsing.
@@ -92,8 +92,9 @@
 //! [`generate_keyboard_sequence`]: crate::core::ansi::generator::generate_keyboard_sequence
 //! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
 //! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
@@ -122,11 +123,12 @@ generate_pty_test! {
 ///
 /// - Receives [`PTY`] pair and child process from macro
 /// - Writes [`ANSI`] sequences to [`PTY`] controller
-/// - Reads parsed output from controlled's stdout
+/// - Reads parsed output from controlled's [`stdout`]
 /// - Verifies correctness
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stdout`]: std::io::stdout
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
@@ -201,15 +203,17 @@ fn controller(context: PtyTestContext) {
 ///    - Disable line buffering (get bytes immediately)
 ///    - Prevent [`ANSI`] escape sequence interpretation
 ///    - Allow async byte-by-byte reading
-/// 2. **Create Device**: Initialize `DirectToAnsiInputDevice` to read from stdin
+/// 2. **Create Device**: Initialize `DirectToAnsiInputDevice` to read from [`stdin`]
 /// 3. **Process Events**: Read and parse [`ANSI`] sequences into `InputEvents`
-/// 4. **Output Results**: Write parsed events to stdout for controller to verify
+/// 4. **Output Results**: Write parsed events to [`stdout`] for controller to verify
 ///
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`file descriptor`]: https://manpages.debian.org/open.2
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{MSG_TEST_RUNNING}");

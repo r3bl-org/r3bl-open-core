@@ -9,14 +9,14 @@
 //! # Test Coverage
 //!
 //! 1. **Basic Enable/Disable** - Verifies fundamental raw mode lifecycle
-//! 2. **Flag Verification** - Validates that correct termios flags are set
+//! 2. **Flag Verification** - Validates that correct [`termios`] flags are set
 //! 3. **Input Behavior** - Tests actual character-by-character input processing
 //! 4. **Multiple Cycles** - Ensures enable/disable can be called repeatedly
 //!
 //! # Manual Tests
 //!
 //! For tests that require a **real terminal** (e.g., `/dev/tty` fallback with redirected
-//! stdin), see [`validation_tests`]. Those tests are marked `#[ignore]` and must be run
+//! [`stdin`]), see [`validation_tests`]. Those tests are marked `#[ignore]` and must be run
 //! manually by developers.
 //!
 //! # Running Automated Tests
@@ -42,11 +42,13 @@
 //! - Automatic cleanup
 //!
 //! [`PTY`] pairs simulate real terminals, allowing automated verification without user
-//! interaction. For edge cases that cannot be simulated with PTYs (like stdin redirection
+//! interaction. For edge cases that cannot be simulated with PTYs (like [`stdin`] redirection
 //! with controlling terminals), see [`validation_tests`].
 //!
 //! [`generate_pty_test!`]: macro@crate::generate_pty_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`stdin`]: std::io::stdin
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [`validation_tests`]: mod@super::validation_tests
 
 #![rustfmt::skip]

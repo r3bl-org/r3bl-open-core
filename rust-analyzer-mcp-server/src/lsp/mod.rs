@@ -3,8 +3,10 @@
 //! Language Server Protocol (LSP) client subsystem for `rust-analyzer`.
 //!
 //! This module encapsulates the `rust-analyzer` child process lifecycle, asynchronous
-//! stdio framing reader threads, synchronous JSON-RPC request-response routing, AST
+//! [`stdio`] framing reader threads, synchronous JSON-RPC request-response routing, AST
 //! inspection queries, compiler diagnostics aggregation, and server readiness tracking.
+//!
+//! [`stdio`]: std::io
 
 mod client;
 mod diagnostics;

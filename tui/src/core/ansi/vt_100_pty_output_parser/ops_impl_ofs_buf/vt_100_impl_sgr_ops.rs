@@ -146,7 +146,7 @@ impl OfsBufVT100 {
             Some(TuiColor::Ansi(AnsiValue::new(index)));
     }
 
-    /// Set foreground color using RGB values.
+    /// Set foreground color using [`RGB`] values.
     ///
     /// # Arguments
     ///
@@ -158,13 +158,14 @@ impl OfsBufVT100 {
     ///
     /// Used with: `ESC[38;2;r;g;bm` or `ESC[38:2:r:g:bm`
     ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_foreground_rgb(&mut self, r: u8, g: u8, b: u8) {
         self.get_parser_global_state_mut().current_style.color_fg =
             Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
     }
 
-    /// Set background color using RGB values.
+    /// Set background color using [`RGB`] values.
     ///
     /// # Arguments
     ///
@@ -176,6 +177,7 @@ impl OfsBufVT100 {
     ///
     /// Used with: `ESC[48;2;r;g;bm` or `ESC[48:2:r:g:bm`
     ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
         self.get_parser_global_state_mut().current_style.color_bg =

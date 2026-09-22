@@ -719,6 +719,7 @@ use crate::VPSize;
 /// [`portable_pty's CommandBuilder`]: portable_pty::CommandBuilder
 /// [`portable_pty's openpty()`]: portable_pty::PtySystem::openpty
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
+/// [`portable_pty`]: portable_pty
 /// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
 /// [`posix_openpt()`]: https://manpages.debian.org/posix_openpt.3
 /// [`println!`]: std::println
@@ -735,7 +736,7 @@ use crate::VPSize;
 /// [`Receiver`]: std::sync::mpsc::Receiver
 /// [`select!`]: tokio::select
 /// [`setsid()`]: https://manpages.debian.org/setsid.2
-/// [`SIGINT`]: https://manpages.debian.org/signal.7
+/// [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 /// [`SIGPIPE`]: https://manpages.debian.org/signal.7
 /// [`SIGQUIT`]: https://manpages.debian.org/signal.7
 /// [`SIGTSTP`]: https://manpages.debian.org/signal.7
@@ -758,7 +759,7 @@ use crate::VPSize;
 /// [`tcgetattr()`]: https://manpages.debian.org/tcgetattr.3
 /// [`tcsetattr()`]: https://manpages.debian.org/tcsetattr.3
 /// [`tcsetattr`]: https://manpages.debian.org/tcsetattr.3
-/// [`termios`]: https://manpages.debian.org/termios.3
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 /// [`tmux`]: https://github.com/tmux/tmux
 /// [`tokio`]: tokio
 /// [`top`]: https://manpages.debian.org/top.1

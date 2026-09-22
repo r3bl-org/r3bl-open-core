@@ -2,6 +2,7 @@
 
 //! Run `cargo fmt` on specified files.
 
+use crate::cargo_rustdoc_fmt::{CARGO_ARGS_SEPARATOR, CARGO_PROGRAM, FMT_SUBCOMMAND};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use r3bl_tui::{CommandOutputResult, ok};
 use std::{path::PathBuf, process::Command};
@@ -31,7 +32,7 @@ use std::{path::PathBuf, process::Command};
 /// # Ok::<(), miette::Report>(())
 /// ```
 pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
-    // No-op if no files to format
+    // No-op if no files to format.
     if files.is_empty() {
         return ok!();
     }
@@ -43,9 +44,9 @@ pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
         }
     }
 
-    // Build cargo fmt command with file arguments
-    let mut cmd = Command::new("cargo");
-    cmd.arg("fmt").arg("--");
+    // Build cargo fmt command with file arguments.
+    let mut cmd = Command::new(CARGO_PROGRAM);
+    cmd.arg(FMT_SUBCOMMAND).arg(CARGO_ARGS_SEPARATOR);
 
     for file in files {
         cmd.arg(file);

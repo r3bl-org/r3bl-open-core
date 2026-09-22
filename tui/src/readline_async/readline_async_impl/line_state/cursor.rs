@@ -138,13 +138,14 @@ impl LineState {
         ok!()
     }
 
-    /// Shifts the logical cursor by the given number of unicode grapheme segments either
-    /// left (negative) or right (positive).
+    /// Shifts the logical cursor by the given number of unicode [`grapheme`] segments
+    /// either left (negative) or right (positive).
     ///
     /// This is an infallible, in-memory state update that does not perform any terminal
     /// I/O. To update the physical terminal cursor after shifting, invoke
     /// [`paint_cursor_at_current_column`].
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`paint_cursor_at_current_column`]: Self::paint_cursor_at_current_column
     pub fn shift_logical_cursor_by(&mut self, seg_delta: isize) {
         if seg_delta > 0 {
@@ -174,7 +175,10 @@ impl LineState {
         self.cursor_position = seg_index(0);
     }
 
-    /// Moves the logical cursor to the end of the line buffer (after the last grapheme).
+    /// Moves the logical cursor to the end of the line buffer (after the last
+    /// [`grapheme`]).
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub fn move_logical_cursor_to_end(&mut self) {
         self.cursor_position = self.line.segment_count().eol_cursor_position();
     }
@@ -190,11 +194,13 @@ impl LineState {
     /// 0 -----------------------------------------------------> current_column
     /// ```
     ///
-    /// Because grapheme clusters vary in display width (e.g. [`ASCII`] is 1 column, wide
-    /// characters and emojis are 2 columns, zero-width joiners are 0 columns), the
-    /// column position is computed in display cells rather than byte or segment indices.
+    /// Because [`grapheme`] clusters vary in display width (e.g. [`ASCII`] is 1 column,
+    /// wide characters and emojis are 2 columns, zero-width joiners are 0 columns),
+    /// the column position is computed in display cells rather than byte or segment
+    /// indices.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`vp_col(0)`]: crate::vp_col
     #[must_use]
     pub fn calc_current_column(&self) -> VPCol {
@@ -205,11 +211,12 @@ impl LineState {
     /// Calculates the total display width of buffer content up to the current logical
     /// cursor position.
     ///
-    /// Uses pre-computed grapheme cluster segment metadata from [`GCStringOwned`] to
+    /// Uses pre-computed [`grapheme`] cluster segment metadata from [`GCStringOwned`] to
     /// achieve an `O(1)` direct array lookup, rather than iterating or re-parsing the
     /// underlying text.
     ///
     /// [`GCStringOwned`]: crate::GCStringOwned
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     fn calc_display_width_up_to_cursor(&self) -> VPWidth {
         match self.line.get(self.cursor_position) {
             // Cursor is positioned in front of an existing segment. The display width up
@@ -222,15 +229,16 @@ impl LineState {
         }
     }
 
-    /// Returns the grapheme cluster segment immediately before the cursor position.
+    /// Returns the [`grapheme`] cluster segment immediately before the cursor position.
     ///
     /// Returns `None` if the cursor is at the beginning of the line (position 0).
     ///
     /// # Returns
     ///
     /// A [`Seg`] containing byte offset, display width, and other segment metadata.
-    /// Use [`seg.get_str(&self.line)`] to get the actual grapheme string.
+    /// Use [`seg.get_str(&self.line)`] to get the actual [`grapheme`] string.
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`seg.get_str(&self.line)`]: crate::Seg::get_str
     #[must_use]
     pub fn grapheme_before_cursor(&self) -> Option<Seg> {
@@ -240,7 +248,7 @@ impl LineState {
         self.line.get(self.cursor_position - seg_length(1))
     }
 
-    /// Returns the grapheme cluster segment at the cursor position (to be deleted by
+    /// Returns the [`grapheme`] cluster segment at the cursor position (to be deleted by
     /// Delete key).
     ///
     /// Returns `None` if the cursor is at the end of the line.
@@ -248,8 +256,9 @@ impl LineState {
     /// # Returns
     ///
     /// A [`Seg`] containing byte offset, display width, and other segment metadata. Use
-    /// [`seg.get_str(&self.line)`] to get the actual grapheme string.
+    /// [`seg.get_str(&self.line)`] to get the actual [`grapheme`] string.
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`seg.get_str(&self.line)`]: crate::Seg::get_str
     #[must_use]
     pub fn grapheme_at_cursor(&self) -> Option<Seg> {

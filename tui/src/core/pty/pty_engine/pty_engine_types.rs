@@ -21,9 +21,12 @@ pub const READ_BUFFER_SIZE: usize = 4_096;
 /// Type alias for the controlled half of a [`PTY`].
 ///
 /// This represents the process-side of the [`PTY`] that the child process will use for
-/// stdin/stdout/stderr.
+/// [`stdin`]/[`stdout`]/[`stderr`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 pub type Controlled = Box<dyn SlavePty + Send>;
 
 /// Type alias for the controller half of a [`PTY`].
@@ -55,7 +58,7 @@ pub type PtyCommand = CommandBuilder;
 /// on the [`portable_pty`] crate directly. All [`PTY`]-related exit statuses should use
 /// this alias.
 ///
-/// [`portable_pty`]: https://docs.rs/portable-pty
+/// [`portable_pty`]: portable_pty
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub struct PtyControlledChildExitStatus {

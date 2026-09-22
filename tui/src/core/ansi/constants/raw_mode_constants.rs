@@ -3,7 +3,7 @@
 //! Raw mode terminal configuration constants.
 //!
 //! This module contains constants specific to raw mode terminal configuration,
-//! particularly for POSIX termios special codes (VMIN and VTIME).
+//! particularly for POSIX [`termios`] special codes (VMIN and VTIME).
 //!
 //! # Architecture Context
 //!
@@ -22,7 +22,7 @@
 //! └──────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! **You are here**: The constants layer, defining POSIX termios special codes
+//! **You are here**: The constants layer, defining POSIX [`termios`] special codes
 //! used by [`terminal_raw_mode`] when configuring the terminal.
 //!
 //! **See also**:
@@ -33,7 +33,7 @@
 //!
 //! Raw mode disables terminal line buffering and processing, allowing applications
 //! to read input character-by-character. The behavior is controlled by two special
-//! codes in the termios structure:
+//! codes in the [`termios`] structure:
 //!
 //! - **VMIN**: Minimum number of bytes to read before returning
 //! - **VTIME**: Timeout in deciseconds (0.1s units)
@@ -46,7 +46,7 @@
 //!
 //! This configuration is used by:
 //! - `cfmakeraw()` in POSIX
-//! - crossterm's raw mode implementation
+//! - [`crossterm`]'s raw mode implementation
 //! - Most TUI applications requiring immediate input
 //!
 //! ## Example Usage
@@ -83,12 +83,14 @@
 //!
 //! Raw mode uses **VMIN=1, VTIME=0** for immediate, blocking input.
 //!
+//! [`crossterm`]: crossterm
 //! [`RawModeGuard`]: crate::RawModeGuard
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
 
 // ==================== Special Codes for Raw Mode ====================
 
-/// VMIN Raw Mode (termios): return after reading 1 byte.
+/// VMIN Raw Mode ([`termios`]): return after reading 1 byte.
 ///
 /// Value: `1` dec, `01` hex.
 ///
@@ -98,11 +100,14 @@
 ///
 /// This is the standard setting for:
 /// - POSIX `cfmakeraw()`
-/// - crossterm raw mode
+/// - [`crossterm`] raw mode
 /// - Interactive TUI applications
+///
+/// [`crossterm`]: crossterm
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 pub const VMIN_RAW_MODE: u8 = 1;
 
-/// VTIME Raw Mode (termios): no timeout (blocking read).
+/// VTIME Raw Mode ([`termios`]): no timeout (blocking read).
 ///
 /// Value: `0` dec, `00` hex.
 ///
@@ -114,6 +119,8 @@ pub const VMIN_RAW_MODE: u8 = 1;
 /// - 0 = no timeout (block forever)
 /// - 1 = 0.1 second timeout
 /// - 10 = 1 second timeout
+///
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 pub const VTIME_RAW_MODE: u8 = 0;
 
 #[cfg(test)]

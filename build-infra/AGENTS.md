@@ -7,7 +7,8 @@ This crate provides CLI tools for the r3bl workspace. After making code changes,
 
 This crate provides command-line tools (binaries) that are installed to `~/.cargo/bin`:
 
-- `cargo-rustdoc-fmt`: Format markdown tables and links in rustdoc comments
+- `cargo-rustdoc-fmt`: Format markdown tables, convert inline links, auto-link technical
+  terms, and normalize code fences in rustdoc comments
 
 ### After Making Code Changes
 
@@ -80,9 +81,12 @@ Follow the standard Rust module organization:
 
 ### Testing Best Practices
 
-- Write unit tests for individual functions
-- Write integration tests in `tests/` directory for end-to-end flows
-- Use test fixtures in `tests/test_data/` for complex test cases
+- Write unit tests (Tier 1) inside each module (`cst/`, `formatters/`, `processor.rs`,
+  `cli_arg.rs`) for isolated functions and options
+- Write end-to-end golden-file tests (Tier 2) in
+  `src/cargo_rustdoc_fmt/validation_tests/complete_file_tests.rs`
+- Use test fixtures in `src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/`
+  for complete `.rs` file test cases
 - Include both positive and negative test cases
 
 ## Project Structure
@@ -94,21 +98,48 @@ build-infra/
 │   │   └── cargo-rustdoc-fmt.rs
 │   ├── cargo_rustdoc_fmt/               # cargo-rustdoc-fmt implementation
 │   │   ├── cli_arg.rs                   # CLI argument parsing
+│   │   ├── constants.rs                 # Shared syntax constants and delimiters
+│   │   ├── cst/                         # Lossless CST parser, nodes, and slice scanners
+│   │   │   ├── mod.rs                   # Barrel re-exports and CST unit tests
+│   │   │   ├── source_file_cst.rs       # SourceFileCst, FileChunk, LineEndings, TrailingNewline
+│   │   │   ├── doc_block_cst.rs         # DocBlockCst, DocNode, DocCommentLine
+│   │   │   ├── link_reference.rs        # LinkReference, reference def & backtick span scanners
+│   │   │   └── table_data.rs            # TableData, ColumnAlignment, GFM table parser & formatter
+│   │   ├── formatters/                  # Formatting rules that mutate the CST
+│   │   │   ├── mod.rs                   # Barrel re-exports for formatters
+│   │   │   ├── code_fence.rs            # Code fence language tag normalizer
+│   │   │   ├── link.rs                  # Inline-to-reference link converter
+│   │   │   ├── table.rs                 # Markdown table column aligner
+│   │   │   └── technical_term/          # Technical term auto-linker sub-module
+│   │   │       ├── mod.rs               # Technical term barrel re-exports
+│   │   │       ├── link_terms_entry_point.rs # CST block orchestrator & node walkers
+│   │   │       ├── upgrade_term.rs      # Single-line term upgrading
+│   │   │       ├── markdown_spans.rs    # Protected Markdown spans & multi-line state scanners
+│   │   │       ├── ref_defs.rs          # Reference definition reconciliation & CST layout
+│   │   │       ├── technical_term_dictionary.rs # Technical term dictionary loader
+│   │   │       └── known_technical_term_link_dictionary.jsonc # Seed dictionary
 │   │   ├── processor.rs                 # File processing orchestration
-│   │   ├── extractor.rs                 # Rustdoc block extraction
-│   │   ├── link_converter.rs            # Link conversion and aggregation
-│   │   ├── table_formatter.rs           # Markdown table formatting
-│   │   └── validation_tests/            # Integration tests with fixtures
+│   │   ├── types.rs                     # Domain types and CLI options
+│   │   ├── ui_str.rs                    # User-facing strings
+│   │   └── validation_tests/            # End-to-end validation tests with fixtures
+│   │       ├── mod.rs                   # Testing philosophy and module coordinator
+│   │       ├── complete_file_tests.rs   # Golden-file and idempotency E2E tests
+│   │       └── test_data/               # Input and expected_output fixtures
 │   └── common/                          # Shared utilities
-└── tests/                               # Integration tests
+└── README.md
 ```
 
 ## Skipping Files
 
-Add `// rustdoc-fmt: skip` to any `.rs` file to exclude it from `cargo rustdoc-fmt`
-processing. Place it after the copyright line. All source files in `cargo_rustdoc_fmt/`
-use this marker because their doc comments discuss the formatter's own concepts (e.g.,
-CSI, ANSI) which would be incorrectly linkified.
+- **Per-file directive**: Add `// rustdoc-fmt: skip` to any `.rs` file to exclude it from
+  `cargo rustdoc-fmt` processing. Place it after the copyright line. All source files in
+  `cargo_rustdoc_fmt/` use this marker because their doc comments discuss the formatter's
+  own concepts (e.g., CSI, ANSI) which would be incorrectly linkified.
+- **Folder pattern matching**: By default, `cargo rustdoc-fmt` skips any file whose path
+  components contain `test_data` (`--skip-folder-matches=test_data`). External crates can
+  customize this with comma-separated substrings (e.g.,
+  `--skip-folder-matches=testdata,snapshots`) or disable it with
+  `--skip-folder-matches=""`.
 
 ## Debugging Tips
 

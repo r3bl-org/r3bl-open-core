@@ -10,7 +10,7 @@ This skill is invoked when the user runs the `/audit-task <file>` slash command.
 ## Procedure
 
 1. Read the provided `<file>` (which is typically a Markdown file in the `task/` folder).
-2. Launch a subagent using the `invoke_subagent` tool. You MUST set the `Model` argument to `pro` (which maps to gemini-3.1-pro) and explicitly instruct it to use high reasoning effort. You can use an existing subagent like `research`, or define a new one for this specific purpose.
+2. Launch a subagent using the `invoke_subagent` tool with `Model: "inherit"`. You can use an existing subagent like `research`, or define a new one for this specific purpose.
 3. The prompt for the subagent MUST instruct it to:
    - Read the plan in the provided `<file>`.
    - Audit the plan critically and exhaustively.

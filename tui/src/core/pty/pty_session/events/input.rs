@@ -13,7 +13,9 @@ use std::borrow::Cow;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 #[derive(Debug, Clone)]
 pub enum PtyInputEvent {
-    /// Send raw bytes to child process's stdin.
+    /// Send raw bytes to child process's [`stdin`].
+    ///
+    /// [`stdin`]: std::io::stdin
     Write(Vec<u8>),
 
     /// Send text with an automatic newline.
@@ -31,7 +33,9 @@ pub enum PtyInputEvent {
     /// Forces any previously buffered data to be sent to the child process immediately.
     Flush,
 
-    /// Close the input stream (EOF).
+    /// Close the input stream ([`EOF`]).
+    ///
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     Close,
 }
 

@@ -24,7 +24,7 @@ pub enum CaptureFlag {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// # use r3bl_tui::{
 /// #     DefaultPtySessionConfig, PtySessionConfig, PtySessionConfigToken,
 /// #     PtySessionConfigToken::CaptureOsc, PtySessionConfigToken::CaptureOutput

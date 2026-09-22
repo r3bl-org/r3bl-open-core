@@ -13,7 +13,7 @@
 //!   [`VT100InputEventIR`] → application logic (via [`vt_100_terminal_input_parser`])
 //! - **Generator**: Convert application styling → outgoing [`ANSI`] sequences → real
 //!   terminal display (via [`RenderOpOutput`], [`SgrCode`], [`CliTextInline`])
-//! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔
+//! - **Constants & Color**: Shared [`ANSI`] specifications - color types ([`RGB`] ↔
 //!   ANSI256), escape sequence definitions, used by all subsystems
 //!
 //! For how these subsystems are orchestrated and executed in the Stage 5 backend, see the
@@ -198,7 +198,7 @@
 //! ## Key Types and Public API
 //!
 //! **Color System:**
-//! - `TuiColor` - Terminal color with `RGB` and ANSI256 support
+//! - [`TuiColor`] - Terminal color with [`RGB`] and ANSI256 support
 //! - [`RgbValue`], [`AnsiValue`] - Color value types
 //!
 //! **Text Styling:**
@@ -228,8 +228,10 @@
 //! [`Perform`]: vte::Perform
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::SgrCode
+//! [`TuiColor`]: crate::TuiColor
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`VT100KeyCodeIR`]: crate::vt_100_terminal_input_parser::VT100KeyCodeIR

@@ -307,7 +307,9 @@ pub mod controlled_common {
     ///
     /// # Panics
     ///
-    /// Panics if stdout flush fails.
+    /// Panics if [`stdout`] flush fails.
+    ///
+    /// [`stdout`]: std::io::stdout
     pub fn signal_ready() {
         println!("{}", crate::MSG_CONTROLLED_READY);
         std::io::stdout().flush().expect("Failed to flush stdout");
@@ -369,13 +371,14 @@ pub mod controlled_crossterm {
 
     /// Crossterm controlled process entry point.
     ///
-    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly to test the crossterm
+    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly to test the [`crossterm`]
     /// backend's raw mode implementation.
     ///
     /// # Panics
     ///
     /// Panics if the [`tokio`] runtime cannot be created.
     ///
+    /// [`crossterm`]: crossterm
     /// [`tokio`]: tokio
     pub fn run() -> ! {
         // 1. Enable raw mode using Crossterm's raw mode.

@@ -16,9 +16,11 @@ use std::{fmt::{self, Debug},
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PixelChar {
     /// Invisible structural placeholder. Used to fill the trailing columns
-    /// of a wide grapheme cluster (e.g., a jumbo emoji). Since the wide
+    /// of a wide [`grapheme`] cluster (e.g., a jumbo emoji). Since the wide
     /// character takes more than 1 column to display, the subsequent
     /// cells must be `Void` to prevent overlapping text.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     Void,
 
     /// Empty but visible cell. This is effectively just a space `' '`

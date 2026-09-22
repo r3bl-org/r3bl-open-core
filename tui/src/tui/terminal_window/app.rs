@@ -85,9 +85,9 @@ pub trait App {
         has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation>;
 
-    /// Use the state to render the output (via crossterm). The state is immutable. If you
-    /// want to change it then it should be done in the [`App::app_handle_input_event`]
-    /// method.
+    /// Use the state to render the output (via [`crossterm`]). The state is immutable. If
+    /// you want to change it then it should be done in the
+    /// [`App::app_handle_input_event`] method.
     ///
     /// More than likely a bunch of other [`crate::Component::render`]s will perform the
     /// actual rendering.
@@ -95,6 +95,8 @@ pub trait App {
     /// # Errors
     ///
     /// Returns an error if the rendering operation fails.
+    ///
+    /// [`crossterm`]: crossterm
     fn app_render(
         &mut self,
         global_data: &mut GlobalData<Self::S, Self::AS>,

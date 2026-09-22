@@ -1,14 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`GCStringOwned`] implementation for Unicode grapheme cluster handling.
+//! [`GCStringOwned`] implementation for [`Unicode`] [`grapheme`] cluster handling.
 //!
-//! This module contains the [`GCStringOwned`] type that provides Unicode-safe string
-//! operations with grapheme cluster support. It's used throughout the TUI system
+//! This module contains the [`GCStringOwned`] type that provides [`Unicode`]-safe string
+//! operations with [`grapheme`] cluster support. It's used throughout the TUI system
 //! for text formatting, clipping, and rendering operations.
 //!
-//! See the [module docs] for comprehensive information about Unicode
-//! handling, grapheme clusters, and the three types of indices used in this system.
+//! See the [module docs] for comprehensive information about [`Unicode`]
+//! handling, [`grapheme`] clusters, and the three types of indices used in this system.
 //!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [module docs]: crate::graphemes
 
 // Submodules

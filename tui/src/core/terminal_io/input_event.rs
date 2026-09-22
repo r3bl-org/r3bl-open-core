@@ -20,7 +20,7 @@ use crossterm::event::{Event as CTEvent,
 /// 1. **Crossterm Event** (Raw terminal events)
 ///    - Platform-specific events with all their quirks
 ///    - May include Release/Repeat events on some platforms
-///    - API tied to crossterm version
+///    - API tied to [`crossterm`] version
 ///
 /// 2. **Specialized Types** (Clean abstractions)
 ///    - [`KeyPress`]: Normalized keyboard input
@@ -61,6 +61,8 @@ use crossterm::event::{Event as CTEvent,
 /// - **Future-proofing**: Internal changes don't affect app code
 ///
 /// Please see [`KeyPress`] for more information about handling keyboard input.
+///
+/// [`crossterm`]: crossterm
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputEvent {
     Keyboard(KeyPress),
@@ -93,15 +95,17 @@ pub enum InputEvent {
     /// - **Characteristics**: Requires clipboard access permissions
     ///
     /// ## Visual Difference
-    /// - **Bracketed paste**: Text appears instantly as one operation
+    /// - **[`Bracketed paste`]**: Text appears instantly as one operation
     /// - **Ctrl+V paste**: May have slight delay while reading clipboard
     ///
     /// ## Why Two Mechanisms?
-    /// - **Bracketed paste**: Terminal-native, works even without clipboard access
+    /// - **[`Bracketed paste`]**: Terminal-native, works even without clipboard access
     /// - **Ctrl+V**: Application-controlled, consistent with desktop applications
     ///
-    /// Note: Bracketed paste must be enabled via [`enable_bracketed_paste`] in raw mode.
+    /// Note: [`Bracketed paste`] must be enabled via [`enable_bracketed_paste`] in raw
+    /// mode.
     ///
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     /// [`enable_bracketed_paste`]: crate::TerminalModeController::enable_bracketed_paste
     BracketedPaste(String),
 
@@ -161,7 +165,7 @@ pub enum InputEvent {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::FocusEvent;
 ///
 /// let focus_event = FocusEvent::Gained;
@@ -227,9 +231,11 @@ pub(crate) mod converters {
         type Error = ();
         /// Typecast / convert [Event] to [`InputEvent`].
         ///
-        /// This function routes crossterm events to their appropriate `InputEvent`
+        /// This function routes [`crossterm`] events to their appropriate `InputEvent`
         /// variants. Each specific converter (`KeyPress`, `MouseInput`, etc.) is
         /// responsible for its own validation and filtering logic.
+        ///
+        /// [`crossterm`]: crossterm
         fn try_from(event: Event) -> Result<Self, Self::Error> {
             match event {
                 CTEvent::Key(key_event) => Ok(key_event.try_into()?),

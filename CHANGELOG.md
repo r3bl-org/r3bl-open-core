@@ -1527,6 +1527,30 @@ in a text editor.
 
 **Added:**
 
+- **`cargo-rustdoc-fmt` Lossless CST Engine & Surgical Line-Range Formatting**:
+    - Refactored `cargo-rustdoc-fmt` around a lossless two-level Concrete Syntax Tree
+      (`SourceFileCst` / `DocBlockCst` / `DocNode`) with direct byte/slice scanners,
+      replacing `extractor.rs`, `RustdocBlock`, and `ContentProtector` sentinel
+      placeholders.
+    - `--lines <START-END>` and `--lines-force <START-END>` arguments (supporting
+      comma-separated 1-based inclusive ranges like `10-20,50-60`) for surgical range
+      formatting of tables, inline links, technical terms, and code fences in doc
+      comments while preserving untouched lines byte-for-byte.
+    - Automatic `// rustdoc-fmt: skip` bypass when `--lines-force` is supplied.
+    - Decoupled `#![rustfmt::skip]` from `cargo-rustdoc-fmt` (`cargo-rustdoc-fmt` only
+      checks `// rustdoc-fmt: skip`, while `cargo fmt` natively handles
+      `#![rustfmt::skip]`).
+    - Strict single-file target validation for line-range mode (`paths.len() == 1`, `.rs`
+      extension, no `--workspace`).
+    - `--skip-folder-matches <PATTERN>` argument (comma-separated, defaults to
+      `test_data`) to configure excluded folder substrings during file discovery.
+    - `--dry-run`, `--skip-cargo-fmt`, `--terms-only`, and `--fences-only` CLI flags
+      for previewing output and isolating formatting passes.
+- **`cargo-rustdoc-fmt` Code Fence Normalization**:
+    - Strips redundant `rust` language tags from opening code fences in rustdoc comments
+      (` ```rust ` → ` ``` ` and ` ```rust,<attr> ` → ` ```<attr> `, such as
+      ` ```rust,no_run ` → ` ```no_run `) since rustdoc treats unlabeled code fences as
+      Rust by default.
 - **`cargo-rustdoc-fmt` Technical Term Auto-Linking**:
     - Automatically identifies and converts technical terms into reference-style intra-doc
       links.
@@ -1536,15 +1560,23 @@ in a text editor.
 
 **Fixed:**
 
-- **Link Converter Bug Fixes**:
+- **Link Converter & Table Formatter Fixes**:
     - Fixed an issue where the term linker deleted multi-line plain reference definitions.
     - Fixed shortcut reference link clobbering.
+    - Space-padded markdown table separator rows (`| --- |`) and preserved code block /
+      HTML comment boundaries inside doc blocks.
     - Removed `--include-lib-rs` and dropped redundant workspace scans for faster
       formatting runs.
 
 **Changed:**
 
-- **Dependency Upgrades**:
+- **Dependency & Codebase Cleanup**:
+    - Removed `pulldown-cmark`, `regex`, `once_cell`, `serde_json`, and
+      `pretty_assertions` dependencies in favor of zero-regex byte/slice scanners in
+      `cst/`.
+    - Centralized syntax delimiters and UI strings in `constants.rs` and `ui_str.rs`.
+    - Consolidated all 23 end-to-end golden-file fixtures under `test_data/complete_file/`,
+      reducing crate test suite execution time from ~3.6s to ~0.07s.
     - Updated workspace dependency to `r3bl_tui = "0.8.0"`.
 
 ### v0.0.5 (2026-02-17)

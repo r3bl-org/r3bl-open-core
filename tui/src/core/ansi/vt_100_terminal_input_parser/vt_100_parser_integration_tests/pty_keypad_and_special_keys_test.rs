@@ -68,7 +68,7 @@
 //! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
 //! [`Key`]: crate::Key
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SS3_NUMPAD_0`]: crate::core::ansi::constants::SS3_NUMPAD_0
 //! [`SS3_NUMPAD_9`]: crate::core::ansi::constants::SS3_NUMPAD_9

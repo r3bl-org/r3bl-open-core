@@ -285,11 +285,15 @@ impl ReadlineAsyncContext {
             .ok();
     }
 
-    /// Returns a clone of the current buffer content with grapheme metadata.
+    /// Returns a clone of the current buffer content with [`grapheme`] metadata.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_buffer(&self) -> GCStringOwned { self.readline.get_buffer() }
 
-    /// Returns the cursor position as a type-safe grapheme segment index (0-based).
+    /// Returns the cursor position as a type-safe [`grapheme`] segment index (0-based).
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_cursor_position(&self) -> SegIndex { self.readline.get_cursor_position() }
 

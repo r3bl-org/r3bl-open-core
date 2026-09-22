@@ -7,7 +7,9 @@ use r3bl_tui::{ColorWheel, GradientGenerationPolicy, InlineString,
 use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
 
 pub mod rustup_progress {
-    /// Prefix stripped from rustup stdout lines to extract progress information.
+    /// Prefix stripped from rustup [`stdout`] lines to extract progress information.
+    ///
+    /// [`stdout`]: std::io::stdout
     pub const INFO_PREFIX: &str = "info: ";
 
     /// Suffix appended to truncated progress output.

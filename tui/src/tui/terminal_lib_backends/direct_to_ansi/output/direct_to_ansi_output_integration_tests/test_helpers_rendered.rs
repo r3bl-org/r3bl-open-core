@@ -174,7 +174,9 @@ pub fn paint_text_bold(text: &str) -> RenderOpOutput {
     paint_text(text, Some(style))
 }
 
-/// Helper to create a text paint operation with RGB foreground color.
+/// Helper to create a text paint operation with [`RGB`] foreground color.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 pub fn paint_text_with_rgb_fg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput {
     let style = TuiStyle {
         color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b))),
@@ -183,7 +185,9 @@ pub fn paint_text_with_rgb_fg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput
     paint_text(text, Some(style))
 }
 
-/// Helper to create a text paint operation with RGB background color.
+/// Helper to create a text paint operation with [`RGB`] background color.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 pub fn paint_text_with_rgb_bg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput {
     let style = TuiStyle {
         color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b))),
@@ -192,7 +196,9 @@ pub fn paint_text_with_rgb_bg(text: &str, r: u8, g: u8, b: u8) -> RenderOpOutput
     paint_text(text, Some(style))
 }
 
-/// Helper to create a text paint operation with RGB foreground and background colors.
+/// Helper to create a text paint operation with [`RGB`] foreground and background colors.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 pub fn paint_text_with_rgb_colors(
     text: &str,
     fg: (u8, u8, u8),

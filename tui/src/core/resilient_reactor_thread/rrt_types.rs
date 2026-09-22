@@ -29,9 +29,10 @@ pub enum RetryLoopExhaustion {
 pub enum StopReason {
     /// The framework loop detected that all subscribers have dropped.
     ZeroReceivers,
-    /// The worker implementation returned [`Continuation::Stop`] (e.g., due to EOF).
+    /// The worker implementation returned [`Continuation::Stop`] (e.g., due to [`EOF`]).
     ///
     /// [`Continuation::Stop`]: crate::Continuation::Stop
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     WorkerRequested,
 }
 

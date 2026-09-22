@@ -130,13 +130,15 @@ impl RustAnalyzerClient {
         }
     }
 
-    /// Sends a one-way JSON-RPC notification to `rust-analyzer`'s `stdin`.
+    /// Sends a one-way JSON-RPC notification to `rust-analyzer`'s [`stdin`].
     ///
     /// # Errors
     ///
     /// Returns [`McpServerError::ClientNotAvailable`] if the client is not running, or
     /// [`McpServerError::Io`] / [`McpServerError::Json`] if serialization or writing
     /// fails.
+    ///
+    /// [`stdin`]: std::io::stdin
     pub fn send_notification(
         &mut self,
         method: &str,

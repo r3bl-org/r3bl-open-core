@@ -20,7 +20,7 @@
 //!
 //! </div>
 //!
-//! This module defines the Canvas and Viewport concept, ASCII visual representation, and
+//! This module defines the Canvas and Viewport concept, [`ASCII`] visual representation, and
 //! coordinate domain taxonomy across the crate.
 //!
 //! ```text
@@ -193,33 +193,34 @@
 //! on [The Typestate Pattern in Rust] from [Stanford CS 242], and Alexis King's essay on
 //! [Parse, don't validate] for foundational theory and empirical benchmarks.
 //!
-//! [`numeric_value`]: mod@crate::numeric_value
 //! [`Add`]: std::ops::Add
 //! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
+//! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`CanvasStorage`]: crate::CanvasStorage
 //! [`CCol`]: crate::CCol
 //! [`CPos`]: crate::CPos
 //! [`CRow`]: crate::CRow
-//! [`VPCol`]: crate::VPCol
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 //! [`Deref`]: std::ops::Deref
 //! [`DerefMut`]: std::ops::DerefMut
 //! [`Display`]: std::fmt::Display
+//! [`EditorContent`]: crate::EditorContent
+//! [`Flat2DArray`]: crate::core::Flat2DArray
 //! [`generate_index_type_impl!`]: crate::generate_index_type_impl
+//! [`GrowableBuffer`]: crate::tui::GrowableBuffer
+//! [`numeric_value`]: mod@crate::numeric_value
+//! [`NumericValue`]: crate::core::NumericValue
+//! [`pty_mux`]: mod@crate::core::pty::pty_mux
+//! [`Sub`]: std::ops::Sub
+//! [`usize`]: prim@usize
+//! [`Viewport`]: crate::Viewport
+//! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+//! [`VPCol`]: crate::VPCol
+//! [`VPHeight`]: crate::VPHeight
 //! [`VPPos`]: crate::core::VPPos
 //! [`VPRow`]: crate::VPRow
-//! [`Sub`]: std::ops::Sub
-//! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
-//! [`Viewport`]: crate::Viewport
-//! [`EditorContent`]: crate::EditorContent
-//! [`GrowableBuffer`]: crate::tui::GrowableBuffer
-//! [`Flat2DArray`]: crate::core::Flat2DArray
-//! [`CanvasStorage`]: crate::CanvasStorage
-//! [`pty_mux`]: mod@crate::core::pty::pty_mux
-//! [`VPHeight`]: crate::VPHeight
-//! [`VPWidth`]: crate::VPWidth
 //! [`VPSize`]: crate::VPSize
-//! [`NumericValue`]: crate::core::NumericValue
-//! [`usize`]: prim@usize
+//! [`VPWidth`]: crate::VPWidth
 //! [FUNARCH 2023 paper]: https://dl.acm.org/doi/epdf/10.1145/3609025.3609477
 //! [FUNARCH 2026 paper]: https://dl.acm.org/doi/epdf/10.1145/3830438.3830958
 //! [Parse, don't validate]:

@@ -281,7 +281,7 @@ fn controller(context: PtyTestContext) {
 /// [`OfsBufVT100::apply_ansi_bytes`].
 ///
 /// This struct implements [`Write`] to collect terminal output bytes (including escape
-/// sequences) that would normally go to stdout. The captured bytes can then be fed to
+/// sequences) that would normally go to [`stdout`]. The captured bytes can then be fed to
 /// [`OfsBufVT100::apply_ansi_bytes`] to render them in a virtual terminal buffer,
 /// allowing inspection of the exact visual output.
 ///
@@ -304,6 +304,7 @@ fn controller(context: PtyTestContext) {
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
+/// [`stdout`]: std::io::stdout
 struct CaptureOutputBytes(Vec<u8>);
 
 impl CaptureOutputBytes {

@@ -39,8 +39,7 @@ Keep it concise:
   may check them after their manual review is complete.
 - Prefer one line per step. A brief technical note or sub-bullet is fine for clarity.
 - Do NOT use doctoc, numbered step headings (`Step 0.0`), or per-step detail blocks.
-- Avoid large code blocks. Use descriptive text for intent, but a brief snippet is
-  encouraged if it's the highest-signal way to define the goal.
+- **Exact Signatures & File Paths for Implementation**: Include exact Rust type signatures, trait bounds, and target file paths in the plan so implementation steps can be executed deterministically without guessing architecture. Avoid large boilerplate implementation blocks.
 - Technical notes and context belong in the Overview, not repeated per step.
 - **Formatting**: Always run `prettier --write <file>` on any markdown files after creating or editing them to ensure they are properly formatted and easy to review in the user's IDE.
 
