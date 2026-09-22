@@ -52,21 +52,22 @@
 //! raw [`ASCII`] bytes, numbers sent as text, and multi-byte [`UTF-8`] characters):
 //!
 //! 1. `b'9'` is an 8-bit integer ([`u8`]): It is simply syntactic sugar for the [`ASCII`]
-//!    integer value `57u8`. It cannot hold multi-byte Unicode characters (e.g. `b'🦀'` is
-//!    a compiler error).
-//! 2. `'9'` is a 32-bit Unicode character ([`char`]): In Rust, all [`char`] types are 4
-//!    bytes wide (`size_of::<char>() == 4`) to represent any valid Unicode scalar value.
+//!    integer value `57u8`. It cannot hold multi-byte [`Unicode`] characters (e.g.
+//!    `b'🦀'` is a compiler error).
+//! 2. `'9'` is a 32-bit [`Unicode`] character ([`char`]): In Rust, all [`char`] types are
+//!    4 bytes wide (`size_of::<char>() == 4`) to represent any valid [`Unicode`] scalar
+//!    value.
 //! 3. `&`[`str`] / [`String`] is a variable-length [`UTF-8`] byte slice: Each character
 //!    takes between 1 and 4 bytes in memory ([`ASCII`] digits take 1 byte, emojis take 4
 //!    bytes).
 //! 4. **Relationship**: `b'9'` is the [`ASCII`] byte representation of the digit
 //!    character `'9'`, but its concrete Rust type is [`u8`], not [`char`].
 //!
-//! | Syntax | Name              | Type                 | Size              | Value in Memory                     |
-//! | :----- | :---------------- | :------------------- | :---------------- | :---------------------------------- |
-//! | `b'9'` | Byte literal      | [`u8`]               | 1 byte (8 bits)   | `57` (`0x39`)                       |
-//! | `'9'`  | Character literal | [`char`]             | 4 bytes (32 bits) | `'\u{0039}'` (Unicode scalar value) |
-//! | `"9"`  | String literal    | `&`[`str`] (`&[u8]`) | 1 byte payload    | `[0x39]` ([`UTF-8`] encoded)        |
+//! | Syntax | Name              | Type                 | Size              | Value in Memory                         |
+//! | :----- | :---------------- | :------------------- | :---------------- | :-------------------------------------- |
+//! | `b'9'` | Byte literal      | [`u8`]               | 1 byte (8 bits)   | `57` (`0x39`)                           |
+//! | `'9'`  | Character literal | [`char`]             | 4 bytes (32 bits) | `'\u{0039}'` ([`Unicode`] scalar value) |
+//! | `"9"`  | String literal    | `&`[`str`] (`&[u8]`) | 1 byte payload    | `[0x39]` ([`UTF-8`] encoded)            |
 //!
 //! Contrast this with numeric [`ANSI`] parameter parsing in [`parse_decimal_digits()`],
 //! which parses text digit bytes (`&[u8]`) directly into integers without allocating or
@@ -75,8 +76,8 @@
 //! ## [`UTF-8`] Encoding Explained
 //!
 //! [`UTF-8`] uses **bit pattern matching** (not arithmetic) to identify byte types and
-//! extract data. The high bits are structural markers; remaining bits carry the `Unicode`
-//! code point.
+//! extract data. The high bits are structural markers; remaining bits carry the
+//! [`Unicode`] code point.
 //!
 //! ### Byte Type Detection
 //!
@@ -152,7 +153,7 @@
 //! # Important: [`UTF-8`] Byte Length vs Display Width
 //!
 //! This module handles **[`UTF-8`] byte-level parsing only**, converting raw bytes from
-//! terminal input into Unicode characters. It does NOT handle display width.
+//! terminal input into [`Unicode`] characters. It does NOT handle display width.
 //!
 //! ## Two Separate Concerns
 //!
@@ -165,9 +166,9 @@
 //!   of bytes to advance in the input buffer (1-4 bytes for [`UTF-8`]).
 //!
 //! - **Display rendering**: Calculated separately using the [`unicode_width`] crate. See
-//!   [`mod@crate::graphemes`] for comprehensive documentation on Unicode display width,
-//!   grapheme clusters, and the three types of indices ([`ByteIndex`], [`SegIndex`],
-//!   [`VPCol`]).
+//!   [`mod@crate::graphemes`] for comprehensive documentation on [`Unicode`] display
+//!   width, [`grapheme`] clusters, and the three types of indices ([`ByteIndex`],
+//!   [`SegIndex`], [`VPCol`]).
 //!
 //! ## Why This Matters
 //!
@@ -192,12 +193,14 @@
 //! [`ByteOffset`]: crate::ByteOffset
 //! [`chunk_decoder`]: mod@super
 //! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`parse_decimal_digits()`]: super::csi_scanner::parse_decimal_digits
 //! [`ParsedInputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::ParsedInputEventIR
 //! [`SegIndex`]: crate::SegIndex
 //! [`terminal_events`]: mod@super::terminal_events
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VPCol`]: crate::VPCol
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR

@@ -12,7 +12,7 @@
 //! - Parsing [`ANSI`] escape sequences (e.g., `ESC[5;10H`)
 //! - Working with `vt_100_pty_output_parser` module
 //!
-//! For all other terminal operations (including crossterm), use [`viewport_coords`] types
+//! For all other terminal operations (including [`crossterm`]), use [`viewport_coords`] types
 //! which are 0-based.
 //!
 //! # Core Types
@@ -37,7 +37,7 @@
 //! The delta types wrap [`NonZeroU16`] internally, making zero-valued deltas
 //! **impossible to represent**. Construction is fallible:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{TermRowDelta, CsiSequence};
 //!
 //! // Fallible construction - must handle the None case
@@ -55,6 +55,7 @@
 //! - `.from_zero_based()`: Convert from 0-based viewport coordinates
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`crossterm`]: crossterm
 //! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`viewport_coords`]: crate::coordinates::viewport_coords
@@ -78,8 +79,10 @@ pub use term_pos::*;
 pub use term_row::*;
 pub use term_row_delta::*;
 
-/// Error returned when attempting to create a VT-100 1-based coordinate or count with a
+/// Error returned when attempting to create a [`VT-100`] 1-based coordinate or count with a
 /// value of 0.
+///
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[derive(thiserror::Error, Debug, miette::Diagnostic, Clone, PartialEq, Eq)]
 #[error("VT-100 coordinates and counts must be non-zero")]
 pub struct ZeroCoordinateError;

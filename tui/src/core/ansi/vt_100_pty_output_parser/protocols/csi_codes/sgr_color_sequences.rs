@@ -4,7 +4,7 @@
 //!
 //! This module provides type-safe parsing of extended color sequences used in
 //! [`VT-100`]-compliant terminal emulators. These sequences enable 256-color palette
-//! support and true RGB colors, going beyond the basic 16 [`ANSI`] colors.
+//! support and true [`RGB`] colors, going beyond the basic 16 [`ANSI`] colors.
 //!
 //! # Architecture Note
 //!
@@ -16,7 +16,7 @@
 //!
 //! This module lives in the `csi_codes` parent directory because [`SGR`] is conceptually
 //! part of the larger [`CSI`] protocol family. The [`SgrColorSequence`] type specifically
-//! handles the extended color subset of [`SGR`] (256-color and RGB modes).
+//! handles the extended color subset of [`SGR`] (256-color and [`RGB`] modes).
 //!
 //! # Color Sequence Formats
 //!
@@ -86,6 +86,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 //! [`ParamsExt`]: crate::ParamsExt
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`SGR_SET_GRAPHICS`]: crate::constants::SGR_SET_GRAPHICS
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -123,7 +124,7 @@ pub enum ColorTarget {
 ///
 /// This enum represents the four possible extended color operations that can be parsed
 /// from [`VT-100`]-compliant color sequences, directly encoding both the color type
-/// (256-color or RGB) and the target layer (foreground or background).
+/// (256-color or [`RGB`]) and the target layer (foreground or background).
 ///
 /// # Variants
 ///
@@ -135,11 +136,11 @@ pub enum ColorTarget {
 ///   - Maps to color palette indices 0-255
 ///   - Sequence format: `ESC [ 48 : 5 : n` or `ESC [ 48 ; 5 ; n`
 ///
-/// - [`SetForegroundRgb`]: True RGB foreground
+/// - [`SetForegroundRgb`]: True [`RGB`] foreground
 ///   - Each component (r, g, b) ranges from 0-255
 ///   - Sequence format: `ESC [ 38 : 2 : r : g : b` or `ESC [ 38 ; 2 ; r ; g ; b`
 ///
-/// - [`SetBackgroundRgb`]: True RGB background
+/// - [`SetBackgroundRgb`]: True [`RGB`] background
 ///   - Each component (r, g, b) ranges from 0-255
 ///   - Sequence format: `ESC [ 48 : 2 : r : g : b` or `ESC [ 48 ; 2 ; r ; g ; b`
 ///
@@ -149,17 +150,18 @@ pub enum ColorTarget {
 /// - `38` = foreground color control
 /// - `48` = background color control
 /// - `5` = 256-color palette mode (next parameter is index)
-/// - `2` = RGB mode (next 3 parameters are r, g, b values)
+/// - `2` = [`RGB`] mode (next 3 parameters are r, g, b values)
 ///
 /// # Color Palette Layout (256-color mode)
 ///
 /// - **0-15**: Standard [`ANSI`] colors (matches basic 16-color palette)
-/// - **16-231**: 6×6×6 RGB cube (216 colors)
+/// - **16-231**: 6×6×6 [`RGB`] cube (216 colors)
 ///   - Formula: `16 + 36r + 6g + b` where r,g,b ∈ `[0,5]`
 /// - **232-255**: Grayscale ramp (24 shades from dark to light)
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`CSI`]: crate::CsiSequence
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SetBackgroundAnsi256`]: SgrColorSequence::SetBackgroundAnsi256
 /// [`SetBackgroundRgb`]: SgrColorSequence::SetBackgroundRgb
 /// [`SetForegroundAnsi256`]: SgrColorSequence::SetForegroundAnsi256
@@ -185,20 +187,24 @@ pub enum SgrColorSequence {
     /// ```
     SetBackgroundAnsi256(u8),
 
-    /// Set foreground to RGB true color
+    /// Set foreground to [`RGB`] true color
     ///
     /// # Example
     /// ```text
     /// ESC [ 38 : 2 : 255 : 128 : 0 m  → Orange foreground (#FF8000)
     /// ```
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     SetForegroundRgb(u8, u8, u8),
 
-    /// Set background to RGB true color
+    /// Set background to [`RGB`] true color
     ///
     /// # Example
     /// ```text
     /// ESC [ 48 : 2 : 255 : 128 : 0 m  → Orange background (#FF8000)
     /// ```
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     SetBackgroundRgb(u8, u8, u8),
 }
 
@@ -313,7 +319,7 @@ impl SgrColorSequence {
 impl From<SgrColorSequence> for TuiColor {
     /// Converts an extended color sequence to a normalized [`TuiColor`].
     ///
-    /// This converts both 256-color palette and RGB color sequences to their
+    /// This converts both 256-color palette and [`RGB`] color sequences to their
     /// corresponding `TuiColor` variants. The layer information (foreground/background)
     /// is preserved separately via [`SgrColorSequence::target()`].
     ///
@@ -336,6 +342,8 @@ impl From<SgrColorSequence> for TuiColor {
     /// let color: TuiColor = SgrColorSequence::SetForegroundAnsi256(42).into();
     /// assert!(matches!(color, TuiColor::Ansi(_)));
     /// ```
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     fn from(seq: SgrColorSequence) -> TuiColor {
         match seq {
             SgrColorSequence::SetForegroundAnsi256(index)

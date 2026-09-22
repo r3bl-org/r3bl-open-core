@@ -8,7 +8,10 @@
 
 /// Boolean flags gating structured tracing throughout the MCP server subsystems.
 pub mod debug_flags {
-    /// Controls structured tracing for the MCP JSON-RPC stdio server and request router.
+    /// Controls structured tracing for the MCP JSON-RPC [`stdio`] server and request
+    /// router.
+    ///
+    /// [`stdio`]: std::io
     pub const DEBUG_MCP_SERVER: bool = true;
 
     /// Controls structured tracing for the underlying rust-analyzer LSP child process and

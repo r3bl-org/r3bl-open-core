@@ -19,7 +19,7 @@
 //! # Reference Implementation Pattern
 //!
 //! Instead of raw format strings (DON'T DO THIS):
-//! ```rust
+//! ```
 //! # use r3bl_tui::{vp_row, vp_col, CSI_START};
 //! let row_idx = vp_row(5);
 //! let col_idx = vp_col(10);
@@ -28,7 +28,7 @@
 //! ```
 //!
 //! We now use semantic enums (CURRENT APPROACH):
-//! ```rust
+//! ```
 //! # use r3bl_tui::{vp_row, vp_col, ansi_output};
 //! let row_idx = vp_row(5);
 //! let col_idx = vp_col(10);

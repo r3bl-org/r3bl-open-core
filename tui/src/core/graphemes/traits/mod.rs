@@ -1,11 +1,11 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Unified trait system for grapheme-aware string and document operations.
+//! Unified trait system for [`grapheme`]-aware string and document operations.
 //!
-//! This module provides traits that enable consistent handling of grapheme clusters
+//! This module provides traits that enable consistent handling of [`grapheme`] clusters
 //! across different string and document implementations in this codebase. These traits
-//! serve as a common interface for working with Unicode text in a grapheme-cluster-aware
-//! manner.
+//! serve as a common interface for working with [`Unicode`] text in a
+//! [`grapheme`]-cluster-aware manner.
 //!
 //! ## Purpose
 //!
@@ -21,7 +21,7 @@
 //!
 //! ## Core Traits
 //!
-//! - [`GraphemeString`]: Single-line grapheme-aware string operations.
+//! - [`GraphemeString`]: Single-line [`grapheme`]-aware string operations.
 //!
 //! ## Implementation Status
 //!
@@ -30,6 +30,8 @@
 //! abstraction layer for future flexibility without requiring immediate migration of
 //! existing code.
 //!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach

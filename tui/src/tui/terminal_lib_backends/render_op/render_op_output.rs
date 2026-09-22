@@ -36,8 +36,8 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{RenderOpCommon, RenderOpsExec};
-use crate::{InlineString, LockedOutputDevice, RenderOpsLocalData, VPSize,
-            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok,
+use crate::{InlineString, LockedOutputDevice, RenderOpsLocalData, TERMINAL_LIB_BACKEND,
+            TerminalLibBackend, TuiStyle, VPSize, ok,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 use std::{fmt::{Debug, Formatter},
@@ -69,10 +69,12 @@ pub enum RenderOpOutput {
     /// after the `OfsBuf` has been fully processed. The compositor has
     /// already handled:
     /// - Clipping text to available width
-    /// - Unicode and emoji display width
+    /// - [`Unicode`] and emoji display width
     /// - Style application
     ///
     /// The backend just needs to paint the result as-is to the terminal.
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>),
 }
 

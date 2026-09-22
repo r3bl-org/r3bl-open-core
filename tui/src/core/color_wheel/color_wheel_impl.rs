@@ -6,7 +6,7 @@
 //! providing the main interface for color wheel functionality:
 //! - Text colorization with various policies
 //! - Gradient generation and management
-//! - Support for RGB, [`ANSI`] 256, and Lolcat color modes
+//! - Support for [`RGB`], [`ANSI`] 256, and Lolcat color modes
 //! - Iterator interface for color cycling
 //!
 //! The [`ColorWheel`] automatically adapts to terminal capabilities and provides
@@ -91,6 +91,7 @@
 //! [`ColorWheel`] operations negligible in the overall performance profile.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 
 use crate::{Ansi256GradientIndex, ArrayBoundsCheck, ArrayOverflowResult,
             ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed, Colorize,
@@ -521,7 +522,9 @@ impl ColorWheel {
     /// 3. If nothing is found in `ColorWheelConfig` then use `DEFAULT_STEPS`.
     ///
     /// # Errors
-    /// If the RGB color is invalid, then this method will panic.
+    /// If the [`RGB`] color is invalid, then this method will panic.
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     pub fn generate_color_wheel(
         &mut self,
         maybe_steps_override: Option<u8>,
@@ -1149,7 +1152,9 @@ mod lolcat_bg_helper {
         }
     }
 
-    /// Converts a [`TuiColor`] to an RGB tuple for use as background color.
+    /// Converts a [`TuiColor`] to an [`RGB`] tuple for use as background color.
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     pub fn convert_tui_color_to_rgb_tuple(color: TuiColor) -> (u8, u8, u8) {
         match color {
             TuiColor::Rgb(RgbValue {
@@ -1743,7 +1748,9 @@ mod bench {
         });
     }
 
-    /// Benchmark: `lolcat_into_string` with Unicode text
+    /// Benchmark: `lolcat_into_string` with [`Unicode`] text
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[bench]
     fn bench_lolcat_into_string_unicode(b: &mut Bencher) {
         let text = "Hello, 世界! こんにちは";

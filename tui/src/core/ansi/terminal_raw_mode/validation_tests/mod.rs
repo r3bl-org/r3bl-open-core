@@ -10,9 +10,9 @@
 //! Unlike the automated tests in [`integration_tests`], these tests verify behavior
 //! that fundamentally requires a real controlling terminal provided by a shell:
 //!
-//! - **`/dev/tty` fallback**: Tests that raw mode works when stdin is redirected
+//! - **`/dev/tty` fallback**: Tests that raw mode works when [`stdin`] is redirected
 //!   (e.g., `echo "data" | app`). The shell provides a controlling terminal even
-//!   when stdin is piped, but test harnesses spawn processes without controlling
+//!   when [`stdin`] is piped, but test harnesses spawn processes without controlling
 //!   terminals, making automated verification impossible.
 //!
 //! ## Running Validation Tests
@@ -47,8 +47,9 @@
 //! edge cases that cannot be simulated with [`PTY`] pairs.
 //!
 //! [`integration_tests`]: mod@super::raw_mode_integration_tests
-//! [`portable_pty`]: https://docs.rs/portable-pty
+//! [`portable_pty`]: portable_pty
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`stdin`]: std::io::stdin
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 
 #![rustfmt::skip]

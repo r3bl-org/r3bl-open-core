@@ -1,19 +1,21 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Manual validation test for `/dev/tty` fallback when stdin is redirected.
+//! Manual validation test for `/dev/tty` fallback when [`stdin`] is redirected.
 //!
-//! This test verifies that raw mode works correctly when stdin is not a tty,
+//! This test verifies that raw mode works correctly when [`stdin`] is not a tty,
 //! which happens in real-world scenarios like piped input.
+//!
+//! [`stdin`]: std::io::stdin
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER_CLEANUP, GLYPH_FAILURE, GLYPH_SKIPPING,
             GLYPH_SUCCESS, GLYPH_WARNING};
 use rustix::termios::LocalModes;
 use std::io::Write;
 
-/// Manual test for `/dev/tty` fallback with redirected stdin.
+/// Manual test for `/dev/tty` fallback with redirected [`stdin`].
 ///
-/// This test verifies the enhancement we made to match crossterm's behavior:
-/// when stdin is not a tty (e.g., piped input), the implementation falls back
+/// This test verifies the enhancement we made to match [`crossterm`]'s behavior:
+/// when [`stdin`] is not a tty (e.g., piped input), the implementation falls back
 /// to opening `/dev/tty` for terminal control.
 ///
 /// Run this test in a real terminal using:
@@ -26,12 +28,12 @@ use std::io::Write;
 ///
 /// Test harnesses spawn processes without controlling terminals, so `/dev/tty`
 /// doesn't exist in automated tests. However, when you run this test from a
-/// shell with redirected stdin, the shell provides a controlling terminal that
+/// shell with redirected [`stdin`], the shell provides a controlling terminal that
 /// makes `/dev/tty` available.
 ///
 /// # Expected Behavior
 ///
-/// When stdin is redirected:
+/// When [`stdin`] is redirected:
 /// 1. `stdin.isatty()` returns `false`
 /// 2. `enable_raw_mode()` falls back to opening `/dev/tty`
 /// 3. Raw mode is successfully enabled via `/dev/tty`
@@ -45,7 +47,10 @@ use std::io::Write;
 /// cat config.txt | my_tui_app
 /// ```
 ///
-/// Where the app needs terminal control even though stdin is redirected.
+/// Where the app needs terminal control even though [`stdin`] is redirected.
+///
+/// [`crossterm`]: crossterm
+/// [`stdin`]: std::io::stdin
 #[test]
 #[allow(clippy::too_many_lines)]
 #[ignore = "Manual test: echo 'test' | cargo test test_dev_tty_fallback_manual -- --ignored --nocapture"]

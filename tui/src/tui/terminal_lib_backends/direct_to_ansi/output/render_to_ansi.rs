@@ -44,15 +44,16 @@ use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES,
 ///
 /// ## Design Principles
 ///
-/// 1. **Backend Agnostic**: The trait doesn't care about I/O backend (crossterm, direct
-///    [`ANSI`], etc.)
+/// 1. **Backend Agnostic**: The trait doesn't care about I/O backend ([`crossterm`],
+///    direct [`ANSI`], etc.)
 /// 2. **Simple Contract**: Single method with clear semantics
 /// 3. **Reusable**: Multiple implementations possible for different buffer types
-/// 4. **Future-Ready**: Designed to work with both current crossterm backend and future
-///    direct [`ANSI`] backend
+/// 4. **Future-Ready**: Designed to work with both current [`crossterm`] backend and
+///    future direct [`ANSI`] backend
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`choose()`]: crate::choose
+/// [`crossterm`]: crossterm
 /// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 pub trait RenderToAnsi {
     /// Render this buffer to [`ANSI`] escape sequence bytes.

@@ -43,6 +43,8 @@ fn controller(spawned_self_process_output: std::process::Output) {
 
 /// Controlled path: [`stdin`] is `/dev/null`, report the result and exit. The
 /// harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`stdin`]: std::io::stdin
 fn controlled() {
     let result = is_input_interactive();
     println!("{result:?}");

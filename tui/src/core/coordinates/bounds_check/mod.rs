@@ -87,7 +87,7 @@
 //!
 //! | Trait                  | File              | Key Methods                                                                                                                          |
 //! | ---------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-//! | [`ScreenCoordinate`]   | [`numeric_value`] | 16-bit physical screen domain: Extends [`NumericValue`], adds [`as_u16()`](ScreenCoordinate::as_u16) and [`From`]<[`primitive@u16`]> |
+//! | [`ScreenCoordinate`]   | [`numeric_value`] | 16-bit physical screen domain: Extends [`NumericValue`], adds [`as_u16()`] and [`From`]<[`primitive@u16`]>                           |
 //! | [`StorageCoordinate`]  | [`numeric_value`] | 64-bit storage domain: Extends [`NumericValue`], adds [`From`]<[`primitive@usize`]>                                                  |
 //!
 //! #### Complementary Bounds & Index Operations
@@ -104,22 +104,22 @@
 //! These build on foundational traits to provide specialized validation for specific use
 //! cases:
 //!
-//! | Trait                   | File                          | Key Methods                                                                                                                                        |
-//! | ----------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-//! | [`ArrayBoundsCheck`]    | [`array_bounds_check.rs`]     | [`overflows()`], [`underflows()`]                                                                                                                  |
-//! | [`CursorBoundsCheck`]   | [`cursor_bounds_check.rs`]    | [`eol_cursor_position()`], [`is_valid_cursor_position()`], [`clamp_cursor_position()`], [`check_cursor_position_bounds()`]                         |
-//! | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | [`check_viewport_bounds()`]                                                                                                                        |
-//! | [`RangeBoundsExt`]      | [`range_bounds_check.rs`]     | [`check_range_is_valid_for_length()`], [`clamp_range_to()`], [`check_index_is_within()`] (supports both [`RangeExclusive`] and [`RangeInclusive`]) |
-//! | [`RangeConstructExt`]   | [`range_construct_ext.rs`]    | [`to_exclusive_range()`], [`to_inclusive_range()`]: Construct [`RangeExclusive`]/[`RangeInclusive`] from `(VPIndex, VPLength)` pairs               |
-//! | [`RangeConvertExt`]     | [`range_convert_ext.rs`]      | [`to_exclusive()`]: Convert [`RangeInclusive`] -> [`RangeExclusive`] for iteration                                                                 |
-//! | [`RangeExt`]            | [`range_ext.rs`]              | [`as_usize_range()`], [`as_index_iter()`]: Slice indexing and type-safe range iteration                                                            |
+//! | Trait                   | File                          | Key Methods                                                                                                                                                                      |
+//! | ----------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+//! | [`ArrayBoundsCheck`]    | [`array_bounds_check.rs`]     | [`overflows()`], [`underflows()`]                                                                                                                                                |
+//! | [`CursorBoundsCheck`]   | [`cursor_bounds_check.rs`]    | [`eol_cursor_position()`], [`is_valid_cursor_position()`], [`clamp_cursor_position()`], [`check_cursor_position_bounds()`]                                                       |
+//! | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | [`check_viewport_bounds()`]                                                                                                                                                      |
+//! | [`RangeBoundsExt`]      | [`range_bounds_check.rs`]     | [`check_range_is_valid_for_length()`], [`clamp_range_to()`], [`check_index_is_within()`], [`overlaps()`], [`to_len()`] (supports both [`RangeExclusive`] and [`RangeInclusive`]) |
+//! | [`RangeConstructExt`]   | [`range_construct_ext.rs`]    | [`to_exclusive_range()`], [`to_inclusive_range()`]: Construct [`RangeExclusive`]/[`RangeInclusive`] from `(VPIndex, VPLength)` pairs                                             |
+//! | [`RangeConvertExt`]     | [`range_convert_ext.rs`]      | [`to_exclusive()`]: Convert [`RangeInclusive`] -> [`RangeExclusive`] for iteration                                                                                               |
+//! | [`RangeExt`]            | [`range_ext.rs`]              | [`as_usize_range()`], [`as_index_iter()`]: Slice indexing and type-safe range iteration                                                                                          |
 //!
 //! ### Why Import These Traits?
 //!
 //! In Rust, trait methods are only available when the trait is in scope. You need to
 //! import the trait that provides the method you want to use:
 //!
-//! ```rust
+//! ```
 //! // ArrayBoundsCheck provides overflows()
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 //!
@@ -132,7 +132,7 @@
 //!
 //! For detailed bounds checking (pattern matching on status), import the semantic trait:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 //!
 //! let index = vp_col(5);
@@ -163,7 +163,7 @@
 //!
 //! **📐 Length/space/size calculations & text wrapping** → Use [`LengthOps`]
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LengthOps, vp_col, vp_width};
 //! # let line_width = vp_width(80);
 //! # let cursor_col = vp_col(60);
@@ -175,7 +175,7 @@
 //! **🔧 Writing generic bounds functions** → Use [`NumericConversions`] or
 //! [`NumericValue`]
 //!
-//! ```rust
+//! ```
 //! // Use NumericConversions when you only need to READ values (most common)
 //! use r3bl_tui::NumericConversions;
 //! fn safe_access<I, L>(index: I, length: L) -> bool
@@ -193,7 +193,7 @@
 //!
 //! **🎛️ Check cursor position (EOL detection)** → Use [`CursorPositionBoundsStatus`]
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_col, vp_width};
 //! # let cursor = vp_col(5);
 //! # let content = vp_width(10);
@@ -220,7 +220,7 @@
 //!
 //! **🔍 Array access safety checking** → Use [`array_bounds_check.rs`]
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 //! # let index = vp_col(5);
 //! # let length = vp_width(10);
@@ -238,7 +238,7 @@
 //!
 //! **➤ Cursor position validation** → Use [`cursor_bounds_check.rs`]
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_col, vp_width};
 //! # let pos = vp_col(5);
 //! # let content_length = vp_width(10);
@@ -250,7 +250,7 @@
 //!
 //! **👁️ Viewport visibility checking** → Use [`viewport_bounds_check.rs`]
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{RangeBoundsResult, ViewportBoundsCheck, vp_col, vp_width};
 //! # let index = vp_col(15);
 //! # let start = vp_col(10);
@@ -262,7 +262,7 @@
 //!
 //! **Range Structure Validation** - Check if range object is well-formed:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{RangeBoundsExt, RangeValidityStatus, vp_col, vp_width};
 //! # let buffer_length = vp_width(10);
 //! let range = vp_col(2)..vp_col(8);
@@ -273,7 +273,7 @@
 //!
 //! **Range Membership Checking** - Check if index is within range:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{RangeBoundsExt, RangeBoundsResult, vp_row};
 //! # let row_pos = vp_row(5);
 //! # let char_pos = vp_row(3);
@@ -297,7 +297,7 @@
 //!
 //! **Range Type Conversion** - Convert inclusive to exclusive for iteration:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{RangeConvertExt, vp_row};
 //!
 //! // VT-100 scroll region (inclusive: both endpoints are valid positions)
@@ -437,7 +437,7 @@
 //! - Required super-trait for all coordinate index and length types
 //!
 //! **Use [`ScreenCoordinate`] (16-bit physical screen domain):**
-//! - When you need infallible 16-bit conversions ([`as_u16()`](ScreenCoordinate::as_u16), [`From`]<[`primitive@u16`]>)
+//! - When you need infallible 16-bit conversions ([`as_u16()`], [`From`]<[`primitive@u16`]>)
 //! - Required when interacting with physical terminal dimensions and [`ANSI`] output buffers
 //!
 //! **Use [`StorageCoordinate`] (64-bit continuous storage domain):**
@@ -456,7 +456,7 @@
 //!
 //! **Step 1**: Replace raw numeric types with constructors
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{vp_col, vp_width};
 //! let pos_x = vp_col(5); // Instead of let pos_x = 5_usize;
 //! let width = vp_width(10); // Instead of let width = 10_usize;
@@ -464,7 +464,7 @@
 //!
 //! **Step 2**: Replace manual bounds checks with safe methods
 //!
-//! ```rust
+//! ```
 //! # use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, vp_col, vp_width};
 //! # let pos_x = vp_col(5);
 //! # let width = vp_width(10);
@@ -474,7 +474,7 @@
 //!
 //! **Step 3**: Add pattern matching for array access (buffer/vector elements)
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 //! # let pos_x = vp_col(5);
 //! # let width = vp_width(10);
@@ -486,7 +486,7 @@
 //!
 //! **Step 4**: Add pattern matching for cursor positioning (text editors)
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_col, vp_width};
 //! # let cursor_pos = vp_col(5);
 //! # let content_length = vp_width(10);
@@ -549,7 +549,7 @@
 //!
 //! ** Don't mix row and column types**
 //!
-//! ```rust,compile_fail
+//! ```compile_fail
 //! use r3bl_tui::{IndexOps, vp_row, vp_width};  // IndexOps provides .overflows()
 //! // Compiler error - cannot compare VPRow with VPWidth
 //! let row_pos = vp_row(5);
@@ -559,7 +559,7 @@
 //!
 //! ** Don't use raw usize for bounds checking**
 //!
-//! ```rust
+//! ```
 //! let raw_index: usize = 5;
 //! let raw_length: usize = 10;
 //! // Error-prone - no protection against off-by-one bugs
@@ -568,7 +568,7 @@
 //!
 //! ** Do use type-safe constructors and methods**
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, vp_col, vp_width};
 //! let index = vp_col(5);
 //! let length = vp_width(10);
@@ -633,7 +633,7 @@
 //!   ([`std::ops::Add`], [`std::ops::Sub`], [`Ord`]) and zero-checking ([`is_zero()`]).
 //!
 //! - **[`ScreenCoordinate`]**: Extends [`NumericValue`] for 16-bit physical screen coordinates
-//!   ([`as_u16()`](ScreenCoordinate::as_u16), [`From`]<[`primitive@u16`]>).
+//!   ([`as_u16()`], [`From`]<[`primitive@u16`]>).
 //!
 //! - **[`StorageCoordinate`]**: Extends [`NumericValue`] for 64-bit continuous storage coordinates
 //!   ([`From`]<[`primitive@usize`]>).
@@ -1015,7 +1015,7 @@
 //!
 //! **How to use extension traits:**
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{RangeBoundsExt, RangeValidityStatus, vp_col, vp_width};
 //!
 //! let range = vp_col(2)..vp_col(8);
@@ -1042,7 +1042,7 @@
 //!
 //! **Without blanket impl (tedious boilerplate):**
 //!
-//! ```rust,compile_fail
+//! ```compile_fail
 //! # use r3bl_tui::{CursorBoundsCheck, VPWidth, VPHeight, Length, ByteLength};
 //! impl CursorBoundsCheck for VPWidth {}
 //! impl CursorBoundsCheck for VPHeight {}
@@ -1053,7 +1053,7 @@
 //!
 //! **With blanket impl (write once, works everywhere):**
 //!
-//! ```rust,compile_fail
+//! ```compile_fail
 //! # use r3bl_tui::{CursorBoundsCheck, LengthOps};
 //! // Single blanket impl in cursor_bounds_check.rs:
 //! impl<T: LengthOps> CursorBoundsCheck for T
@@ -1066,7 +1066,7 @@
 //!
 //! **How blanket impls work:**
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_col, vp_width};
 //!
 //! let line_width = vp_width(10);  // VPWidth type implements LengthOps
@@ -1085,7 +1085,7 @@
 //!
 //! **Example: [`ArrayBoundsCheck`] requires manual impls**
 //!
-//! ```rust,compile_fail
+//! ```compile_fail
 //! # use r3bl_tui::{ArrayBoundsCheck, LengthOps, VPWidth, VPCol, VPHeight, VPRow};
 //! // ArrayBoundsCheck is parameterized over LengthType
 //! // (trait definition shown for reference)
@@ -1119,7 +1119,7 @@
 //! compile time. For practical adoption guidance, see the [Getting Started with Bounds
 //! Checking] section.
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LengthOps, vp_col, vp_height, vp_row, vp_width};
 //!
 //! // Type-safe terminal operations
@@ -1162,7 +1162,6 @@
 //! [`ArrayOverflowResult`]: crate::ArrayOverflowResult
 //! [`as_index_iter()`]: crate::RangeExt::as_index_iter
 //! [`as_u16()`]: crate::ScreenCoordinate::as_u16
-//! [`as_usize()`]: crate::NumericConversions::as_usize
 //! [`as_usize()`]: NumericConversions::as_usize
 //! [`as_usize_range()`]: crate::RangeExt::as_usize_range
 //! [`ByteIndex`]: crate::ByteIndex
@@ -1202,7 +1201,6 @@
 //! [`IndexOps`]: crate::IndexOps
 //! [`is_overflowed_by()`]: crate::LengthOps::is_overflowed_by
 //! [`is_valid_cursor_position()`]: crate::CursorBoundsCheck::is_valid_cursor_position
-//! [`is_zero()`]: crate::NumericValue::is_zero
 //! [`is_zero()`]: NumericValue::is_zero
 //! [`is_zero`]: NumericValue::is_zero
 //! [`length.clamp_to_max(max)`]: crate::LengthOps::clamp_to_max
@@ -1216,6 +1214,7 @@
 //! [`NumericConversions`]: crate::NumericConversions
 //! [`NumericValue`]: crate::NumericValue
 //! [`overflows()`]: crate::core::ArrayBoundsCheck::overflows
+//! [`overlaps()`]: crate::RangeBoundsExt::overlaps
 //! [`Range<VPIndex>`]: std::ops::Range
 //! [`range_bounds_check.rs`]: mod@crate::bounds_check::range::range_bounds_check
 //! [`range_bounds_check`]: mod@crate::bounds_check::range::range_bounds_check
@@ -1244,6 +1243,7 @@
 //! [`to_exclusive()`]: crate::RangeConvertExt::to_exclusive
 //! [`to_exclusive_range()`]: crate::RangeConstructExt::to_exclusive_range
 //! [`to_inclusive_range()`]: crate::RangeConstructExt::to_inclusive_range
+//! [`to_len()`]: crate::RangeBoundsExt::to_len
 //! [`try_as_u16()`]: NumericConversions::try_as_u16
 //! [`underflows()`]: crate::core::ArrayBoundsCheck::underflows
 //! [`viewport_bounds_check.rs`]: mod@crate::viewport_bounds_check

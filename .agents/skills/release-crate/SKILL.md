@@ -61,7 +61,7 @@ cargo install r3bl-cmdr --force
 ```markdown
 > **r3bl-build-infra** provides developer tools and utilities for Rust projects and documentation automation.
 > 
-> - 📐 **`cargo-rustdoc-fmt`**: CLI tool that formats Markdown tables and automatically converts inline code references into clean reference-style intra-doc links with technical term linking.
+> - 📐 **`cargo-rustdoc-fmt`**: CLI tool that formats Markdown tables, converts inline links into sorted reference-style links, auto-links known technical terms, and normalizes code fence language tags in rustdoc comments (`///` and `//!`).
 
 Install with:
 ```bash

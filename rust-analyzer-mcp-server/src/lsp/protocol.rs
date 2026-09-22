@@ -33,7 +33,9 @@ pub mod primitive_types {
     /// [LSP Base Protocol Specification]: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#headerPart
     pub type LspPayloadByteLength = usize;
 
-    /// Thread-safe `stdin` writer handle to the `rust-analyzer` child process.
+    /// Thread-safe [`stdin`] writer handle to the `rust-analyzer` child process.
+    ///
+    /// [`stdin`]: std::io::stdin
     pub type LspWriter = Box<dyn Write + Send>;
 
     /// Numeric request identifier for request/response correlation, defined by the
@@ -230,7 +232,9 @@ pub mod envelope_types {
     }
 
     /// Categorized incoming Language Server Protocol (LSP) message parsed from child
-    /// process `stdout`.
+    /// process [`stdout`].
+    ///
+    /// [`stdout`]: std::io::stdout
     #[derive(Debug, Clone, PartialEq)]
     pub enum IncomingLspMessage {
         /// Server notification publishing compiler diagnostics for a file URI.

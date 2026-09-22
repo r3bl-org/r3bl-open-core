@@ -106,7 +106,7 @@ pub fn assert_blank_line(buf: &OfsBufVT100, row: usize) {
 /// Panics if value is 0, which indicates a test bug.
 ///
 /// # Examples
-/// ```rust
+/// ```
 /// use r3bl_tui::{term_col, term_row};
 /// use std::num::NonZeroU16;
 ///

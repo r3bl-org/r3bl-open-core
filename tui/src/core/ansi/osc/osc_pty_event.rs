@@ -30,7 +30,7 @@ use crate::Pc;
 /// 1. Terminal emulator or application needs to send [`OSC`] sequences.
 /// 2. Creates [`OscSequence`] instances via [`OscSender`].
 /// 3. Formats them using `FastStringify`/`Display` traits.
-/// 4. Sends formatted sequences over `stdout`.
+/// 4. Sends formatted sequences over [`stdout`].
 ///
 /// ## Common [`OSC`] Events
 ///
@@ -40,7 +40,7 @@ use crate::Pc;
 ///
 /// ## Usage Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{OscPtyEvent, pc};
 ///
 /// // Example of matching OSC events from a PTY:
@@ -78,6 +78,7 @@ use crate::Pc;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyOscProgressScanner`]: crate::PtyOscProgressScanner
 /// [`PtyResponseEvent`]: crate::PtyResponseEvent
+/// [`stdout`]: std::io::stdout
 #[derive(Debug, Clone, PartialEq)]
 pub enum OscPtyEvent {
     /// Set specific progress value 0-100% ([`OSC`] 9;4 state 1).

@@ -46,11 +46,11 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range, Sub, SubAssign};
 /// > 💡 **See also**: For complete workflows showing [`ByteIndex`] used with [`UTF-8`]
 /// > string
 /// > operations and bounds checking, see the [coordinates module
-/// > documentation](crate::coordinates#common-workflows).
+/// > documentation].
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ByteIndex, ByteLength, byte_index, byte_len, ArrayBoundsCheck, ArrayOverflowResult};
 ///
 /// // Create a byte index
@@ -66,6 +66,7 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Range, Sub, SubAssign};
 /// ```
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [coordinates module documentation]: crate::coordinates#common-workflows
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(usize);
 

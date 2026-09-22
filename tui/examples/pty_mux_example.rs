@@ -3,9 +3,9 @@
 //! [`PTYMux`] terminal multiplexer example with universal process compatibility.
 //!
 //! This example demonstrates how to use the [`pty_mux`] module to create a terminal
-//! multiplexer similar to tmux, but with enhanced support for truecolor and TUI apps that
-//! frequently re-render their UI, with support for ALL types of programs: interactive
-//! shells, TUI applications, and CLI tools.
+//! multiplexer similar to tmux, but with enhanced support for [`truecolor`] and TUI apps
+//! that frequently re-render their UI, with support for ALL types of programs:
+//! interactive shells, TUI applications, and CLI tools.
 //!
 //! ## Features
 //!
@@ -51,6 +51,7 @@
 //! [`pty_mux`]: r3bl_tui::core::pty_mux
 //! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
 use r3bl_tui::{DefaultIoDevices, EventPropagation, InputEvent, IntoErr, Key, KeyPress,
                KeyState, ModifierKeysMask, TuiAvailability, TuiAvailabilityChooseExt,

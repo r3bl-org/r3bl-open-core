@@ -33,7 +33,9 @@ pub struct RustAnalyzerClient {
     /// Monotonically increasing request ID counter.
     pub request_id: JsonRpcRequestId,
 
-    /// Thread-safe writer handle to `rust-analyzer` `stdin`.
+    /// Thread-safe writer handle to `rust-analyzer` [`stdin`].
+    ///
+    /// [`stdin`]: std::io::stdin
     pub lsp_writer: Option<LspWriter>,
 
     /// Current handshake state with the language server.

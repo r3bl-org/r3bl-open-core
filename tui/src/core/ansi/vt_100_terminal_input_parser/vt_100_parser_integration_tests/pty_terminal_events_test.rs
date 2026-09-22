@@ -57,7 +57,7 @@
 //! [`InputEvent::Focus`]: crate::InputEvent::Focus
 //! [`InputEvent::Resize`]: crate::InputEvent::Resize
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`pty_bracketed_paste_test`]:
 //!     mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_bracketed_paste_test
 //! [`pty_sigwinch_test`]:

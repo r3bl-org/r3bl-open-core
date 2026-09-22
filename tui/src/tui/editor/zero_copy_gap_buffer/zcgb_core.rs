@@ -22,7 +22,9 @@ pub struct ZeroCopyGapBuffer {
     /// [`INITIAL_LINE_SIZE`]: super::INITIAL_LINE_SIZE
     pub buffer: Vec<u8>,
 
-    /// Metadata for each line (grapheme clusters, display width, etc.).
+    /// Metadata for each line ([`grapheme`] clusters, display width, etc.).
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     lines: Vec<LineMetadata>,
 
     /// Number of lines currently in the buffer.

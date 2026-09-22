@@ -4,12 +4,14 @@
 //!
 //! This module provides utility functions for color wheel operations:
 //! - `calc_fg_color()` - Calculates appropriate foreground color for contrast
-//! - `get_color_tuple()` - Generates RGB color values from `ColorWheelControl`
+//! - `get_color_tuple()` - Generates [`RGB`] color values from `ColorWheelControl`
 //! - `clamp()` - Safely converts f64 to u8 values
 //!
 //! These functions handle the mathematical calculations for color generation
 //! and ensure proper contrast ratios. Previously located in
 //! `color_wheel_core/color_helpers.rs`.
+//!
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 
 use super::color_wheel_types::ColorWheelControl;
 use crate::LossyConvertToByte;
@@ -35,10 +37,12 @@ fn clamp(value: f64) -> u8 {
     val_f64.to_u8_lossy()
 }
 
-/// Generate an RGB color tuple based on the `ColorWheelControl` parameters.
+/// Generate an [`RGB`] color tuple based on the `ColorWheelControl` parameters.
 ///
 /// This function uses trigonometric calculations to generate smooth color transitions.
 /// The seed value determines the starting point in the color cycle.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 #[must_use]
 pub fn get_color_tuple(c: &ColorWheelControl) -> (u8, u8, u8) {
     // Calculate the angle for the sine functions.

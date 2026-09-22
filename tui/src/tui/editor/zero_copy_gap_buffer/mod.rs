@@ -4,9 +4,9 @@
 //!
 //! This module provides a buffer data structure where each line is stored
 //! as a dynamically-sized byte array padded with null characters. This enables zero-copy
-//! access as `&str` for the markdown parser while maintaining efficient Unicode support.
-//! Unlike a traditional gap buffer, this implementation maintains separate buffers for
-//! each line rather than a single gap in a monolithic buffer.
+//! access as `&str` for the markdown parser while maintaining efficient [`Unicode`]
+//! support. Unlike a traditional gap buffer, this implementation maintains separate
+//! buffers for each line rather than a single gap in a monolithic buffer.
 //!
 //! # Module Architecture
 //!
@@ -28,7 +28,7 @@
 //!
 //! [`ZeroCopyGapBuffer`] is used directly as a concrete type:
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{ZeroCopyGapBuffer, c_row};
 //! let mut buffer = ZeroCopyGapBuffer::default();
 //! buffer.push_line("Hello World");
@@ -44,7 +44,7 @@
 //! - Dynamic line buffers starting at 256 bytes, growing as needed
 //! - Null-padded storage for efficient in-place editing
 //! - Zero-copy access for parsing operations
-//! - Unicode-safe text manipulation using grapheme clusters
+//! - [`Unicode`]-safe text manipulation using [`grapheme`] clusters
 //! - Metadata caching for performance
 //!
 //! # Line Storage Architecture
@@ -213,7 +213,7 @@
 //! Grapheme cluster analysis performance varies by content complexity:
 //!
 //! - **`rebuild_single_line_ascii`**: 79.07 ns - [`ASCII`] text (36 chars)
-//! - **`rebuild_single_line_unicode`**: 365.45 ns - Unicode with emojis
+//! - **`rebuild_single_line_unicode`**: 365.45 ns - [`Unicode`] with emojis
 //! - **`rebuild_batch_10_lines`**: 753.85 ns - Batch rebuild (~75 ns/line)
 //! - **`append_optimization_single_char`**: 1.48 ns - Optimized single char append
 //! - **`full_rebuild_after_append_single_char`**: 100.48 ns - Full rebuild comparison
@@ -227,8 +227,9 @@
 //! 1. **True Zero-Copy Access**: Read operations (0.19-0.88 ns) are essentially free,
 //!    showing that we're returning direct pointers without any processing overhead.
 //!
-//! 2. **Efficient Unicode Handling**: Unicode operations are 2-3x slower than [`ASCII`]
-//!    but still sub-microsecond, making them suitable for real-time text editing.
+//! 2. **Efficient [`Unicode`] Handling**: [`Unicode`] operations are 2-3x slower than
+//!    [`ASCII`] but still sub-microsecond, making them suitable for real-time text
+//!    editing.
 //!
 //! 3. **Scalable Line Management**: Adding 100 lines takes only ~16 ns per line,
 //!    demonstrating good scalability for large documents.
@@ -243,30 +244,32 @@
 //!    - Word append: 2.91 ns (optimized) vs 273.74 ns (full rebuild) - **94x faster**
 //!
 //! These benchmarks confirm that the zero-copy gap buffer design achieves its goal of
-//! providing high-performance text editing operations while maintaining Unicode safety
-//! and memory efficiency.
+//! providing high-performance text editing operations while maintaining [`Unicode`]
+//! safety and memory efficiency.
 //!
 //! # Optimization Strategies
 //!
 //! ## Segment Rebuilding
 //!
 //! After any text modification (insertion or deletion), the buffer rebuilds the
-//! grapheme cluster segments for the affected line. This ensures that:
+//! [`grapheme`] cluster segments for the affected line. This ensures that:
 //!
 //! - Display width calculations remain accurate
-//! - Unicode grapheme boundaries are properly tracked
-//! - Cursor movement respects grapheme clusters
+//! - [`Unicode`] [`grapheme`] boundaries are properly tracked
+//! - Cursor movement respects [`grapheme`] clusters
 //!
-//! The rebuild operation parses the line content using the Unicode segmentation
-//! library to identify grapheme cluster boundaries and calculate display widths.
+//! The rebuild operation parses the line content using the [`Unicode`] segmentation
+//! library to identify [`grapheme`] cluster boundaries and calculate display widths.
 //! While this adds some overhead to each edit operation, it ensures correctness
-//! for all Unicode text, including emojis, combining characters, and complex scripts.
+//! for all [`Unicode`] text, including emojis, combining characters, and complex scripts.
 //!
 //! [`as_str()`]: ZeroCopyGapBuffer::as_str
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 // Core types and data structures.

@@ -63,7 +63,7 @@ impl<T> DebouncedState<T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///
@@ -89,7 +89,7 @@ impl<T> DebouncedState<T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///
@@ -114,7 +114,7 @@ impl<T> DebouncedState<T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///
@@ -147,7 +147,7 @@ impl<T> DebouncedState<T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///
@@ -184,7 +184,7 @@ impl<T> DebouncedState<T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::DebouncedState;
     ///

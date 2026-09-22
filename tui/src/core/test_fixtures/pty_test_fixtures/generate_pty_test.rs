@@ -168,7 +168,8 @@
 /// ```
 ///
 /// This is why all output in [`pty`] controlled processes should use [`println!()`] -
-/// using [`eprintln!()`] creates a false impression that stderr is handled differently.
+/// using [`eprintln!()`] creates a false impression that [`stderr`] is handled
+/// differently.
 ///
 /// For complete [`pty`] test implementations, see:
 /// - [`raw mode integration_tests`] - Tests raw mode itself.
@@ -237,9 +238,9 @@
 /// [`read_line_state()`]: crate::PtyTestChild::read_line_state
 /// [`spawn_controlled_in_pty`]: crate::spawn_controlled_in_pty
 /// [`std::process::exit(0)`]: std::process::exit
-/// [`stderr`]: std::io::Stderr
-/// [`stdin`]: std::io::Stdin
-/// [`stdout`]: std::io::Stdout
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 /// [`timeout`]: crate::PTY_TEST_WATCHDOG_TIMEOUT
 /// [`tokio`]: tokio
 /// [`wait()`]: portable_pty::Child::wait
@@ -416,7 +417,7 @@ macro_rules! generate_pty_test {
 ///
 /// [`Cooked`]: PtyTestMode::Cooked
 /// [`pty`]: crate::core::pty
-/// [`stdin`]: std::io::Stdin
+/// [`stdin`]: std::io::stdin
 /// [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PtyTestMode {
@@ -425,14 +426,14 @@ pub enum PtyTestMode {
     /// or any [`stdin`]-reading code that expects [raw mode].
     ///
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-    /// [`stdin`]: std::io::Stdin
+    /// [`stdin`]: std::io::stdin
     /// [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     Raw,
     /// Do not change the terminal mode. The controlled process starts in the default
     /// [cooked mode]. Use for tests that manage raw mode themselves or that never read
     /// [`stdin`].
     ///
-    /// [`stdin`]: std::io::Stdin
+    /// [`stdin`]: std::io::stdin
     /// [cooked mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     Cooked,
 }

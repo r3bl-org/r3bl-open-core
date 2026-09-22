@@ -7,7 +7,7 @@
 //! environment:
 //! - [`LineState`] async event handling and state management
 //! - Line editing operations (insert, delete, navigation)
-//! - Word boundary detection with Unicode support
+//! - Word boundary detection with [`Unicode`] support
 //! - Terminal rendering and cursor positioning
 //!
 //! All tests use **real keyboard input sequences** to verify the system handles actual
@@ -25,7 +25,7 @@
 //!   environment
 //! - **Integration validation**: Verifies the complete stack from keyboard input → line
 //!   state → terminal output
-//! - **Unicode safety**: Validates multi-byte character handling in actual terminal
+//! - **[`Unicode`] safety**: Validates multi-byte character handling in actual terminal
 //!   environment
 //!
 //! **Unit tests** (in [`line_state`]) validate individual handler logic with mocked I/O.
@@ -36,6 +36,7 @@
 //! [`line_state`]: super::line_state
 //! [`LineState`]: super::LineState
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [parent module]: mod@super
 
 #![rustfmt::skip]

@@ -1,12 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Extension traits for grapheme-aware string operations.
+//! Extension traits for [`grapheme`]-aware string operations.
+//!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 
 use crate::{GCStringOwned, GraphemeString, Seg, SegStringOwned, VPCol};
 
 /// Extension trait for when ownership is needed.
 /// This trait provides convenience methods for converting borrowed
-/// grapheme operations into owned types.
+/// [`grapheme`] operations into owned types.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub trait GraphemeStringOwnedExt: GraphemeString {
     /// Converts the entire string to an owned `GCStringOwned`.
     fn to_owned(&self) -> GCStringOwned { GCStringOwned::new(self.as_str()) }

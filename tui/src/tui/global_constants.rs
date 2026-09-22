@@ -107,9 +107,11 @@ impl From<DefaultTiming> for Duration {
     }
 }
 
-/// Unicode box-drawing characters used for rendering dialog borders and UI elements.
+/// [`Unicode`] box-drawing characters used for rendering dialog borders and UI elements.
 /// These characters provide a consistent visual style for drawing rectangular
 /// borders, frames, and separators in the terminal user interface.
+///
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 #[derive(Debug, Eq, PartialEq, AsRefStr)]
 pub enum BorderGlyphCharacter {
     /// Top-right corner character: ╮

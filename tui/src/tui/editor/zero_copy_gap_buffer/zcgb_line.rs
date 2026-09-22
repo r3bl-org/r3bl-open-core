@@ -14,7 +14,7 @@ use crate::{ByteLength, CCol, CLength, CWidth, DocSeg, SegStringOwned};
 /// metadata for zero-copy operations.
 ///
 /// # Usage
-/// ```rust
+/// ```
 /// # use r3bl_tui::{ZeroCopyGapBuffer, c_row, c_col};
 /// # let mut buffer = ZeroCopyGapBuffer::default();
 /// # buffer.add_line();
@@ -49,20 +49,28 @@ impl<'a> GapBufferLine<'a> {
     #[must_use]
     pub fn display_width(&self) -> CWidth { self.info.display_width }
 
-    /// Get the number of grapheme clusters in the line.
+    /// Get the number of [`grapheme`] clusters in the line.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn grapheme_count(&self) -> CLength { self.info.grapheme_count }
 
-    /// Get the number of grapheme cluster segments.
+    /// Get the number of [`grapheme`] cluster segments.
     /// This is the preferred method for semantic clarity.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn segment_count(&self) -> CLength { self.info.grapheme_count }
 
-    /// Get the segments (grapheme cluster information) for the line.
+    /// Get the segments ([`grapheme`] cluster information) for the line.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn segments(&self) -> &[DocSeg] { &self.info.grapheme_segments }
 
-    /// Checks if the given column index falls in the middle of a grapheme cluster.
+    /// Checks if the given column index falls in the middle of a [`grapheme`] cluster.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn check_is_in_middle_of_grapheme(
         &self,
@@ -102,7 +110,9 @@ impl<'a> GapBufferLine<'a> {
         self.info.get_string_at_left_of(self.content, col_index)
     }
 
-    /// Get the last grapheme cluster in the line.
+    /// Get the last [`grapheme`] cluster in the line.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_string_at_end(&self) -> Option<SegStringOwned> {
         self.info.get_string_at_end(self.content)

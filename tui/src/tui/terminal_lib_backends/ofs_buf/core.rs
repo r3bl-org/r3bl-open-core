@@ -26,7 +26,7 @@ use std::{fmt::{self, Debug},
 ///
 /// - **Dual Integration**: Works with both render pipeline and [`ANSI`] terminal
 ///   emulation.
-/// - **Variable-ColWidth Support**: Proper handling of emoji and Unicode characters.
+/// - **Variable-ColWidth Support**: Proper handling of emoji and [`Unicode`] characters.
 /// - **[`VT-100`] Compliance**: Full terminal specification compliance.
 /// - **Performance Optimized**: Pre-calculated memory sizes and efficient operations.
 ///
@@ -72,6 +72,7 @@ use std::{fmt::{self, Debug},
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RenderOpCommon`]: enum@crate::tui::RenderOpCommon
 /// [`set_char()`]: OfsBuf::set_char
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [`vte`]: https://docs.rs/vte

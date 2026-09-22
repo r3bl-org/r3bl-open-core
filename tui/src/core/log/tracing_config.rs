@@ -102,8 +102,8 @@ pub struct TracingConfig {
 /// [Thread local tracing subscriber]: tracing::subscriber::set_default
 impl TracingConfig {
     /// Thread local is use in tests, where each test should have its own log file or
-    /// stdout, etc. This is set per thread. So you can have more than one, assuming you
-    /// have more than one thread.
+    /// [`stdout`], etc. This is set per thread. So you can have more than one, assuming
+    /// you have more than one thread.
     ///
     /// This function will return a [`tracing::dispatcher::DefaultGuard`]. You should drop
     /// this guard when you're done with the tracing system. This will reset the tracing
@@ -114,6 +114,8 @@ impl TracingConfig {
     /// Returns an error if:
     /// - The file writer cannot be created (invalid path, permissions)
     /// - The tracing layer cannot be initialized
+    ///
+    /// [`stdout`]: std::io::stdout
     pub fn install_thread_local(self) -> miette::Result<ThreadLocalLogFileGuard> {
         try_create_layers(&self).map(|layers| ThreadLocalLogFileGuard {
             _default_guard: tracing_subscriber::registry().with(layers).set_default(),
@@ -122,7 +124,7 @@ impl TracingConfig {
     }
 
     /// Global scope is used in production, for an app that needs to log to a file or
-    /// stdout, etc. Once set, this can't be unset or changed.
+    /// [`stdout`], etc. Once set, this can't be unset or changed.
     ///
     /// # Errors
     ///
@@ -130,6 +132,8 @@ impl TracingConfig {
     /// - The file writer cannot be created (invalid path, permissions)
     /// - The tracing layer cannot be initialized
     /// - A global subscriber has already been set
+    ///
+    /// [`stdout`]: std::io::stdout
     pub fn install_global(self) -> miette::Result<GlobalLogFileGuard> {
         try_create_layers(&self).map(|layers| {
             tracing_subscriber::registry().with(layers).init();

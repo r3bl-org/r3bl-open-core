@@ -76,20 +76,21 @@ impl AnsiValue {
     /// Basic [`ANSI`] colors (indices 0-15) have special handling:
     /// - They represent the standard 16 terminal colors
     /// - Color degradation treats them differently than extended colors (16-255)
-    /// - When converting to grayscale, we convert via RGB first
+    /// - When converting to grayscale, we convert via [`RGB`] first
     ///
     /// # Returns
     ///
     /// `true` if this is a basic color (0-15), `false` for extended colors (16-255)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[must_use]
     pub const fn is_basic(&self) -> bool { self.index < 16 }
 
     /// Checks if this is an extended [`ANSI`] color (indices 16-255).
     ///
     /// Extended [`ANSI`] colors (indices 16-255) are from the 256-color palette:
-    /// - Indices 16-231: 6×6×6 RGB color cube (216 colors)
+    /// - Indices 16-231: 6×6×6 [`RGB`] color cube (216 colors)
     /// - Indices 232-255: Grayscale ramp (24 shades)
     /// - They don't have the special handling that basic colors (0-15) require
     ///
@@ -98,6 +99,7 @@ impl AnsiValue {
     /// `true` if this is an extended color (16-255), `false` for basic colors (0-15)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[must_use]
     pub const fn is_extended(&self) -> bool { !self.is_basic() }
 }
@@ -109,11 +111,12 @@ mod tests {
     use test_case::test_case;
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// RGB: #5f00ff rgb(95,0,255)
+    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`] value 57 = `BlueViolet`
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[test]
     fn test_ansi_to_rgb() {
         let ansi = AnsiValue::new(57);

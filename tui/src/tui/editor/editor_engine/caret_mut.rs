@@ -331,7 +331,7 @@ mod right_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Advances the caret position to the right to the start of the next grapheme
+    /// Advances the caret position to the right to the start of the next [`grapheme`]
     /// cluster, skipping across multi-column display widths (such as jumbo emojis) when
     /// necessary.
     ///
@@ -346,8 +346,9 @@ mod right_helper {
     ///     a jumbo emoji, pressing `Right` advances the caret by 1 column onto the
     ///     starting display column of the jumbo emoji.
     /// 2. Moving off a jumbo emoji:
-    ///   - Let's say the caret is standing **ON** a multi-column grapheme cluster (e.g.,
-    ///     display width 2). The caret is **ON** the first half of the jumbo emoji.
+    ///   - Let's say the caret is standing **ON** a multi-column [`grapheme`] cluster
+    ///     (e.g., display width 2). The caret is **ON** the first half of the jumbo
+    ///     emoji.
     ///   - Pressing `Right` skips all interior columns of the cluster and places the
     ///     caret at the start of the next character.
     /// 3. Adjacency Gating:
@@ -382,6 +383,7 @@ mod right_helper {
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`c_width(2)`]: crate::c_width
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub fn right_normal(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
         let unicode_width_at_caret = buffer
             .get_seg_at_caret()
@@ -421,8 +423,10 @@ mod right_helper {
         }
     }
 
-    /// Advances the caret past an immediately adjacent wide grapheme cluster (jumbo
+    /// Advances the caret past an immediately adjacent wide [`grapheme`] cluster (jumbo
     /// emoji), placing the caret ON the starting column of the jumbo emoji.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     fn jump_adjacent_wide_segment(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,

@@ -55,7 +55,7 @@ impl PreallocatedStringExt for String {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::format_no_alloc;
 ///
 /// // Allocate ONCE outside the hot loop

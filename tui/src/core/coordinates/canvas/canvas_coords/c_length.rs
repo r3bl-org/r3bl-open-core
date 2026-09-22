@@ -7,11 +7,12 @@ use crate::{VPLength, generate_canvas_length_type_impl};
 /// [`Canvas`] domain).
 ///
 /// Represents the total number of elements or total size of a 1D sequence in document
-/// space (such as total grapheme cluster count or 1D buffer length).
+/// space (such as total [`grapheme`] cluster count or 1D buffer length).
 ///
 /// See the [Canvas and Viewport concept] for details.
 ///
 /// [`Canvas`]: mod@crate::core::coordinates::canvas
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [Canvas and Viewport concept]: mod@crate::core::coordinates::canvas#canvas-and-viewport-concept
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug)]
 pub struct CLength(pub usize);

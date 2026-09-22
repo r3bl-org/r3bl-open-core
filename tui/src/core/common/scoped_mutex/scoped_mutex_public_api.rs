@@ -28,7 +28,7 @@ use std::sync::{LockResult, Mutex, MutexGuard};
 /// Use the [`scoped_mutex!`] macro to create a new instance. Don't instantiate this
 /// struct directly (the `state` field is private to the module).
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{scoped_mutex, ScopedMutex,
 ///     DeadlockPreventionPolicy::PanicOnAnyLockNesting
 /// };

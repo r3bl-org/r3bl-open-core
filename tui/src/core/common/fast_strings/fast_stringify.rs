@@ -35,7 +35,7 @@ use std::fmt::{Display, Formatter};
 /// 2. **Call the macro** [`generate_impl_display_for_fast_stringify!`] to generate the
 ///    [`Display`] implementation
 ///
-/// ```rust
+/// ```
 /// # use r3bl_tui::{
 /// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
 /// # };
@@ -171,7 +171,7 @@ pub type BufTextStorage = String;
 ///
 /// # Basic Usage
 ///
-/// ```rust
+/// ```
 /// # use r3bl_tui::{
 /// #    FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify, ok
 /// # };

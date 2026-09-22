@@ -5,7 +5,7 @@ use crate::{Pc, TerminalColorRole, core::terminal_io::OutputDevice, ok};
 use miette::IntoDiagnostic;
 
 /// Sender for emitting [`OSC`] (Operating System Command) sequences to the terminal's
-/// standard output (`stdout`).
+/// standard output ([`stdout`]).
 ///
 /// This provides a high-level, ergonomic interface for common outbound [`OSC`] operations
 /// such as sending color queries, setting terminal window titles, updating taskbar
@@ -17,6 +17,7 @@ use miette::IntoDiagnostic;
 /// inbound response decoding) and platform support, see the [module documentation][docs].
 ///
 /// [`OSC`]: crate::OscSequence
+/// [`stdout`]: std::io::stdout
 /// [docs]: mod@crate::core::ansi::osc#architecture--mental-model-bidirectional-osc-pipeline
 #[allow(missing_debug_implementations)]
 pub struct OscSender<'a> {
@@ -72,7 +73,7 @@ impl<'a> OscSender<'a> {
     /// (e.g. [`TerminalColorRole::Background`], [`TerminalColorRole::Foreground`]).
     ///
     /// The terminal emulator responds asynchronously by writing an [`OSC`] color report
-    /// sequence back into `stdin`, which is framed by [`vt_100_terminal_input_parser`]
+    /// sequence back into [`stdin`], which is framed by [`vt_100_terminal_input_parser`]
     /// and parsed by [`parse_osc_response`] into [`InputEvent::TerminalColorReport`].
     ///
     /// > ⚠️ **Platform Availability**: Inbound decoding of terminal color responses is
@@ -88,6 +89,7 @@ impl<'a> OscSender<'a> {
     /// [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
     /// [`OSC`]: crate::OscSequence
     /// [`parse_osc_response`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events::osc::parse_osc_response
+    /// [`stdin`]: std::io::stdin
     /// [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
     /// [osc-platform-support]: mod@crate::core::ansi::osc#platform--backend-availability
     pub fn send_color_query(&mut self, role: TerminalColorRole) -> miette::Result<()> {

@@ -36,8 +36,9 @@
 //! the stack ([`16`] bytes). It acts as a drop-in replacement for [`format!`].
 //!
 //! - Use Case: The primary use case is the core [Editor Component], which processes
-//!   thousands of individual characters or short grapheme clusters (1-4 bytes) per frame.
-//!   It is also highly recommended for `tracing::*!` macros when logging small variables.
+//!   thousands of individual characters or short [`grapheme`] clusters (1-4 bytes) per
+//!   frame. It is also highly recommended for `tracing::*!` macros when logging small
+//!   variables.
 //! - Warning: If the formatted text exceeds [`16`] bytes, it will dynamically spill to
 //!   the heap, incurring the same cost as [`format!`].
 //!
@@ -58,6 +59,7 @@
 //! [`format!`]: std::format
 //! [`format_no_alloc!`]: macro@crate::format_no_alloc
 //! [`Formatter`]: std::fmt::Formatter
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`inline_string!`]: crate::inline_string
 //! [`InlineString`]: crate::InlineString
 //! [`push_str()`]: String::push_str

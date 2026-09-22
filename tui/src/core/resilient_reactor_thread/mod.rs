@@ -264,7 +264,7 @@
 //! I/O source.
 //!
 //! Let's consider a real-world example for RRT - implement async terminal input (blocking
-//! [`read(2)`] [`syscall`] on [`fd 0`], aka [`stdin`]). The `crossterm` crate provides
+//! [`read(2)`] [`syscall`] on [`fd 0`], aka [`stdin`]). The [`crossterm`] crate provides
 //! this feature, but let's examine what it would take to implement this manually, which
 //! this `r3bl_tui` crate does in [`mio_poller`] (for performance, resilience, efficiency,
 //! and composability reasons).
@@ -790,7 +790,7 @@
 //! Even though you block in both models, **[`io_uring`]'s blocking is more efficient**:
 //! the kernel performs the actual I/O during that wait, not just watching for readiness.
 //!
-//! ## Benefits Over epoll
+//! ## Benefits Over [`epoll`]
 //!
 //! | Benefit                | [`epoll`]                        | [`io_uring`] (blocking wait)          |
 //! | :--------------------- | :------------------------------- | :------------------------------------ |
@@ -805,7 +805,7 @@
 //! The [`block_until_ready_then_dispatch()`] implementation would change from the current
 //! [`epoll`] model:
 //!
-//! <!-- It is ok to use ignore here - pseudo-code sketch showing epoll readiness-based
+//! <!-- It is ok to use ignore here - pseudo-code sketch showing [`epoll`] readiness-based
 //! API pattern -->
 //!
 //! ```ignore
@@ -900,6 +900,7 @@
 //! [`Continue`]: crate::Continuation::Continue
 //! [`CQ`]: https://manpages.debian.org/io_uring.7
 //! [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
+//! [`crossterm`]: crossterm
 //! [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [`EINTR`]: https://manpages.debian.org/errno.3
 //! [`EINVAL`]: https://manpages.debian.org/errno.3
@@ -927,7 +928,7 @@
 //!     https://manpages.debian.org/io_uring_prep_msg_ring.3
 //! [`kevent()`]: https://man.freebsd.org/cgi/man.cgi?query=kevent
 //! [`kill -9`]: https://manpages.debian.org/kill.1
-//! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`LazyLock`]: std::sync::LazyLock
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
@@ -986,7 +987,7 @@
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
 //! [`Sender::send()`]: tokio::sync::broadcast::Sender::send
 //! [`ShutdownReason`]: ShutdownReason
-//! [`SIGINT`]: https://manpages.debian.org/signal.7
+//! [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 //! [`signal-hook`]: signal_hook
 //! [`signalfd(2)`]: https://manpages.debian.org/signalfd.2
 //! [`signals`]: https://manpages.debian.org/signal.7

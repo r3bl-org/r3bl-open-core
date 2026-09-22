@@ -21,10 +21,10 @@
 //! | [`pty_mouse_events_test`]                  | Mouse clicks, drags, scrolling             |
 //! | [`pty_terminal_events_test`]               | Focus events, window resize                |
 //! | [`pty_utf8_text_test`]                     | [`UTF-8`] text input handling              |
-//! | [`pty_bracketed_paste_test`]               | Bracketed paste mode                       |
+//! | [`pty_bracketed_paste_test`]               | [`Bracketed paste`] mode                   |
 //! | [`pty_keypad_and_special_keys_test`]       | Keypad and special keys                    |
 //! | [`pty_csi_u_keyboard_test`]                | [`Kitty`] keyboard protocol (`CSI u`)      |
-//! | [`pty_sigwinch_test`]                      | SIGWINCH signal handling                   |
+//! | [`pty_sigwinch_test`]                      | [`SIGWINCH`] signal handling               |
 //! | [`pty_mio_poller_thread_lifecycle_test`]   | Thread spawn, drop, and relaunch           |
 //! | [`pty_mio_poller_thread_reuse_test`]       | Thread reuse (race condition handling)     |
 //!
@@ -51,6 +51,7 @@
 //!
 //! These [`PTY`] tests are **Linux-only** — see [Why Linux-Only?] in the parent module.
 //!
+//! [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
 //! [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
@@ -68,6 +69,7 @@
 //! [`pty_terminal_events_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_terminal_events_test
 //! [`pty_utf8_text_test`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_utf8_text_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`vt_100_terminal_input_parser::integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
 //! [parser module's testing strategy]: mod@crate::vt_100_terminal_input_parser#testing-strategy

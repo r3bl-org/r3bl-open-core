@@ -46,8 +46,10 @@ fn create_inspector_cli_command(server_bin: &Path) -> Command {
 }
 
 /// Verifies that:
-/// 1. The MCP handshake succeeds over stdio.
+/// 1. The MCP handshake succeeds over [`stdio`].
 /// 2. All 10 tools are registered and advertised with valid input schemas.
+///
+/// [`stdio`]: std::io
 #[test]
 fn test_inspector_cli_tools_list() {
     let server_bin = get_server_bin();
@@ -165,9 +167,11 @@ fn test_inspector_cli_tools_call_symbols() {
     );
 }
 
-/// Tests that closing `stdin` (simulating coding agent termination or
+/// Tests that closing [`stdin`] (simulating coding agent termination or
 /// disconnection) triggers a clean graceful shutdown of the server process with exit
 /// code 0.
+///
+/// [`stdin`]: std::io::stdin
 #[test]
 fn test_server_graceful_shutdown_on_stdin_eof() {
     let server_bin = get_server_bin();

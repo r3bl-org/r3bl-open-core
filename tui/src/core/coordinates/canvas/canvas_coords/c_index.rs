@@ -6,13 +6,14 @@ use crate::{VPLength, generate_canvas_index_type_impl};
 /// Generic 0-based 1D index in the continuous storage buffer space (64-bit [`Canvas`]
 /// domain).
 ///
-/// Addresses an absolute index within a 1D sequence in document space (such as a grapheme
-/// cluster position or 1D buffer offset). Valid indices start at 0 and go up to, but do
-/// not include, the total length of the sequence.
+/// Addresses an absolute index within a 1D sequence in document space (such as a
+/// [`grapheme`] cluster position or 1D buffer offset). Valid indices start at 0 and go up
+/// to, but do not include, the total length of the sequence.
 ///
 /// See the [Canvas and Viewport concept] for details.
 ///
 /// [`Canvas`]: mod@crate::core::coordinates::canvas
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [Canvas and Viewport concept]: mod@crate::core::coordinates::canvas#canvas-and-viewport-concept
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default, Debug)]
 pub struct CIndex(pub usize);

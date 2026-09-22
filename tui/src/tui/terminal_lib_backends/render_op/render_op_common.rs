@@ -28,7 +28,7 @@
 //!
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{InlineString, VPPos, TuiColor, TuiStyle, VPCol, VPHeight};
+use crate::{InlineString, TuiColor, TuiStyle, VPCol, VPHeight, VPPos};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RenderOpCommon {
@@ -56,10 +56,14 @@ pub enum RenderOpCommon {
     /// a clean display state before rendering new content.
     ClearScreen,
 
-    /// Directly set the fg color for crossterm without using [`TuiStyle`].
+    /// Directly set the fg color for [`crossterm`] without using [`TuiStyle`].
+    ///
+    /// [`crossterm`]: crossterm
     SetFgColor(TuiColor),
 
-    /// Directly set the bg color for crossterm without using [`TuiStyle`].
+    /// Directly set the bg color for [`crossterm`] without using [`TuiStyle`].
+    ///
+    /// [`crossterm`]: crossterm
     SetBgColor(TuiColor),
 
     /// Resets terminal colors to their default values.
@@ -69,11 +73,13 @@ pub enum RenderOpCommon {
     /// ensuring clean color state between different rendering operations.
     ResetColor,
 
-    /// Translate [`TuiStyle`] into fg and bg colors for crossterm.
+    /// Translate [`TuiStyle`] into fg and bg colors for [`crossterm`].
     ///
     /// Note that this does not apply attributes (bold, italic, underline, etc.).
     /// If you need to apply attributes, use context-specific text painting operations
     /// instead.
+    ///
+    /// [`crossterm`]: crossterm
     ApplyColors(Option<TuiStyle>),
 
     /// Move cursor to specific column in current row (leaving row unchanged).

@@ -63,10 +63,10 @@ use crate::{byte_offset,
 /// ## The Ambiguity
 ///
 /// Both a standalone [`ESC`] keypress and every multi-byte [`ANSI`] escape sequence (such
-/// as Up Arrow `\x1b[A` or OSC color queries `\x1b]11;...`) begin with the identical byte
-/// [`ANSI_ESC`] (`0x1B`). When `accumulated_bytes` contains only `[0x1B]`, the parser
-/// must decide: is this a standalone [`ESC`] key, or the prefix of an in-flight escape
-/// sequence?
+/// as Up Arrow `\x1b[A` or [`OSC`] color queries `\x1b]11;...`) begin with the identical
+/// byte [`ANSI_ESC`] (`0x1B`). When `accumulated_bytes` contains only `[0x1B]`, the
+/// parser must decide: is this a standalone [`ESC`] key, or the prefix of an in-flight
+/// escape sequence?
 ///
 /// ## The [`MaybeMore`] Stream Availability Heuristic
 ///
@@ -165,6 +165,7 @@ use crate::{byte_offset,
 /// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
 /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mouse`]: mod@super::mouse
+/// [`OSC`]: crate::osc_codes::OscSequence
 /// [`ParsedInputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::ParsedInputEventIR
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html

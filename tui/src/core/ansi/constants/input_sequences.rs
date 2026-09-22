@@ -872,7 +872,7 @@ pub const CONTROL_A: u8 = 1;
 /// Key combo: `Ctrl+C`. Sends [`SIGINT`] in [cooked mode].
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`SIGINT`]: https://manpages.debian.org/signal.7
+/// [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 /// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 pub const CONTROL_C: u8 = 3;
 
@@ -1159,7 +1159,7 @@ define_ansi_const!(@csi_str : DECCKM_ENABLE_STR = ["?1h"] =>
 /// Sequence: `ESC [ ? 1 h`
 ///
 /// Byte representation of:
-/// ```rust
+/// ```
 /// use r3bl_tui::{CsiSequence, PrivateModeType};
 /// use smallvec::smallvec;
 /// CsiSequence::EnablePrivateMode(smallvec![PrivateModeType::CursorKeys]);

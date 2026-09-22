@@ -165,7 +165,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// Initialization always happens lazily on the first [`try_subscribe()`] call, enabled by
 /// internal [`LazyLock`] fields.
 ///
-/// 1. **Static Singleton**: Ideal for global OS resources (like `stdin` or `signals`).
+/// 1. **Static Singleton**: Ideal for global OS resources (like [`stdin`] or `signals`).
 ///    Using a `static` declaration with [`RRT::new()`] ensures only one instance exists
 ///    for the entire process, preventing resource contention.
 ///
@@ -505,7 +505,7 @@ pub fn try_subscribe<W: RRTWorker>(
 ///     crate::terminal_lib_backends::direct_to_ansi::input::global_input_resource::SINGLETON
 /// [`InterruptHandle`]: super::InterruptHandle
 /// [`io_uring`]: https://manpages.debian.org/io_uring.7
-/// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+/// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 /// [`LazyLock`]: std::sync::LazyLock
 /// [`mio::Poll`]: mio::Poll
 /// [`MioPollWorker::block_until_ready_then_dispatch_impl()`]:

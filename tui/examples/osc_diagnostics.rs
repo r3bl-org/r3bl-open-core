@@ -499,7 +499,9 @@ mod app {
     }
 }
 
-/// Unicode box-drawing utilities for rendering rectangular terminal dashboard panels.
+/// [`Unicode`] box-drawing utilities for rendering rectangular terminal dashboard panels.
+///
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 mod box_drawing {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -811,8 +813,10 @@ mod ui_strings {
     #[must_use]
     pub fn event_log_title() -> &'static str { "Event History Log" }
 
-    /// Formats a single terminal color query status line with optional RGB swatch for
+    /// Formats a single terminal color query status line with optional [`RGB`] swatch for
     /// display in the UI.
+    ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     #[must_use]
     pub fn color_query_line(
         role: TerminalColorRole,

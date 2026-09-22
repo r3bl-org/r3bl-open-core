@@ -72,13 +72,14 @@ mod tests {
     ///
     /// Test 3 deliberately double-claims to verify the panic guard.
     /// [`catch_unwind`] catches the panic, but Rust's default panic hook still prints
-    /// the message to stderr *before* the catch. Since [`spawn_isolated_process()`],
+    /// the message to [`stderr`] *before* the catch. Since [`spawn_isolated_process()`],
     /// from [`generate_isolated_process_test!`], passes `--nocapture`, these deliberate
-    /// panic messages appear in the piped stderr. We must tolerate them.
+    /// panic messages appear in the piped [`stderr`]. We must tolerate them.
     ///
     /// [`catch_unwind`]: std::panic::catch_unwind
     /// [`generate_isolated_process_test!`]: crate::generate_isolated_process_test
     /// [`spawn_isolated_process()`]: crate::spawn_isolated_process
+    /// [`stderr`]: std::io::stderr
     fn controller_fn(output: std::process::Output) {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 

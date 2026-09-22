@@ -56,7 +56,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent::Mouse`]: crate::InputEvent::Mouse
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`MouseInput`]: crate::MouseInput
 //! [`MouseInputKind`]: crate::MouseInputKind

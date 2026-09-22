@@ -255,12 +255,13 @@ impl CanvasStorage for GrowableBuffer {
     /// [`pty_mux`] without corrupting parser state see
     /// - Why horizontal panning is safe.
     ///
+    /// [Viewport Mechanics (Scroll vs Pan)]:
+    /// - Why we avoid vertical panning in favor of external scrolling.
+    ///
     /// [`pty_mux`]: crate::core::pty::pty_mux
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [Viewport Mechanics (Scroll vs Pan)]:
     ///     crate::core::pty::pty_mux#viewport-mechanics-scroll-vs-pan
-    /// [Viewport Mechanics (Scroll vs Pan)]:
-    /// - Why we avoid vertical panning in favor of external scrolling.
     fn try_pan_viewport_to(
         &mut self,
         origin_pos: crate::CPos,

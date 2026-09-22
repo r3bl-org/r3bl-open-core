@@ -33,7 +33,7 @@ use std::time::{Duration, Instant};
 ///
 /// ## Basic Timeout Enforcement
 ///
-/// ```rust
+/// ```
 /// use std::time::Duration;
 /// use r3bl_tui::Deadline;
 ///
@@ -51,7 +51,7 @@ use std::time::{Duration, Instant};
 ///
 /// ## Custom Timeout Duration
 ///
-/// ```rust
+/// ```
 /// use std::time::Duration;
 /// use r3bl_tui::Deadline;
 ///
@@ -70,7 +70,7 @@ use std::time::{Duration, Instant};
 ///
 /// ## Readable Assertions
 ///
-/// ```rust
+/// ```
 /// use std::time::Duration;
 /// use r3bl_tui::Deadline;
 ///
@@ -99,7 +99,7 @@ impl Deadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::Deadline;
     ///
@@ -117,7 +117,7 @@ impl Deadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::Deadline;
     ///
@@ -136,7 +136,7 @@ impl Deadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::Deadline;
     ///
@@ -156,7 +156,7 @@ impl Default for Deadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::Deadline;
     ///
     /// let deadline = Deadline::default();

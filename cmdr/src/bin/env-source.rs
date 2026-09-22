@@ -37,6 +37,7 @@
 //! env-source -i setenv.bat -o dotenv > .env
 //! ```
 //!
+//! [`stdout`]: std::io::stdout
 //! [`try_env_source`]: r3bl_tui::try_env_source
 
 use clap::Parser;

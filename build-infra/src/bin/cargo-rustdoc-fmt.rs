@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use clap::Parser;
-use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor,
-                                           TechnicalTermDictionary},
+use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor, FormatStatus,
+                                           PassPolicy, RUST_FILE_EXTENSION,
+                                           TechnicalTermDictionary, ui_str},
                        common::{cargo_fmt_runner, workspace_utils}};
 use r3bl_tui::{core::script::{try_get_changed_files_by_ext, try_is_git_repo},
                ok};
@@ -30,7 +31,7 @@ async fn main() {
 ///
 /// # Cargo Plugin Convention
 ///
-/// When a Cargo plugin is invoked via the `cargo` binary, Cargo injects the the
+/// When a Cargo plugin is invoked via the `cargo` binary, Cargo injects the
 /// "subcommand name" as the first argument after the program name (which is `cargo`).
 /// This is a Cargo convention to help plugins identify how they were invoked.
 ///
@@ -63,10 +64,14 @@ async fn run() -> miette::Result<()> {
 
     // Parse args
     let cli_arg = CLIArg::parse_from(&args);
+    cli_arg.validate()?;
     let options = cli_arg.to_format_options();
 
     // Get files to process
-    let files = if !cli_arg.paths.is_empty() {
+    let files = if cli_arg.lines_force.is_some() {
+        // Fast path for range formatting: single explicit file path.
+        vec![cli_arg.paths[0].clone()]
+    } else if !cli_arg.paths.is_empty() {
         // Specific paths provided - highest priority
         if cli_arg.verbose {
             println!(
@@ -74,20 +79,24 @@ async fn run() -> miette::Result<()> {
                 cli_arg.paths.len()
             );
         }
-        workspace_utils::find_rust_files_in_paths(&cli_arg.paths)?
+        workspace_utils::find_rust_files_in_paths(
+            &cli_arg.paths,
+            &cli_arg.skip_folder_matches,
+        )
     } else if cli_arg.workspace {
         // --workspace flag: format entire workspace
         let workspace_root = workspace_utils::get_workspace_root()?;
         if cli_arg.verbose {
             println!("File discovery: Using --workspace flag (entire workspace)");
         }
-        workspace_utils::find_rust_files(&workspace_root)?
+        workspace_utils::find_rust_files(&workspace_root, &cli_arg.skip_folder_matches)
     } else {
         // Default: use git to find changed files
         let (is_git_repo_result, _) = try_is_git_repo().await;
         let is_git_repo = is_git_repo_result.map_err(|e| miette::miette!("{:?}", e))?;
         if is_git_repo {
-            let (git_files_result, _) = try_get_changed_files_by_ext(&["rs"]).await;
+            let (git_files_result, _) =
+                try_get_changed_files_by_ext(&[RUST_FILE_EXTENSION]).await;
             let git_files = git_files_result.map_err(|e| miette::miette!("{:?}", e))?;
             if git_files.is_empty() {
                 // No git changes, format entire workspace as fallback
@@ -97,7 +106,10 @@ async fn run() -> miette::Result<()> {
                         "File discovery: No git changes found, using entire workspace"
                     );
                 }
-                workspace_utils::find_rust_files(&workspace_root)?
+                workspace_utils::find_rust_files(
+                    &workspace_root,
+                    &cli_arg.skip_folder_matches,
+                )
             } else {
                 if cli_arg.verbose {
                     println!(
@@ -113,21 +125,25 @@ async fn run() -> miette::Result<()> {
             if cli_arg.verbose {
                 println!("File discovery: Not a git repository, using entire workspace");
             }
-            workspace_utils::find_rust_files(&workspace_root)?
+            workspace_utils::find_rust_files(
+                &workspace_root,
+                &cli_arg.skip_folder_matches,
+            )
         }
     };
 
     // Silently filter out files that no longer exist on disk (safety net in case
-    // git reports deleted files despite --diff-filter=d) and test data directories
-    // (golden fixtures that should not be formatted).
+    // git reports deleted files despite --diff-filter=d) and paths matching
+    // --skip-folder-matches (unless --lines-force is explicitly targeting a file).
     let files: Vec<_> = files
         .into_iter()
         .filter(|p| {
             p.exists()
-                && !p.components().any(|c| {
-                    let s = c.as_os_str().to_string_lossy();
-                    s.contains("test_data") || s.contains("testdata")
-                })
+                && (cli_arg.lines_force.is_some()
+                    || !workspace_utils::should_skip_path(
+                        p,
+                        &cli_arg.skip_folder_matches,
+                    ))
         })
         .collect();
 
@@ -149,9 +165,9 @@ async fn run() -> miette::Result<()> {
         println!("Processing {} files...", files.len());
     }
 
-    // Build the known-terms registry (once, shared across all files).
+    // Build the known-terms dictionary (once, shared across all files).
     // Uses the embedded seed file by default, or a custom file via --terms-file.
-    let registry = if options.link_terms {
+    let term_dict = if options.link_terms == PassPolicy::Enabled {
         Some(TechnicalTermDictionary::from_seed(
             cli_arg.terms_file.as_deref(),
         )?)
@@ -160,10 +176,7 @@ async fn run() -> miette::Result<()> {
     };
 
     // Process files
-    let processor = match &registry {
-        Some(reg) => FileProcessor::with_registry(options, reg),
-        None => FileProcessor::new(options),
-    };
+    let processor = FileProcessor::new(options, term_dict.as_ref());
     let results = processor.process_files(&files);
 
     // Report results
@@ -171,10 +184,13 @@ async fn run() -> miette::Result<()> {
     let mut total_errors = 0;
 
     for result in &results {
-        if result.modified {
+        if result.status == FormatStatus::Modified {
             total_modified += 1;
             if cli_arg.verbose || cli_arg.check {
-                println!("Modified: {}", result.file_path.display());
+                println!(
+                    "{}",
+                    ui_str::format_modified(&result.file_path.display().to_string())
+                );
             }
         }
         if !result.errors.is_empty() {
@@ -187,17 +203,15 @@ async fn run() -> miette::Result<()> {
     }
 
     println!(
-        "\nProcessed {} files, {} modified, {} errors",
-        results.len(),
-        total_modified,
-        total_errors
+        "\n{}",
+        ui_str::format_summary(results.len(), total_modified, total_errors)
     );
 
-    // Run cargo fmt on successfully modified files (unless skipped or in check mode)
+    // Run cargo fmt on successfully modified files (unless skipped or in check mode).
     if !cli_arg.skip_cargo_fmt && total_modified > 0 && !cli_arg.check {
         let modified_files: Vec<_> = results
             .iter()
-            .filter(|r| r.modified && r.errors.is_empty())
+            .filter(|r| r.status == FormatStatus::Modified && r.errors.is_empty())
             .map(|r| r.file_path.clone())
             .collect();
 
@@ -213,7 +227,7 @@ async fn run() -> miette::Result<()> {
     }
 
     if cli_arg.check && total_modified > 0 {
-        eprintln!("\nSome files need formatting. Run without --check to format them.");
+        eprintln!("\n{}", ui_str::CHECK_MODE_NEEDS_FORMATTING);
         process::exit(1);
     }
 

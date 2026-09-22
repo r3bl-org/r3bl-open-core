@@ -146,6 +146,7 @@ mod impl_windows_conpty {
     ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
     /// [`DSR`]: crate::DSR_CURSOR_POSITION_REQUEST
     /// [`origin response`]: crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
+    /// [`portable_pty`]: portable_pty
     pub fn perform_conpty_handshake(
         mut reader: ControllerReader,
         writer: &mut ControllerWriter,

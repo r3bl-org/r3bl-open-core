@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Event handlers for stdin input processing.
+//! Event handlers for [`stdin`] input processing.
+//!
+//! [`stdin`]: std::io::stdin
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
@@ -95,8 +97,9 @@ use tokio::sync::broadcast::Sender;
 /// [`ErrorKind::WouldBlock`]: std::io::ErrorKind::WouldBlock
 /// [`fd`]: https://manpages.debian.org/open.2
 /// [`kevent`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
-/// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
+/// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 /// [`mio::Poll`]: mio::Poll
+/// [`mio`]: mio
 /// [`MioPollWorker::create_and_register_os_sources()`]: super::MioPollWorker#method.create_and_register_os_sources
 /// [`MioPollWorker`]: super::MioPollWorker
 /// [`new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
@@ -169,9 +172,12 @@ pub fn consume_stdin_input_with_sender(
     }
 }
 
-/// Parses bytes read from stdin into input events, using explicit `sender` parameter.
+/// Parses bytes read from [`stdin`] into input events, using explicit `sender` parameter.
 ///
-/// Parses bytes into [VT-100] events and sends them through the paste state machine.
+/// Parses bytes into [`VT-100`] events and sends them through the paste state machine.
+///
+/// [`stdin`]: std::io::stdin
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn parse_stdin_bytes_with_sender(
     worker: &mut MioPollWorker,
     bytes_read: usize,
@@ -218,7 +224,7 @@ pub fn parse_stdin_bytes_with_sender(
     Continuation::Continue
 }
 
-/// Read buffer size for stdin reads (`1_024` bytes).
+/// Read buffer size for [`stdin`] reads (`1_024` bytes).
 ///
 /// When `bytes_read == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the kernel
 /// buffer - this determines the [`MaybeMore::KernelMayHaveMore`] heuristic passed to
@@ -226,4 +232,5 @@ pub fn parse_stdin_bytes_with_sender(
 ///
 /// [`ChunkFramer::process_incoming_bytes()`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer::process_incoming_bytes
 /// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+/// [`stdin`]: std::io::stdin
 pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;

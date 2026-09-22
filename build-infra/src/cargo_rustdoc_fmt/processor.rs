@@ -9,13 +9,123 @@
 //! whose doc comments discuss the formatter's own concepts (e.g., technical terms like
 //! CSI that would be incorrectly linkified by the term linker).
 
-use crate::cargo_rustdoc_fmt::{content_protector::ContentProtector,
-                               extractor, link_converter, table_formatter,
-                               technical_term_dictionary::TechnicalTermDictionary,
-                               technical_term_linker,
-                               types::{CommentType, FormatOptions, ProcessingResult,
-                                       RustdocBlock}};
+use crate::cargo_rustdoc_fmt::{constants::RUSTDOC_FMT_SKIP_DIRECTIVE,
+                               cst::{FileChunk, SourceFileCst},
+                               formatters::{TechnicalTermDictionary,
+                                            convert_links_in_doc_block,
+                                            format_table_node, link_terms_in_doc_block,
+                                            normalize_code_fence_node},
+                               types::{ExecutionMode, FormatOptions, FormatStatus,
+                                       PassPolicy}};
+use r3bl_tui::{RangeBoundsExt, RangeOverlapResult};
 use std::path::{Path, PathBuf};
+
+/// Processes Rust files to format their rustdoc comments.
+#[derive(Debug)]
+pub struct FileProcessor<'a> {
+    options: FormatOptions,
+    maybe_term_dict: Option<&'a TechnicalTermDictionary>,
+}
+
+impl<'a> FileProcessor<'a> {
+    /// Creates a new file processor with the given formatting options and optional
+    /// technical term dictionary.
+    #[must_use]
+    pub fn new(
+        options: FormatOptions,
+        maybe_term_dict: Option<&'a TechnicalTermDictionary>,
+    ) -> Self {
+        Self {
+            options,
+            maybe_term_dict,
+        }
+    }
+
+    /// Processes multiple files using the lossless [`SourceFileCst`] pipeline.
+    #[must_use]
+    pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
+        paths.iter().map(|path| self.process_file(path)).collect()
+    }
+
+    /// Processes a single file using the lossless [`SourceFileCst`] pipeline.
+    fn process_file(&self, path: &Path) -> ProcessingResult {
+        let mut result = ProcessingResult::new(path.to_path_buf());
+
+        // Read file.
+        let source = match std::fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(err) => {
+                result.add_error(format!("Failed to read file: {err}"));
+                return result;
+            }
+        };
+
+        // Skip entire file if it contains `// rustdoc-fmt: skip`, UNLESS
+        // line_range is specified (e.g. `--lines-force`). Explicit line range
+        // overrides file-level skip directive for our binary.
+        let range = self.options.line_range.as_ref();
+        if range.is_none() && has_rustdoc_fmt_skip(&source) {
+            return result;
+        }
+
+        let mut cst = SourceFileCst::parse(&source);
+        let mut modified = false;
+
+        for chunk in &mut cst.chunks {
+            if let FileChunk::DocBlock(block) = chunk {
+                if self.options.format_tables == PassPolicy::Enabled {
+                    for node in &mut block.nodes {
+                        if range.is_none_or(|target_range| {
+                            node.span().overlaps(target_range)
+                                == RangeOverlapResult::Overlaps
+                        }) && format_table_node(node) == FormatStatus::Modified
+                        {
+                            modified = true;
+                        }
+                    }
+                }
+                if self.options.convert_links == PassPolicy::Enabled
+                    && convert_links_in_doc_block(block, range) == FormatStatus::Modified
+                {
+                    modified = true;
+                }
+                if self.options.link_terms == PassPolicy::Enabled
+                    && let Some(dict) = self.maybe_term_dict
+                    && link_terms_in_doc_block(block, dict, range)
+                        == FormatStatus::Modified
+                {
+                    modified = true;
+                }
+                if self.options.normalize_fences == PassPolicy::Enabled {
+                    for node in &mut block.nodes {
+                        if range.is_none_or(|target_range| {
+                            node.span().overlaps(target_range)
+                                == RangeOverlapResult::Overlaps
+                        }) && normalize_code_fence_node(node) == FormatStatus::Modified
+                        {
+                            modified = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if modified {
+            let new_source = cst.reconstruct();
+            if new_source != source {
+                if self.options.mode == ExecutionMode::CheckOnly {
+                    result.mark_modified();
+                } else if let Err(err) = std::fs::write(path, new_source) {
+                    result.add_error(format!("Failed to write file: {err}"));
+                } else {
+                    result.mark_modified();
+                }
+            }
+        }
+
+        result
+    }
+}
 
 /// Checks if a file contains the `// rustdoc-fmt: skip` marker.
 ///
@@ -24,239 +134,264 @@ use std::path::{Path, PathBuf};
 fn has_rustdoc_fmt_skip(source: &str) -> bool {
     source
         .lines()
-        .any(|line| line.trim() == "// rustdoc-fmt: skip")
+        .any(|line| line.trim() == RUSTDOC_FMT_SKIP_DIRECTIVE)
 }
 
-/// Finds the line number where `rustfmt_skip` attribute appears.
-///
-/// Returns `Some(line_number)` (0-indexed) if found, `None` otherwise.
-/// When present, only rustdoc blocks ending before this line should be processed.
-fn find_rustfmt_skip_line(source: &str) -> Option<usize> {
-    for (line_num, line) in source.lines().enumerate() {
-        if line.contains("#![cfg_attr(rustfmt, rustfmt_skip)]")
-            || line.contains("#![ cfg_attr(rustfmt, rustfmt_skip) ]")
-            || line.contains("#![ cfg_attr( rustfmt , rustfmt_skip ) ]")
-            || line.contains("#![rustfmt::skip]")
-        {
-            return Some(line_num);
-        }
-    }
-    None
-}
-
-/// Processes Rust files to format their rustdoc comments.
+/// Result of processing a single file.
 #[derive(Debug)]
-pub struct FileProcessor<'a> {
-    options: FormatOptions,
-    registry: Option<&'a TechnicalTermDictionary>,
+pub struct ProcessingResult {
+    /// Path to the processed file.
+    pub file_path: PathBuf,
+
+    /// Whether the file was modified by the formatting pipeline.
+    pub status: FormatStatus,
+
+    /// Any errors encountered.
+    pub errors: Vec<String>,
 }
 
-impl<'a> FileProcessor<'a> {
-    /// Creates a new file processor with the given options.
-    #[must_use]
-    pub fn new(options: FormatOptions) -> Self {
+impl ProcessingResult {
+    fn new(file_path: PathBuf) -> Self {
         Self {
-            options,
-            registry: None,
+            file_path,
+            status: FormatStatus::Unchanged,
+            errors: Vec::new(),
         }
     }
 
-    /// Creates a new file processor with known-term linking support.
-    #[must_use]
-    pub fn with_registry(
-        options: FormatOptions,
-        registry: &'a TechnicalTermDictionary,
-    ) -> Self {
-        Self {
-            options,
-            registry: Some(registry),
-        }
-    }
+    fn mark_modified(&mut self) { self.status = FormatStatus::Modified; }
 
-    /// Processes a single file.
-    #[must_use]
-    pub fn process_file(&self, path: &Path) -> ProcessingResult {
-        let mut result = ProcessingResult::new(path.to_path_buf());
-
-        // Read file
-        let source = match std::fs::read_to_string(path) {
-            Ok(content) => content,
-            Err(e) => {
-                result.add_error(format!("Failed to read file: {e}"));
-                return result;
-            }
-        };
-
-        // Skip entire file if it contains `// rustdoc-fmt: skip`.
-        if has_rustdoc_fmt_skip(&source) {
-            return result;
-        }
-
-        // Extract rustdoc blocks.
-        let mut blocks = extractor::extract_rustdoc_blocks(&source);
-
-        // If file has rustfmt_skip, only process blocks that end before that line.
-        if let Some(skip_line) = find_rustfmt_skip_line(&source) {
-            blocks.retain(|block| block.end_line < skip_line);
-        }
-
-        // Process blocks
-        let mut modified = false;
-        for block in &mut blocks {
-            if process_rustdoc_block(block, &self.options, self.registry) {
-                modified = true;
-            }
-        }
-
-        // If modified, reconstruct and write
-        if modified && !self.options.check_only {
-            let new_source = reconstruct_source(&source, &blocks);
-            if let Err(e) = std::fs::write(path, new_source) {
-                result.add_error(format!("Failed to write file: {e}"));
-            } else {
-                result.mark_modified();
-            }
-        } else if modified {
-            result.mark_modified();
-        }
-
-        result
-    }
-
-    /// Processes multiple files.
-    #[must_use]
-    pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
-        paths.iter().map(|p| self.process_file(p)).collect()
-    }
-}
-
-/// Processes a single rustdoc block, applying formatters.
-/// Returns true if the block was modified.
-fn process_rustdoc_block(
-    block: &mut RustdocBlock,
-    options: &FormatOptions,
-    registry: Option<&TechnicalTermDictionary>,
-) -> bool {
-    let original = block.lines.join("\n");
-    let mut modified = original.clone();
-
-    // Table formatting is safe even with protected content (HTML comments, etc.)
-    // Tables are self-contained and don't interact with link references.
-    if options.format_tables {
-        modified = table_formatter::format_tables(&modified);
-    }
-
-    // Link conversion uses ContentProtector to preserve HTML comments, tags,
-    // blockquotes, and code fences while converting links in unprotected areas.
-    if options.convert_links {
-        let mut protector = ContentProtector::new();
-        let protected = protector.protect(&modified);
-        let converted = link_converter::convert_links(&protected);
-        let aggregated = link_converter::aggregate_existing_references(&converted);
-        modified = protector.restore(&aggregated);
-    }
-
-    // Term linking: upgrade known terms to backticked+linked form.
-    // Runs last because it needs reference-style links from the previous step.
-    if options.link_terms
-        && let Some(reg) = registry
-    {
-        modified = technical_term_linker::link_known_terms(&modified, reg);
-    }
-
-    if modified == original {
-        false
-    } else {
-        block.lines = modified.lines().map(String::from).collect();
-        true
-    }
-}
-
-/// Reconstruct source file with modified rustdoc blocks.
-fn reconstruct_source(original: &str, blocks: &[RustdocBlock]) -> String {
-    let original_lines: Vec<&str> = original.lines().collect();
-    let mut result = String::new();
-    let mut block_idx = 0;
-    let mut line_idx = 0;
-
-    while line_idx < original_lines.len() {
-        if block_idx < blocks.len() && line_idx == blocks[block_idx].start_line {
-            // Replace block lines
-            let block = &blocks[block_idx];
-            for (i, block_line) in block.lines.iter().enumerate() {
-                if i > 0 {
-                    result.push('\n');
-                }
-                result.push_str(&block.indentation);
-                if block.comment_type == CommentType::Inner {
-                    result.push_str("//!");
-                } else {
-                    result.push_str("///");
-                }
-                if !block_line.is_empty() {
-                    result.push(' ');
-                    result.push_str(block_line);
-                }
-            }
-            result.push('\n');
-            line_idx = block.end_line + 1;
-            block_idx += 1;
-        } else {
-            result.push_str(original_lines[line_idx]);
-            result.push('\n');
-            line_idx += 1;
-        }
-    }
-
-    // Remove trailing newline if original didn't have it
-    if !original.ends_with('\n') && result.ends_with('\n') {
-        result.pop();
-    }
-
-    result
+    fn add_error(&mut self, error: String) { self.errors.push(error); }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_processor_creation() {
-        let options = FormatOptions::default();
-        let processor = FileProcessor::new(options);
-        assert!(!processor.options.check_only);
-    }
+    use crate::cargo_rustdoc_fmt::types::{EditorLineNum, Verbosity, editor_line_num};
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_process_nonexistent_file() {
         let options = FormatOptions::default();
-        let processor = FileProcessor::new(options);
+        let processor = FileProcessor::new(options, None);
         let result = processor.process_file(Path::new("/nonexistent/file.rs"));
         assert!(!result.errors.is_empty());
     }
 
     #[test]
-    fn test_has_rustdoc_fmt_skip_present() {
-        let source = "// Copyright\n// rustdoc-fmt: skip\n\n//! Module docs.\n";
-        assert!(has_rustdoc_fmt_skip(source));
-    }
-
-    #[test]
-    fn test_has_rustdoc_fmt_skip_absent() {
-        let source = "// Copyright\n\n//! Module docs.\n";
-        assert!(!has_rustdoc_fmt_skip(source));
-    }
-
-    #[test]
-    fn test_has_rustdoc_fmt_skip_indented() {
-        let source = "    // rustdoc-fmt: skip\n";
-        assert!(has_rustdoc_fmt_skip(source));
-    }
-
-    #[test]
-    fn test_has_rustdoc_fmt_skip_not_in_doc_comment() {
+    fn test_has_rustdoc_fmt_skip() {
+        assert!(has_rustdoc_fmt_skip(
+            "// Copyright\n// rustdoc-fmt: skip\n\n//! Module docs.\n"
+        ));
+        assert!(has_rustdoc_fmt_skip("    // rustdoc-fmt: skip\n"));
+        assert!(!has_rustdoc_fmt_skip("// Copyright\n\n//! Module docs.\n"));
         // Should only match plain comments, not doc comments.
-        let source = "/// rustdoc-fmt: skip\n";
-        assert!(!has_rustdoc_fmt_skip(source));
+        assert!(!has_rustdoc_fmt_skip("/// rustdoc-fmt: skip\n"));
+    }
+
+    #[test]
+    fn test_file_processor_check_mode_does_not_write() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.rs");
+
+        let content = "//! Test with link [docs](https://example.com)\n\nfn main() {}\n";
+        fs::write(&test_file, content).unwrap();
+
+        let options = FormatOptions {
+            format_tables: PassPolicy::Skipped,
+            convert_links: PassPolicy::Enabled,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: None,
+            mode: ExecutionMode::CheckOnly,
+            verbosity: Verbosity::Quiet,
+        };
+
+        let processor = FileProcessor::new(options, None);
+        let result = processor.process_file(&test_file);
+
+        assert!(result.errors.is_empty());
+        assert_eq!(result.status, FormatStatus::Modified);
+        let after_content = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(content, after_content);
+    }
+
+    #[test]
+    fn test_lines_range_formatting_single_table() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_range.rs");
+
+        let input = "fn header() {}\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn footer() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        let options = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Skipped,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: Some(EditorLineNum::to_c_row_range(
+                editor_line_num(2),
+                editor_line_num(4),
+            )),
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+
+        let proc = FileProcessor::new(options, None);
+        let result = proc.process_file(&test_file);
+        assert_eq!(result.status, FormatStatus::Modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert!(output.contains("fn header() {}\n"));
+        assert!(output.contains("/// | A   | B   |\n"));
+        assert!(output.contains("fn footer() {}\n"));
+    }
+
+    #[test]
+    fn test_lines_range_formatting_selective_multi_table() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_multi.rs");
+
+        let input = "/// | T1 | Col |\n/// |---|---|\n/// | 1 | 2 |\n///\n/// | T2 | Col |\n/// |---|---|\n/// | 3 | 4 |\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target Table 2 (1-indexed lines 5..=7).
+        let options = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Skipped,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: Some(EditorLineNum::to_c_row_range(
+                editor_line_num(5),
+                editor_line_num(7),
+            )),
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+
+        let proc = FileProcessor::new(options, None);
+        let result = proc.process_file(&test_file);
+        assert_eq!(result.status, FormatStatus::Modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        // Table 1 must remain 100% byte-for-byte untouched.
+        assert!(output.contains("/// | T1 | Col |\n/// |---|---|\n/// | 1 | 2 |\n"));
+        // Table 2 must be formatted.
+        assert!(
+            output.contains("/// | T2  | Col |\n/// | --- | --- |\n/// | 3   | 4   |\n")
+        );
+    }
+
+    #[test]
+    fn test_lines_range_formatting_non_overlapping_unmodified() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_non_overlap.rs");
+
+        let input = "fn line_1() {}\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn line_5() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target line 1 (pure code).
+        let options = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Skipped,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: Some(EditorLineNum::to_c_row_range(
+                editor_line_num(1),
+                editor_line_num(1),
+            )),
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+
+        let proc = FileProcessor::new(options, None);
+        let result = proc.process_file(&test_file);
+        assert_eq!(result.status, FormatStatus::Unchanged);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_lines_force_bypasses_rustdoc_fmt_skip() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_skip_bypass.rs");
+
+        let input = "// rustdoc-fmt: skip\n\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // 1. Without line_range, file is skipped entirely.
+        let options_normal = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Skipped,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: None,
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+        let proc = FileProcessor::new(options_normal, None);
+        let res1 = proc.process_file(&test_file);
+        assert_eq!(res1.status, FormatStatus::Unchanged);
+        assert_eq!(fs::read_to_string(&test_file).unwrap(), input);
+
+        // 2. With line_range, // rustdoc-fmt: skip is bypassed.
+        let options_force = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Skipped,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: Some(EditorLineNum::to_c_row_range(
+                editor_line_num(3),
+                editor_line_num(5),
+            )),
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+        let proc_force = FileProcessor::new(options_force, None);
+        let res2 = proc_force.process_file(&test_file);
+        assert_eq!(res2.status, FormatStatus::Modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert!(output.contains("// rustdoc-fmt: skip\n"));
+        assert!(
+            output.contains("/// | A   | B   |\n/// | --- | --- |\n/// | 1   | 2   |\n")
+        );
+    }
+
+    #[test]
+    fn test_lines_force_converts_inline_links_and_aggregates() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_links_range.rs");
+
+        let input = "/// Line 1 [first](https://example.com/first)\n///\n/// Line 3 [second](https://example.com/second)\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target only Line 1 (line 1..=1).
+        let options = FormatOptions {
+            format_tables: PassPolicy::Enabled,
+            convert_links: PassPolicy::Enabled,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: Some(EditorLineNum::to_c_row_range(
+                editor_line_num(1),
+                editor_line_num(1),
+            )),
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+
+        let proc = FileProcessor::new(options, None);
+        let res = proc.process_file(&test_file);
+        assert_eq!(res.status, FormatStatus::Modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        // Line 1 link converted to reference style.
+        assert!(output.contains("/// Line 1 [first]\n"));
+        // Line 3 link preserved as inline.
+        assert!(output.contains("/// Line 3 [second](https://example.com/second)\n"));
+        // Reference aggregated at bottom of doc block.
+        assert!(output.contains("/// [first]: https://example.com/first\n"));
     }
 }

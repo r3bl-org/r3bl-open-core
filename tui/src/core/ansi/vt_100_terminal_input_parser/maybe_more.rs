@@ -149,11 +149,6 @@
 /// └──────────────────────────────────────────────────────────────────┘
 /// ```
 ///
-/// [`PTY`]: <https://en.wikipedia.org/wiki/Pseudoterminal>
-/// [`SSH`]: <https://en.wikipedia.org/wiki/Secure_Shell>
-/// [`TCP`]: <https://en.wikipedia.org/wiki/Transmission_Control_Protocol>
-/// [Kitty Keyboard Protocol]: <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>
-///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`chunk_decoder`]: mod@super::chunk_decoder
 /// [`ChunkFramer`]: super::chunk_framer::ChunkFramer
@@ -168,7 +163,9 @@
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`read()`]: https://manpages.debian.org/read.2
+/// [`SSH`]: <https://en.wikipedia.org/wiki/Secure_Shell>
 /// [`stdin`]: std::io::stdin
+/// [`TCP`]: <https://en.wikipedia.org/wiki/Transmission_Control_Protocol>
 /// [`try_decode_input_event()`]: super::chunk_decoder::try_decode_input_event
 /// [`try_disambiguate_or_alt_bracket()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events::osc::try_disambiguate_or_alt_bracket
 /// [`ttimeoutlen`]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
@@ -176,6 +173,7 @@
 /// [`write()`]: https://manpages.debian.org/write.2
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 /// [Escape Sequence Disambiguation]: mod@super::chunk_decoder#esc-key-detection--disambiguation
+/// [Kitty Keyboard Protocol]: <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum MaybeMore {
     /// The userspace read buffer was filled to capacity (`bytes_read == buffer_size`).

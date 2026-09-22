@@ -7,7 +7,7 @@ use core::fmt::Debug;
 ///
 /// # Usage
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::tui_color;
 ///
 /// // Named colors
@@ -298,10 +298,11 @@ macro_rules! tui_color {
 /// [`TuiColor`]: crate::TuiColor
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
-    /// An RGB color. See [RGB color model] for more info.
+    /// An [`RGB`] color. See [RGB color model] for more info.
     ///
     /// Most UNIX terminals and Windows 10 supported only.
     ///
+    /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
     /// [RGB color model]: https://en.wikipedia.org/wiki/RGB_color_model
     Rgb(RgbValue),
     /// An [`ANSI`] color. See [256 colors - cheat sheet] for more info.

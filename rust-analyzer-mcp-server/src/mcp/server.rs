@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Model Context Protocol (MCP) server managing JSON-RPC over `stdio` and
+//! Model Context Protocol (MCP) server managing JSON-RPC over [`stdio`] and
 //! dispatching tool requests.
 //!
 //! This module coordinates client process lifecycle, tool dispatch, document opening,
@@ -8,6 +8,7 @@
 //!
 //! See the [Threading Model] documentation for full details on all 3 threads.
 //!
+//! [`stdio`]: std::io
 //! [Threading Model]: mod@crate#threading-model
 
 use crate::{constants::{debug_flags::DEBUG_MCP_SERVER, mcp_methods, mcp_protocol,
@@ -24,10 +25,13 @@ use serde_json::{Value, json};
 use std::{io::{BufRead, Write},
           path::PathBuf};
 
-/// Main Model Context Protocol server executing synchronously over `stdin` and `stdout`.
+/// Main Model Context Protocol server executing synchronously over [`stdin`] and
+/// [`stdout`].
 ///
 /// See [Threading Model] for the complete 3-thread architecture.
 ///
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 /// [Threading Model]: mod@crate#threading-model
 #[derive(Debug)]
 pub struct RustAnalyzerMCPServer {
@@ -43,7 +47,10 @@ impl RustAnalyzerMCPServer {
     ///
     /// # Errors
     ///
-    /// Returns an error if `stdin` reading or `stdout` writing fails.
+    /// Returns an error if [`stdin`] reading or [`stdout`] writing fails.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
     pub fn start(workspace_root: PathBuf) -> Result<(), McpServerError> {
         Self::new(workspace_root).enter_main_event_loop()
     }
@@ -299,11 +306,14 @@ impl RustAnalyzerMCPServer {
         Some(response)
     }
 
-    /// Runs the main server event loop reading newline-delimited JSON-RPC from `stdin`.
+    /// Runs the main server event loop reading newline-delimited JSON-RPC from [`stdin`].
     ///
     /// # Errors
     ///
-    /// Returns an error if reading `stdin` or writing `stdout` fails.
+    /// Returns an error if reading [`stdin`] or writing [`stdout`] fails.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
     pub fn enter_main_event_loop(&mut self) -> Result<(), McpServerError> {
         DEBUG_MCP_SERVER.then(|| {
             // % is Display, ? is Debug.

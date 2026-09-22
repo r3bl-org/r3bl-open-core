@@ -264,11 +264,12 @@ pub enum CharacterSet {
     /// - `ESC ( 0`
     /// - or `[27, 40, 48]` in decimal
     ///
-    /// Maps [`ASCII`] characters to box-drawing Unicode characters.
+    /// Maps [`ASCII`] characters to box-drawing [`Unicode`] characters.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`ESC`]: crate::EscSequence
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     DECGraphics,
 }
 

@@ -37,10 +37,10 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 ///   thread on the kernel [`PTY`] wait-queue using [`rustix::event::poll`] on
 ///   [`POLLOUT`].
 ///
-/// - **macOS & Windows ([`Crossterm`] Backend):** Crossterm uses standard blocking stdio
-///   and never puts [`stdin`] into non-blocking mode. Consequently, [`stdout`] remains in
-///   standard blocking mode natively. Calls to [`write()`] and [`flush()`] succeed
-///   immediately or block natively in the OS kernel without ever returning
+/// - **macOS & Windows ([`Crossterm`] Backend):** Crossterm uses standard blocking
+///   [`stdio`] and never puts [`stdin`] into non-blocking mode. Consequently, [`stdout`]
+///   remains in standard blocking mode natively. Calls to [`write()`] and [`flush()`]
+///   succeed immediately or block natively in the OS kernel without ever returning
 ///   [`WouldBlock`]. On macOS and Windows, this struct acts as a zero-overhead
 ///   pass-through.
 ///
@@ -123,10 +123,11 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// [`rustix::event::poll`]: rustix::event::poll
 /// [`SIGCONT`]: https://manpages.debian.org/signal.7
 /// [`SIGPROF`]: https://manpages.debian.org/signal.7
-/// [`SIGWINCH`]: https://manpages.debian.org/signal.7
+/// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
 /// [`stdin`]: std::io::stdin
-/// [`Stdout`]: std::io::Stdout
+/// [`stdio`]: std::io
 /// [`stdout`]: std::io::stdout
+/// [`Stdout`]: std::io::Stdout
 /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
 /// [`write()`]: std::io::Write::write
 /// [`yield_now()`]: std::thread::yield_now

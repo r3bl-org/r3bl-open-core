@@ -14,7 +14,7 @@ use std::{collections::hash_map::Entry,
 ///
 /// - `StripAnsi`: Calculates the length of the string after stripping [`ANSI`] escape
 ///   sequences.
-/// - `Unicode`: Calculates the Unicode width of the string.
+/// - [`Unicode`]: Calculates the [`Unicode`] width of the string.
 ///
 /// # Example
 /// ```
@@ -28,6 +28,7 @@ use std::{collections::hash_map::Entry,
 /// ```
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StringLength {
     StripAnsi,

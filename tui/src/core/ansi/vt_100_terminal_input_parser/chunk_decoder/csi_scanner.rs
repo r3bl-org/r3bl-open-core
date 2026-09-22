@@ -65,7 +65,7 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// directly from the raw byte stream into an integer ([`u32`]).
 ///
 /// See [`Rust Character And Byte Types`] in [`utf8`] for a detailed breakdown of how Rust
-/// differentiates between 1-byte [`ASCII`] byte literals (`b'9'`), 4-byte Unicode
+/// differentiates between 1-byte [`ASCII`] byte literals (`b'9'`), 4-byte [`Unicode`]
 /// characters (`'9'`), and [`UTF-8`] strings (`"9"`).
 ///
 /// ```text
@@ -94,7 +94,7 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```ignore
 /// // Text "91" parses to integer 91:
 /// assert_eq!(parse_decimal_digits(b"91"), Some(91));
 ///
@@ -113,6 +113,7 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`Rust Character And Byte Types`]: mod@super::utf8#rust-character-and-byte-types
 /// [`str::parse::<u32>()`]: str::parse
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`utf8`]: mod@super::utf8
 #[must_use]

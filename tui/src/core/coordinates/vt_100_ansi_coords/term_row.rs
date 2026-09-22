@@ -29,7 +29,7 @@ use std::{fmt::{Display, Formatter},
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TermRow, VPRow, vp_row, term_row};
 /// use std::num::NonZeroU16;
 ///
@@ -80,7 +80,7 @@ impl TermRow {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{TermRow, CsiSequence};
     ///
     /// // Move cursor to row 1 (top of screen)
@@ -157,7 +157,7 @@ impl TryFrom<u16> for TermRow {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TermRow, TermCol, term_row, term_col, CsiSequence};
 /// use std::num::NonZeroU16;
 ///

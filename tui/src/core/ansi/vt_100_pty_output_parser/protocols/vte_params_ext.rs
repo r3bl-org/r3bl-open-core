@@ -97,7 +97,7 @@ use std::{cmp::max, num::NonZeroU16};
 /// **Use [`extract_nth_many_raw`]** when:
 /// - You need all sub-parameters at a given position, not just the first value, without
 ///   the “treat 0 as 1” transformation
-/// - Implementing extended color commands (`SGR m`) with 256-color or RGB syntax
+/// - Implementing extended color commands (`SGR m`) with 256-color or [`RGB`] syntax
 /// - Handling sequences where colon-separated sub-parameters carry distinct meaning
 /// - The complete slice contains essential information (e.g., `38:5:196` for color index
 ///   196)
@@ -121,7 +121,7 @@ use std::{cmp::max, num::NonZeroU16};
 /// The following example demonstrates parsing a 256-color escape sequence through the
 /// [`VTE`] [`Parser`] and extracting its parameters using [`extract_nth_many_raw`]:
 ///
-/// ```rust
+/// ```
 /// # // Doc test for `VT-100` parameter parsing workflow
 /// # use r3bl_tui::ParamsExt;
 /// # use vte::{Parser, Perform};
@@ -226,6 +226,7 @@ use std::{cmp::max, num::NonZeroU16};
 /// [`parse_cursor_position()`]: parse_cursor_position
 /// [`Parser`]: vte::Parser
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`VPCol(9)`]: crate::VPCol
 /// [`VPRow(4)`]: crate::VPRow
 /// [`VT-100` Parameter Structure]: #vt-100-parameter-structure

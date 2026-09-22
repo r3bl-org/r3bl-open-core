@@ -16,7 +16,7 @@ description: Establish performance baselines and detect regressions using flameg
 
 ## Instructions
 
-Follow these steps to analyze performance and detect regressions:
+When delegating performance benchmarking and flamegraph collection to a background subagent (e.g., `perf-checker` or `self`), always invoke it with `Model: "inherit"`. Follow these steps to analyze performance and detect regressions:
 
 ### Step 1: Generate Current Flamegraph
 

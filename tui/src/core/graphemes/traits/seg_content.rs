@@ -2,12 +2,14 @@
 
 use crate::{ByteIndex, RangeExclusive, Seg, VPCol, VPWidth};
 
-/// Core segment content reference for zero-copy access to grapheme cluster segments.
+/// Core segment content reference for zero-copy access to [`grapheme`] cluster segments.
 ///
 /// This struct provides a unified way to access segment content and metadata
 /// without copying the underlying string data. The lifetime parameter `'a` represents
 /// the lifetime of the borrowed string content, ensuring that the `SegContent`
 /// cannot outlive the string it references.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[derive(Debug, Clone, Copy)]
 pub struct SegContent<'a> {
     /// The actual string content of the segment.

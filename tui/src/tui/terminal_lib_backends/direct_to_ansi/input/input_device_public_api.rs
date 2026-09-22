@@ -154,8 +154,9 @@ use tokio::sync::broadcast::error::RecvError;
 /// represented as replicated [`SubscriberGuard`] handles. All handles share the same
 /// underlying channel and process-global reader resource.
 ///
-/// See [`MioPollWorker`] for details on how the mio poller thread works, including file
-/// descriptor handling, parsing, thread lifecycle, and [`ESC`] detection limitations.
+/// See [`MioPollWorker`] for details on how the [`mio`] poller thread works, including
+/// file descriptor handling, parsing, thread lifecycle, and [`ESC`] detection
+/// limitations.
 ///
 /// # Device Lifecycle
 ///
@@ -377,14 +378,14 @@ use tokio::sync::broadcast::error::RecvError;
 ///   [`VT100InputEventIR`]. This device calls [`try_parse_input_event`] to perform the
 ///   actual parsing.
 ///
-/// # [`ESC`] Key Disambiguation (crossterm `more` flag pattern)
+/// # [`ESC`] Key Disambiguation ([`crossterm`] `more` flag pattern)
 ///
 /// **The Problem**: Distinguishing [`ESC`] key presses from escape sequences (e.g., Up
 /// Arrow = `ESC [ A`). When we see a lone `0x1B` byte, is it the [`ESC`] key or the start
 /// of an escape sequence?
 ///
-/// **The Solution**: We use crossterm's `more` flag pattern - a clever heuristic based on
-/// read buffer fullness:
+/// **The Solution**: We use [`crossterm`]'s `more` flag pattern - a clever heuristic
+/// based on read buffer fullness:
 ///
 /// ```text
 /// let bytes_read = stdin.read(&mut buffer)?; // Read available bytes
@@ -442,8 +443,8 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// ## Attribution
 ///
-/// This pattern is adapted from crossterm's `mio.rs` implementation. See the
-/// [Architecture] section above for details on our mio-based architecture.
+/// This pattern is adapted from [`crossterm`]'s `mio.rs` implementation. See the
+/// [Architecture] section above for details on our [`mio`]-based architecture.
 ///
 /// We looked at [`crossterm`] source code for design inspiration:
 /// 1. **Global state pattern**: [`crossterm`] uses a global [`INTERNAL_EVENT_READER`]
@@ -481,12 +482,13 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`InputDevice`]: crate::InputDevice
 /// [`INTERNAL_EVENT_READER`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
-/// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+/// [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mio.rs`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
 /// [`mio_poller`]: super::mio_poller
+/// [`mio`]: mio
 /// [`MioPollWorker`]: super::mio_poller::MioPollWorker
 /// [`more` flag pattern]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [`new()`]: Self::new
@@ -584,7 +586,7 @@ impl DirectToAnsiInputDevice {
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
     /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
-    /// [`stdin`]: std::io::Stdin
+    /// [`stdin`]: std::io::stdin
     /// [`SubscribeError`]: crate::core::resilient_reactor_thread::SubscribeError
     /// [`SubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
     /// [`try_subscribe()`]: Self::try_subscribe
@@ -649,7 +651,7 @@ impl DirectToAnsiInputDevice {
     /// - **Mouse**: Clicks, drags, motion, scrolling with position and modifiers
     /// - **Resize**: Terminal window size change (rows, cols)
     /// - **Focus**: Terminal gained/lost focus
-    /// - **Paste**: Bracketed paste mode text
+    /// - **Paste**: [`Bracketed paste`] mode text
     /// - **Terminal color**: Terminal foreground, background, and palette color reports
     /// - **Shutdown**: The RRT framework shut down the input thread ([`RestartPolicy`]
     ///   exhausted or panic caught). See [`ShutdownReason`] for details.
@@ -759,6 +761,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// Panics if called after [`Drop`] has already been invoked (internal invariant).
     ///
+    /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     /// [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`ESC`]: crate::EscSequence

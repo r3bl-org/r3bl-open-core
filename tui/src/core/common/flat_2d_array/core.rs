@@ -63,7 +63,7 @@ use std::mem::size_of;
 /// redraws), you should **bypass** the 2D abstraction and avoid nested `for` loops.
 /// Repeating bounds checks and row math over thousands of pixels adds up.
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::*;
 ///
 /// let mut grid = Flat2DArray::<u8>::new_empty((c_width(10), c_height(10)), 0);

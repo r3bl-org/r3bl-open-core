@@ -10,6 +10,7 @@ Akira
 Alacritty
 Alexis
 Amdahl's
+Antigravity
 B8
 BCDEF
 BCE
@@ -24,8 +25,6 @@ Bderivebuilder
 Bemer
 Bincode
 Blackbox
-Blockquote
-Blockquotes
 Buttonless
 C0
 C1
@@ -108,6 +107,8 @@ DirectToAnsiInputDevice
 Dn
 Doctest
 Dont
+Dotenv
+E2E
 E4
 EACCES
 EAGAIN
@@ -171,7 +172,6 @@ G1
 GHIJ
 GPGSIGN
 Ghostty
-Giti
 HEADING
 HKLM
 HORIZ_LINE_CACHE
@@ -247,6 +247,7 @@ Nodesource
 O.
 OFD
 OFDs
+OK
 ONLCR
 OOM
 OPOST
@@ -341,13 +342,13 @@ UART
 UNIX
 USERPROFILE
 UTF
-Underflowed
 Undertie
 UnixSlavePty
 Unresolvable
 VEOF
 VKILL
 VMIN
+VMs
 VPA
 VPCMPEQB
 VPR
@@ -419,6 +420,8 @@ bitmasks
 bitshift
 bitshifts
 blocklisted
+blockquote
+blockquotes
 boop
 bottlenecked
 bottlenecking
@@ -488,6 +491,7 @@ debootstrap
 debuglognoerr
 dec
 deciseconds
+defs
 delims
 demultiplexing
 deprecations
@@ -524,6 +528,7 @@ drawio
 drwxr
 dyn
 econd
+edi
 editorbuffer
 editorcomponent
 editorengine
@@ -561,6 +566,7 @@ flate
 flatline
 flexbox
 flycheck
+fmt
 footgun
 formatcp
 fract
@@ -576,6 +582,7 @@ getconf
 getcwd
 getfl
 gethostname
+giti
 gitui
 glassit
 globalcursor
@@ -693,6 +700,7 @@ memmoves
 mfile
 mfoo
 mgmt
+microVMs
 middlewares
 miette
 millis
@@ -712,6 +720,7 @@ modelcontextprotocol
 monomorphization
 moptions
 mouseover
+mp4
 mprompt
 mpsc
 msvc
@@ -719,6 +728,7 @@ mult
 multiaddr
 multibyte
 multispace
+multithreaded
 mworld
 myapp
 nadia
@@ -802,6 +812,7 @@ prefetcher
 prereqs
 println
 probiotics
+proc
 processenv
 pseudoconsole
 pseudoterminal
@@ -968,6 +979,7 @@ treememoryarena
 trnql
 truecolor
 trunc
+truncations
 ttimeoutlen
 tty
 tui
@@ -985,9 +997,11 @@ u8
 uids
 uindex
 uinteger
+unbackticked
 unbuffered
 unclipped
 undercurls
+underflowed
 underflowing
 underflows
 undisplayable

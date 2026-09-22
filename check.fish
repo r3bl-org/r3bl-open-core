@@ -28,7 +28,7 @@
 #   ./check.fish --check      Run typecheck only (cargo check)
 #   ./check.fish --build      Run build only (cargo build)
 #   ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)
-#   ./check.fish --fmt        Run formatting on changed files (cargo fmt + cargo-rustdoc-fmt)
+#   ./check.fish --fmt        Run formatting (cargo fmt --all + cargo-rustdoc-fmt on changed files)
 #   ./check.fish --test       Run tests only (cargo test + doctests)
 #   ./check.fish --doc        Build docs only (full, with deps, dep-doc caching)
 #   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)

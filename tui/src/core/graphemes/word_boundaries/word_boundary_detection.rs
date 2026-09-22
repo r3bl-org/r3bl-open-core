@@ -5,7 +5,8 @@
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck, GCStringOwned,
             NumericValue, SegIndex, seg_index};
 
-/// Returns true if the grapheme cluster is a word boundary (whitespace or punctuation).
+/// Returns true if the [`grapheme`] cluster is a word boundary (whitespace or
+/// punctuation).
 ///
 /// ## Examples
 ///
@@ -20,6 +21,8 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck, GCStringOw
 /// assert_eq!(is_word_boundary("5"), false);  // Digit
 /// assert_eq!(is_word_boundary("世"), false); // Unicode char
 /// ```
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn is_word_boundary(grapheme: &str) -> bool {
     grapheme
@@ -27,9 +30,11 @@ pub fn is_word_boundary(grapheme: &str) -> bool {
         .all(|c| c.is_whitespace() || c.is_ascii_punctuation())
 }
 
-/// Returns true if the grapheme cluster is a word character (not a boundary).
+/// Returns true if the [`grapheme`] cluster is a word character (not a boundary).
 ///
 /// This is the inverse of `is_word_boundary()`.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn is_word_char(grapheme: &str) -> bool { !is_word_boundary(grapheme) }
 
@@ -43,7 +48,7 @@ fn get_seg_str(line: &GCStringOwned, idx: SegIndex) -> &str {
 ///
 /// This function moves backward from the cursor, skipping any boundary characters, then
 /// skipping word characters until it finds the start of the previous word. It operates
-/// directly on pre-computed grapheme segments, avoiding any heap allocations or
+/// directly on pre-computed [`grapheme`] segments, avoiding any heap allocations or
 /// re-segmentation.
 ///
 /// ## Algorithm
@@ -76,6 +81,8 @@ fn get_seg_str(line: &GCStringOwned, idx: SegIndex) -> &str {
 /// // Empty string
 /// assert_eq!(find_prev_word_start(&GCStringOwned::from(""), 0), seg_index(0));
 /// ```
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn find_prev_word_start(
     line: &GCStringOwned,
@@ -128,7 +135,8 @@ pub fn find_prev_word_start(
 ///
 /// This function moves forward from the cursor, skipping any boundary characters, then
 /// skipping word characters until it finds the end of the next word. It operates directly
-/// on pre-computed grapheme segments, avoiding any heap allocations or re-segmentation.
+/// on pre-computed [`grapheme`] segments, avoiding any heap allocations or
+/// re-segmentation.
 ///
 /// ## Algorithm
 ///
@@ -160,6 +168,8 @@ pub fn find_prev_word_start(
 /// // Empty string
 /// assert_eq!(find_next_word_end(&GCStringOwned::from(""), 0), seg_index(0));
 /// ```
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn find_next_word_end(line: &GCStringOwned, cursor: impl Into<SegIndex>) -> SegIndex {
     let count = line.segment_count();
@@ -201,8 +211,8 @@ pub fn find_next_word_end(line: &GCStringOwned, cursor: impl Into<SegIndex>) -> 
 ///
 /// This function moves forward from the cursor, skipping any word characters (to finish
 /// the current word), then skipping boundary characters, until it finds the start of the
-/// next word. It operates directly on pre-computed grapheme segments, avoiding any heap
-/// allocations or re-segmentation.
+/// next word. It operates directly on pre-computed [`grapheme`] segments, avoiding any
+/// heap allocations or re-segmentation.
 ///
 /// ## Algorithm
 ///
@@ -239,6 +249,8 @@ pub fn find_next_word_end(line: &GCStringOwned, cursor: impl Into<SegIndex>) -> 
 /// // Empty string
 /// assert_eq!(find_next_word_start(&GCStringOwned::from(""), 0), seg_index(0));
 /// ```
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn find_next_word_start(
     line: &GCStringOwned,

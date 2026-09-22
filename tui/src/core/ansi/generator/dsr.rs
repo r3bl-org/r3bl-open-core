@@ -95,7 +95,7 @@ mod impl_dsr_request_type {
 ///
 /// ## Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{DsrSequence, term_row, term_col};
 /// use std::num::NonZeroU16;
 ///
@@ -175,7 +175,7 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 ///
 /// ## Usage Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{PtyResponseEvent, term_row, term_col};
 /// use std::num::NonZeroU16;
 ///

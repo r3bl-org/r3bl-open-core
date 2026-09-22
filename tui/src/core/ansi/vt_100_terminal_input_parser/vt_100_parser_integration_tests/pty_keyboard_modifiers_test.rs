@@ -56,7 +56,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`generate_keyboard_sequence`]: crate::core::ansi::generator::generate_keyboard_sequence
 //! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdin`]: std::io::stdin

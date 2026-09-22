@@ -228,7 +228,7 @@ pub fn try_source_and_export_env_unix(
 /// - `cmd.exe /c`: Runs the command string in the Windows Command Prompt and terminates.
 /// - `(call %1)`: Evaluates the batch script or inline command in the current environment
 ///   context.
-/// - `>nul 2>&1 &`: Redirects both stdout and stderr to the `nul` device during
+/// - `>nul 2>&1 &`: Redirects both [`stdout`] and [`stderr`] to the `nul` device during
 ///   evaluation.
 /// - `set`: Emits all current environment variables in `KEY=VALUE\r\n` format.
 ///
@@ -240,6 +240,8 @@ pub fn try_source_and_export_env_unix(
 /// process exits with an error status.
 ///
 /// [`parse_env_windows`]: parser::parse_env_windows
+/// [`stderr`]: std::io::stderr
+/// [`stdout`]: std::io::stdout
 #[cfg(any(windows, doc))]
 pub fn try_source_and_export_env_windows(
     script_path: &Path,

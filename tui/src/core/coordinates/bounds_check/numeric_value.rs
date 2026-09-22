@@ -103,7 +103,7 @@ pub trait NumericConversions: Copy + Sized {
 /// The [`NumericValue`] trait provides standardized numeric conversions and zero
 /// checking:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{NumericValue, ScreenCoordinate, VPCol, VPWidth, vp_col, vp_width};
 ///
 /// let index = vp_col(42);

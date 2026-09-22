@@ -37,7 +37,7 @@ use tokio::time::interval;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::pty_mux::PTYMux;
 ///
 /// let builder = PTYMux::builder()

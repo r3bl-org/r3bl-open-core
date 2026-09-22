@@ -61,14 +61,16 @@ pub const CSI_PARAM_SEPARATOR_STR: &str = ANSI_PARAM_SEPARATOR_STR;
 /// Used to separate sub-parameters within a single [`CSI`] parameter:
 /// - `ESC [ 38 : 5 : 196 m` - 256-color foreground (38 = fg extended, 5 = palette mode,
 ///   196 = index)
-/// - `ESC [ 48 : 2 : 255 : 128 : 0 m` - RGB background (48 = bg extended, 2 = RGB mode,
-///   255:128:0 = RGB)
+/// - `ESC [ 48 : 2 : 255 : 128 : 0 m` - [`RGB`] background (48 = bg extended, 2 = [`RGB`]
+///   mode, 255:128:0 = [`RGB`])
 ///
-/// Per [ITU-T Rec. T.416] (ISO 8613-6), the colon (`:`) is the recommended modern format
-/// for sub-parameters, while semicolon (`;`) is supported for legacy compatibility.
+/// Per [`ITU-T Rec. T.416`] (ISO 8613-6), the colon (`:`) is the recommended modern
+/// format for sub-parameters, while semicolon (`;`) is supported for legacy
+/// compatibility.
 ///
 /// [`CSI`]: crate::CsiSequence
-/// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
+/// [`ITU-T Rec. T.416`]: https://www.itu.int/rec/T-REC-T.416-199303-I
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 pub const CSI_SUB_PARAM_SEPARATOR: char = ANSI_SUBPARAM_SEPARATOR_CHAR;
 
 // Cursor Movement.
@@ -697,8 +699,9 @@ pub const SGR_BG_BRIGHT_WHITE: u16 = 107;
 ///
 /// Used in sequences like:
 /// - `ESC [ 38 : 5 : n m` - 256-color foreground (n = 0-255)
-/// - `ESC [ 38 : 2 : r : g : b m` - RGB foreground (r,g,b = 0-255)
+/// - `ESC [ 38 : 2 : r : g : b m` - [`RGB`] foreground (r,g,b = 0-255)
 ///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SGR`]: crate::SgrCode
 pub const SGR_FG_EXTENDED: u16 = 38;
 
@@ -709,8 +712,9 @@ pub const SGR_FG_EXTENDED: u16 = 38;
 ///
 /// Used in sequences like:
 /// - `ESC [ 48 : 5 : n m` - 256-color background (n = 0-255)
-/// - `ESC [ 48 : 2 : r : g : b m` - RGB background (r,g,b = 0-255)
+/// - `ESC [ 48 : 2 : r : g : b m` - [`RGB`] background (r,g,b = 0-255)
 ///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SGR`]: crate::SgrCode
 pub const SGR_BG_EXTENDED: u16 = 48;
 
@@ -725,14 +729,16 @@ pub const SGR_BG_EXTENDED: u16 = 48;
 /// [`SGR`]: crate::SgrCode
 pub const SGR_COLOR_MODE_256: u16 = 5;
 
-/// RGB Color Mode Indicator ([`SGR`] `2`): Second parameter in RGB color sequences.
+/// [`RGB`] Color Mode Indicator ([`SGR`] `2`): Second parameter in [`RGB`] color
+/// sequences.
 ///
 /// Value: `2`.
 ///
 /// Used in sequences like:
-/// - `ESC [ 38 : 2 : r : g : b m` - RGB foreground
-/// - `ESC [ 48 : 2 : r : g : b m` - RGB background
+/// - `ESC [ 38 : 2 : r : g : b m` - [`RGB`] foreground
+/// - `ESC [ 48 : 2 : r : g : b m` - [`RGB`] background
 ///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 /// [`SGR`]: crate::SgrCode
 pub const SGR_COLOR_MODE_RGB: u16 = 2;
 

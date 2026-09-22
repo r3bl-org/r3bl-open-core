@@ -54,7 +54,8 @@
 /// - `controller_fn`: A function that receives the [`std::process::Output`] from the
 ///   spawned process.
 /// - `controlled_fn`: A function that runs the actual test logic in the isolated process.
-/// - `stdin`, `stdout`, `stderr`: [`std::process::Stdio`] configurations for the child.
+/// - [`stdin`], [`stdout`], [`stderr`]: [`std::process::Stdio`] configurations for the
+///   child.
 ///
 /// # Example
 /// ```no_run
@@ -83,6 +84,9 @@
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 #[macro_export]
 macro_rules! generate_isolated_process_test {
     (
@@ -126,7 +130,8 @@ macro_rules! generate_isolated_process_test {
 ///   spawned process. This is always sync (it just inspects the child's output).
 /// - `controlled_fn`: An `async` function that runs the actual test logic in the isolated
 ///   process.
-/// - `stdin`, `stdout`, `stderr`: [`std::process::Stdio`] configurations for the child.
+/// - [`stdin`], [`stdout`], [`stderr`]: [`std::process::Stdio`] configurations for the
+///   child.
 ///
 /// # Example
 /// ```no_run
@@ -150,6 +155,9 @@ macro_rules! generate_isolated_process_test {
 /// ```
 ///
 /// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
+/// [`stderr`]: std::io::stderr
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 /// [`tokio`]: tokio
 #[macro_export]
 macro_rules! generate_async_isolated_process_test {

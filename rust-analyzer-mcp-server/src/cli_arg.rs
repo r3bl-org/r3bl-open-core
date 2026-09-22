@@ -15,9 +15,10 @@ use tracing::level_filters::LevelFilter;
 /// Model Context Protocol (MCP) server for [`rust-analyzer`].
 ///
 /// Exposes semantic code navigation, AST symbol search, hover information, diagnostics,
-/// formatting, and code actions over JSON-RPC stdio transport.
+/// formatting, and code actions over JSON-RPC [`stdio`] transport.
 ///
 /// [`rust-analyzer`]: https://rust-analyzer.github.io/
+/// [`stdio`]: std::io
 #[derive(Parser, Debug, Clone, PartialEq, Eq)]
 #[command(
     name = "rust-analyzer-mcp-server",
@@ -34,7 +35,9 @@ pub struct CLIArg {
     #[arg(short = 'w', long = "workspace", value_name = "PATH")]
     pub workspace: Option<PathBuf>,
 
-    /// Log level filter for stderr or log file.
+    /// Log level filter for [`stderr`] or log file.
+    ///
+    /// [`stderr`]: std::io::stderr
     #[arg(
         short = 'l',
         long = "log-level",

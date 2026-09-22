@@ -170,12 +170,12 @@
 //! | [`EscSequence`]      | Manual parsing       | `Display` + `FastStringify` | [`ESC`] control sequences              |
 //! | [`OscSequence`]      | Manual parsing       | `Display` + `FastStringify` | [`OSC`] sequences (titles, hyperlinks) |
 //! | [`DsrSequence`]      | Manual parsing       | `Display` + `FastStringify` | Device Status Report responses         |
-//! | [`SgrColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors                 |
+//! | [`SgrColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & [`RGB`] colors             |
 //!
 //! ### Benefits of Bidirectional Pattern
 //!
 //! 1. **Infallible Generation**: Enums can only represent valid sequences
-//! 2. **Type Safety**: Compiler prevents invalid color indices, RGB values, etc.
+//! 2. **Type Safety**: Compiler prevents invalid color indices, [`RGB`] values, etc.
 //! 3. **Self-Documenting**: Enum variants clearly describe what they do
 //! 4. **Consistent API**: Same types used for parsing and test data
 //! 5. **Easy Refactoring**: Changes to sequence format happen in one place
@@ -248,7 +248,7 @@
 //!
 //! Use bidirectional enums when:
 //! - The sequence has **multiple variants** (colors, positions, modes)
-//! - Sequences are **parameterized** (indices, RGB values, coordinates)
+//! - Sequences are **parameterized** (indices, [`RGB`] values, coordinates)
 //! - You need **type-safe test data** generation
 //! - Parsing and generation **share the same structure**
 //!
@@ -340,6 +340,7 @@
 //! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`SGR`]: crate::SgrCode
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`test_char_ops`]: tests::vt_100_test_char_ops

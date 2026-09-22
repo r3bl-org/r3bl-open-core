@@ -8,18 +8,19 @@ use crossterm::style::Color;
 /// This converter uses the [`degrade_color`] function to ensure consistent color
 /// degradation across the codebase. The degradation algorithm respects terminal
 /// capabilities and handles all color variants (Basic [`ANSI`], Extended [`ANSI`], and
-/// RGB).
+/// [`RGB`]).
 ///
 /// # Color Degradation
 ///
 /// - **Truecolor terminals**: Colors are passed through unchanged
-/// - **Ansi256 terminals**: RGB colors are converted to nearest ANSI256 palette color
+/// - **Ansi256 terminals**: [`RGB`] colors are converted to nearest ANSI256 palette color
 /// - **Grayscale terminals**: All colors are converted to grayscale equivalents
 /// - **`NoColor` terminals**: All colors are converted to terminal default
 ///
 /// For detailed information about the degradation algorithm, see [`degrade_color`].
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 impl From<TuiColor> for crossterm::style::Color {
     fn from(color: TuiColor) -> crossterm::style::Color {
         let color_support = global_color_support::detect();

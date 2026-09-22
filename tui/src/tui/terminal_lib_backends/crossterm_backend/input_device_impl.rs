@@ -30,7 +30,7 @@ impl CrosstermInputDevice {
         }
     }
 
-    /// Gets the next raw crossterm event (used internally).
+    /// Gets the next raw [`crossterm`] event (used internally).
     ///
     /// # Errors
     ///
@@ -38,6 +38,8 @@ impl CrosstermInputDevice {
     /// - The input event stream has been closed
     /// - An I/O error occurs while reading input
     /// - The terminal is not available
+    ///
+    /// [`crossterm`]: crossterm
     async fn next_raw(&mut self) -> miette::Result<crossterm::event::Event> {
         match self.resource.next().fuse().await {
             Some(it) => it.into_diagnostic(),

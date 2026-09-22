@@ -2,14 +2,15 @@
 
 //! Text deletion operations for [`ZeroCopyGapBuffer`].
 //!
-//! This module implements grapheme-safe text deletion operations that maintain
-//! the null-padding invariant and Unicode correctness. Unlike insertion operations,
+//! This module implements [`grapheme`]-safe text deletion operations that maintain
+//! the null-padding invariant and [`Unicode`] correctness. Unlike insertion operations,
 //! deletion does not shrink line capacity - it maintains the allocated space for
 //! efficient future insertions.
 //!
 //! # Key Features
 //!
-//! - **Grapheme-aware**: Respects Unicode grapheme cluster boundaries during deletion
+//! - **Grapheme-aware**: Respects [`Unicode`] [`grapheme`] cluster boundaries during
+//!   deletion
 //! - **[`UTF-8`] safe**: Maintains [`UTF-8`] validity throughout all operations
 //! - **Capacity preservation**: Does not shrink line capacity after deletion
 //! - **Null-padding restoration**: Clears freed space with null bytes
@@ -18,7 +19,7 @@
 //! # Deletion Behavior
 //!
 //! When text is deleted from a line:
-//! 1. Validate deletion boundaries respect grapheme clusters
+//! 1. Validate deletion boundaries respect [`grapheme`] clusters
 //! 2. Shift remaining content left to fill the gap
 //! 3. Update line metadata (content length, segment info)
 //! 4. **Critical**: Fill freed space at end of content with null bytes
@@ -38,8 +39,8 @@
 //!
 //! # Operations
 //!
-//! - [`delete_grapheme_at()`]: Delete single grapheme cluster
-//! - [`delete_range()`]: Delete range of grapheme clusters
+//! - [`delete_grapheme_at()`]: Delete single [`grapheme`] cluster
+//! - [`delete_range()`]: Delete range of [`grapheme`] clusters
 //! - Internal helpers for byte-level manipulation and cleanup
 //!
 //! # Null-Padding Invariant
@@ -68,11 +69,11 @@
 //!
 //! ## Grapheme-Level Safety
 //!
-//! - **[`delete_grapheme_at()`]**: Only deletes complete grapheme clusters, never splits
-//!   [`UTF-8`] sequences
-//! - **[`delete_range()`]**: Operates on grapheme boundaries, ensuring no mid-character
-//!   cuts
-//! - **Segment-based indexing**: Uses pre-computed grapheme boundaries from segment
+//! - **[`delete_grapheme_at()`]**: Only deletes complete [`grapheme`] clusters, never
+//!   splits [`UTF-8`] sequences
+//! - **[`delete_range()`]**: Operates on [`grapheme`] boundaries, ensuring no
+//!   mid-character cuts
+//! - **Segment-based indexing**: Uses pre-computed [`grapheme`] boundaries from segment
 //!   metadata
 //!
 //! ## Byte-Level Safety
@@ -98,6 +99,8 @@
 //! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
 //! [`delete_range()`]: ZeroCopyGapBuffer::delete_range
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::ZeroCopyGapBuffer;
@@ -108,15 +111,16 @@ use miette::{Result, miette};
 use std::ops::Range;
 
 impl ZeroCopyGapBuffer {
-    /// Delete a grapheme cluster at the specified position
+    /// Delete a [`grapheme`] cluster at the specified position
     ///
-    /// This method removes a single grapheme cluster from the specified position,
-    /// ensuring that we never split a grapheme cluster. The operation is Unicode-safe
-    /// and will rebuild the line's segment information after deletion.
+    /// This method removes a single [`grapheme`] cluster from the specified position,
+    /// ensuring that we never split a [`grapheme`] cluster. The operation is
+    /// [`Unicode`]-safe and will rebuild the line's segment information after
+    /// deletion.
     ///
     /// # Arguments
-    /// * `line_index` - The line containing the grapheme to delete
-    /// * `seg_index` - The grapheme cluster position to delete
+    /// * `line_index` - The line containing the [`grapheme`] to delete
+    /// * `seg_index` - The [`grapheme`] cluster position to delete
     ///
     /// # Returns
     /// `Ok(())` if successful, `Err` with a diagnostic error if the operation fails
@@ -126,6 +130,9 @@ impl ZeroCopyGapBuffer {
     /// - The line index is out of bounds
     /// - The segment index is out of bounds
     /// - Segment rebuilding fails
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn delete_grapheme_at(
         &mut self,
         arg_line_index: impl Into<CRow>,
@@ -162,15 +169,15 @@ impl ZeroCopyGapBuffer {
         ok!()
     }
 
-    /// Delete a range of grapheme clusters
+    /// Delete a range of [`grapheme`] clusters
     ///
-    /// This method removes multiple grapheme clusters from the specified range,
-    /// ensuring Unicode safety throughout the operation.
+    /// This method removes multiple [`grapheme`] clusters from the specified range,
+    /// ensuring [`Unicode`] safety throughout the operation.
     ///
     /// # Arguments
     /// * `line_index` - The line containing the graphemes to delete
-    /// * `start_seg` - The starting grapheme cluster position (inclusive)
-    /// * `end_seg` - The ending grapheme cluster position (exclusive)
+    /// * `start_seg` - The starting [`grapheme`] cluster position (inclusive)
+    /// * `end_seg` - The ending [`grapheme`] cluster position (exclusive)
     ///
     /// # Returns
     /// `Ok(())` if successful, `Err` with a diagnostic error if the operation fails
@@ -181,6 +188,9 @@ impl ZeroCopyGapBuffer {
     /// - The segment indices are out of bounds
     /// - The range is invalid (start >= end)
     /// - Segment rebuilding fails
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn delete_range(
         &mut self,
         arg_line_index: impl Into<CRow>,

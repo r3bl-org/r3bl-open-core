@@ -65,7 +65,7 @@ pub const DEBUG_TUI_PTY_MUX: bool = true;
 ///
 /// Logs continuous data polling events, byte output yielding, and terminal resizing
 /// within the active [`PTY`] sessions. Because of the extreme volume of bytes being
-/// parsed from the PTY event loop, this is separated from [`DEBUG_TUI_PTY_MUX`].
+/// parsed from the [`PTY`] event loop, this is separated from [`DEBUG_TUI_PTY_MUX`].
 ///
 /// [`ProcessManager`]: crate::core::pty::pty_mux::ProcessManager
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -77,9 +77,9 @@ pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 /// errors directly from the [`AnsiToOfsBufPerformer`]. Generates extremely
 /// high-volume output when running interactive TUIs, so defaults to `false`.
 ///
-/// [`VT-100` PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
-/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer
+/// [`VT-100` PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
 pub const DEBUG_TUI_VT100_PARSER: bool = false;
 
 /// Controls debug logging for the [Resilient Reactor Thread].
@@ -90,14 +90,18 @@ pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
 /// Controls selective warning and error logging for the [`env_source`] module.
 ///
 /// When enabled, logs subshell process spawn failures and non-zero subshell exit
-/// statuses with captured stderr.
+/// statuses with captured [`stderr`].
 ///
 /// [`env_source`]: mod@crate::core::script::env_source
+/// [`stderr`]: std::io::stderr
 pub const DEBUG_ENV_SOURCE: bool = false;
 
-/// Unicode replacement character used when a grapheme cluster cannot be converted to a
-/// single char. This character (�) is the standard fallback for invalid/undisplayable
-/// characters.
+/// [`Unicode`] replacement character used when a [`grapheme`] cluster cannot be converted
+/// to a single char. This character (�) is the standard fallback for
+/// invalid/undisplayable characters.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub const UNICODE_REPLACEMENT_CHAR: char = '�';
 
 // Attach sources.

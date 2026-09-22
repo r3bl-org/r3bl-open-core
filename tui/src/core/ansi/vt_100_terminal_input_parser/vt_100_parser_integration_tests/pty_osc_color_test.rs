@@ -10,7 +10,7 @@
 //!   [`Cursor`], [`MouseForeground`], [`MouseBackground`], [`Highlight`], and
 //!   [`HighlightForeground`]
 //! - Alternating string terminators: `BEL` (`0x07`) and `ST` (`ESC \`)
-//! - Multi-depth RGB hex formats: 4-digit (`rgb:aaaa/bbbb/cccc`), 2-digit
+//! - Multi-depth [`RGB`] hex formats: 4-digit (`rgb:aaaa/bbbb/cccc`), 2-digit
 //!   (`rgb:12/34/56`), 1-digit (`rgb:f/0/8`), and hash hex (`#rrggbb`)
 //! - Modern terminal emulator security: Inbound [`OSC 52`] clipboard payloads are safely
 //!   absorbed as [`VT100InputEventIR::Ignored`] without leaking phantom keystrokes
@@ -56,7 +56,7 @@
 //! security vulnerabilities (such as exfiltrating passwords, tokens, and private keys).
 //! Because clipboard queries are untrusted, [`DirectToAnsiInputDevice`] mimics the
 //! security posture of modern terminal emulators and safely discards inbound [`OSC 52`]
-//! payloads. Bracketed paste is used for intentional clipboard input instead.
+//! payloads. [`Bracketed paste`] is used for intentional clipboard input instead.
 //!
 //! # Run with:
 //!
@@ -66,6 +66,7 @@
 //!
 //! [`Alacritty`]: https://alacritty.org/
 //! [`Background`]: crate::TerminalColorRole::Background
+//! [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
 //! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`Cursor`]: crate::TerminalColorRole::Cursor
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
@@ -74,7 +75,7 @@
 //! [`HighlightForeground`]: crate::TerminalColorRole::HighlightForeground
 //! [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-//! [`mio`]: https://crates.io/crates/mio
+//! [`mio`]: mio
 //! [`MouseBackground`]: crate::TerminalColorRole::MouseBackground
 //! [`MouseForeground`]: crate::TerminalColorRole::MouseForeground
 //! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
@@ -83,6 +84,7 @@
 //! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
 //! [`OscSequence::try_parse()`]: crate::core::ansi::osc::OscSequence::try_parse
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`RgbValue`]: crate::RgbValue
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
@@ -124,10 +126,11 @@ generate_pty_test! {
 /// [`PTY`] Controller: Emulate host terminal response to color queries and clipboard.
 ///
 /// Acts as the simulated terminal emulator peer connected to the controller side of the
-/// [`PTY`]. Reads child query strings from stdout, verifies them, and writes back
+/// [`PTY`]. Reads child query strings from [`stdout`], verifies them, and writes back
 /// synthesized color reports and clipboard payloads.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stdout`]: std::io::stdout
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
@@ -223,14 +226,16 @@ fn controller(context: PtyTestContext) {
 /// [`PTY`] Controlled: Queries terminal colors and verifies decoded events.
 ///
 /// Runs inside the child process connected to the controlled side of the [`PTY`].
-/// Exercises [`OscSender::send_color_query`] on stdout, and uses the Sans-IO
-/// [`DirectToAnsiInputDevice`] to frame and decode inbound response bytes on stdin.
+/// Exercises [`OscSender::send_color_query`] on [`stdout`], and uses the Sans-IO
+/// [`DirectToAnsiInputDevice`] to frame and decode inbound response bytes on [`stdin`].
 ///
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
 fn controlled() {
     println!("{MSG_TEST_RUNNING}");
     println!("{MSG_CONTROLLED_STARTING}");

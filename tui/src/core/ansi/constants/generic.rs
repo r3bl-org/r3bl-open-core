@@ -31,7 +31,7 @@
 //! ### Option 1: Static Strings (Tier 2 - Zero Overhead)
 //!
 //! Use these for hardcoded, performance-critical feature toggles.
-//! ```rust
+//! ```
 //! use r3bl_tui::SGR_MOUSE_MODE_ENABLE_STR;
 //!
 //! let enable_mouse = SGR_MOUSE_MODE_ENABLE_STR; // "\x1b[?1006h"
@@ -40,7 +40,7 @@
 //! ### Option 2: Dynamic Builder (Tier 3 - Type Safe)
 //!
 //! Use these when composing sequences or handling modes dynamically.
-//! ```rust
+//! ```
 //! use r3bl_tui::{CsiSequence, PrivateModeType, SGR_MOUSE_MODE};
 //!
 //! let seq = CsiSequence::EnablePrivateMode(

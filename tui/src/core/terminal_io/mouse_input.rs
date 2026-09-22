@@ -12,7 +12,7 @@ use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{vp_col, vp_row, Button, MouseInput, MouseInputKind, VPPos};
 ///
 /// let mouse_click = MouseInput {
@@ -38,7 +38,7 @@ pub struct MouseInput {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{MouseInputKind, Button};
 ///
 /// // Left mouse button press
@@ -77,7 +77,7 @@ pub enum MouseInputKind {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::Button;
 ///
 /// let primary = Button::Left;    // Primary button (usually left)

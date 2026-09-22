@@ -11,7 +11,7 @@
 //! configuration settings.
 //!
 //! **Linux-only**: This test reads from [`PTY`] [`stdin`] which hangs on macOS due to
-//! [`kqueue`]/[`PTY`] interaction. Linux uses [`epoll`] which handles [`PTY`] stdin
+//! [`kqueue`]/[`PTY`] interaction. Linux uses [`epoll`] which handles [`PTY`] [`stdin`]
 //! correctly.
 //!
 //! # Run with:
@@ -21,7 +21,7 @@
 //! ```
 //!
 //! [`epoll`]: https://manpages.debian.org/epoll.7
-//! [`kqueue`]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
 //! [`stdin`]: std::io::stdin
 

@@ -95,7 +95,7 @@ All sync operations can run in parallel.
 
 ### Step 2: Concurrent Test Execution
 
-Run the full test suite across all three platforms concurrently using non-blocking background tasks (`run_command` with async tasks) so the active conversation remains responsive:
+Run the full test suite across all three platforms concurrently using non-blocking background tasks (`run_command` with async tasks, or delegated via `invoke_subagent` with `TypeName: "self", Model: "inherit"`) so the active conversation remains responsive:
 
 1. **Linux (`nazmul-mobile.local`)**:
    ```bash

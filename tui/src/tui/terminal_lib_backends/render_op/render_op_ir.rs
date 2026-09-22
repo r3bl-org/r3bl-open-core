@@ -56,7 +56,7 @@
 //! Removing these methods prevents IR from bypassing the compositor. The compositor is
 //! critical for:
 //! - Handling text clipping to terminal width
-//! - Managing Unicode and emoji display widths
+//! - Managing [`Unicode`] and emoji display widths
 //! - Applying style information correctly
 //!
 //! [`compositor_render_ops_to_ofs_buf` mod docs]:
@@ -65,6 +65,7 @@
 //! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
 //! [`render_op` mod docs]: mod@crate::render_op
 //! [`render_pipeline`]: mod@crate::render_pipeline
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
@@ -90,17 +91,19 @@ pub enum RenderOpIR {
     /// Shared operation used identically in IR and Output contexts.
     Common(RenderOpCommon),
 
-    /// Paint text with attributes (handles clipping, Unicode, emoji).
+    /// Paint text with attributes (handles clipping, [`Unicode`], emoji).
     ///
     /// This operation is used by components to render text with styling.
     /// The compositor is responsible for:
     /// - Clipping text to available terminal width
-    /// - Handling Unicode and emoji display width
+    /// - Handling [`Unicode`] and emoji display width
     /// - Applying styles correctly
     ///
     /// This is the **IR-specific** variant. The backend converter
     /// generates `CompositorNoClipTruncPaintTextWithAttributes` after
     /// clipping has been done by the compositor.
+    ///
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     PaintTextWithAttributes(InlineString, Option<TuiStyle>),
 }
 

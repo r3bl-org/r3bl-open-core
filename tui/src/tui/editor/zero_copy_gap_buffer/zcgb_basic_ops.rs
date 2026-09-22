@@ -8,9 +8,11 @@
 //! # Performance Characteristics
 //!
 //! - **Zero-copy access**: Line content is returned as `&str` without copying
-//! - **Efficient grapheme operations**: Leverages pre-computed segment metadata
+//! - **Efficient [`grapheme`] operations**: Leverages pre-computed segment metadata
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
+//!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
@@ -227,20 +229,21 @@ impl ZeroCopyGapBuffer {
         }
     }
 
-    /// Delete a specified number of grapheme clusters starting at the given column
+    /// Delete a specified number of [`grapheme`] clusters starting at the given column
     /// position.
     ///
     /// # Arguments
     ///
     /// * `row_index` - The row to delete from
     /// * `col_index` - The column position to start deletion
-    /// * `segment_count` - The number of grapheme clusters (segments) to delete
+    /// * `segment_count` - The number of [`grapheme`] clusters (segments) to delete
     ///
     /// # Returns
     ///
     /// [`Some(())`] when deletion was successful, or [`None`] if the position was invalid
     /// or deletion failed.
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`Some(())`]: Option::Some
     pub fn delete_at_col(
         &mut self,

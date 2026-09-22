@@ -74,12 +74,14 @@ pub mod defaults {
     ];
 }
 
-/// For RGB colors:
+/// For [`RGB`] colors:
 /// 1. The stops are the colors that will be used to create the gradient.
 /// 2. The speed is how fast the color wheel will rotate.
 /// 3. The steps are the number of colors that will be generated. The larger this number
 ///    is the smoother the transition will be between each color. 100 is a good number to
 ///    start with.
+///
+/// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 #[derive(Clone, PartialEq, Debug)]
 pub enum ColorWheelConfig {
     Rgb(

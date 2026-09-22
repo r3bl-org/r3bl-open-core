@@ -45,8 +45,6 @@
 //! [`ofs_buf::paint_impl`]: mod@crate::ofs_buf::paint_impl
 //! [`OfsBuf`]: crate::tui::OfsBuf
 
-//!
-//!
 //! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData

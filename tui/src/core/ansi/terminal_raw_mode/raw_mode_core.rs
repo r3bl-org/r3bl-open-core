@@ -28,10 +28,11 @@
 //! for direct raw mode control and the [`RawModeGuard`] RAII wrapper.
 //!
 //! **See also**:
-//! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX termios constants
+//! - [`VMIN_RAW_MODE`][vmin] / [`VTIME_RAW_MODE`][vtime] - POSIX [`termios`] constants
 //! - [`RawMode`] - High-level render pipeline integration
 //!
 //! [`RawMode`]: crate::raw_mode::RawMode
+//! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [vmin]: crate::VMIN_RAW_MODE
 //! [vtime]: crate::VTIME_RAW_MODE
 
@@ -46,7 +47,7 @@ use miette::IntoDiagnostic;
 /// Enables raw mode on the terminal.
 ///
 /// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
-/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based termios API
+/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`termios`] API
 /// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::enable_raw_mode()`]
 ///
 /// See [module documentation] for:
@@ -64,6 +65,7 @@ use miette::IntoDiagnostic;
 /// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
 /// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 /// [module documentation]: mod@crate::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
@@ -109,7 +111,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// Disable raw mode and restore original terminal settings.
 ///
 /// Dispatches to the correct raw mode implementation based on [`TERMINAL_LIB_BACKEND`]:
-/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based termios API
+/// - **Linux** ([`DirectToAnsi`]): Uses rustix-based [`termios`] API
 /// - **macOS/Windows** ([`Crossterm`]): Uses [`crossterm::terminal::disable_raw_mode()`]
 ///
 /// Safe to call even if raw mode was never enabled (it will be a no-op).
@@ -127,6 +129,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
 /// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+/// [`termios`]: https://en.wikipedia.org/wiki/Termios
 /// [module documentation]: mod@crate::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
     DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {

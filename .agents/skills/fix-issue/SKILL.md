@@ -37,7 +37,7 @@ Before proposing any changes or writing a task file, gather context on the probl
 1. Read the issue description (e.g., via `gh issue view <id>`).
 2. Search the codebase to locate all relevant files, traits, types, and usages.
 3. Understand the control flow, thread boundaries, and lifecycle constraints.
-4. Do NOT write or modify any code during this step.
+4. Do NOT write or modify any source code or run `cargo check` during this step.
 
 ### Step 2: Design Doc (Task File Creation)
 
@@ -76,8 +76,8 @@ Present at least two (ideally three) alternative approaches. For each alternativ
 #### 4. Proposed Design
 
 - Which alternative was chosen and why.
-- Specific API signatures, type changes, and struct definitions.
-- Visual diagram (if applicable, using ASCII or Mermaid).
+- Exact Rust API signatures, type changes, struct definitions, and target file paths so implementation steps can be executed deterministically.
+- Visual diagram (if applicable, using ASCII or `flowchart LR` Mermaid).
 - Threading, lock, and lifecycle impact analysis.
 
 #### 5. Implementation Plan
@@ -99,10 +99,9 @@ Present the newly created task file to the user.
 
 ### Step 4: Iterative Implementation
 
-Only after the design doc is approved, load the task and begin implementation
-step-by-step.
+Only after the design doc is approved, load the task (ideally in a fresh or `/compact`-ed context if Step 1 read many unrelated files) and begin implementation step-by-step:
 
-- Run quality checks (`./check.fish`) and pause for manual reviews frequently.
+- Verify each step with `./check.fish --check` (which runs `cargo check -q --message-format=short`) and pause for manual reviews frequently.
 
 ### Step 5: Merge & Complete
 

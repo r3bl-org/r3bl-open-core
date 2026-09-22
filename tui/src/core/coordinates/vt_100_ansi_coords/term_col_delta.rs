@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```
 //! use r3bl_tui::{TermColDelta, CsiSequence};
 //!
 //! let position: u16 = 240;
@@ -54,7 +54,7 @@ use std::{fmt::{Display, Formatter},
 /// This type wraps [`NonZeroU16`] internally. A zero-valued delta **cannot exist**,
 /// preventing the [`CSI`] zero bug at compile time:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{TermColDelta, CsiSequence};
 ///
 /// // Fallible construction - returns None for zero
@@ -99,7 +99,7 @@ impl TermColDelta {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::TermColDelta;
     ///
     /// assert!(TermColDelta::new(0).is_none());  // Zero not allowed
@@ -156,7 +156,7 @@ impl TryFrom<u16> for TermColDelta {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::term_col_delta;
 ///
 /// assert!(term_col_delta(0).is_none());

@@ -20,7 +20,7 @@ use std::collections::VecDeque;
 /// stream over standard input. These include:
 ///
 /// - Single-byte [`ASCII`] control codes (e.g., `Ctrl+C`, `Enter`).
-/// - Multi-byte [`UTF-8`] sequences (e.g., Unicode text and emojis).
+/// - Multi-byte [`UTF-8`] sequences (e.g., [`Unicode`] text and emojis).
 /// - Variable-length [`ANSI`]/[`VT-100`] escape sequences, like [`CSI`] sequences for
 ///   arrow keys, function keys, mouse clicks, and modified keystrokes like `Shift+Home`.
 /// - [`OSC`] query responses.
@@ -137,6 +137,7 @@ use std::collections::VecDeque;
 /// [`try_drain()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker::try_drain
 /// [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 /// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UnparsedBufferAction::determine_action()`]: UnparsedBufferAction::determine_action
 /// [`UnparsedBufferAction::KeepAndAwaitMore`]: UnparsedBufferAction::KeepAndAwaitMore
 /// [`UnparsedBufferAction::PurgeMalformed`]: UnparsedBufferAction::PurgeMalformed

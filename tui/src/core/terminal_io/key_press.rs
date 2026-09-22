@@ -102,14 +102,14 @@ macro_rules! key_press {
 /// 1. **[Crossterm Event]** (External dependency)
 ///    - Raw events from the terminal (keyboard, mouse, resize, etc.)
 ///    - Includes platform-specific quirks (Windows sends Press/Release, Unix only Press)
-///    - API can change between crossterm versions
+///    - API can change between [`crossterm`] versions
 ///    - Contains unnecessary complexity for most use cases
 ///
 /// 2. **[`KeyPress`]** (Clean keyboard abstraction - this struct)
 ///    - Focuses only on keyboard input
 ///    - Filters out Release/Repeat events for cross-platform consistency
 ///    - Simplifies modifier handling (e.g., Shift+X becomes just 'X')
-///    - Provides a stable API that won't break if crossterm changes
+///    - Provides a stable API that won't break if [`crossterm`] changes
 ///    - Makes it easier to support other terminal backends in the future
 ///
 /// 3. **[`InputEvent`]** (Unified input abstraction)
@@ -127,7 +127,7 @@ macro_rules! key_press {
 ///
 /// This layered approach provides:
 /// - **Abstraction**: Hide terminal backend implementation details
-/// - **Stability**: Shield app code from crossterm API changes
+/// - **Stability**: Shield app code from [`crossterm`] API changes
 /// - **Consistency**: Normalize behavior across platforms
 /// - **Type safety**: Each layer handles specific concerns
 /// - **Extensibility**: Easy to add new backends or event types
@@ -149,6 +149,7 @@ macro_rules! key_press {
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
 ///    conversion code.
 ///
+/// [`crossterm`]: crossterm
 /// [`InputEvent`]: crate::InputEvent
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`MouseInput`]: crate::MouseInput
@@ -197,7 +198,7 @@ pub enum Key {
     /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled
     /// with [`PushKeyboardEnhancementFlags`].
     ///
-    /// Here's how you can enable crossterm enhanced mode.
+    /// Here's how you can enable [`crossterm`] enhanced mode.
     ///
     /// ```
     /// use std::io::{Write, stdout};
@@ -222,6 +223,7 @@ pub enum Key {
     /// execute!(stdout, PopKeyboardEnhancementFlags);
     /// ```
     ///
+    /// [`crossterm`]: crossterm
     /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`]:
     ///     https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html
     /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`]:
@@ -299,8 +301,8 @@ pub enum SpecialKey {
 /// the [`KeyEvent`] is a [`KeyCode::Char`].
 ///
 /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in
-/// crossterm as "Shift + X". In this case, the [`KeyModifiers`] `SHIFT` and `NONE` are
-/// ignored when converted into a [`KeyPress`]. This means the following:
+/// [`crossterm`] as "Shift + X". In this case, the [`KeyModifiers`] `SHIFT` and `NONE`
+/// are ignored when converted into a [`KeyPress`]. This means the following:
 ///
 /// ```text
 /// ╔════════════════════╦════════════════════════════════════════════════════════════════╗
@@ -318,6 +320,7 @@ pub enum SpecialKey {
 ///
 /// See [Crossterm KeyCode::Char] for more details.
 ///
+/// [`crossterm`]: crossterm
 /// [Crossterm KeyCode::Char]: https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char
 pub mod convert_key_event {
     #[allow(clippy::wildcard_imports)]
@@ -413,8 +416,10 @@ pub mod convert_key_event {
         }
     }
 
-    /// Macro to insulate this library from changes in crossterm
+    /// Macro to insulate this library from changes in [`crossterm`]
     /// [`crossterm::event::KeyEvent`] constructor & fields.
+    ///
+    /// [`crossterm`]: crossterm
     #[macro_export]
     macro_rules! crossterm_keyevent {
         (

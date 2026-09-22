@@ -2,13 +2,13 @@
 
 //! Text insertion operations for [`ZeroCopyGapBuffer`].
 //!
-//! This module implements grapheme-safe text insertion operations that maintain
-//! the null-padding invariant and Unicode correctness while handling dynamic
+//! This module implements [`grapheme`]-safe text insertion operations that maintain
+//! the null-padding invariant and [`Unicode`] correctness while handling dynamic
 //! line growth automatically.
 //!
 //! # Key Features
 //!
-//! - **Grapheme-aware**: Respects Unicode grapheme cluster boundaries
+//! - **Grapheme-aware**: Respects [`Unicode`] [`grapheme`] cluster boundaries
 //! - **[`UTF-8`] safe**: Maintains [`UTF-8`] validity throughout all operations
 //! - **Dynamic growth**: Automatically extends line capacity when needed
 //! - **Null-padding**: Preserves null-padding in unused capacity
@@ -26,7 +26,7 @@
 //!
 //! # Operations
 //!
-//! - [`insert_text_at_grapheme()`]: Insert text at a specific grapheme position with
+//! - [`insert_text_at_grapheme()`]: Insert text at a specific [`grapheme`] position with
 //!   automatic optimization detection
 //! - [`insert_empty_line()`]: Create new empty lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
@@ -70,10 +70,10 @@
 //!
 //! ## Grapheme-Safe Positioning
 //!
-//! Insertion respects **Unicode grapheme cluster boundaries**:
+//! Insertion respects **[`Unicode`] [`grapheme`] cluster boundaries**:
 //! - Uses pre-computed segment metadata to find valid insertion points
-//! - Never splits multi-byte [`UTF-8`] sequences or grapheme clusters
-//! - Maintains proper Unicode text editing semantics
+//! - Never splits multi-byte [`UTF-8`] sequences or [`grapheme`] clusters
+//! - Maintains proper [`Unicode`] text editing semantics
 //!
 //! ## Buffer Integrity During Insertion
 //!
@@ -95,9 +95,11 @@
 //! After insertion, all other modules can safely use [`from_utf8_unchecked()`] because
 //! they operate on content that was validated at this boundary.
 //!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`insert_empty_line()`]: ZeroCopyGapBuffer::insert_empty_line
 //! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
 //! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
@@ -107,15 +109,16 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CRow,
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
-    /// Insert text at a specific grapheme position within a line.
+    /// Insert text at a specific [`grapheme`] position within a line.
     ///
-    /// This method inserts the given text at the specified grapheme cluster position,
-    /// ensuring that we never split a grapheme cluster. The operation is Unicode-safe
-    /// and will rebuild the line's segment information after insertion.
+    /// This method inserts the given text at the specified [`grapheme`] cluster position,
+    /// ensuring that we never split a [`grapheme`] cluster. The operation is
+    /// [`Unicode`]-safe and will rebuild the line's segment information after
+    /// insertion.
     ///
     /// # Arguments
     /// * `line_index` - The line to insert into
-    /// * `seg_index` - The grapheme cluster position to insert at
+    /// * `seg_index` - The [`grapheme`] cluster position to insert at
     /// * `text` - The text to insert
     ///
     /// # Returns
@@ -126,6 +129,9 @@ impl ZeroCopyGapBuffer {
     /// - The line index is out of bounds
     /// - Text insertion fails due to capacity or encoding issues
     /// - Segment rebuilding fails
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     pub fn insert_text_at_grapheme(
         &mut self,
         arg_line_index: impl Into<CRow>,

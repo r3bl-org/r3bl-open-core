@@ -4,7 +4,9 @@ use super::seg_length::{SegLength, seg_length};
 use crate::{ChUnit, IndexOps, VPIndex, generate_index_type_impl};
 use std::fmt::{Display, Formatter};
 
-/// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
+/// Represents a [`grapheme`] segment index inside of [`crate::GCStringOwned`].
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegIndex(ChUnit);
 generate_index_type_impl!(

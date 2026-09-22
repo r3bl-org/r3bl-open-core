@@ -32,7 +32,7 @@ pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 ///    fallback: it attempts the local desktop display server first; if that fails, it
 ///    seamlessly falls back to [`Osc52Clipboard`].
 ///
-/// 4. **Paste vs Copy Separation**: While copying (outbound) writes to `stdout` via
+/// 4. **Paste vs Copy Separation**: While copying (outbound) writes to [`stdout`] via
 ///    [`OscSequence::ClipboardSet`], pasting (inbound) is driven asynchronously by
 ///    [`DEC`] Private Mode 2004 Bracketed Paste (`CSI 200 ~ <content> CSI 201 ~`),
 ///    triggered when the user executes a paste action in their terminal emulator.
@@ -42,6 +42,7 @@ pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 /// [`Osc52Clipboard`]: crate::Osc52Clipboard
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`OscSequence::ClipboardSet`]: crate::osc_codes::OscSequence::ClipboardSet
+/// [`stdout`]: std::io::stdout
 /// [`SystemClipboard`]: crate::SystemClipboard
 pub trait ClipboardService {
     /// # Errors

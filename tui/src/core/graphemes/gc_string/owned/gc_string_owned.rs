@@ -1,6 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`GCStringOwned`] implementation for owned Unicode grapheme cluster strings.
+//! [`GCStringOwned`] implementation for owned [`Unicode`] [`grapheme`] cluster strings.
+//!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 
 use crate::{ByteIndex, CCol, ChUnit, CowInlineString, GraphemeString, GraphemeStringMut,
             InlineString, InlineVecStr, NarrowingCastToU16, RangeExt, Seg, SegContent,
@@ -17,15 +20,21 @@ pub enum ContainsWideSegment {
     No,
 }
 
-/// Owned version of a Unicode grapheme cluster string with pre-computed segment metadata.
+/// Owned version of a [`Unicode`] [`grapheme`] cluster string with pre-computed segment
+/// metadata.
 ///
-/// This type owns both the string data and the grapheme cluster metadata, making it
+/// This type owns both the string data and the [`grapheme`] cluster metadata, making it
 /// suitable for cases where the string needs to be stored or passed around independently.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 #[derive(Clone, PartialEq, Eq)]
 pub struct GCStringOwned {
     /// The underlying string data (owned).
     pub string: InlineString,
-    /// Pre-computed grapheme cluster segments.
+    /// Pre-computed [`grapheme`] cluster segments.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub segments: SegmentArray,
     /// Display width of the entire string.
     pub display_width: VPWidth,
@@ -81,8 +90,10 @@ impl From<&String> for GCStringOwned {
 }
 
 impl GCStringOwned {
-    /// Creates a new [`GCStringOwned`] from a string, computing grapheme cluster
+    /// Creates a new [`GCStringOwned`] from a string, computing [`grapheme`] cluster
     /// segments.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub fn new(input: impl AsRef<str>) -> Self {
         let string: InlineString = input.as_ref().into();
         let segments = build_segments_for_str(string.as_str());
@@ -111,12 +122,16 @@ impl GCStringOwned {
     #[must_use]
     pub fn bytes_size(&self) -> ChUnit { self.bytes_size }
 
-    /// Gets the number of grapheme clusters.
+    /// Gets the number of [`grapheme`] clusters.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn len(&self) -> SegLength { self.segments.len().as_u16_narrowing().into() }
 
-    /// Gets the number of grapheme cluster segments. This is the preferred method for
+    /// Gets the number of [`grapheme`] cluster segments. This is the preferred method for
     /// semantic clarity.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn segment_count(&self) -> SegLength {
         self.segments.len().as_u16_narrowing().into()
@@ -191,11 +206,16 @@ impl GCStringOwned {
 /// Result type for string operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SegStringOwned {
-    /// The grapheme cluster slice as `GCStringOwned` (owns both string and segments).
+    /// The [`grapheme`] cluster slice as `GCStringOwned` (owns both string and
+    /// segments).
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub string: GCStringOwned,
     /// The display width of the slice.
     pub width: VPWidth,
-    /// The display col index at which this grapheme cluster starts.
+    /// The display col index at which this [`grapheme`] cluster starts.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub start_at: VPCol,
 }
 
@@ -360,8 +380,9 @@ pub mod at_display_col_index {
     use super::*;
 
     impl GCStringOwned {
-        /// If the given `display_col_index` falls in the middle of a grapheme cluster,
-        /// then return the [Seg] at that `display_col_index`. Otherwise return [None].
+        /// If the given `display_col_index` falls in the middle of a [`grapheme`]
+        /// cluster, then return the [Seg] at that `display_col_index`. Otherwise
+        /// return [None].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -387,6 +408,8 @@ pub mod at_display_col_index {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         pub fn check_is_in_middle_of_grapheme(
             &self,
             arg_col_index: impl Into<VPCol>,
@@ -400,9 +423,9 @@ pub mod at_display_col_index {
             None
         }
 
-        /// Returns the string and display width of the grapheme cluster segment at the
-        /// given `display_col_index`. If this `display_col_index` falls in the middle of
-        /// a grapheme cluster, then return [None].
+        /// Returns the string and display width of the [`grapheme`] cluster segment at
+        /// the given `display_col_index`. If this `display_col_index` falls in
+        /// the middle of a [`grapheme`] cluster, then return [None].
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -428,6 +451,8 @@ pub mod at_display_col_index {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         pub fn get_string_at(
             &self,
             arg_col_index: impl Into<VPCol>,
@@ -447,50 +472,8 @@ pub mod at_display_col_index {
 
         /// Returns the string at the right of the given `display_col_index`. If the
         /// `display_col_index` is at the end of the string, then return [None]. If the
-        /// `display_col_index` is in the middle of a grapheme cluster, then return the
-        /// grapheme cluster segment that includes that `display_col_index`.
-        ///
-        /// Here's a visual depiction of the different indices.
-        ///
-        /// *How it appears in the terminal (displayed)*:
-        ///
-        /// ```text
-        /// R ╭──────────────╮
-        /// 0 │Hi📦XelLo🙏🏽Bye│
-        ///   ╰──────────────╯
-        ///  DC01234567890123 : index (0 based)
-        /// ```
-        ///
-        /// *Detailed breakdown*:
-        ///
-        /// ```text
-        /// DW   1 2 34 5 6 7 8 9 01 234 : width (1 based)
-        /// DC   0 1 23 4 5 6 7 8 90 123 : index (0 based)
-        ///  R ╭ ─ ─ ── ─ ─ ─ ─ ─ ── ───╮
-        ///  0 │ H i 📦 X e l L o 🙏🏽 Bye│
-        ///    ╰ ─ ─ ── ─ ─ ─ ─ ─ ── ───╯
-        ///   SI 0 1 2  3 4 5 6 7 8  901 : index (0 based)
-        ///
-        /// ❯ DC: display column index | DW: display width
-        /// ❯ R: row index | SI: segment index
-        /// ```
-        pub fn get_string_at_right_of(
-            &self,
-            arg_col_index: impl Into<VPCol>,
-        ) -> Option<SegStringOwned> {
-            let col: VPCol = arg_col_index.into();
-            let seg_index_at_col = (self + col)?;
-            let seg = self.get(seg_index_at_col)?;
-            (seg.seg_index < self.get_max_seg_index()).then(|| {
-                let right_neighbor_seg = self.get(*seg.seg_index + ch(1))?;
-                Some((right_neighbor_seg, self).into())
-            })?
-        }
-
-        /// Returns the string at the left of the given `display_col_index`. If the
-        /// `display_col_index` is at the start of the string, or past the end of the
-        /// string, then return [None]. If the `display_col_index` is in the middle of a
-        /// grapheme cluster, then return the grapheme cluster segment that includes that
+        /// `display_col_index` is in the middle of a [`grapheme`] cluster, then return
+        /// the [`grapheme`] cluster segment that includes that
         /// `display_col_index`.
         ///
         /// Here's a visual depiction of the different indices.
@@ -517,21 +500,26 @@ pub mod at_display_col_index {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
-        pub fn get_string_at_left_of(
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
+        pub fn get_string_at_right_of(
             &self,
             arg_col_index: impl Into<VPCol>,
         ) -> Option<SegStringOwned> {
             let col: VPCol = arg_col_index.into();
             let seg_index_at_col = (self + col)?;
             let seg = self.get(seg_index_at_col)?;
-            (seg.seg_index > seg_index(0)).then(|| {
-                let left_neighbor_seg = self.get(*seg.seg_index - ch(1))?;
-                Some((left_neighbor_seg, self).into())
+            (seg.seg_index < self.get_max_seg_index()).then(|| {
+                let right_neighbor_seg = self.get(*seg.seg_index + ch(1))?;
+                Some((right_neighbor_seg, self).into())
             })?
         }
 
-        /// Returns the last grapheme cluster segment in the grapheme string.
-        /// If the grapheme string is empty, then return [None].
+        /// Returns the string at the left of the given `display_col_index`. If the
+        /// `display_col_index` is at the start of the string, or past the end of the
+        /// string, then return [None]. If the `display_col_index` is in the middle of a
+        /// [`grapheme`] cluster, then return the [`grapheme`] cluster segment that
+        /// includes that `display_col_index`.
         ///
         /// Here's a visual depiction of the different indices.
         ///
@@ -557,6 +545,50 @@ pub mod at_display_col_index {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
+        pub fn get_string_at_left_of(
+            &self,
+            arg_col_index: impl Into<VPCol>,
+        ) -> Option<SegStringOwned> {
+            let col: VPCol = arg_col_index.into();
+            let seg_index_at_col = (self + col)?;
+            let seg = self.get(seg_index_at_col)?;
+            (seg.seg_index > seg_index(0)).then(|| {
+                let left_neighbor_seg = self.get(*seg.seg_index - ch(1))?;
+                Some((left_neighbor_seg, self).into())
+            })?
+        }
+
+        /// Returns the last [`grapheme`] cluster segment in the [`grapheme`] string.
+        /// If the [`grapheme`] string is empty, then return [None].
+        ///
+        /// Here's a visual depiction of the different indices.
+        ///
+        /// *How it appears in the terminal (displayed)*:
+        ///
+        /// ```text
+        /// R ╭──────────────╮
+        /// 0 │Hi📦XelLo🙏🏽Bye│
+        ///   ╰──────────────╯
+        ///  DC01234567890123 : index (0 based)
+        /// ```
+        ///
+        /// *Detailed breakdown*:
+        ///
+        /// ```text
+        /// DW   1 2 34 5 6 7 8 9 01 234 : width (1 based)
+        /// DC   0 1 23 4 5 6 7 8 90 123 : index (0 based)
+        ///  R ╭ ─ ─ ── ─ ─ ─ ─ ─ ── ───╮
+        ///  0 │ H i 📦 X e l L o 🙏🏽 Bye│
+        ///    ╰ ─ ─ ── ─ ─ ─ ─ ─ ── ───╯
+        ///   SI 0 1 2  3 4 5 6 7 8  901 : index (0 based)
+        ///
+        /// ❯ DC: display column index | DW: display width
+        /// ❯ R: row index | SI: segment index
+        /// ```
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         #[must_use]
         pub fn get_string_at_end(&self) -> Option<SegStringOwned> {
             let seg = self.last()?;
@@ -565,7 +597,9 @@ pub mod at_display_col_index {
     }
 }
 
-/// Methods for easily modifying grapheme cluster segments for common TUI use cases.
+/// Methods for easily modifying [`grapheme`] cluster segments for common TUI use cases.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub mod mutate {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -716,7 +750,7 @@ pub mod mutate {
 
         /// Splits the string at the given `display_col_index` and returns a tuple of the
         /// left and right parts of the split. If the `display_col_index` falls in the
-        /// middle of a grapheme cluster, then the split is done at the start of the
+        /// middle of a [`grapheme`] cluster, then the split is done at the start of the
         /// cluster.
         ///
         /// Returns two new tuples:
@@ -747,6 +781,8 @@ pub mod mutate {
         /// ❯ DC: display column index | DW: display width
         /// ❯ R: row index | SI: segment index
         /// ```
+        ///
+        /// [`grapheme`]: https://unicode.org/reports/tr29/
         pub fn split_at_display_col(
             &self,
             arg_col_index: impl Into<VPCol>,

@@ -4,7 +4,9 @@
 //!
 //! This module contains the [`LineMetadata`] struct which stores all the metadata
 //! for a single line in the gap buffer, including buffer position, capacity,
-//! grapheme segments, and display information.
+//! [`grapheme`] segments, and display information.
+//!
+//! [`grapheme`]: https://unicode.org/reports/tr29/
 
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, CCol, CIndex,
             CLength, CWidth, ContainsWideSegment, CursorBoundsCheck, GCStringOwned,
@@ -13,13 +15,15 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, CCol, 
             SegStringOwned, byte_index, byte_len, c_index, c_width,
             core::coordinates::byte_index::ByteIndexRangeExt};
 
-/// Represents a grapheme cluster segment within a continuous document line.
+/// Represents a [`grapheme`] cluster segment within a continuous document line.
 ///
 /// Unlike [`Seg`] (which uses 16-bit Viewport types), [`DocSeg`] uses 64-bit
 /// [`Canvas`]-domain coordinate types ([`CCol`], [`CIndex`], [`CWidth`]) and
-/// [`ByteLength`], allowing document lines to exceed 65,535 columns or grapheme clusters.
+/// [`ByteLength`], allowing document lines to exceed 65,535 columns or [`grapheme`]
+/// clusters.
 ///
 /// [`Canvas`]: mod@crate::core::coordinates::canvas
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Seg`]: crate::Seg
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash, Debug)]
 pub struct DocSeg {
@@ -29,17 +33,21 @@ pub struct DocSeg {
     /// End index in bytes within the line content.
     pub end_byte_index: ByteIndex,
 
-    /// Display width of the grapheme cluster in [`Canvas`] columns.
+    /// Display width of the [`grapheme`] cluster in [`Canvas`] columns.
     ///
     /// [`Canvas`]: mod@crate::core::coordinates::canvas
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub display_width: CWidth,
 
-    /// 0-based [`Canvas`] segment index of this grapheme on the line.
+    /// 0-based [`Canvas`] segment index of this [`grapheme`] on the line.
     ///
     /// [`Canvas`]: mod@crate::core::coordinates::canvas
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub seg_index: CIndex,
 
-    /// Byte size of this grapheme cluster.
+    /// Byte size of this [`grapheme`] cluster.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub bytes_size: ByteLength,
 
     /// Starting display column index in [`Canvas`] space.
@@ -49,7 +57,9 @@ pub struct DocSeg {
 }
 
 impl DocSeg {
-    /// Gets the string slice for the grapheme cluster segment.
+    /// Gets the string slice for the [`grapheme`] cluster segment.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();
         let start_index = self.start_byte_index.as_usize();
@@ -108,7 +118,9 @@ pub struct LineMetadata {
     /// Display width of the line.
     pub display_width: CWidth,
 
-    /// Number of grapheme clusters.
+    /// Number of [`grapheme`] clusters.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     pub grapheme_count: CLength,
 }
 
@@ -146,7 +158,7 @@ pub enum WideSegmentLookahead {
 
     /// A multi-column wide [`grapheme cluster`] (jumbo emoji) exists further down the
     /// line, but is separated from the caret by single-width characters
-    /// (`display_width == 1`, such as [`ASCII`] text, spaces, or single-width Unicode
+    /// (`display_width == 1`, such as [`ASCII`] text, spaces, or single-width [`Unicode`]
     /// characters like `é`, `α`, `ñ`) (`start_col > caret_col + width_at_caret`).
     ///
     /// ```text
@@ -163,6 +175,7 @@ pub enum WideSegmentLookahead {
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`grapheme cluster`]: https://unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     Distant(DocSeg),
 
     /// No multi-column wide [`grapheme cluster`]s (jumbo emojis) exist to the right of
@@ -183,7 +196,7 @@ impl LineMetadata {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::ZeroCopyGapBuffer;
     /// use r3bl_tui::ByteIndexRangeExt;
     ///
@@ -224,7 +237,7 @@ impl LineMetadata {
 
     /// Get the byte position for a given segment index
     ///
-    /// This method converts a grapheme cluster index (segment index) to its
+    /// This method converts a [`grapheme`] cluster index (segment index) to its
     /// corresponding byte position in the line buffer. It handles three cases:
     /// - Beginning of line (`seg_index` = 0) → returns byte position 0
     /// - End of line (`seg_index` >= `grapheme_segments.len()`) → returns content length
@@ -232,14 +245,14 @@ impl LineMetadata {
     /// - Middle of line → returns the `start_byte_index` of the segment
     ///
     /// # Arguments
-    /// * `seg_index` - The grapheme cluster index to convert
+    /// * `seg_index` - The [`grapheme`] cluster index to convert
     ///
     /// # Returns
-    /// The byte position where the grapheme at `seg_index` starts
+    /// The byte position where the [`grapheme`] at `seg_index` starts
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{ZeroCopyGapBuffer, c_index, c_row};
     ///
     /// let mut buffer = ZeroCopyGapBuffer::default();
@@ -254,6 +267,8 @@ impl LineMetadata {
     /// // End of line
     /// assert_eq!(line_info.get_byte_index(c_index(5u16)).as_usize(), 5);
     /// ```
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_byte_index(&self, arg_seg_index: impl Into<CIndex>) -> ByteIndex {
         let seg_index: CIndex = arg_seg_index.into();
@@ -319,7 +334,9 @@ impl LineMetadata {
         })
     }
 
-    /// Gets the string slice for the grapheme cluster segment containing `col_index`.
+    /// Gets the string slice for the [`grapheme`] cluster segment containing `col_index`.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_string_at(
         &self,
@@ -332,14 +349,14 @@ impl LineMetadata {
 
     /// Returns the [`DocSeg`] that starts EXACTLY at `col_index`.
     ///
-    /// If `col_index` falls inside a multi-column grapheme cluster (limbo / no-man's
+    /// If `col_index` falls inside a multi-column [`grapheme`] cluster (limbo / no-man's
     /// land) rather than at its starting display column index, this method returns
     /// [`None`].
     ///
     /// # Visualizing Segment Start vs. Limbo / No-Man's Land
     ///
-    /// Given a wide grapheme cluster (e.g. jumbo emoji `😀`, display width 2) starting at
-    /// column index 4:
+    /// Given a wide [`grapheme`] cluster (e.g. jumbo emoji `😀`, display width 2)
+    /// starting at column index 4:
     ///
     /// ```text
     /// 😀 = ( )
@@ -355,9 +372,11 @@ impl LineMetadata {
     ///                                       → returns Some(DocSeg)
     /// ```
     ///
-    /// - **`col_index = 4`**: Exact start of the grapheme cluster → returns
+    /// - **`col_index = 4`**: Exact start of the [`grapheme`] cluster → returns
     ///   `Some(DocSeg)`
-    /// - **`col_index = 5`**: Interior column of wide grapheme → returns `None`
+    /// - **`col_index = 5`**: Interior column of wide [`grapheme`] → returns `None`
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_seg_at(&self, col_index: CCol) -> Option<DocSeg> {
         let skip_width = c_width(col_index.as_usize());
@@ -371,7 +390,7 @@ impl LineMetadata {
             .filter(|seg| seg.start_display_col_index == col_index)
     }
 
-    /// Look ahead to the right of `col_index` for the next multi-column wide grapheme
+    /// Look ahead to the right of `col_index` for the next multi-column wide [`grapheme`]
     /// cluster (`display_width > 1`, e.g., jumbo emojis `🙏🏽` or CJK characters `汉`) and
     /// evaluate its adjacency relative to the caret.
     ///
@@ -380,11 +399,13 @@ impl LineMetadata {
     ///   touching the caret position (`start_col == col_index + unicode_width_at_caret`).
     /// - [`WideSegmentLookahead::Distant`] if the wide emoji exists further down the line
     ///   separated by single-width characters (`display_width == 1`, such as [`ASCII`]
-    ///   text, spaces, or single-width Unicode characters like `é`, `α`, `ñ`).
+    ///   text, spaces, or single-width [`Unicode`] characters like `é`, `α`, `ñ`).
     /// - [`WideSegmentLookahead::None`] if no wide emojis exist to the right of
     ///   `col_index`.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[must_use]
     pub fn lookahead_wide_segment_to_right(
         &self,
@@ -410,14 +431,15 @@ impl LineMetadata {
         WideSegmentLookahead::None
     }
 
-    /// Returns the next multi-column wide grapheme cluster segment (such as a jumbo
+    /// Returns the next multi-column wide [`grapheme`] cluster segment (such as a jumbo
     /// emoji `🙏🏽` or CJK character `汉`) strictly to the right of `col_index`.
     ///
-    /// This method is specifically used for wide grapheme cluster lookahead and viewport
-    /// scrolling adjustments. It ignores single-width characters (`display_width == 1`,
-    /// including [`ASCII`] text, spaces, and single-width Unicode characters like `é`,
-    /// `α`, `ñ`) and searches [`grapheme_segments`] for the first segment with
-    /// [`display_width`] > 1 whose display range starts strictly after `col_index`.
+    /// This method is specifically used for wide [`grapheme`] cluster lookahead and
+    /// viewport scrolling adjustments. It ignores single-width characters
+    /// (`display_width == 1`, including [`ASCII`] text, spaces, and single-width
+    /// [`Unicode`] characters like `é`, `α`, `ñ`) and searches [`grapheme_segments`]
+    /// for the first segment with [`display_width`] > 1 whose display range starts
+    /// strictly after `col_index`.
     ///
     /// ```text
     /// 🙏🏽: [ ]
@@ -442,6 +464,8 @@ impl LineMetadata {
     /// [`CCol`]: crate::CCol
     /// [`display_width`]: DocSeg::display_width
     /// [`grapheme_segments`]: Self::grapheme_segments
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[must_use]
     pub fn get_seg_at_right_of(&self, col_index: CCol) -> Option<DocSeg> {
         match self.lookahead_wide_segment_to_right(col_index, c_width(1)) {
@@ -451,10 +475,11 @@ impl LineMetadata {
         }
     }
 
-    /// Gets the string slice for the grapheme cluster segment strictly to the right of
-    /// `col_index`. See [`get_seg_at_right_of()`].
+    /// Gets the string slice for the [`grapheme`] cluster segment strictly to the right
+    /// of `col_index`. See [`get_seg_at_right_of()`].
     ///
     /// [`get_seg_at_right_of()`]: Self::get_seg_at_right_of
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_string_at_right_of(
         &self,
@@ -465,7 +490,7 @@ impl LineMetadata {
             .to_seg_string_owned(content)
     }
 
-    /// Returns the grapheme cluster segment strictly to the left of `col_index`.
+    /// Returns the [`grapheme`] cluster segment strictly to the left of `col_index`.
     ///
     /// This method uses [`to_exclusive_range()`] to construct a safe
     /// `RangeExclusive<CCol>` (`[start, start + width)`) and checks if
@@ -491,6 +516,7 @@ impl LineMetadata {
     ///   The segment is to the left of col_index. Used for get_seg_at_left_of().
     /// ```
     ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`to_exclusive_range()`]: crate::RangeConstructExt::to_exclusive_range
     #[must_use]
     pub fn get_seg_at_left_of(&self, col_index: CCol) -> Option<DocSeg> {
@@ -505,10 +531,11 @@ impl LineMetadata {
             .and_then(|idx| self.grapheme_segments.get(idx).copied())
     }
 
-    /// Gets the string slice for the grapheme cluster segment strictly to the left of
+    /// Gets the string slice for the [`grapheme`] cluster segment strictly to the left of
     /// `col_index`. See [`get_seg_at_left_of()`].
     ///
     /// [`get_seg_at_left_of()`]: Self::get_seg_at_left_of
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_string_at_left_of(
         &self,
@@ -524,10 +551,11 @@ impl LineMetadata {
         self.grapheme_segments.last().copied()
     }
 
-    /// Gets the string slice for the last grapheme cluster segment on the line.
+    /// Gets the string slice for the last [`grapheme`] cluster segment on the line.
     /// See [`get_seg_at_end()`].
     ///
     /// [`get_seg_at_end()`]: Self::get_seg_at_end
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
     #[must_use]
     pub fn get_string_at_end(&self, content: &str) -> Option<SegStringOwned> {
         self.get_seg_at_end()?.to_seg_string_owned(content)

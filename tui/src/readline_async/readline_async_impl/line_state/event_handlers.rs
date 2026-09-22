@@ -36,7 +36,7 @@ impl LineState {
     ///
     /// ## Basic Usage (Simulated Events)
     ///
-    /// ```rust
+    /// ```
     /// use r3bl_tui::{InputEvent, KeyPress, LineState, ReadlineEvent, StdMutex,
     ///               StdoutMock, VPSize, seg_index, vp_height, vp_width, SpecialKey};
     /// use std::sync::Arc;

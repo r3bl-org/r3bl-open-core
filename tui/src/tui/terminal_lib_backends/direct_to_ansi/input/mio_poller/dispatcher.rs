@@ -1,6 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Event dispatching for the [`mio`] poller event loop.
+//!
+//! [`mio`]: mio
 
 use super::{super::channel_types::PollerEvent, MioPollWorker,
             handler_signals::consume_pending_signals_with_sender,

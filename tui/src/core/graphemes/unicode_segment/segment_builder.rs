@@ -1,15 +1,17 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Segment building utilities for grapheme clusters.
+//! Segment building utilities for [`grapheme`] clusters.
 //!
 //! This module provides functions to build segments from string slices, extracting the
 //! core logic from [`GCStringOwned`] for reuse in other components like the gap buffer
 //! implementation.
 //!
-//! See the [module docs] for comprehensive information about Unicode handling, grapheme
-//! clusters, and the three types of indices used in this system.
+//! See the [module docs] for comprehensive information about [`Unicode`] handling,
+//! [`grapheme`] clusters, and the three types of indices used in this system.
 //!
 //! [`GCStringOwned`]: crate::GCStringOwned
+//! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [module docs]: crate::graphemes
 
 use crate::{CWidth, DocSeg, NarrowingCastToU16, Seg, SegmentArray, VPCol, VPWidth,
@@ -18,9 +20,9 @@ use crate::{CWidth, DocSeg, NarrowingCastToU16, Seg, SegmentArray, VPCol, VPWidt
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-/// Builds grapheme cluster segments for any string slice.
+/// Builds [`grapheme`] cluster segments for any string slice.
 ///
-/// This function analyzes a [`UTF-8`] string and creates a segment for each grapheme
+/// This function analyzes a [`UTF-8`] string and creates a segment for each [`grapheme`]
 /// cluster (user-perceived character). It includes an [`ASCII`] fast path for better
 /// performance when dealing with [`ASCII`]-only text.
 ///
@@ -30,9 +32,10 @@ use unicode_width::UnicodeWidthStr;
 ///
 /// # Returns
 ///
-/// A [`SegmentArray`] containing one [`Seg`] for each grapheme cluster in the input
+/// A [`SegmentArray`] containing one [`Seg`] for each [`grapheme`] cluster in the input
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn build_segments_for_str(input: &str) -> SegmentArray {
@@ -68,9 +71,10 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
 /// Builds segments for [`ASCII`]-only strings (optimized path).
 ///
 /// Since [`ASCII`] characters are always 1 byte and 1 display column wide, we can build
-/// segments more efficiently without Unicode analysis.
+/// segments more efficiently without [`Unicode`] analysis.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 fn build_ascii_segments(input: &str) -> SegmentArray {
     let mut segments = SegmentArray::with_capacity(input.len());
 
@@ -105,8 +109,10 @@ pub fn calculate_display_width(segments: &SegmentArray) -> VPWidth {
     }
 }
 
-/// Builds [`DocSeg`] grapheme cluster segments for any string slice using 64-bit Canvas
-/// coordinates.
+/// Builds [`DocSeg`] [`grapheme`] cluster segments for any string slice using 64-bit
+/// Canvas coordinates.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 #[must_use]
 pub fn build_doc_segments_for_str(input: &str) -> Vec<DocSeg> {
     if input.is_ascii() {

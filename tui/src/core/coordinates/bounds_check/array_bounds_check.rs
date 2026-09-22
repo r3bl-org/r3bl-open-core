@@ -37,7 +37,8 @@ use crate::NumericValue;
 /// - [`VPIndex`] - Generic implementation via blanket impls
 /// - [`VPRow`] - Implements `ArrayBoundsCheck<VPHeight>` for vertical bounds checking
 /// - [`VPCol`] - Implements `ArrayBoundsCheck<VPWidth>` for horizontal bounds checking
-/// - [`SegIndex`] - Implements `ArrayBoundsCheck<SegLength>` for grapheme segment bounds
+/// - [`SegIndex`] - Implements `ArrayBoundsCheck<SegLength>` for [`grapheme`] segment
+///   bounds
 /// - [`ByteIndex`] - Implements `ArrayBoundsCheck<ByteLength>` for byte-level bounds
 ///
 /// # Array Access Semantics
@@ -106,7 +107,7 @@ use crate::NumericValue;
 ///
 /// The `ArrayBoundsCheck` trait provides comprehensive array access validation:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, vp_col, vp_width};
 ///
 /// let index = vp_col(5);
@@ -142,6 +143,7 @@ use crate::NumericValue;
 ///
 /// [`ByteIndex`]: crate::ByteIndex
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`index.overflows()`]: ArrayBoundsCheck::overflows
 /// [`IndexOps`]: crate::IndexOps
 /// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by

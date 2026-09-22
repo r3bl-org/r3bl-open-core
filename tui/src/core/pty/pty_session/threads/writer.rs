@@ -67,13 +67,15 @@ mod impl_writer {
     use super::*;
 
     #[cfg(target_os = "windows")]
-    /// Windows console EOF byte sequence: `Ctrl+Z` (`SUB`, decimal 26, `1A` in hex)
+    /// Windows console [`EOF`] byte sequence: `Ctrl+Z` (`SUB`, decimal 26, `1A` in hex)
     /// followed by carriage return (`b'\r'`) and line feed (`b'\n'`).
     ///
-    /// Win32 console handles (`STD_INPUT_HANDLE`) do not deliver native pipe EOF
+    /// Win32 console handles (`STD_INPUT_HANDLE`) do not deliver native pipe [`EOF`]
     /// semantics when the input pipe is closed. Interactive Windows console utilities
     /// (such as `findstr "^"`, `more`, or `copy con`) require `Ctrl+Z` followed by
     /// `Enter` to recognize end of file.
+    ///
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     const WIN_CONSOLE_EOF_BYTES: [u8; 3] = [26, b'\r', b'\n'];
 
     pub fn handle_pty_input_event(

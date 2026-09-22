@@ -4,12 +4,14 @@ use crossterm::event::KeyModifiers;
 
 /// The `ModifierKeysMask` struct is used to represent the state of the modifier keys
 /// (shift, ctrl, alt) on the keyboard. It is meant to be a replacement of the bitflags
-/// approach that `crossterm` takes in representing it's [`KeyModifiers`] struct.
+/// approach that [`crossterm`] takes in representing it's [`KeyModifiers`] struct.
 ///
 /// There is no representation for an empty state (no modifier keys are pressed) in this
 /// struct. If you look at [`try_convert_key_modifiers()`] on how it converts from
 /// [`KeyModifiers`], you will see that it returns [None] if the given [`KeyModifiers`] is
 /// empty.
+///
+/// [`crossterm`]: crossterm
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ModifierKeysMask {
     pub shift_key_state: KeyState,
@@ -24,7 +26,7 @@ pub struct ModifierKeysMask {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::KeyState;
 ///
 /// let shift_down = KeyState::Pressed;
@@ -49,7 +51,7 @@ pub enum KeyState {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{MatchResult, ModifierKeysMask};
 /// use crossterm::event::KeyModifiers;
 ///

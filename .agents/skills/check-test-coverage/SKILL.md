@@ -36,7 +36,7 @@ In this codebase, **test quality is measured by branch-targeted verification of 
 
 ## 5-Step Audit Workflow
 
-When running `/check-test-coverage <path>`, follow these five steps systematically:
+When running `/check-test-coverage <path>` (either directly or delegated to a background subagent via `invoke_subagent` with `TypeName: "self", Model: "inherit"`), follow these five steps systematically:
 
 ### Step 1: Inspect the Target File
 

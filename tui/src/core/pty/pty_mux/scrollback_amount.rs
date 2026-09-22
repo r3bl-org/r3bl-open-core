@@ -19,7 +19,7 @@ use std::{fmt::Debug,
 ///
 /// ## Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ScrollbackAmount, ArrayOverflowResult, ArrayBoundsCheck};
 ///
 /// // Create from usize.

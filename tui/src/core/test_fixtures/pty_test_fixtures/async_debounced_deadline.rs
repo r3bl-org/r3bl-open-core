@@ -93,7 +93,7 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
@@ -113,7 +113,7 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
@@ -141,7 +141,7 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///
@@ -160,7 +160,7 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///

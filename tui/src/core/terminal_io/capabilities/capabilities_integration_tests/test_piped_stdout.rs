@@ -41,8 +41,10 @@ fn controller(spawned_self_process_output: std::process::Output) {
     );
 }
 
-/// Controlled path: stdout is piped, report the result and exit. The harness
+/// Controlled path: [`stdout`] is piped, report the result and exit. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`stdout`]: std::io::stdout
 fn controlled() {
     let result = is_output_interactive();
     println!("{result:?}");

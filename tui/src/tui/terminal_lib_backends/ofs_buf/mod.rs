@@ -78,7 +78,7 @@
 //! - **Visual Rendering**: Direct integration with [`RenderPipeline::paint()`]
 //! - **Styling Support**: Rich text styling with [`TuiStyle`] for colors and attributes
 //! - **Performance**: Efficient diff-based rendering to minimize screen updates
-//! - **Multi-width Characters**: Proper handling of emoji and Unicode display widths
+//! - **Multi-width Characters**: Proper handling of emoji and [`Unicode`] display widths
 //!
 //! # Grid Representation & Variable-ColWidth Characters
 //!
@@ -102,7 +102,7 @@
 //!   placeholders
 //! - **Rendering Integrity**: Void cells ensure proper visual alignment and cursor
 //!   positioning
-//! - **Unicode Support**: Full support for emoji, combining characters, and international
+//! - **[`Unicode`] Support**: Full support for emoji, combining characters, and international
 //!   text
 //!
 //! # [`VT-100`] Implementation Architecture - 1:1 Mapping
@@ -146,7 +146,7 @@
 //! - [`insert_chars()`], [`delete_chars()`]
 //!
 //! **Usage Pattern:**
-//! ```rust
+//! ```
 //! use r3bl_tui::*;
 //! let mut buffer = OfsBuf::new(
 //!     Flat2DArray::new_empty(vp_width(10) + vp_height(5), PixelChar::default()));
@@ -172,7 +172,7 @@
 //! - [`diff()`] → [`Option<PixelCharDiffChunks>`]
 //!
 //! **Usage Pattern:**
-//! ```rust
+//! ```
 //! use r3bl_tui::*;
 //! let buffer = OfsBuf::new(
 //!     Flat2DArray::new_empty(vp_width(10) + vp_height(5), PixelChar::default()));
@@ -210,7 +210,7 @@
 //! ### Development Safety (Debug Builds)
 //!
 //! Debug assertions catch issues during development:
-//! ```rust,ignore
+//! ```ignore
 //! use r3bl_tui::{vp_col, vp_height, vp_len, vp_row, vp_width, OfsBufVT100, Pos};
 //!
 //! let mut vt100 = OfsBufVT100::new_empty(vp_width(10) + vp_height(5));
@@ -312,6 +312,7 @@
 //! [`set_foreground_color()`]: crate::core::ansi::OfsBufVT100::set_foreground_color
 //! [`shift_lines_in_range()`]: crate::core::ansi::OfsBufVT100::shift_lines_in_range
 //! [`TuiStyle`]: crate::TuiStyle
+//! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`VPPos`]: crate::core::VPPos
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture

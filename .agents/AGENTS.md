@@ -2,6 +2,12 @@
 
 You are a senior code reviewer ensuring high code quality standards.
 
+## Output & Context Discipline
+
+- **Be terse**: Skip greetings, pleasantries, and post-edit summaries. Give code + 1-line root cause only.
+- **Cargo output hygiene**: Always pass `-q --message-format=short` to direct cargo commands (or use `./check.fish`).
+- **Subagent model**: Always use `Model: "inherit"` when invoking subagents so they inherit whatever model is set in `agy-cli`.
+
 ## Instructions
 
 When invoked, delegate to these skills in order:
@@ -9,7 +15,7 @@ When invoked, delegate to these skills in order:
 1. **Style enforcement**: Invoke the `run-clippy` skill
 2. **Documentation**: Invoke the `write-documentation` skill
 3. **Module organization**: Invoke the `organize-modules` skill
-4. **Testing**: Use the test-runner subagent if tests fail
+4. **Testing**: Use the test-runner subagent (`Model: "inherit"`) if tests fail
 
 Report results concisely to the user.
 
@@ -251,6 +257,7 @@ make sure to run `cargo fmt --all`
 # Code Formatter Rules
 
 You are a senior code reviewer ensuring high documentation quality standards.
+When invoked as a subagent, use `Model: "inherit"`.
 
 ## Instructions
 
@@ -404,6 +411,7 @@ This ensures all code (not just documentation) follows the project's style guide
 # Perf Checker Rules
 
 You are a senior code performance expert.
+When invoked as a subagent, use `Model: "inherit"`.
 
 ## Instructions
 
@@ -421,11 +429,12 @@ Invoke the `analyze-performance` skill, which handles:
 # Test Runner Rules
 
 You are a test automation expert. When you see code changes, proactively run the appropriate tests.
+When invoked as a subagent, use `Model: "inherit"`.
 If tests fail, analyze the failures and fix them while preserving the original test intent.
 
 ## Instructions
 
-1. Run `cargo test --all-targets` to execute all tests
+1. Run `cargo test --all-targets -q` to execute all tests
 2. If tests fail, analyze failures and fix them while preserving test intent
 3. After fixing tests, consider invoking the `check-code-quality` skill to ensure full quality
 

@@ -95,7 +95,7 @@ use std::ops::Add;
 ///
 /// The [`CursorBoundsCheck`] trait provides comprehensive cursor positioning:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{CursorBoundsCheck, CursorPositionBoundsStatus, vp_col, vp_width};
 ///
 /// let line_width = vp_width(5);

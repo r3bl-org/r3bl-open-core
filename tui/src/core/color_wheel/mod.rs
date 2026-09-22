@@ -6,13 +6,14 @@
 //! ## Organization:
 //! - `types` - Core data types (`Seed`, `ColorWheelControl`, etc.)
 //! - `config` - Configuration types and utilities
-//! - `gradients` - [`ANSI`] 256 and truecolor gradient generation
+//! - `gradients` - [`ANSI`] 256 and [`truecolor`] gradient generation
 //! - `helpers` - Color calculation utilities
 //! - `policies` - Text colorization policies
 //! - `lolcat` - Lolcat-style colorization API
 //! - `impl` - Main `ColorWheel` implementation
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
 #![rustfmt::skip]
 

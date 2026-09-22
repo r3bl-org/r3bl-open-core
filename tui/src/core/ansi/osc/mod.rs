@@ -17,7 +17,7 @@
 //!
 //! 2. **Inbound Terminal Response Parsing ([`stdin`])**:
 //!    - Terminal responses to queries (e.g. dynamic color reports) arrive asynchronously
-//!      over `stdin`.
+//!      over [`stdin`].
 //!    - The [`vt_100_terminal_input_parser`] frames incoming bytes and uses
 //!      [`OscSequence::try_parse`] to decode responses into
 //!      [`InputEvent::TerminalColorReport`].

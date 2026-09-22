@@ -57,12 +57,13 @@ impl OfsBufVT100 {
         self.get_parser_global_state_mut().character_set = CharacterSet::DECGraphics;
     }
 
-    /// Translate [`DEC`] Special Graphics characters to Unicode box-drawing characters.
-    /// Used when `character_set` is [`DECGraphics`] (after `ESC ( 0`).
+    /// Translate [`DEC`] Special Graphics characters to [`Unicode`] box-drawing
+    /// characters. Used when `character_set` is [`DECGraphics`] (after `ESC ( 0`).
     ///
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`DECGraphics`]: crate::CharacterSet::DECGraphics
     /// [`ESC`]: crate::EscSequence
+    /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
     #[must_use]
     pub fn translate_dec_graphics(c: char) -> char {
         match c {

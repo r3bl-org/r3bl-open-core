@@ -90,11 +90,10 @@
 //!   - SSH optimized (only repaints what's changed)
 //!   - Zero-copy gap buffer for responsive editing even in large files
 //!
-//! - 📜 `env-source` (Released 🚀) - A fast cross-platform environment loader that evaluates
-//!   shell scripts in a native subshell and exports environment variable diffs for your
-//!   interactive shell.
-//!   - Fast (~1.8 ms execution time, over 100x faster than [Python-based
-//!     alternatives](https://github.com/edc/bass)).
+//! - 📜 `env-source` (Released 🚀) - A fast cross-platform environment loader that
+//!   evaluates shell scripts in a native subshell and exports environment variable diffs
+//!   for your interactive shell.
+//!   - Fast (~1.8 ms execution time, over 100x faster than [Python-based alternatives]).
 //!   - Evaluates POSIX `sh` or Bash scripts on Linux/macOS and `.bat`/`cmd.exe` scripts
 //!     on Windows.
 //!   - Multiple output formats: Fish (`set -gx`), PowerShell (`$env:`), JSON, and Dotenv
@@ -112,12 +111,12 @@
 //!
 //! If you don't have `cargo` on your system, you can either:
 //!
-//! 1. Follow these [instructions](https://rustup.rs/) to install `cargo` on your system
-//!    first (available for Linux, macOS, and Windows). Then run `cargo install r3bl-cmdr`
-//!    to install this crate.
+//! 1. Follow these [instructions] to install `cargo` on your system first (available for
+//!    Linux, macOS, and Windows). Then run `cargo install r3bl-cmdr` to install this
+//!    crate.
 //!
-//! 2. Build the binaries from the crate's source code. First clone this
-//!    [repo](https://github.com/r3bl-org/r3bl-open-core/). Then, run:
+//! 2. Build the binaries from the crate's source code. First clone this [repo]. Then,
+//!    run:
 //!
 //!    ```bash
 //!    git clone https://github.com/r3bl-org/r3bl-open-core/ # clone the repo locally
@@ -168,22 +167,25 @@
 //!
 //! # Changelog
 //!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr)
-//! to see how the crate has evolved over time.
+//! Please check out the [changelog] to see how the crate has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
 //!
 //! To learn how we built this crate and explore the broader ecosystem:
-//! - Read the main
-//!   [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of the
-//!   `r3bl-open-core` monorepo and workspace to get a better understanding of the context
-//!   in which this crate is meant to exist.
-//! - If you like consuming video content, here's our [YT
-//!   channel](https://www.youtube.com/@developerlifecom). Please consider
-//!   [subscribing](https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1).
-//! - If you like consuming written content, here's our developer
-//!   [site](https://developerlife.com/).
+//! - Read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get a
+//!   better understanding of the context in which this crate is meant to exist.
+//! - If you like consuming video content, here's our [YT channel]. Please consider
+//!   [subscribing].
+//! - If you like consuming written content, here's our developer [site].
+//!
+//! [changelog]: https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr
+//! [instructions]: https://rustup.rs/
+//! [Python-based alternatives]: https://github.com/edc/bass
+//! [README.md]: https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md
+//! [repo]: https://github.com/r3bl-org/r3bl-open-core/
+//! [site]: https://developerlife.com/
+//! [subscribing]: https://www.youtube.com/channel/UCMcsxfCwzwDevc3NRqFgfEg?sub_confirmation=1
+//! [YT channel]: https://www.youtube.com/@developerlifecom
 
 pub const DEVELOPMENT_MODE: bool = true;
 pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;

@@ -21,14 +21,14 @@ Instead:
 ## Procedure for Sub-Agents
 1.  **Define the transformation**: Identify the exact "before" and "after" patterns. Create a representative code snippet for the sub-agent to follow.
 2.  **Locate targets**: Use `grep_search` to find all absolute file paths and line numbers that need modification.
-3.  **Draft a precise prompt**: Call the `generalist` (or similar) tool with a prompt that includes:
+3.  **Draft a precise prompt**: Call the `generalist` (or similar) tool with `Model: "inherit"` and a prompt that includes:
     - **Goal**: Clear statement of the refactoring objective.
     - **Scope**: A bulleted list of absolute file paths to modify.
     - **Example**: A code block showing the `old_string` vs `new_string` transformation.
     - **Constraints**: Instructions to preserve specific logic (e.g., "preserve original closure logic while changing the call site").
-    - **Verification**: Instructions to run `cargo check --all-targets` or specific tests after finishing.
-4.  **Delegate**: Execute the sub-agent call.
-5.  **Review and Cleanup**: Sub-agents may introduce minor issues like `unused_import` warnings. Perform a final sweep with `cargo clippy` and fix manually or via a second batch call.
+    - **Verification**: Instructions to run `./check.fish --check` (or `cargo check -q --message-format=short --all-targets`) or specific tests after finishing.
+4.  **Delegate**: Execute the sub-agent call using `invoke_subagent` with `Model: "inherit"`.
+5.  **Review and Cleanup**: Sub-agents may introduce minor issues like `unused_import` warnings. Perform a final sweep with `./check.fish --clippy` (or `cargo clippy -q --message-format=short --all-targets`) and fix manually or via a second batch call.
 
 ## Pitfalls and Fixes
 - **symptom**: Sub-agent misses some files or applies incorrect logic.
@@ -39,6 +39,6 @@ Instead:
 - **fix**: Read the modified files and use targeted `replace` calls to fix the syntax errors.
 
 ## Verification
-- Run `cargo check --all-targets` to confirm zero compilation errors.
-- Run `cargo clippy --all-targets` to find and fix any `unused_import` or style warnings introduced by the refactor.
+- Run `./check.fish --check` (or `cargo check -q --message-format=short --all-targets`) to confirm zero compilation errors.
+- Run `./check.fish --clippy` (or `cargo clippy -q --message-format=short --all-targets`) to find and fix any `unused_import` or style warnings introduced by the refactor.
 - Run relevant integration tests for the modified files.

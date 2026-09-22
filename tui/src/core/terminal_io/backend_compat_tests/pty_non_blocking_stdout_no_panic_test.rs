@@ -23,9 +23,6 @@
 //! cargo test -p r3bl_tui test_pty_non_blocking_stdout_no_panic -- --nocapture
 //! ```
 //!
-//! why-stdout-needs-backpressure-handling-on-linux-with-directtoansi [Why We Need
-//! Non-Blocking Read]:     consume_stdin_input_with_sender#why-we-need-non-blocking-read
-//!
 //! [`BackpressureStdout`]: BackpressureStdout
 //! [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 //! [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
@@ -34,10 +31,9 @@
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
 //! [How This Affects stdout as well]: MioPollWorker#how-this-affects-stdout-as-well
-//! [Signal Interrupts]:
-//!     BackpressureStdout#signal-interrupts-eintr-and-fatal-error-handling
-//! [Why Stdout Needs Backpressure Handling]:
-//!     BackpressureStdout#
+//! [Signal Interrupts]: BackpressureStdout#signal-interrupts-eintr-and-fatal-error-handling
+//! [Why Stdout Needs Backpressure Handling]: BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
+//! [Why We Need Non-Blocking Read]: consume_stdin_input_with_sender#why-we-need-non-blocking-read
 
 // Imported specifically for the intra-doc links in the module-level documentation.
 #[allow(unused_imports)]

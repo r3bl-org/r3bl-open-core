@@ -15,9 +15,11 @@ use smallstr::SmallString;
 use smallvec::SmallVec;
 use std::fmt::Display;
 
-/// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
-/// string. When this gets larger than [`INLINE_VEC_SIZE`], it will be
+/// Intermediate struct used to insert a [`grapheme`] cluster segment into an existing
+/// unicode string. When this gets larger than [`INLINE_VEC_SIZE`], it will be
 /// [`smallvec::SmallVec::spilled`] on the heap.
+///
+/// [`grapheme`]: https://unicode.org/reports/tr29/
 pub type InlineVecStr<'a> = InlineVec<&'a str>;
 
 /// Stack allocated string storage for small strings. When this gets larger than

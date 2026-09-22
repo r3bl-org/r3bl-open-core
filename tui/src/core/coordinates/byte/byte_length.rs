@@ -6,7 +6,7 @@ use crate::{ArrayBoundsCheck, ByteIndex, ChUnit, NarrowingCastToUsize, VPLength,
             bounds_check::{LengthOps, NumericConversions, NumericValue,
                            StorageCoordinate},
             byte_index, usize};
-use std::ops::{Add, Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut, Sub};
 
 /// Represents a byte length measurement (1-based).
 ///
@@ -29,7 +29,7 @@ use std::ops::{Add, Deref, DerefMut};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, IndexOps, byte_index, byte_len};
 ///
 /// // Create a buffer with 10 bytes
@@ -78,7 +78,7 @@ pub struct ByteLength(usize);
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{ByteLength, byte_len};
 ///
 /// let length = byte_len(42u16);
@@ -155,12 +155,14 @@ impl From<VPLength> for ByteLength {
 
 impl Add for ByteLength {
     type Output = Self;
-    fn add(self, other: Self) -> Self { ByteLength(self.0 + other.0) }
+
+    fn add(self, other: Self) -> Self { ByteLength(self.0.saturating_add(other.0)) }
 }
 
-impl Add<usize> for ByteLength {
+impl Sub for ByteLength {
     type Output = Self;
-    fn add(self, other: usize) -> Self { ByteLength(self.0 + other) }
+
+    fn sub(self, other: Self) -> Self { ByteLength(self.0.saturating_sub(other.0)) }
 }
 
 impl NumericConversions for ByteLength {
@@ -367,5 +369,18 @@ mod tests {
 
         let zero_length = byte_len(0);
         assert!(zero_length.is_zero());
+    }
+
+    #[test]
+    fn test_byte_length_arithmetic_and_index_from_end() {
+        let len_a = byte_len(10);
+        let len_b = byte_len(4);
+
+        assert_eq!(len_a + len_b, byte_len(14));
+        assert_eq!(len_a - len_b, byte_len(6));
+        assert_eq!(len_b - len_a, byte_len(0)); // Saturates at 0.
+
+        // LengthOps::index_from_end is now available on ByteLength.
+        assert_eq!(len_a.index_from_end(byte_len(2)), byte_index(7));
     }
 }

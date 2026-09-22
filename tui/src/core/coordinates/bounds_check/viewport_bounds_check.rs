@@ -120,7 +120,7 @@ use crate::RangeBoundsResult;
 /// # Examples
 ///
 /// This trait provides comprehensive visibility checking:
-/// ```rust
+/// ```
 /// use r3bl_tui::{RangeBoundsResult, ViewportBoundsCheck, vp_col, vp_width};
 ///
 /// let vp_start = vp_col(10);
@@ -215,7 +215,7 @@ pub trait ViewportBoundsCheck: IndexOps {
 /// types that implement [`IndexOps`].
 ///
 /// This eliminates the need to write individual empty impl blocks like:
-/// ```rust,compile_fail
+/// ```compile_fail
 /// impl ViewportBoundsCheck for ColIndex {}
 /// impl ViewportBoundsCheck for RowIndex {}
 /// impl ViewportBoundsCheck for Index {}

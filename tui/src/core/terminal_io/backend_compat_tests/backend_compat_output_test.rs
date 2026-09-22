@@ -91,9 +91,9 @@
 //!
 //! # Why [`OfsBufVT100`] Comparison?
 //!
-//! The raw [`ANSI`] bytes from each backend may differ in encoding (e.g., crossterm might
-//! use different [`CSI`] parameter formats), but they should produce **identical terminal
-//! state**. By applying bytes to [`OfsBufVT100`]s and comparing those, we test
+//! The raw [`ANSI`] bytes from each backend may differ in encoding (e.g., [`crossterm`]
+//! might use different [`CSI`] parameter formats), but they should produce **identical
+//! terminal state**. By applying bytes to [`OfsBufVT100`]s and comparing those, we test
 //! semantic equivalence rather than byte-for-byte equality. This is a rendered output
 //! snapshot test that confirms that both backends "look the same" at the end, regardless
 //! what [`ANSI`] escape code encoded byte sequences they used to get there.
@@ -108,6 +108,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
+//! [`crossterm`]: crossterm
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
@@ -276,9 +277,10 @@ pub mod controller {
     /// # Errors
     ///
     /// Returns an error message if [`PTY`] reader cannot be obtained, if I/O operations
-    /// fail, or if EOF/EIO is reached before completion signal.
+    /// fail, or if [`EOF`]/EIO is reached before completion signal.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn run(
         (backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild),
@@ -349,12 +351,15 @@ pub mod controlled_crossterm {
 
     /// Crossterm controlled process entry point.
     ///
-    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly, which is what crossterm
-    /// uses internally.
+    /// Uses `crossterm::terminal::enable_raw_mode()` explicitly, which is what
+    /// [`crossterm`] uses internally.
     ///
     /// # Panics
     ///
-    /// Panics if stdout flush fails.
+    /// Panics if [`stdout`] flush fails.
+    ///
+    /// [`crossterm`]: crossterm
+    /// [`stdout`]: std::io::stdout
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         println!("{MSG_CONTROLLED_READY}");
@@ -413,9 +418,10 @@ pub mod controlled_direct_to_ansi {
     ///
     /// # Panics
     ///
-    /// Panics if stdout flush fails.
+    /// Panics if [`stdout`] flush fails.
     ///
     /// [`rustix`]: https://docs.rs/rustix
+    /// [`stdout`]: std::io::stdout
     pub fn run() -> ! {
         // 1. Signal ready (before enabling raw mode so newlines work normally).
         println!("{MSG_CONTROLLED_READY}");

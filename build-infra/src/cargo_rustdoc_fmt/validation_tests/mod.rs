@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// rustdoc-fmt: skip
+
 //! End-to-end validation tests for `cargo-rustdoc-fmt`.
 //!
 //! # Testing Philosophy
@@ -11,17 +13,18 @@
 //!          /  \    complete_file_tests.rs:
 //!         /    \   • Component interaction tests
 //!        / E2E  \  • Full file processing scenarios
-//!       /  Tests \ • Extract → format → reconstruct
+//!       /  Tests \ • Parse CST → format → reconstruct
 //!      /          \
-//!     /------------\     link_converter.rs, table_formatter.rs:
-//!    /              \    • Fast, isolated edge cases
-//!   / Unit           \   • Empty input, no links, no tables
-//!  /  Tests           \
+//!     /------------\
+//!    /     Unit     \    formatters/ (link.rs, table.rs, etc.):
+//!   /      Tests     \   • Fast, isolated edge cases
+//!  /                  \  • Empty input, no links, no tables
 //! /────────────────────\
 //! ```
 //!
 //! ## Tier 1: Unit Tests (in module files)
-//! - **Location**: Embedded in [`link_converter`], [`table_formatter`], etc.
+//! - **Location**: Embedded in [`formatters`] (`link.rs`, `table.rs`, `code_fence.rs`,
+//!   `technical_term/`), [`cst`], [`processor`], and [`cli_arg`]
 //! - **Purpose**: Test individual functions with simple inputs
 //! - **Input**: Minimal hardcoded strings
 //! - **Assertions**: Basic behavior (`contains`, `is_empty`, simple checks)
@@ -51,9 +54,11 @@
 //!   E2E tests (realistic). We don't need middle-layer "component-only" tests with
 //!   realistic data, as those can behave differently than real usage.
 //!
+//! [`cli_arg`]: crate::cargo_rustdoc_fmt::cli_arg
 //! [`complete_file_tests`]: complete_file_tests
-//! [`link_converter`]: crate::cargo_rustdoc_fmt::link_converter
-//! [`table_formatter`]: crate::cargo_rustdoc_fmt::table_formatter
+//! [`cst`]: crate::cargo_rustdoc_fmt::cst
+//! [`formatters`]: crate::cargo_rustdoc_fmt::formatters
+//! [`processor`]: crate::cargo_rustdoc_fmt::processor
 
 #[cfg(any(test, doc))]
 mod complete_file_tests;

@@ -14,7 +14,7 @@ use std::ops::Add;
 /// operator [`Add`] DSL. Any of the following types can be passed directly into
 /// [`EditorBuffer::new_empty()`] as arguments:
 ///
-/// ```rust
+/// ```
 /// use r3bl_tui::{EditorBuffer, FileExtensionToken, FilePathToken};
 ///
 /// // 1. Unit type `()`: no extension, no file path.
