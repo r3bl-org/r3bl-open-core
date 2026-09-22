@@ -95,12 +95,61 @@ fn extract_table(lines: &[&str], start: usize) -> Option<(Vec<String>, String)> 
         }
     }
 
-    // Must have at least header and separator.
-    if table_lines.len() >= 2 {
+    // Must have at least header and separator, and separator must be valid GFM separator.
+    if table_lines.len() >= 2
+        && crate::cargo_rustdoc_fmt::cst::is_separator_row(&table_lines[1])
+        && crate::cargo_rustdoc_fmt::cst::parse_table_row(&table_lines[0]).len()
+            == crate::cargo_rustdoc_fmt::cst::parse_table_row(&table_lines[1]).len()
+    {
         Some((table_lines, content_indent.to_string()))
     } else {
         None
     }
+}
+
+/// Formats a `DocNode::Table` using `format_table_data`.
+/// Sets `modified = true` on the node if any formatted row differs from original raw
+/// lines. Returns `true` if the node was modified.
+pub fn format_table_node(node: &mut crate::cargo_rustdoc_fmt::types::DocNode) -> bool {
+    use crate::cargo_rustdoc_fmt::types::DocNode;
+
+    if let DocNode::Table {
+        table,
+        content_indent,
+        raw_lines,
+        modified,
+        ..
+    } = node
+    {
+        let formatted_rows = crate::cargo_rustdoc_fmt::cst::format_table_data(table);
+        if formatted_rows.is_empty() {
+            return false;
+        }
+
+        let is_different = formatted_rows.len() != raw_lines.len()
+            || formatted_rows
+                .iter()
+                .zip(raw_lines.iter())
+                .any(|(fmt_row, raw_line)| {
+                    let trimmed_raw = raw_line.trim_start();
+                    let content_after_marker =
+                        if let Some(after) = trimmed_raw.strip_prefix("///") {
+                            after
+                        } else if let Some(after) = trimmed_raw.strip_prefix("//!") {
+                            after
+                        } else {
+                            trimmed_raw
+                        };
+                    let expected_content = format!(" {content_indent}{fmt_row}");
+                    content_after_marker != expected_content
+                });
+
+        if is_different {
+            *modified = true;
+            return true;
+        }
+    }
+    false
 }
 
 /// Column alignment extracted from separator row.
@@ -542,5 +591,56 @@ More text";
         assert!(lines[1].starts_with("    "));
         assert!(lines[2].starts_with("    "));
         assert!(lines[3].starts_with("    "));
+    }
+
+    #[test]
+    fn test_format_table_node_modification() {
+        use crate::cargo_rustdoc_fmt::types::{DocNode, FileChunk, SourceFileCst};
+
+        let source = "/// Header\n/// | Col A | Col B |\n/// |---|---|\n/// | 1 | 2 |\nfn test() {}\n";
+        let mut cst = SourceFileCst::parse(source);
+        if let FileChunk::DocBlock(ref mut block) = cst.chunks[0] {
+            assert!(matches!(block.nodes[1], DocNode::Table { .. }));
+            let modified = format_table_node(&mut block.nodes[1]);
+            assert!(modified);
+        } else {
+            panic!("Expected DocBlock");
+        }
+
+        let reconstructed = cst.reconstruct();
+        assert!(reconstructed.contains("| Col A | Col B |"));
+        assert!(reconstructed.contains("| ----- | ----- |"));
+    }
+
+    #[test]
+    fn test_table_range_overlap_filtering() {
+        use crate::cargo_rustdoc_fmt::types::{DocNode, FileChunk, LineRange,
+                                              SourceFileCst};
+
+        let source = "/// Intro\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\n/// Mid\n/// | C | D |\n/// |---|---|\n/// | 3 | 4 |\nfn foo() {}\n";
+        let mut cst = SourceFileCst::parse(source);
+
+        // Table 1 is on lines 2..=4
+        // Table 2 is on lines 6..=8
+        // Target only Table 2 with LineRange 6..=8
+        let range = LineRange::new(6, 8);
+
+        if let FileChunk::DocBlock(ref mut block) = cst.chunks[0] {
+            for node in &mut block.nodes {
+                if node.span().overlaps(&range)
+                    && let DocNode::Table { .. } = node
+                {
+                    format_table_node(node);
+                }
+            }
+            // Table 1 (node index 1) should NOT be modified
+            assert!(!block.nodes[1].is_modified());
+            // Table 2 (node index 3) SHOULD be modified
+            assert!(block.nodes[3].is_modified());
+        }
+
+        let reconstructed = cst.reconstruct();
+        // Table 1 raw lines should be unchanged
+        assert!(reconstructed.contains("/// | A | B |\n/// |---|---|\n/// | 1 | 2 |"));
     }
 }

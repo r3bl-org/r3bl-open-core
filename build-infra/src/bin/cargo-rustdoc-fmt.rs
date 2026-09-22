@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor,
-                                           TechnicalTermDictionary},
+                                           TechnicalTermDictionary, has_rustfmt_skip},
                        common::{cargo_fmt_runner, workspace_utils}};
 use r3bl_tui::{core::script::{try_get_changed_files_by_ext, try_is_git_repo},
                ok};
@@ -63,10 +63,14 @@ async fn run() -> miette::Result<()> {
 
     // Parse args
     let cli_arg = CLIArg::parse_from(&args);
+    cli_arg.validate()?;
     let options = cli_arg.to_format_options();
 
     // Get files to process
-    let files = if !cli_arg.paths.is_empty() {
+    let files = if cli_arg.lines_force.is_some() {
+        // Fast path for range formatting: single explicit file path
+        vec![cli_arg.paths[0].clone()]
+    } else if !cli_arg.paths.is_empty() {
         // Specific paths provided - highest priority
         if cli_arg.verbose {
             println!(
@@ -193,11 +197,19 @@ async fn run() -> miette::Result<()> {
         total_errors
     );
 
-    // Run cargo fmt on successfully modified files (unless skipped or in check mode)
+    // Run cargo fmt on successfully modified files (unless skipped or in check mode).
+    // Files containing `#![rustfmt::skip]` are respected and excluded from cargo fmt.
     if !cli_arg.skip_cargo_fmt && total_modified > 0 && !cli_arg.check {
         let modified_files: Vec<_> = results
             .iter()
             .filter(|r| r.modified && r.errors.is_empty())
+            .filter(|r| {
+                if let Ok(content) = std::fs::read_to_string(&r.file_path) {
+                    !has_rustfmt_skip(&content)
+                } else {
+                    true
+                }
+            })
             .map(|r| r.file_path.clone())
             .collect();
 

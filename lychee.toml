@@ -53,5 +53,8 @@ exclude_path = [
     # Exclude files which contain dummy and mock URLs in unit tests (these are regexes).
     "build-infra/src/cargo_rustdoc_fmt/link_converter\\.rs",
     "build-infra/src/cargo_rustdoc_fmt/technical_term_linker\\.rs",
+    "build-infra/src/cargo_rustdoc_fmt/validation_tests/.*",
+    # Changelog contains historical and pre-draft release tag URLs not meant for rustdoc link checking.
+    "CHANGELOG\\.md",
 ]
 
