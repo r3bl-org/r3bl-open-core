@@ -187,6 +187,7 @@ fn main() {}";
             format_tables: true,
             convert_links: false,
             link_terms: false,
+            line_range: None,
             check_only: false,
             verbose: false,
         };
@@ -218,6 +219,7 @@ fn main() {}";
             format_tables: false,
             convert_links: true,
             link_terms: false,
+            line_range: None,
             check_only: true,
             verbose: false,
         };
@@ -450,6 +452,7 @@ fn main() {}";
             format_tables: false,
             convert_links: true,
             link_terms: false,
+            line_range: None,
             check_only: false,
             verbose: false,
         };
@@ -674,6 +677,7 @@ fn main() {}";
             format_tables: true,
             convert_links: false,
             link_terms: false,
+            line_range: None,
             check_only: false,
             verbose: false,
         };
@@ -1676,5 +1680,125 @@ fn main() {}";
             fs::write(output_dir.join(name.as_ref()), &output).unwrap();
             eprintln!("Regenerated: {name}");
         }
+    }
+
+    #[test]
+    fn test_lines_range_formatting_single_table() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_range.rs");
+
+        let input = "fn header() {}\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn footer() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: Some(LineRange::new(2, 4)),
+            check_only: false,
+            verbose: false,
+        };
+
+        let proc = processor::FileProcessor::new(options);
+        let result = proc.process_file(&test_file);
+        assert!(result.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert!(output.contains("fn header() {}\n"));
+        assert!(output.contains("/// | A   | B   |\n"));
+        assert!(output.contains("fn footer() {}\n"));
+    }
+
+    #[test]
+    fn test_lines_range_formatting_rustfmt_skip_bypass() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_skip.rs");
+
+        let input = "#![rustfmt::skip]\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn footer() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Without range, whole file would be skipped because of #![rustfmt::skip]
+        // With line_range, #![rustfmt::skip] is bypassed!
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: Some(LineRange::new(2, 4)),
+            check_only: false,
+            verbose: false,
+        };
+
+        let proc = processor::FileProcessor::new(options);
+        let result = proc.process_file(&test_file);
+        assert!(result.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert!(output.contains("#![rustfmt::skip]\n"));
+        assert!(output.contains("/// | A   | B   |\n"));
+    }
+
+    #[test]
+    fn test_lines_range_formatting_selective_multi_table() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_multi.rs");
+
+        let input = "/// | T1 | Col |\n/// |---|---|\n/// | 1 | 2 |\n///\n/// | T2 | Col |\n/// |---|---|\n/// | 3 | 4 |\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target Table 2 (lines 5..=7)
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: Some(LineRange::new(5, 7)),
+            check_only: false,
+            verbose: false,
+        };
+
+        let proc = processor::FileProcessor::new(options);
+        let result = proc.process_file(&test_file);
+        assert!(result.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        // Table 1 must remain 100% byte-for-byte untouched
+        assert!(output.contains("/// | T1 | Col |\n/// |---|---|\n/// | 1 | 2 |\n"));
+        // Table 2 must be formatted
+        assert!(
+            output.contains("/// | T2  | Col |\n/// | --- | --- |\n/// | 3   | 4   |\n")
+        );
+    }
+
+    #[test]
+    fn test_lines_range_formatting_non_overlapping_unmodified() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_non_overlap.rs");
+
+        let input = "fn line_1() {}\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn line_5() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target line 1 (pure code)
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: Some(LineRange::new(1, 1)),
+            check_only: false,
+            verbose: false,
+        };
+
+        let proc = processor::FileProcessor::new(options);
+        let result = proc.process_file(&test_file);
+        assert!(!result.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(output, input);
     }
 }

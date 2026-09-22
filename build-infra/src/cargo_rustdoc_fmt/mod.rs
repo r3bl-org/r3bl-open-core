@@ -13,7 +13,7 @@
 //! `r3bl_tui::md_parser` once table support is added to that parser.
 
 pub mod cli_arg;
-pub mod content_protector;
+pub mod cst;
 pub mod extractor;
 pub mod link_converter;
 pub mod processor;
@@ -28,7 +28,7 @@ pub mod validation_tests;
 
 // Re-export public API for flat module interface (like cmdr/).
 pub use cli_arg::*;
-pub use content_protector::*;
+pub use cst::*;
 pub use extractor::*;
 pub use link_converter::*;
 pub use processor::*;

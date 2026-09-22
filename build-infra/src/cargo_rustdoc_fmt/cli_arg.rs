@@ -5,7 +5,7 @@
 
 //! Command-line argument parsing for cargo-rustdoc-fmt.
 
-use crate::cargo_rustdoc_fmt::types::FormatOptions;
+use crate::cargo_rustdoc_fmt::types::{FormatOptions, LineRange};
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -68,6 +68,16 @@ pub struct CLIArg {
     #[arg(long, short = 'd')]
     pub dry_run: bool,
 
+    /// Format only documentation within the specified line range (e.g. 10:20, 10..20,
+    /// 42)
+    #[arg(
+        long = "lines",
+        value_name = "RANGE",
+        allow_hyphen_values = true,
+        conflicts_with_all = ["links_only", "terms_only", "terms_file", "workspace"]
+    )]
+    pub lines: Option<LineRange>,
+
     /// Specific files or directories to format.
     /// If not provided, formats git-changed files (or entire workspace with
     /// --workspace).
@@ -76,15 +86,73 @@ pub struct CLIArg {
 }
 
 impl CLIArg {
+    /// Validates CLI arguments for semantic consistency.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `--lines` is specified without an explicit target file path.
+    /// - More than one target file path is provided with `--lines`.
+    /// - The specified path does not exist, is a directory, or is not a `.rs` file.
+    /// - Both `--lines` and `--workspace` are specified.
+    pub fn validate(&self) -> miette::Result<()> {
+        if self.lines.is_some() {
+            if self.paths.is_empty() {
+                return Err(miette::miette!(
+                    "--lines requires an explicit target file path (e.g. 'cargo rustdoc-fmt --lines 10:20 src/lib.rs')"
+                ));
+            }
+            if self.paths.len() > 1 {
+                return Err(miette::miette!(
+                    "--lines only supports formatting a single file at a time, but {} paths were provided",
+                    self.paths.len()
+                ));
+            }
+            let path = &self.paths[0];
+            if !path.exists() {
+                return Err(miette::miette!("File not found: '{}'", path.display()));
+            }
+            if path.is_dir() {
+                return Err(miette::miette!(
+                    "--lines requires a file, but directory was provided: '{}'",
+                    path.display()
+                ));
+            }
+            let is_rs = path
+                .extension()
+                .and_then(|s| s.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"));
+            if !is_rs {
+                return Err(miette::miette!(
+                    "--lines requires a Rust source file (.rs), but got: '{}'",
+                    path.display()
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Converts CLI arguments to `FormatOptions`.
     #[must_use]
     pub fn to_format_options(&self) -> FormatOptions {
-        FormatOptions {
-            format_tables: !self.links_only && !self.terms_only,
-            convert_links: !self.tables_only && !self.terms_only,
-            link_terms: !self.tables_only && !self.links_only,
-            check_only: self.check,
-            verbose: self.verbose,
+        if self.lines.is_some() {
+            FormatOptions {
+                format_tables: true,
+                convert_links: false,
+                link_terms: false,
+                line_range: self.lines,
+                check_only: self.check,
+                verbose: self.verbose,
+            }
+        } else {
+            FormatOptions {
+                format_tables: !self.links_only && !self.terms_only,
+                convert_links: !self.tables_only && !self.terms_only,
+                link_terms: !self.tables_only && !self.links_only,
+                line_range: None,
+                check_only: self.check,
+                verbose: self.verbose,
+            }
         }
     }
 }
@@ -105,6 +173,7 @@ mod tests {
         assert!(opts.format_tables);
         assert!(opts.convert_links);
         assert!(opts.link_terms);
+        assert!(opts.line_range.is_none());
     }
 
     #[test]
@@ -131,5 +200,46 @@ mod tests {
         assert!(!opts.format_tables);
         assert!(!opts.convert_links);
         assert!(opts.link_terms);
+    }
+
+    #[test]
+    fn test_cli_lines_argument() {
+        let cli = CLIArg {
+            lines: Some(LineRange::new(10, 20)),
+            ..Default::default()
+        };
+
+        let opts = cli.to_format_options();
+        assert!(opts.format_tables);
+        assert!(!opts.convert_links);
+        assert!(!opts.link_terms);
+        assert_eq!(opts.line_range, Some(LineRange::new(10, 20)));
+    }
+
+    #[test]
+    fn test_cli_validate_lines() {
+        // Missing paths
+        let cli = CLIArg {
+            lines: Some(LineRange::new(10, 20)),
+            paths: vec![],
+            ..Default::default()
+        };
+        assert!(cli.validate().is_err());
+
+        // Multiple paths
+        let cli = CLIArg {
+            lines: Some(LineRange::new(10, 20)),
+            paths: vec![PathBuf::from("a.rs"), PathBuf::from("b.rs")],
+            ..Default::default()
+        };
+        assert!(cli.validate().is_err());
+
+        // Nonexistent path
+        let cli = CLIArg {
+            lines: Some(LineRange::new(10, 20)),
+            paths: vec![PathBuf::from("/nonexistent_file_xyz_123.rs")],
+            ..Default::default()
+        };
+        assert!(cli.validate().is_err());
     }
 }

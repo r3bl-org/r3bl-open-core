@@ -63,10 +63,14 @@ async fn run() -> miette::Result<()> {
 
     // Parse args
     let cli_arg = CLIArg::parse_from(&args);
+    cli_arg.validate()?;
     let options = cli_arg.to_format_options();
 
     // Get files to process
-    let files = if !cli_arg.paths.is_empty() {
+    let files = if cli_arg.lines.is_some() {
+        // Fast path for range formatting: single explicit file path
+        vec![cli_arg.paths[0].clone()]
+    } else if !cli_arg.paths.is_empty() {
         // Specific paths provided - highest priority
         if cli_arg.verbose {
             println!(
@@ -193,8 +197,13 @@ async fn run() -> miette::Result<()> {
         total_errors
     );
 
-    // Run cargo fmt on successfully modified files (unless skipped or in check mode)
-    if !cli_arg.skip_cargo_fmt && total_modified > 0 && !cli_arg.check {
+    // Run cargo fmt on successfully modified files (unless skipped, range formatting, or
+    // in check mode)
+    if !cli_arg.skip_cargo_fmt
+        && cli_arg.lines.is_none()
+        && total_modified > 0
+        && !cli_arg.check
+    {
         let modified_files: Vec<_> = results
             .iter()
             .filter(|r| r.modified && r.errors.is_empty())

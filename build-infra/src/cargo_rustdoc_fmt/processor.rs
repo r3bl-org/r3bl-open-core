@@ -11,12 +11,11 @@
 //! whose doc comments discuss the formatter's own concepts (e.g., technical terms like
 //! CSI that would be incorrectly linkified by the term linker).
 
-use crate::cargo_rustdoc_fmt::{content_protector::ContentProtector,
-                               extractor, link_converter, table_formatter,
+use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
                                technical_term_dictionary::TechnicalTermDictionary,
                                technical_term_linker,
-                               types::{CommentType, FormatOptions, ProcessingResult,
-                                       RustdocBlock}};
+                               types::{CommentType, FileChunk, FormatOptions,
+                                       ProcessingResult, RustdocBlock, SourceFileCst}};
 use std::path::{Path, PathBuf};
 
 /// Checks if a file contains the `// rustdoc-fmt: skip` marker.
@@ -94,6 +93,47 @@ impl<'a> FileProcessor<'a> {
             return result;
         }
 
+        // When line_range is specified, use our lossless CST engine for surgical range
+        // formatting. Bypasses `#![rustfmt::skip]` so targeted doc comments in
+        // skipped files can be formatted.
+        if let Some(range) = self.options.line_range {
+            let mut cst =
+                SourceFileCst::parse_with_path(&source, Some(path.to_path_buf()));
+            let mut modified = false;
+
+            for chunk in &mut cst.chunks {
+                if let FileChunk::DocBlock(block) = chunk {
+                    if self.options.format_tables {
+                        for node in &mut block.nodes {
+                            if node.span().overlaps(&range)
+                                && table_formatter::format_table_node(node)
+                            {
+                                modified = true;
+                            }
+                        }
+                    }
+                    if self.options.convert_links
+                        && link_converter::convert_links_in_doc_block(block, Some(&range))
+                    {
+                        modified = true;
+                    }
+                }
+            }
+
+            if modified && !self.options.check_only {
+                let new_source = cst.reconstruct();
+                if let Err(e) = std::fs::write(path, new_source) {
+                    result.add_error(format!("Failed to write file: {e}"));
+                } else {
+                    result.mark_modified();
+                }
+            } else if modified {
+                result.mark_modified();
+            }
+
+            return result;
+        }
+
         // Extract rustdoc blocks.
         let mut blocks = extractor::extract_rustdoc_blocks(&source);
 
@@ -148,14 +188,10 @@ fn process_rustdoc_block(
         modified = table_formatter::format_tables(&modified);
     }
 
-    // Link conversion uses ContentProtector to preserve HTML comments, tags,
-    // blockquotes, and code fences while converting links in unprotected areas.
+    // Link conversion: convert inline links and aggregate references.
     if options.convert_links {
-        let mut protector = ContentProtector::new();
-        let protected = protector.protect(&modified);
-        let converted = link_converter::convert_links(&protected);
-        let aggregated = link_converter::aggregate_existing_references(&converted);
-        modified = protector.restore(&aggregated);
+        let converted = link_converter::convert_links(&modified);
+        modified = link_converter::aggregate_existing_references(&converted);
     }
 
     // Term linking: upgrade known terms to backticked+linked form.

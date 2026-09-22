@@ -1527,6 +1527,13 @@ in a text editor.
 
 **Added:**
 
+- **`cargo-rustdoc-fmt` Range Formatting & CST Engine**:
+    - `--lines <START>:<END>` argument allowing surgical range formatting of markdown
+      tables in doc comments.
+    - Automatic `#![rustfmt::skip]` bypass when `--lines` is supplied.
+    - Automatic whole-file `cargo fmt` skip to preserve untouched lines outside range.
+    - Strict single-file target validation (`paths.len() == 1`, `.rs` extension, no
+      `--workspace`).
 - **`cargo-rustdoc-fmt` Technical Term Auto-Linking**:
     - Automatically identifies and converts technical terms into reference-style intra-doc
       links.
