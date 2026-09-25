@@ -73,14 +73,14 @@ function ensure_target_symlink
     if test -L "$local_target"
         set -l link_target (readlink "$local_target")
         if test "$link_target" != "$CHECK_TARGET_DIR"
-            rm -f "$local_target"
+            command rm -f "$local_target"
             ln -s "$CHECK_TARGET_DIR" "$local_target"
         end
     else
         if test -e "$local_target"
             echo "Moving existing physical target directory to tmpfs..."
             mv "$local_target"/* "$CHECK_TARGET_DIR"/ 2>/dev/null
-            rmdir "$local_target" 2>/dev/null; or rm -rf "$local_target"
+            rmdir "$local_target" 2>/dev/null; or command rm -rf "$local_target"
         else
             # User nuked target/ to reset cache; wipe backing store too.
             find "$CHECK_TARGET_DIR" -mindepth 1 -delete 2>/dev/null

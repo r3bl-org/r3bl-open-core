@@ -197,6 +197,12 @@ impl ReadlineLockManager {
         self.line_state_level_1.write(fn_once)
     }
 
+    /// Provides shared reference access to the internal [`OutputDevice`].
+    ///
+    /// [`OutputDevice`]: crate::OutputDevice
+    #[must_use]
+    pub fn output_device(&self) -> &OutputDevice { &self.output_device_level_2 }
+
     /// Provides exclusive mutable access to the internal [`OutputDevice`].
     ///
     /// Used **ONLY** by [`ModalTerminalGuard::as_mut_tuple`] to provide `(&mut

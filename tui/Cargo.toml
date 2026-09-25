@@ -61,13 +61,6 @@ chrono = "0.4.42"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 futures-util = "0.3.31"
 
-# Safe Rust POSIX APIs:
-# - termios: raw mode terminal state manipulation.
-# - std: std::io and standard library type conversions.
-# - event: event-driven POLLOUT backpressure via poll(2).
-# - fs: non-blocking stdin OFlags manipulation via fcntl.
-rustix = { version = "1.1.2", features = ["termios", "std", "event", "fs"] }
-
 # mio for cross-platform async I/O (uses kqueue on macOS, epoll on Linux).
 # Used by DirectToAnsi backend to poll stdin and SIGWINCH together.
 mio = { version = "1.0", features = ["os-poll", "os-ext"] }
@@ -89,6 +82,7 @@ nom = "8.0.0"
 
 # For clipboard.
 copypasta = "0.10.2"
+base64 = "0.22.1"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
@@ -191,6 +185,12 @@ hdrhistogram = "7.6.0"
 
 # Unix-only dependencies for DirectToAnsi backend.
 [target.'cfg(unix)'.dependencies]
+# Safe Rust POSIX APIs:
+# - termios: raw mode terminal state manipulation.
+# - std: std::io and standard library type conversions.
+# - event: event-driven POLLOUT backpressure via poll(2).
+# - fs: non-blocking stdin OFlags manipulation via fcntl.
+rustix = { version = "1.1.2", features = ["termios", "std", "event", "fs"] }
 # Signal handling for DirectToAnsi backend (SIGWINCH for terminal resize).
 signal-hook = "0.3"
 signal-hook-mio = { version = "0.2", features = ["support-v1_0"] }

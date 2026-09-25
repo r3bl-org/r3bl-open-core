@@ -2,9 +2,8 @@
 
 use super::KeyPressReader;
 use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
-            InputEvent, ItemsOwned, TTYResult, emit_stderr_redirection_disclaimer,
-            execute_commands, is_output_interactive, ok};
-use crossterm::cursor::{Hide, Show};
+            InputEvent, ItemsOwned, TTYResult, TerminalModeController,
+            emit_stderr_redirection_disclaimer, is_output_interactive, ok};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::large_enum_variant)]
@@ -109,7 +108,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult {
-    execute_commands!(function_component.get_output_device(), Hide);
+    function_component.get_output_device().hide_cursor()?;
     crate::enable_raw_mode()?;
 
     // First render before blocking the main thread for user input.
@@ -121,7 +120,7 @@ fn run_before_event_loop<S: CalculateResizeHint>(
 fn run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
 ) -> CommonResult {
-    execute_commands!(function_component.get_output_device(), Show);
+    function_component.get_output_device().show_cursor()?;
     crate::disable_raw_mode()?;
     ok!()
 }

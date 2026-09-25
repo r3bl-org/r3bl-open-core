@@ -345,7 +345,7 @@ impl PaintRenderOpImplCrossterm {
         // Create CliTextInline from text and style
         let cli_text = CliTextInline {
             text: text_arg.into(),
-            attribs: maybe_style.map(|s| s.attribs).unwrap_or_default(),
+            attribs: maybe_style.map_or_default(|s| s.attribs),
             color_fg: maybe_style.and_then(|s| s.color_fg),
             color_bg: maybe_style.and_then(|s| s.color_bg),
         };

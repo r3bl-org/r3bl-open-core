@@ -5,8 +5,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::{OscEvent, osc_codes::OscSequence};
-use crate::ok;
-use crate::core::terminal_io::OutputDevice;
+use crate::{core::terminal_io::OutputDevice, ok};
 use miette::IntoDiagnostic;
 
 /// Controller for sending [`OSC`] sequences to the terminal.

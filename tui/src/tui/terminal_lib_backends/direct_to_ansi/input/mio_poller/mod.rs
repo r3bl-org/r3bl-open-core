@@ -1,8 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen eventfd userspace kevent POLLIN
-// cspell:words POLLOUT EVFILT EVFILT_READ EVFILT_WRITE EPOLLIN EPOLLOUT EINVAL
-
 //! # Architecture Overview
 //!
 //! This module encapsulates all state and logic for the [`mio`] poller thread. It manages
@@ -10,26 +7,26 @@
 //!
 //! ## Resources Managed
 //!
-//! | Resource                                | Responsibility                                                                                                                   |
-//! | :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
-//! | [**Poll**][`mio::Poll`]                 | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                     |
-//! | [**Stdin**][`stdin`]                    | Read bytes into buffer -> handle using [VT100 input parser] and [paste state machine] to generate [`PollerEvent::Stdin`]         |
-//! | [**Signals**][`signal_hook_mio`]        | Drain signal ([`SIGWINCH`]) and generate [`PollerEvent::Signal`]                                                                 |
-//! | [**Channel**][`tokio::sync::broadcast`] | Publish [`PollerEvent`] variants to async consumers                                                                              |
+//! | Resource                                | Responsibility                                                                                                              |
+//! | :-------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+//! | [**Poll**][`mio::Poll`]                 | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                |
+//! | [**Stdin**][`stdin`]                    | Read bytes into buffer -> handle using [`VT-100` input parser] and [paste state machine] to generate [`PollerEvent::Stdin`] |
+//! | [**Signals**][`signal_hook_mio`]        | Drain signal ([`SIGWINCH`]) and generate [`PollerEvent::Signal`]                                                            |
+//! | [**Channel**][`tokio::sync::broadcast`] | Publish [`PollerEvent`] variants to async consumers                                                                         |
 //!
 //! ## Quick Reference
 //!
-//! | Item                                             | Description                                                           |
-//! | :----------------------------------------------- | :-------------------------------------------------------------------- |
-//! | [`MioPollWorker`]                                | Core struct: holds poll handle, buffers, parser (implements RRT)      |
-//! | [`SourceRegistry`]                               | Holds [`stdin`] and [`SIGWINCH`] signal handles                       |
-//! | [`SourceKindReady`]                              | Enum mapping [`mio::Token`] ↔ source kind for dispatch                |
-//! | [`dispatch_with_sender()`]                       | Routes ready events to appropriate handlers                           |
-//! | [`consume_stdin_input_with_sender()`]            | Reads and parses [`stdin`] bytes into [`InputEvent`]s                 |
-//! | [`consume_pending_signals_with_sender()`]        | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]            |
-//! | [`handle_software_interrupt_with_sender()`]      | Handles lifecycle interrupts (eg: [`SubscriberGuard`] drop)           |
-//! | [VT100 input parser] ([`StatefulInputParser`])   | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling |
-//! | [paste state machine] ([`PasteCollectionState`]) | Collects text between bracketed paste markers                         |
+//! | Item                                                    | Description                                                           |
+//! | :------------------------------------------------------ | :-------------------------------------------------------------------- |
+//! | [`MioPollWorker`]                                       | Core struct: holds poll handle, buffers, parser (implements RRT)      |
+//! | [`SourceRegistry`]                                      | Holds [`stdin`] and [`SIGWINCH`] signal handles                       |
+//! | [`SourceKindReady`]                                     | Enum mapping [`mio::Token`] ↔ source kind for dispatch                |
+//! | [`dispatch_with_sender()`]                              | Routes ready events to appropriate handlers                           |
+//! | [`consume_stdin_input_with_sender()`]                   | Reads and parses [`stdin`] bytes into [`InputEvent`]s                 |
+//! | [`consume_pending_signals_with_sender()`]               | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]            |
+//! | [`handle_software_interrupt_with_sender()`]             | Handles lifecycle interrupts (eg: [`SubscriberGuard`] drop)           |
+//! | [`VT-100` input parser] ([`InputByteStreamToIrParser`]) | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling |
+//! | [paste state machine] ([`PasteCollectionState`])        | Collects text between bracketed paste markers                         |
 //!
 //! # How It Works
 //!
@@ -115,9 +112,8 @@
 //!    ([`EPOLLOUT`]) would trigger an immediate return on every iteration, causing a 100%
 //!    CPU busy-spin [loop]. Instead, [`BackpressureStdout`] performs a one-shot
 //!    [`rustix::event::poll()`] call watching for [`POLLOUT`] *only* when an OS write
-//!    buffer is full and returns [`ErrorKind::WouldBlock`]. See
-//!    [`BackpressureStdout`]'s [Why Stdout Needs Backpressure Handling] for output
-//!    backpressure handling.
+//!    buffer is full and returns [`ErrorKind::WouldBlock`]. See [`BackpressureStdout`]'s
+//!    [Why Stdout Needs Backpressure Handling] for output backpressure handling.
 //!
 //! #### Control Plane vs. Data Plane
 //!
@@ -166,9 +162,10 @@
 //! <div class="warning">
 //!
 //! **No exclusive access**: Any thread in the process can call [`std::io::stdin()`] and
-//! read from it—there is no OS or Rust mechanism to prevent this. If another thread reads
-//! from [`stdin`], bytes will be **stolen** from this thread, causing interleaved reads
-//! that corrupt the input stream and break the VT100 parser state machine.
+//! read from it. There is no OS or Rust mechanism to prevent this. If another thread
+//! reads from [`stdin`], bytes will be **stolen** from this thread, causing interleaved
+//! reads that corrupt the input stream and break the [`InputByteStreamToIrParser`] state
+//! machine.
 //!
 //! </div>
 //!
@@ -299,8 +296,8 @@
 //!
 //! The parser handles three tricky cases:
 //! - **[`ESC`] disambiguation**: The `more` flag indicates if more bytes might be
-//!   waiting. If `read_count == buffer_size`, we wait before deciding a lone [`ESC`] is
-//!   the [`ESC`] key.
+//!   waiting. If `bytes_read == STDIN_READ_BUFFER_SIZE`, we wait before deciding a lone
+//!   [`ESC`] is the [`ESC`] key.
 //! - **Chunked input**: The buffer accumulates bytes until a complete sequence is parsed.
 //! - **[`UTF-8`]**: Multi-byte characters can span multiple reads.
 //!
@@ -316,20 +313,26 @@
 //! provides a clean platform abstraction over [`epoll`] on Linux. See [Why Linux-Only?]
 //! for why this module doesn't support macOS.
 //!
-//! # [`ESC`] Detection Limitations
+//! # [`ESC`] Detection & Stream Availability Heuristics
 //!
-//! Both the [`ESC`] key and escape sequences (like `Up Arrow` = `ESC [ A`) start with the
-//! same byte (`1B`). When we read a lone [`ESC`] byte, is it the [`ESC`] key or the start
-//! of a sequence?
+//! Both the [`ESC`] key and escape sequences (like Up Arrow `ESC [ A`) start with the
+//! same byte (`0x1B`). When a lone [`ESC`] byte is read, is it the [`ESC`] key or the
+//! start of a multi-byte sequence?
 //!
-//! ## The `more` Flag Heuristic
+//! ## The [`MaybeMore`] Stream Availability Heuristic
 //!
-//! We use [`crossterm`]'s `more` flag pattern: `more = (read_count == buffer_size)`. The
-//! idea is that if [`read()`] fills the entire buffer, more data is probably waiting in
-//! the kernel. So:
+//! To eliminate fixed timer delays (like Vim's [100ms `ttimeoutlen` delay]), `mio_poller`
+//! evaluates stream availability at the OS boundary using
 //!
-//! - `more == true` + lone [`ESC`] → wait (might be start of escape sequence)
-//! - `more == false` + lone [`ESC`] → emit [`ESC`] key (no more data waiting)
+//! - `bytes_read == STDIN_READ_BUFFER_SIZE`: The OS read completely filled the buffer;
+//!   more bytes may be in-flight in the kernel [`PTY`] buffer
+//!   ([`MaybeMore::KernelMayHaveMore`]).
+//! - `bytes_read < STDIN_READ_BUFFER_SIZE`: The OS read was smaller than the buffer; all
+//!   input from the kernel queue has been drained ([`MaybeMore::KernelDrained`]).
+//!
+//! This kernel heuristic is passed to [`InputByteStreamToIrParser::advance()`], which
+//! supplies it to [`try_parse_input_event()`]. See [`MaybeMore`] for the full
+//! architectural model and pipeline diagram.
 //!
 //! ## Why This is a Heuristic, Not a Guarantee
 //!
@@ -342,7 +345,7 @@
 //!   packet and `[ A` in the next (even microseconds later), we might incorrectly emit
 //!   [`ESC`].
 //! - **High latency networks**: The more latency and packet fragmentation, the higher the
-//!   chance of incorrect [`ESC`] detection.
+//!   chance of premature [`ESC`] detection.
 //!
 //! ## Why Not Use a Timeout Like `vim`?
 //!
@@ -350,7 +353,7 @@
 //! [`ESC`], it's the [`ESC`] key. This is more reliable but adds latency to every [`ESC`]
 //! keypress.
 //!
-//! We chose the `more` flag heuristic (following [`crossterm`]) because:
+//! We chose the [`MaybeMore`] stream availability heuristic because:
 //! - Zero latency for [`ESC`] key in the common case (local terminal).
 //! - Acceptable behavior for most [`SSH`] connections ([`TCP`] usually delivers related
 //!   bytes together). In our testing there were no issues over [`SSH`].
@@ -390,12 +393,23 @@
 //! [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`handle_software_interrupt_with_sender()`]:
 //!     handler_software_interrupt::handle_software_interrupt_with_sender
+//! [`InputByteStreamToIrParser::advance()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::advance
+//! [`InputByteStreamToIrParser`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser
 //! [`InputEvent`]: crate::InputEvent
 //! [`integration_tests`]: crate::core::resilient_reactor_thread::rrt_integration_tests
 //! [`Interest::READABLE`]: mio::Interest::READABLE
 //! [`Interest::WRITABLE`]: mio::Interest::WRITABLE
 //! [`Interest`]: mio::Interest
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`MaybeMore::from_read_count()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::from_read_count
+//! [`MaybeMore::KernelDrained`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
+//! [`MaybeMore::KernelMayHaveMore`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+//! [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 //! [`mio::Poll::poll()`]: mio::Poll::poll
 //! [`mio::Poll`]: mio::Poll
 //! [`mio::Token`]: mio::Token
@@ -436,8 +450,6 @@
 //! [`SourceKindReady`]: sources::SourceKindReady
 //! [`SourceRegistry`]: sources::SourceRegistry
 //! [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
-//! [`StatefulInputParser`]: super::stateful_parser::StatefulInputParser
-//! [`std::thread`]: std::thread
 //! [`Stdin(Eof)`]: super::channel_types::StdinEvent::Eof
 //! [`Stdin(Error)`]: super::channel_types::StdinEvent::Error
 //! [`Stdin(Input(InputEvent))`]: super::channel_types::StdinEvent::Input
@@ -456,10 +468,15 @@
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::sync::broadcast`]: tokio::sync::broadcast
 //! [`tokio`]: tokio
+//! [`try_parse_input_event()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 //! [`try_subscribe()`]: crate::RRT::try_subscribe
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`VT-100` input parser]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
@@ -472,7 +489,6 @@
 //! [RRT module docs]: crate::core::resilient_reactor_thread
 //! [The Problems section in `DirectToAnsiInputDevice`]:
 //!     super::DirectToAnsiInputDevice#the-problems
-//! [VT100 input parser]: super::stateful_parser::StatefulInputParser
 //! [Why Linux-Only?]: super#why-linux-only
 //! [Why Stdout Needs Backpressure Handling]:
 //!     crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
@@ -518,6 +534,10 @@ pub mod handler_software_interrupt;
 mod handler_software_interrupt;
 
 // Re-export public API.
+pub use handler_stdin::*;
 pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;
 pub use sources::*;
+
+// cspell:words EINTR wakeup kqueue epoll ttimeoutlen eventfd userspace kevent POLLIN
+// cspell:words POLLOUT EVFILT EVFILT_READ EVFILT_WRITE EPOLLIN EPOLLOUT EINVAL

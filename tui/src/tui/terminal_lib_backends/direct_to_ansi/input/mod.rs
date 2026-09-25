@@ -97,11 +97,6 @@ pub mod paste_state_machine;
 mod paste_state_machine;
 
 #[cfg(any(test, doc))]
-pub mod stateful_parser;
-#[cfg(not(any(test, doc)))]
-mod stateful_parser;
-
-#[cfg(any(test, doc))]
 pub mod mio_poller;
 #[cfg(not(any(test, doc)))]
 mod mio_poller;

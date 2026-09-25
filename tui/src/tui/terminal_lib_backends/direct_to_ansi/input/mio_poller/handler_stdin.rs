@@ -7,18 +7,12 @@
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
             MioPollWorker};
-use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
+use crate::{Continuation,
+            core::{ansi::vt_100_terminal_input_parser::MaybeMore,
+                   resilient_reactor_thread::RRTEvent},
             tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
-
-/// Read buffer size for stdin reads (`1_024` bytes).
-///
-/// When `read_count == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the
-/// kernel buffer—this is the `more` flag used for [`ESC`] disambiguation.
-///
-/// [`ESC`]: crate::EscSequence
-pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 
 /// Handles [`stdin`] becoming readable, using explicit `sender` parameter.
 ///
@@ -153,9 +147,9 @@ pub fn consume_stdin_input_with_sender(
                 return Continuation::Stop;
             }
 
-            Ok(n) => {
+            Ok(bytes_read) => {
                 if let Continuation::Stop =
-                    parse_stdin_bytes_with_sender(worker, n, sender)
+                    parse_stdin_bytes_with_sender(worker, bytes_read, sender)
                 {
                     return Continuation::Stop;
                 }
@@ -184,23 +178,23 @@ pub fn consume_stdin_input_with_sender(
 
 /// Parses bytes read from stdin into input events, using explicit `sender` parameter.
 ///
-/// Parses bytes into VT100 events and sends them through the paste state machine.
+/// Parses bytes into [VT-100] events and sends them through the paste state machine.
 pub fn parse_stdin_bytes_with_sender(
     worker: &mut MioPollWorker,
-    n: usize,
+    bytes_read: usize,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
-        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
+        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read);
     });
 
-    // `more` flag for ESC disambiguation.
-    let more = n == STDIN_READ_BUFFER_SIZE;
+    // Stream availability for ESC and OSC disambiguation.
+    let maybe_more = MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE);
 
     // Parse bytes into events.
     worker
         .vt_100_input_seq_parser
-        .advance(&worker.stdin_unparsed_byte_buffer[..n], more);
+        .advance(&worker.stdin_unparsed_byte_buffer[..bytes_read], maybe_more);
 
     // Process all parsed events through paste state machine.
     for vt100_event in worker.vt_100_input_seq_parser.by_ref() {
@@ -229,3 +223,15 @@ pub fn parse_stdin_bytes_with_sender(
 
     Continuation::Continue
 }
+
+/// Read buffer size for stdin reads (`1_024` bytes).
+///
+/// When `bytes_read == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the kernel
+/// buffer - this determines the [`MaybeMore::KernelMayHaveMore`] heuristic passed to
+/// [`InputByteStreamToIrParser::advance()`].
+///
+/// [`InputByteStreamToIrParser::advance()`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::advance
+/// [`MaybeMore::KernelMayHaveMore`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
