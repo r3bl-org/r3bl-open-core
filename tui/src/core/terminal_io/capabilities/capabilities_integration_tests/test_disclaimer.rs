@@ -20,9 +20,9 @@ generate_isolated_process_test!(
     test_disclaimer_is_emitted_exactly_once,
     controller,
     controlled,
-    std::process::Stdio::null(), // stdin
-    std::process::Stdio::null(), // stdout
-    std::process::Stdio::piped() // stderr
+    std::process::Stdio::null(),  // stdin
+    std::process::Stdio::null(),  // stdout
+    std::process::Stdio::piped()  // stderr
 );
 
 fn controller(spawned_self_process_output: std::process::Output) {

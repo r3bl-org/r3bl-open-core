@@ -988,6 +988,24 @@ that should right-align for decimal alignment).
 - **Prose readability** - Technical descriptions flow better left-to-right
 - **Code snippets** - Backtick content is easier to read left-aligned
 
+### Use `<kbd>` for Physical Keyboard Keystrokes
+
+When documenting physical keyboard input in rustdoc comments or markdown (such as user key presses, shortcut chords, or contrasting physical keys with terminal escape sequences), **always use the HTML `<kbd>` tag** rather than raw backticks or plain text:
+
+- `<kbd>Esc</kbd>`
+- `<kbd>Enter</kbd>`
+- `<kbd>Ctrl+C</kbd>`
+- `<kbd>Alt</kbd>+<kbd>]</kbd>`
+- `<kbd>Shift + Home</kbd>`
+
+#### Why `<kbd>`?
+
+1. **Native Rustdoc Styling**: Rustdoc's CSS includes dedicated rules for `<kbd>` (`border: solid 1px`, `border-radius: 3px`, `box-shadow: inset 0 -1px 0`, and theme-aware colors across Light, Dark, and Ayu themes). It renders with a distinct 3D rectangular keycap button appearance.
+2. **Visual Contrast**: It creates an immediate visual distinction between:
+   - **Physical keyboard keys** that human fingers press (<kbd>Alt</kbd>+<kbd>]</kbd>), and
+   - **Terminal escape sequences or code bytes** emitted over the wire (`ESC ]`, `1B 5D`, `b"\x1b]"`).
+3. **Consistency**: Aligns keyboard shortcut presentation across editor, dialog, readline, and parser modules.
+
 ### No `$` or LaTeX Math Delimiters
 
 Do NOT use `$` or `$$` or `\(...\)` LaTeX math delimiters in rustdoc comments or chat responses. They do not render in the user's UI or standard markdown viewers. Use standard Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.

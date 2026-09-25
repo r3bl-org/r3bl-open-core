@@ -1,8 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BackpressureStdout, FullScreenTuiModeGuard, SafeRawTerminal,
-            SendRawTerminal, StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend,
-            TerminalModeController, ansi_output, ok, vp_col, vp_row};
+use crate::{BackpressureStdout, SafeRawTerminal, SendRawTerminal, StdMutex,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend, TerminalModeController,
+            ansi_output, ok, vp_col, vp_row};
 use crossterm::QueueableCommand;
 use miette::IntoDiagnostic;
 use std::{io::{Write, stdout},
@@ -140,14 +140,16 @@ impl OutputDevice {
 
     /// Sets up the full-screen TUI environment.
     ///
-    /// This includes enabling bracketed paste, mouse tracking, entering the alternate
-    /// screen, hiding the cursor, and clearing the screen.
+    /// This includes enabling bracketed paste, mouse tracking, progressive keyboard
+    /// enhancement, entering the alternate screen, hiding the cursor, and clearing the
+    /// screen.
     ///
     /// # Errors
     /// Returns an error if any terminal mode cannot be set or I/O fails.
     pub fn setup_full_screen_tui(&self) -> miette::Result<FullScreenTuiModeGuard> {
         self.enable_bracketed_paste()?;
         self.enable_mouse_tracking()?;
+        self.enable_keyboard_enhancement()?;
         self.enter_alternate_screen()?;
         self.hide_cursor()?;
 
@@ -187,12 +189,14 @@ impl OutputDevice {
     }
 
     /// Tears down the full-screen TUI environment.
-    /// This restores the cursor, exits the alternate screen, and disables mouse/paste
-    /// tracking.
+    ///
+    /// This disables keyboard enhancement, restores the cursor, exits the alternate
+    /// screen, and disables mouse/paste tracking.
     ///
     /// # Errors
     /// Returns an error if any terminal mode cannot be reset or I/O fails.
     pub fn teardown_full_screen_tui(&self) -> miette::Result<()> {
+        self.disable_keyboard_enhancement()?;
         self.disable_bracketed_paste()?;
         self.disable_mouse_tracking()?;
         self.exit_alternate_screen()?;
@@ -203,6 +207,29 @@ impl OutputDevice {
         }
         ok!()
     }
+}
+
+/// An [`RAII`] guard that tears down the TUI environment when dropped.
+///
+/// This is returned by [`OutputDevice::setup_full_screen_tui()`] and ensures that the
+/// terminal is properly restored (cursor shown, alternate screen exited, mouse and
+/// bracketed paste tracking disabled) even if a panic occurs or the future returns early,
+/// avoiding a [Double Panic Abort].
+///
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [Double Panic Abort]: crate#the-double-panic-abort-risk
+#[must_use = "The full screen TUI mode guard must be held as long as the TUI is active."]
+#[allow(missing_debug_implementations)]
+pub struct FullScreenTuiModeGuard {
+    pub(crate) output_device: OutputDevice,
+}
+
+impl Drop for FullScreenTuiModeGuard {
+    /// We prioritize Resilience over Integrity here to prevent a [Double Panic Abort].
+    /// The teardown methods underneath are poison-safe.
+    ///
+    /// [Double Panic Abort]: crate#the-double-panic-abort-risk
+    fn drop(&mut self) { drop(self.output_device.teardown_full_screen_tui()); }
 }
 
 #[cfg(test)]

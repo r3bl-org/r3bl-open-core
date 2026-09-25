@@ -1,12 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BufReadExt, GLYPH_CONTROLLER, MSG_SUCCESS, PtyTestContext, PtyTestMode,
-            generate_pty_test, CustomEventFormatter, StdoutMock};
+use crate::{BufReadExt, CustomEventFormatter, GLYPH_CONTROLLER, MSG_SUCCESS,
+            PtyTestContext, PtyTestMode, StdoutMock, generate_pty_test};
+use chrono::Local;
+use std::{sync::Mutex,
+          time::{Duration, Instant}};
 use tracing::info;
 use tracing_subscriber::fmt::SubscriberBuilder;
-use std::time::{Duration, Instant};
-use chrono::Local;
-use std::sync::Mutex;
 
 generate_pty_test! {
     test_fn: test_custom_formatter_pty,

@@ -1,9 +1,11 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, VPSize, ok,
-            queue_commands, throws};
+use crate::{ChUnit, DEVELOPMENT_MODE, OutputDevice, ResizeHint, TERMINAL_LIB_BACKEND,
+            TermRowDelta, TerminalLibBackend, VPSize, ansi_output, ok, queue_commands,
+            throws};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
+use miette::IntoDiagnostic;
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: VPSize);
@@ -75,19 +77,47 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
             };
 
             // Clear the viewport.
-            for _ in 0..*vp_height {
-                queue_commands! {
-                    self.get_output_device(),
-                    Clear(ClearType::FromCursorDown),
-                    MoveToNextLine(1),
-                };
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    for _ in 0..*vp_height {
+                        queue_commands! {
+                            self.get_output_device(),
+                            Clear(ClearType::FromCursorDown),
+                            MoveToNextLine(1),
+                        };
+                    }
+                    queue_commands! {
+                        self.get_output_device(),
+                        MoveToPreviousLine(*vp_height),
+                    };
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    self.get_output_device()
+                        .write(|writer| -> miette::Result<()> {
+                            let mut buf = String::new();
+                            for _ in 0..*vp_height {
+                                buf.push_str(
+                                    ansi_output::screen_clearing::clear_to_end_of_screen(
+                                    ),
+                                );
+                                buf.push_str(
+                                    &ansi_output::cursor_movement::cursor_next_line(
+                                        TermRowDelta::ONE,
+                                    ),
+                                );
+                            }
+                            if let Some(delta) = TermRowDelta::new(*vp_height) {
+                                buf.push_str(
+                                    &ansi_output::cursor_movement::cursor_previous_line(
+                                        delta,
+                                    ),
+                                );
+                            }
+                            writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                            ok!()
+                        })?;
+                }
             }
-
-            // Move the cursor back up.
-            queue_commands! {
-                self.get_output_device(),
-                MoveToPreviousLine(*vp_height),
-            };
 
             // Clear resize hint.
             state.clear_resize_hint();
@@ -104,19 +134,46 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             // Clear the viewport.
-            for _ in 0..*vp_height {
-                queue_commands! {
-                    self.get_output_device(),
-                    Clear(ClearType::CurrentLine),
-                    MoveToNextLine(1),
-                };
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    for _ in 0..*vp_height {
+                        queue_commands! {
+                            self.get_output_device(),
+                            Clear(ClearType::CurrentLine),
+                            MoveToNextLine(1),
+                        };
+                    }
+                    queue_commands! {
+                        self.get_output_device(),
+                        MoveToPreviousLine(*vp_height),
+                    };
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    self.get_output_device()
+                        .write(|writer| -> miette::Result<()> {
+                            let mut buf = String::new();
+                            for _ in 0..*vp_height {
+                                buf.push_str(
+                                    ansi_output::screen_clearing::clear_current_line(),
+                                );
+                                buf.push_str(
+                                    &ansi_output::cursor_movement::cursor_next_line(
+                                        TermRowDelta::ONE,
+                                    ),
+                                );
+                            }
+                            if let Some(delta) = TermRowDelta::new(*vp_height) {
+                                buf.push_str(
+                                    &ansi_output::cursor_movement::cursor_previous_line(
+                                        delta,
+                                    ),
+                                );
+                            }
+                            writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                            ok!()
+                        })?;
+                }
             }
-
-            // Move the cursor back up.
-            queue_commands! {
-                self.get_output_device(),
-                MoveToPreviousLine(*vp_height),
-            };
         });
     }
 }

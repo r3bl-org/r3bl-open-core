@@ -1,30 +1,96 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! This module exports [`try_parse_input_event`], the [`VT-100`] terminal input parser
-//! entry point for converting raw bytes into terminal input events. See the function
-//! documentation for full details.
+//! entry point for converting raw bytes into terminal input events.
 //!
+//! ## Parser Dispatch Priority Pipeline
+//!
+//! When bytes are accumulated, [`try_parse_input_event`] dispatches them across
+//! specialized parsers in a **predefined priority order**:
+//!
+//! ### 1. [`CSI`] Sequences (`ESC [`...)
+//!
+//! When the buffer begins with `ESC [`:
+//! 1. **`parse_keyboard_sequence()`** ([`keyboard`]) - Arrow keys, function keys,
+//!    modified keys with [`CSI`] format (e.g., `ESC [ A` for Up, `ESC [ 1 ; 5 A` for
+//!    Ctrl+Up, `ESC [ 1 5 ~` for F5).
+//! 2. **`parse_mouse_sequence()`** ([`mouse`]) - [`SGR`] mouse protocol for clicks,
+//!    drags, scrolling (e.g., `ESC [ < 0 ; 10 ; 20 M` for left click, `ESC [ < 64 ; 10 ;
+//!    20 M` for scroll up).
+//! 3. **`parse_terminal_event()`** ([`terminal_events`]) - Window resize, focus
+//!    gained/lost, paste markers (e.g., `ESC [ 8 ; 24 ; 80 t` for resize, `ESC [ I` for
+//!    focus gained).
+//!
+//! ### 2. SS3 Sequences (`ESC O`...)
+//!
+//! When the buffer begins with `ESC O`:
+//! - **`parse_ss3_sequence()`** ([`keyboard`]) - Application mode keys (F1-F4, Home, End,
+//!   arrows, e.g., `ESC O P` for F1, `ESC O A` for Up in app mode).
+//!
+//! ### 3. [`OSC`] Sequences & `Alt+]` Disambiguation (`ESC ]`...)
+//!
+//! In [`VT-100`] terminals, both the `Alt+]` key combination and terminal-generated
+//! [`OSC`] responses begin with `ESC ]` (`\x1b]`).
+//!
+//! Routing for `ESC ]` delegates directly to
+//! [`terminal_events::try_disambiguate_osc_or_alt_bracket()`], which uses a dedicated
+//! state machine implementing Rule 1 (the [`MaybeMore`] stream availability heuristic)
+//! and Rule 2 (strict [`OSC`] syntax validation) to safely distinguish between user
+//! keystrokes and terminal query responses.
+//!
+//! ### 4. [`ESC`] + Other Byte
+//!
+//! When the buffer begins with [`ESC`] + (a byte other than `[`, `O`, or `]`):
+//! - **`parse_alt_letter()`** ([`keyboard`]) - Alt+printable character combinations
+//!   (e.g., `ESC b` for Alt+B, `ESC 3` for Alt+3). If unrecognized, emits standalone
+//!   [`ESC`] and leaves the trailing byte in the buffer for the next parse cycle.
+//!
+//! ### 5. Non-[`ESC`] Sequences (Regular Input)
+//!
+//! When the first byte is not [`ESC`]:
+//! 1. **`parse_control_character()`** ([`keyboard`]) - Ctrl+A through Ctrl+Z
+//!    (`0x00`-`0x1F`, e.g., `0x01` for Ctrl+A, `0x04` for Ctrl+D).
+//!    - **Must be tried before [`UTF-8`]**: Bytes `0x00`-`0x1F` are technically valid
+//!      single-byte [`UTF-8`] but represent control characters. Without this priority,
+//!      Ctrl+A would be misinterpreted as raw text.
+//! 2. **`parse_utf8_text()`** ([`utf8`]) - Regular text input and printable multi-byte
+//!    characters (e.g., `a`, `ñ`, `日`).
+//!
+//! [`CSI`]: crate::CsiSequence
+//! [`ESC`]: crate::EscSequence
+//! [`keyboard`]: mod@super::keyboard
+//! [`MaybeMore`]: MaybeMore
+//! [`mouse`]: mod@super::mouse
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`SGR`]: crate::SgrCode
+//! [`terminal_events::try_disambiguate_osc_or_alt_bracket()`]: terminal_events::try_disambiguate_osc_or_alt_bracket
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use super::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, keyboard, mouse,
-            terminal_events, utf8};
+use super::{MaybeMore, VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, keyboard,
+            mouse, terminal_events, utf8};
 use crate::{ByteOffset, byte_offset,
-            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O}};
+            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET,
+                                    ANSI_SS3_O}};
 
-/// Parses a complete input event from a byte buffer.
+/// Parses a complete input event from accumulated input bytes.
 ///
 /// This is the main entry point for [`VT-100`] terminal input parsing. It analyzes the
-/// buffer and routes to specialized parsers ([`keyboard`], [`mouse`],
+/// accumulated sequence bytes and routes to specialized parsers ([`keyboard`], [`mouse`],
 /// [`terminal_events`], [`utf8`]) based on content analysis.
 ///
 /// # Arguments
 ///
-/// - `buffer`: The accumulated bytes to parse.
-/// - `input_available`: Whether more input is likely available in the kernel buffer.
-///   Computed by the caller as `read_count == TTY_BUFFER_SIZE` (crossterm pattern).
-///   - When `true` and buffer is `[ESC]`: Return `None` (wait for more bytes).
-///   - When `false` and buffer is `[ESC]`: Emit [`ESC`] key immediately.
-///   - For all other inputs: This flag has no effect.
+/// - `accumulated_bytes`: The slice of accumulated unparsed bytes to evaluate.
+/// - `maybe_more`: Availability heuristic of subsequent bytes:
+///   - When `maybe_more == MaybeMore::KernelMayHaveMore` and `accumulated_bytes` is
+///     `[ESC]`: Return `None` (wait for subsequent bytes of the multi-byte sequence).
+///   - When `maybe_more == MaybeMore::KernelDrained` and `accumulated_bytes` is `[ESC]`:
+///     Emit [`ESC`] key immediately (0ms latency).
+///   - For complete multi-byte sequences (such as [`CSI`] or [`SS3`]): This parameter has
+///     no effect.
 ///
 /// # Where You Are in the Pipeline
 ///
@@ -32,9 +98,9 @@ use crate::{ByteOffset, byte_offset,
 /// where this function fits:
 ///
 /// ```text
-/// DirectToAnsiInputDevice (async I/O layer)
+/// mio_poller thread (reads from stdin into read_buffer)
 ///    │
-///    │ Reads from tokio::io::stdin(), calls try_parse_input_event()
+///    │ InputByteStreamToIrParser::advance(read_buffer, maybe_more)
 ///    ▼
 /// ┌──────────────────────────────────────────┐  ┌──────────────────┐
 /// │  try_parse_input_event()                 ◄──┤ YOU ARE HERE     │
@@ -51,75 +117,60 @@ use crate::{ByteOffset, byte_offset,
 /// VT100InputEventIR
 ///    │
 ///    ▼
-/// convert_input_event() → InputEvent (returned to application)
+/// convert_input_event() -> InputEvent (returned to application)
 /// ```
 ///
 /// **Navigate**:
-/// - ⬆️ **Up**: [`DirectToAnsiInputDevice`] - Async I/O layer that calls this
+/// - ⬆️ **Up**: [`DirectToAnsiInputDevice`] - Async I/O layer that drives this pipeline
 /// - ⬇️ **Down**: [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Specialized
 ///   parsers
 /// - 📚 **Types**: [`VT100InputEventIR`] - Output event type
 ///
-/// # [`ESC`] Key Detection (Crossterm Pattern)
+/// # [`ESC`] Key Detection & Disambiguation
 ///
-/// ## The Problem
+/// ## The Ambiguity
 ///
-/// Both [`ESC`] key presses and escape sequences (e.g., Up Arrow = `ESC [ A`) start with
-/// [`ANSI_ESC`] (`0x1B`), so when we read that byte, is it a standalone [`ESC`] or the
-/// start of a multi-byte sequence?
+/// Both a standalone [`ESC`] keypress and every multi-byte [`ANSI`] escape sequence (such
+/// as Up Arrow `\x1b[A` or OSC color queries `\x1b]11;...`) begin with the identical byte
+/// [`ANSI_ESC`] (`0x1B`). When `accumulated_bytes` contains only `[0x1B]`, the router
+/// must decide: is this a standalone [`ESC`] key, or the prefix of an in-flight escape
+/// sequence?
 ///
-/// ## Crossterm's Solution: The `input_available` Flag
+/// ## The [`MaybeMore`] Stream Availability Heuristic
 ///
-/// Instead of using a timeout (which adds latency), crossterm uses the `input_available`
-/// flag to disambiguate. This flag is computed as `read_count == TTY_BUFFER_SIZE`:
+/// Instead of using a fixed 50-150ms timeout (which introduces sluggish latency for modal
+/// editors like Vim), the parser inspects stream availability through [`MaybeMore`]. See
+/// the [`MaybeMore`] documentation for the full two-level heuristic model and pipeline
+/// architecture.
 ///
-/// - If the read filled the entire buffer, more data is likely waiting in the kernel.
-/// - If the read returned fewer bytes, we've drained all available input.
+/// ## How Disambiguation Works
 ///
-/// This works because:
-/// - **Over [`SSH`]**: Bytes may arrive in fragments, but if we read fewer bytes than the
-///   buffer size, we know there's no more data waiting right now.
-/// - **Locally**: Terminal emulators send escape sequences in a single burst, so they
-///   arrive complete in a single read.
+/// When `accumulated_bytes` is `[0x1B]`:
 ///
-/// ## Algorithm
+/// 1. **Part of a Multi-Byte Sequence (Burst Arrival)**: Terminal emulators emit
+///    multi-byte escape sequences in a single write burst (e.g., `\x1b[A`). While
+///    processing the first byte (`0x1B`), subsequent bytes are already in-flight or
+///    waiting in user space.
+///    - `maybe_more == MaybeMore::KernelMayHaveMore`: The router returns `None` so the
+///      parser loop continues accumulating the rest of the sequence.
 ///
-/// ```text
-/// if buffer == [ESC] {
-///     if input_available {
-///         return None  // Wait for more bytes (might be escape sequence)
-///     } else {
-///         return ESC key  // No more input, user pressed ESC
-///     }
-/// }
-/// ```
-///
-/// ## Why This Avoids Fixed Timeouts
-///
-/// Unlike a fixed 150ms timeout approach, the `input_available` flag provides **adaptive
-/// waiting**:
-///
-/// - **Local terminals**: Escape sequences arrive in a single burst, so `input_available`
-///   is usually `false` after reading—we emit [`ESC`] immediately when appropriate.
-/// - **[`SSH`]/high-latency**: If bytes arrive separately, `input_available` tells us
-///   when more data is pending—we wait correctly without a fixed timeout.
-///
-/// **Benefits**: Vim-style modal editors, [`ESC`]-heavy workflows, dialog dismissal.
-/// **[`SSH`] compatibility**: Works correctly because we wait for more bytes when
-/// available.
+/// 2. **Standalone [`ESC`] Key (Human Keystroke)**: A human pressing the physical [`ESC`]
+///    key generates a single `0x1B` byte.
+///    - `maybe_more == MaybeMore::KernelDrained`: The router immediately returns
+///      `Some(VT100KeyCodeIR::Escape)` with **0ms latency**.
 ///
 /// # Smart Lookahead Logic
 ///
-/// The parser uses intelligent 1-2 byte lookahead to determine routing:
+/// The router inspects prefix bytes in `accumulated_bytes` to determine routing:
 ///
-/// | Input Pattern        | `input_available` | Routing                               |
-/// | :------------------- | :---------------- | :------------------------------------ |
-/// | `[ 0x1B ]` alone     | `false`           | Emit [`ESC`] key immediately          |
-/// | `[ 0x1B ]` alone     | `true`            | Return `None` (wait for more bytes)   |
-/// | `[ 0x1B, b'[', .. ]` | (ignored)         | [`CSI`] → keyboard/mouse/terminal     |
-/// | `[ 0x1B, b'O', .. ]` | (ignored)         | [`SS3`] → F1-F4, Home, End, arrows    |
-/// | `[ 0x1B, other ]`    | (ignored)         | Alt+letter or emit standalone [`ESC`] |
-/// | Other bytes          | (ignored)         | control char → [`UTF-8`]              |
+/// | Input Pattern        | `maybe_more`              | Routing                               |
+/// | :------------------- | :------------------------ | :------------------------------------ |
+/// | `[ 0x1B ]` alone     | [`KernelDrained`]         | Emit [`ESC`] key immediately (0ms)    |
+/// | `[ 0x1B ]` alone     | [`KernelMayHaveMore`]     | Return `None` (wait for more bytes)   |
+/// | `[ 0x1B, b'[', .. ]` | (ignored)                 | [`CSI`] -> keyboard/mouse/terminal    |
+/// | `[ 0x1B, b'O', .. ]` | (ignored)                 | [`SS3`] -> F1-F4, Home, End, arrows   |
+/// | `[ 0x1B, other ]`    | (ignored)                 | Alt+letter or emit standalone [`ESC`] |
+/// | Other bytes          | (ignored)                 | control char -> [`UTF-8`]             |
 ///
 /// - [`CSI`] (Control Sequence Introducer):
 ///   - The most common escape sequence format, starting with `ESC [`. Used for arrow
@@ -140,127 +191,103 @@ use crate::{ByteOffset, byte_offset,
 /// # Routing Algorithm
 ///
 /// ```text
-/// try_parse_input_event(buffer, input_available):
-/// ┌────────────────────────────────────────────────────┐
-/// │ First byte check                                   │
-/// ├────────────────────────────────────────────────────┤
-/// │ 0x1B (ESC)?                                        │
-/// │  ├─ buf.len() == 1?                                │
-/// │  │  ├─ input_available == true?                    │
-/// │  │  │  └─ Return None (wait for more bytes)        │
-/// │  │  └─ input_available == false?                   │
-/// │  │     └─ Emit ESC key immediately                 │
-/// │  └─ buf.len() >= 2?                                │
-/// │     ├─ Second byte = b'['?                         │
-/// │     │  └─ CSI → keyboard/mouse/terminal_events     │
-/// │     ├─ Second byte = b'O'?                         │
-/// │     │  └─ SS3 → application mode keys              │
-/// │     └─ Second byte = other?                        │
-/// │        └─ Alt+letter or emit ESC                   │
-/// ├────────────────────────────────────────────────────┤
-/// │ Not ESC?                                           │
-/// │  └─ Raw byte: control_char → UTF-8                 │
-/// └────────────────────────────────────────────────────┘
+/// try_parse_input_event(accumulated_bytes, maybe_more):
+/// ┌────────────────────────────────────────────────────────┐
+/// │ First byte check                                       │
+/// ├────────────────────────────────────────────────────────┤
+/// │ 0x1B (ESC)?                                            │
+/// │  ├─ accumulated_bytes.len() == 1?                      │
+/// │  │  ├─ maybe_more == KernelMayHaveMore?                │
+/// │  │  │  └─ Return None (wait for more bytes)            │
+/// │  │  └─ else: emit ESC key immediately (0ms)            │
+/// │  └─ accumulated_bytes.len() >= 2?                      │
+/// │     ├─ Second byte = b'['?                             │
+/// │     │  └─ CSI -> keyboard/mouse/terminal_events        │
+/// │     ├─ Second byte = b'O'?                             │
+/// │     │  └─ SS3 -> application mode keys                 │
+/// │     └─ Second byte = other?                            │
+/// │        └─ Alt+letter or emit ESC                       │
+/// ├────────────────────────────────────────────────────────┤
+/// │ Not ESC?                                               │
+/// │  └─ Raw byte: control_char -> UTF-8                    │
+/// └────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// # Returns
 ///
 /// - The parsed [`VT100InputEventIR`] and [`ByteOffset`] byte count on success.
-/// - Nothing if the buffer contains an incomplete sequence (more bytes needed), or if
-///   `input_available` is `true` and the buffer is `[ESC]` (waiting for a potential
-///   escape sequence).
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_tui::core::ansi::vt_100_terminal_input_parser::{try_parse_input_event,
-///                                                           VT100InputEventIR,
-///                                                           VT100KeyCodeIR};
-/// use r3bl_tui::byte_offset;
-///
-/// // Parse `ESC` key - no more input available, emit immediately.
-/// let buffer = &[0x1B];
-/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
-///     assert!(matches!(event, VT100InputEventIR::Keyboard {
-///         code: VT100KeyCodeIR::Escape, ..
-///     }));
-///     assert_eq!(consumed, byte_offset(1));
-/// }
-///
-/// // Lone `ESC` with more input available - wait for more bytes.
-/// let buffer = &[0x1B];
-/// assert!(try_parse_input_event(buffer, true).is_none());
-///
-/// // Parse Up Arrow (`CSI` sequence) - input_available doesn't matter.
-/// let buffer = &[0x1B, b'[', b'A'];
-/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
-///     assert!(matches!(event, VT100InputEventIR::Keyboard {
-///         code: VT100KeyCodeIR::Up, ..
-///     }));
-///     assert_eq!(consumed, byte_offset(3));
-/// }
-///
-/// // Parse regular text.
-/// let buffer = b"Hello";
-/// if let Some((event, consumed)) = try_parse_input_event(buffer, false) {
-///     assert!(matches!(event, VT100InputEventIR::Keyboard {
-///         code: VT100KeyCodeIR::Char('H'), ..
-///     }));
-///     assert_eq!(consumed, byte_offset(1));
-/// }
-/// ```
+/// - Nothing if `accumulated_bytes` contains an incomplete sequence (more bytes needed),
+///   or if `maybe_more == MaybeMore::KernelMayHaveMore` and `accumulated_bytes` is
+///   `[ESC]` (waiting for a potential escape sequence).
 ///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ByteOffset`]: crate::ByteOffset
 /// [`CSI`]: crate::CsiSequence
 /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 /// [`ESC`]: crate::EscSequence
+/// [`KernelDrained`]: super::MaybeMore::KernelDrained
+/// [`KernelMayHaveMore`]: super::MaybeMore::KernelMayHaveMore
 /// [`keyboard`]: mod@super::keyboard
+/// [`MaybeMore::KernelDrained`]: super::MaybeMore::KernelDrained
+/// [`MaybeMore::KernelMayHaveMore`]: super::MaybeMore::KernelMayHaveMore
+/// [`MaybeMore`]: super::MaybeMore
 /// [`mouse`]: mod@super::mouse
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html
-/// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell
+/// [`stdin`]: std::io::stdin
 /// [`terminal_events`]: mod@super::terminal_events
-/// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`utf8`]: mod@super::utf8
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`VT100InputEventIR`]: super::VT100InputEventIR
 /// [parent module documentation]: mod@super#primary-consumer
-/// [write-syscall]: https://man7.org/linux/man-pages/man2/write.2.html
 #[must_use]
 pub fn try_parse_input_event(
-    buffer: &[u8],
-    input_available: bool,
+    accumulated_bytes: &[u8],
+    maybe_more: MaybeMore,
 ) -> Option<(VT100InputEventIR, ByteOffset)> {
     // Routing table.
-    match buffer {
+    match accumulated_bytes {
         // Empty buffer.
         [] => None,
 
-        // Single ESC byte - check input_available flag (crossterm pattern).
-        // - input_available == true: Wait for more bytes (might be escape sequence).
-        // - input_available == false: Emit ESC key immediately (no more input).
-        [ANSI_ESC] if input_available => None,
-        [ANSI_ESC] => Some((esc_key_event(), byte_offset(1))),
+        // Single ESC byte - check maybe_more heuristic.
+        // - MaybeMore::KernelMayHaveMore: Wait for more bytes (might be escape sequence).
+        // - MaybeMore::KernelDrained: Emit ESC key immediately (no more input).
+        [ANSI_ESC] => match maybe_more {
+            MaybeMore::KernelMayHaveMore => None,
+            MaybeMore::KernelDrained => Some((esc_key_event(), byte_offset(1))),
+        },
 
         // CSI sequence (ESC [) - keyboard/mouse/terminal events.
-        [ANSI_ESC, ANSI_CSI_BRACKET, ..] => keyboard::parse_keyboard_sequence(buffer)
-            .or_else(|| mouse::parse_mouse_sequence(buffer))
-            .or_else(|| terminal_events::parse_terminal_event(buffer)),
+        [ANSI_ESC, ANSI_CSI_BRACKET, ..] => {
+            keyboard::parse_keyboard_sequence(accumulated_bytes)
+                .or_else(|| mouse::parse_mouse_sequence(accumulated_bytes))
+                .or_else(|| terminal_events::parse_terminal_event(accumulated_bytes))
+        }
 
         // SS3 sequence (ESC O) - application mode keys (F1-F4, Home, End, arrows).
-        [ANSI_ESC, ANSI_SS3_O, ..] => keyboard::parse_ss3_sequence(buffer),
+        [ANSI_ESC, ANSI_SS3_O, ..] => keyboard::parse_ss3_sequence(accumulated_bytes),
+
+        // OSC sequence or Alt+] keypress disambiguation.
+        [ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ..] => {
+            terminal_events::try_disambiguate_osc_or_alt_bracket(
+                accumulated_bytes,
+                maybe_more,
+            )
+        }
 
         // ESC + other byte - try Alt+letter (e.g., Alt+B, Alt+F), else emit standalone
         // ESC.
-        [ANSI_ESC, _, ..] => keyboard::parse_alt_letter(buffer)
+        [ANSI_ESC, _, ..] => keyboard::parse_alt_letter(accumulated_bytes)
             .or_else(|| Some((esc_key_event(), byte_offset(1)))),
 
         // Not ESC - raw byte input (control characters or UTF-8 text).
         // Control characters (0x00-0x1F) must be tried before UTF-8 because they are
         // technically valid UTF-8 but should be parsed as Ctrl+letter instead.
-        _ => keyboard::parse_control_character(buffer)
-            .or_else(|| utf8::parse_utf8_text(buffer)),
+        _ => keyboard::parse_control_character(accumulated_bytes)
+            .or_else(|| utf8::parse_utf8_text(accumulated_bytes)),
     }
 }
 
@@ -294,11 +321,27 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse Up Arrow");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse Up Arrow");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
+    }
+
+    #[test]
+    fn raw_csi_arrow_key() {
+        let buffer = &[0x1B, b'[', b'A'];
+        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+            .expect("Should parse Up Arrow");
+
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: VT100KeyModifiersIR::default(),
+            }
+        );
+        assert_eq!(consumed, byte_offset(3));
     }
 
     #[test]
@@ -310,8 +353,8 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse mouse event");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse mouse event");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -326,8 +369,8 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = &[0x1B, b'O', b'P']; // ESC O P
-        let (event, consumed) =
-            try_parse_input_event(buffer, false).expect("Should parse F1");
+        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+            .expect("Should parse F1");
 
         assert_eq!(event, expected);
         assert_eq!(consumed, byte_offset(3));
@@ -338,8 +381,8 @@ mod tests_csi_routing {
         // Focus gained.
         let focus_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
         let buffer = generate_keyboard_sequence(&focus_gained).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse focus gained");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse focus gained");
 
         assert_eq!(event, focus_gained);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -347,8 +390,8 @@ mod tests_csi_routing {
         // Focus lost.
         let focus_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
         let buffer = generate_keyboard_sequence(&focus_lost).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse focus lost");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse focus lost");
 
         assert_eq!(event, focus_lost);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -359,8 +402,8 @@ mod tests_csi_routing {
         // Bracketed paste start.
         let paste_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
         let buffer = generate_keyboard_sequence(&paste_start).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse paste start");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse paste start");
 
         assert_eq!(event, paste_start);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -368,8 +411,8 @@ mod tests_csi_routing {
         // Bracketed paste end.
         let paste_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let buffer = generate_keyboard_sequence(&paste_end).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse paste end");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse paste end");
 
         assert_eq!(event, paste_end);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -389,14 +432,14 @@ mod tests_non_csi_input {
 
     #[test]
     fn esc_key_immediate_when_no_more_input() {
-        // Single ESC byte emits immediately when input_available == false.
+        // Single ESC byte emits immediately when stream is drained.
         let expected = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Escape,
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse ESC key");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse ESC key");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -404,10 +447,10 @@ mod tests_non_csi_input {
 
     #[test]
     fn esc_key_waits_when_more_input_available() {
-        // Single ESC byte returns None when input_available == true.
+        // Single ESC byte returns None when more input is anticipated.
         let buffer = &[0x1B]; // ESC
         assert!(
-            try_parse_input_event(buffer, true).is_none(),
+            try_parse_input_event(buffer, MaybeMore::KernelMayHaveMore).is_none(),
             "Should return None when more input might be coming"
         );
     }
@@ -423,8 +466,8 @@ mod tests_non_csi_input {
             },
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse Alt+b");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse Alt+b");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -441,8 +484,8 @@ mod tests_non_csi_input {
             },
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse Ctrl+A");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse Ctrl+A");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
@@ -456,11 +499,27 @@ mod tests_non_csi_input {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) =
-            try_parse_input_event(&buffer, false).expect("Should parse 'H'");
+        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+            .expect("Should parse 'H'");
 
         assert_eq!(event, expected);
         assert_eq!(consumed.as_usize(), buffer.len());
+    }
+
+    #[test]
+    fn utf8_text_in_longer_buffer() {
+        let buffer = b"Hello";
+        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+            .expect("Should parse 'H'");
+
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('H'),
+                modifiers: VT100KeyModifiersIR::default(),
+            }
+        );
+        assert_eq!(consumed, byte_offset(1));
     }
 }
 
@@ -473,22 +532,22 @@ mod tests_invalid_input {
     #[test]
     fn empty_buffer_returns_none() {
         let buffer: &[u8] = &[];
-        assert!(try_parse_input_event(buffer, false).is_none());
+        assert!(try_parse_input_event(buffer, MaybeMore::KernelDrained).is_none());
     }
 
     #[test]
     fn incomplete_csi_sequence_returns_none() {
         // ESC [ without final byte - waiting for more input.
         let buffer = &[0x1B, b'['];
-        assert!(try_parse_input_event(buffer, false).is_none());
+        assert!(try_parse_input_event(buffer, MaybeMore::KernelDrained).is_none());
     }
 
     #[test]
     fn unknown_esc_emits_standalone_esc() {
-        // ESC + invalid byte → emit standalone ESC, leave invalid byte for next cycle.
+        // ESC + invalid byte -> emit standalone ESC, leave invalid byte for next cycle.
         let buffer = &[0x1B, 0xFF];
-        let (event, consumed) =
-            try_parse_input_event(buffer, false).expect("Should emit standalone ESC");
+        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+            .expect("Should emit standalone ESC");
 
         assert_eq!(
             event,
@@ -499,5 +558,96 @@ mod tests_invalid_input {
         );
         // Only consume 1 byte (ESC), leave 0xFF for next parse.
         assert_eq!(consumed, byte_offset(1));
+    }
+}
+
+/// Tests for [`OSC`] sequence and Alt+] disambiguation routing.
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+#[cfg(test)]
+mod tests_osc_routing {
+    use super::*;
+    use crate::{KeyState, MAX_OSC_SEQUENCE_LENGTH};
+
+    fn alt_bracket_expected() -> VT100InputEventIR {
+        VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char(']'),
+            modifiers: VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+            },
+        }
+    }
+
+    #[test]
+    fn lone_alt_bracket_drained() {
+        let (event, consumed) = try_parse_input_event(b"\x1b]", MaybeMore::KernelDrained)
+            .expect("Should emit Alt+]");
+        assert_eq!(event, alt_bracket_expected());
+        assert_eq!(consumed, byte_offset(2));
+    }
+
+    #[test]
+    fn lone_alt_bracket_more_anticipated() {
+        assert!(try_parse_input_event(b"\x1b]", MaybeMore::KernelMayHaveMore).is_none());
+    }
+
+    #[test]
+    fn alt_bracket_followed_by_non_digit() {
+        let (event, consumed) =
+            try_parse_input_event(b"\x1b]a", MaybeMore::KernelMayHaveMore)
+                .expect("Should emit Alt+]");
+        assert_eq!(event, alt_bracket_expected());
+        assert_eq!(consumed, byte_offset(2));
+    }
+
+    #[test]
+    fn alt_bracket_followed_by_digit_drained() {
+        let (event, consumed) =
+            try_parse_input_event(b"\x1b]5", MaybeMore::KernelDrained)
+                .expect("Should emit Alt+] when drained");
+        assert_eq!(event, alt_bracket_expected());
+        assert_eq!(consumed, byte_offset(2));
+    }
+
+    #[test]
+    fn alt_bracket_followed_by_digit_more_anticipated() {
+        assert!(try_parse_input_event(b"\x1b]5", MaybeMore::KernelMayHaveMore).is_none());
+    }
+
+    #[test]
+    fn candidate_osc_complete() {
+        let seq = b"\x1b]0;my title\x07";
+        let (event, consumed) = try_parse_input_event(seq, MaybeMore::KernelDrained)
+            .expect("Should consume OSC sequence");
+        assert_eq!(event, VT100InputEventIR::Ignored);
+        assert_eq!(consumed, byte_offset(seq.len()));
+    }
+
+    #[test]
+    fn candidate_osc_in_flight_payload_drained() {
+        // Delimiter was parsed; in-flight payload must wait even if drained.
+        assert!(
+            try_parse_input_event(b"\x1b]0;my title", MaybeMore::KernelDrained).is_none()
+        );
+    }
+
+    #[test]
+    fn candidate_osc_invalid_syntax() {
+        // Embedded newline in payload violates OSC syntax -> emits Alt+]
+        let (event, consumed) =
+            try_parse_input_event(b"\x1b]0;line\nbreak\x07", MaybeMore::KernelDrained)
+                .expect("Should emit Alt+] on invalid syntax");
+        assert_eq!(event, alt_bracket_expected());
+        assert_eq!(consumed, byte_offset(2));
+    }
+
+    #[test]
+    fn candidate_osc_runaway() {
+        let mut runaway = Vec::with_capacity(MAX_OSC_SEQUENCE_LENGTH + 10);
+        runaway.extend_from_slice(b"\x1b]52;");
+        runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
+        assert!(try_parse_input_event(&runaway, MaybeMore::KernelDrained).is_none());
     }
 }

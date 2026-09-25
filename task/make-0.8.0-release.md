@@ -77,9 +77,9 @@ release `r3bl_tui = "0.8.0"`.
       implemented resilient recovery in `StatefulInputParser::advance` that purges
       unrecognized terminated sequences, preventing permanent input event loop lockups.
     - **`MaybeMore` State Machine & Zero-Latency ESC Disambiguation**: Replaced loose
-      booleans with the `MaybeMore` enum (`Drained`, `KernelMayHaveMore`,
-      `RemainingInReadBuffer`), enabling 0ms zero-latency ESC handling while correctly
-      reassembling multi-packet escape sequences across SSH.
+      booleans with the `MaybeMore` enum (`KernelDrained`, `KernelMayHaveMore`),
+      enabling 0ms zero-latency ESC handling while correctly reassembling multi-packet
+      escape sequences across SSH.
     - **OSC Terminal Query Absorption**: Implemented `OscScanState` and
       `scan_osc_sequence` state machine to scan, frame, and absorb terminal query
       responses (OSC 10/11 color queries, OSC 52 clipboard) on `stdin`, preventing text

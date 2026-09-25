@@ -100,6 +100,8 @@
 //! - [Changelog](#changelog)
 //! - [Learn how these crates are built, provide
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Getting started: Add `r3bl_tui` to your
+//!   project](#getting-started-add-r3bl_tui-to-your-project)
 //! - [Run the demo locally](#run-the-demo-locally)
 //!   - [Prerequisites](#prerequisites)
 //!   - [Running examples](#running-examples)
@@ -240,7 +242,7 @@
 //!
 //! Despite the massive rise of AI/LLM coding agents & execution harnesses and cloud VM
 //! administration over SSH, terminal UI innovation has largely stagnated since the 1970s.
-//! Most CLI tools still rely on blocking single-threaded I/O, [curses]-era APIs, and
+//! Most CLI tools still rely on blocking single-threaded I/O, [`curses`]-era APIs, and
 //! fragile platform hacks - or rely on the heavy, fragile workaround of layering web
 //! stacks like [`Node.js`], [`React`], and [`ink`] onto the console. This introduces
 //! unreasonable memory bloat, high latency, broken keyboard shortcuts, and unpredictable
@@ -380,10 +382,10 @@
 //!     - **Safe Bidirectional Conversions**: Pairing traits provide explicit conversions
 //!       between 0-based and 1-based domains ([`TermRow::to_zero_based()`],
 //!       [`TermRow::from_zero_based()`], `convert_to_length()`).
-//!     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws (`Index
-//!       + Length = Index`, `Index - Index = Length`) to eliminate dangerous manual
-//!       arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`), negative
-//!       underflow, and CSI zero-index terminal crashes ([`TermRowDelta`],
+//!     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
+//!       (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous
+//!       manual arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`),
+//!       negative underflow, and CSI zero-index terminal crashes ([`TermRowDelta`],
 //!       [`TermColDelta`]).
 //!     - **Empirically Proven Zero-Cost Layout**: Newtypes share the identical memory
 //!       layout, size, and ABI of raw primitives (passed in CPU registers with zero heap
@@ -478,7 +480,7 @@
 //!     stalling on terminal drawing or network I/O backpressure.
 //!
 //! - 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy
-//!   `terminfo` / `termcap` databases and [ncurses] baggage by querying modern ANSI
+//!   `terminfo` / `termcap` databases and [`ncurses`] baggage by querying modern ANSI
 //!   protocols directly at runtime.
 //!
 //! - 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
@@ -506,8 +508,8 @@
 //!     full modifier reporting, key-release events, and unambiguous key sequences with
 //!     graceful legacy fallback.
 //!   - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms
-//!     timeout heuristics with an internal state machine (`Drained`, `KernelMayHaveMore`,
-//!     `RemainingInReadBuffer`), achieving 0ms zero-latency ESC handling while correctly
+//!     timeout heuristics with an internal state machine (`KernelDrained`,
+//!     `KernelMayHaveMore`), achieving 0ms zero-latency ESC handling while correctly
 //!     reassembling multi-packet escape sequences across SSH.
 //!   - **OSC Terminal Query Absorption & SGR Mouse Reporting**: Frames and absorbs
 //!     background terminal responses (such as OSC 10/11 color queries and OSC 52
@@ -690,6 +692,42 @@
 //! - If you like consuming video content, here's our [YT channel]. Please consider
 //!   [subscribing].
 //! - If you like consuming written content, here's our developer [site].
+//!
+//! # Getting started: Add `r3bl_tui` to your project
+//!
+//! Add `r3bl_tui` as a dependency in your `Cargo.toml`. You can choose between the
+//! published crates.io release or the latest `main` branch on GitHub.
+//!
+//! ## Option 1: crates.io (stable release)
+//!
+//! Use this if you prefer stable, versioned releases:
+//!
+//! ```bash
+//! cargo add r3bl_tui
+//! ```
+//!
+//! Or in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! r3bl_tui = "0.7.8"
+//! ```
+//!
+//! ## Option 2: GitHub main branch (bleeding edge)
+//!
+//! Bug fixes and patches land on `main` immediately before being published to crates.io.
+//! If you need the latest fixes or rapid iteration:
+//!
+//! ```bash
+//! cargo add r3bl_tui --git https://github.com/r3bl-org/r3bl-open-core.git --branch main
+//! ```
+//!
+//! Or in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! r3bl_tui = { git = "https://github.com/r3bl-org/r3bl-open-core.git", branch = "main" }
+//! ```
 //!
 //! # Run the demo locally
 //!
@@ -2327,6 +2365,66 @@
 //! - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
 //! - **[`direct_to_ansi`]**: When targeting Linux and want maximum performance
 //!
+//! ## Terminal Input Capabilities: Legacy VT-100 vs. Kitty Keyboard Protocol
+//!
+//! In terminal applications, input handling is inherently split between traditional
+//! legacy VT-100 conventions (which date back to 1978 and lack distinction for many key
+//! combinations) and modern enhanced protocols like the [Kitty Keyboard Protocol].
+//!
+//! ### Sans-IO Protocol Architecture
+//!
+//! Crucially, input parsing in `r3bl_tui` follows a **Sans-IO architecture**:
+//! - The protocol parser ([`vt_100_terminal_input_parser`]) is purely functional: it
+//!   consumes raw byte slices (`&[u8]`) and produces structured intermediate
+//!   representations ([`VT100InputEventIR`]) with zero knowledge of threads, file
+//!   descriptors, or operating system I/O syscalls.
+//! - The I/O layer ([`direct_to_ansi`]) uses an asynchronous [`mio`] poller thread to
+//!   read from non-blocking [`stdin`], buffering bytes into [`InputByteStreamToIrParser`]
+//!   before passing them to the Sans-IO parser.
+//! - This decoupling means [`vt_100_terminal_input_parser`] is fully reusable across
+//!   multiple consumers, including [`pty_mux`] multiplexer sessions, headless test
+//!   harnesses, session replay tools, and future platform backends.
+//!
+//! ### Capability Matrix
+//!
+//! The following matrix establishes the ground truth for input handling capabilities
+//! across both modes in `r3bl_tui`:
+//!
+//! | Keystroke / Protocol Event                         | Legacy VT-100 / xterm (Default)               | Kitty Keyboard Protocol (`CSI u`)        | Technical Reason & Ambiguity                                   |
+//! | :------------------------------------------------- | :-------------------------------------------- | :--------------------------------------- | :------------------------------------------------------------- |
+//! | **Standard Characters (`a-z`, `0-9`, UTF-8)**      | ✅ Supported (`UTF-8` bytes)                  | ✅ Supported (`UTF-8` bytes)               | Unambiguous in both modes.                                     |
+//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**      | ✅ Supported (`0x01` .. `0x1A`)               | ✅ Supported                               | Standard ASCII control characters.                             |
+//! | **Enter / Return**                                 | ✅ Supported (`\r`, `0x0D`)                   | ✅ Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                      |
+//! | **`Shift + Enter`**                                | ❌ **Collides with Enter** (`\r`)             | ✅ **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.               |
+//! | **Tab**                                            | ✅ Supported (`\t`, `0x09`)                   | ✅ Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                       |
+//! | **`Shift + Tab` (`BackTab`)**                      | ✅ Supported (`ESC [ Z`)                      | ✅ Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                        |
+//! | **`Ctrl + Tab`**                                   | ❌ **Collides with Tab** (`\t`)               | ✅ **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.               |
+//! | **Distinct `Ctrl+I` vs. `Tab`**                    | ❌ **Indistinguishable** (`0x09`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+I` is literally `0x09` (`Tab`).                    |
+//! | **Distinct `Ctrl+M` vs. `Enter`**                  | ❌ **Indistinguishable** (`0x0D`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+M` is literally `0x0D` (`Enter`).                  |
+//! | **Standalone `Escape` Key**                        | ✅ Supported (0ms latency)                    | ✅ Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; Kitty is unambiguous.  |
+//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)** | ✅ Supported (`CSI` / `SS3`)                  | ✅ Supported (`CSI` / `CSI u`)             | Standard xterm / VT220 sequences.                              |
+//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**  | ✅ Supported (`ESC [ 1 ; <m> <final>`)        | ✅ Supported                               | Standard xterm parameter encoding.                             |
+//! | **Function Keys (`F1` .. `F12`)**                  | ✅ Supported (VT220 `~` / `SS3`)              | ✅ Supported                               | Standard escape encodings.                                     |
+//! | **`Alt + Key` (Letters & Digits)**                 | ✅ Supported (`ESC <char>`)                   | ✅ Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                   |
+//! | **`Alt + ]` (OSC Prefix Collision)**               | ✅ **Solved in Step 8** (`scan_osc_sequence`) | ✅ **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.   |
+//! | **`Alt + [` (CSI Prefix Collision)**               | ❌ **Unresolvable in Legacy**                 | ✅ **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to `CSI` (`\x1b[`).  |
+//! | **Terminal OSC Query Replies (Theme, Clipboard)**  | ✅ **Solved in Step 8** (Framed & Absorbed)   | ✅ Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage. |
+//! | **OSC 52 Clipboard Copy (SSH & Headless)**        | ✅ **Solved in Step 10** (`Osc52Clipboard`)   | ✅ Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable. |
+//! | **Key Release & Repeat Events**                    | ❌ Unsupported by VT-100                      | ✅ Supported (via Kitty Flag 2)            | Legacy terminals only report key press down events.            |
+//!
+//! For deeper protocol architecture and parser implementation, see the
+//! [`vt_100_terminal_input_parser`] module.
+//!
+//! [`InputByteStreamToIrParser`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser
+//! [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+//! [`VT100InputEventIR`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`direct_to_ansi`]: crate::direct_to_ansi
+//! [`mio`]: https://docs.rs/mio
+//! [`pty_mux`]: crate::core::pty_mux
+//! [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+//!
 //! ## Architecture
 //!
 //! Both backends plug into **Stage 5** of the 6-stage rendering pipeline:
@@ -3472,8 +3570,8 @@
 //! [Video: Markdown Parser Deep Dive]: https://youtu.be/SbwvSHZRb1E
 //! [`crossterm::cursor`]: https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html
 //! [issue tracker]: https://github.com/r3bl-org/r3bl-rs-utils/issues
-//! [curses]: https://en.wikipedia.org/wiki/Curses_(programming_library)
-//! [ncurses]: https://en.wikipedia.org/wiki/Ncurses
+//! [`curses`]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+//! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 //! [`Shift+Enter`]:
 //!     https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
 //! [Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855

@@ -46,6 +46,11 @@ exclude = [
     "^https?://([a-z0-9-]+\\.)?stackexchange\\.com/",
     # GNU.org times out automated link checkers.
     "^https?://(www\\.)?gnu\\.org/",
+    # ACM Digital Library blocks automated link checkers (returns 403 to bots via Cloudflare).
+    "^https?://(dl\\.)?acm\\.org/",
+    "^https?://doi\\.org/10\\.1145/",
+    # Release tags not yet pushed to GitHub during release prep.
+    "^https?://github\\.com/r3bl-org/r3bl-open-core/blob/v[0-9].*-tui/CHANGELOG\\.md",
 ]
 
 # Exclude specific files from link checking.

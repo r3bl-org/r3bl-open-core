@@ -64,14 +64,23 @@
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 use crate::{ColorTarget, SgrColorSequence, TermRowDelta, TuiColor, TuiStyle,
-            core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING,
+            core::{ansi::{constants::{ALT_SCREEN_DISABLE_STR, ALT_SCREEN_ENABLE_STR,
+                                      ANSI_CSI_U_CHAR, APPLICATION_MOUSE_TRACKING,
                                       BRACKETED_PASTE_MODE, CSI_ERASE_DISPLAY_ALL,
                                       CSI_ERASE_DISPLAY_TO_END, CSI_PARAM_SEPARATOR,
-                                      CSI_START, RCP_RESTORE_CURSOR_STR,
+                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,
+                                      DECAWM_AUTO_WRAP, DECTCEM_SHOW_CURSOR,
+                                      EL_ERASE_ALL, EL_ERASE_FROM_START,
+                                      EL_ERASE_LINE, EL_ERASE_TO_END,
+                                      KITTY_DISAMBIGUATE_ESCAPE_CODES,
+                                      KITTY_POP_KEYBOARD_FLAGS,
+                                      KITTY_PUSH_KEYBOARD_FLAGS,
+                                      RCP_RESTORE_CURSOR_STR, RM_RESET_MODE,
                                       SCP_SAVE_CURSOR_STR, SGR_BOLD, SGR_DIM,
                                       SGR_ITALIC, SGR_MOUSE_MODE, SGR_RESET_STR,
                                       SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
-                                      SGR_UNDERLINE, URXVT_MOUSE_EXTENSION},
+                                      SGR_UNDERLINE, SM_SET_MODE,
+                                      URXVT_MOUSE_EXTENSION},
                           vt_100_pty_output_parser::CsiSequence},
                    coordinates::{TermCol, TermRow}}};
 
@@ -152,7 +161,7 @@ pub mod screen_clearing {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn clear_current_line() -> &'static str {
-        const_format::formatcp!("{CSI_START}2K")
+        const_format::concatcp!(CSI_START, EL_ERASE_ALL, EL_ERASE_LINE)
     }
 
     /// Clear to end of line
@@ -161,7 +170,7 @@ pub mod screen_clearing {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn clear_to_end_of_line() -> &'static str {
-        const_format::formatcp!("{CSI_START}0K")
+        const_format::concatcp!(CSI_START, EL_ERASE_TO_END, EL_ERASE_LINE)
     }
 
     /// Clear to start of line
@@ -170,7 +179,7 @@ pub mod screen_clearing {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn clear_to_start_of_line() -> &'static str {
-        const_format::formatcp!("{CSI_START}1K")
+        const_format::concatcp!(CSI_START, EL_ERASE_FROM_START, EL_ERASE_LINE)
     }
 }
 
@@ -256,14 +265,28 @@ pub mod cursor_visibility {
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     #[must_use]
-    pub fn show_cursor() -> &'static str { const_format::formatcp!("{CSI_START}?25h") }
+    pub fn show_cursor() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            DECTCEM_SHOW_CURSOR,
+            SM_SET_MODE,
+        )
+    }
 
     /// Hide cursor
     /// [`CSI`] ?25l (DECTCEM = reset)
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn hide_cursor() -> &'static str { const_format::formatcp!("{CSI_START}?25l") }
+    pub fn hide_cursor() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            DECTCEM_SHOW_CURSOR,
+            RM_RESET_MODE,
+        )
+    }
 }
 
 pub mod cursor_save_restore {
@@ -294,18 +317,14 @@ pub mod terminal_modes {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn enter_alternate_screen() -> &'static str {
-        const_format::formatcp!("{CSI_START}?1049h")
-    }
+    pub fn enter_alternate_screen() -> &'static str { ALT_SCREEN_ENABLE_STR }
 
     /// Exit alternate screen buffer
     /// [`CSI`] ?1049l (`AlternateScreenBuffer`)
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn exit_alternate_screen() -> &'static str {
-        const_format::formatcp!("{CSI_START}?1049l")
-    }
+    pub fn exit_alternate_screen() -> &'static str { ALT_SCREEN_DISABLE_STR }
 
     /// Enable mouse tracking (all modes)
     /// [`CSI`] ?1003h [`CSI`] ?1015h [`CSI`] ?1006h
@@ -313,8 +332,15 @@ pub mod terminal_modes {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn enable_mouse_tracking() -> &'static str {
-        const_format::formatcp!(
-            "{CSI_START}?{APPLICATION_MOUSE_TRACKING}{CSI_PARAM_SEPARATOR}{URXVT_MOUSE_EXTENSION}{CSI_PARAM_SEPARATOR}{SGR_MOUSE_MODE}h"
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            APPLICATION_MOUSE_TRACKING,
+            CSI_PARAM_SEPARATOR,
+            URXVT_MOUSE_EXTENSION,
+            CSI_PARAM_SEPARATOR,
+            SGR_MOUSE_MODE,
+            SM_SET_MODE,
         )
     }
 
@@ -324,8 +350,15 @@ pub mod terminal_modes {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn disable_mouse_tracking() -> &'static str {
-        const_format::formatcp!(
-            "{CSI_START}?{SGR_MOUSE_MODE}{CSI_PARAM_SEPARATOR}{URXVT_MOUSE_EXTENSION}{CSI_PARAM_SEPARATOR}{APPLICATION_MOUSE_TRACKING}l"
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            SGR_MOUSE_MODE,
+            CSI_PARAM_SEPARATOR,
+            URXVT_MOUSE_EXTENSION,
+            CSI_PARAM_SEPARATOR,
+            APPLICATION_MOUSE_TRACKING,
+            RM_RESET_MODE,
         )
     }
 
@@ -335,7 +368,12 @@ pub mod terminal_modes {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn enable_bracketed_paste() -> &'static str {
-        const_format::formatcp!("{CSI_START}?{BRACKETED_PASTE_MODE}h")
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            BRACKETED_PASTE_MODE,
+            SM_SET_MODE,
+        )
     }
 
     /// Disable bracketed paste mode
@@ -344,6 +382,73 @@ pub mod terminal_modes {
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn disable_bracketed_paste() -> &'static str {
-        const_format::formatcp!("{CSI_START}?{BRACKETED_PASTE_MODE}l")
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            BRACKETED_PASTE_MODE,
+            RM_RESET_MODE,
+        )
+    }
+
+    /// Enable progressive keyboard enhancement ([`Kitty`] keyboard protocol).
+    /// [`CSI`] `>1u` (Push flags: 1 = `DISAMBIGUATE_ESCAPE_CODES`).
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+    #[must_use]
+    pub fn enable_keyboard_enhancement() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            KITTY_PUSH_KEYBOARD_FLAGS,
+            KITTY_DISAMBIGUATE_ESCAPE_CODES,
+            ANSI_CSI_U_CHAR,
+        )
+    }
+
+    /// Disable progressive keyboard enhancement ([`Kitty`] keyboard protocol).
+    /// [`CSI`] `<1u` (Pop 1 level of flags from the stack).
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+    #[must_use]
+    pub fn disable_keyboard_enhancement() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            KITTY_POP_KEYBOARD_FLAGS,
+            KITTY_DISAMBIGUATE_ESCAPE_CODES,
+            ANSI_CSI_U_CHAR,
+        )
+    }
+
+    /// Enable line wrap ([`DECAWM`]: [`DEC`] Autowrap Mode = set).
+    /// [`CSI`] `?7h`
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
+    #[must_use]
+    pub fn enable_line_wrap() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            DECAWM_AUTO_WRAP,
+            SM_SET_MODE,
+        )
+    }
+
+    /// Disable line wrap ([`DECAWM`]: [`DEC`] Autowrap Mode = reset).
+    /// [`CSI`] `?7l`
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
+    #[must_use]
+    pub fn disable_line_wrap() -> &'static str {
+        const_format::concatcp!(
+            CSI_START,
+            CSI_PRIVATE_MODE_PREFIX,
+            DECAWM_AUTO_WRAP,
+            RM_RESET_MODE,
+        )
     }
 }

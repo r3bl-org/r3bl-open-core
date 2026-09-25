@@ -11,7 +11,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{OutputDevice, PtyTestContext, PtyTestMode, TerminalModeController,
-            ansi_output::{cursor_visibility, terminal_modes},
+            ansi_output::{cursor_visibility, screen_clearing, terminal_modes},
             generate_pty_test};
 use std::io::{Read, Write};
 
@@ -101,6 +101,28 @@ fn controller(context: PtyTestContext) {
         "Missing bracketed paste disable"
     );
 
+    assert!(
+        output_str.contains(terminal_modes::enable_keyboard_enhancement()),
+        "Missing keyboard enhancement enable"
+    );
+    assert!(
+        output_str.contains(terminal_modes::disable_keyboard_enhancement()),
+        "Missing keyboard enhancement disable"
+    );
+
+    assert!(
+        output_str.contains(terminal_modes::enable_line_wrap()),
+        "Missing line wrap enable"
+    );
+    assert!(
+        output_str.contains(terminal_modes::disable_line_wrap()),
+        "Missing line wrap disable"
+    );
+    assert!(
+        output_str.contains(screen_clearing::clear_screen()),
+        "Missing clear screen"
+    );
+
     eprintln!("Terminal Mode Controller Test: Passed!");
 }
 
@@ -121,6 +143,15 @@ fn controlled() {
     device.disable_mouse_tracking().expect("conversion error");
     device.enable_bracketed_paste().expect("conversion error");
     device.disable_bracketed_paste().expect("conversion error");
+    device
+        .enable_keyboard_enhancement()
+        .expect("conversion error");
+    device
+        .disable_keyboard_enhancement()
+        .expect("conversion error");
+    device.enable_line_wrap().expect("conversion error");
+    device.disable_line_wrap().expect("conversion error");
+    device.clear_screen().expect("conversion error");
 
     std::io::stdout()
         .write_all(b"DONE")

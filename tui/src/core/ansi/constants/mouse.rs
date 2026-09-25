@@ -29,7 +29,7 @@
 //! ### Bitmask arithmetic operations
 //!
 //! *(See also: [`keyboard` module docs] for a contrasting example of where arithmetic
-//! addition is required by the VT100 spec).*
+//! addition is required by the [`VT-100`] spec).*
 //!
 //! When combining bitmasks (like applying a modifier to a button):
 //! - **always** use bitwise OR (`|` or `|=`)
@@ -48,6 +48,7 @@
 //! [`keyboard` module docs]: mod@crate::core::ansi::vt_100_terminal_input_parser::keyboard#how-bitmask-encoding-for-modifiers-works
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [constants module design]: mod@crate::constants#design
 
@@ -103,7 +104,7 @@ pub const MOUSE_RXVT_MIN_LEN: usize = 8;
 
 /// [`SGR`] Mouse Marker ([`SGR`]): The `<` byte (`60` dec, `3C` hex).
 ///
-/// Value: `'<'` dec, `3C` hex.
+/// Value: `60` dec, `3C` hex.
 ///
 /// Sequence: `ESC [ < Cb ; Cx ; Cy M/m`.
 ///
@@ -112,7 +113,7 @@ pub const MOUSE_SGR_MARKER: u8 = b'<';
 
 /// [`SGR`] Mouse Press Action ([`SGR`]): `M` (uppercase) indicates button press.
 ///
-/// Value: `'M'` dec, `4D` hex.
+/// Value: `77` dec, `4D` hex.
 ///
 /// Sequence: `CSI < Cb ; Cx ; Cy M`.
 ///
@@ -121,7 +122,7 @@ pub const MOUSE_SGR_PRESS: u8 = b'M';
 
 /// [`SGR`] Mouse Release Action ([`SGR`]): `m` (lowercase) indicates button release.
 ///
-/// Value: `'m'` dec, `6D` hex.
+/// Value: `109` dec, `6D` hex.
 ///
 /// Sequence: `CSI < Cb ; Cx ; Cy m`.
 ///
@@ -134,7 +135,7 @@ pub const MOUSE_SGR_RELEASE: u8 = b'm';
 
 /// [`X10`] Mouse Protocol Marker ([`X10`]): `M` identifies the [`X10`] format.
 ///
-/// Value: `'M'` dec, `4D` hex.
+/// Value: `77` dec, `4D` hex.
 ///
 /// Sequence: `CSI M Cb Cx Cy`.
 ///
