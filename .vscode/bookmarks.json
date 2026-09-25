@@ -1,0 +1,59 @@
+{
+	"files": [
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/chunk_framer/chunk_framer_struct.rs",
+			"bookmarks": [
+				{
+					"line": 231,
+					"column": 0,
+					"label": "[ ] main entry point for stdin byte processing"
+				},
+				{
+					"line": 283,
+					"column": 0,
+					"label": "[ ] review classify_unparsed_buffer call site"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/chunk_framer/accumulator/classification.rs",
+			"bookmarks": [
+				{
+					"line": 77,
+					"column": 0,
+					"label": "[ ] review AccumulatorClassification::classify"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/chunk_framer/circuit_breaker/circuit_breaker_struct.rs",
+			"bookmarks": [
+				{
+					"line": 435,
+					"column": 12,
+					"label": "[x] circuit breaker - handle_open"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/chunk_decoder/mod.rs",
+			"bookmarks": [
+				{
+					"line": 246,
+					"column": 0,
+					"label": "[ ] review the ir parser"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/chunk_decoder/terminal_events.rs",
+			"bookmarks": [
+				{
+					"line": 287,
+					"column": 0,
+					"label": "[x] review scan_osc_sequence(buffer: &[u8])"
+				}
+			]
+		}
+	]
+}

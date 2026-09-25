@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words Hllo
-
 //! Segment construction operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides centralized segment rebuilding functionality that maintains

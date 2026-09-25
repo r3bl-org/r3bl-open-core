@@ -1,25 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BackpressureStdout, FullScreenTuiModeGuard, SafeRawTerminal,
-            SendRawTerminal, StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend,
-            TerminalModeController, ansi_output, ok, vp_col, vp_row};
+use crate::{AtomicBoolExt, BackpressureStdout, SafeRawTerminal, SendRawTerminal,
+            StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend, TerminalModeController,
+            ansi_output, ok, vp_col, vp_row};
 use crossterm::QueueableCommand;
 use miette::IntoDiagnostic;
 use std::{io::{Write, stdout},
-          sync::Arc};
-
-pub type LockedOutputDevice<'a> = &'a mut dyn Write;
-
-/// Whether to execute paint operations against the real terminal or in mock mode
-/// for testing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PaintMode {
-    /// Send execution commands to the real, active physical terminal backend.
-    Real,
-    /// Record execution commands in memory without outputting to the screen (used
-    /// for testing).
-    Mock,
-}
+          sync::{Arc, atomic::AtomicBool}};
 
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
@@ -140,59 +127,84 @@ impl OutputDevice {
 
     /// Sets up the full-screen TUI environment.
     ///
-    /// This includes enabling bracketed paste, mouse tracking, entering the alternate
-    /// screen, hiding the cursor, and clearing the screen.
+    /// This includes enabling bracketed paste, mouse tracking, progressive keyboard
+    /// enhancement, entering the alternate screen, hiding the cursor, and clearing the
+    /// screen.
     ///
     /// # Errors
     /// Returns an error if any terminal mode cannot be set or I/O fails.
+    /// Also returns an error if another [`FullScreenTuiModeGuard`] is already active.
     pub fn setup_full_screen_tui(&self) -> miette::Result<FullScreenTuiModeGuard> {
-        self.enable_bracketed_paste()?;
-        self.enable_mouse_tracking()?;
-        self.enter_alternate_screen()?;
-        self.hide_cursor()?;
-
-        self.write(|writer| -> miette::Result<()> {
-            match TERMINAL_LIB_BACKEND {
-                TerminalLibBackend::Crossterm => {
-                    writer
-                        .queue(crossterm::cursor::MoveTo(0, 0))
-                        .into_diagnostic()?;
-                    writer
-                        .queue(crossterm::terminal::Clear(
-                            crossterm::terminal::ClearType::All,
-                        ))
-                        .into_diagnostic()?;
-                }
-                TerminalLibBackend::DirectToAnsi => {
-                    let ansi = ansi_output::cursor_movement::cursor_position(
-                        vp_row(0).into(),
-                        vp_col(0).into(),
-                    );
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-
-                    let ansi2 = ansi_output::screen_clearing::clear_screen();
-                    writer.write_all(ansi2.as_bytes()).into_diagnostic()?;
-                }
-            }
-            ok!()
-        })?;
-
-        if matches!(self.paint_mode, PaintMode::Real) {
-            self.flush()?;
+        // Enforce single active instance across all terminals.
+        if FULLSCREEN_ACTIVE.try_acquire().is_none() {
+            miette::bail!(
+                "Cannot activate full-screen TUI: another FullScreenTuiModeGuard is already active. \
+                 Only one full-screen terminal session can exist at a time."
+            );
         }
 
-        Ok(FullScreenTuiModeGuard {
-            output_device: self.clone(),
-        })
+        let setup_result = (|| -> miette::Result<()> {
+            self.enable_bracketed_paste()?;
+            self.enable_mouse_tracking()?;
+            self.enable_keyboard_enhancement()?;
+            self.enter_alternate_screen()?;
+            self.hide_cursor()?;
+
+            self.write(|writer| -> miette::Result<()> {
+                match TERMINAL_LIB_BACKEND {
+                    TerminalLibBackend::Crossterm => {
+                        writer
+                            .queue(crossterm::cursor::MoveTo(0, 0))
+                            .into_diagnostic()?;
+                        writer
+                            .queue(crossterm::terminal::Clear(
+                                crossterm::terminal::ClearType::All,
+                            ))
+                            .into_diagnostic()?;
+                    }
+                    TerminalLibBackend::DirectToAnsi => {
+                        let ansi = ansi_output::cursor_movement::cursor_position(
+                            vp_row(0).into(),
+                            vp_col(0).into(),
+                        );
+                        writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+
+                        let ansi2 = ansi_output::screen_clearing::clear_screen();
+                        writer.write_all(ansi2.as_bytes()).into_diagnostic()?;
+                    }
+                }
+                ok!()
+            })?;
+
+            if matches!(self.paint_mode, PaintMode::Real) {
+                self.flush()?;
+            }
+
+            ok!()
+        })();
+
+        match setup_result {
+            Ok(()) => Ok(FullScreenTuiModeGuard {
+                output_device: self.clone(),
+            }),
+            Err(err) => {
+                // Clean up partial mode settings and release the gate on failure.
+                drop(self.teardown_full_screen_tui());
+                FULLSCREEN_ACTIVE.release();
+                Err(err)
+            }
+        }
     }
 
     /// Tears down the full-screen TUI environment.
-    /// This restores the cursor, exits the alternate screen, and disables mouse/paste
-    /// tracking.
+    ///
+    /// This disables keyboard enhancement, restores the cursor, exits the alternate
+    /// screen, and disables mouse/paste tracking.
     ///
     /// # Errors
     /// Returns an error if any terminal mode cannot be reset or I/O fails.
     pub fn teardown_full_screen_tui(&self) -> miette::Result<()> {
+        self.disable_keyboard_enhancement()?;
         self.disable_bracketed_paste()?;
         self.disable_mouse_tracking()?;
         self.exit_alternate_screen()?;
@@ -203,6 +215,51 @@ impl OutputDevice {
         }
         ok!()
     }
+}
+
+/// An [`RAII`] guard that tears down the TUI environment when dropped.
+///
+/// This is returned by [`OutputDevice::setup_full_screen_tui()`] and ensures that the
+/// terminal is properly restored (cursor shown, alternate screen exited, mouse and
+/// bracketed paste tracking disabled) even if a panic occurs or the future returns early,
+/// avoiding a [Double Panic Abort].
+///
+/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [Double Panic Abort]: crate#the-double-panic-abort-risk
+#[must_use = "The full screen TUI mode guard must be held as long as the TUI is active."]
+#[allow(missing_debug_implementations)]
+pub struct FullScreenTuiModeGuard {
+    output_device: OutputDevice,
+}
+
+impl Drop for FullScreenTuiModeGuard {
+    /// We prioritize Resilience over Integrity here to prevent a [Double Panic Abort].
+    /// The teardown methods underneath are poison-safe.
+    ///
+    /// [Double Panic Abort]: crate#the-double-panic-abort-risk
+    fn drop(&mut self) {
+        drop(self.output_device.teardown_full_screen_tui());
+        FULLSCREEN_ACTIVE.release();
+    }
+}
+
+/// Tracks whether a full-screen TUI session is currently active.
+///
+/// Prevents multiple [`FullScreenTuiModeGuard`] instances from corrupting the terminal's
+/// alternate screen buffer, mouse tracking, and progressive keyboard state.
+static FULLSCREEN_ACTIVE: AtomicBool = AtomicBool::new(false);
+
+pub type LockedOutputDevice<'a> = &'a mut dyn Write;
+
+/// Whether to execute paint operations against the real terminal or in mock mode
+/// for testing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaintMode {
+    /// Send execution commands to the real, active physical terminal backend.
+    Real,
+    /// Record execution commands in memory without outputting to the screen (used
+    /// for testing).
+    Mock,
 }
 
 #[cfg(test)]
@@ -274,5 +331,30 @@ mod tests {
             // panic.
             drop(writer.flush());
         });
+    }
+
+    #[test]
+    fn test_fullscreen_single_instance_guard() {
+        let resource: SafeRawTerminal = Arc::new(StdMutex::new(Vec::new()));
+        let device = OutputDevice {
+            resource,
+            paint_mode: PaintMode::Mock,
+        };
+
+        // 1. First setup succeeds.
+        let guard1 = device.setup_full_screen_tui();
+        assert!(guard1.is_ok());
+
+        // 2. Second setup while guard1 is alive MUST return an error.
+        let guard2 = device.setup_full_screen_tui();
+        assert!(guard2.is_err());
+
+        // 3. Dropping guard1 releases the gate.
+        drop(guard1);
+
+        // 4. Sequential setup now succeeds.
+        let guard3 = device.setup_full_screen_tui();
+        assert!(guard3.is_ok());
+        drop(guard3);
     }
 }

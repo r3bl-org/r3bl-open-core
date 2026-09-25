@@ -1,9 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words epoll kqueue SIGWINCH syscall syscalls SQPOLL IORING eventfd signalfd
-// cspell:words pollable Proactor demultiplexing injectables threadwaker IOCP EINVAL
-// cspell:words kqueuefd filedescriptor
-
 //! Generic infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
 //!
 //! # What is the RRT Pattern?

@@ -101,11 +101,6 @@
 //!     (`.env`).
 //!   - Seamless shell startup integration (pipe output directly into `source`).
 //!
-//! - 🐒 `rc` (Under Construction 🚧) - A unified developer hub and interactive command
-//!   launcher for the `r3bl-cmdr` suite.
-//!   - This is currently just a placeholder, pointing to [issue
-//!     #363](https://github.com/r3bl-org/r3bl-open-core/issues/363).
-//!
 //! # Installation
 //!
 //! To install `r3bl-cmdr` on your system, run the following command, assuming you have
@@ -199,7 +194,6 @@ pub mod common;
 pub mod edi;
 pub mod giti;
 pub mod env_source;
-pub mod rc;
 
 // Re-export.
 pub use analytics_client::*;

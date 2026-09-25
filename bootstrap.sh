@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# cspell:words noconfirm
-
 # bootstrap.sh - Initial OS-level setup for r3bl-open-core development
 #
 # PURPOSE:

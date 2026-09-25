@@ -61,7 +61,7 @@ use crate::{LockedOutputDevice, VPSize};
 /// ```compile_fail
 /// # use r3bl_tui::{RenderOpsExec, RenderOpIRVec, Size, PaintMode};
 /// # fn example(ops: &RenderOpIRVec) {
-/// ops.execute_all(Size::default(), todo!()); // ❌ Compile error!
+/// ops.execute_all(Size::default(), todo!()); // Compile error!
 /// # }
 /// ```
 ///

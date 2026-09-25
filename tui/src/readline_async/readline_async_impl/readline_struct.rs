@@ -10,10 +10,8 @@ use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             PrintLineOnControlC, PrintLineOnEnter,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
             ReadlineControlFlow, ReadlineError, ReadlineEvent, ReadlineLockManager,
-            SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex, VPSize,
-            execute_commands_no_lock, ok};
-use crossterm::{ExecutableCommand, QueueableCommand, cursor,
-                terminal::{self, Clear}};
+            SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex,
+            TerminalModeController, VPSize, ok};
 use std::sync::Arc;
 use tokio::{select, spawn,
             sync::{broadcast, mpsc},
@@ -22,11 +20,11 @@ use tokio::{select, spawn,
 /// # Mental model and overview
 ///
 /// This is a replacement for a [`std::io::BufRead::read_line`] function. It is async. It
-/// supports other tasks concurrently writing to the terminal output (via
-/// [`SharedWriter`]s). It also supports being paused so that [`Spinner`] can display an
+/// supports other tasks concurrently writing to the terminal output (via [`SharedWriter`]
+/// instances). It also supports being paused so that [`Spinner`] can display an
 /// indeterminate progress spinner. Then it can be resumed so that the user can type in
-/// the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is printed
-/// out.
+/// the terminal. Upon resumption, any queued output from the [`SharedWriter`] instances
+/// is printed out.
 ///
 /// For details on the underlying async orchestration, including [`Pin`] and [`Unpin`]
 /// requirements for [`tokio::select!`], see [Core Async Concepts].
@@ -40,7 +38,7 @@ use tokio::{select, spawn,
 /// When you create a new [`Readline`] instance, a task, is started via
 /// [`spawn_task_to_monitor_line_control_channel()`]. This task monitors the `line`
 /// channel, and processes any messages that are sent to it. This allows the task to be
-/// paused, and resumed, and to flush the output from the [`SharedWriter`]s.
+/// paused, and resumed, and to flush the output from the [`SharedWriter`] instances.
 ///
 /// # How or when to terminate the session
 ///
@@ -175,8 +173,7 @@ use tokio::{select, spawn,
 /// crate root documentation for why this is designed to be poison-safe.
 ///
 /// [`choose()`]: crate::choose
-/// [`crossterm::event::EventStream`]:
-///     https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
+/// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
 /// [`flush_internal()`]: crate::flush_internal
 /// [`LineState`]: crate::readline_async::LineState
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
@@ -188,23 +185,18 @@ use tokio::{select, spawn,
 /// [`PauseState`]: crate::PauseState
 /// [`Pin`]: std::pin::Pin
 /// [`PinnedInputStream`]: crate::core::PinnedInputStream
-/// [`ReadlineAsyncContext::acquire_modal_terminal()`]:
-///     crate::ReadlineAsyncContext::acquire_modal_terminal
-/// [`ReadlineAsyncContext::await_shutdown`]:
-///     crate::readline_async::ReadlineAsyncContext::await_shutdown
+/// [`ReadlineAsyncContext::acquire_modal_terminal()`]: crate::ReadlineAsyncContext::acquire_modal_terminal
+/// [`ReadlineAsyncContext::await_shutdown`]: crate::readline_async::ReadlineAsyncContext::await_shutdown
 /// [`ReadlineAsyncContext::pause()`]: crate::ReadlineAsyncContext::pause
-/// [`ReadlineAsyncContext::read_line`]:
-///     crate::readline_async::ReadlineAsyncContext::read_line
-/// [`ReadlineAsyncContext::request_shutdown`]:
-///     crate::readline_async::ReadlineAsyncContext::request_shutdown
+/// [`ReadlineAsyncContext::read_line`]: crate::readline_async::ReadlineAsyncContext::read_line
+/// [`ReadlineAsyncContext::request_shutdown`]: crate::readline_async::ReadlineAsyncContext::request_shutdown
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [`Spinner`]: crate::readline_async::Spinner
 /// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
-/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
-///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
+/// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]: crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(missing_debug_implementations)]
 pub struct Readline {
     /// Manages hierarchical locking between line state and output device.
@@ -324,11 +316,8 @@ impl Readline {
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
         // (try to eliminate jank). It makes it appear as if the cursor is animated into
         // place.
-        output_device.write(|writer| {
-            execute_commands_no_lock!(writer, cursor::Hide);
-            execute_commands_no_lock!(writer, terminal::EnableLineWrap);
-            Ok::<(), miette::Report>(())
-        })?;
+        output_device.hide_cursor()?;
+        output_device.enable_line_wrap()?;
 
         // Enable raw mode (unless using a mock output device for testing). Drop will
         // disable raw mode.
@@ -393,10 +382,8 @@ impl Readline {
                 // display the cursor (try to eliminate jank). This does not make
                 // caller wait.
                 sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
-                output_device_clone.write(|term| {
-                    // We don't care about the result of this operation.
-                    drop(term.execute(cursor::Show));
-                });
+                // We don't care about the result of this operation.
+                drop(output_device_clone.show_cursor());
             }
         });
 
@@ -447,8 +434,8 @@ impl Readline {
     /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
+        self.lock_manager.output_device().clear_screen()?;
         self.lock_manager.lock_both(|line_state, term| {
-            term.queue(Clear(terminal::ClearType::All))?;
             line_state.clear_and_render_and_flush(term)?;
             term.flush()?;
             Ok::<(), ReadlineError>(())

@@ -15,8 +15,7 @@
 //! [`mouse`]: crate::constants::mouse
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [constants module design]: mod@crate::constants#design
-//! [keyboard]:
-//!     mod@crate::vt_100_terminal_input_parser::keyboard#keyboard-encoding-explained
+//! [keyboard]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::keyboard#keyboard-encoding-explained
 
 // ==================== ANSI Sequence Components ====================
 
@@ -60,12 +59,140 @@ pub const ANSI_SS3_O: u8 = b'O';
 /// [`CSI`]: crate::CsiSequence
 pub const ANSI_PARAM_SEPARATOR: u8 = b';';
 
+/// Sub-Parameter Separator: Colon `:` delimiter between [`CSI`] sub-parameters.
+///
+/// Sequence: `CSI param1 : subparam1 ...` (separates sub-parameters, e.g. in `CSI u`).
+///
+/// Value: `58` dec, `3A` hex.
+///
+/// [`CSI`]: crate::CsiSequence
+pub const ANSI_SUBPARAM_SEPARATOR: u8 = b':';
+pub const ANSI_SUB_PARAM_SEPARATOR: u8 = ANSI_SUBPARAM_SEPARATOR;
+
 /// Function Key Terminator: Tilde `~` that ends function key and special key sequences.
 ///
 /// Sequence: `CSI n ~` (terminates function key codes like `CSI 11~` for F1).
 ///
 /// Value: `126` dec, `7E` hex.
 pub const ANSI_FUNCTION_KEY_TERMINATOR: u8 = b'~';
+
+/// [`Kitty`] Keyboard Protocol Terminator (`CSI u`): Final byte `u` terminating enhanced
+/// keyboard encoding sequences.
+///
+/// Sequence: `CSI <codepoint> [; <modifiers> [: <event_type>]] u`.
+///
+/// Value: `117` dec, `75` hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+/// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+pub const ANSI_CSI_U: u8 = b'u';
+
+// ==================== Kitty Keyboard Protocol Constants ====================
+
+/// [`Kitty`] Keyboard Protocol event type for key press (default).
+///
+/// Value: `1`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_PRESS: u8 = 1;
+
+/// [`Kitty`] Keyboard Protocol event type for key repeat.
+///
+/// Value: `2`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_REPEAT: u8 = 2;
+
+/// [`Kitty`] Keyboard Protocol event type for key release.
+///
+/// Value: `3`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_RELEASE: u8 = 3;
+
+/// [`Kitty`] PUA codepoint for Insert key.
+///
+/// Value: `57358` dec, `E00E` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_INSERT: u32 = 57358;
+
+/// [`Kitty`] PUA codepoint for Delete key.
+///
+/// Value: `57359` dec, `E00F` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_DELETE: u32 = 57359;
+
+/// [`Kitty`] PUA codepoint for Left arrow key.
+///
+/// Value: `57360` dec, `E010` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_LEFT: u32 = 57360;
+
+/// [`Kitty`] PUA codepoint for Right arrow key.
+///
+/// Value: `57361` dec, `E011` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_RIGHT: u32 = 57361;
+
+/// [`Kitty`] PUA codepoint for Up arrow key.
+///
+/// Value: `57362` dec, `E012` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_UP: u32 = 57362;
+
+/// [`Kitty`] PUA codepoint for Down arrow key.
+///
+/// Value: `57363` dec, `E013` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_DOWN: u32 = 57363;
+
+/// [`Kitty`] PUA codepoint for Page Up key.
+///
+/// Value: `57364` dec, `E014` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_PAGE_UP: u32 = 57364;
+
+/// [`Kitty`] PUA codepoint for Page Down key.
+///
+/// Value: `57365` dec, `E015` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_PAGE_DOWN: u32 = 57365;
+
+/// [`Kitty`] PUA codepoint for Home key.
+///
+/// Value: `57366` dec, `E016` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_HOME: u32 = 57366;
+
+/// [`Kitty`] PUA codepoint for End key.
+///
+/// Value: `57367` dec, `E017` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_END: u32 = 57367;
+
+/// [`Kitty`] PUA starting codepoint for Function keys (F1 = `57376`, F12 = `57387`).
+///
+/// Value: `57376` dec, `E020` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_F1: u32 = 57376;
+
+/// [`Kitty`] PUA ending codepoint for Function keys (F12 = `57387`).
+///
+/// Value: `57387` dec, `E02B` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_F12: u32 = 57387;
 
 // ==================== Arrow Keys (CSI A/B/C/D) ====================
 
@@ -314,7 +441,7 @@ pub const FUNCTION_F12_CODE: u16 = 24;
 
 /// SS3 F1 ([`ANSI`]): Application mode F1 final byte.
 ///
-/// Value: `'P'` dec, `50` hex.
+/// Value: `80` dec, `50` hex.
 ///
 /// Sequence: `SS3 P`.
 ///
@@ -323,7 +450,7 @@ pub const SS3_F1_FINAL: u8 = b'P';
 
 /// SS3 F2 ([`ANSI`]): Application mode F2 final byte.
 ///
-/// Value: `'Q'` dec, `51` hex.
+/// Value: `81` dec, `51` hex.
 ///
 /// Sequence: `SS3 Q`.
 ///
@@ -332,7 +459,7 @@ pub const SS3_F2_FINAL: u8 = b'Q';
 
 /// SS3 F3 ([`ANSI`]): Application mode F3 final byte.
 ///
-/// Value: `'R'` dec, `52` hex.
+/// Value: `82` dec, `52` hex.
 ///
 /// Sequence: `SS3 R`.
 ///
@@ -341,7 +468,7 @@ pub const SS3_F3_FINAL: u8 = b'R';
 
 /// SS3 F4 ([`ANSI`]): Application mode F4 final byte.
 ///
-/// Value: `'S'` dec, `53` hex.
+/// Value: `83` dec, `53` hex.
 ///
 /// Sequence: `SS3 S`.
 ///
@@ -354,7 +481,7 @@ pub const SS3_F4_FINAL: u8 = b'S';
 
 /// SS3 Numpad Enter ([`ANSI`]): Application mode numpad Enter final byte.
 ///
-/// Value: `'M'` dec, `4D` hex.
+/// Value: `77` dec, `4D` hex.
 ///
 /// Sequence: `SS3 M`.
 ///
@@ -363,7 +490,7 @@ pub const SS3_NUMPAD_ENTER: u8 = b'M';
 
 /// SS3 Numpad Multiply ([`ANSI`]): Application mode numpad `*` final byte.
 ///
-/// Value: `'j'` dec, `6A` hex.
+/// Value: `106` dec, `6A` hex.
 ///
 /// Sequence: `SS3 j`.
 ///
@@ -372,7 +499,7 @@ pub const SS3_NUMPAD_MULTIPLY: u8 = b'j';
 
 /// SS3 Numpad Plus ([`ANSI`]): Application mode numpad `+` final byte.
 ///
-/// Value: `'k'` dec, `6B` hex.
+/// Value: `107` dec, `6B` hex.
 ///
 /// Sequence: `SS3 k`.
 ///
@@ -382,7 +509,7 @@ pub const SS3_NUMPAD_PLUS: u8 = b'k';
 /// SS3 Numpad Comma ([`ANSI`]): Application mode numpad `,` final byte. Not all terminals
 /// support this.
 ///
-/// Value: `'l'` dec, `6C` hex.
+/// Value: `108` dec, `6C` hex.
 ///
 /// Sequence: `SS3 l`.
 ///
@@ -391,7 +518,7 @@ pub const SS3_NUMPAD_COMMA: u8 = b'l';
 
 /// SS3 Numpad Minus ([`ANSI`]): Application mode numpad `-` final byte.
 ///
-/// Value: `'m'` dec, `6D` hex.
+/// Value: `109` dec, `6D` hex.
 ///
 /// Sequence: `SS3 m`.
 ///
@@ -400,7 +527,7 @@ pub const SS3_NUMPAD_MINUS: u8 = b'm';
 
 /// SS3 Numpad Decimal ([`ANSI`]): Application mode numpad `.` final byte.
 ///
-/// Value: `'n'` dec, `6E` hex.
+/// Value: `110` dec, `6E` hex.
 ///
 /// Sequence: `SS3 n`.
 ///
@@ -409,7 +536,7 @@ pub const SS3_NUMPAD_DECIMAL: u8 = b'n';
 
 /// SS3 Numpad Divide ([`ANSI`]): Application mode numpad `/` final byte.
 ///
-/// Value: `'o'` dec, `6F` hex.
+/// Value: `111` dec, `6F` hex.
 ///
 /// Sequence: `SS3 o`.
 ///
@@ -418,7 +545,7 @@ pub const SS3_NUMPAD_DIVIDE: u8 = b'o';
 
 /// SS3 Numpad 0 ([`ANSI`]): Application mode numpad `0` final byte.
 ///
-/// Value: `'p'` dec, `70` hex.
+/// Value: `112` dec, `70` hex.
 ///
 /// Sequence: `SS3 p`.
 ///
@@ -427,7 +554,7 @@ pub const SS3_NUMPAD_0: u8 = b'p';
 
 /// SS3 Numpad 1 ([`ANSI`]): Application mode numpad `1` final byte.
 ///
-/// Value: `'q'` dec, `71` hex.
+/// Value: `113` dec, `71` hex.
 ///
 /// Sequence: `SS3 q`.
 ///
@@ -436,7 +563,7 @@ pub const SS3_NUMPAD_1: u8 = b'q';
 
 /// SS3 Numpad 2 ([`ANSI`]): Application mode numpad `2` final byte.
 ///
-/// Value: `'r'` dec, `72` hex.
+/// Value: `114` dec, `72` hex.
 ///
 /// Sequence: `SS3 r`.
 ///
@@ -445,7 +572,7 @@ pub const SS3_NUMPAD_2: u8 = b'r';
 
 /// SS3 Numpad 3 ([`ANSI`]): Application mode numpad `3` final byte.
 ///
-/// Value: `'s'` dec, `73` hex.
+/// Value: `115` dec, `73` hex.
 ///
 /// Sequence: `SS3 s`.
 ///
@@ -454,7 +581,7 @@ pub const SS3_NUMPAD_3: u8 = b's';
 
 /// SS3 Numpad 4 ([`ANSI`]): Application mode numpad `4` final byte.
 ///
-/// Value: `'t'` dec, `74` hex.
+/// Value: `116` dec, `74` hex.
 ///
 /// Sequence: `SS3 t`.
 ///
@@ -463,7 +590,7 @@ pub const SS3_NUMPAD_4: u8 = b't';
 
 /// SS3 Numpad 5 ([`ANSI`]): Application mode numpad `5` final byte.
 ///
-/// Value: `'u'` dec, `75` hex.
+/// Value: `117` dec, `75` hex.
 ///
 /// Sequence: `SS3 u`.
 ///
@@ -472,7 +599,7 @@ pub const SS3_NUMPAD_5: u8 = b'u';
 
 /// SS3 Numpad 6 ([`ANSI`]): Application mode numpad `6` final byte.
 ///
-/// Value: `'v'` dec, `76` hex.
+/// Value: `118` dec, `76` hex.
 ///
 /// Sequence: `SS3 v`.
 ///
@@ -481,7 +608,7 @@ pub const SS3_NUMPAD_6: u8 = b'v';
 
 /// SS3 Numpad 7 ([`ANSI`]): Application mode numpad `7` final byte.
 ///
-/// Value: `'w'` dec, `77` hex.
+/// Value: `119` dec, `77` hex.
 ///
 /// Sequence: `SS3 w`.
 ///
@@ -490,7 +617,7 @@ pub const SS3_NUMPAD_7: u8 = b'w';
 
 /// SS3 Numpad 8 ([`ANSI`]): Application mode numpad `8` final byte.
 ///
-/// Value: `'x'` dec, `78` hex.
+/// Value: `120` dec, `78` hex.
 ///
 /// Sequence: `SS3 x`.
 ///
@@ -499,7 +626,7 @@ pub const SS3_NUMPAD_8: u8 = b'x';
 
 /// SS3 Numpad 9 ([`ANSI`]): Application mode numpad `9` final byte.
 ///
-/// Value: `'y'` dec, `79` hex.
+/// Value: `121` dec, `79` hex.
 ///
 /// Sequence: `SS3 y`.
 ///
@@ -619,6 +746,13 @@ pub const MODIFIER_PARAMETER_OFFSET: u8 = 1;
 //
 // Ctrl+letter → letter & 0x1F. Reverse: byte | 0x60 → lowercase letter.
 
+/// Control Character Range Minimum ([`ANSI`]): Lowest control character byte (NUL).
+///
+/// Value: `0` dec, `00` hex.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+pub const CTRL_CHAR_RANGE_MIN: u8 = 0;
+
 /// Control Character Range Maximum ([`ANSI`]): Highest control character byte.
 ///
 /// Value: `31` dec, `1F` hex.
@@ -677,7 +811,7 @@ pub const CONTROL_ENTER: u8 = b'\r';
 ///
 /// Value: `27` dec, `1B` hex.
 ///
-/// Key combo: `Ctrl+[` or Esc key.
+/// Key combo: `Ctrl+[` or `Esc` key.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ESC`]: crate::EscSequence
@@ -861,6 +995,16 @@ pub const ASCII_LOWER_A: u8 = b'a';
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 pub const ASCII_LOWER_Z: u8 = b'z';
 
+/// [`ASCII`] Question Mark ([`ASCII`]): Byte value for character `'?'`. Delimiter for
+/// [`OSC`] queries or [`DEC`] private parameters.
+///
+/// Value: `63` dec, `3F` hex.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`OSC`]: crate::osc_codes::OscSequence
+pub const ASCII_QUESTION_MARK: u8 = b'?';
+
 // ==================== CSI Prefix ====================
 
 /// Control Sequence Introducer ([`CSI`]) Prefix: Two-byte introducer for all [`CSI`]
@@ -877,6 +1021,90 @@ pub const CSI_PREFIX: &[u8] = b"\x1b[";
 ///
 /// [`CSI`]: crate::CsiSequence
 pub const CSI_PREFIX_LEN: usize = CSI_PREFIX.len();
+
+/// [`CSI`] Minimum Length: Minimum number of bytes for a valid [`CSI`] sequence (`ESC [`
+/// + final byte).
+///
+/// Derived from [`CSI_PREFIX_LEN`] + 1.
+///
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_MIN_LEN: usize = CSI_PREFIX_LEN + 1;
+
+/// Minimum byte value for an ECMA-48 / [`CSI`] sequence terminating final byte (`b'@'`,
+/// `0x40`).
+///
+/// Final characters in standard [`CSI`] sequences are restricted to the [`ASCII`] range
+/// `0x40..=0x7E`.
+///
+/// Value: `64` dec, `40` hex.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_FINAL_BYTE_MIN: u8 = b'@';
+
+/// Maximum byte value for an ECMA-48 / [`CSI`] sequence terminating final byte (`b'~'`,
+/// `0x7E`).
+///
+/// Final characters in standard [`CSI`] sequences are restricted to the [`ASCII`] range
+/// `0x40..=0x7E`.
+///
+/// Value: `126` dec, `7E` hex.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_FINAL_BYTE_MAX: u8 = b'~';
+
+/// [`CSI`] Default Parameter: Default numeric parameter value in ECMA-48 / [`ANSI`]
+/// [`CSI`] sequences (representing 1 repeat count or base key parameter).
+///
+/// Value: `1`.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_PARAM_DEFAULT: u16 = 1;
+
+/// [`CSI`] Zero Parameter: Zero parameter value in ECMA-48 / [`ANSI`] [`CSI`] sequences,
+/// which ECMA-48 treats as equivalent to default ([`CSI_PARAM_DEFAULT`]).
+///
+/// Value: `0`.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`CSI`]: crate::CsiSequence
+pub const CSI_PARAM_ZERO: u16 = 0;
+
+/// Single Shift 3 ([`SS3`]) Prefix: Two-byte introducer for [`SS3`] sequences.
+///
+/// Sequence: `ESC O` (`1B 4F` hex).
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_PREFIX: &[u8] = b"\x1bO";
+
+/// [`SS3`] Prefix Length: Number of bytes in the [`SS3_PREFIX`].
+///
+/// Derived from [`SS3_PREFIX`].
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_PREFIX_LEN: usize = SS3_PREFIX.len();
+
+/// [`SS3`] Sequence Length: Exact number of bytes in an [`SS3`] keyboard sequence (`ESC
+/// O` + command char).
+///
+/// Derived from [`SS3_PREFIX_LEN`] + 1.
+///
+/// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+pub const SS3_SEQ_LEN: usize = SS3_PREFIX_LEN + 1;
+
+/// Length in bytes of an Alt+key escape sequence ([`ESC`] + key byte).
+///
+/// Value: `2`.
+///
+/// [`ESC`]: crate::EscSequence
+pub const ALT_KEY_SEQ_LEN: usize = 2;
+
+/// Length in bytes of a single-byte C0 control character sequence.
+///
+/// Value: `1`.
+pub const CONTROL_CHAR_SEQ_LEN: usize = 1;
 
 // ==================== DECCKM Cursor Key Mode Sequences ====================
 //
@@ -1042,7 +1270,15 @@ mod tests {
         assert_eq!(ANSI_ESC, 0x1B);
         assert_eq!(ANSI_CSI_BRACKET, 0x5B);
         assert_eq!(ANSI_PARAM_SEPARATOR, b';');
+        assert_eq!(ANSI_SUBPARAM_SEPARATOR, b':');
         assert_eq!(ANSI_FUNCTION_KEY_TERMINATOR, b'~');
+        assert_eq!(ANSI_CSI_U, b'u');
+        assert_eq!(KITTY_EVENT_PRESS, 1);
+        assert_eq!(KITTY_EVENT_REPEAT, 2);
+        assert_eq!(KITTY_EVENT_RELEASE, 3);
+        assert_eq!(KITTY_PUA_INSERT, 57358);
+        assert_eq!(KITTY_PUA_F1, 57376);
+        assert_eq!(KITTY_PUA_F12, 57387);
     }
 
     #[test]
@@ -1087,9 +1323,29 @@ mod tests {
 
     #[test]
     fn test_control_characters() {
+        assert_eq!(CTRL_CHAR_RANGE_MIN, 0);
+        assert_eq!(CTRL_CHAR_RANGE_MAX, 31);
         assert_eq!(CONTROL_TAB, b'\t');
         assert_eq!(CONTROL_ENTER, b'\r');
         assert_eq!(CONTROL_ESC, 0x1B);
         assert_eq!(CONTROL_BACKSPACE, 0x08);
+    }
+
+    #[test]
+    fn test_sequence_prefixes_and_lengths() {
+        assert_eq!(CSI_PREFIX, b"\x1b[");
+        assert_eq!(CSI_PREFIX_LEN, 2);
+        assert_eq!(CSI_MIN_LEN, 3);
+        assert_eq!(CSI_FINAL_BYTE_MIN, b'@');
+        assert_eq!(CSI_FINAL_BYTE_MAX, b'~');
+        assert_eq!(CSI_PARAM_DEFAULT, 1);
+        assert_eq!(CSI_PARAM_ZERO, 0);
+        assert_eq!(SS3_PREFIX, b"\x1bO");
+        assert_eq!(SS3_PREFIX_LEN, 2);
+        assert_eq!(SS3_SEQ_LEN, 3);
+        assert_eq!(ALT_KEY_SEQ_LEN, 2);
+        assert_eq!(CONTROL_CHAR_SEQ_LEN, 1);
+        assert_eq!(ASCII_QUESTION_MARK, b'?');
+        assert_eq!(ANSI_CSI_U, b'u');
     }
 }

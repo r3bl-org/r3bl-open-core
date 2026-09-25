@@ -22,8 +22,6 @@ authors = [
     "Nadia Idris <nadia@developerlife.com>",
 ]
 documentation = "https://docs.rs/r3bl-cmdr"
-# More info on default-run: https://stackoverflow.com/a/51790493/2085356
-default-run = "rc"
 
 # https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
 [package.metadata.docs.rs]
@@ -43,10 +41,6 @@ path = "src/bin/giti.rs"
 [[bin]]
 name = "edi"
 path = "src/bin/edi.rs"
-
-[[bin]]
-name = "rc"
-path = "src/bin/rc.rs"
 
 [[bin]]
 name = "env-source"

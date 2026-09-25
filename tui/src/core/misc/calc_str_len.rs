@@ -6,8 +6,6 @@ use std::{collections::hash_map::Entry,
           fmt::{Display, Formatter},
           str::FromStr};
 
-// cspell:words mfoo
-
 /// Enum representing different methods for calculating the length of a string. The
 /// [`Self::calculate`] function memoizes the length of the string for the
 /// [`StringLength::StripAnsi`] variant to speed up computations.

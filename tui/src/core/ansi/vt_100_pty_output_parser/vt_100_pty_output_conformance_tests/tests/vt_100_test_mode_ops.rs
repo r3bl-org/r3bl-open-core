@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words KLMNOP ABCDEFGHIP
-
 //! Tests for terminal mode operations (SM/RM).
 //!
 //! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation

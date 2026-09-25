@@ -325,8 +325,19 @@ end
 # Usage:
 #   install_cargo_tool "bacon"
 #   install_cargo_tool "flamegraph"
-function install_cargo_tool --argument-names tool_name
-    if not command -v $tool_name >/dev/null
+function install_cargo_tool --argument-names tool_name binary_name
+    if test -z "$binary_name"
+        switch $tool_name
+            case "inferno"
+                set binary_name "inferno-flamegraph"
+            case "typos-cli"
+                set binary_name "typos"
+            case '*'
+                set binary_name $tool_name
+        end
+    end
+
+    if not command -v $binary_name >/dev/null
         echo "Installing $tool_name..."
         if command -v cargo-binstall >/dev/null
             # Use --force because binstall metadata may be stale: the binary

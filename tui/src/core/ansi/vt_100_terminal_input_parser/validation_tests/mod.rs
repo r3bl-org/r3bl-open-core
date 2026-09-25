@@ -37,12 +37,12 @@
 //! function calls, **STOP**! This would break the validation chain:
 //!
 //! ```text
-//! ❌ BROKEN: Circular validation (no ground truth)
-//!    Generator → Bytes → Parser → Generator validates itself ✗
+//! BROKEN: Circular validation (no ground truth)
+//!    Generator → Bytes → Parser → Generator validates itself
 //!
-//! ✅ CORRECT: Independent validation against reality
-//!    Terminal observation → Bytes → Parser validates against reality ✓
-//!    Generator → Bytes validates against reality ✓
+//! CORRECT: Independent validation against reality
+//!    Terminal observation → Bytes → Parser validates against reality
+//!    Generator → Bytes validates against reality
 //! ```
 //!
 //! **These hardcoded sequences ARE the ground truth.** The generators in [`generator`]

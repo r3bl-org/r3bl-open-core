@@ -275,6 +275,9 @@ fn controlled() {
                                 InputEvent::BracketedPaste(ref text) => {
                                     format!("Paste: {} chars", text.len())
                                 }
+                                InputEvent::TerminalColor(ref report) => {
+                                    format!("TerminalColor: {report:?}")
+                                }
                                 InputEvent::Shutdown(ref reason) => {
                                     format!("Shutdown: {reason:?}")
                                 }

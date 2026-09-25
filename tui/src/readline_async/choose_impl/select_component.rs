@@ -2,9 +2,11 @@
 
 use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            RangeExt, State, StyleSheet, TuiStyle, c_col, ch, cli_text_inline,
-            core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
-            inline_string, ok, queue_commands, usize, vp_width};
+            RangeExt, SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
+            TermRowDelta, TerminalLibBackend, TuiStyle, VPHeight, ansi_output, c_col,
+            ch, cli_text_inline, core::common::string_repeat_cache::get_spaces, fg_blue,
+            get_terminal_width, inline_string, ok, queue_commands, usize, vp_height,
+            vp_width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -27,21 +29,21 @@ impl FunctionComponent<State> for SelectComponent {
     fn get_output_device(&mut self) -> OutputDevice { self.output_device.clone() }
 
     // Header can be either a single line or a multi line.
-    fn calculate_header_viewport_height(&self, state: &mut State) -> ChUnit {
+    fn calculate_header_viewport_height(&self, state: &mut State) -> VPHeight {
         match state.header {
-            Header::SingleLine(_) => ch(1),
-            Header::MultiLine(ref lines) => ch(lines.len()),
+            Header::SingleLine(_) => vp_height(1),
+            Header::MultiLine(ref lines) => vp_height(lines.len()),
         }
     }
 
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
     /// This does NOT include the header.
-    fn calculate_items_viewport_height(&self, state: &mut State) -> ChUnit {
+    fn calculate_items_viewport_height(&self, state: &mut State) -> VPHeight {
         if state.items.len() > usize(state.max_display_height) {
-            state.max_display_height
+            vp_height(state.max_display_height)
         } else {
-            ch(state.items.len())
+            vp_height(state.items.len())
         }
     }
 
@@ -87,8 +89,8 @@ mod render_helper {
     use super::*;
 
     pub struct RenderContext {
-        pub header_viewport_height: ChUnit,
-        pub items_viewport_height: ChUnit,
+        pub header_viewport_height: VPHeight,
+        pub items_viewport_height: VPHeight,
         pub vp_width: ChUnit,
         pub start_display_col_offset: usize,
         pub data_row_index_start: ChUnit,
@@ -187,21 +189,42 @@ mod render_helper {
         // choose_apply_style! calls that were previously used.
         let styled_header = cli_text_inline(&header_text, *header_style).to_string();
 
-        queue_commands! {
-            output_device,
-            // Bring the caret back to the start of line.
-            MoveToColumn(0),
-            // Reset the colors that may have been set by the previous command.
-            ResetColor,
-            // Clear the current line.
-            Clear(ClearType::CurrentLine),
-            // Print the styled text (ANSI codes already embedded).
-            Print(styled_header),
-            // Move to next line.
-            MoveToNextLine(1),
-            // Reset the colors.
-            ResetColor,
-        };
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                queue_commands! {
+                    output_device,
+                    // Bring the caret back to the start of line.
+                    MoveToColumn(0),
+                    // Reset the colors that may have been set by the previous command.
+                    ResetColor,
+                    // Clear the current line.
+                    Clear(ClearType::CurrentLine),
+                    // Print the styled text (ANSI codes already embedded).
+                    Print(styled_header),
+                    // Move to next line.
+                    MoveToNextLine(1),
+                    // Reset the colors.
+                    ResetColor,
+                };
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                output_device.write(|writer| -> miette::Result<()> {
+                    let mut buf = String::new();
+                    buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
+                        TermCol::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    buf.push_str(ansi_output::screen_clearing::clear_current_line());
+                    buf.push_str(&styled_header);
+                    buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
+                        TermRowDelta::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                    ok!()
+                })?;
+            }
+        }
 
         ok!()
     }
@@ -300,21 +323,42 @@ mod render_helper {
             .collect::<Vec<String>>()
             .join("\r\n");
 
-        queue_commands! {
-            output_device,
-            // Bring the caret back to the start of line.
-            MoveToColumn(0),
-            // Reset the colors that may have been set by the previous command.
-            ResetColor,
-            // Clear the current line.
-            Clear(ClearType::CurrentLine),
-            // Print each AnsiStyledText.
-            Print(multi_line_header_text),
-            // Move to next line.
-            MoveToNextLine(1),
-            // Reset the colors.
-            ResetColor,
-        };
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                queue_commands! {
+                    output_device,
+                    // Bring the caret back to the start of line.
+                    MoveToColumn(0),
+                    // Reset the colors that may have been set by the previous command.
+                    ResetColor,
+                    // Clear the current line.
+                    Clear(ClearType::CurrentLine),
+                    // Print each AnsiStyledText.
+                    Print(multi_line_header_text),
+                    // Move to next line.
+                    MoveToNextLine(1),
+                    // Reset the colors.
+                    ResetColor,
+                };
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                output_device.write(|writer| -> miette::Result<()> {
+                    let mut buf = String::new();
+                    buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
+                        TermCol::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    buf.push_str(ansi_output::screen_clearing::clear_current_line());
+                    buf.push_str(&multi_line_header_text);
+                    buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
+                        TermRowDelta::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                    ok!()
+                })?;
+            }
+        }
 
         ok!()
     }
@@ -329,7 +373,7 @@ mod render_helper {
         let vp_range = ..render_context.items_viewport_height;
         for viewport_row in vp_range.as_index_iter() {
             let row_context = ItemRowContext::new(
-                viewport_row,
+                *viewport_row,
                 render_context.data_row_index_start,
                 state,
             );
@@ -494,36 +538,73 @@ mod render_helper {
         // Apply the same style to padding to ensure background color extends.
         let styled_padding = cli_text_inline(&padding_right, *data_style).to_string();
 
-        queue_commands! {
-            output_device,
-            // Bring the caret back to the start of line.
-            MoveToColumn(0),
-            // Reset the colors that may have been set by the previous command.
-            ResetColor,
-            // Clear the current line.
-            Clear(ClearType::CurrentLine),
-            // Print the styled text (ANSI codes already embedded).
-            Print(styled_item),
-            // Print the styled padding (ensures bg color extends).
-            Print(styled_padding),
-            // Move to next line.
-            MoveToNextLine(1),
-            // Reset the colors.
-            ResetColor,
-        };
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                queue_commands! {
+                    output_device,
+                    // Bring the caret back to the start of line.
+                    MoveToColumn(0),
+                    // Reset the colors that may have been set by the previous command.
+                    ResetColor,
+                    // Clear the current line.
+                    Clear(ClearType::CurrentLine),
+                    // Print the styled text (ANSI codes already embedded).
+                    Print(styled_item),
+                    // Print the styled padding (ensures bg color extends).
+                    Print(styled_padding),
+                    // Move to next line.
+                    MoveToNextLine(1),
+                    // Reset the colors.
+                    ResetColor,
+                };
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                output_device.write(|writer| -> miette::Result<()> {
+                    let mut buf = String::new();
+                    buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
+                        TermCol::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    buf.push_str(ansi_output::screen_clearing::clear_current_line());
+                    buf.push_str(&styled_item);
+                    buf.push_str(&styled_padding);
+                    buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
+                        TermRowDelta::ONE,
+                    ));
+                    buf.push_str(SGR_RESET_STR);
+                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                    ok!()
+                })?;
+            }
+        }
 
         ok!()
     }
 
     pub fn move_cursor_back_to_start(
         output_device: &mut OutputDevice,
-        items_viewport_height: ChUnit,
-        header_viewport_height: ChUnit,
+        items_viewport_height: VPHeight,
+        header_viewport_height: VPHeight,
     ) -> CommonResult {
-        queue_commands! {
-            output_device,
-            MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
-        };
+        let total_lines = (items_viewport_height + header_viewport_height).as_u16();
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                queue_commands! {
+                    output_device,
+                    MoveToPreviousLine(total_lines),
+                };
+            }
+            TerminalLibBackend::DirectToAnsi => {
+                if let Some(delta) = TermRowDelta::new(total_lines) {
+                    output_device.write(|writer| -> miette::Result<()> {
+                        let ansi =
+                            ansi_output::cursor_movement::cursor_previous_line(delta);
+                        writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                        ok!()
+                    })?;
+                }
+            }
+        }
         ok!()
     }
 }

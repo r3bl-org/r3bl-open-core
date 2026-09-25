@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+pub use crate::core::ansi::vt_100_terminal_input_parser::{TerminalColorReport,
+                                                          TerminalColorRole};
 use crate::{KeyPress, MouseInput, VPSize, core::resilient_reactor_thread::ShutdownReason};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
@@ -102,6 +104,45 @@ pub enum InputEvent {
     ///
     /// [`enable_bracketed_paste`]: crate::TerminalModeController::enable_bracketed_paste
     BracketedPaste(String),
+
+    /// Terminal dynamic color query report ([`OSC`] 10, 11, 12, 13, 14, 17, or 19).
+    ///
+    /// Emitted on [`stdin`] in response to dynamic color queries sent to the terminal via
+    /// [`OscSequence::ColorQuery`] or [`OscSender::send_color_query`]. Contains the
+    /// resolved [`RgbValue`] and the functional [`TerminalColorRole`]:
+    ///
+    /// | [`OSC`] Code | Role Variant                               | Description                      |
+    /// | :----------- | :----------------------------------------- | :------------------------------- |
+    /// | `10`         | [`TerminalColorRole::Foreground`]          | Text foreground                  |
+    /// | `11`         | [`TerminalColorRole::Background`]          | Text background                  |
+    /// | `12`         | [`TerminalColorRole::Cursor`]              | Text cursor                      |
+    /// | `13`         | [`TerminalColorRole::MouseForeground`]     | Mouse pointer foreground         |
+    /// | `14`         | [`TerminalColorRole::MouseBackground`]     | Mouse pointer background         |
+    /// | `17`         | [`TerminalColorRole::Highlight`]           | Highlight / selection background |
+    /// | `19`         | [`TerminalColorRole::HighlightForeground`] | Highlight / selection foreground |
+    ///
+    /// > ⚠️ **Platform Availability**: Inbound decoding of terminal color responses is
+    /// > Linux-only via [`DirectToAnsiInputDevice`]. On macOS and Windows (Crossterm),
+    /// > replies are misparsed as phantom keypresses. For details, see
+    /// > [Platform & Backend Availability][osc-platform-support].
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+    /// [`OSC`]: crate::core::ansi::osc::OscSequence
+    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
+    /// [`RgbValue`]: crate::RgbValue
+    /// [`stdin`]: std::io::stdin
+    /// [`TerminalColorReport`]: crate::TerminalColorReport
+    /// [`TerminalColorRole::Background`]: crate::TerminalColorRole::Background
+    /// [`TerminalColorRole::Cursor`]: crate::TerminalColorRole::Cursor
+    /// [`TerminalColorRole::Foreground`]: crate::TerminalColorRole::Foreground
+    /// [`TerminalColorRole::Highlight`]: crate::TerminalColorRole::Highlight
+    /// [`TerminalColorRole::HighlightForeground`]: crate::TerminalColorRole::HighlightForeground
+    /// [`TerminalColorRole::MouseBackground`]: crate::TerminalColorRole::MouseBackground
+    /// [`TerminalColorRole::MouseForeground`]: crate::TerminalColorRole::MouseForeground
+    /// [`TerminalColorRole`]: crate::TerminalColorRole
+    /// [osc-platform-support]: mod@crate::core::ansi::osc#platform--backend-availability
+    TerminalColor(TerminalColorReport),
 
     /// The input thread shut down. The [`ShutdownReason`] indicates why - either the RRT
     /// framework exhausted its [`RestartPolicy`] or caught a panic on the dedicated

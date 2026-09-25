@@ -42,7 +42,7 @@
 //!     Route to `OSC` operations:                               ╭───────────╮
 //!       - osc_ops:: for OS commands (title, hyperlink)      <- │THIS MODULE│
 //!         ↓                                                    ╰───────────╯
-//!     Queue OscEvent for later rendering
+//!     Queue OscPtyEvent for later rendering
 //! ```
 //!
 //! # Supported [`OSC`] Sequences
@@ -57,56 +57,50 @@
 //!
 //! [`OSC`] sequences are queued as events for later processing by the output renderer.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
 //! [`test_osc_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
 //! [`vt_100_impl_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_osc_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::core::osc::osc_codes;
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
+                   protocols::VteOscParams};
+use crate::core::ansi::constants::{OSC_CODE_HYPERLINK, OSC_CODE_ICON, OSC_CODE_TITLE,
+                                   OSC_CODE_TITLE_AND_ICON};
 
 /// Handle [`OSC`] dispatch - process all [`OSC`] (Operating System Command) sequences.
 /// This is the main entry point for [`OSC`] sequence processing.
 /// See individual helper functions for specific [`OSC`] code handling.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
-pub fn dispatch_osc(
-    performer: &mut AnsiToOfsBufPerformer,
-    params: &[&[u8]],
-    _bell_terminated: bool,
-) {
-    if params.is_empty() {
+/// [`OSC`]: crate::core::ansi::osc::OscSequence
+pub fn dispatch_osc(performer: &mut AnsiToOfsBufPerformer, params: VteOscParams<'_>) {
+    let Some(code) = params.code() else {
         return;
-    }
+    };
 
-    // Parse the OSC code (first parameter).
-    if let Ok(code) = std::str::from_utf8(params[0]) {
-        match code {
-            // OSC 0: Set both window title and icon name.
-            // OSC 1: Set icon name only (we treat same as title).
-            // OSC 2: Set window title only.
-            osc_codes::OSC_CODE_TITLE_AND_ICON
-            | osc_codes::OSC_CODE_ICON
-            | osc_codes::OSC_CODE_TITLE
-                if params.len() > 1 =>
-            {
-                if let Ok(title) = std::str::from_utf8(params[1]) {
-                    handle_title_and_icon(performer, title);
-                }
+    let mut args = params.into_iter();
+
+    match code {
+        // OSC 0: Set both window title and icon name.
+        // OSC 1: Set icon name only (we treat same as title).
+        // OSC 2: Set window title only.
+        OSC_CODE_TITLE_AND_ICON | OSC_CODE_ICON | OSC_CODE_TITLE => {
+            if let Some(title) = args.next_str() {
+                handle_title_and_icon(performer, title);
             }
-            // OSC 8: Hyperlink (format: OSC 8 ; params ; URI).
-            osc_codes::OSC_CODE_HYPERLINK if params.len() > 2 => {
-                if let Ok(uri) = std::str::from_utf8(params[2]) {
-                    handle_hyperlink(performer, uri);
-                }
+        }
+        // OSC 8: Hyperlink (format: OSC 8 ; params ; URI).
+        OSC_CODE_HYPERLINK => {
+            let _params = args.next_str();
+            if let Some(uri) = args.next_str() {
+                handle_hyperlink(performer, uri);
             }
-            // OSC 9;4: Progress sequences (already handled by OscBuffer in some
-            // contexts) We could handle them here too if needed.
-            _ => {
-                // Ignore other OSC sequences for now.
-            }
+        }
+        // OSC 9;4: Progress sequences (handled by PtyOscProgressScanner in pty_session
+        // contexts).
+        _ => {
+            // Ignore other OSC sequences for now.
         }
     }
 }
@@ -115,8 +109,8 @@ pub fn dispatch_osc(
 /// Sets window title and/or icon name.
 /// Queues [`SetTitleAndTab`] event for later processing by output renderer.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
-/// [`SetTitleAndTab`]: crate::OscEvent::SetTitleAndTab
+/// [`OSC`]: crate::core::ansi::osc::OscSequence
+/// [`SetTitleAndTab`]: crate::OscPtyEvent::SetTitleAndTab
 pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str) {
     performer.ofs_buf_vt_100.handle_title_and_icon(title);
 }

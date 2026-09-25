@@ -368,7 +368,8 @@ function run_full_doc_build_task
 
                 # Fork another full build to eventually fix the broken links
                 fish -c "
-                    cd $CHECK_REPO_ROOT
+                    set -gx CHECK_REPO_ROOT '$CHECK_REPO_ROOT'
+                    cd '$CHECK_REPO_ROOT'
                     source script_lib.fish
                     source check_constants.fish
                     source check_docs.fish

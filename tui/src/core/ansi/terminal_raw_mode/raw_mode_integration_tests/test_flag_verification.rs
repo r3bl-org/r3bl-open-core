@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words IEXTEN VMIN VTIME OPOST ICRNL INLCR IGNCR IXON ISTRIP
-
 //! [`PTY`]-based integration test for raw mode flag verification.
 //!
 //! Verifies that [`make_raw()`] sets the correct [`termios`] flags according to the

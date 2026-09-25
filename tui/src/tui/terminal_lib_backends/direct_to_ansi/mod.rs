@@ -1,7 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words kqueue filedescriptor terminfo undercurls
-
 //! # [`DirectToAnsi`] Terminal Backend
 //!
 //! Pure-Rust [`ANSI`] sequence generation without crossterm dependencies.
@@ -78,6 +76,85 @@
 //! > the [`pty` mod docs: Masquerading] section explains how child processes use
 //! > [`terminfo`] masquerading to know how to draw to the TUI.
 //!
+//! # Terminal Protocols & Capabilities Hub
+//!
+//! [`DirectToAnsi`] acts as the **Stage 5 I/O Execution Layer**, driving the pure
+//! Rust [`Sans-IO`] protocol parsers and generators located in `core/ansi/` and
+//! `core/osc/`.
+//!
+//! Rather than duplicating low-level protocol specifications across backends, this module
+//! serves as the central navigation hub linking to the authoritative protocol
+//! documentation across the codebase.
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────────────────────┐
+//! │                         CORE SANS-IO PROTOCOL LAYER                                 │
+//! │                                                                                     │
+//! │  • Progressive Enhancement (Kitty CSI u)      ──► vt_100_terminal_input_parser      │
+//! │  • Inbound OSC Framing & Alt+]                ──► chunk_decoder / osc_scanner       │
+//! │  • Outbound OSC Sequence Generation           ──► core::osc::osc_codes              │
+//! │  • Hybrid Clipboard (OSC 52 + Paste)          ──► tui::editor::clipboard            │
+//! │  • Child Process PTY Controlled Interception  ──► core::pty / PtyOscProgressScanner │
+//! └──────────────────────────────────────┬──────────────────────────────────────────────┘
+//!                                        │ Driven by
+//! ┌──────────────────────────────────────▼────────────────────────────────────────────┐
+//! │                 STAGE 5 BACKEND EXECUTOR (DirectToAnsi)                           │
+//! │                                                                                   │
+//! │  • direct_to_ansi::input   ──► Linux non-blocking stdin & mio epoll poller        │
+//! │  • direct_to_ansi::output  ──► High-performance ANSI stream writer to stdout      │
+//! └───────────────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Protocol Navigation Matrix
+//!
+//! 1. **[`Kitty`] Keyboard Protocol (`CSI u`)**:
+//!    - **Direction**: 🛬 Inbound (`stdin`) & Outbound (`stdout`)
+//!    - **Source of Truth**: [`vt_100_terminal_input_parser`]
+//!    - **Highlights**:
+//!      - Zero-latency progressive enhancement (`CSI > 1 u`).
+//!      - Disambiguates `Shift+Enter`, `Ctrl+Tab`, and distinct `Ctrl+I` vs `Tab`.
+//!      - See [Legacy vs Kitty Capability Matrix].
+//!
+//! 2. **[`OSC`] 52 In-Band Clipboard**:
+//!    - **Direction**: 🛫 Outbound (`stdout`)
+//!    - **Source of Truth**: [`ClipboardService`] & [`Osc52Clipboard`]
+//!    - **Highlights**:
+//!      - Automatic fallback when desktop display server (`$DISPLAY` / `$WAYLAND_DISPLAY`)
+//!        is unset.
+//!      - Encodes clipboard text into Base64 payload over SSH.
+//!      - Works seamlessly in headless and Docker environments.
+//!
+//! 3. **[`DEC`] 2004 Bracketed Paste**:
+//!    - **Direction**: 🛬 Inbound (`stdin`)
+//!    - **Source of Truth**: [`paste_state_machine`] & [`terminal_events`]
+//!    - **Highlights**:
+//!      - Asynchronous paste handling (`CSI 200 ~` / `CSI 201 ~`).
+//!      - Eliminates need for insecure synchronous [`OSC`] 52 queries.
+//!
+//! 4. **Inbound [`OSC`] Framing & `Alt+]` Disambiguation**:
+//!    - **Direction**: 🛬 Inbound (`stdin`)
+//!    - **Source of Truth**: [`terminal_events`] & [`osc_scanner`]
+//!    - **Highlights**:
+//!      - 2-phase lexical scanner distinguishing human `Alt+]` from terminal [`OSC`]
+//!        responses.
+//!      - Uses [`MaybeMore`] stream availability heuristic for 0ms latency.
+//!      - 1 MiB runaway sequence safety drain via [`OscCircuitBreaker`].
+//!
+//! 5. **Outbound [`OSC`] Codes & Formatting**:
+//!    - **Direction**: 🛫 Outbound (`stdout`)
+//!    - **Source of Truth**: [`core::osc`] & [`OscSender`]
+//!    - **Highlights**:
+//!      - Type-safe enum builder ([`OscSequence`]).
+//!      - Sets window titles (`OSC 0`/`2`), creates clickable hyperlinks (`OSC 8`), and
+//!        sends progress notifications (`OSC 9;4`).
+//!
+//! 6. **[`PTY`] Controlled Child Interception**:
+//!    - **Direction**: 🔄 Intermediate ([`PTY`] controlled output)
+//!    - **Source of Truth**: [`core::pty`] & [`PtyOscProgressScanner`]
+//!    - **Highlights**:
+//!      - Uses `TERM=xterm-256color` masquerading for child processes.
+//!      - Background reader scans and extracts cargo/rustup `OSC 9;4` progress updates.
+//!
 //! # Architecture
 //!
 //! The module consists of:
@@ -90,10 +167,10 @@
 //!
 //! # Platform Support
 //!
-//! | Component                    | Linux   | macOS   | Windows   |
-//! | ---------------------------- | ------- | ------- | --------- |
-//! | Output ([`ANSI`] generation) | ✅      | ✅      | ✅        |
-//! | Input (terminal reading)     | ✅      | ❌      | ❌        |
+//! | Component                    | Linux | macOS | Windows |
+//! | ---------------------------- | ----- | ----- | ------- |
+//! | Output ([`ANSI`] generation) | Y     | Y     | Y       |
+//! | Input (terminal reading)     | Y     | N     | N       |
 //!
 //! The **output** side works on all platforms (pure [`ANSI`] sequence generation).
 //!
@@ -114,47 +191,52 @@
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`compositor_render_ops_to_ofs_buf` mod docs]:
-//!     mod@crate::compositor_render_ops_to_ofs_buf
-//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]:
-//!     mod@crate::crossterm_backend::crossterm_paint_render_op_impl
+//! [`ClipboardService`]: crate::ClipboardService
+//! [`core::osc`]: mod@crate::core::osc
+//! [`core::pty`]: mod@crate::core::pty
+//! [`crossterm_backend::crossterm_paint_render_op_impl` mod docs]: mod@crate::crossterm_backend::crossterm_paint_render_op_impl
+//! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 //! [`DirectToAnsi`]: self
-//! [`filedescriptor::poll()`]:
-//!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
+//! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
-//! [`input::integration_tests_stub`]:
-//!     mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
+//! [`input::integration_tests_stub`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::integration_tests_stub
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+//! [`Legacy vs Kitty Capability Matrix`]: mod@crate::core::ansi::vt_100_terminal_input_parser#terminal-input-capability-matrix-legacy-vt-100-vs-kitty-keyboard-protocol
 //! [`libc`]: https://crates.io/crates/libc
+//! [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 //! [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 //! [`ofs_buf::paint_impl` mod docs]: mod@crate::ofs_buf::paint_impl
-//! [`output::direct_to_ansi_output_integration_tests`]:
-//!     mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
+//! [`Osc52Clipboard`]: crate::Osc52Clipboard
+//! [`osc_scanner`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::OscCircuitBreaker
+//! [`OscSender`]: crate::OscSender
+//! [`OscSequence`]: crate::osc_codes::OscSequence
+//! [`output::direct_to_ansi_output_integration_tests`]: mod@crate::terminal_lib_backends::direct_to_ansi::output::direct_to_ansi_output_integration_tests
+//! [`paste_state_machine`]: mod@crate::terminal_lib_backends::direct_to_ansi::input::paste_state_machine
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
-//! [`pty` mod docs: Masquerading]:
-//!     mod@crate::core::pty#terminal-emulation--terminfo-masquerading
+//! [`pty` mod docs: Masquerading]: mod@crate::core::pty#terminal-emulation--terminfo-masquerading
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`render_op_ir` mod docs]: mod@crate::render_op::render_op_ir
+//! [`PtyOscProgressScanner`]: crate::PtyOscProgressScanner
 //! [`RenderOpCommon`]: crate::tui::RenderOpCommon
-//! [`RenderOpIR`]: crate::RenderOpIR
-//! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [`RenderOpOutputVec`]: crate::tui::RenderOpOutputVec
 //! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`RenderToAnsi`]: crate::RenderToAnsi
+//! [`Sans-IO`]: https://sans-io.readthedocs.io/
 //! [`StdoutMock`]: crate::StdoutMock
+//! [`terminal_events`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events
 //! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 //! [`terminfo`]: https://en.wikipedia.org/wiki/Terminfo
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]:
-//!     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+//! [`vt_100_terminal_input_parser::vt_100_parser_integration_tests`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
+//! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`wezterm.terminfo`]: https://wezterm.org/faq.html
 //! [`WezTerm`]: https://wezterm.org/
 //! [`winapi`]: https://crates.io/crates/winapi
-//! [rendering pipeline overview]:
-//!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 #![rustfmt::skip]
 

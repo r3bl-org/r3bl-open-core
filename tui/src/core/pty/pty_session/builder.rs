@@ -483,9 +483,9 @@ impl PtySessionBuilder {
     ///   excluded. It also ensures cargo trusts the terminal enough to emit [`OSC`]
     ///   sequences rather than falling back to plain text output.
     ///
-    /// The emitted [`OSC`] bytes are parsed downstream by [`OscBuffer`] into [`OscEvent`]
-    /// variants such as [`ProgressUpdate(u8)`], and delivered to the caller via the
-    /// [`PTY`] session's MPSC channel.
+    /// The emitted [`OSC`] bytes are parsed downstream by [`PtyOscProgressScanner`]
+    /// into [`OscPtyEvent`] variants such as [`ProgressUpdate(Pc)`], and delivered to the
+    /// caller via the [`PTY`] session's MPSC channel.
     ///
     /// [`CARGO_TERM_PROGRESS_WHEN=always`]:
     ///     https://doc.rust-lang.org/cargo/reference/config.html#termprogresswhen
@@ -493,10 +493,10 @@ impl PtySessionBuilder {
     /// [`examine_env_vars_to_determine_hyperlink_support()`]:
     ///     crate::examine_env_vars_to_determine_hyperlink_support
     /// [`OSC`]: crate::osc_codes::OscSequence
-    /// [`OscBuffer`]: crate::OscBuffer
-    /// [`OscEvent`]: crate::OscEvent
-    /// [`ProgressUpdate(u8)`]: crate::OscEvent::ProgressUpdate
+    /// [`OscPtyEvent`]: crate::OscPtyEvent
+    /// [`ProgressUpdate(Pc)`]: crate::OscPtyEvent::ProgressUpdate
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PtyOscProgressScanner`]: crate::PtyOscProgressScanner
     /// [`rustup`]: https://rust-lang.github.io/rustup/
     /// [`TERM=xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
     /// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/

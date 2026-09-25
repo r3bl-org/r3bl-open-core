@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EFGHIJ ABCEFGHIJ FGHIJ ABFGHIJ CDEFG DEFGHI
-
 //! Tests for character insertion, deletion, and erasure operations (ICH/DCH/ECH).
 //!
 //! Tests the complete pipeline from [`ANSI`] sequences through the shim to implementation

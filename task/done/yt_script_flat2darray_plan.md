@@ -1,5 +1,3 @@
-<!-- cspell:words darray memcopy Memcopy mktemp -->
-
 ## Video Title
 
 **Build High-Performance Flat 2D Arrays in Rust (using SIMD & L1 Cache)**

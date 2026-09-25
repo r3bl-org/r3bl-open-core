@@ -12,8 +12,8 @@ use std::ops::{Range, RangeBounds, RangeFrom, RangeInclusive, RangeTo};
 ///
 /// # Purpose
 ///
-/// This trait answers the question: **"How do I convert strongly-typed index ranges into
-/// raw [`usize`] ranges for slice indexing or iterate over them?"**
+/// This trait answers the question: **How do I convert strongly-typed index ranges into
+/// raw [`usize`] ranges for slice indexing or iterate over them?**
 ///
 /// <div class="warning">
 ///

@@ -34,5 +34,3 @@
 		"description": "Create an inner module with super wildcard import"
 	}
 }
-
-// cspell:words usesuper innermod

@@ -1,7 +1,5 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words ello
-
 //! [`PTY`]-based integration test for Ctrl+D delete character behavior.
 //!
 //! Validates that Ctrl+D on a non-empty line deletes the character at cursor position.

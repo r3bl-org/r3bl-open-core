@@ -1,11 +1,56 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Extension trait for [`AtomicU8`] with ergonomic methods for common operations. See
-//! [`AtomicU8Ext`] for details.
+//! Extension traits for atomic types ([`AtomicBool`], [`AtomicU8`]) with ergonomic
+//! methods for common operations. See [`AtomicBoolExt`] and [`AtomicU8Ext`] for details.
 //!
+//! [`AtomicBool`]: std::sync::atomic::AtomicBool
 //! [`AtomicU8`]: std::sync::atomic::AtomicU8
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+
+/// Ergonomic helpers for [`AtomicBool`] that hide [`SeqCst`] boilerplate.
+///
+/// All operations use [`SeqCst`] ordering so callers never have to choose.
+///
+/// [`AtomicBool`]: std::sync::atomic::AtomicBool
+/// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
+pub trait AtomicBoolExt {
+    /// Reads the current value.
+    fn get(&self) -> bool;
+
+    /// Writes `value`.
+    fn set(&self, value: bool);
+
+    /// Attempts to acquire a single-instance lease or gate by atomically transitioning
+    /// the flag from `false` to `true`.
+    ///
+    /// - Returns `Some(())` if the lease was successfully acquired (value was `false`).
+    /// - Returns `None` if the lease was already held (value was already `true`).
+    ///
+    /// This prevents Time-Of-Check to Time-Of-Use ([TOCTOU]) race conditions by combining
+    /// the check and the state transition into a single, indivisible hardware atomic
+    /// operation.
+    ///
+    /// [TOCTOU]: https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use
+    fn try_acquire(&self) -> Option<()>;
+
+    /// Releases a previously acquired lease or gate by atomically resetting the flag to
+    /// `false`.
+    fn release(&self);
+}
+
+impl AtomicBoolExt for AtomicBool {
+    fn get(&self) -> bool { self.load(Ordering::SeqCst) }
+
+    fn set(&self, value: bool) { self.store(value, Ordering::SeqCst) }
+
+    fn try_acquire(&self) -> Option<()> {
+        let was_already_held = self.swap(true, Ordering::SeqCst);
+        if was_already_held { None } else { Some(()) }
+    }
+
+    fn release(&self) { self.set(false); }
+}
 
 /// Ergonomic helpers for [`AtomicU8`] that hide [`SeqCst`] boilerplate and the
 /// [`fetch_add`] return-value quirk.
@@ -36,7 +81,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 /// [`fetch_add`]: std::sync::atomic::AtomicU8::fetch_add
 /// [`get`]: Self::get
 /// [`increment`]: Self::increment
-/// [`SeqCst`]: Ordering::SeqCst
+/// [`SeqCst`]: std::sync::atomic::Ordering::SeqCst
 pub trait AtomicU8Ext {
     /// Atomically increments the counter and returns the **new** value.
     ///
@@ -51,8 +96,10 @@ pub trait AtomicU8Ext {
 }
 
 impl AtomicU8Ext for AtomicU8 {
-    /// See [the `fetch_add` quirk][AtomicU8Ext#the-fetch_add-quirk] for why this avoids a
+    /// See [the `fetch_add` quirk][quirk] for why this avoids a
     /// second load.
+    ///
+    /// [quirk]: AtomicU8Ext#the-fetch_add-quirk
     fn increment(&self) -> u8 { self.fetch_add(1, Ordering::SeqCst).wrapping_add(1) }
 
     fn get(&self) -> u8 { self.load(Ordering::SeqCst) }
@@ -66,6 +113,45 @@ mod tests {
     use crate::LossyConvertToByte;
     use rustc_hash::FxHashSet;
     use std::{sync::Arc, thread};
+
+    #[test]
+    fn bool_get_returns_initial_value() {
+        let flag = AtomicBool::new(false);
+        assert!(!flag.get());
+
+        let flag_true = AtomicBool::new(true);
+        assert!(flag_true.get());
+    }
+
+    #[test]
+    fn bool_set_updates_value() {
+        let flag = AtomicBool::new(false);
+        flag.set(true);
+        assert!(flag.get());
+        flag.set(false);
+        assert!(!flag.get());
+    }
+
+    #[test]
+    fn bool_try_acquire_and_release() {
+        let flag = AtomicBool::new(false);
+
+        // 1. Initial acquire succeeds.
+        assert_eq!(flag.try_acquire(), Some(()));
+        assert!(flag.get());
+
+        // 2. Subsequent acquire fails while held.
+        assert_eq!(flag.try_acquire(), None);
+        assert!(flag.get());
+
+        // 3. Release resets flag to false.
+        flag.release();
+        assert!(!flag.get());
+
+        // 4. Can acquire again after release.
+        assert_eq!(flag.try_acquire(), Some(()));
+        assert!(flag.get());
+    }
 
     #[test]
     fn get_returns_initial_value() {

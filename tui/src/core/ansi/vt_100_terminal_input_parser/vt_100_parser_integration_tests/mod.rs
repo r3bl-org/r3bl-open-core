@@ -75,3 +75,7 @@ pub mod pty_mio_poller_subscribe_test;
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
 pub mod pty_mio_poller_singleton_test;
+
+#[cfg(all(target_os = "linux", any(test, doc)))]
+pub mod pty_osc_color_test;
+

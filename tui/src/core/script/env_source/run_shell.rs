@@ -430,5 +430,3 @@ mod tests_run_shell_windows {
         Ok(())
     }
 }
-
-// cspell:words Popen

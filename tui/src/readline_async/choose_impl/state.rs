@@ -80,30 +80,6 @@ mod convert_to_header {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{TuiStyle, assert_eq2, cli_text_inline};
-    use smallvec::smallvec;
-
-    #[test]
-    fn test_header_enum() {
-        let state = State {
-            header: Header::MultiLine(smallvec![smallvec![cli_text_inline(
-                "line1",
-                TuiStyle::default(),
-            )]]),
-            ..Default::default()
-        };
-        let lhs = state.header;
-        let rhs = Header::MultiLine(smallvec![smallvec![cli_text_inline(
-            "line1",
-            TuiStyle::default()
-        )]]);
-        assert_eq2!(lhs, rhs);
-    }
-}
-
 impl CalculateResizeHint for State {
     fn set_size(&mut self, new_size: VPSize) {
         self.window_size = Some(new_size);
@@ -171,5 +147,29 @@ impl State {
         } else {
             Some(ResizeHint::NoChange)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{TuiStyle, assert_eq2, cli_text_inline};
+    use smallvec::smallvec;
+
+    #[test]
+    fn test_header_enum() {
+        let state = State {
+            header: Header::MultiLine(smallvec![smallvec![cli_text_inline(
+                "line1",
+                TuiStyle::default(),
+            )]]),
+            ..Default::default()
+        };
+        let lhs = state.header;
+        let rhs = Header::MultiLine(smallvec![smallvec![cli_text_inline(
+            "line1",
+            TuiStyle::default()
+        )]]);
+        assert_eq2!(lhs, rhs);
     }
 }

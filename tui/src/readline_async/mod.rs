@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words terminalasynctry spinnertry
-
 //! # Readline Async, Choice Selection, and Spinner Modules
 //!
 //! This module provides asynchronous line editing, choice selection UI ([`choose()`]),
@@ -16,7 +14,7 @@
 //! your Terminal Emulator that displays the prompt and you can type your input into).
 //!
 //! In traditional blocking readline implementations:
-//! - The calling thread is trapped waiting for user input and cannot be cancelled or
+//! - The calling thread is trapped waiting for user input and cannot be canceled or
 //!   cleanly interrupted.
 //! - Any background thread writing to [`stdout`] clobbers the active prompt and corrupts
 //!   the cursor display.
@@ -73,7 +71,8 @@
 //!   keystrokes, history navigation, multiline editing, and channel signals. You probably
 //!   won't interact with this directly; [`ReadlineAsyncContext`] wraps and manages it.
 //! - [`LineState`]: **Active Line & Cursor State**. Holds the prompt text, grapheme
-//!   buffer, cursor position, and suspension state. Protected by Level 1 mutex.
+//!   buffer, cursor position, and suspension state. Protected by [`SafeLineState`]
+//!   (State lock, acquired 1st).
 //! - [`ModalTerminalGuard`]: **Exclusive Terminal Lease (RAII)**. Acquire via
 //!   [`ReadlineAsyncContext::acquire_modal_terminal()`] when a full-screen or modal
 //!   component (like [`choose()`]) needs exclusive control of input and output.

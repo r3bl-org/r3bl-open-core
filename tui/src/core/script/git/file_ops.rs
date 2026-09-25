@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words GPGSIGN
-
 //! Operations for detecting and filtering changed files in git repositories.
 
 use crate::{ResultAndCommand, Run, command,

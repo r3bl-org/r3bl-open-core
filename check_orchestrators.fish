@@ -1,5 +1,3 @@
-# cspell: words ETXTBSY oneoff nextest mktemp coreutils
-
 # Check Composition, Result Aggregation & Recovery
 #
 # Layered architecture for running cargo checks with automatic error recovery:

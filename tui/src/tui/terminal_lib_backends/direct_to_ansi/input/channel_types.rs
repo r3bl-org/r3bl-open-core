@@ -72,7 +72,7 @@ pub enum SignalEvent {
     /// [`TTY`], e.g., during [`SSH`] disconnect or terminal crash), the signal is
     /// silently dropped.
     ///
-    /// [`get_size()`]: crate::core::term::get_size
+    /// [`get_size()`]: crate::get_size
     /// [`InputEvent::Resize`]: crate::InputEvent::Resize
     /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
     /// [`SSH`]: https://en.wikipedia.org/wiki/Secure_Shell

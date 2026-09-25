@@ -68,11 +68,11 @@ const RENDER_LIST_STORAGE_SIZE: usize = 16;
 ///
 /// ## When to Use
 ///
-/// - ✅ **Hot rendering paths** (called thousands of times per second)
-/// - ✅ **Shallow call stacks** (typical UI rendering: 5-10 levels)
-/// - ✅ **Predictable sizes** (most renders: 8-16 items)
-/// - ❌ **Deep recursion** (parsers with 300+ frames) → Use [`crate::ParseList`]
-/// - ❌ **Unpredictable growth** (user-controlled list sizes) → Use `Vec` directly
+/// - Yes: **Hot rendering paths** (called thousands of times per second)
+/// - Yes: **Shallow call stacks** (typical UI rendering: 5-10 levels)
+/// - Yes: **Predictable sizes** (most renders: 8-16 items)
+/// - No:  **Deep recursion** (parsers with 300+ frames) → See [`crate::ParseList`]
+/// - No:  **Unpredictable growth** (user-controlled list sizes) → Use `Vec` directly
 ///
 /// ## Historical Context
 ///

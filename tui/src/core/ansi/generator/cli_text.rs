@@ -1,13 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{
-    generate_impl_display_for_fast_stringify, impl_cli_text_inline::CliTextConvertOptions,
-    inline_string, ok, tui_color,
-    tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline},
-    BufTextStorage, CCol, FastStringify, GCStringOwned, InlineString, InlineVec,
-    PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
-    UNICODE_REPLACEMENT_CHAR, VPWidth, c_col,
-};
+use crate::{BufTextStorage, CCol, FastStringify, GCStringOwned, InlineString, InlineVec,
+            PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
+            UNICODE_REPLACEMENT_CHAR, VPWidth, c_col,
+            generate_impl_display_for_fast_stringify,
+            impl_cli_text_inline::CliTextConvertOptions,
+            inline_string, ok, tui_color,
+            tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 // use std::fmt::Result;
 use strum_macros::EnumCount;
 
@@ -937,11 +936,9 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 #[cfg(test)]
 mod tests {
     use super::{dim, impl_cli_text_inline::CliTextConvertOptions};
-    use crate::{
-        tui_style::tui_style_attrib::Bold, tui_style_attribs, vp_width, c_col,
-        CliTextInline, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle,
-        TuiStyleAttribs, global_color_support, ok, tui_color,
-    };
+    use crate::{CliTextInline, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle,
+                TuiStyleAttribs, c_col, global_color_support, ok, tui_color,
+                tui_style::tui_style_attrib::Bold, tui_style_attribs, vp_width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;
 
