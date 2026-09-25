@@ -21,11 +21,9 @@ pub mod ansi;
 pub mod color_wheel;
 pub mod glyphs;
 pub mod graphemes;
-pub mod osc;
 pub mod pty;
 pub mod resilient_reactor_thread;
 pub mod storage;
-pub mod term;
 
 // Re-export.
 pub use color_wheel::*;
@@ -37,7 +35,6 @@ pub use heap_alloc_types::*;
 pub use log::*;
 pub use misc::*;
 pub use notification::*;
-pub use osc::*;
 pub use pty::*;
 pub use script::*;
 pub use stack_alloc_types::*;
@@ -47,7 +44,6 @@ pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
 pub use resilient_reactor_thread::*;
-pub use term::*;
 pub use ansi::*;
 pub use common::*;
 

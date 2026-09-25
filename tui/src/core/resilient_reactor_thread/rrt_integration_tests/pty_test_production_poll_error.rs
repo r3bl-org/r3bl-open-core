@@ -12,7 +12,7 @@
 //! ```
 //!
 //! [`Continuation::Restart`]: crate::Continuation::Restart
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`epoll`]: https://manpages.debian.org/epoll.7
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`StdinEvent::Error`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::channel_types::StdinEvent::Error
 

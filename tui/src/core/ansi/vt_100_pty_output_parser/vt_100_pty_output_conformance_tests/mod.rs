@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words backticking minibuffer
-
 // Allow doc_markdown in this test module - the documentation explains internal
 // architecture and patterns, where backticking every function/type name would reduce
 // readability.
@@ -135,10 +133,10 @@
 //! types, not a complete example -->
 //!
 //! ```ignore
-//! // ❌ Hardcoded sequences (brittle, unclear intent)
+//! // Hardcoded sequences (brittle, unclear intent).
 //! let bad_sequence = "\x1b[2;5H\x1b[31mError\x1b[0m";
 //!
-//! // ✅ Type-safe builders (validated, self-documenting)
+//! // Type-safe builders (validated, self-documenting).
 //! let good_sequence = format!("{}{}{}",
 //!     CsiSequence::CursorPosition { row: term_row(nz(2)), col: term_col(nz(5)) },
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),
@@ -191,15 +189,15 @@
 //! use crate::protocols::csi_codes::SgrColorSequence;
 //! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
-//! // ❌ Raw escape strings (error-prone, unclear)
+//! // Raw escape strings (error-prone, unclear).
 //! let bad_fg = "\x1b[38:5:196m";  // What color index? Typo-prone!
 //! let bad_bg = "\x1b[48:2:255:128:0m";  // RGB components unclear
 //!
-//! // ✅ Type-safe generation (compiler-validated)
+//! // Type-safe generation (compiler-validated).
 //! let good_fg = SgrColorSequence::SetForegroundAnsi256(196).to_string();
 //! let good_bg = SgrColorSequence::SetBackgroundRgb(255, 128, 0).to_string();
 //!
-//! // ✅ Even better: Use test helpers
+//! // Even better: Use test helpers.
 //! let helper_fg = fg_ansi256(196);
 //! let helper_bg = bg_rgb(255, 128, 0);
 //! ```
@@ -249,15 +247,15 @@
 //! ### When to Use This Pattern
 //!
 //! Use bidirectional enums when:
-//! - ✅ The sequence has **multiple variants** (colors, positions, modes)
-//! - ✅ Sequences are **parameterized** (indices, RGB values, coordinates)
-//! - ✅ You need **type-safe test data** generation
-//! - ✅ Parsing and generation **share the same structure**
+//! - The sequence has **multiple variants** (colors, positions, modes)
+//! - Sequences are **parameterized** (indices, RGB values, coordinates)
+//! - You need **type-safe test data** generation
+//! - Parsing and generation **share the same structure**
 //!
 //! Don't use when:
-//! - ❌ Sequences are **one-off** strings without structure
-//! - ❌ Parsing is handled entirely by [`vte`] library
-//! - ❌ No need for test sequence generation
+//! - Sequences are **one-off** strings without structure
+//! - Parsing is handled entirely by [`vte`] library
+//! - No need for test sequence generation
 //!
 //! ### Adding a New Bidirectional Type
 //!

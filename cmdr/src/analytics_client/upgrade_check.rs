@@ -57,7 +57,7 @@
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
-use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
+use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscPtyEvent, OutputDevice,
                SpinnerStyle, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
                TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
                cli_text_inline, cli_text_line,
@@ -353,25 +353,25 @@ async fn run_cargo_install_with_progress(
 /// Handle [`OSC`] events from cargo install and update the spinner message accordingly.
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
-fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>) {
+fn handle_osc_event(event: OscPtyEvent, crate_name: &str, spinner: Option<&Spinner>) {
     if let Some(spinner) = spinner {
         match event {
-            OscEvent::ProgressUpdate(percentage) => {
+            OscPtyEvent::ProgressUpdate(percentage) => {
                 spinner
-                    .update_message(format!("Installing {crate_name}... {percentage}%"));
+                    .update_message(format!("Installing {crate_name}... {percentage:?}"));
             }
-            OscEvent::IndeterminateProgress => {
+            OscPtyEvent::IndeterminateProgress => {
                 spinner.update_message(format!("Installing {crate_name}... (building)"));
             }
-            OscEvent::ProgressCleared => {
+            OscPtyEvent::ProgressCleared => {
                 spinner.update_message(format!("Installing {crate_name}..."));
             }
-            OscEvent::BuildError => {
+            OscPtyEvent::BuildError => {
                 spinner.update_message(format!(
                     "Installing {crate_name}... (error occurred)"
                 ));
             }
-            OscEvent::Hyperlink { .. } | OscEvent::SetTitleAndTab(_) => {
+            OscPtyEvent::Hyperlink { .. } | OscPtyEvent::SetTitleAndTab(_) => {
                 // Hyperlinks and title/tab events aren't relevant for cargo install
                 // progress, so we ignore them here.
             }

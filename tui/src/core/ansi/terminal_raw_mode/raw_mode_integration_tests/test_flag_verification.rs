@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words IEXTEN VMIN VTIME OPOST ICRNL INLCR IGNCR IXON ISTRIP
-
 //! [`PTY`]-based integration test for raw mode flag verification.
 //!
 //! Verifies that [`make_raw()`] sets the correct [`termios`] flags according to the
@@ -20,19 +18,19 @@
 //! cargo test -p r3bl_tui test_raw_mode_flags -- --nocapture
 //! ```
 //!
-//! [`cfmakeraw`]: https://man7.org/linux/man-pages/man3/cfmakeraw.3.html
+//! [`cfmakeraw`]: https://manpages.debian.org/cfmakeraw.3
 //! [`crossterm`]: crossterm
-//! [`CS8`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`ICANON`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`IEXTEN`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`ISIG`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`CS8`]: https://manpages.debian.org/termios.3
+//! [`ECHO`]: https://manpages.debian.org/termios.3
+//! [`ICANON`]: https://manpages.debian.org/termios.3
+//! [`IEXTEN`]: https://manpages.debian.org/termios.3
+//! [`ISIG`]: https://manpages.debian.org/termios.3
 //! [`make_raw()`]: rustix::termios::Termios::make_raw
-//! [`OPOST`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`OPOST`]: https://manpages.debian.org/termios.3
 //! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
-//! [`VMIN`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VTIME`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [POSIX terminal API]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`VMIN`]: https://manpages.debian.org/termios.3
+//! [`VTIME`]: https://manpages.debian.org/termios.3
+//! [POSIX terminal API]: https://manpages.debian.org/termios.3
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,

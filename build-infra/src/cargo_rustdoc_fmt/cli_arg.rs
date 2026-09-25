@@ -9,8 +9,6 @@ use crate::cargo_rustdoc_fmt::types::FormatOptions;
 use clap::Parser;
 use std::path::PathBuf;
 
-// cspell:words fences
-
 /// Format markdown tables and links in Rust documentation comments.
 #[derive(Debug, Default, Parser)]
 #[command(

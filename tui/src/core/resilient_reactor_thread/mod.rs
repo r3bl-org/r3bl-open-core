@@ -1,9 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words epoll kqueue SIGWINCH syscall syscalls SQPOLL IORING eventfd signalfd
-// cspell:words pollable Proactor demultiplexing injectables threadwaker IOCP EINVAL
-// cspell:words kqueuefd filedescriptor rrtwaker EINTR errno kevent WezTerm
-
 //! Reusable infrastructure for the Resilient Reactor Thread (RRT) pattern implementation.
 //!
 //! # Blocking Calls and Async Code Don't Mix
@@ -902,35 +898,35 @@
 //! [`Continuation::Stop`]: crate::Continuation::Stop
 //! [`Continuation`]: crate::Continuation
 //! [`Continue`]: crate::Continuation::Continue
-//! [`CQ`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [`CQ`]: https://manpages.debian.org/io_uring.7
 //! [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
 //! [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
-//! [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
-//! [`EINVAL`]: https://man7.org/linux/man-pages/man3/errno.3.html
+//! [`EINTR`]: https://manpages.debian.org/errno.3
+//! [`EINVAL`]: https://manpages.debian.org/errno.3
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-//! [`epoll_wait()`]: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`epoll_wait()`]: https://manpages.debian.org/epoll_wait.2
+//! [`epoll`]: https://manpages.debian.org/epoll.7
 //! [`Event`]: RRTWorker::Output
-//! [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
-//! [`fd 0`]: https://man7.org/linux/man-pages/man3/stdin.3.html
-//! [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-//! [`fds`]: https://man7.org/linux/man-pages/man2/open.2.html
-//! [`fifo(7)`]: https://man7.org/linux/man-pages/man7/fifo.7.html
+//! [`eventfd`]: https://manpages.debian.org/eventfd.2
+//! [`fd 0`]: https://manpages.debian.org/stdin.3
+//! [`fd`]: https://manpages.debian.org/open.2
+//! [`fds`]: https://manpages.debian.org/open.2
+//! [`fifo(7)`]: https://manpages.debian.org/fifo.7
 //! [`filedescriptor::poll()`]:
 //!     https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`generation`]: RRT::get_thread_generation
 //! [`interrupt_if_running()`]: ThreadLifecycleMonitor::interrupt_if_running
 //! [`InterruptHandle`]: InterruptHandle
-//! [`io_uring_enter()`]: https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
+//! [`io_uring_enter()`]: https://manpages.debian.org/io_uring_enter.2
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
-//! [`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [`io_uring`]: https://manpages.debian.org/io_uring.7
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
 //! [`IORING_OP_ASYNC_CANCEL`]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_prep_cancel.3.html
+//!     https://manpages.debian.org/io_uring_prep_cancel.3
 //! [`IORING_OP_MSG_RING`]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
+//!     https://manpages.debian.org/io_uring_prep_msg_ring.3
 //! [`kevent()`]: https://man.freebsd.org/cgi/man.cgi?query=kevent
-//! [`kill -9`]: https://man7.org/linux/man-pages/man1/kill.1.html
+//! [`kill -9`]: https://manpages.debian.org/kill.1
 //! [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 //! [`LazyLock`]: std::sync::LazyLock
 //! [`mio::Poll::poll()`]: mio::Poll::poll
@@ -939,18 +935,18 @@
 //! [`mio`]: mio
 //! [`Mutex`]: std::sync::Mutex
 //! [`notify_all()`]: std::sync::Condvar::notify_all
-//! [`pipe(2)`]: https://man7.org/linux/man-pages/man2/pipe.2.html
+//! [`pipe(2)`]: https://manpages.debian.org/pipe.2
 //! [`poll()`]: mio::Poll::poll
-//! [`pollable`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`pollable`]: https://manpages.debian.org/poll.2
 //! [`PTY` pair]: crate::pty_engine::pty_pair::PtyPair
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-//! [`read(2)`]: https://man7.org/linux/man-pages/man2/read.2.html
+//! [`read(2)`]: https://manpages.debian.org/read.2
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
 //! [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 //! [`Receiver`]: tokio::sync::broadcast::Receiver
-//! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+//! [`reset`]: https://manpages.debian.org/reset.1
 //! [`restart_policy()`]: RRTWorker::restart_policy
 //! [`Restart`]: crate::Continuation::Restart
 //! [`Restarting`]: ThreadState::Restarting
@@ -985,28 +981,28 @@
 //! [`RRTWorker`]: RRTWorker
 //! [`run_worker_loop()`]: run_worker_loop
 //! [`Running`]: ThreadState::Running
-//! [`SA_RESTART`]: https://man7.org/linux/man-pages/man2/sigaction.2.html
-//! [`select(2)`]: https://man7.org/linux/man-pages/man2/select.2.html
+//! [`SA_RESTART`]: https://manpages.debian.org/sigaction.2
+//! [`select(2)`]: https://manpages.debian.org/select.2
 //! [`sender.send()`]: tokio::sync::broadcast::Sender::send
 //! [`Sender::send()`]: tokio::sync::broadcast::Sender::send
 //! [`ShutdownReason`]: ShutdownReason
-//! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`SIGINT`]: https://manpages.debian.org/signal.7
 //! [`signal-hook`]: signal_hook
-//! [`signalfd(2)`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
-//! [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`signalfd(2)`]: https://manpages.debian.org/signalfd.2
+//! [`signals`]: https://manpages.debian.org/signal.7
 //! [`SINGLETON`]: #how-to-use-it
-//! [`sockets`]: https://man7.org/linux/man-pages/man7/socket.7.html
-//! [`SQPOLL`]: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html
+//! [`sockets`]: https://manpages.debian.org/socket.7
+//! [`SQPOLL`]: https://manpages.debian.org/io_uring_setup.2
 //! [`Starting`]: ThreadState::Starting
 //! [`state`]: ThreadLifecycleMonitor::lock()
 //! [`stdin`]: std::io::stdin
 //! [`Stop`]: crate::Continuation::Stop
 //! [`Stopped`]: ThreadState::Stopped
 //! [`Stopping`]: ThreadState::Stopping
-//! [`stty sane`]: https://man7.org/linux/man-pages/man1/stty.1.html
+//! [`stty sane`]: https://manpages.debian.org/stty.1
 //! [`SubscriberGuard`]: SubscriberGuard
-//! [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [`syscall`]: https://manpages.debian.org/syscalls.2
+//! [`syscalls`]: https://manpages.debian.org/syscalls.2
 //! [`TCP`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 //! [`TerminationGuard`]: TerminationGuard
 //! [`ThreadLifecycleMonitor`]: ThreadLifecycleMonitor
@@ -1016,7 +1012,7 @@
 //!     https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Connection_termination
 //! [`tokio`]: tokio
 //! [`try_subscribe()`]: RRT::try_subscribe
-//! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+//! [`tty`]: https://manpages.debian.org/tty.4
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [`W::Event`]: RRTWorker::Output
@@ -1026,12 +1022,12 @@
 //! [async runtime]: tokio::runtime
 //! [async Rust]: https://rust-lang.github.io/async-book/
 //! [async task]: tokio::task
-//! [async-signal-safe]: https://man7.org/linux/man-pages/man7/signal-safety.7.html
+//! [async-signal-safe]: https://manpages.debian.org/signal-safety.7
 //! [blocking call]: #understanding-blocking-io
 //! [blocking I/O]: #understanding-blocking-io
 //! [blocks on I/O]: #understanding-blocking-io
 //! [busy-waiting]: https://en.wikipedia.org/wiki/Busy_waiting
-//! [completions]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+//! [completions]: https://manpages.debian.org/io_uring.7
 //! [Console API]: https://learn.microsoft.com/en-us/windows/console/console-functions
 //! [const expression]: RRT#const-expression-vs-const-declaration-vs-static-declaration
 //! [const expressions]: RRT#const-expression-vs-const-declaration-vs-static-declaration
@@ -1041,41 +1037,41 @@
 //! [Dependency Injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
 //! [Drop implementation]: SubscriberGuard#method.drop
-//! [event mechanism]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [event mechanism]: https://manpages.debian.org/epoll.7
 //! [Example]: #example
 //! [executor thread in the `tokio` async runtime]: tokio::runtime
 //! [executor threads in the async runtime]: tokio::runtime
-//! [file descriptors]: https://man7.org/linux/man-pages/man2/open.2.html
+//! [file descriptors]: https://manpages.debian.org/open.2
 //! [generation]: RRT::get_thread_generation
 //! [in the meantime]: #the-exit-decision-race
 //! [inversion of control]: https://en.wikipedia.org/wiki/Inversion_of_control
 //! [kernel]: https://en.wikipedia.org/wiki/Kernel_(operating_system)
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
-//! [Linked operations]: https://man7.org/linux/man-pages/man3/io_uring_prep_link.3.html
-//! [Linux]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
-//! [macOS]: https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
+//! [Linked operations]: https://manpages.debian.org/io_uring_prep_link.3
+//! [Linux]: https://manpages.debian.org/pthread_cancel.3
+//! [macOS]: https://manpages.debian.org/pthread_cancel.3
 //! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [poll loop]: run_worker_loop
 //! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
-//! [readiness]: https://man7.org/linux/man-pages/man7/epoll.7.html#DESCRIPTION
+//! [readiness]: https://manpages.debian.org/epoll.7#DESCRIPTION
 //! [Registered buffers]:
-//!     https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html
-//! [Registered FDs]: https://man7.org/linux/man-pages/man3/io_uring_register_files.3.html
+//!     https://manpages.debian.org/io_uring_register_buffers.3
+//! [Registered FDs]: https://manpages.debian.org/io_uring_register_files.3
 //! [restart budget]: RestartPolicy
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
 //! [Rust discussion]: https://internals.rust-lang.org/t/thread-cancel-support/3056
 //! [Rust workarounds]: https://matklad.github.io/2018/03/03/stopping-a-rust-worker.html
 //! [scenario examples]: RestartPolicy#example-scenarios
 //! [self-healing restarts]: #self-healing-restart-details
-//! [signals]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [signals]: https://manpages.debian.org/signal.7
 //! [Single-threaded runtime]: tokio::runtime::Builder::new_current_thread
 //! [singleton]: #how-to-use-it
-//! [sockets]: https://man7.org/linux/man-pages/man7/socket.7.html
+//! [sockets]: https://manpages.debian.org/socket.7
 //! [Static vs. Flexible Usage]: RRT#static-vs-flexible-usage
-//! [Syscall]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-//! [Syscalls]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [Syscall]: https://manpages.debian.org/syscalls.2
+//! [Syscalls]: https://manpages.debian.org/syscalls.2
 //! [terminal escape sequences]: crate::core::ansi
 //! [Thread Lifecycle]: RRT#thread-lifecycle
 //! [thread pool]: https://en.wikipedia.org/wiki/Thread_pool

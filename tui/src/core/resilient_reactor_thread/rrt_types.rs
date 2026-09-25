@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words maxfiles taskthreads
-
 //! Public API types for the Resilient Reactor Thread (RRT) pattern. See
 //! [`SubscribeError`] and [`BroadcastSender`] for details.
 

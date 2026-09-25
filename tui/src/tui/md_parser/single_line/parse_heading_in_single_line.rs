@@ -1,8 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{HeadingData, HeadingLevel,
-            md_parser::md_parser_constants::{HEADING_CHAR, NEW_LINE, NULL_CHAR,
-                                             NULL_STR, SPACE},
+use crate::{HEADING_CHAR, HeadingData, HeadingLevel, NEW_LINE, NUL_CHAR, NUL_STR, SPACE,
             parse_null_padded_line::is};
 use nom::{IResult, Parser,
           branch::alt,
@@ -36,7 +34,7 @@ fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
         parse_heading_tag,
         parse_anychar_in_heading_no_new_line,
         opt(
-            (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR)))
+            (tag(NEW_LINE), /* zero or more */ take_while(is(NUL_CHAR)))
         ),
     )
         .parse(input)?;
@@ -53,7 +51,7 @@ fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
                 not( /* error out if starts w/ special chars */
                     alt((
                         tag(NEW_LINE),
-                        tag(NULL_STR),
+                        tag(NUL_STR),
                     ))
                 ),
                 /* output - keep char */

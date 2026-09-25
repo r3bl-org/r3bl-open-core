@@ -44,6 +44,12 @@ Before proposing any changes or writing a task file, gather context on the probl
 Create the task file under `task/issue-<id>-fix.md` or `task/<name>.md`. 
 Create a new git branch for this task, push it, and open a Draft PR using `gh pr create --draft --fill` to track the work.
 
+> [!TIP]
+> If creating a linked git worktree for the task, always use relative paths (or set `git config --global worktree.useRelativePaths true`) so the worktree remains portable across remote fleet machines (Linux and macOS):
+> ```bash
+> git worktree add --relative ../roc-<name> <branch_name>
+> ```
+
 Instead of a simple todo list, format this task file as a **Design Document** with the following sections:
 
 #### 1. Overview

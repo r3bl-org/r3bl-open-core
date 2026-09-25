@@ -461,5 +461,3 @@ any machine and across Linux and macOS runners in CI/CD.
     - [x] `README.md`
     - [x] `cmdr/Cargo.toml`
     - [x] `run.fish`
-
-<!-- cspell:words pipestatus SHLVL testuser -->

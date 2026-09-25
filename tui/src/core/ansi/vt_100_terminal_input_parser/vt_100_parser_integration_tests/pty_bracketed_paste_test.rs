@@ -1,17 +1,52 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// XMARK: pty test faking terminal emulator (in controller)
+
 //! [`PTY`]-based integration test for bracketed paste text collection.
 //!
 //! Validates that [`DirectToAnsiInputDevice`] correctly collects text between bracketed
-//! paste markers (`ESC [200~` ... `ESC [201~`) and emits a single
-//! [`InputEvent::BracketedPaste`] with the complete text.
+//! paste markers (`ESC [ 200 ~` ... `ESC [ 201 ~`) in a real pseudoterminal environment:
+//! - Simple [`ASCII`] paste: `"Hello"`
+//! - Multiline paste with newline preservation: `"Line 1\nLine 2\nLine 3"`
+//! - Tabbed paste with tabs preserved: `"col1\tcol2\tcol3"`
+//! - Mixed whitespace in multi-line code blocks
+//! - Carriage return line endings: `"line1\rline2"`
+//! - CRLF line endings: `"line1\r\nline2"`
+//! - Multi-byte [`UTF-8`] paste with unicode glyphs and emojis: `"Hello 世界 🌍"`
+//! - Empty paste: Start marker immediately followed by End marker
 //!
-//! ## Test Cases
+//! # Architecture and Process Roles
 //!
-//! - Simple [`ASCII`] paste: "Hello"
-//! - Multiline paste with newlines preserved
-//! - [`UTF-8`] paste with multi-byte characters
-//! - Empty paste (Start immediately followed by End)
+//! In this test, the controller process simulates a host terminal emulator while the
+//! controlled child runs our TUI input engine. For the overall architecture and testing
+//! philosophy, see the [process roles documentation].
+//!
+//! 1. **[`PTY`] Controller (Simulated Terminal Emulator)**:
+//!    - Simulates an external terminal emulator host (such as [`Kitty`], Ghostty, or
+//!      [`XTerm`]) performing paste operations into the active terminal session.
+//!    - Synthesizes bracketed paste framing by wrapping raw byte buffers between paste
+//!      start (`ESC [ 200 ~`) and paste end (`ESC [ 201 ~`) control sequences.
+//!    - Writes sequence bytes directly into the controller side of the [`PTY`], which the
+//!      operating system delivers to the controlled process's [`stdin`].
+//!    - Exercises diverse text payloads including multiline buffers, mixed tabs and
+//!      newlines, differing line endings (`LF`, `CR`, `CRLF`), multi-byte [`UTF-8`]
+//!      sequences, and empty payloads.
+//!    - Reads line-by-line event confirmation strings from the controlled child's
+//!      [`stdout`] and validates character counts and received content.
+//!
+//! 2. **[`PTY`] Controlled (System Under Test / TUI Input Engine)**:
+//!    - Represents the real TUI application running inside the child subprocess connected
+//!      to the controlled side of the [`PTY`].
+//!    - Initializes [`DirectToAnsiInputDevice`].
+//!    - Behind the scenes, the background [`mio`] polling thread watches [`stdin`],
+//!      feeding raw bytes into [`ChunkFramer`] and the Sans-IO [`vt_100`] parser.
+//!    - Accumulates incoming raw bytes between bracketed paste markers without emitting
+//!      individual keystroke events for each character.
+//!    - Runs a Tokio asynchronous event loop consuming from `input_device.next().await`.
+//!    - Emits a single consolidated [`InputEvent::BracketedPaste`] containing the entire
+//!      pasted string buffer once the paste end marker is encountered.
+//!    - Formats and echoes the paste receipt over [`stdout`] so the controller can verify
+//!      parsing accuracy.
 //!
 //! # Run with:
 //!
@@ -20,10 +55,18 @@
 //! ```
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent::BracketedPaste`]: crate::InputEvent::BracketedPaste
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`mio`]: https://crates.io/crates/mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
+//! [`XTerm`]: https://invisible-island.net/xterm/
+//! [process roles documentation]: mod@super#architecture-and-process-roles
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
             GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
@@ -47,38 +90,7 @@ generate_pty_test! {
 /// [`PTY`] Controller: Send bracketed paste sequences and verify collection
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[allow(clippy::too_many_lines)]
 fn controller(context: PtyTestContext) {
-    /// Helper to build a complete bracketed paste sequence from text.
-    ///
-    /// Returns (description, byte sequence) tuple.
-    /// Generates: Start marker + [`UTF-8`] text bytes + End marker.
-    /// (Regular characters are raw [`UTF-8`] bytes, not [`ANSI`] escape sequences)
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    fn generate_paste_test_sequence<'a>(desc: &'a str, text: &str) -> (&'a str, Vec<u8>) {
-        let mut bytes = Vec::new();
-
-        // Start marker (ESC[200~)
-        let start_bytes = generate_keyboard_sequence(&VT100InputEventIR::Paste(
-            VT100PasteModeIR::Start,
-        ))
-        .expect("Failed to generate paste start marker");
-        bytes.extend_from_slice(&start_bytes);
-
-        // Text characters: just raw UTF-8 bytes (no ANSI escape sequences needed)
-        bytes.extend_from_slice(text.as_bytes());
-
-        // End marker (ESC[201~)
-        let end_bytes =
-            generate_keyboard_sequence(&VT100InputEventIR::Paste(VT100PasteModeIR::End))
-                .expect("Failed to generate paste end marker");
-        bytes.extend_from_slice(&end_bytes);
-
-        (desc, bytes)
-    }
-
     let PtyTestContext {
         pty_pair,
         child,
@@ -97,17 +109,7 @@ fn controller(context: PtyTestContext) {
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
         .expect("Failed to wait for ready signal");
 
-    // Generate test cases using abstractions (no magic strings!)
-    let test_cases = vec![
-        generate_paste_test_sequence("Simple ASCII paste", "Hello"),
-        generate_paste_test_sequence("Multiline paste", "Line 1\nLine 2\nLine 3"),
-        generate_paste_test_sequence("Tabbed paste", "col1\tcol2\tcol3"),
-        generate_paste_test_sequence("Mixed whitespace", "fn main() {\n\tlet x = 1;\n}"),
-        generate_paste_test_sequence("CR line endings", "line1\rline2"),
-        generate_paste_test_sequence("CRLF line endings", "line1\r\nline2"),
-        generate_paste_test_sequence("UTF-8 paste", "Hello 世界 🌍"),
-        generate_paste_test_sequence("Empty paste", ""),
-    ];
+    let test_cases = generate_test_cases();
 
     eprintln!(
         "{} PTY Controller: Sending {} paste sequences...",
@@ -115,8 +117,13 @@ fn controller(context: PtyTestContext) {
         test_cases.len()
     );
 
-    for (desc, sequence) in &test_cases {
-        eprintln!("  → Sending: {desc}");
+    for test_case in &test_cases {
+        let TestCase {
+            description,
+            sequence,
+        } = test_case;
+
+        eprintln!("  → Sending: {description}");
 
         writer
             .write_all(sequence)
@@ -127,7 +134,7 @@ fn controller(context: PtyTestContext) {
         let event_line =
             child.read_line_state(&mut buf_reader, |line| line.starts_with("Paste:"));
 
-        eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
+        eprintln!("  {GLYPH_SUCCESS} {description}: {event_line}");
     }
 
     eprintln!("{GLYPH_CONTROLLER_CLEANUP} PTY Controller: Cleaning up...");
@@ -186,7 +193,7 @@ fn controlled() {
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             // Exit after processing the expected number of test cases
-                            if event_count >= 8 {
+                            if event_count >= TOTAL_EXPECTED_EVENTS {
                                 eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
@@ -206,4 +213,55 @@ fn controlled() {
 
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Completed, exiting");
     });
+}
+
+/// Expected number of paste events processed by the controlled process:
+/// - 8 distinct bracketed paste test cases
+const TOTAL_EXPECTED_EVENTS: usize = 8;
+
+/// A single test case for bracketed paste verification.
+struct TestCase {
+    description: &'static str,
+    sequence: Vec<u8>,
+}
+
+impl TestCase {
+    fn new(description: &'static str, text: &str) -> Self {
+        let mut sequence = Vec::new();
+
+        // Start marker (ESC[200~)
+        let start_bytes = generate_keyboard_sequence(&VT100InputEventIR::Paste(
+            VT100PasteModeIR::Start,
+        ))
+        .expect("Failed to generate paste start marker");
+        sequence.extend_from_slice(&start_bytes);
+
+        // Text characters: raw UTF-8 bytes (no ANSI escape sequences needed)
+        sequence.extend_from_slice(text.as_bytes());
+
+        // End marker (ESC[201~)
+        let end_bytes =
+            generate_keyboard_sequence(&VT100InputEventIR::Paste(VT100PasteModeIR::End))
+                .expect("Failed to generate paste end marker");
+        sequence.extend_from_slice(&end_bytes);
+
+        Self {
+            description,
+            sequence,
+        }
+    }
+}
+
+/// Generate the structured test cases for bracketed paste testing.
+fn generate_test_cases() -> Vec<TestCase> {
+    vec![
+        TestCase::new("Simple ASCII paste", "Hello"),
+        TestCase::new("Multiline paste", "Line 1\nLine 2\nLine 3"),
+        TestCase::new("Tabbed paste", "col1\tcol2\tcol3"),
+        TestCase::new("Mixed whitespace", "fn main() {\n\tlet x = 1;\n}"),
+        TestCase::new("CR line endings", "line1\rline2"),
+        TestCase::new("CRLF line endings", "line1\r\nline2"),
+        TestCase::new("UTF-8 paste", "Hello 世界 🌍"),
+        TestCase::new("Empty paste", ""),
+    ]
 }

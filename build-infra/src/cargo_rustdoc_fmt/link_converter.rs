@@ -712,19 +712,19 @@ continues on the next line without breaking.
 
     #[test]
     fn test_multiline_reference_definition_aggregate() {
-        let input = "See [Registered buffers] for details.\n\n[Registered buffers]:\n    https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html";
+        let input = "See [Registered buffers] for details.\n\n[Registered buffers]:\n    https://manpages.debian.org/io_uring_register_buffers.3";
         let output = aggregate_existing_references(input);
         eprintln!("Input:\n{input}");
         eprintln!("\nOutput:\n{output}");
 
         // Multi-line reference should be preserved as two lines
         assert!(
-            output.contains("[Registered buffers]:\n    https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html"),
+            output.contains("[Registered buffers]:\n    https://manpages.debian.org/io_uring_register_buffers.3"),
             "Multi-line reference should be preserved as two lines"
         );
         // URL should not be orphaned as content
         assert_eq!(
-            output.matches("https://man7.org/linux/man-pages/man3/io_uring_register_buffers.3.html").count(),
+            output.matches("https://manpages.debian.org/io_uring_register_buffers.3").count(),
             1,
             "URL should appear exactly once"
         );

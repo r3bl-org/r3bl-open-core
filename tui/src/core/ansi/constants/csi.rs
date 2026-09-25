@@ -13,6 +13,9 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [constants module design]: mod@crate::constants#design
 
+use super::{ascii_byte_to_char,
+            input_sequences::{ANSI_PARAM_SEPARATOR_CHAR, ANSI_PARAM_SEPARATOR_STR,
+                              ANSI_SUBPARAM_SEPARATOR_CHAR, ASCII_QUESTION_MARK}};
 use crate::{core::ansi, define_ansi_const};
 
 // CSI sequence components.
@@ -26,17 +29,17 @@ pub const CSI_START: &str =
 /// Private Mode Prefix ([`CSI`]): Introduces [`DEC`] private mode parameters in [`CSI`]
 /// sequences.
 ///
-/// Value: `'?'` dec, `3F` hex.
+/// Value: `63` dec, `3F` hex.
 ///
 /// Sequence: `CSI ?`.
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
+pub const CSI_PRIVATE_MODE_PREFIX: char = ascii_byte_to_char(ASCII_QUESTION_MARK);
 
 /// Parameter Separator ([`CSI`]): Separates top-level parameters in [`CSI`] sequences.
 ///
-/// Value: `';'` dec, `3B` hex.
+/// Value: `59` dec, `3B` hex.
 ///
 /// Sequence: `CSI n ; m`.
 ///
@@ -45,12 +48,13 @@ pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
 /// - `ESC [ 1 ; 31 m` - Bold + red foreground
 ///
 /// [`CSI`]: crate::CsiSequence
-pub const CSI_PARAM_SEPARATOR: char = ';';
+pub const CSI_PARAM_SEPARATOR: char = ANSI_PARAM_SEPARATOR_CHAR;
+pub const CSI_PARAM_SEPARATOR_STR: &str = ANSI_PARAM_SEPARATOR_STR;
 
 /// Sub-Parameter Separator ([`CSI`]): Separates sub-parameters within a single [`CSI`]
 /// parameter.
 ///
-/// Value: `':'` dec, `3A` hex.
+/// Value: `58` dec, `3A` hex.
 ///
 /// Sequence: `CSI n : m`.
 ///
@@ -65,13 +69,13 @@ pub const CSI_PARAM_SEPARATOR: char = ';';
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [ITU-T Rec. T.416]: https://www.itu.int/rec/T-REC-T.416-199303-I
-pub const CSI_SUB_PARAM_SEPARATOR: char = ':';
+pub const CSI_SUB_PARAM_SEPARATOR: char = ANSI_SUBPARAM_SEPARATOR_CHAR;
 
 // Cursor Movement.
 
 /// Cursor Up (CUU): Moves cursor up by n lines (default 1).
 ///
-/// Value: `'A'` dec, `41` hex.
+/// Value: `65` dec, `41` hex.
 ///
 /// Sequence: `CSI n A`.
 ///
@@ -80,7 +84,7 @@ pub const CUU_CURSOR_UP: char = 'A';
 
 /// Cursor Down (CUD): Moves cursor down by n lines (default 1).
 ///
-/// Value: `'B'` dec, `42` hex.
+/// Value: `66` dec, `42` hex.
 ///
 /// Sequence: `CSI n B`.
 ///
@@ -89,7 +93,7 @@ pub const CUD_CURSOR_DOWN: char = 'B';
 
 /// Cursor Forward (CUF): Moves cursor forward by n columns (default 1).
 ///
-/// Value: `'C'` dec, `43` hex.
+/// Value: `67` dec, `43` hex.
 ///
 /// Sequence: `CSI n C`.
 ///
@@ -98,7 +102,7 @@ pub const CUF_CURSOR_FORWARD: char = 'C';
 
 /// Cursor Backward (CUB): Moves cursor backward by n columns (default 1).
 ///
-/// Value: `'D'` dec, `44` hex.
+/// Value: `68` dec, `44` hex.
 ///
 /// Sequence: `CSI n D`.
 ///
@@ -107,7 +111,7 @@ pub const CUB_CURSOR_BACKWARD: char = 'D';
 
 /// Cursor Next Line (CNL): Moves cursor to beginning of line n lines down (default 1).
 ///
-/// Value: `'E'` dec, `45` hex.
+/// Value: `69` dec, `45` hex.
 ///
 /// Sequence: `CSI n E`.
 ///
@@ -116,7 +120,7 @@ pub const CNL_CURSOR_NEXT_LINE: char = 'E';
 
 /// Cursor Previous Line (CPL): Moves cursor to beginning of line n lines up (default 1).
 ///
-/// Value: `'F'` dec, `46` hex.
+/// Value: `70` dec, `46` hex.
 ///
 /// Sequence: `CSI n F`.
 ///
@@ -125,7 +129,7 @@ pub const CPL_CURSOR_PREV_LINE: char = 'F';
 
 /// Cursor Horizontal Absolute (CHA): Moves cursor to column n (default 1).
 ///
-/// Value: `'G'` dec, `47` hex.
+/// Value: `71` dec, `47` hex.
 ///
 /// Sequence: `CSI n G`.
 ///
@@ -134,7 +138,7 @@ pub const CHA_CURSOR_COLUMN: char = 'G';
 
 /// Cursor Position (CUP): Moves cursor to row n, column m (default 1,1).
 ///
-/// Value: `'H'` dec, `48` hex.
+/// Value: `72` dec, `48` hex.
 ///
 /// Sequence: `CSI n ; m H`.
 ///
@@ -144,7 +148,7 @@ pub const CUP_CURSOR_POSITION: char = 'H';
 /// Horizontal and Vertical Position (HVP): Moves cursor to row n, column m (default 1,1).
 /// Same as CUP.
 ///
-/// Value: `'f'` dec, `66` hex.
+/// Value: `102` dec, `66` hex.
 ///
 /// Sequence: `CSI n ; m f`.
 ///
@@ -159,7 +163,7 @@ pub const HVP_CURSOR_POSITION: char = 'f';
 /// `2` = erase entire screen,
 /// `3` = erase entire screen and scrollback.
 ///
-/// Value: `'J'` dec, `4A` hex.
+/// Value: `74` dec, `4A` hex.
 ///
 /// Sequence: `CSI n J`.
 ///
@@ -171,7 +175,7 @@ pub const ED_ERASE_DISPLAY: char = 'J';
 /// `1` = erase from start of line to cursor,
 /// `2` = erase entire line.
 ///
-/// Value: `'K'` dec, `4B` hex.
+/// Value: `75` dec, `4B` hex.
 ///
 /// Sequence: `CSI n K`.
 ///
@@ -221,7 +225,7 @@ pub const EL_ERASE_ALL: u16 = 2;
 
 /// Scroll Up (SU): Scrolls text up by n lines (default 1).
 ///
-/// Value: `'S'` dec, `53` hex.
+/// Value: `83` dec, `53` hex.
 ///
 /// Sequence: `CSI n S`.
 ///
@@ -230,7 +234,7 @@ pub const SU_SCROLL_UP: char = 'S';
 
 /// Scroll Down (SD): Scrolls text down by n lines (default 1).
 ///
-/// Value: `'T'` dec, `54` hex.
+/// Value: `84` dec, `54` hex.
 ///
 /// Sequence: `CSI n T`.
 ///
@@ -239,7 +243,7 @@ pub const SD_SCROLL_DOWN: char = 'T';
 
 /// Set Top and Bottom Margins ([`DECSTBM`]): Defines the scrolling region.
 ///
-/// Value: `'r'` dec, `72` hex.
+/// Value: `114` dec, `72` hex.
 ///
 /// Sequence: `CSI top ; bottom r`.
 ///
@@ -305,7 +309,7 @@ pub const VPA_VERTICAL_POSITION: char = 'd';
 
 /// Select Graphic Rendition ([`SGR`]): Sets colors and text attributes.
 ///
-/// Value: `'m'` dec, `6D` hex.
+/// Value: `109` dec, `6D` hex.
 ///
 /// Sequence: `CSI n m`.
 ///
@@ -384,6 +388,13 @@ pub const SGR_HIDDEN: u16 = 8;
 ///
 /// [`SGR`]: crate::SgrCode
 pub const SGR_STRIKETHROUGH: u16 = 9;
+
+/// Overline ([`SGR`] `53`): Enables overlined text.
+///
+/// Value: `53`.
+///
+/// [`SGR`]: crate::SgrCode
+pub const SGR_OVERLINE: u16 = 53;
 
 /// Reset Bold/Dim ([`SGR`] `22`): Disables bold and dim attributes.
 ///
@@ -738,12 +749,12 @@ define_ansi_const!(@csi_str : SCP_SAVE_CURSOR_STR = ["s"] =>
 /// Sequence: `ESC [ s`.
 ///
 /// [`CSI`]: crate::CsiSequence
-pub const SCP_SAVE_CURSOR_BYTES: &[u8] = b"\x1b[s";
+pub const SCP_SAVE_CURSOR_BYTES: &[u8] = SCP_SAVE_CURSOR_STR.as_bytes();
 
 /// Save Cursor Position (SCP): Final byte for save cursor sequence, alternative to `ESC
 /// 7`.
 ///
-/// Value: `'s'` dec, `73` hex.
+/// Value: `115` dec, `73` hex.
 ///
 /// Sequence: `CSI s`.
 ///
@@ -761,12 +772,12 @@ define_ansi_const!(@csi_str : RCP_RESTORE_CURSOR_STR = ["u"] =>
 /// Sequence: `ESC [ u`.
 ///
 /// [`CSI`]: crate::CsiSequence
-pub const RCP_RESTORE_CURSOR_BYTES: &[u8] = b"\x1b[u";
+pub const RCP_RESTORE_CURSOR_BYTES: &[u8] = RCP_RESTORE_CURSOR_STR.as_bytes();
 
 /// Restore Cursor Position (RCP): Final byte for restore cursor sequence, alternative to
 /// `ESC 8`.
 ///
-/// Value: `'u'` dec, `75` hex.
+/// Value: `117` dec, `75` hex.
 ///
 /// Sequence: `CSI u`.
 ///
@@ -788,7 +799,7 @@ define_ansi_const!(@csi_str : CSI_ERASE_DISPLAY_ALL = ["2J"] =>
 /// Device Status Report ([`DSR`]): Requests device status or cursor position.
 /// `5` = request status, `6` = request cursor position.
 ///
-/// Value: `'n'` dec, `6E` hex.
+/// Value: `110` dec, `6E` hex.
 ///
 /// Sequence: `CSI n n`.
 ///
@@ -799,7 +810,7 @@ pub const DSR_DEVICE_STATUS: char = 'n';
 /// Device Attributes ([`DA`]): Request terminal type/capabilities.
 /// `0` or no parameters = request primary device attributes.
 ///
-/// Value: `'c'` dec, `63` hex.
+/// Value: `99` dec, `63` hex.
 ///
 /// Sequence: `CSI c` or `CSI 0 c`.
 ///
@@ -811,7 +822,7 @@ pub const DA_DEVICE_ATTRIBUTES: char = 'c';
 
 /// Set Mode (SM): Sets various terminal modes.
 ///
-/// Value: `'h'` dec, `68` hex.
+/// Value: `104` dec, `68` hex.
 ///
 /// Sequence: `CSI n h`.
 ///
@@ -820,7 +831,7 @@ pub const SM_SET_MODE: char = 'h';
 
 /// Reset Mode (RM): Resets various terminal modes.
 ///
-/// Value: `'l'` dec, `6C` hex.
+/// Value: `108` dec, `6C` hex.
 ///
 /// Sequence: `CSI n l`.
 ///
@@ -831,7 +842,7 @@ pub const RM_RESET_MODE: char = 'l';
 
 /// Set Private Mode (SM): Sets [`DEC`] private modes.
 ///
-/// Value: `'h'` dec, `68` hex.
+/// Value: `104` dec, `68` hex.
 ///
 /// Sequence: `CSI ? n h`.
 ///
@@ -841,7 +852,7 @@ pub const SM_SET_PRIVATE_MODE: char = 'h';
 
 /// Reset Private Mode (RM): Resets [`DEC`] private modes.
 ///
-/// Value: `'l'` dec, `6C` hex.
+/// Value: `108` dec, `6C` hex.
 ///
 /// Sequence: `CSI ? n l`.
 ///
@@ -924,3 +935,46 @@ pub const DECREQTPARM_REQUEST_TERMINAL_PARAMETERS: char = 'x';
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const DECERA_RECTANGULAR_ERASE: char = 'z';
+
+// Kitty Keyboard Protocol (CSI u).
+
+/// [`Kitty`] Keyboard Protocol Push Flags: Character `>` indicating push flags to stack.
+///
+/// Sequence: `CSI > <flags> u`.
+///
+/// Value: `'>'`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUSH_KEYBOARD_FLAGS: char = '>';
+
+/// [`Kitty`] Keyboard Protocol Pop Flags: Character `<` indicating pop flags from stack.
+///
+/// Sequence: `CSI < <count> u`.
+///
+/// Value: `'<'`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_POP_KEYBOARD_FLAGS: char = '<';
+
+/// [`Kitty`] Keyboard Protocol Disambiguate Escape Codes Flag: Flag value `1`.
+///
+/// When set via `CSI > 1 u`, the terminal emulator sends all ambiguous key combinations
+/// (such as `Alt+[` or modified functional keys) using unambiguous `CSI u` encoding.
+///
+/// Value: `1`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_DISAMBIGUATE_ESCAPE_CODES: u8 = 1;
+
+#[cfg(test)]
+mod tests {
+    use super::{super::input_sequences::ANSI_CSI_U_CHAR, *};
+
+    #[test]
+    fn test_kitty_keyboard_constants() {
+        assert_eq!(KITTY_PUSH_KEYBOARD_FLAGS, '>');
+        assert_eq!(KITTY_POP_KEYBOARD_FLAGS, '<');
+        assert_eq!(KITTY_DISAMBIGUATE_ESCAPE_CODES, 1);
+        assert_eq!(ANSI_CSI_U_CHAR, 'u');
+    }
+}

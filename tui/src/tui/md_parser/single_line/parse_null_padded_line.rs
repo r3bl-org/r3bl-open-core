@@ -1,8 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words aaabbb
-
-use crate::md_parser::md_parser_constants::{NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR};
+use crate::{NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR};
 use nom::{IResult, Parser,
           bytes::complete::{is_not, tag, take_while},
           combinator::opt,
@@ -75,7 +73,7 @@ pub fn is_any_of(targets: &'static [char]) -> impl Fn(char) -> bool {
 pub fn trim_optional_leading_newline_and_nulls(input: &str) -> &str {
     let result: IResult<&str, Option<(&str, &str)>> = opt((
         tag(NEW_LINE),
-        /* zero or more */ take_while(is(NULL_CHAR)),
+        /* zero or more */ take_while(is(NUL_CHAR)),
     ))
     .parse(input);
 
@@ -111,18 +109,18 @@ pub fn parse_null_padded_line(input: &str) -> IResult<&str, &str> {
             "",
             (
                 tag(NEW_LINE),
-                take_while(is(NULL_CHAR))
+                take_while(is(NUL_CHAR))
             )
         ),
         // Normal case: content followed by optional newline and null padding
         terminated(
             // Take content (non-null, non-newline chars)
-            is_not(NEWLINE_OR_NULL),
+            is_not(NEWLINE_OR_NUL),
             // Consume newline + null padding if present.
             opt(
                 (
                     tag(NEW_LINE),
-                    take_while(is(NULL_CHAR))
+                    take_while(is(NUL_CHAR))
                 )
             )
         )

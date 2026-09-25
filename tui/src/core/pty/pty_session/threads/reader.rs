@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CaptureFlag, ControllerReader, OscBuffer, PtyOutputEvent, PtySessionConfig,
-            READ_BUFFER_SIZE, ok};
+use crate::{CaptureFlag, ControllerReader, PtyOscProgressScanner, PtyOutputEvent,
+            PtySessionConfig, READ_BUFFER_SIZE, ok};
 use miette::miette;
 use std::{io::Read, sync::mpsc::SyncSender, thread::JoinHandle};
 
@@ -42,7 +42,7 @@ pub fn spawn_pty_reader_thread(
         .name("pty-reader".into())
         .spawn(move || -> miette::Result<()> {
             let mut buf = [0u8; READ_BUFFER_SIZE];
-            let mut osc_buffer = OscBuffer::new();
+            let mut progress_scanner = PtyOscProgressScanner::new();
 
             loop {
                 match reader.read(&mut buf) {
@@ -57,7 +57,7 @@ pub fn spawn_pty_reader_thread(
 
                         // 2. Process OSC sequences if enabled.
                         if config.capture_osc == CaptureFlag::Capture {
-                            let events = osc_buffer.append_and_extract(&buf, n);
+                            let events = progress_scanner.append_and_extract(&buf, n);
                             for event in events {
                                 let _unused = output_event_ch_tx_half
                                     .send(PtyOutputEvent::Osc(event));

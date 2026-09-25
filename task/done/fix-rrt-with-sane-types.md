@@ -1,5 +1,3 @@
-<!-- cspell:words EBUSY panicker ONLCR SIGABRT errno -->
-
 # Task: Fix RRT with Sane Types (Typestate Pattern)
 
 ## Overview

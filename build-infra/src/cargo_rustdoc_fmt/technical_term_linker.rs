@@ -1188,7 +1188,7 @@ mod tests {
             "[`RRTWorker`]: super::RRTWorker\n",
             "[`block_until_ready()`]:\n",
             "    super::RRTWorker::block_until_ready\n",
-            "[`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html",
+            "[`epoll`]: https://manpages.debian.org/epoll.7",
         );
         let (content, refs) = split_off_ref_defs(text);
         assert_eq!(content.trim(), "Content here.");
@@ -1234,14 +1234,15 @@ mod tests {
         let registry = test_registry();
         // The term "epoll" appears inside a URL target. It should NOT be
         // linkified because ref defs are split off before term processing.
-        let input = "Uses [`epoll`] for I/O.\n\n[`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html";
+        let input =
+            "Uses [`epoll`] for I/O.\n\n[`epoll`]: https://manpages.debian.org/epoll.7";
         let result = link_known_terms(input, &registry);
         assert!(
-            result.contains("epoll.7.html"),
+            result.contains("epoll.7"),
             "URL should not be corrupted: {result}"
         );
         assert!(
-            !result.contains("[`epoll`].7.html"),
+            !result.contains("[`epoll`].7"),
             "Term inside URL should not be linkified: {result}"
         );
     }

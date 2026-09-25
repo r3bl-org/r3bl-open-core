@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words VMIN, VTIME
-
 //! Centralized [`ANSI`]/[`VT-100`] escape sequence constants.
 //!
 //! This module consolidates all [`ANSI`] terminal constants into a single, discoverable
@@ -19,11 +17,11 @@
 //!
 //! Each definition should include:
 //!
-//! | Element              | Description                                      |
-//! | :------------------- | :----------------------------------------------- |
-//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`     |
-//! | **Technical detail** | `Value: 'X' dec, 'YY' hex` or `Sequence: ESC X`. |
-//! | **Context**          | Representation and protocol fit.                 |
+//! | Element              | Description                                         |
+//! | :------------------- | :-------------------------------------------------- |
+//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`        |
+//! | **Technical detail** | `Value: <dec> dec, <hex> hex` or `Sequence: ESC X`. |
+//! | **Context**          | Representation and protocol fit.                    |
 //!
 //! Here's an example:
 //! ```no_run
@@ -148,6 +146,11 @@ pub mod da;
 #[cfg(not(any(test, doc)))]
 mod da;
 
+#[cfg(any(test, doc))]
+pub mod osc_constants;
+#[cfg(not(any(test, doc)))]
+mod osc_constants;
+
 // Macros for const expansion.
 mod macros;
 
@@ -161,5 +164,49 @@ pub use raw_mode_constants::*;
 pub use sgr::*;
 pub use utf8::*;
 pub use da::*;
-#[allow(unused_imports)]
+pub use osc_constants::*;
 pub use mouse::*;
+
+/// Converts an ASCII [`u8`] byte to a [`char`] at compile time.
+///
+/// Every `u8` byte (0..=255) maps directly to the ISO-8859-1 / ASCII range of Unicode
+/// (`U+0000`..`U+00FF`), which does not overlap with UTF-16 surrogates
+/// (`U+D800`..`U+DFFF`), making this conversion 100% sound.
+#[allow(clippy::as_conversions)]
+#[must_use]
+pub const fn ascii_byte_to_char(byte: u8) -> char {
+    // XMARK: Intentional numeric casting using as.
+    byte as char
+}
+
+/// Converts a static ASCII byte slice to a [`&'static str`] at compile time.
+///
+/// # Panics
+/// Panics at compile time if the input bytes are not valid UTF-8.
+#[must_use]
+pub const fn ascii_byte_to_str(bytes: &'static [u8]) -> &'static str {
+    match core::str::from_utf8(bytes) {
+        Ok(s) => s,
+        Err(_) => panic!("invalid UTF-8 bytes for ascii_byte_to_str"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ascii_byte_to_char() {
+        assert_eq!(ascii_byte_to_char(0), '\0');
+        assert_eq!(ascii_byte_to_char(b'A'), 'A');
+        assert_eq!(ascii_byte_to_char(b';'), ';');
+    }
+
+    #[test]
+    fn test_ascii_byte_to_str() {
+        assert_eq!(ascii_byte_to_str(&[0]), "\0");
+        assert_eq!(ascii_byte_to_str(b"hello"), "hello");
+        assert_eq!(ascii_byte_to_str(b";"), ";");
+    }
+}
+

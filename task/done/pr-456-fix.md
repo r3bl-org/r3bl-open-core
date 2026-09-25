@@ -1,7 +1,5 @@
 _Task: PR 456 Integration (VT100 Pending Wrap fix)_
 
-<!-- cspell:words wrapneeded -->
-
 # User Story & Context
 
 ## Problem

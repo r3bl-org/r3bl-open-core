@@ -206,9 +206,8 @@ impl RustAnalyzerClient {
     ) -> Result<Value, McpServerError> {
         let diagnostics = self.diagnostics(uri).unwrap_or_else(|_| json!([]));
 
-        let filtered_diagnostics: Vec<Value> = diagnostics
-            .as_array()
-            .map(|diags| {
+        let filtered_diagnostics: Vec<Value> =
+            diagnostics.as_array().map_or_default(|diags| {
                 diags
                     .iter()
                     .filter(|d| {
@@ -216,8 +215,7 @@ impl RustAnalyzerClient {
                     })
                     .cloned()
                     .collect()
-            })
-            .unwrap_or_default();
+            });
 
         let params = json!({
             "textDocument": { "uri": uri },

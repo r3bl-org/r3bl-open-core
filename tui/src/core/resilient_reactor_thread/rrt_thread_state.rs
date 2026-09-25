@@ -120,7 +120,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// to be temporarily blocked during this transition periods.
     ///
     /// [`Condvar`]: super::ThreadLifecycleMonitor::wait()
-    /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+    /// [`epoll`]: https://manpages.debian.org/epoll.7
     /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
     /// [`Running`]: ThreadState::Running
     /// [`Stopped`]: ThreadState::Stopped
@@ -171,8 +171,8 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`Continuation::Restart`]: crate::Continuation::Restart
     /// [`Continuation::Stop`]: crate::Continuation::Stop
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [`file descriptors`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`epoll`]: https://manpages.debian.org/epoll.7
+    /// [`file descriptors`]: https://manpages.debian.org/open.2
     /// [`interrupt_if_running()`]: super::ThreadLifecycleMonitor::interrupt_if_running
     /// [`InterruptHandle`]: super::InterruptHandle
     /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -183,8 +183,8 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`Stopped`]: ThreadState::Stopped
     /// [`Stopping`]: ThreadState::Stopping
     /// [`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
-    /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-    /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`syscall`]: https://manpages.debian.org/syscalls.2
+    /// [`syscalls`]: https://manpages.debian.org/syscalls.2
     /// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
     ///     super::ThreadLifecycleMonitor::interrupt_if_running
     /// [`try_subscribe()`]: crate::RRT::try_subscribe

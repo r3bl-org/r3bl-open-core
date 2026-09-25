@@ -74,7 +74,7 @@ use std::sync::{LockResult, Mutex, MutexGuard};
 ///     LazyLock::new(|| Mutex::new(0).into_scoped_mutex());
 ///
 /// HOT_PATH.write(|_| {
-///     HOT_PATH.read(|_| {}); // ❌ DEADLOCK! (Recursive call to the same static)
+///     HOT_PATH.read(|_| {}); // ☠️ DEADLOCK! (Recursive call to the same static)
 /// });
 /// ```
 ///
@@ -112,7 +112,7 @@ use std::sync::{LockResult, Mutex, MutexGuard};
 ///    placeholders and intentionally differs from the actual implementation. -->
 ///
 ///    ```ignore
-///    // ❌ Alternatives we avoided (The "Trait Pattern" boilerplate)
+///    // Alternatives we avoided (The "Trait Pattern" boilerplate)
 ///    trait PolicyTrait { fn check(); }
 ///    struct Strict; impl PolicyTrait for Strict { fn check() { /* ... */ } }
 ///    struct OptOut; impl PolicyTrait for OptOut { fn check() { /* ... */ } }
@@ -131,14 +131,14 @@ use std::sync::{LockResult, Mutex, MutexGuard};
 ///    placeholders and intentionally differs from the actual implementation. -->
 ///
 ///    ```ignore
-///    // ❌ Alternatives we avoided (The "Runtime Check" overhead)
+///    // Alternatives we avoided (The "Runtime Check" overhead)
 ///    struct ScopedMutex<S> {
 ///        policy_field: DeadlockPreventionPolicy,
 ///        /* ... */
 ///    }
 ///    impl<S> ScopedMutex<S> {
 ///        fn read(&self) {
-///            match self.policy_field { // ❌ Branching happens at runtime
+///            match self.policy_field { // Branching happens at runtime
 ///                DeadlockPreventionPolicy::PanicOnAnyLockNesting => { /* ... */ }
 ///                DeadlockPreventionPolicy::OptOut => { /* ... */ }
 ///                _ => { /* ... */ }

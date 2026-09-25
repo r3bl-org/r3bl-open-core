@@ -102,8 +102,8 @@
 
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
-            CursorBoundsCheck, LINE_FEED_BYTE, NULL_BYTE, RangeBoundsExt,
-            RangeValidityStatus, c_len, ok};
+            CursorBoundsCheck, LINE_FEED_BYTE, NUL, RangeBoundsExt, RangeValidityStatus,
+            c_len, ok};
 use miette::{Result, miette};
 use std::ops::Range;
 
@@ -339,7 +339,7 @@ impl ZeroCopyGapBuffer {
         // Fill the freed space with null bytes.
         let null_start = newline_pos + 1;
         let null_end = buffer_pos.as_usize() + current_content_len.as_usize() + 1;
-        self.buffer[null_start..null_end].fill(NULL_BYTE);
+        self.buffer[null_start..null_end].fill(NUL);
 
         // Update line metadata.
         let line_info_mut = self.get_line_info_mut(line_index).ok_or_else(|| {
@@ -565,7 +565,7 @@ mod tests {
             .enumerate()
         {
             let i = buffer_start + content_len + 1 + idx;
-            assert_eq!(byte, NULL_BYTE, "Byte at {i} should be null");
+            assert_eq!(byte, NUL, "Byte at {i} should be null");
         }
     }
 
@@ -768,5 +768,3 @@ mod benches {
         });
     }
 }
-
-// cspell:words ello Helo

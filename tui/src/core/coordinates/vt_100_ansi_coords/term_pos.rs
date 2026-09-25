@@ -38,10 +38,10 @@ use std::num::NonZeroU16;
 /// these 1-based coordinates.
 ///
 /// This means:
-/// - ✅ Coordinates are [`VT-100`] spec-compliant (1-based, not 0-based)
-/// - ✅ Mouse click positions match actual terminal emulator output
-/// - ✅ Tested against multiple terminal emulators
-/// - ✅ Validated through real-world interactive testing
+/// - Coordinates are [`VT-100`] spec-compliant (1-based, not 0-based)
+/// - Mouse click positions match actual terminal emulator output
+/// - Tested against multiple terminal emulators
+/// - Validated through real-world interactive testing
 ///
 /// # Use Cases
 ///

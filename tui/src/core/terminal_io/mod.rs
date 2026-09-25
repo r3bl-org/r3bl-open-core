@@ -13,6 +13,8 @@
 //! - [`KeyPress`] - Keyboard input with key code and modifiers
 //! - [`ModifierKeysMask`] - Bitflags for Shift, Ctrl, Alt, etc.
 //! - [`MouseInput`] - Mouse events (click, scroll, move)
+//! - [`TerminalInteractiveStatus`] - Interactivity status (TTY vs pipe)
+//! - [`get_size()`] - Detect terminal window size
 //!
 //! # Testing
 //!
@@ -30,15 +32,21 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`get_size()`]: crate::get_size
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`KeyPress`]: crate::KeyPress
 //! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`MouseInput`]: crate::MouseInput
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`TerminalInteractiveStatus`]: crate::TerminalInteractiveStatus
 
 // Private modules (hide internal structure).
 mod backpressure_stdout;
+#[cfg(any(test, doc))]
+pub mod capabilities;
+#[cfg(not(any(test, doc)))]
+mod capabilities;
 mod enhanced_keys;
 mod input_device;
 mod input_event;
@@ -52,6 +60,7 @@ mod types;
 
 // Re-exports for flat public API.
 pub use backpressure_stdout::*;
+pub use capabilities::*;
 pub use enhanced_keys::*;
 pub use input_device::*;
 pub use input_event::*;

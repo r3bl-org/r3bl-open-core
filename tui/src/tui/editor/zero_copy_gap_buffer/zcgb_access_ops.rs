@@ -292,7 +292,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::{super::INITIAL_LINE_SIZE, *};
-    use crate::{LINE_FEED_BYTE, NULL_BYTE, byte_len, c_row};
+    use crate::{LINE_FEED_BYTE, NUL, byte_len, c_row};
 
     #[test]
     fn test_as_str_empty() {
@@ -319,7 +319,7 @@ mod tests {
         let bytes = buffer.as_bytes();
         assert_eq!(bytes.len(), INITIAL_LINE_SIZE);
         assert_eq!(bytes[0], LINE_FEED_BYTE);
-        assert!(bytes[1..].iter().all(|&b| b == NULL_BYTE));
+        assert!(bytes[1..].iter().all(|&b| b == NUL));
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
         let raw = buffer.get_line_raw(c_row(0)).expect("conversion error");
         assert_eq!(raw.len(), INITIAL_LINE_SIZE);
         assert_eq!(raw[0], LINE_FEED_BYTE);
-        assert!(raw[1..].iter().all(|&b| b == NULL_BYTE));
+        assert!(raw[1..].iter().all(|&b| b == NUL));
     }
 
     #[test]

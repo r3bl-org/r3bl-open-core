@@ -238,6 +238,7 @@ documentation and test code coverage.
 - **Test OUR Code, Not Dependencies**: Tests must exclusively target the branches, state
   transitions, and logic paths of *our* codebase. Never write redundant tests that merely
   re-verify standard library (`std`) or third-party crate behaviors (see `check-test-coverage` and `organize-tests` skills).
+  Use `cargo-llvm-cov` surgically to empirically verify execution of custom logic branches while ignoring derive/macro lines.
 - For existing tests, make sure they add value and are not redundant or needless.
 - If they are needless, remove them. If there are missing tests, then add them.
 

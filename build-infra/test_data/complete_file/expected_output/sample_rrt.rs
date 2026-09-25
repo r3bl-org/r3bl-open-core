@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words maxfiles taskthreads rrtwaker
-
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread pattern.
 //! See [`RRT`] for details.
 use super::{BroadcastSender, LivenessState, RRTEvent, RRTWorker, RestartPolicy,

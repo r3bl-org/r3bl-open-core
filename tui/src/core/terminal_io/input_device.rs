@@ -116,8 +116,8 @@ impl InputDevice {
     /// resources like [`epoll`] or [`eventfd`] are unavailable).
     ///
     /// [`DirectToAnsi`]: crate::DirectToAnsiInputDevice
-    /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
+    /// [`epoll`]: https://manpages.debian.org/epoll.7
+    /// [`eventfd`]: https://manpages.debian.org/eventfd.2
     #[cfg(target_os = "linux")]
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno
-
 use super::buf_read_ext::BufReadExt;
 use crate::{ControlledChild, ControlledChildTerminationHandle, ControllerWriter, EIO,
             GLYPH_CONTROLLED, GLYPH_SUCCESS, GLYPH_WARNING, PtyPair, ReadLinesResult, ok};
@@ -161,13 +159,13 @@ impl PtyTestChild {
     ///
     /// [`child.wait()`]: portable_pty::Child::wait
     /// [`ControlledChild::wait()`]: portable_pty::Child::wait
-    /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+    /// [`EIO`]: https://manpages.debian.org/errno.3
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
     /// [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
     /// [`PtyPair`]: crate::PtyPair
-    /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
+    /// [`read()`]: https://manpages.debian.org/read.2
     /// [`std::process::exit(0)`]: std::process::exit
     /// [`stdio`]: std::io
     /// [Two Types of Deadlocks]: crate::PtyPair#two-types-of-pty-deadlocks
@@ -236,7 +234,7 @@ impl PtyTestChild {
     /// Returns an error message if [`EOF`]/[`EIO`] is reached before the ready signal is
     /// found, or if an I/O error occurs.
     ///
-    /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+    /// [`EIO`]: https://manpages.debian.org/errno.3
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
     pub fn wait_for_ready<R: BufRead>(
@@ -614,5 +612,3 @@ impl PtyTestChild {
         }
     }
 }
-
-// cspell:words PSEUDOCONSOLE nonsignaled conhost

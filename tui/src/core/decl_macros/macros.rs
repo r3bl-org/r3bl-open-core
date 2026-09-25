@@ -96,7 +96,7 @@ macro_rules! throws_with_return {
 ///
 /// let result: miette::Result<String> = Ok("foo".to_string());
 /// if let Err(err) = result {
-///     let msg = format!("❌ Failed to {}", stringify!($cmd));
+///     let msg = format!("Failed to {}", stringify!($cmd));
 ///     console_log!(ERROR_RAW &msg, err);
 /// }
 /// ```
@@ -108,7 +108,7 @@ macro_rules! throws_with_return {
 /// ```
 /// use r3bl_tui::console_log;
 ///
-/// let msg = format!("✅ Did the thing to {}", stringify!($name));
+/// let msg = format!("Did the thing to {}", stringify!($name));
 /// console_log!(OK_RAW &msg);
 /// ```
 ///

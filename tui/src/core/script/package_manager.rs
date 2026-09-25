@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words noconfirm
-
 use crate::{CommandOutputResult, command, ok};
 use miette::{Context, IntoDiagnostic};
 

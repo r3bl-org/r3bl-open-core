@@ -1,7 +1,5 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words suckless
-
 //! Internal implementation for [`ANSI`]/[`VT-100`] sequence processing.
 //!
 //! This parser is based on the [`vte`] crate's [`Perform`] trait, and is [`VT-100` spec]
@@ -196,7 +194,7 @@
 //! [`kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`Parser`]: vte::Parser
 //! [`Perform`]: vte::Perform
@@ -740,7 +738,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     Parse OSC code & params
     ///         ↓
-    ///     Queue OscEvent:
+    ///     Queue OscPtyEvent:
     ///       - SetTitleAndTab (OSC 0,1,2)
     ///       - Hyperlink (OSC 8)
     ///         ↓
@@ -758,12 +756,21 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ESC ] 0 ; "vim - file.rs" ESC \ (ST)
     /// ```
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// ## Why `_bell_terminated` is dropped
+    ///
+    /// The [`vte`] parser provides `bell_terminated: bool` as a hint indicating whether
+    /// the [`OSC`] sequence was terminated by `BEL` (`\x07`) or `ST` (`ESC \` / String
+    /// Terminator). Our downstream API does not care about this hint: terminal operations
+    /// (such as setting the window title or defining hyperlinks) behave identically
+    /// regardless of which terminator was used. Dropping this hint simplifies the
+    /// internal dispatch interface and keeps it focused solely on the parameters.
+    ///
+    /// [`OSC`]: crate::core::ansi::osc::OscSequence
     /// [`Parser`]: vte::Parser
     /// [`vte`]: https://docs.rs/vte
     /// [module docs]: self
-    fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
-        vt_100_shim_osc_ops::dispatch_osc(self, params, bell_terminated);
+    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
+        vt_100_shim_osc_ops::dispatch_osc(self, params.into());
     }
 
     /// Handles escape sequences (not [`CSI`] or [`OSC`]).
@@ -886,7 +893,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// [`DECRC`]: https://vt100.net/docs/vt510-rm/DECRC.html
     /// [`DECSC`]: https://vt100.net/docs/vt510-rm/DECSC.html
     /// [`ESC`]: crate::EscSequence
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::core::ansi::osc::OscSequence
     /// [`Parser`]: vte::Parser
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`vte`]: https://docs.rs/vte

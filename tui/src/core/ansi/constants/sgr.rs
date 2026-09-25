@@ -9,17 +9,17 @@
 
 use crate::define_ansi_const;
 
+define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] =>
+    "Reset (SGR 0)" : "Resets all text attributes to default. Avoids runtime format!() calls."
+);
+
 /// Reset ([`SGR`] `0`): Complete sequence bytes to reset all text attributes to default.
 /// Provides zero-overhead access for performance-critical paths.
 ///
 /// Sequence: `ESC [ 0 m`
 ///
 /// [`SGR`]: crate::SgrCode
-pub const SGR_RESET_BYTES: &[u8] = b"\x1b[0m";
-
-define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] =>
-    "Reset (SGR 0)" : "Resets all text attributes to default. Avoids runtime format!() calls."
-);
+pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
 
 // Common text attributes.
 

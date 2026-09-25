@@ -243,6 +243,83 @@ use crate::VPSize;
 /// src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/image/inception.gif"
 /// width="350" height="250" alt="Inception GIF">
 ///
+/// ## Why attach to a [`PTY`] instead of a pipe? (The Interactive Illusion)
+///
+/// **TL;DR:** Standard anonymous pipes ([`Stdio::piped()`]) cannot emulate a terminal
+/// because child processes actively query their file descriptors via [`isatty()`]. If a
+/// child detects a pipe, it recognizes that no human operator is attached and disables
+/// interactive behavior, defeating the entire purpose of terminal emulation.
+///
+/// Attaching a child to a [`PTY`] preserves **four critical behaviors** that pipes break:
+///
+/// 1. **Interactive Session Illusion ([`isatty()`] & Human Presence):** The child process
+///    believes it is talking directly to a live human operator. Calling [`isatty()`]
+///    returns `true` (`1`), prompting shells (`bash`), REPLs (`python`), and CLIs to
+///    display prompts, activate readline keybindings, enable tab completion, and maintain
+///    command history rather than falling back to headless batch script mode.
+///
+/// 2. **Real-Time Streaming vs. 8 KB Stalls ([`libc`] Buffering):** Terminal devices use
+///    **line-buffering** (flushing immediately on every `\n`). Pipes automatically switch
+///    [`libc`] into **block-buffering** (typically 4 KB or 8 KB chunks), stalling output
+///    from streaming CLI tools until the buffer fills or the process exits.
+///
+/// 3. **Rich Visual Output ([`ANSI`] Colors & TUI Apps):** Programs like `git`, `grep`,
+///    and `rustc` query [`isatty()`] and strip all [`ANSI`] color escapes when connected
+///    to a pipe. Full-screen TUI apps ([`vim`], [`top`], [`tmux`]) query terminal
+///    geometry via [`ioctl(TIOCGWINSZ)`] or [`tcgetattr()`], which fail with [`ENOTTY`]
+///    on a pipe, causing the program to abort immediately.
+///
+/// 4. **Kernel Line Discipline (Signals & Raw Mode):** Pipes are raw unformatted byte
+///    conduits. A [`PTY`] passes through the kernel's terminal line discipline,
+///    synthesizing signals ([`SIGINT`] on Ctrl+C, [`SIGTSTP`] on Ctrl+Z), managing local
+///    echo, and enabling [raw mode] via [`tcsetattr()`].
+///
+/// | Feature / Behavior          | Interactive Terminal ([`PTY`] Device)           | Anonymous Pipe ([`pipe()`])                          |
+/// | :-------------------------- | :---------------------------------------------- | :--------------------------------------------------- |
+/// | **Session Interactivity**   | Interactive mode (prompts, readline, history)   | Headless batch mode (scripts, non-interactive)       |
+/// | **[`isatty()`] checks**     | Returns `true` (`1`)                            | Returns `false` (`0`)                                |
+/// | **[`libc`] Buffering**      | **Line-buffered** (immediate flush on `\n`)     | **Block-buffered** (stalls in 4 KB to 8 KB chunks)   |
+/// | **[`ANSI`] Colors & Style** | Full 24-bit Truecolor & escape sequences        | Stripped by default (`--color=auto` turns off)       |
+/// | **TUI & Geometry**          | Responds to [`ioctl(TIOCGWINSZ)`] and resize    | Fails with [`ENOTTY`]; full-screen TUI apps abort    |
+/// | **Line Discipline Signals** | Synthesizes [`SIGINT`] (Ctrl+C), [`SIGWINCH`]   | None; bytes are treated strictly as data             |
+///
+/// ## Full-duplex controller vs. unidirectional child [`stdio`]
+///
+/// A Pseudoterminal bridges two fundamentally different communication models:
+///
+/// 1. **The Controller is Full-Duplex:** The parent process holds a single descriptor
+///    that simultaneously writes keystrokes into child [`stdin`] and reads merged output
+///    emitted by the child.
+/// 2. **Child Stdio is Unidirectional:** The child process interacts with standard POSIX
+///    unidirectional streams: reading from [`stdin`] (`fd 0`) and writing to [`stdout`]
+///    (`fd 1`) and [`stderr`] (`fd 2`).
+///
+/// ```text
+///  Full-Duplex Controller                         Unidirectional Controlled
+///  (Parent / Multiplexer)   Kernel Line Discipline    (Child Process)
+/// ┌──────────────────────┐                         ┌───────────────────────┐
+/// │                      │─────── Write Input ────►│ stdin  (fd 0) [read]  │
+/// │                      │                         ├───────────────────────┤
+/// │ Controller Descriptor│                         │ stdout (fd 1) [write] ┐
+/// │  (Single fd: read/   │◄── Read Merged Output ──┤                       ├─► [Merged]
+/// │   write concurrently)│                         │ stderr (fd 2) [write] ┘
+/// └──────────────────────┘                         └───────────────────────┘
+/// ```
+///
+/// **Open File Description ([`OFD`]) Sharing Across Stdio**
+///
+/// While [`stdin`], [`stdout`], and [`stderr`] are separate integer entries in the
+/// child's file descriptor table, all three point to the **same underlying Open File
+/// Description** for `/dev/pts/N`.
+///
+/// Because file status flags live on the Open File Description rather than the
+/// descriptor:
+/// - Setting [`O_NONBLOCK`] on [`stdin`] (e.g., for edge-triggered polling in an async
+///   reader) **silently converts [`stdout`] into non-blocking mode as well**.
+/// - Subsequent large writes to [`stdout`] can fail with `ErrorKind::WouldBlock` when the
+///   4 KB kernel [`PTY`] buffer fills, requiring backpressure handling (see
+///   [`BackpressureStdout`]).
+///
 /// ## Parent process perspective (your application)
 ///
 /// The **parent process** (your application) is essentially doing what a terminal
@@ -597,12 +674,13 @@ use crate::VPSize;
 /// controller/controlled, per [Inclusive Naming Initiative - Tier 1 Terms].
 ///
 /// [3-layer Functional Stack]: crate::core::pty#the-functional-stack
-/// [`/dev/ptmx`]: https://man7.org/linux/man-pages/man4/ptmx.4.html
-/// [`/dev/pts/N`]: https://man7.org/linux/man-pages/man4/pts.4.html
-/// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+/// [`/dev/ptmx`]: https://manpages.debian.org/ptmx.4
+/// [`/dev/pts/N`]: https://manpages.debian.org/pts.4
+/// [`/dev/tty`]: https://manpages.debian.org/tty.4
 /// [`4.2BSD`]: https://en.wikipedia.org/wiki/Berkeley_Software_Distribution#4.2BSD
 /// [`Alacritty`]: https://alacritty.org/
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`BackpressureStdout`]: crate::BackpressureStdout
 /// [`BufReadExt`]: crate::BufReadExt
 /// [`Command::spawn()`]: std::process::Command::spawn
 /// [`Command::stderr()`]: std::process::Command::stderr
@@ -614,27 +692,35 @@ use crate::VPSize;
 /// [`controller_mut()`]: PtyPair::controller_mut
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`DefaultPtySize`]: crate::DefaultPtySize
-/// [`dup2()`]: https://man7.org/linux/man-pages/man2/dup2.2.html
-/// [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`dup2()`]: https://manpages.debian.org/dup2.2
+/// [`ECHO`]: https://manpages.debian.org/termios.3
+/// [`EIO`]: https://manpages.debian.org/errno.3
+/// [`ENOTTY`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`eprintln!`]: std::eprintln
-/// [`exec()`]: https://man7.org/linux/man-pages/man3/exec.3.html
-/// [`FD_CLOEXEC`]: https://man7.org/linux/man-pages/man2/fcntl.2.html
-/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-/// [`fork()`]: https://man7.org/linux/man-pages/man2/fork.2.html
-/// [`ICANON`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`ioctl(TIOCGWINSZ)`]: https://man7.org/linux/man-pages/man2/ioctl_tty.2.html
-/// [`ioctl`]: https://man7.org/linux/man-pages/man2/ioctl.2.html
-/// [`isatty()`]: https://man7.org/linux/man-pages/man3/isatty.3.html
-/// [`ONLCR`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`openpty()`]: https://man7.org/linux/man-pages/man3/openpty.3.html
-/// [`openpty(3)`]: https://man7.org/linux/man-pages/man3/openpty.3.html
+/// [`exec()`]: https://manpages.debian.org/exec.3
+/// [`FD_CLOEXEC`]: https://manpages.debian.org/fcntl.2
+/// [`fd`]: https://manpages.debian.org/open.2
+/// [`FIFO`]: https://manpages.debian.org/fifo.7
+/// [`fork()`]: https://manpages.debian.org/fork.2
+/// [`ICANON`]: https://manpages.debian.org/termios.3
+/// [`ioctl(TIOCGWINSZ)`]: https://manpages.debian.org/ioctl_tty.2
+/// [`ioctl`]: https://manpages.debian.org/ioctl.2
+/// [`isatty()`]: https://manpages.debian.org/isatty.3
+/// [`libc`]: https://docs.rs/libc
+/// [`mkfifo()`]: https://manpages.debian.org/mkfifo.3
+/// [`nano`]: https://en.wikipedia.org/wiki/GNU_nano
+/// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
+/// [`OFD`]: https://en.wikipedia.org/wiki/File_descriptor
+/// [`ONLCR`]: https://manpages.debian.org/termios.3
+/// [`openpty()`]: https://manpages.debian.org/openpty.3
+/// [`openpty(3)`]: https://manpages.debian.org/openpty.3
+/// [`pipe()`]: https://manpages.debian.org/pipe.2
 /// [`portable_pty's CommandBuilder`]: portable_pty::CommandBuilder
 /// [`portable_pty's openpty()`]: portable_pty::PtySystem::openpty
 /// [`portable_pty's spawn_command()`]: portable_pty::SlavePty::spawn_command
 /// [`POSIX.1-2001`]: https://pubs.opengroup.org/onlinepubs/009695399/
-/// [`posix_openpt()`]: https://man7.org/linux/man-pages/man3/posix_openpt.3.html
+/// [`posix_openpt()`]: https://manpages.debian.org/posix_openpt.3
 /// [`println!`]: std::println
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyPair::into_controller()`]: PtyPair::into_controller
@@ -643,12 +729,17 @@ use crate::VPSize;
 ///     Self::spawn_command_and_close_controlled
 /// [`PtySession`]: crate::PtySession
 /// [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
-/// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
+/// [`read()`]: https://manpages.debian.org/read.2
 /// [`read_line`]: std::io::Stdin::read_line
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 /// [`Receiver`]: std::sync::mpsc::Receiver
 /// [`select!`]: tokio::select
-/// [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`setsid()`]: https://manpages.debian.org/setsid.2
+/// [`SIGINT`]: https://manpages.debian.org/signal.7
+/// [`SIGPIPE`]: https://manpages.debian.org/signal.7
+/// [`SIGQUIT`]: https://manpages.debian.org/signal.7
+/// [`SIGTSTP`]: https://manpages.debian.org/signal.7
+/// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 /// [`std::io::stderr()`]: std::io::stderr
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`std::io::stdout()`]: std::io::stdout
@@ -657,20 +748,26 @@ use crate::VPSize;
 /// [`std::write()`]: std::io::Write::write
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
+/// [`Stdio::piped()`]: std::process::Stdio::piped
+/// [`stdio`]: std::io
 /// [`stdout`]: std::io::stdout
 /// [`struct file`]:
 ///     https://elixir.bootlin.com/linux/v6.19.3/source/include/linux/fs.h#L1256
 /// [`SyncSender`]: std::sync::mpsc::SyncSender
-/// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`tcsetattr()`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
-/// [`tcsetattr`]: https://man7.org/linux/man-pages/man3/tcsetattr.3.html
-/// [`termios`]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [`syscall`]: https://manpages.debian.org/syscalls.2
+/// [`tcgetattr()`]: https://manpages.debian.org/tcgetattr.3
+/// [`tcsetattr()`]: https://manpages.debian.org/tcsetattr.3
+/// [`tcsetattr`]: https://manpages.debian.org/tcsetattr.3
+/// [`termios`]: https://manpages.debian.org/termios.3
+/// [`tmux`]: https://github.com/tmux/tmux
 /// [`tokio`]: tokio
-/// [`top`]: https://man7.org/linux/man-pages/man1/top.1.html
+/// [`top`]: https://manpages.debian.org/top.1
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`vim`]: https://www.vim.org/
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
-/// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
+/// [`WouldBlock`]: std::io::ErrorKind::WouldBlock
+/// [`write()`]: https://manpages.debian.org/write.2
 /// [`Xenix`]: https://en.wikipedia.org/wiki/Xenix
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 /// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
@@ -684,10 +781,10 @@ use crate::VPSize;
 /// [Linux (1992)]: https://en.wikipedia.org/wiki/Linux_console
 /// [Linux `pty.c` source]:
 ///     https://github.com/torvalds/linux/blob/master/drivers/tty/pty.c
-/// [Linux `PTY` man page]: https://man7.org/linux/man-pages/man7/pty.7.html
+/// [Linux `PTY` man page]: https://manpages.debian.org/pty.7
 /// [physical terminal]: https://en.wikipedia.org/wiki/Computer_terminal
 /// [portable_pty's `CommandBuilder`]: portable_pty::CommandBuilder
-/// [POSIX terminal API]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [POSIX terminal API]: https://manpages.debian.org/termios.3
 /// [PTY Core Concept]: crate::core::pty#the-pty-core-concept
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [Resource-leaking deadlock]: #resource-leaking-deadlock
@@ -722,7 +819,7 @@ impl PtyPair {
     /// Returns an error if the [`PTY`] system fails to open a pair, or if the command
     /// fails to spawn.
     ///
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn open_and_spawn(
         arg_size: impl Into<VPSize>,
@@ -752,7 +849,7 @@ impl PtyPair {
     /// - [File Descriptor ownership].
     /// - [Resource-leaking deadlock].
     ///
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [File Descriptor ownership]: #file-descriptor-ownership
     /// [Resource-leaking deadlock]: #resource-leaking-deadlock
@@ -793,7 +890,7 @@ impl PtyPair {
     ///
     /// Returns an error if the [`PTY`] system fails to open a pair.
     ///
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     pub fn open_raw_pair(
@@ -830,7 +927,7 @@ impl PtyPair {
     /// previous call to this function or by [`PtyPair::into_controller()`]), or if the
     /// command fails to spawn.
     ///
-    /// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+    /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     /// [Two Types of Deadlocks]: #two-types-of-pty-deadlocks
@@ -901,6 +998,3 @@ mod tests {
         assert!(pty_pair.maybe_controlled.is_none());
     }
 }
-
-// cspell:words CLOEXEC errno ptmx isatty TIOCGWINSZ Xenix DUPFD SETFD fcntl ONLCR grantpt
-// cspell:words unlockpt ptsname devpts RDWR openpt devtty

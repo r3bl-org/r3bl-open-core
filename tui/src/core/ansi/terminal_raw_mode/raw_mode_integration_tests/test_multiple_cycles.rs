@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words PENDIN
-
 //! [`PTY`]-based integration test for multiple raw mode cycles.
 //!
 //! Verifies that enabling and disabling raw mode multiple times works correctly:
@@ -26,11 +24,11 @@
 //!
 //! [`disable`]: crate::disable_raw_mode
 //! [`enable`]: crate::enable_raw_mode
-//! [`PENDIN`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`PENDIN`]: https://manpages.debian.org/termios.3
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
-//! [`tcsetattr`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`termios`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`tcsetattr`]: https://manpages.debian.org/termios.3
+//! [`termios`]: https://manpages.debian.org/termios.3
 
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,

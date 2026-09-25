@@ -1,71 +1,84 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// XMARK: pty test faking terminal emulator (in controller)
+
 //! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`].
 //!
-//! Test coordinator that routes to controller or controlled based on env var. When
-//! [`ENV_VAR_PTY_CONTROLLED`] is set, runs controlled logic and exits. Otherwise runs the
-//! controller test.
+//! Validates that [`DirectToAnsiInputDevice`] correctly manages asynchronous terminal
+//! input streams in a real pseudoterminal environment:
+//! - Up Arrow escape sequence (`ESC [ A`)
+//! - Down Arrow escape sequence (`ESC [ B`)
+//! - Function key F1 escape sequence (`ESC [ 11 ~` / `ESC O P`)
+//! - Terminal raw mode configuration preventing line-buffering and signal trapping
 //!
-//! ## Test Architecture (2 Actors)
+//! # Architecture and Process Roles
 //!
-//! This test validates [`DirectToAnsiInputDevice`] in a real [`PTY`] environment using a
-//! coordinator-worker pattern with two processes:
+//! In this test, the controller process simulates a host terminal emulator while the
+//! controlled child runs our TUI input engine. For the overall architecture and testing
+//! philosophy, see the [process roles documentation].
 //!
 //! ```text
-//! ┌─────────────────────────────────────────────────────────────────────┐
-//! │ Actor 1: PTY Controller (test coordinator)                          │
-//! │ Synchronous code                                                    │
-//! │                                                                     │
-//! │  1. Create PTY pair (controller/controlled file descriptors)        │
-//! │  2. Spawn test binary with $ENV_VAR_PTY_CONTROLLED=1 env var        │
-//! │  3. Write ANSI sequences to PTY controller (the pipe)               │
-//! │  4. Read parsed events from Actor 2's stdout via PTY                │
-//! │  5. Verify parsed events match expected values                      │
-//! └──────────────────────────────────┬──────────────────────────────────┘
-//!                                    │ spawns with controlled PTY as stdin/stdout
-//! ┌──────────────────────────────────▼──────────────────────────────────┐
-//! │ Actor 2: PTY Controlled (worker process, $ENV_VAR_PTY_CONTROLLED=1) │
-//! │ Tokio runtime and async code                                        │
-//! │                                                                     │
-//! │  1. Test function detects $ENV_VAR_PTY_CONTROLLED env var           │
-//! │  2. CRITICAL: Enable raw mode on terminal (controlled PTY)          │
-//! │  3. Create DirectToAnsiInputDevice (reads from stdin)               │
-//! │  4. Loop: next() → parse ANSI → write to stdout                     │
-//! │  5. Exit after processing test sequences                            │
-//! └─────────────────────────────────────────────────────────────────────┘
+//! ┌─────────────────────────────────────────────────────────────────────────┐
+//! │ Actor 1: PTY Controller (Simulated Terminal Emulator)                   │
+//! │ Synchronous test driver (runs on host / controller PTY)                 │
+//! │                                                                         │
+//! │  1. generate_pty_test! creates PTY pair (controller / controlled)       │
+//! │  2. Spawns test binary child with $ENV_VAR_PTY_CONTROLLED=1             │
+//! │  3. Writes synthesized ANSI escape sequences into controller PTY fd     │
+//! │  4. Reads parsed event strings from Actor 2's stdout via PTY reader     │
+//! │  5. Verifies parsed domain events match expectations                    │
+//! └────────────────────────────────────┬────────────────────────────────────┘
+//!                                      │ spawns with controlled PTY as stdin/stdout
+//! ┌────────────────────────────────────▼────────────────────────────────────┐
+//! │ Actor 2: PTY Controlled (System Under Test / TUI Input Engine)          │
+//! │ Tokio runtime and asynchronous event loop (runs on controlled PTY)      │
+//! │                                                                         │
+//! │  1. Test entry detects $ENV_VAR_PTY_CONTROLLED environment variable     │
+//! │  2. Enables raw mode on controlled PTY (prevents line buffering)         │
+//! │  3. Creates DirectToAnsiInputDevice (mio poller reads stdin)            │
+//! │  4. Loop: next().await → ChunkFramer / vt_100 parser → echo to stdout   │
+//! │  5. Exits cleanly after processing expected test event count            │
+//! └─────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
-//! ## Critical: Raw Mode Requirement
+//! 1. **[`PTY`] Controller (Simulated Terminal Emulator)**:
+//!    - Simulates an external terminal emulator host (such as [`Kitty`], Ghostty, or
+//!      [`XTerm`]).
+//!    - Synthesizes foundational navigation and function key sequences using
+//!      [`generate_keyboard_sequence`].
+//!    - Writes sequence bytes directly into the controller side of the [`PTY`], which the
+//!      operating system delivers to the controlled process's [`stdin`].
+//!    - Reads line-by-line event confirmation strings from the controlled child's
+//!      [`stdout`] and validates decoded `Keyboard:` output.
 //!
-//! **Raw Mode Clarification**: In [`PTY`] architecture, the controlled [`PTY`] side is
-//! what the child process sees as its terminal. When the child reads from stdin, it's
-//! reading from the controlled [`PTY`]. Therefore, we MUST set the controlled [`PTY`] to
-//! raw mode so that:
+//! 2. **[`PTY`] Controlled (System Under Test / TUI Input Engine)**:
+//!    - Represents the real TUI application running inside the child subprocess connected
+//!      to the controlled side of the [`PTY`].
+//!    - Configures the controlled [`PTY`] to raw mode to disable canonical line
+//!      buffering, disable local echo, and prevent control characters from being
+//!      intercepted by the tty driver.
+//!    - Initializes [`DirectToAnsiInputDevice`].
+//!    - Behind the scenes, the background [`mio`] polling thread watches [`stdin`],
+//!      feeding raw bytes into [`ChunkFramer`] and the Sans-IO [`vt_100`] parser.
+//!    - Runs a Tokio asynchronous event loop consuming from `input_device.next().await`.
+//!    - Maps parsed intermediate representation events into domain
+//!      [`InputEvent::Keyboard`] structures.
+//!    - Formats and echoes each received event over [`stdout`] so the controller can
+//!      verify parsing accuracy.
 //!
-//! 1. **No Line Buffering**: Input isn't line-buffered - characters are available
-//!    immediately without waiting for Enter key
-//! 2. **No Special Character Processing**: Special characters (like [`ESC`] sequences)
-//!    aren't interpreted by the terminal layer - they pass through as raw bytes
-//! 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
-//!    for newlines, enabling proper [`ANSI`] escape sequence parsing
+//! # Critical: Raw Mode Requirement
 //!
-//! **Controller vs Controlled**: The controller doesn't need raw mode - it's just a
-//! bidirectional pipe for communication. The controlled side is the actual "terminal"
-//! that needs proper settings for the child process to read [`ANSI`] sequences correctly.
+//! In pseudoterminal architectures, the controlled side is what the child process sees as
+//! its terminal. When the child reads from [`stdin`], it reads from the controlled
+//! [`PTY`]. Setting raw mode on the controlled device is mandatory because:
 //!
-//! Without raw mode, the [`PTY`] stays in "cooked" mode where:
-//! - Input waits for line termination (Enter key)
-//! - Control sequences may be interpreted instead of passed through
-//! - [`DirectToAnsiInputDevice`] times out waiting for input that's stuck in buffers
-//!
-//! ## Why This Test Pattern?
-//!
-//! - **Real [`PTY`] Environment**: Tests [`DirectToAnsiInputDevice`] with actual [`PTY`],
-//!   not mocks
-//! - **Process Isolation**: Each test run gets fresh [`PTY`] resources via process
-//!   spawning
-//! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
-//! - **Async Validation**: Properly tests [`tokio`] async I/O with real terminal input
+//! 1. **No Line Buffering**: Characters become available immediately as bytes arrive
+//!    without waiting for a carriage return or newline.
+//! 2. **No Special Character Processing**: Control characters (such as [`ESC`]) pass
+//!    through verbatim rather than triggering terminal signals (like `SIGINT` on
+//!    `Ctrl+C`).
+//! 3. **Non-Blocking Async Read**: The asynchronous reader retrieves discrete chunks as
+//!    they arrive, enabling continuous Sans-IO parsing.
 //!
 //! # Run with:
 //!
@@ -73,12 +86,19 @@
 //! cargo test -p r3bl_tui test_pty_input_device -- --nocapture
 //! ```
 //!
-//! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+//! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-//! [`ENV_VAR_PTY_CONTROLLED`]: crate::ENV_VAR_PTY_CONTROLLED
 //! [`ESC`]: crate::EscSequence
+//! [`generate_keyboard_sequence`]: crate::core::ansi::generator::generate_keyboard_sequence
+//! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+//! [`mio`]: https://crates.io/crates/mio
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`tokio`]: tokio
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
+//! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
+//! [`XTerm`]: https://invisible-island.net/xterm/
+//! [process roles documentation]: mod@super#architecture-and-process-roles
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
             GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
@@ -107,17 +127,7 @@ generate_pty_test! {
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[allow(clippy::too_many_lines)]
 fn controller(context: PtyTestContext) {
-    /// Helper to generate [`ANSI`] bytes from `InputEvent`.
-    ///
-    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    fn generate_test_sequence(desc: &str, event: VT100InputEventIR) -> (&str, Vec<u8>) {
-        let bytes = generate_keyboard_sequence(&event)
-            .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
-        (desc, bytes)
-    }
-
     let PtyTestContext {
         pty_pair,
         child,
@@ -136,42 +146,23 @@ fn controller(context: PtyTestContext) {
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
         .expect("Failed to wait for ready signal");
 
-    // Send sequences and verify.
-    let no_mods = VT100KeyModifiersIR::default();
-    let sequences: Vec<(&str, Vec<u8>)> = vec![
-        generate_test_sequence(
-            "Up Arrow",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Up,
-                modifiers: no_mods,
-            },
-        ),
-        generate_test_sequence(
-            "Down Arrow",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Down,
-                modifiers: no_mods,
-            },
-        ),
-        generate_test_sequence(
-            "F1",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Function(1),
-                modifiers: no_mods,
-            },
-        ),
-    ];
+    let test_cases = generate_test_cases();
 
     eprintln!(
         "{} PTY Controller: Sending {} sequences...",
         GLYPH_WAITING,
-        sequences.len()
+        test_cases.len()
     );
 
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     // correctness.
-    for (desc, sequence) in &sequences {
-        eprintln!("  → Sending: {desc} ({sequence:?})");
+    for test_case in &test_cases {
+        let TestCase {
+            description,
+            sequence,
+        } = test_case;
+
+        eprintln!("  → Sending: {description} ({sequence:?})");
 
         writer
             .write_all(sequence)
@@ -187,7 +178,7 @@ fn controller(context: PtyTestContext) {
                 || line.starts_with("Paste:")
         });
 
-        eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
+        eprintln!("  {GLYPH_SUCCESS} {description}: {event_line}");
     }
 
     eprintln!("{GLYPH_CONTROLLER_CLEANUP} PTY Controller: Cleaning up...");
@@ -217,7 +208,7 @@ fn controller(context: PtyTestContext) {
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`file descriptor`]: https://manpages.debian.org/open.2
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
@@ -275,6 +266,9 @@ fn controlled() {
                                 InputEvent::BracketedPaste(ref text) => {
                                     format!("Paste: {} chars", text.len())
                                 }
+                                InputEvent::TerminalColorReport(ref report) => {
+                                    format!("TerminalColorReport: {report:?}")
+                                }
                                 InputEvent::Shutdown(ref reason) => {
                                     format!("Shutdown: {reason:?}")
                                 }
@@ -283,8 +277,8 @@ fn controlled() {
                             println!("{output}");
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
-                            // Exit after processing a few events for testing.
-                            if event_count >= 3 {
+                            // Exit after processing expected number of events.
+                            if event_count >= TOTAL_EXPECTED_EVENTS {
                                 eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
@@ -306,4 +300,45 @@ fn controlled() {
 
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Completed, exiting");
     });
+}
+
+/// Expected number of keyboard events processed by the controlled process:
+/// - 3 navigation and function key sequences (Up, Down, F1)
+const TOTAL_EXPECTED_EVENTS: usize = 3;
+
+/// A single test case for basic input device sequence verification.
+struct TestCase {
+    description: &'static str,
+    sequence: Vec<u8>,
+}
+
+/// Generate the structured test cases for basic input device testing.
+fn generate_test_cases() -> Vec<TestCase> {
+    let no_mods = VT100KeyModifiersIR::default();
+    vec![
+        TestCase {
+            description: "Up Arrow",
+            sequence: generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: no_mods,
+            })
+            .expect("Failed to generate sequence for: Up Arrow"),
+        },
+        TestCase {
+            description: "Down Arrow",
+            sequence: generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Down,
+                modifiers: no_mods,
+            })
+            .expect("Failed to generate sequence for: Down Arrow"),
+        },
+        TestCase {
+            description: "F1",
+            sequence: generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
+                modifiers: no_mods,
+            })
+            .expect("Failed to generate sequence for: F1"),
+        },
+    ]
 }

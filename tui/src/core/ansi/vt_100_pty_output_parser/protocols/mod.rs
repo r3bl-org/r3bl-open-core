@@ -4,9 +4,13 @@
 mod csi_codes;
 pub use csi_codes::*;
 
-// Utility trait for parsing VTE parameters
-mod params_ext;
-pub use params_ext::*;
+// Utility trait for parsing VTE parameters.
+mod vte_params_ext;
+pub use vte_params_ext::*;
+
+// Types for parsing VTE OSC parameters.
+mod vte_osc_params;
+pub use vte_osc_params::*;
 
 // NOTE: Constants have been moved to `core::ansi::constants::*` module
 // NOTE: ESC sequence builders moved to `core::ansi::generator::esc`

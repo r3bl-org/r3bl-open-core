@@ -12,7 +12,7 @@ use std::sync::Mutex;
 /// This macro creates a [`ScopedMutex`] ergonomically and is the primary public
 /// construction API. This macro is powered by the [`MutexExt`] extension trait.
 ///
-/// # Parameters
+/// # Arguments
 ///
 /// 1. It supports three variants: `ANY`, `SPECIFIC`, and `OPT_OUT`, corresponding to the
 ///    variants of [`DeadlockPreventionPolicy`] enum.

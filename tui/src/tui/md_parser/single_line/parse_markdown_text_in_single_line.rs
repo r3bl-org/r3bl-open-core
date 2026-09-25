@@ -1,10 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{MdLineFragments, ParseList,
-            md_parser::md_parser_constants::{NEW_LINE, NULL_CHAR},
-            md_parser_types::CheckboxParsePolicy,
-            parse_inline_fragments_until_eol_or_eoi,
-            parse_null_padded_line::is};
+use crate::{CheckboxParsePolicy, MdLineFragments, NEW_LINE, NUL_CHAR, ParseList,
+            parse_inline_fragments_until_eol_or_eoi, parse_null_padded_line::is};
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_while},
           multi::many0,
@@ -74,7 +71,7 @@ mod inner {
                     |it| parse_inline_fragments_until_eol_or_eoi( it, CheckboxParsePolicy::IgnoreCheckbox)
                 ),
                 /* ends with (discarded) */
-                (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR))),
+                (tag(NEW_LINE), /* zero or more */ take_while(is(NUL_CHAR))),
             ).parse(input)?;
 
         let it = ParseList::from(output);

@@ -12,8 +12,9 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// When a modal component (like [`crate::choose()`]) needs full control of the terminal,
 /// it acquires a [`ModalTerminalGuard`]. While the guard is held:
 ///
-/// 1. The [`Readline`]'s pause state is transitioned to [`PauseState::PausedByModal`] (or
-///    [`PauseState::PausedByBoth`] if a spinner was already running).
+/// 1. The [`Readline`] instance's pause state is transitioned to
+///    [`PauseState::PausedByModal`] (or [`PauseState::PausedByBoth`] if a spinner was
+///    already running).
 /// 2. Any prompt currently rendered on screen is cleared.
 /// 3. Background writes to [`crate::SharedWriter`] are safely buffered in the pause
 ///    buffer instead of being output to the screen, preventing modal display corruption.
@@ -120,8 +121,8 @@ impl Drop for ModalTerminalGuard<'_> {
 ///    checker only allows one caller to call this method at a time, and no other methods
 ///    can be called on [`Readline`] until this guard is dropped).
 ///    - Inside [`ModalTerminalGuard::acquire`], [`ReadlineLockManager::lock_both`] is
-///      called to acquire locks in strict hierarchical order (Level 1 [`SafeLineState`],
-///      then Level 2 [`OutputDevice`]).
+///      called to acquire locks in strict hierarchical order (State lock
+///      [`SafeLineState`] acquired 1st, then Device lock [`OutputDevice`] acquired 2nd).
 ///    - Under these locks, [`Readline`] is transitioned to a modal-paused state, and the
 ///      terminal prompt is cleared via a call to
 ///      [`line_state.clear_and_render_and_flush(term)`].
@@ -133,11 +134,10 @@ impl Drop for ModalTerminalGuard<'_> {
 ///    [`Readline`] is paused and exclusive access to the [`OutputDevice`] is safely held.
 /// 4. Guard Release & Resumption: When [`ModalTerminalGuard`] is dropped, its [`Drop`]
 ///    implementation transitions [`PauseState`] back via [`PauseState::resume_modal`]
-///    (under the Level 1 [`SafeLineState`] lock) and flushes the prompt to restore normal
-///    [`Readline`] operation, concluding the token's validity lifecycle.
+///    (under the [`SafeLineState`] state lock, acquired 1st) and flushes the prompt to
+///    restore normal [`Readline`] operation, concluding the token's validity lifecycle.
 ///
-/// [`line_state.clear_and_render_and_flush(term)`]:
-///     crate::LineState::clear_and_render_and_flush
+/// [`line_state.clear_and_render_and_flush(term)`]: crate::LineState::clear_and_render_and_flush
 /// [`ModalGuardToken`]: crate::ModalGuardToken
 /// [`ModalTerminalGuard::acquire`]: crate::ModalTerminalGuard::acquire
 /// [`ModalTerminalGuard::as_mut_tuple`]: crate::ModalTerminalGuard::as_mut_tuple

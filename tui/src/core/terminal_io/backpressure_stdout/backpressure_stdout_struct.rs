@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words O_NONBLOCK POLLOUT EINTR SIGCONT SIGPROF EBADF devtty
-
 use std::io::Stdout;
 
 // Make the link to `consume_stdin_input_with_sender` shorter when used in rustdocs.
@@ -108,8 +106,8 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 /// [`drop()`]:
 ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker#method.drop
-/// [`EBADF`]: https://man7.org/linux/man-pages/man3/errno.3.html
-/// [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EBADF`]: https://manpages.debian.org/errno.3
+/// [`EINTR`]: https://manpages.debian.org/errno.3
 /// [`flush()`]: std::io::Write::flush
 /// [`mio_poller`]: mio_poller
 /// [`mio`]: mio
@@ -120,12 +118,12 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 /// [`original_stdin_flags`]:
 ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker::original_stdin_flags
 /// [`OutputDevice`]: crate::OutputDevice
-/// [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
+/// [`POLLOUT`]: https://manpages.debian.org/poll.2
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`rustix::event::poll`]: rustix::event::poll
-/// [`SIGCONT`]: https://man7.org/linux/man-pages/man7/signal.7.html
-/// [`SIGPROF`]: https://man7.org/linux/man-pages/man7/signal.7.html
-/// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`SIGCONT`]: https://manpages.debian.org/signal.7
+/// [`SIGPROF`]: https://manpages.debian.org/signal.7
+/// [`SIGWINCH`]: https://manpages.debian.org/signal.7
 /// [`stdin`]: std::io::stdin
 /// [`Stdout`]: std::io::Stdout
 /// [`stdout`]: std::io::stdout

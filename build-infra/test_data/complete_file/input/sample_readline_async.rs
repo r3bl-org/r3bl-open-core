@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words terminalasynctry spinnertry
-
 //! Readline async and choose modules
 //!
 //! This module provides readline async functionality, choice selection UI, and spinners

@@ -40,7 +40,7 @@
 //!
 //! This module serves **two integration points**:
 //! 1. **As the Compositor's Output**: Receives rendering operations from the pipeline
-//! 2. **As a VT100/[`ANSI`] Terminal Emulator**: Processes escape sequences from child
+//! 2. **As a [`VT-100`]/[`ANSI`] Terminal Emulator**: Processes escape sequences from child
 //!    processes
 //!
 //! # Architecture Overview
@@ -65,12 +65,12 @@
 //!
 //! The offscreen buffer is designed to work seamlessly with two major subsystems:
 //!
-//! ## 1. [`ANSI`]/VT100 Terminal Emulation
+//! ## 1. [`ANSI`]/[`VT-100`] Terminal Emulation
 //!
 //! - **Parser Integration**: Processes escape sequences via [`ofs_buf_vt_100`]
 //!   implementations
 //! - **State Management**: Maintains cursor position, character sets, scrolling regions
-//! - **Protocol Compliance**: Full VT100 specification compliance with conformance tests
+//! - **Protocol Compliance**: Full [`VT-100`] specification compliance with conformance tests
 //! - **Character Handling**: Supports both [`ASCII`] and [`DEC`] graphics character sets
 //!
 //! ## 2. Render Pipeline Integration
@@ -105,9 +105,9 @@
 //! - **Unicode Support**: Full support for emoji, combining characters, and international
 //!   text
 //!
-//! # VT100 Implementation Architecture - 1:1 Mapping
+//! # [`VT-100`] Implementation Architecture - 1:1 Mapping
 //!
-//! The buffer's VT100 support follows a clean architectural pattern with perfect file
+//! The buffer's [`VT-100`] support follows a clean architectural pattern with perfect file
 //! mapping:
 //!
 //! ```text
@@ -187,7 +187,7 @@
 //! Methods that are designed to always succeed return nothing:
 //!
 //! **Categories:**
-//! - **Cursor operations**: Always clamp to valid bounds (VT100 behavior)
+//! - **Cursor operations**: Always clamp to valid bounds ([`VT-100`] behavior)
 //!   - [`move_cursor_up()`], [`move_cursor_down()`], [`move_cursor_right()`],
 //!     [`move_cursor_left()`]
 //! - **Style operations**: No failure mode for attribute changes
@@ -195,7 +195,7 @@
 //! - **Control operations**: Terminal emulation resilience
 //!   - [`handle_backspace()`], [`handle_tab()`], [`handle_line_feed()`]
 //!
-//! These operations follow VT100 terminal behavior where operations are resilient
+//! These operations follow [`VT-100`] terminal behavior where operations are resilient
 //! and clamp values rather than failing.
 //!
 //! ## Error Handling Strategy
@@ -239,7 +239,7 @@
 //! 1. **Terminal Resilience**: Production terminals never crash on bad input
 //! 2. **Development Safety**: Issues are caught early during testing
 //! 3. **Zero Cost**: `debug_assert!` compiles to nothing in release builds
-//! 4. **VT100 Compliance**: Follows terminal emulation standards for clamping behavior
+//! 4. **[`VT-100`] Compliance**: Follows terminal emulation standards for clamping behavior
 //! 5. **API Clarity**: Consistent patterns make the API predictable
 //!
 //! The philosophy aligns with terminal emulation best practices where the terminal
@@ -313,6 +313,7 @@
 //! [`shift_lines_in_range()`]: crate::core::ansi::OfsBufVT100::shift_lines_in_range
 //! [`TuiStyle`]: crate::TuiStyle
 //! [`VPPos`]: crate::core::VPPos
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 #![rustfmt::skip]

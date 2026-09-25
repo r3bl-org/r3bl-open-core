@@ -15,7 +15,7 @@
     - [Architectural Symmetry](#architectural-symmetry)
     - [Benefits of This Approach](#benefits-of-this-approach)
   - [Implementation Plan](#implementation-plan)
-  - [Step 0: Prerequisite Setup [PENDING]](#step-0-prerequisite-setup-pending)
+  - [Step 0: Prerequisite Setup [COMPLETE]](#step-0-prerequisite-setup-complete)
   - [Step 1: Extend RenderOp for Incremental Rendering [COMPLETE]](#step-1-extend-renderop-for-incremental-rendering-complete)
     - [Key Accomplishments:](#key-accomplishments)
   - [Step 2: Implement DirectAnsi Backend [COMPLETE]](#step-2-implement-directansi-backend-complete)
@@ -48,26 +48,27 @@
     - [Part D: State Optimization [COMPLETE]](#part-d-state-optimization-complete)
     - [Part E: Text Painting Operations [COMPLETE]](#part-e-text-painting-operations-complete)
     - [Final QA [COMPLETE]](#final-qa-complete)
-  - [Step 8: Implement InputDevice for DirectToAnsi Backend [WORK_IN_PROGRESS]](#step-8-implement-inputdevice-for-directtoansi-backend-work_in_progress)
+  - [Step 8: Implement InputDevice for DirectToAnsi Backend [COMPLETE - Linux]](#step-8-implement-inputdevice-for-directtoansi-backend-complete---linux)
     - [Architecture](#architecture)
-    - [Step 8.0: Reorganize Existing Output Files [PENDING]](#step-80-reorganize-existing-output-files-pending)
+    - [Step 8.0: Reorganize Existing Output Files [COMPLETE]](#step-80-reorganize-existing-output-files-complete)
     - [Step 8.1: Architecture Design [COMPLETE]](#step-81-architecture-design-complete)
     - [Step 8.2: Implement Protocol Layer Parsers [COMPLETE]](#step-82-implement-protocol-layer-parsers-complete)
       - [Keyboard Parsing [COMPLETE]](#keyboard-parsing-complete)
       - [SS3 Keyboard Support [COMPLETE]](#ss3-keyboard-support-complete)
+      - [Kitty Keyboard Protocol (CSI u) Support [COMPLETE]](#kitty-keyboard-protocol-csi-u-support-complete)
       - [Mouse Parsing [COMPLETE]](#mouse-parsing-complete)
-      - [Terminal Events Parsing [COMPLETE]](#terminal-events-parsing-complete)
+      - [Terminal Events & OSC Parsing [COMPLETE]](#terminal-events--osc-parsing-complete)
       - [UTF-8 Text Parsing [COMPLETE]](#utf-8-text-parsing-complete)
     - [Step 8.2.1: Crossterm Feature Parity Analysis [COMPLETE]](#step-821-crossterm-feature-parity-analysis-complete)
-    - [Step 8.2.2: Architecture Insight - Why No Timeout? [COMPLETE]](#step-822-architecture-insight---why-no-timeout-complete)
+    - [Step 8.2.2: Architecture Insight - Mio Poller, MaybeMore & Zero-Latency ESC [COMPLETE]](#step-822-architecture-insight---mio-poller-maybemore--zero-latency-esc-complete)
     - [Step 8.3: Backend Device Implementation [COMPLETE]](#step-83-backend-device-implementation-complete)
     - [Step 8.4: Testing & Validation [COMPLETE]](#step-84-testing--validation-complete)
-    - [Step 8.5: Migration & Cleanup [PENDING]](#step-85-migration--cleanup-pending)
+    - [Step 8.5: Migration & Cleanup [COMPLETE]](#step-85-migration--cleanup-complete)
     - [Step 8.6: Resolve TODOs and Stubs [PENDING]](#step-86-resolve-todos-and-stubs-pending)
-  - [Step 9: macOS & Windows Platform Validation & Crossterm Removal [DEFERRED]](#step-9-macos--windows-platform-validation--crossterm-removal-deferred)
-    - [macOS Testing [PENDING]](#macos-testing-pending)
-    - [Windows Testing [PENDING]](#windows-testing-pending)
-    - [Crossterm Removal [PENDING]](#crossterm-removal-pending)
+  - [Step 9: macOS & Windows Platform Validation & Crossterm Removal [PENDING]](#step-9-macos--windows-platform-validation--crossterm-removal-pending)
+    - [macOS Drivers & Testing [PENDING]](#macos-drivers--testing-pending)
+    - [Windows Drivers & Testing [PENDING]](#windows-drivers--testing-pending)
+    - [Crossterm Dependency Removal [PENDING]](#crossterm-dependency-removal-pending)
   - [Implementation Checklist](#implementation-checklist)
   - [Critical Success Factors](#critical-success-factors)
   - [Effort Summary - Steps 1-7 Implementation](#effort-summary---steps-1-7-implementation)
@@ -266,9 +267,9 @@ stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Applicatio
 
 ## Implementation Plan
 
-## Step 0: Prerequisite Setup [PENDING]
+## Step 0: Prerequisite Setup [COMPLETE]
 
-Description of prerequisites and any setup needed before beginning the implementation.
+All prerequisites, repository dependencies, and RenderOp design requirements are satisfied.
 
 ## Step 1: Extend RenderOp for Incremental Rendering [COMPLETE]
 
@@ -527,39 +528,44 @@ pipeline with DirectToAnsi backend.
 
 **Sign-Off**: [COMPLETE] DirectToAnsi backend is robust, tested, and production-ready
 
-## Step 8: Implement InputDevice for DirectToAnsi Backend [WORK_IN_PROGRESS]
+## Step 8: Implement InputDevice for DirectToAnsi Backend [COMPLETE - Linux]
 
-**Status**: [WORK_IN_PROGRESS] WORK_IN_PROGRESS - Core keyboard functionality complete, other
-parsers in progress
+**Status**: [COMPLETE] Linux InputDevice implementation complete with Crossterm feature parity, Kitty CSI u support, OSC handling, MaybeMore stream tracking, and resilient circuit-breaker recovery.
 
-**Objective**: Replace `crossterm::event::EventStream` with native tokio-based stdin reading and
-ANSI sequence parsing to generate input events (keyboard, mouse, resize, focus, and paste).
+**Objective**: Replace `crossterm::event::EventStream` on Linux with native `mio`-based non-blocking stdin polling and a decoupled chunk framer / chunk decoder pipeline.
 
-**Rationale**: This is the final piece needed to completely remove crossterm. Currently, while
-output uses DirectToAnsi, input still relies on `crossterm::event::read()`.
+**Rationale**: Completes the DirectToAnsi pipeline on Linux, delivering high-performance, pure-Rust terminal input handling without Crossterm dependency.
 
 ### Architecture
 
 ```
-Layer 1: Protocol Parsing (core/ansi/ - reusable, pure functions)
-  tui/src/core/ansi/vt_100_terminal_input_parser/
-  ├── mod.rs                   # Public API exports
-  ├── keyboard.rs              # parse_keyboard_sequence()
-  ├── mouse.rs                 # parse_mouse_sequence()
-  ├── terminal_events.rs       # parse_terminal_event()
-  ├── utf8.rs                  # parse_utf8_text()
-  └── tests.rs                 # Pure parsing unit tests
+Layer 1: Protocol Parsing & Framing (core/ansi/vt_100_terminal_input_parser/)
+  ├── chunk_framer/            # Slices raw streams, CircuitBreaker, DrainState, ByteOffset
+  │   ├── circuit_breaker/     # Runaway payload protection & safety limits
+  │   └── mod.rs               # ChunkFramer state machine with MaybeMore
+  ├── chunk_decoder/           # Pure, zero-allocation decoders from byte chunks to VT100InputEventIR
+  │   ├── keyboard/            # CSI, SS3, CSI u (Kitty), Alt disambiguation
+  │   ├── mouse/               # SGR, X10, RXVT mouse decoders
+  │   ├── terminal_events/     # Resize, focus, bracketed paste, OSC queries/reports
+  │   └── utf8/                # Character input decoding
+  ├── ir_event_types.rs        # Intermediate event representations (including Ignored)
+  └── maybe_more.rs            # KernelDrained vs KernelMayHaveMore stream status
 
-Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
-  tui/src/tui/terminal_lib_backends/direct_to_ansi/input/
-  ├── mod.rs                   # Public API exports
-  ├── input_device_impl.rs     # DirectToAnsiInputDevice
-  └── tests.rs                 # Integration tests
+Layer 2: Backend I/O & Actor Polling (terminal_lib_backends/direct_to_ansi/input/)
+  ├── mio_poller/              # Dedicated OS thread with mio::Poll on /dev/tty
+  │   ├── mio_poll_worker.rs   # Event loop polling stdin, signals, and software interrupts
+  │   └── handler_stdin.rs     # Non-blocking reads evaluating MaybeMore
+  ├── input_device_impl.rs     # DirectToAnsiInputDevice channel consumer
+  ├── input_device_public_api.rs # Public API & single-instance lifecycle guard
+  ├── paste_state_machine.rs   # Bracketed paste reassembly
+  └── protocol_conversion.rs   # Conversion from IR events to InputEvent
 ```
 
-### Step 8.0: Reorganize Existing Output Files [PENDING]
+### Step 8.0: Reorganize Existing Output Files [COMPLETE]
 
 **Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi backend
+
+**Status**: [COMPLETE] COMPLETE
 
 **Directory Structure After Reorganization**:
 
@@ -567,8 +573,8 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 tui/src/tui/terminal_lib_backends/direct_to_ansi/
 ├── mod.rs                          ← Backend coordinator
 ├── debug.rs                        ← Debug utilities
-├── input/                          ← NEW: Input handling
-├── output/                         ← NEW: Output handling (moved files)
+├── input/                          ← Input handling (mio poller, subscriber, conversion)
+├── output/                         ← Output handling (RenderOp painter, pixel renderer)
 │   ├── mod.rs
 │   ├── render_to_ansi.rs
 │   ├── paint_render_op_impl.rs
@@ -583,14 +589,13 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **Approved Architecture**:
 
-- [COMPLETE] **Two-layer separation**: Protocol parsing (pure) separate from I/O (async)
-- [COMPLETE] **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm
-  (deprecated)
-- [COMPLETE] **Async I/O**: Use `tokio::io::stdin()` (already available, better than mio)
-- [COMPLETE] **ANSI protocols supported**: Keyboard (CSI + SS3), Mouse (SGR + X10 + RXVT), Focus,
-  Paste, UTF-8
-- [COMPLETE] **Naming**: `vt_100_pty_output_parser` (existing) + `vt_100_terminal_input_parser`
-  (new)
+- [COMPLETE] **Two-layer separation**: Framing and decoding (pure) separate from I/O polling (mio)
+- [COMPLETE] **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm (pending Step 9)
+- [COMPLETE] **Async I/O**: Dedicated `mio` worker thread polling `/dev/tty` non-blocking with OS pipe / channel dispatch to tokio tasks (replaces problematic `tokio::io::stdin()`)
+- [COMPLETE] **Stream availability**: Evaluated via `MaybeMore` (`KernelDrained` vs `KernelMayHaveMore`) at I/O read boundary
+- [COMPLETE] **ANSI protocols supported**: Keyboard (CSI + SS3 + CSI u Kitty), Mouse (SGR + X10 + RXVT), Focus, Paste, OSC 10-19 color reports, OSC 52 clipboard, UTF-8
+- [COMPLETE] **Resiliency**: Runaway OSC payload protection via `CircuitBreaker` and `DrainState`
+- [COMPLETE] **Naming**: `vt_100_pty_output_parser` (existing) + `vt_100_terminal_input_parser` (new)
 
 ### Step 8.2: Implement Protocol Layer Parsers [COMPLETE]
 
@@ -602,17 +607,26 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 - [COMPLETE] Arrow keys: CSI A/B/C/D → KeyCode::Up/Down/Right/Left
 - [COMPLETE] Function keys: CSI <n>~ → KeyCode::Function(1-12)
 - [COMPLETE] Home/End: CSI H/F → KeyCode::Home/End
+- [COMPLETE] Modified Home/End: CSI 1;m H/F → KeyCode::Home/End with modifiers (xterm standard)
+- [COMPLETE] Modified Function keys F1-F4: CSI 1;m P/Q/R/S → KeyCode::Function(1-4) with modifiers
+- [COMPLETE] Backtab: CSI Z → KeyCode::BackTab
 - [COMPLETE] Modifier combinations: CSI 1;m final_byte
-- [COMPLETE] 23 unit tests passing
-- [COMPLETE] All critical keyboard sequences handled
+- [COMPLETE] All critical keyboard sequences handled and covered by unit/roundtrip tests
 
 #### SS3 Keyboard Support [COMPLETE]
 
 - [COMPLETE] Implemented `parse_ss3_sequence()` for application mode (vim, less, emacs)
 - [COMPLETE] Arrow keys: ESC O A/B/C/D → KeyCode::Up/Down/Right/Left
 - [COMPLETE] Function keys F1-F4: ESC O P/Q/R/S → KeyCode::Function(1-4)
-- [COMPLETE] 13 unit tests passing
 - [COMPLETE] Critical for vim/application mode compatibility
+
+#### Kitty Keyboard Protocol (CSI u) Support [COMPLETE]
+
+- [COMPLETE] Implemented `parse_csi_u()` in `chunk_decoder/keyboard/csi_u.rs`
+- [COMPLETE] Disambiguates `Alt+[` (`ESC [`) from standard CSI sequences
+- [COMPLETE] Decodes Kitty progressive enhancement sequences (`CSI <codepoint> ; <modifiers> u`)
+- [COMPLETE] Terminal mode controller pushes `PushKeyboardEnhancementFlags` on startup and pops on shutdown
+- [COMPLETE] Tested with unit and roundtrip tests
 
 #### Mouse Parsing [COMPLETE]
 
@@ -639,13 +653,16 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 - [COMPLETE] Same button encoding as X10
 - [COMPLETE] 13 unit tests passing
 
-#### Terminal Events Parsing [COMPLETE]
+#### Terminal Events & OSC Parsing [COMPLETE]
 
 - [COMPLETE] Implemented `parse_terminal_event()` dispatcher
 - [COMPLETE] Resize events: CSI 8 ; rows ; cols t
 - [COMPLETE] Focus events: CSI I (gained) / CSI O (lost)
 - [COMPLETE] Bracketed paste: ESC[200~ (start) / ESC[201~ (end)
-- [COMPLETE] 4 unit tests with round-trip validation
+- [COMPLETE] OSC Sequence parsing: OSC 10, 11, 12, 13, 14, 17, 19 dynamic color query responses and OSC 52 clipboard transfers
+- [COMPLETE] `Alt+]` vs OSC disambiguation via lexical scanning and `MaybeMore`
+- [COMPLETE] `VT100InputEventIR::Ignored` variant for consumed protocol responses
+- [COMPLETE] Circuit breaker and runaway OSC payload protection (1 MiB cap with drain state)
 
 #### UTF-8 Text Parsing [COMPLETE]
 
@@ -669,57 +686,39 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **Keyboard Sequence Support**:
 
-| Sequence Type | Status                     | Use Case                                           |
-| ------------- | -------------------------- | -------------------------------------------------- |
-| **CSI**       | [COMPLETE] COMPLETE        | Arrow keys, function keys, modifiers (normal mode) |
-| **SS3**       | [COMPLETE] COMPLETE        | Arrow keys, F1-F4 in application mode              |
-| **Kitty**     | [WORK_IN_PROGRESS] PENDING | Advanced: press/release/repeat, media keys         |
+| Sequence Type | Status              | Use Case                                           |
+| ------------- | ------------------- | -------------------------------------------------- |
+| **CSI**       | [COMPLETE] COMPLETE | Arrow keys, function keys, modifiers (normal mode) |
+| **SS3**       | [COMPLETE] COMPLETE | Arrow keys, F1-F4 in application mode              |
+| **Kitty**     | [COMPLETE] COMPLETE | Advanced: CSI u progressive enhancement, Alt+[     |
 
 **Terminal Compatibility Matrix**:
 
-| Terminal         | Keyboard | Mouse Protocol | Status           |
-| ---------------- | -------- | -------------- | ---------------- |
-| xterm (normal)   | CSI      | SGR            | [COMPLETE] WORKS |
-| xterm (app mode) | SS3      | X10            | [COMPLETE] WORKS |
-| vim              | SS3      | SGR            | [COMPLETE] WORKS |
-| less             | SS3      | SGR            | [COMPLETE] WORKS |
-| urxvt            | CSI/SS3  | RXVT           | [COMPLETE] WORKS |
-| kitty            | CSI      | SGR            | [COMPLETE] WORKS |
-| alacritty        | CSI      | SGR            | [COMPLETE] WORKS |
-| screen           | SS3      | X10            | [COMPLETE] WORKS |
-| tmux             | SS3      | SGR/X10        | [COMPLETE] WORKS |
+| Terminal         | Keyboard    | Mouse Protocol | Status           |
+| ---------------- | ----------- | -------------- | ---------------- |
+| xterm (normal)   | CSI         | SGR            | [COMPLETE] WORKS |
+| xterm (app mode) | SS3         | X10            | [COMPLETE] WORKS |
+| vim              | SS3         | SGR            | [COMPLETE] WORKS |
+| less             | SS3         | SGR            | [COMPLETE] WORKS |
+| urxvt            | CSI/SS3     | RXVT           | [COMPLETE] WORKS |
+| kitty            | CSI / CSI u | SGR            | [COMPLETE] WORKS |
+| alacritty        | CSI / CSI u | SGR            | [COMPLETE] WORKS |
+| screen           | SS3         | X10            | [COMPLETE] WORKS |
+| tmux             | SS3         | SGR/X10        | [COMPLETE] WORKS |
 
-### Step 8.2.2: Architecture Insight - Why No Timeout? [COMPLETE]
+### Step 8.2.2: Architecture Insight - Mio Poller, MaybeMore & Zero-Latency ESC [COMPLETE]
 
-**The ESC Key Problem**: How do we distinguish between ESC key press and ANSI sequences?
+**The ESC Key & Escape Collision Problem**: How do we distinguish between an isolated ESC key press and the start of an ANSI sequence (`ESC [`, `ESC O`, `ESC ]`) without adding arbitrary timer delays?
 
-**Smart Async Approach (No Timeout)**:
+**The Solution: Dedicated Mio Poller + `MaybeMore` + Circuit Breaker**:
 
-- Use tokio async I/O: `stdin.read().await` returns when data is ready
-- If buffer has `[0x1B]` only → emit ESC immediately (no delay!)
-- If buffer has `[0x1B, b'[', ...]` → parse CSI sequence
-- **Advantage**: Zero latency, deterministic parsing
-
-**Implementation Pattern**:
-
-```rust
-loop {
-    // 1. Try to parse from existing buffer
-    if let Some((event, bytes_consumed)) = self.try_parse() {
-        self.consume(bytes_consumed);
-        return Some(event);
-    }
-
-    // 2. Buffer exhausted, read more from stdin (yields until ready)
-    match self.stdin.read(&mut self.buffer).await {
-        Ok(0) => return None,  // EOF
-        Ok(n) => { /* buffer now has n more bytes */ }
-        Err(_) => return None,
-    }
-
-    // 3. Loop back to try_parse() with new data
-}
-```
+1. **Dedicated Worker Thread**: `MioPollWorker` monitors `/dev/tty` with `mio::Poll` using non-blocking reads, multiplexing stdin with OS signals (`SIGWINCH`) and software interrupts.
+2. **Deterministic Stream Availability (`MaybeMore`)**:
+   - Evaluated directly at the I/O read boundary: `MaybeMore::from_read_count(bytes_read, capacity)`.
+   - **`KernelDrained`**: If `bytes_read < capacity`, the kernel read queue is empty. A lone `ESC` byte represents an intentional ESC key press and is emitted immediately (0ms delay, no timeout).
+   - **`KernelMayHaveMore`**: If `bytes_read == capacity`, more packet fragments may be in flight; incomplete prefixes are held in the framer accumulator.
+3. **Resilient Circuit Breaker & Drain State**:
+   - If an unrecognized or malformed sequence arrives (e.g., unsupported CSI sequence, runaway OSC transfer), the `CircuitBreaker` transitions to `DrainState` or discards the chunk without freezing the input event loop. Subsequent keystrokes are never blocked.
 
 ### Step 8.3: Backend Device Implementation [COMPLETE]
 
@@ -731,32 +730,31 @@ loop {
 
 ```rust
 pub struct DirectToAnsiInputDevice {
-    stdin: Stdin,         // tokio::io::Stdin for async reading
-    buffer: Vec<u8>,      // Raw byte buffer (4KB pre-allocated)
-    consumed: usize,      // Bytes already parsed and consumed
+    channel_receiver: Option<tokio::sync::mpsc::Receiver<InputEvent>>,
+    _subscriber_guard: Option<SubscriberGuard>,
 }
 ```
 
-**Main Event Loop (No Timeout Pattern)**: [COMPLETE] COMPLETE
+**Main Event Loop & Poller Thread Architecture**: [COMPLETE] COMPLETE
 
-- Implemented `async read_event(&mut self) -> Option<InputEvent>`
-- Smart buffer management with Vec<u8> and compaction
-- Parser dispatcher with all parsers integrated
-- Zero-latency ESC key detection
+- Asynchronous `next(&mut self) -> Option<InputEvent>` reading from subscriber channel
+- Background `MioPollWorker` running dedicated `mio::Poll` on `/dev/tty`
+- Chunk framing, circuit breaking, and protocol decoding performed before channel broadcast
+- Zero-latency ESC key detection and packet fragmentation reassembly via `MaybeMore`
 
 **Parser Integration**: [COMPLETE] **ALL COMPLETE**
 
-- [COMPLETE] Keyboard parser (CSI + SS3) with 23 unit tests
+- [COMPLETE] Keyboard parser (CSI + SS3 + CSI u) with unit and roundtrip tests
 - [COMPLETE] Mouse parser (SGR + X10 + RXVT) with 51 total tests
-- [COMPLETE] Terminal events parser with 4 unit tests
+- [COMPLETE] Terminal events parser (resize, focus, paste, OSC color & clipboard)
 - [COMPLETE] UTF-8 text parser with 13 tests
 
-**Test Status**: [COMPLETE] **2,389+ tests passing**
+**Test Status**: [COMPLETE] **All input parser unit, property, and PTY integration tests passing**
 
-- [COMPLETE] 51 input parser unit tests
-- [COMPLETE] 4 PTY integration tests
-- [COMPLETE] 10 input event generator tests
-- [COMPLETE] 8 DirectToAnsiInputDevice tests
+- [COMPLETE] Input parser unit tests
+- [COMPLETE] PTY integration tests (process isolation)
+- [COMPLETE] Input event generator roundtrip tests
+- [COMPLETE] DirectToAnsiInputDevice lifecycle and multi-instance tests
 
 ### Step 8.4: Testing & Validation [COMPLETE]
 
@@ -769,26 +767,28 @@ pub struct DirectToAnsiInputDevice {
 3. [COMPLETE] DirectToAnsiInputDevice unit tests
 4. [COMPLETE] PTY integration tests (4 tests)
 
-**Step 8.4.1: Backend Unit Tests** - [WORK_IN_PROGRESS] PENDING
+**Step 8.4.1: Backend Unit Tests** - [COMPLETE] COMPLETE
 
-- [ ] Expand backend unit tests (36 additional tests)
-- [ ] Buffer management deep dive (8 tests)
-- [ ] Parser dispatch coverage (15 tests)
-- [ ] ESC key detection & lookahead (5 tests)
-- [ ] Incomplete sequence handling (5 tests)
-- [ ] EOF & error handling (3 tests)
+- [COMPLETE] Expand backend unit tests
+- [COMPLETE] Buffer management & ByteOffset coordinate tests
+- [COMPLETE] Parser dispatch coverage
+- [COMPLETE] ESC key detection & MaybeMore lookahead tests
+- [COMPLETE] Incomplete sequence handling & circuit breaker tests
+- [COMPLETE] EOF & error handling tests
 
-### Step 8.5: Migration & Cleanup [PENDING]
+### Step 8.5: Migration & Cleanup [COMPLETE]
 
 **Objective**: Integrate DirectToAnsiInputDevice into application event loop
 
+**Status**: [COMPLETE] COMPLETE
+
 **Tasks**:
 
-- [ ] Update InputDevice trait to support DirectToAnsiInputDevice
-- [ ] Add platform-specific backend selection (#[cfg(target_os = "linux")])
-- [ ] Update application event loop to use new input device
-- [ ] Remove crossterm EventStream usage in DirectToAnsi paths
-- [ ] Update documentation
+- [COMPLETE] Update `InputDevice` enum to support `DirectToAnsi(DirectToAnsiInputDevice)`
+- [COMPLETE] Add platform-specific backend selection (`#[cfg(target_os = "linux")]`)
+- [COMPLETE] Update application event loop to use new input device (`InputDevice::new()`)
+- [COMPLETE] Remove crossterm `EventStream` usage in DirectToAnsi paths on Linux
+- [COMPLETE] Update documentation and PTY integration tests
 
 ### Step 8.6: Resolve TODOs and Stubs [PENDING]
 
@@ -804,36 +804,41 @@ pub struct DirectToAnsiInputDevice {
 - [ ] Verify no lingering crossterm references in DirectToAnsi code paths
 - [ ] Run full test suite to ensure no regressions
 
-## Step 9: macOS & Windows Platform Validation & Crossterm Removal [DEFERRED]
+## Step 9: macOS & Windows Platform Validation & Crossterm Removal [PENDING]
 
-**Status**: [WORK_IN_PROGRESS] DEFERRED - After Step 8 completes on Linux
+**Status**: [WORK_IN_PROGRESS] PENDING - Linux DirectToAnsi is complete; macOS and Windows native drivers are required to eliminate Crossterm entirely.
 
-**Objective**: Platform-specific validation and full crossterm removal
+**Objective**: Implement native non-Crossterm input and raw-mode drivers for macOS and Windows, validate cross-platform parity, and remove `crossterm` from `Cargo.toml`.
 
-### macOS Testing [PENDING]
+### macOS Drivers & Testing [PENDING]
 
-- [ ] Verify DirectAnsi backend works on macOS (if applicable)
-- [ ] Otherwise, test crossterm backend on macOS
-- [ ] Validate all rendering operations
-- [ ] Verify input handling
+- [ ] Implement Darwin-compatible tty poller:
+  - Darwin's `kqueue(2)` fails with `EINVAL` on `/dev/tty` / PTY file descriptors.
+  - Implement a `select(2)` / `poll(2)` polling driver (similar to `filedescriptor`).
+- [ ] Implement `SIGWINCH` signal delivery via `signal-hook` with self-pipe trick.
+- [ ] Validate DirectToAnsi rendering operations on macOS fleet.
+- [ ] Validate DirectToAnsi input handling on macOS fleet.
 
-### Windows Testing [PENDING]
+### Windows Drivers & Testing [PENDING]
 
-- [ ] Verify DirectAnsi backend works on Windows (if applicable)
-- [ ] Otherwise, test crossterm backend on Windows
-- [ ] Validate all rendering operations
-- [ ] Verify input handling
+- [ ] Implement native Windows Console input driver:
+  - Windows lacks `/dev/tty` and POSIX termios.
+  - Implement Win32 console reader using `ReadConsoleInputW` / ConPTY virtual terminal input processing (`ENABLE_VIRTUAL_TERMINAL_INPUT`).
+- [ ] Implement Windows console raw mode toggling via `GetConsoleMode` / `SetConsoleMode`.
+- [ ] Validate DirectToAnsi rendering operations on Windows fleet.
+- [ ] Validate DirectToAnsi input handling on Windows fleet.
 
-### Crossterm Removal [PENDING]
+### Crossterm Dependency Removal [PENDING]
 
-- [ ] Verify no crossterm usage in DirectToAnsi paths
-- [ ] Keep crossterm for macOS/Windows (if applicable)
-- [ ] Update documentation
-- [ ] Final validation and sign-off
+- [ ] Verify zero remaining `crossterm` usages in the codebase.
+- [ ] Remove `crossterm` dependency from `tui/Cargo.toml`.
+- [ ] Remove `TerminalLibBackend::Crossterm` or retain as optional feature flag.
+- [ ] Update documentation and crate architecture diagrams.
+- [ ] Final validation across all platforms.
 
 ## Implementation Checklist
 
-- [ ] Step 0: Prerequisites complete
+- [x] Step 0: Prerequisites complete
 - [x] Step 1: RenderOp extension complete
 - [x] Step 2: DirectAnsi backend module structure
 - [x] Step 3: Type system and DirectAnsi implementation
@@ -841,10 +846,10 @@ pub struct DirectToAnsiInputDevice {
 - [x] Step 5: Performance optimization complete
 - [x] Step 6: Cleanup and refinement complete
 - [x] Step 7: Comprehensive test suite complete
-- [ ] Step 8: InputDevice implementation and cleanup in progress
-  - [x] Step 8.0-8.5: Mostly complete
-  - [ ] Step 8.6: Resolve TODOs and Stubs (pending)
-- [ ] Step 9: Cross-platform validation deferred
+- [x] Step 8: InputDevice implementation for Linux complete
+  - [x] Step 8.0-8.5: Complete
+  - [ ] Step 8.6: Resolve TODOs and Stubs (optional final sweep)
+- [ ] Step 9: macOS & Windows native drivers and Crossterm removal
 
 ## Critical Success Factors
 
@@ -852,6 +857,7 @@ pub struct DirectToAnsiInputDevice {
    - [COMPLETE] RenderOp is proven to work for all rendering paths
    - [COMPLETE] DirectAnsi backend matches Crossterm performance (18% faster)
    - [COMPLETE] Input/output symmetry via ANSI protocol
+   - [COMPLETE] Decoupled ChunkFramer / ChunkDecoder / CircuitBreaker architecture
 
 2. **Code Quality**:
    - [COMPLETE] Full test coverage for all major components
@@ -859,39 +865,37 @@ pub struct DirectToAnsiInputDevice {
    - [COMPLETE] Zero regressions from refactoring
 
 3. **Platform Support**:
-   - [COMPLETE] Linux fully validated
-   - [WORK_IN_PROGRESS] macOS validation pending
-   - [WORK_IN_PROGRESS] Windows validation pending
+   - [COMPLETE] Linux fully validated (RenderOp output + DirectToAnsiInputDevice)
+   - [WORK_IN_PROGRESS] macOS native driver pending (kqueue workaround via select)
+   - [WORK_IN_PROGRESS] Windows native driver pending (Win32 Console / ConPTY)
 
 4. **Performance**:
    - [COMPLETE] DirectAnsi is 18% faster than Crossterm
-   - [COMPLETE] No memory leaks detected
-   - [COMPLETE] Handles high-frequency input without issues
+   - [COMPLETE] Zero memory leaks
+   - [COMPLETE] Zero-latency ESC key disambiguation (0ms delay) via MaybeMore
 
-## Effort Summary - Steps 1-7 Implementation
+## Effort Summary - Steps 1-8 Implementation
 
-| Step      | Component                    | Status                         | Time          | Lines |
-| --------- | ---------------------------- | ------------------------------ | ------------- | ----- |
-| 1         | RenderOp extension           | [COMPLETE] COMPLETE            | 4-5h          | 1242  |
-| 2         | DirectAnsi module + ANSI gen | [COMPLETE] COMPLETE            | 3-4h          | 600   |
-| 3         | Type system + backend impl   | [COMPLETE] COMPLETE            | 33-46h        | 1300  |
-| 4         | Linux validation             | [COMPLETE] COMPLETE            | 2-3h          | 0     |
-| 5         | Performance optimization     | [COMPLETE] COMPLETE            | 3-4h          | 150   |
-| 6         | Cleanup & refinement         | [WORK_IN_PROGRESS] IN PROGRESS | 1-2h          | 50    |
-| 7         | Test suite                   | [COMPLETE] COMPLETE            | 4-6h          | 400   |
-| 8         | InputDevice implementation   | [WORK_IN_PROGRESS] IN PROGRESS | 8-12h         | 800   |
-| 9         | Platform validation          | [WORK_IN_PROGRESS] DEFERRED    | 2-3h          | 0     |
-| **TOTAL** | **Steps 1-7**                | **~50-70 hours**               | **~4500 LOC** |       |
+| Step      | Component                         | Status                         | Time          | Lines |
+| --------- | --------------------------------- | ------------------------------ | ------------- | ----- |
+| 1         | RenderOp extension                | [COMPLETE] COMPLETE            | 4-5h          | 1242  |
+| 2         | DirectAnsi module + ANSI gen      | [COMPLETE] COMPLETE            | 3-4h          | 600   |
+| 3         | Type system + backend impl        | [COMPLETE] COMPLETE            | 33-46h        | 1300  |
+| 4         | Linux validation                  | [COMPLETE] COMPLETE            | 2-3h          | 0     |
+| 5         | Performance optimization          | [COMPLETE] COMPLETE            | 3-4h          | 150   |
+| 6         | Cleanup & refinement              | [COMPLETE] COMPLETE            | 1-2h          | 50    |
+| 7         | Test suite                        | [COMPLETE] COMPLETE            | 4-6h          | 400   |
+| 8         | InputDevice implementation (Linux)| [COMPLETE] COMPLETE            | 8-12h         | 800+  |
+| 9         | macOS & Windows native drivers    | [WORK_IN_PROGRESS] PENDING     | 10-15h        | TBD   |
+| **TOTAL** | **Steps 1-8**                     | **~60-80 hours**               | **~5500 LOC** |       |
 
 ## Conclusion
 
-The task to remove the crossterm dependency via unified RenderOp architecture is well underway:
+The unified RenderOp architecture and DirectToAnsi backend are now production-ready on Linux:
 
 - [COMPLETE] Output path fully implemented with DirectAnsi backend (18% performance improvement)
-- [COMPLETE] Comprehensive test coverage in place
-- [COMPLETE] Input protocol parsers complete with crossterm feature parity
-- [WORK_IN_PROGRESS] Input device integration and platform validation ongoing
-- [COMPLETE] Architecture proven sound and production-ready for Linux
-
-The phased approach provides clear milestones and allows incremental validation at each step.
-Remaining work focuses on completing InputDevice integration and cross-platform validation.
+- [COMPLETE] Comprehensive test coverage across all RenderOps
+- [COMPLETE] Input protocol parsers complete with Crossterm feature parity, Kitty CSI u, and OSC support
+- [COMPLETE] Resilient circuit breaker and zero-latency ESC disambiguation via MaybeMore
+- [COMPLETE] Production-ready Linux InputDevice integrated into application event loop
+- [WORK_IN_PROGRESS] Final step is implementing native drivers for macOS (select poller) and Windows (ConPTY) to drop Crossterm from `Cargo.toml`.

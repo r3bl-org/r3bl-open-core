@@ -50,7 +50,7 @@ impl MioSoftwareInterrupt {
     ///
     /// Returns [`SoftwareInterruptCreationError`] if the OS resource cannot be created.
     ///
-    /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
+    /// [`eventfd`]: https://manpages.debian.org/eventfd.2
     pub fn create_and_register_synthetic_software_interrupt_source(
         registry: &mio::Registry,
         token: mio::Token,

@@ -9,7 +9,7 @@
 #   Redirects     → Informational only (docs.rs short URLs always 302)
 
 # Accept rate-limit responses as non-errors.
-accept = ["100..=103", "200..=299", "429"]
+accept = ["100..=103", "200..=299", "429", "503"]
 
 # Timeout per request (seconds).
 timeout = 20
@@ -44,8 +44,11 @@ exclude = [
     # Stack Overflow / Stack Exchange blocks automated link checkers (returns 403 to bots).
     "^https?://stackoverflow\\.com/",
     "^https?://([a-z0-9-]+\\.)?stackexchange\\.com/",
-    # GNU.org times out automated link checkers.
-    "^https?://(www\\.)?gnu\\.org/",
+    # ACM Digital Library blocks automated link checkers (returns 403 to bots via Cloudflare).
+    "^https?://(dl\\.)?acm\\.org/",
+    "^https?://doi\\.org/10\\.1145/",
+    # Release tags not yet pushed to GitHub during release prep.
+    "^https?://github\\.com/r3bl-org/r3bl-open-core/blob/v[0-9].*-tui/CHANGELOG\\.md",
 ]
 
 # Exclude specific files from link checking.
@@ -53,5 +56,7 @@ exclude_path = [
     # Exclude files which contain dummy and mock URLs in unit tests (these are regexes).
     "build-infra/src/cargo_rustdoc_fmt/link_converter\\.rs",
     "build-infra/src/cargo_rustdoc_fmt/technical_term_linker\\.rs",
+    # Unreleased release notes contain blob/main links to code not yet merged to main.
+    "docs/release-notes/.*",
 ]
 

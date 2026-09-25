@@ -15,7 +15,7 @@ use crate::{Continuation, DEBUG_TUI_PTY_MUX, EventPropagation, InputEvent,
                           screen_clearing::clear_screen},
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
-                   osc::OscController,
+                   osc::OscSender,
                    pty::pty_mux::{AdaptiveRenderResult::{Render, Skip},
                                   Budget, input_router},
                    terminal_io::{InputDevice, OutputDevice, TerminalModeController}},
@@ -300,7 +300,7 @@ mod impl_pty_mux {
         /// See [interactive terminal application entry points].
         ///
         /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
-        /// [`OSC`]: crate::OscEvent
+        /// [`OSC`]: crate::OscSender
         /// [`stderr`]: std::io::stderr
         /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
         pub async fn run(mut self) -> miette::Result<()> {
@@ -317,10 +317,10 @@ mod impl_pty_mux {
                 };
             });
 
-            // Set initial terminal title using OSC controller.
+            // Set initial terminal title using OSC sender.
             {
-                let mut osc = OscController::new(&self.output_device);
-                osc.set_title_and_tab("PTYMux Example - Starting")?;
+                let mut osc = OscSender::new(&self.output_device);
+                osc.send_set_title_and_tab("PTYMux Example - Starting")?;
             }
 
             // Start all processes at startup.
@@ -477,7 +477,7 @@ mod impl_pty_mux {
                     // Periodic status bar updates - ensures status bar is visible even when idle.
                     _ = status_bar_interval.tick() => {
                         self.output_renderer.render_initial_status_bar(&self.output_device, &self.process_manager)?;
-                        let mut osc = OscController::new(&self.output_device);
+                        let mut osc = OscSender::new(&self.output_device);
                         self.update_terminal_title(&mut osc, &mut title_buffer)?;
                     }
                 }
@@ -497,7 +497,7 @@ mod impl_pty_mux {
         /// Updates the terminal title based on the currently active process.
         fn update_terminal_title(
             &self,
-            osc: &mut OscController<'_>,
+            osc: &mut OscSender<'_>,
             title_buffer: &mut String,
         ) -> miette::Result<()> {
             // Check if the focused process has set a custom terminal title.
@@ -518,7 +518,7 @@ mod impl_pty_mux {
                 );
             }
 
-            osc.set_title_and_tab(title_buffer)?;
+            osc.send_set_title_and_tab(title_buffer)?;
             ok!()
         }
 

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words adduser trackpads
-
 //! [`PTYMux`] 2D panning and infinite canvas showcase.
 //!
 //! This example demonstrates the infinite 2D canvas capabilities of the [`pty_mux`]

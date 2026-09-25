@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
-
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
 # - language fundamentals: https://fishshell.com/docs/current/language.html
@@ -34,6 +32,10 @@ function main
     # before running any commands.
     purge_zombie_processes
 
+    # Ensure target symlink and backing store exist before running any workspace commands.
+    set -l repo_root (cd (dirname (status --current-filename)) && pwd)
+    $repo_root/check.fish --ensure-target >/dev/null 2>&1
+
     set command $argv[1]
 
     switch $command
@@ -49,6 +51,8 @@ function main
             install-cargo-tools
         case test
             test_workspace
+        case cov coverage
+            coverage $argv[2..-1]
         case test-watch
             if test (count $argv) -gt 1
                 test-watch $argv[2]
@@ -147,68 +151,88 @@ end
 function print-help
     set command $argv[1]
 
+    # Initialize colors safely so text is never dropped in non-TTY or TERM=dumb environments.
+    set -l c_reset ""
+    set -l c_magenta ""
+    set -l c_green_bold ""
+    set -l c_blue_bold ""
+    set -l c_cyan ""
+    set -l c_green ""
+    set -l c_blue ""
+    set -l c_red ""
+
+    set -l tmp (set_color normal 2>/dev/null); if test (count $tmp) -gt 0; set c_reset $tmp; end
+    set -l tmp (set_color magenta --bold 2>/dev/null); if test (count $tmp) -gt 0; set c_magenta $tmp; end
+    set -l tmp (set_color green --bold 2>/dev/null); if test (count $tmp) -gt 0; set c_green_bold $tmp; end
+    set -l tmp (set_color blue --bold 2>/dev/null); if test (count $tmp) -gt 0; set c_blue_bold $tmp; end
+    set -l tmp (set_color cyan --bold 2>/dev/null); if test (count $tmp) -gt 0; set c_cyan $tmp; end
+    set -l tmp (set_color green 2>/dev/null); if test (count $tmp) -gt 0; set c_green $tmp; end
+    set -l tmp (set_color blue 2>/dev/null); if test (count $tmp) -gt 0; set c_blue $tmp; end
+    set -l tmp (set_color red --bold 2>/dev/null); if test (count $tmp) -gt 0; set c_red $tmp; end
+
     if test "$command" = all
-        echo "Usage: "(set_color magenta --bold)"run"(set_color normal)" "(set_color green --bold)"<command>"(set_color normal)" "(set_color blue --bold)"[args]"(set_color normal)
+        echo "Usage: "$c_magenta"run"$c_reset" "$c_green_bold"<command>"$c_reset" "$c_blue_bold"[args]"$c_reset
         echo ""
-        echo (set_color cyan --bold)"Workspace-wide commands:"(set_color normal)
-        echo "    "(set_color green)"all"(set_color normal)"                  Run all major checks"
-        echo "    "(set_color green)"build"(set_color normal)"                Build entire workspace"
-        echo "    "(set_color green)"build-full"(set_color normal)"           Full build with clean and update"
-        echo "    "(set_color green)"clean"(set_color normal)"                Clean entire workspace"
-        echo "    "(set_color green)"test"(set_color normal)"                 Test entire workspace"
-        echo "    "(set_color green)"check"(set_color normal)"                Check all workspaces"
-        echo "    "(set_color green)"check-windows-build"(set_color normal)"  Verify Windows cross-compilation (cfg gates)"
-        echo "    "(set_color green)"check-full"(set_color normal)"           Run comprehensive checks (tests, docs, toolchain)"
-        echo "    "(set_color green)"clippy"(set_color normal)"               Run clippy on all workspaces"
-        echo "    "(set_color green)"clippy-pedantic"(set_color normal)"      Run clippy with pedantic lints"
-        echo "    "(set_color green)"docs"(set_color normal)"                 Generate docs for all"
-        echo "    "(set_color green)"serve-docs"(set_color normal)"           Serve documentation"
-        echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
-        echo "    "(set_color green)"rustdoc-fmt"(set_color normal)"          Format rustdoc comments"
-        echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install all dev tools (crates.io + local source)"
-        echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
-        echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update all tools (crates.io + rebuild local source)"
-        echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
-        echo "    "(set_color green)"unmaintained-deps"(set_color normal)"    Check for unmaintained deps"
-        echo "    "(set_color green)"cloc"(set_color normal)"                 Count lines of code (cargo-warloc)"
-        echo "    "(set_color green)"toolchain-update"(set_color normal)"     Update Rust to month-old nightly"
-        echo "    "(set_color green)"toolchain-sync"(set_color normal)"       Sync environment to rust-toolchain.toml"
-        echo "    "(set_color green)"toolchain-validate"(set_color normal)"   Quick toolchain validation (components only)"
-        echo "    "(set_color green)"toolchain-validate-complete"(set_color normal)"  Complete toolchain validation (full build+test)"
-        echo "    "(set_color green)"toolchain-remove"(set_color normal)"     Remove ALL toolchains (testing)"
+        echo $c_cyan"Workspace-wide commands:"$c_reset
+        echo "    "$c_green"all"$c_reset"                  Run all major checks"
+        echo "    "$c_green"build"$c_reset"                Build entire workspace"
+        echo "    "$c_green"build-full"$c_reset"           Full build with clean and update"
+        echo "    "$c_green"clean"$c_reset"                Clean entire workspace"
+        echo "    "$c_green"test"$c_reset"                 Test entire workspace"
+        echo "    "$c_green"cov"$c_reset" "$c_blue"<pkg> [test] [file] [--html]"$c_reset"  Targeted code coverage (cargo-llvm-cov)"
+        echo "    "$c_green"check"$c_reset"                Check all workspaces"
+        echo "    "$c_green"check-windows-build"$c_reset"  Verify Windows cross-compilation (cfg gates)"
+        echo "    "$c_green"check-full"$c_reset"           Run comprehensive checks (tests, docs, toolchain)"
+        echo "    "$c_green"clippy"$c_reset"               Run clippy on all workspaces"
+        echo "    "$c_green"clippy-pedantic"$c_reset"      Run clippy with pedantic lints"
+        echo "    "$c_green"docs"$c_reset"                 Generate docs for all"
+        echo "    "$c_green"serve-docs"$c_reset"           Serve documentation"
+        echo "    "$c_green"rustfmt"$c_reset"              Format all code"
+        echo "    "$c_green"rustdoc-fmt"$c_reset"          Format rustdoc comments"
+        echo "    "$c_green"install-cargo-tools"$c_reset"  Install all dev tools (crates.io + local source)"
+        echo "    "$c_green"upgrade-deps"$c_reset"         Upgrade dependencies"
+        echo "    "$c_green"update-cargo-tools"$c_reset"   Update all tools (crates.io + rebuild local source)"
+        echo "    "$c_green"audit-deps"$c_reset"           Security audit"
+        echo "    "$c_green"unmaintained-deps"$c_reset"    Check for unmaintained deps"
+        echo "    "$c_green"cloc"$c_reset"                 Count lines of code (cargo-warloc)"
+        echo "    "$c_green"toolchain-update"$c_reset"     Update Rust to month-old nightly"
+        echo "    "$c_green"toolchain-sync"$c_reset"       Sync environment to rust-toolchain.toml"
+        echo "    "$c_green"toolchain-validate"$c_reset"   Quick toolchain validation (components only)"
+        echo "    "$c_green"toolchain-validate-complete"$c_reset"  Complete toolchain validation (full build+test)"
+        echo "    "$c_green"toolchain-remove"$c_reset"     Remove ALL toolchains (testing)"
         echo ""
-        echo (set_color cyan --bold)"Watch commands:"(set_color normal)
-        echo "    "(set_color green)"test-watch"(set_color normal)" "(set_color blue)"[pattern]"(set_color normal)"  Watch files, run specific test"
-        echo "    "(set_color green)"clippy-watch"(set_color normal)"          Watch files, run clippy"
-        echo "    "(set_color green)"check-watch"(set_color normal)"           Watch files, run cargo check"
-        echo "    "(set_color green)"check-full-watch"(set_color normal)"      Watch files, run all checks (tests, doctests, docs)"
-        echo "    "(set_color green)"check-full-watch-test"(set_color normal)" Watch files, run tests and doctests"
-        echo "    "(set_color green)"check-full-watch-doc"(set_color normal)"  Watch files, run doc build only"
+        echo $c_cyan"Watch commands:"$c_reset
+        echo "    "$c_green"test-watch"$c_reset" "$c_blue"[pattern]"$c_reset"  Watch files, run specific test"
+        echo "    "$c_green"clippy-watch"$c_reset"          Watch files, run clippy"
+        echo "    "$c_green"check-watch"$c_reset"           Watch files, run cargo check"
+        echo "    "$c_green"check-full-watch"$c_reset"      Watch files, run all checks (tests, doctests, docs)"
+        echo "    "$c_green"check-full-watch-test"$c_reset" Watch files, run tests and doctests"
+        echo "    "$c_green"check-full-watch-doc"$c_reset"  Watch files, run doc build only"
         echo ""
-        echo (set_color cyan --bold)"TUI-specific commands:"(set_color normal)
-        echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"        Run TUI examples"
-        echo "    "(set_color green)"run-examples-flamegraph-svg"(set_color normal)"                Generate SVG flamegraph"
-        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)" Generate perf-folded (use --benchmark for reproducible profiling)"
-        echo "    "(set_color green)"bench"(set_color normal)"                                      Run benchmarks"
+        echo $c_cyan"TUI-specific commands:"$c_reset
+        echo "    "$c_green"run-examples"$c_reset" "$c_blue"[--release] [--no-log]"$c_reset"        Run TUI examples"
+        echo "    "$c_green"run-examples-flamegraph-svg"$c_reset"                Generate SVG flamegraph"
+        echo "    "$c_green"run-examples-flamegraph-fold"$c_reset" "$c_blue"[--benchmark]"$c_reset" Generate perf-folded (use --benchmark for reproducible profiling)"
+        echo "    "$c_green"bench"$c_reset"                                      Run benchmarks"
         echo ""
-        echo (set_color cyan --bold)"Local source package commands:"(set_color normal)
-        echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries (edi, giti, rc, env-source) from source"
-        echo "    "(set_color green)"install-build-infra"(set_color normal)"  Install build-infra tools (cargo-rustdoc-fmt) from source"
-        echo "    "(set_color green)"install-rust-analyzer-mcp-server"(set_color normal)" Install rust-analyzer MCP server from source"
+        echo $c_cyan"Local source package commands:"$c_reset
+        echo "    "$c_green"install-cmdr"$c_reset"         Install cmdr binaries (edi, giti, rc, env-source) from source"
+        echo "    "$c_green"install-build-infra"$c_reset"  Install build-infra tools (cargo-rustdoc-fmt) from source"
+        echo "    "$c_green"install-rust-analyzer-mcp-server"$c_reset" Install rust-analyzer MCP server from source"
         echo ""
-        echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
-        echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, rc, or env-source"
-        echo "    "(set_color green)"test-cmdr-install-on-all-linux-distros"(set_color normal)
+        echo $c_cyan"cmdr-specific commands:"$c_reset
+        echo "    "$c_green"run-binaries"$c_reset"         Run edi, giti, rc, or env-source"
+        echo "    "$c_green"test-cmdr-install-on-all-linux-distros"$c_reset
         echo "                             Test install on Ubuntu/Fedora/Arch (Linux only)"
         echo ""
-        echo (set_color cyan --bold)"Development Session Commands:"(set_color normal)
-        echo "    "(set_color green)"dev-dashboard"(set_color normal)"        Start 2-pane tmux development dashboard"
+        echo $c_cyan"Development Session Commands:"$c_reset
+        echo "    "$c_green"dev-dashboard"$c_reset"        Start 2-pane tmux development dashboard"
         echo ""
-        echo (set_color cyan --bold)"Other commands:"(set_color normal)
-        echo "    "(set_color green)"log"(set_color normal)"                  Monitor /tmp/r3bl_tui/log.txt"
-        echo "    "(set_color green)"help"(set_color normal)"                 Show this help"
+        echo $c_cyan"Other commands:"$c_reset
+        echo "    "$c_green"log"$c_reset"                  Monitor /tmp/r3bl_tui/log.txt"
+        echo "    "$c_green"help"$c_reset"                 Show this help"
     else
-        echo "Unknown command: "(set_color red --bold)"$command"(set_color normal)
+        echo "Unknown command: "$c_red"$command"$c_reset
     end
 end
 
@@ -261,9 +285,14 @@ end
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
+# - typos-lsp: Language server protocol for typos source-code spell checker
+# - harper-ls: Language server for Harper grammar & spell checker
+# - typos-cli: Source code spell checker CLI (typos)
+# - cargo-llvm-cov: Source-based code coverage data generator
 # - cmdr: CLI apps (edi, giti, rc, env-source)
 # - rust-analyzer: Language server component
 # - rust-src: Rust standard library source component
+# - llvm-tools: LLVM profiling and instrumentation tools
 # - x86_64-pc-windows-gnu: Cross-compilation target for Windows verification
 # - cargo-rustdoc-fmt: Rustdoc comment formatter (from build-infra)
 # - rust-analyzer-mcp-server: MCP server for rust-analyzer (from rust-analyzer-mcp-server)
@@ -288,7 +317,11 @@ function install-cargo-tools
         "cargo-warloc" \
         "flamegraph" \
         "inferno" \
-        "lychee"
+        "lychee" \
+        "typos-lsp" \
+        "harper-ls" \
+        "typos-cli" \
+        "cargo-llvm-cov"
 
     for tool in $cargo_tools
         install_cargo_tool $tool
@@ -314,6 +347,13 @@ function install-cargo-tools
         rustup component add rust-src
     else
         echo '✓ rust-src installed'
+    end
+
+    if not rustup component list --installed | grep -q llvm-tools
+        echo 'Installing llvm-tools...'
+        rustup component add llvm-tools
+    else
+        echo '✓ llvm-tools installed'
     end
 
     # Cross-compilation target for verifying platform-specific code
@@ -495,6 +535,94 @@ function test_workspace
         echo (set_color magenta)"≡ Running tests in $folder .. ≡"(set_color normal)
         cargo test -q -- --test-threads=20
         cd ..
+    end
+end
+
+# Runs targeted code coverage with cargo-llvm-cov, filtering output to avoid large dumps.
+#
+# Usage:
+#   fish run.fish cov <package> [test_filter] [file_filter] [--html]
+#
+# Examples:
+#   fish run.fish cov r3bl_tui osc_color
+#   fish run.fish cov r3bl_tui osc_color osc_color.rs
+#   fish run.fish cov r3bl_tui osc_color --html
+#   fish run.fish cov r3bl_analytics_schema
+function coverage
+    set -l num_args (count $argv)
+    if test $num_args -eq 0
+        echo "Usage: fish run.fish cov <package> [test_filter] [file_filter] [--html]"
+        echo ""
+        echo "Runs targeted cargo-llvm-cov with filtered output to avoid large dumps."
+        echo ""
+        echo "Arguments:"
+        echo "  <package>      Cargo package to measure (e.g. r3bl_tui, r3bl_analytics_schema, cmdr)"
+        echo "  [test_filter]  Optional test name filter (e.g. osc_color)"
+        echo "  [file_filter]  Optional file pattern to filter output (e.g. osc_color.rs)"
+        echo "  [--html]       Generate HTML report and open in browser"
+        echo ""
+        echo "Examples:"
+        echo "  fish run.fish cov r3bl_tui osc_color"
+        echo "  fish run.fish cov r3bl_tui osc_color osc_color.rs"
+        echo "  fish run.fish cov r3bl_tui osc_color --html"
+        echo "  fish run.fish cov r3bl_analytics_schema"
+        return 1
+    end
+
+    set -l pkg $argv[1]
+    # Allow passing crate folder name or full package name
+    switch $pkg
+        case tui
+            set pkg "r3bl_tui"
+        case cmdr
+            set pkg "r3bl-cmdr"
+        case analytics_schema
+            set pkg "r3bl_analytics_schema"
+        case build-infra
+            set pkg "r3bl-build-infra"
+        case rust-analyzer-mcp-server
+            set pkg "r3bl-rust-analyzer-mcp-server"
+    end
+
+    set -l test_filter ""
+    set -l file_filter ""
+    set -l is_html false
+
+    for arg in $argv[2..-1]
+        if test "$arg" = "--html" -o "$arg" = "-html"
+            set is_html true
+        else if test -z "$test_filter"
+            set test_filter "$arg"
+        else if test -z "$file_filter"
+            set file_filter "$arg"
+        end
+    end
+
+    # If file_filter was not specified, default to test_filter
+    if test -z "$file_filter"; and test -n "$test_filter"
+        set file_filter "$test_filter"
+    end
+
+    # Build cargo llvm-cov command
+    set -l cmd_args cargo llvm-cov test -p "$pkg"
+
+    if test -n "$test_filter"
+        set -a cmd_args --lib "$test_filter"
+    end
+
+    if test "$is_html" = true
+        set -a cmd_args --html --open
+        echo (set_color cyan)"Running: "(set_color normal)"$cmd_args"
+        $cmd_args
+    else
+        set -a cmd_args --show-missing-lines
+        if test -n "$file_filter"
+            echo (set_color cyan)"Running: "(set_color normal)"$cmd_args | grep -E \"(Filename.*Cover|$file_filter)\""
+            $cmd_args | grep -E "(Filename.*Cover|$file_filter)"
+        else
+            echo (set_color cyan)"Running: "(set_color normal)"$cmd_args"
+            $cmd_args
+        end
     end
 end
 
@@ -805,6 +933,10 @@ end
 #   fish run.fish run-examples --no-log     # Debug mode without logging
 #   fish run.fish run-examples --release --no-log  # Release mode without logging
 function run-examples
+    # Ensure target symlink and backing store exist.
+    set -l repo_root (cd (dirname (status --current-filename)) && pwd)
+    $repo_root/check.fish --ensure-target >/dev/null 2>&1
+
     set original_dir $PWD
     cd tui
 

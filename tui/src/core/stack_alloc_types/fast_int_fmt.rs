@@ -5,7 +5,7 @@
 //! See [`macro@crate::convert_u16_to_ascii_str_slice`] and
 //! [`macro@crate::convert_usize_to_ascii_str_slice`] for the primary public API.
 
-use crate::{LossyConvertToByte, NarrowingCastToU8};
+use crate::{LossyConvertToByte, NUL_CHAR, NarrowingCastToU8};
 use std::debug_assert_matches;
 
 /// A highly optimized macro that takes a [`u16`] and returns a temporary `&str` slice
@@ -151,7 +151,7 @@ pub mod usize_impl {
         )]
         result_str
             .expect("conversion error")
-            .trim_start_matches(char::from(0))
+            .trim_start_matches(NUL_CHAR)
     }
 
     /// This is just a sanity check done in the debug release to makes sure that the
@@ -273,7 +273,7 @@ pub mod u16_impl {
         )]
         result_str
             .expect("conversion error")
-            .trim_start_matches(char::from(0))
+            .trim_start_matches(NUL_CHAR)
     }
 }
 

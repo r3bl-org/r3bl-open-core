@@ -14,6 +14,7 @@
 //! [`EscSequence`]: crate::EscSequence
 //! [constants module design]: mod@crate::constants#design
 
+use super::{ascii_byte_to_char, input_sequences::ANSI_ESC};
 use crate::define_ansi_const;
 
 // Cursor Save/Restore Operations
@@ -147,6 +148,7 @@ pub const CHARSET_DEC_SUPPLEMENTAL: u8 = b'<';
 ///
 /// [`ESC`]: crate::EscSequence
 pub const NEL_NEXT_LINE: u8 = b'E';
+pub const NEL_NEXT_LINE_CHAR: char = ascii_byte_to_char(NEL_NEXT_LINE);
 
 /// Horizontal Tab Set (HTS): Sets a tab stop at the current cursor position.
 ///
@@ -222,9 +224,7 @@ pub const CARRIAGE_RETURN: u8 = b'\r';
 /// Value: `27` dec, `1B` hex.
 ///
 /// [`ESC`]: crate::ANSI_ESC
-// XMARK: Intentional numeric casting using as.
-#[allow(clippy::as_conversions)]
-pub const ESC_START: char = ESC_STR.as_bytes()[0] as char;
+pub const ESC_START: char = ascii_byte_to_char(ANSI_ESC);
 
 /// Escape Start: Start string: the escape character (`27` dec, `1B` hex).
 ///
@@ -267,5 +267,5 @@ define_ansi_const!(@esc_str : ESC_SELECT_DEC_GRAPHICS_STR = ["(0"] =>
 
 /// G0 character set selector intermediate.
 ///
-/// Value: `'('` dec, `28` hex.
+/// Value: `40` dec, `28` hex.
 pub const CHARSET_SELECTOR_G0: char = '(';

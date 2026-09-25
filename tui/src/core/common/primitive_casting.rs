@@ -125,7 +125,7 @@ pub trait NarrowingCastToU16 {
 
 // - The implementations perform explicit bounds checks before performing raw primitive
 //   casts (such as `self as u16`).
-// - Clippy's static analysis does not evaluate the preceding bounds check guards, so it
+// - Clippy static analysis does not evaluate the preceding bounds check guards, so it
 //   would otherwise raise false-positive truncation and sign-loss warnings during checks.
 // - XMARK: Intentional numeric casting using as.
 #[allow(
@@ -585,7 +585,7 @@ pub trait NarrowingCastToU8 {
 
 // - The implementations perform explicit bounds checks before performing raw primitive
 //   casts (such as `self as u8`).
-// - Clippy's static analysis does not evaluate the preceding bounds check guards, so it
+// - Clippy static analysis does not evaluate the preceding bounds check guards, so it
 //   would otherwise raise false-positive truncation and sign-loss warnings during checks.
 // - XMARK: Intentional numeric casting using as.
 #[allow(
@@ -837,7 +837,7 @@ pub trait NarrowingCastToUsize {
 
 // - The implementations perform explicit bounds checks before performing raw primitive
 //   casts (such as `self as usize`).
-// - Clippy's static analysis does not evaluate the preceding bounds check guards, so it
+// - Clippy static analysis does not evaluate the preceding bounds check guards, so it
 //   would otherwise raise false-positive truncation and sign-loss warnings during checks.
 // - XMARK: Intentional numeric casting using as.
 #[allow(

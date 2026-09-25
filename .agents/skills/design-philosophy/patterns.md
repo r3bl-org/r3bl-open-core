@@ -1,5 +1,3 @@
-<!-- cspell:words Stringly -->
-
 # Design Philosophy Patterns
 
 ## Cognitive Load Patterns
@@ -43,6 +41,71 @@ impl Parser {
     // Advanced users can access more:
     pub fn with_options(options: ParserOptions) -> Self { ... }
 }
+```
+
+### Type-Centric Co-location (Associated Functions over Floating Functions)
+
+#### Bad: Free-Floating Helper Functions for Domain Types
+
+Floating functions clutter the module namespace, complicate barrel re-exports, and hide lifecycle operations from IDE autocomplete.
+
+```rust
+pub enum CsiBufferKind<'a> {
+    SingleChar(u8),
+    Parameterized(&'a [u8]),
+    Invalid,
+}
+
+// Floating classifier in the module namespace:
+pub fn classify_csi_buffer(buffer: &[u8]) -> CsiBufferKind<'_> { ... }
+
+// Floating decoder for an internal shape:
+fn decode_csi_event(params: &[u16], final_byte: u8) -> Option<VT100InputEventIR> { ... }
+```
+
+#### Good: Associated Functions & Methods on Domain Types
+
+Co-locating classification, construction, and decoding directly with the types encapsulates behavior, cleans up module exports, and enables IDE discoverability via `Type::` or `instance.`.
+
+```rust
+pub enum CsiBufferKind<'a> {
+    SingleChar(u8),
+    Parameterized(&'a [u8]),
+    Invalid,
+}
+
+impl<'a> CsiBufferKind<'a> {
+    // Associated constructor / classifier:
+    #[must_use]
+    pub fn classify(buffer: &'a [u8]) -> Self { ... }
+}
+
+impl CsiParamShape {
+    // Associated classifier:
+    #[must_use]
+    fn classify(params: &[u16], final_byte: u8) -> Self { ... }
+
+    // Associated decoder:
+    #[must_use]
+    fn decode(self, final_byte: u8) -> Option<VT100InputEventIR> { ... }
+}
+```
+
+#### When to Keep Floating
+
+Reserve floating functions for top-level pipeline coordinators (orchestrators) that return generic envelopes or cross-cutting intermediate representations, or functions returning standard library / primitive types:
+
+```rust
+// GOOD as floating: Top-level entry point coordinating multiple parsers into generic IR:
+pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
+    if let Some(event) = csi_u::parse_csi_u_sequence(buffer) {
+        return Some(event);
+    }
+    match CsiBufferKind::classify(buffer) { ... }
+}
+
+// GOOD as floating: Primitive or standard library return type (orphan rule):
+pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> { ... }
 ```
 
 ---
@@ -325,12 +388,93 @@ impl<const M: Mode> Processor<M> {
 
 ---
 
+## Constant Design Patterns
+
+### Bad: Redundant Duplicate Literals Across Types
+
+Duplicating literal values across byte slices, string slices, and length constants creates multiple sources of truth, invites desynchronization bugs, and increases cognitive load.
+
+```rust
+// ❌ Bad: Three separate hardcoded literals for the same sequence.
+pub const MOUSE_SGR_PREFIX: &[u8] = b"\x1b[<";
+pub const MOUSE_SGR_PREFIX_STR: &str = "\x1b[<";
+pub const MOUSE_SGR_PREFIX_LEN: usize = 3;
+
+// ❌ Bad: Separate hardcoded byte literal ignoring existing string macro.
+define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] => ...);
+pub const SGR_RESET_BYTES: &[u8] = b"\x1b[0m";
+```
+
+### Good: Single Source of Truth & Derivation Hierarchy
+
+Rust const evaluation has two distinct constraints:
+1. `&str::chars()` is not a `const fn`. Extracting a `char` from `&str` at compile time is clumsy.
+2. Concatenating `&[u8]` byte slices is not supported in `const` contexts without heap allocations. By contrast, `&str` can be concatenated at compile time (`formatcp!`, `define_ansi_const!`), and converting `&str` to `&[u8]` via `.as_bytes()` is a zero-cost `const fn`.
+
+Therefore, constants follow a strict derivation hierarchy based on whether they are atomic primitives or composed sequences.
+
+#### 1. Atomic Primitives (Single byte/char): `u8` is the SSOT
+
+For foundational 1-byte protocol building blocks (`NUL`, `b';'`, `b':'`, `b'<'`, `b'M'`), the `u8` byte value is the SSOT. Derive `char` and `&str` outward using helper functions:
+
+```rust
+// ✅ Good: u8 is SSOT for atomic primitives.
+pub const NUL: u8 = 0;
+pub const NUL_CHAR: char = ascii_byte_to_char(NUL);
+pub const NUL_STR: &str = ascii_byte_to_str(&[NUL]);
+
+pub const ANSI_PARAM_SEPARATOR: u8 = b';';
+pub const ANSI_PARAM_SEPARATOR_CHAR: char = ascii_byte_to_char(ANSI_PARAM_SEPARATOR);
+pub const ANSI_PARAM_SEPARATOR_STR: &str = ascii_byte_to_str(&[ANSI_PARAM_SEPARATOR]);
+```
+
+Do not invert this by defining `NUL_STR: &str = "\0"` and indexing `as_bytes()[0]`.
+
+##### Helper Functions for Atomic Primitives
+
+Defined in `tui/src/core/ansi/constants/mod.rs`:
+
+- `ascii_byte_to_char(byte: u8) -> char`:
+  - **Purpose**: Converts a foundational `u8` byte (`0..=255`) to a `char` at compile time.
+  - **Why**: The ISO-8859-1 / ASCII range (`U+0000`..`U+00FF`) maps 1:1 to Unicode without surrogates. Encapsulating this in a helper satisfies Clippy's `as_conversions` lint in one audited place.
+  - **When to use**: Whenever deriving a single-character constant (`_CHAR`) from an atomic `u8` constant.
+- `ascii_byte_to_str(bytes: &'static [u8]) -> &'static str`:
+  - **Purpose**: Converts a static byte slice to a `&'static str` at compile time.
+  - **Why**: Performs compile-time UTF-8 validation via `core::str::from_utf8`.
+  - **When to use**: Whenever deriving a 1-character string slice (`_STR`) from an atomic `u8` constant (e.g. `ascii_byte_to_str(&[NUL])`). Do not use this for multi-byte composed sequences; composed sequences start as `&str` instead.
+
+#### 2. Composed Sequences (Multi-byte strings): `&str` is the SSOT
+
+For multi-byte sequences composed of prefixes, markers, or parameters, the `&str` is the SSOT. Derive byte slice and length outward:
+
+```rust
+// ✅ Good: &str is SSOT for composed sequences.
+pub const MOUSE_SGR_PREFIX_STR: &str =
+    const_format::formatcp!("{CSI_START}{MOUSE_SGR_MARKER_CHAR}");
+pub const MOUSE_SGR_PREFIX: &[u8] = MOUSE_SGR_PREFIX_STR.as_bytes();
+pub const MOUSE_SGR_PREFIX_LEN: usize = MOUSE_SGR_PREFIX.len();
+
+define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] => ...);
+pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
+```
+
+#### Decision Matrix
+
+| Scenario | SSOT Type | Conversion Mechanism | Resulting Constants |
+| :--- | :--- | :--- | :--- |
+| **Atomic Primitive** (Single byte/char, e.g. `NUL`, `;`, `:`, `<`, `M`) | `u8` | `ascii_byte_to_char(BYTE)`<br>`ascii_byte_to_str(&[BYTE])` | `FOO: u8`<br>`FOO_CHAR: char`<br>`FOO_STR: &str` |
+| **Composed Sequence** (Multi-byte strings, e.g. `ESC [ <`, `ESC [ 0 m`, `ESC ]`) | `&str` | `formatcp!` / `define_ansi_const!`<br>`.as_bytes()`<br>`.len()` | `FOO_STR: &str`<br>`FOO: &[u8]`<br>`FOO_LEN: usize` |
+
+---
+
 ## Quick Reference
 
-| Principle | Ask Yourself |
-|-----------|--------------|
-| Cognitive Load | "How many concepts must a reader hold to understand this?" |
-| Progressive Disclosure | "Can a beginner use the simple path without seeing complexity?" |
-| Illegal States | "Can the type system prevent this bug?" |
-| Abstraction Worth | "Does this abstraction make the code easier or harder to understand?" |
-| ADT Const Params | "Can I use a const enum to replace a trait or runtime field?" |
+| Principle              | Ask Yourself                                                                    |
+| :--------------------- | :------------------------------------------------------------------------------ |
+| Cognitive Load         | "How many concepts must a reader hold to understand this?"                      |
+| Progressive Disclosure | "Can a beginner use the simple path without seeing complexity?"                 |
+| Illegal States         | "Can the type system prevent this bug?"                                         |
+| Abstraction Worth      | "Does this abstraction make the code easier or harder to understand?"           |
+| ADT Const Params       | "Can I use a const enum to replace a trait or runtime field?"                   |
+| Type Co-location       | "Is this floating function constructing or decoding a co-located domain type?"   |
+| Constant Hierarchy     | "Is this atomic (u8 SSOT) or a composed sequence (&str SSOT)?"                   |

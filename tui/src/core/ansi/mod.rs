@@ -16,6 +16,9 @@
 //! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔
 //!   ANSI256), escape sequence definitions, used by all subsystems
 //!
+//! For how these subsystems are orchestrated and executed in the Stage 5 backend, see the
+//! [`direct_to_ansi` mod docs: Terminal Protocols & Capabilities Hub][hub].
+//!
 //! ## Architecture Overview
 //!
 //! ```text
@@ -91,10 +94,11 @@
 //! ```
 //!
 //! **Why raw mode?** The program needs to:
-//! - Capture every keystroke immediately (no line buffering)
-//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants
-//! - Detect special keys (arrows, function keys) sent as **escape sequences**
-//! - Control the cursor, colors, and screen layout
+//! - Capture every keystroke immediately (no line buffering).
+//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants to
+//!   copy something.
+//! - Detect special keys (arrows, function keys) sent as **escape sequences**.
+//! - Control the cursor, colors, and screen layout.
 //!
 //! ### Escape Sequences in Raw Mode
 //!
@@ -150,10 +154,10 @@
 //! incomplete parameters until the final sequence byte arrives.
 //!
 //! **Benefits**:
-//! - ✅ Robust state machine for split sequences and edge cases
-//! - ✅ Battle-tested in production ([`Alacritty`] uses it)
-//! - ✅ Proper [`ANSI`]/[`VT-100`] spec compliance
-//! - ✅ Low maintenance (bug fixes come from upstream)
+//! - Robust state machine for split sequences and edge cases
+//! - Battle-tested in production ([`Alacritty`] uses it)
+//! - Proper [`ANSI`]/[`VT-100`] spec compliance
+//! - Low maintenance (bug fixes come from upstream)
 //!
 //! ### Input Parser: Custom Implementation ([`vt_100_terminal_input_parser`])
 //!
@@ -182,10 +186,10 @@
 //!    overhead
 //!
 //! **Benefits**:
-//! - ✅ Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
-//! - ✅ Optimal for complete sequences (no buffering overhead)
-//! - ✅ Full control over parsing logic
-//! - ✅ Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
+//! - Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
+//! - Optimal for complete sequences (no buffering overhead)
+//! - Full control over parsing logic
+//! - Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
 //!
 //! **Key insight**: The architectural split ([`VTE`] for output, custom for input) is
 //! **not a limitation** - it's the correct design because output and input are
@@ -232,12 +236,14 @@
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte
+//! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 
 #![rustfmt::skip]
 
 // Public modules.
 pub mod constants;
 pub mod detect_color;
+pub mod osc;
 pub mod vt_100_terminal_input_parser;
 
 // XMARK: conditional visibility for docs and test only
@@ -272,6 +278,7 @@ mod vt_100_pty_output_parser;
 pub use color::*;
 pub use constants::*;
 pub use generator::*;
+pub use osc::*;
 pub use vt_100_pty_output_parser::*;
 pub use terminal_raw_mode::*;
 pub use detect_color::*;
@@ -283,7 +290,7 @@ pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
 // Rustdoc search link fixes.
 #[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use constants::{csi, dsr, esc, generic, input_sequences, mouse, raw_mode_constants, sgr, utf8};
+pub use constants::{csi, da, dsr, esc, generic, input_sequences, mouse, osc_constants, raw_mode_constants, sgr, utf8};
 #[cfg(any(test, doc))]
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use detect_color::detect_color_integration_tests::pty_test_color_detection;

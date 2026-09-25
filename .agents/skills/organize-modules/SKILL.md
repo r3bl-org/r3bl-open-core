@@ -364,6 +364,52 @@ mod inner {
 use crate::assert_eq2;
 ```
 
+### Step 8: File and Module Naming Conventions
+
+Follow these conventions when naming files within modules:
+
+#### 1. Inception Collision Avoidance (`<name>_struct.rs` / `<name>_enum.rs`)
+
+When organizing code into subfolders, avoid creating a file whose base name is identical to its parent directory. This avoids "inception" redundancy and naming confusion in paths:
+
+```text
+// ❌ Collision / Inception Anti-Pattern:
+chunk_framer/
+├── mod.rs
+├── chunk_framer.rs       // Collision with parent directory name!
+└── circuit_breaker.rs
+
+// ✅ Disambiguated Pattern:
+chunk_framer/
+├── mod.rs
+├── chunk_framer_struct.rs // Houses `pub struct ChunkFramer`
+└── circuit_breaker/
+    ├── mod.rs
+    └── circuit_breaker_struct.rs
+```
+
+**Rules:**
+- **Primary Struct**: When the colliding file houses the primary `struct` of that module, suffix it with `_struct.rs` (e.g., `accumulator_struct.rs`, `chunk_framer_struct.rs`, `circuit_breaker_struct.rs`, `engine_struct.rs`).
+- **Primary Enum**: When the colliding file houses the primary `enum` of that module, suffix it with `_enum.rs` (e.g., `parser_enum.rs`).
+- **Non-colliding files**: Files whose names differ from the parent directory keep their natural descriptive names **without** suffixes (e.g., `unparsed_buffer_action.rs`, `constants.rs`). Do NOT add `_struct` or `_enum` to non-colliding files.
+
+#### 2. Standalone Functions Entry Point (`<xyz>_entry_point.rs`)
+
+When a module has a file whose sole responsibility is providing top-level function entry points (such as pure functions, pipeline decoders, or event dispatchers) without primary structs or enums, name it `<xyz>_entry_point.rs`:
+
+- `chunk_decoder_entry_point.rs` (houses `try_decode_input_event()`)
+- `input_parser_entry_point.rs` (houses `try_parse_input_event()`)
+
+#### 3. Public API Surface (`<xyz>_public_api.rs`)
+
+When a module explicitly segregates its external, user-facing API surface from internal implementation details, name the public facade `<xyz>_public_api.rs` (optionally paired with `<xyz>_internal_api.rs`):
+
+- `ansi_parser_public_api.rs`
+- `engine_public_api.rs` (paired with `engine_internal_api.rs`)
+- `scoped_mutex_public_api.rs`
+- `log_public_api.rs`
+- `input_device_public_api.rs`
+
 ## Benefits of This Pattern
 
 ### 1. Clean, Flat API
@@ -742,13 +788,15 @@ After organizing modules:
 
 This skill includes additional reference material:
 
-- **`examples.md`** - 6 complete, working examples of module organization for different scenarios: simple library with internal structure, conditional visibility for documentation, large crate with domain separation, test-only module visibility, gradual refactoring strategy, and avoiding naming conflicts. Each example shows full file structure and implementation. **Read this when:**
+- **`examples.md`** - 8 complete, working examples of module organization for different scenarios: simple library with internal structure, conditional visibility for documentation, large crate with domain separation, test-only module visibility, gradual refactoring strategy, avoiding naming conflicts, macro exports, and file/module naming conventions. Each example shows full file structure and implementation. **Read this when:**
   - Simple library module organization → Example 1
   - Need conditional visibility for docs/tests → Example 2
   - Large crate with multiple domains (graphics/audio/physics) → Example 3
   - Test utilities that should only exist in test builds → Example 4
   - Refactoring from public modules to private + re-exports → Example 5
   - Avoiding module naming conflicts → Example 6
+  - Macro module exports (`#[macro_export]`) → Example 7
+  - File and module naming conventions (`_struct.rs`, `_entry_point.rs`, `_public_api.rs`) → Example 8
   - Decision tree for when to use which pattern → End of file
 
 ## Related Skills

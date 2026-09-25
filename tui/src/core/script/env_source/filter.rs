@@ -258,5 +258,3 @@ mod tests_filter {
         }
     }
 }
-
-// cspell:words SHLVL pipestatus CMDCMDLINE

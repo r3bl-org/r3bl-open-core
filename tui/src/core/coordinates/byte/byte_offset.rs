@@ -34,11 +34,35 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 /// - Offset = displacement (like "5 blocks east from here")
 ///
 /// # Semantic Usage
+///
+/// ## Line-Relative Cursor Positioning
 /// - Use [`ByteOffset`] for positions relative to line start (0-based within line)
-/// - Use `ByteIndex` for absolute positions in the global buffer
+/// - Use [`ByteIndex`] for absolute positions in the global buffer
 /// - Arithmetic: `ByteIndex + ByteOffset = ByteIndex` (position + distance = new
 ///   position)
 /// - Arithmetic: `ByteIndex - ByteIndex = ByteOffset` (position - position = distance)
+///
+/// # Distance vs. Capacity ([`ByteOffset`] vs [`ByteLength`])
+///
+/// A [`ByteOffset`] represents a relative movement vector or displacement (e.g., "walk
+/// forward 5 bytes"), whereas a [`ByteLength`] represents the capacity or extent of a
+/// container (e.g., "a 10-byte buffer").
+///
+/// ## Why `Length + Offset` is Semantically Meaningless
+///
+/// Walking 5 steps inside a 10-foot room changes your position, but it does not expand
+/// the room to 15 feet. Adding a movement offset to a container length is meaningless,
+/// which is why [`ByteLength`] deliberately does not implement `Add<ByteOffset>`.
+///
+/// ## Streaming Parser and Scanner Displacement
+///
+/// When a streaming parser or circuit breaker (such as [`vt_100_terminal_input_parser`])
+/// drains an incoming byte stream, no container is being sized or stored. The parser is
+/// simply advancing a read cursor across chunks and discarding bytes. Accumulating total
+/// distance traveled is an addition of two relative distances (`ByteOffset + ByteOffset =
+/// ByteOffset`), making [`ByteOffset`] the semantically correct type for parser
+/// consumption, slice resumption offsets, and cumulative stream draining rather than
+/// [`ByteLength`].
 ///
 /// # Examples
 ///
@@ -56,7 +80,9 @@ use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 /// assert_eq!(absolute_position.as_usize(), 105);
 /// ```
 ///
+/// [`ByteLength`]: crate::ByteLength
 /// [`LengthOps`]: crate::LengthOps
+/// [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteOffset(usize);
 
@@ -276,6 +302,13 @@ impl Sub<ByteOffset> for ByteOffset {
     }
 }
 
+impl AddAssign<ByteOffset> for ByteOffset {
+    /// In-place addition for combining two byte offsets.
+    ///
+    /// Semantically: `offset += offset`
+    fn add_assign(&mut self, rhs: ByteOffset) { self.0 = self.0.saturating_add(*rhs); }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,6 +370,13 @@ mod tests {
         let offset2 = byte_offset(15);
         let result = offset1 + offset2;
         assert_eq!(result, byte_offset(25));
+    }
+
+    #[test]
+    fn test_offset_add_assign_offset() {
+        let mut offset = byte_offset(10);
+        offset += byte_offset(15);
+        assert_eq!(offset, byte_offset(25));
     }
 
     #[test]

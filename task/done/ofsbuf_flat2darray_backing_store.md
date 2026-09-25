@@ -1,5 +1,3 @@
-<!-- cspell:words darray bottlenecked bottlenecking Amdahl's -->
-
 _Task: Rearchitect the OfsBufVT100 to use a Trait-based Canvas Architecture_
 
 This outlines a structural refactor to replace the current `OffscreenBuffer` (Canvas) and

@@ -12,7 +12,7 @@ use std::io::Read as _;
 /// path triggered via [`std::io::BufRead`] will result in a panic via
 /// [`unreachable!()`].
 ///
-/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 #[derive(Debug)]
 pub struct MockReaderErrOnly<F: FnMut() -> std::io::Result<usize>> {

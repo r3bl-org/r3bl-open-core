@@ -313,7 +313,7 @@ impl RenderOpPaintImplDirectToAnsi {
         // Use unified PixelCharRenderer for consistent ANSI generation
         let cli_text = CliTextInline {
             text: text.as_str().into(),
-            attribs: maybe_style.map(|s| s.attribs).unwrap_or_default(),
+            attribs: maybe_style.map_or_default(|s| s.attribs),
             color_fg: maybe_style.and_then(|s| s.color_fg),
             color_bg: maybe_style.and_then(|s| s.color_bg),
         };
@@ -650,6 +650,20 @@ mod tests {
         let ansi = ansi_output::terminal_modes::disable_bracketed_paste();
         assert!(!ansi.is_empty());
         assert!(ansi.contains(ESC_START));
+    }
+
+    #[test]
+    fn test_ansi_sequence_generator_enable_keyboard_enhancement() {
+        // enable_keyboard_enhancement should generate appropriate ANSI sequence.
+        let ansi = ansi_output::terminal_modes::enable_keyboard_enhancement();
+        assert_eq!(ansi, "\x1b[>1u");
+    }
+
+    #[test]
+    fn test_ansi_sequence_generator_disable_keyboard_enhancement() {
+        // disable_keyboard_enhancement should generate appropriate ANSI sequence.
+        let ansi = ansi_output::terminal_modes::disable_keyboard_enhancement();
+        assert_eq!(ansi, "\x1b[<1u");
     }
 
     #[test]

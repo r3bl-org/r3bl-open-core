@@ -566,7 +566,9 @@ mod tests {
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-    use crate::{AnsiValue, BufTextStorage, FastStringify, SgrCode, WideningCastToUsize};
+    use crate::{AnsiValue, BufTextStorage, CSI_START, CSI_SUB_PARAM_SEPARATOR,
+                FastStringify, SGR_COLOR_MODE_256, SGR_FG_EXTENDED, SGR_SET_GRAPHICS,
+                SgrCode, WideningCastToUsize};
     use std::fmt::Write;
     use test::Bencher;
 
@@ -647,7 +649,11 @@ mod benchmarks {
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for i in 0..=255u8 {
-                write!(buf, "\x1b[38:5:{i}m").expect("conversion error");
+                write!(
+                    buf,
+                    "{CSI_START}{SGR_FG_EXTENDED}{CSI_SUB_PARAM_SEPARATOR}{SGR_COLOR_MODE_256}{CSI_SUB_PARAM_SEPARATOR}{i}{SGR_SET_GRAPHICS}"
+                )
+                .expect("conversion error");
             }
             test::black_box(buf);
         });
@@ -681,12 +687,16 @@ mod benchmarks {
             "247", "248", "249", "250", "251", "252", "253", "254", "255",
         ];
 
+        const SGR_FG_256_PREFIX: &str = const_format::formatcp!(
+            "{CSI_START}{SGR_FG_EXTENDED}{CSI_SUB_PARAM_SEPARATOR}{SGR_COLOR_MODE_256}{CSI_SUB_PARAM_SEPARATOR}"
+        );
+
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for i in 0..=255u8 {
-                buf.push_str("\x1b[38:5:");
+                buf.push_str(SGR_FG_256_PREFIX);
                 buf.push_str(U8_STRINGS[i.as_usize_widening()]);
-                buf.push('m');
+                buf.push(SGR_SET_GRAPHICS);
             }
             test::black_box(buf);
         });

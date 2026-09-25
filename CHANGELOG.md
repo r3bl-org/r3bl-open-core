@@ -376,7 +376,7 @@ This [PR][PR370] contains the details for the following:
     - Run the `audit-deps` function in the `all-cicd` function, which is run in GitHub
       Actions. With the whitelist in place, this is ok to run and won't produce errors
       (since we already know about these 3 crates). The `unmaintained` function takes too
-      long to run so it is still not included in teh `all-cicd` function.
+      long to run so it is still not included in the `all-cicd` function.
 
 <!-- Active crates section -->
 
@@ -3067,6 +3067,3 @@ is no longer maintained.
     https://github.com/r3bl-org/r3bl-open-core/pull/376/commits/39bf421bb86d4de004bffd08f35df12ce3ef8541
 [PR378]: https://github.com/r3bl-org/r3bl-open-core/pull/378
 [PR430]: https://github.com/r3bl-org/r3bl-open-core/pull/430
-
-<!-- cspell:words Heuer Falk Woldmann Lu Jan Haase FUNARCH Crichton Alexis King -->
-<!-- cspell:words CSize CPos -->

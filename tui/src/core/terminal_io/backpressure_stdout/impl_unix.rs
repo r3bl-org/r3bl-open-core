@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words POLLOUT EINTR EBADF
-
 use super::BackpressureStdout;
 use std::io::Write;
 
@@ -45,9 +43,9 @@ impl BackpressureStdout {
     ///   signal ([`EINTR`]) so the caller can retry.
     /// - Returns `Err` immediately on fatal OS descriptor errors (such as [`EBADF`]).
     ///
-    /// [`EBADF`]: https://man7.org/linux/man-pages/man3/errno.3.html
-    /// [`EINTR`]: https://man7.org/linux/man-pages/man3/errno.3.html
-    /// [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
+    /// [`EBADF`]: https://manpages.debian.org/errno.3
+    /// [`EINTR`]: https://manpages.debian.org/errno.3
+    /// [`POLLOUT`]: https://manpages.debian.org/poll.2
     fn wait_until_writable(&self) -> std::io::Result<()> {
         let mut poll_fd = [rustix::event::PollFd::new(
             &self.0,

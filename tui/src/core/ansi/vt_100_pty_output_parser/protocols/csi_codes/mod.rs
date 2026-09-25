@@ -50,6 +50,7 @@ mod erase_mode;
 mod margin;
 mod private_mode;
 mod sequence;
+mod sgr_attribute_sequences;
 mod sgr_color_sequences;
 
 // Re-export public items for easier access.
@@ -57,4 +58,5 @@ pub use erase_mode::*;
 pub use margin::*;
 pub use private_mode::*;
 pub use sequence::*;
+pub use sgr_attribute_sequences::*;
 pub use sgr_color_sequences::*;

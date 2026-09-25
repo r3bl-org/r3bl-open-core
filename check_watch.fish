@@ -498,7 +498,8 @@ function run_checks_for_type
             log_and_print $CHECK_LOG_FILE "["(timestamp)"] 🔀 Forking full build to background..."
 
             fish -c "
-                cd $CHECK_REPO_ROOT
+                set -gx CHECK_REPO_ROOT '$CHECK_REPO_ROOT'
+                cd '$CHECK_REPO_ROOT'
                 source script_lib.fish
                 source check_constants.fish
                 source check_docs.fish

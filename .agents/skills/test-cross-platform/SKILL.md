@@ -1,11 +1,11 @@
 ---
 name: test-cross-platform
-description: Synchronize repository changes to remote test fleet (macOS, Windows) and execute the full test suite across all platforms concurrently.
+description: Synchronize repository changes to remote test fleet (Linux, macOS, Windows) and execute the full test suite across all platforms concurrently.
 ---
 
 # Cross-Platform Fleet Testing
 
-Run the full test suite across the cross-platform fleet (Linux host, macOS, and Windows)
+Run the full test suite across the remote cross-platform fleet (Linux on `nazmul-mobile.local`, macOS, and Windows)
 to verify compatibility, platform gates, and asynchronous I/O behavior.
 
 ## When to Use
@@ -14,60 +14,113 @@ to verify compatibility, platform gates, and asynchronous I/O behavior.
 - Before merging pull requests or finalizing release milestones.
 - When the user runs `/test-cross-platform` or asks to test across platforms/fleet.
 
+## Worktree & Folder Detection
+
+The skill dynamically detects whether you are in the primary repository or a git worktree:
+
+```bash
+# Fish syntax:
+set -l REPO_ROOT (git rev-parse --show-toplevel)
+set -l FOLDER_NAME (basename "$REPO_ROOT")
+
+# Bash syntax:
+REPO_ROOT=$(git rev-parse --show-toplevel)
+FOLDER_NAME=$(basename "$REPO_ROOT")
+```
+
+If you are in `~/github/roc`, `$FOLDER_NAME` is `roc`. If you are in a worktree such as `~/github/roc-fix-shift-home-lockup`, `$FOLDER_NAME` is `roc-fix-shift-home-lockup`. Remote fleet machines mirror this folder under their respective repository parent paths.
+
+### Worktree Portability & Relative Paths (`worktree.useRelativePaths`)
+
+Linked git worktrees store administrative pointer files:
+- Inside the worktree: `.git` (file containing `gitdir: <path_to_main_repo>/.git/worktrees/<name>`)
+- Inside the main repo: `.git/worktrees/<name>/gitdir` (file containing `<path_to_worktree>/.git`)
+
+By default, Git writes **absolute paths** (`/home/nazmul/...` on Linux vs `/Users/nazmul/...` on macOS). If worktrees or their `.git` files are mirrored across systems with different home directory roots, Git will fail on the remote host with:
+```
+fatal: not a git repository: (null)
+```
+which causes any tests or tools that invoke `git` (such as `cargo-rustdoc-fmt` validation tests in `build-infra`) to fail.
+
+To prevent this:
+1. **Always enable relative worktree paths globally**:
+   ```bash
+   git config --global worktree.useRelativePaths true
+   ```
+   Or explicitly pass `--relative` when creating a worktree:
+   ```bash
+   git worktree add --relative ../<worktree_folder> <branch>
+   ```
+2. **To repair existing worktrees with absolute path mismatches**:
+   ```bash
+   cd ~/github/roc
+   git config worktree.useRelativePaths true
+   git worktree repair
+   ```
+   Git will detect the absolute path mismatch and convert all linked worktrees to relative paths in place.
+
 ## Fleet Overview
 
 | Platform | Host Address | Shell | Repository Path | Test Runner |
 | :--- | :--- | :--- | :--- | :--- |
-| **Linux** | Local host (`nazmul-mobile.local`) | `bash` / `fish` | `~/github/roc` | `./check.fish --test` |
-| **macOS** | `nazmul-mac.local` | `fish` | `~/github/roc` | `./check.fish --test` |
-| **Windows** | `nazmul-win.local` | `nu` (Nushell) | `github/roc` | `cargo test` |
+| **Linux** | `nazmul-mobile.local` | `fish` | `~/github/<folder_name>` | `./check.fish --test` |
+| **macOS** | `nazmul-mac.local` | `fish` | `~/github/<folder_name>` | `./check.fish --test` |
+| **Windows** | `nazmul-win.local` | `nu` (Nushell) | `github/<folder_name>` | `cargo test` |
 
 ## Workflow
 
 ### Step 1: Fleet Synchronization
 
-Synchronize the local repository to all remote fleet machines using `scp`:
+Ensure the target folder exists on each remote fleet machine, then synchronize the current worktree (always excluding `.git` and `target/` so git worktree files and platform binaries are not overwritten):
 
-1. **Windows**:
+1. **Linux (`nazmul-mobile.local`)**:
    ```bash
-   scp -r ~/github/roc/. nazmul-win.local:github/roc/
+   ssh nazmul-mobile.local "mkdir -p ~/github/$FOLDER_NAME"
+   rsync -av --delete --exclude='.git' --exclude='target' "$REPO_ROOT/" nazmul-mobile.local:"github/$FOLDER_NAME/"
    ```
 
-2. **macOS**:
+2. **macOS (`nazmul-mac.local`)**:
    ```bash
-   scp -r ~/github/roc/. nazmul-mac.local:github/roc/
+   ssh nazmul-mac.local "mkdir -p ~/github/$FOLDER_NAME"
+   rsync -av --delete --exclude='.git' --exclude='target' "$REPO_ROOT/" nazmul-mac.local:"github/$FOLDER_NAME/"
    ```
 
-Both sync operations can run in parallel.
+3. **Windows (`nazmul-win.local`)**:
+   ```bash
+   ssh nazmul-win.local "powershell -NoProfile -Command 'New-Item -ItemType Directory -Force -Path github/$FOLDER_NAME'"
+   tar -cz -C "$REPO_ROOT" --exclude=.git --exclude=target . | ssh nazmul-win.local "tar -xz -C github/$FOLDER_NAME"
+   ```
+
+All sync operations can run in parallel.
 
 ### Step 2: Concurrent Test Execution
 
-Run the full test suite across all three platforms concurrently using non-blocking background tasks (`run_command` with async tasks) so the conversation is not frozen:
+Run the full test suite across all three platforms concurrently using non-blocking background tasks (`run_command` with async tasks) so the active conversation remains responsive:
 
-1. **Linux (Local)**:
+1. **Linux (`nazmul-mobile.local`)**:
    ```bash
-   ./check.fish --test
+   ssh nazmul-mobile.local "cd ~/github/$FOLDER_NAME && ./check.fish --test"
    ```
-   *(Alternatively: `cargo test --workspace`)*
+   *(Alternatively: `ssh nazmul-mobile.local "cd ~/github/$FOLDER_NAME && cargo test"`)*
 
-2. **macOS**:
+2. **macOS (`nazmul-mac.local`)**:
    ```bash
-   ssh nazmul-mac.local "cd ~/github/roc && ./check.fish --test"
+   ssh nazmul-mac.local "cd ~/github/$FOLDER_NAME && ./check.fish --test"
    ```
-   *(Alternatively: `ssh nazmul-mac.local "cd ~/github/roc && cargo test"`)*
+   *(Alternatively: `ssh nazmul-mac.local "cd ~/github/$FOLDER_NAME && cargo test"`)*
 
-3. **Windows**:
+3. **Windows (`nazmul-win.local`)**:
    ```bash
-   ssh nazmul-win.local "cd github/roc; cargo test"
+   ssh nazmul-win.local "cd github/$FOLDER_NAME; cargo test"
    ```
 
 ### Step 3: Targeted Subsystem Testing (Optional)
 
 When testing specific subsystems (like `core::pty`) during active refactoring rather than the entire workspace:
 
-- **Linux**: `cargo test -p r3bl_tui core::pty`
-- **macOS**: `ssh nazmul-mac.local "cd ~/github/roc && cargo test -p r3bl_tui core::pty"`
-- **Windows**: `ssh nazmul-win.local "cd github/roc; cargo test -p r3bl_tui core::pty"`
+- **Linux**: `ssh nazmul-mobile.local "cd ~/github/$FOLDER_NAME && cargo test -p r3bl_tui core::pty"`
+- **macOS**: `ssh nazmul-mac.local "cd ~/github/$FOLDER_NAME && cargo test -p r3bl_tui core::pty"`
+- **Windows**: `ssh nazmul-win.local "cd github/$FOLDER_NAME; cargo test -p r3bl_tui core::pty"`
 
 ### Step 4: Result Aggregation & Reporting
 

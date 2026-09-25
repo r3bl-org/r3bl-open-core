@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words buttonless
-
 //! Mouse input protocol constants for [`ANSI`]/[`CSI`] sequences.
 //!
 //! Defines byte values, bit masks, and protocol prefixes used by mouse input parsers
@@ -29,7 +27,7 @@
 //! ### Bitmask arithmetic operations
 //!
 //! *(See also: [`keyboard` module docs] for a contrasting example of where arithmetic
-//! addition is required by the VT100 spec).*
+//! addition is required by the [`VT-100`] spec).*
 //!
 //! When combining bitmasks (like applying a modifier to a button):
 //! - **always** use bitwise OR (`|` or `|=`)
@@ -45,11 +43,14 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
-//! [`keyboard` module docs]: mod@crate::core::ansi::vt_100_terminal_input_parser::keyboard#how-bitmask-encoding-for-modifiers-works
+//! [`keyboard` module docs]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::keyboard#how-bitmask-encoding-for-modifiers-works
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`SGR`]: crate::SgrCode
+//! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [constants module design]: mod@crate::constants#design
+
+use super::{CSI_START, ascii_byte_to_char};
 
 // ==================== Protocol Prefixes ====================
 
@@ -58,7 +59,9 @@
 /// Format: `CSI < Cb ; Cx ; Cy M/m`
 ///
 /// [`SGR`]: crate::SgrCode
-pub const MOUSE_SGR_PREFIX: &[u8] = b"\x1b[<";
+pub const MOUSE_SGR_PREFIX_STR: &str =
+    const_format::formatcp!("{CSI_START}{MOUSE_SGR_MARKER_CHAR}");
+pub const MOUSE_SGR_PREFIX: &[u8] = MOUSE_SGR_PREFIX_STR.as_bytes();
 
 /// [`SGR`] Mouse Prefix Length: Number of bytes in the [`SGR`] prefix.
 ///
@@ -66,7 +69,7 @@ pub const MOUSE_SGR_PREFIX: &[u8] = b"\x1b[<";
 ///
 /// [`ESC`]: crate::ANSI_ESC
 /// [`SGR`]: crate::SgrCode
-pub const MOUSE_SGR_PREFIX_LEN: usize = 3;
+pub const MOUSE_SGR_PREFIX_LEN: usize = MOUSE_SGR_PREFIX.len();
 
 /// [`SGR`] Minimum Mouse Sequence Length: `ESC [ < 0 ; 1 ; 1 M` (9 bytes).
 ///
@@ -78,7 +81,14 @@ pub const MOUSE_SGR_MIN_LEN: usize = 9;
 /// Format: `CSI M Cb Cx Cy`
 ///
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-pub const MOUSE_X10_PREFIX: &[u8] = b"\x1b[M";
+pub const MOUSE_X10_PREFIX_STR: &str =
+    const_format::formatcp!("{CSI_START}{MOUSE_X10_MARKER_CHAR}");
+pub const MOUSE_X10_PREFIX: &[u8] = MOUSE_X10_PREFIX_STR.as_bytes();
+
+/// [`X10`] Mouse Prefix Length: Number of bytes in the [`X10`] prefix.
+///
+/// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
+pub const MOUSE_X10_PREFIX_LEN: usize = MOUSE_X10_PREFIX.len();
 
 /// [`X10`] Minimum Mouse Sequence Length: `ESC [ M Cb Cx Cy` (6 bytes).
 ///
@@ -103,25 +113,27 @@ pub const MOUSE_RXVT_MIN_LEN: usize = 8;
 
 /// [`SGR`] Mouse Marker ([`SGR`]): The `<` byte (`60` dec, `3C` hex).
 ///
-/// Value: `'<'` dec, `3C` hex.
+/// Value: `60` dec, `3C` hex.
 ///
 /// Sequence: `ESC [ < Cb ; Cx ; Cy M/m`.
 ///
 /// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_MARKER: u8 = b'<';
+pub const MOUSE_SGR_MARKER_CHAR: char = ascii_byte_to_char(MOUSE_SGR_MARKER);
 
 /// [`SGR`] Mouse Press Action ([`SGR`]): `M` (uppercase) indicates button press.
 ///
-/// Value: `'M'` dec, `4D` hex.
+/// Value: `77` dec, `4D` hex.
 ///
 /// Sequence: `CSI < Cb ; Cx ; Cy M`.
 ///
 /// [`SGR`]: crate::SgrCode
 pub const MOUSE_SGR_PRESS: u8 = b'M';
+pub const MOUSE_SGR_PRESS_CHAR: char = ascii_byte_to_char(MOUSE_SGR_PRESS);
 
 /// [`SGR`] Mouse Release Action ([`SGR`]): `m` (lowercase) indicates button release.
 ///
-/// Value: `'m'` dec, `6D` hex.
+/// Value: `109` dec, `6D` hex.
 ///
 /// Sequence: `CSI < Cb ; Cx ; Cy m`.
 ///
@@ -131,15 +143,17 @@ pub const MOUSE_SGR_PRESS: u8 = b'M';
 /// [`SGR`]: crate::SgrCode
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_SGR_RELEASE: u8 = b'm';
+pub const MOUSE_SGR_RELEASE_CHAR: char = ascii_byte_to_char(MOUSE_SGR_RELEASE);
 
 /// [`X10`] Mouse Protocol Marker ([`X10`]): `M` identifies the [`X10`] format.
 ///
-/// Value: `'M'` dec, `4D` hex.
+/// Value: `77` dec, `4D` hex.
 ///
 /// Sequence: `CSI M Cb Cx Cy`.
 ///
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 pub const MOUSE_X10_MARKER: u8 = b'M';
+pub const MOUSE_X10_MARKER_CHAR: char = ascii_byte_to_char(MOUSE_X10_MARKER);
 
 // ==================== Button Codes and Bit Masks ====================
 

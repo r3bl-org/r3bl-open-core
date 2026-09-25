@@ -1,5 +1,3 @@
-<!-- cspell:words ofsbuf memmoves -->
-
 _Architecture Plan: Continuous 2D Buffer for Panning & Variable Line Widths_
 
 # 1. The Problem and Use Cases

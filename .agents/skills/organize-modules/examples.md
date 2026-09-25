@@ -787,7 +787,42 @@ fn example() {
 }
 
 mod inner_helper {
-    use crate::my_macro;  // Must import again - parent scope doesn't propagate
+    use crate::my_macro;  // Must import again: parent scope does not propagate.
     fn helper() { my_macro!(); }
 }
 ```
+
+---
+
+## Example 8: File and Module Naming Conventions
+
+**Scenario:** A parser module with submodules, an entry point function, a primary struct that avoids collision with its directory name, a public API facade, and auxiliary non-colliding types.
+
+### File Structure
+
+```text
+input_parser/
+├── mod.rs                       # Coordinator and barrel exports
+├── input_parser_entry_point.rs  # Standalone pure function entry point
+├── chunk_framer/
+│   ├── mod.rs                   # Coordinator
+│   ├── chunk_framer_struct.rs   # Primary struct (avoids collision with chunk_framer/)
+│   └── accumulator/
+│       ├── mod.rs               # Coordinator
+│       ├── accumulator_struct.rs # Primary struct (avoids collision with accumulator/)
+│       ├── constants.rs         # Non-colliding auxiliary file
+│       └── unparsed_buffer_action.rs # Non-colliding enum (keeps descriptive name)
+└── parser_engine/
+    ├── mod.rs
+    ├── engine_struct.rs         # Primary struct (avoids collision with parser_engine/)
+    ├── engine_public_api.rs     # User-facing public API methods
+    └── engine_internal_api.rs   # Internal implementation methods
+```
+
+### Key Takeaways
+
+1. **Inception collision avoidance**: `chunk_framer_struct.rs` inside `chunk_framer/`, `accumulator_struct.rs` inside `accumulator/`, and `engine_struct.rs` inside `parser_engine/`.
+2. **Non-colliding files keep natural names**: `unparsed_buffer_action.rs` is not named `accumulator.rs`, so it does not collide and does not take `_enum.rs` or `_struct.rs`.
+3. **Pure function entry points**: `input_parser_entry_point.rs` provides standalone parsing functions without primary data types.
+4. **Public API facade**: `engine_public_api.rs` provides public methods for the struct, keeping internal methods in `engine_internal_api.rs`.
+

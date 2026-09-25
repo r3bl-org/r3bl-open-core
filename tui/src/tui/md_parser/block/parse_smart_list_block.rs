@@ -1,16 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, MdLineFragment,
-            ParseList, SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces,
-            md_parser::md_parser_constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
-                                             NEWLINE_OR_NULL, NULL_CHAR,
-                                             ORDERED_LIST_PARTIAL_PREFIX, SPACE,
-                                             SPACE_CHAR, UNCHECKED,
-                                             UNORDERED_LIST_PREFIX},
+use crate::{BulletKind, CHECKED, CheckboxParsePolicy, InlineVec, LIST_PREFIX_BASE_WIDTH,
+            Lines, MdLineFragment, NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR,
+            ORDERED_LIST_PARTIAL_PREFIX, ParseList, SPACE, SPACE_CHAR, SmartListIRStr,
+            SmartListLine, SmartListLineStr, UNCHECKED, UNORDERED_LIST_PREFIX,
+            get_spaces,
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
-            parse_list,
-            parse_null_padded_line::is,
-            tiny_inline_string};
+            parse_list, parse_null_padded_line::is, tiny_inline_string};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{is_not, tag, take_while},
@@ -26,7 +22,7 @@ use smallvec::smallvec;
 ///
 /// This parser expects input where lines end with `\n` followed by zero or more `\0`
 /// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses
-/// `NEWLINE_OR_NULL` constant and handles null padding in list item content parsing.
+/// `NEWLINE_OR_NUL` constant and handles null padding in list item content parsing.
 ///
 /// # Errors
 ///
@@ -797,7 +793,7 @@ fn parse_multi_line_content<'a>(
     // continuation lines.
     let (remaining_input_after_first_line_no_ws, _discarded) = (
         tag(NEW_LINE),
-        /* zero or more */ take_while(is(NULL_CHAR)),
+        /* zero or more */ take_while(is(NUL_CHAR)),
     )
         .parse(remainder_after_crlf)?;
 
@@ -812,7 +808,7 @@ fn parse_multi_line_content<'a>(
                 tag(indent_padding),
                 // Match the rest of the line.
                 /* output */
-                alt((is_not(NEWLINE_OR_NULL), recognize(many1(anychar)))),
+                alt((is_not(NEWLINE_OR_NUL), recognize(many1(anychar)))),
             ),
             // SECOND STEP: Verify it to make sure no ul or ol list prefix.
             |it: &str| {
@@ -831,7 +827,7 @@ fn parse_multi_line_content<'a>(
                 verify_rest::list_contents_does_not_start_with_list_prefix(it)
             },
         ),
-        opt((tag(NEW_LINE), take_while(is(NULL_CHAR)))),
+        opt((tag(NEW_LINE), take_while(is(NUL_CHAR)))),
     ))
     .parse(remaining_input_after_first_line_no_ws)?;
 

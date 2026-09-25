@@ -29,19 +29,19 @@ use std::time::Duration;
 ///
 /// [`Continuation::Restart`]: crate::Continuation::Restart
 /// [`create_and_register_os_sources()`]: super::RRTWorker::create_and_register_os_sources
-/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
-/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
-/// [`fds`]: https://man7.org/linux/man-pages/man2/open.2.html
-/// [`ioctl`]: https://man7.org/linux/man-pages/man2/ioctl.2.html
+/// [`epoll`]: https://manpages.debian.org/epoll.7
+/// [`eventfd`]: https://manpages.debian.org/eventfd.2
+/// [`fd`]: https://manpages.debian.org/open.2
+/// [`fds`]: https://manpages.debian.org/open.2
+/// [`ioctl`]: https://manpages.debian.org/ioctl.2
 /// [`RRT`]: super::RRT
 /// [`RRTWorker`]: super::RRTWorker
-/// [`socket`]: https://man7.org/linux/man-pages/man7/socket.7.html
+/// [`socket`]: https://manpages.debian.org/socket.7
 /// [`systemd`]: https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
 /// [`TIME_WAIT`]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TIME-WAIT
 /// [exponential backoff]: https://en.wikipedia.org/wiki/Exponential_backoff
 /// [self-healing restart details]: super#self-healing-restart-details
-/// [signal]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [signal]: https://manpages.debian.org/signal.7
 #[derive(Debug, Clone)]
 pub struct RestartPolicy {
     /// Maximum restart attempts before giving up. `0` means never restart (policy
@@ -76,11 +76,11 @@ pub struct RestartPolicy {
 /// For other scenarios (network servers, serial/hardware) where recovery windows are
 /// longer, provide your own policy via [`RRTWorker::restart_policy()`].
 ///
-/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
-/// [`fd`]: https://man7.org/linux/man-pages/man2/open.2.html
+/// [`epoll`]: https://manpages.debian.org/epoll.7
+/// [`eventfd`]: https://manpages.debian.org/eventfd.2
+/// [`fd`]: https://manpages.debian.org/open.2
 /// [`RRTWorker::restart_policy()`]: super::RRTWorker::restart_policy
-/// [signal]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [signal]: https://manpages.debian.org/signal.7
 impl Default for RestartPolicy {
     fn default() -> Self {
         Self {

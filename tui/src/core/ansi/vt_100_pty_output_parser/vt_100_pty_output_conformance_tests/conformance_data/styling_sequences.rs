@@ -13,7 +13,7 @@
 //! - Text Attributes: [`VT-100` spec] Appendix C
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+//! [`reset`]: https://manpages.debian.org/reset.1
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -86,7 +86,7 @@ pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
 /// * `bg_color` - Optional background color
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+/// [`reset`]: https://manpages.debian.org/reset.1
 #[must_use]
 pub fn multi_style_text(
     text: &str,
@@ -155,7 +155,7 @@ pub fn rainbow_text(text: &str) -> String {
 /// clearing specific ones.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+/// [`reset`]: https://manpages.debian.org/reset.1
 /// [`SGR`]: crate::SgrCode
 #[must_use]
 pub fn partial_reset_test() -> String {
