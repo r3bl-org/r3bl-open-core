@@ -378,8 +378,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - If state is `OscScanState::Payload`: return
               `OscScanResult::IncompletePayload`.
 
-    - **Function 2: `pub fn try_disambiguate_osc_or_alt_bracket`**: Implements **Rule 1: The
-      [`MaybeMore`] Stream Availability Heuristic** and routes based on state machine
+    - **Function 2: `pub fn try_disambiguate_osc_or_alt_bracket`**: Implements **Rule 1:
+      The [`MaybeMore`] Stream Availability Heuristic** and routes based on state machine
       outcome:
 
         ```rust
@@ -521,7 +521,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 //! [Bidirectional Communication section in the parent module]: mod@super#bidirectional-communication-user-input-vs-terminal-responses
                 ```
             - Add comprehensive doc comments on `pub enum OscScanResult`,
-              `pub fn scan_osc_sequence`, and `pub fn try_disambiguate_osc_or_alt_bracket`:
+              `pub fn scan_osc_sequence`, and
+              `pub fn try_disambiguate_osc_or_alt_bracket`:
 
                 ```rust
                 /// Result of scanning an input buffer for an Operating System Command ([`OSC`]) sequence.
@@ -1220,8 +1221,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
         - Add `DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| { tracing::warn!(...); })` on
           `OscScanResult::Complete(consumed)`.
-        - Verify `try_disambiguate_osc_or_alt_bracket()` safely absorbs OSC 52 sequences with
-          BEL and ST terminators, as well as UTF-8 continuation byte `0x9C`.
+        - Verify `try_disambiguate_osc_or_alt_bracket()` safely absorbs OSC 52 sequences
+          with BEL and ST terminators, as well as UTF-8 continuation byte `0x9C`.
 
 - [x] **Phase 10.6: Verification**:
     - [x] Run `./check.fish --check`.
@@ -1243,9 +1244,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       it risks unbounded memory allocation (OOM) and permanent input lockup. The proper
       architectural solution is an explicit streaming drain mode: once the 1 MiB threshold
       is crossed, the parser reclaims the accumulated 1 MiB and trips
-      `OscCircuitBreaker::Open`, swallowing and discarding all incoming
-      bytes on-the-fly without heap reallocations until a terminator (`BEL` or `ST`) or
-      abort character is encountered.
+      `OscCircuitBreaker::Open`, swallowing and discarding all incoming bytes on-the-fly
+      without heap reallocations until a terminator (`BEL` or `ST`) or abort character is
+      encountered.
 
 - [x] **Phase 11.1: Define `OscCircuitBreaker` & Constants**:
     - In `tui/src/core/ansi/constants/input_sequences.rs`:
@@ -1254,7 +1255,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
           infinite drain loop if input stream corruption never terminates.
         - Re-export `MAX_OSC_DRAIN_BYTES` in `tui/src/lib.rs` and
           `tui/src/core/ansi/constants/mod.rs`.
-    - In `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`:
         - Define `pub enum OscCircuitBreaker`:
             ```rust
             #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1272,8 +1274,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 },
             }
             ```
-        - Add `osc_circuit_breaker: OscCircuitBreaker` field to `InputByteStreamToIrParser`
-          (initialized to `Default::default()`).
+        - Add `osc_circuit_breaker: OscCircuitBreaker` field to
+          `InputByteStreamToIrParser` (initialized to `Default::default()`).
 
 - [x] **Phase 11.2: Implement Streaming Drain in `StatefulInputParser::advance()`**:
     - Implement helper method `drain_osc_payload(&mut self, chunk: &[u8]) -> usize`:
@@ -1309,8 +1311,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - If drain is still active, returns immediately (0 allocations, 0 events
               emitted).
         - When `should_discard_unrecognized_sequence()` detects a runaway OSC:
-            - Sets
-              `self.osc_circuit_breaker.trip(self.accumulator.len())`.
+            - Sets `self.osc_circuit_breaker.trip(self.accumulator.len())`.
             - Clears `self.accumulator` (immediately reclaims the 1 MiB).
             - Emits structured `tracing::warn!` diagnostic gated by
               `DEBUG_TUI_SHOW_DIRECT_TO_ANSI`.
@@ -1366,13 +1367,90 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - Run `./check.fish --fmt`.
     - Run `./check.fish --quick-doc`.
 
-- [ ] **Phase 11.7: Mandatory Manual Review**:
+### [ ] Step 12: Byte Coordinate Type-Safety (`ByteOffset`) Across Circuit Breaker & Parser Subsystems
+
+- **Problem Analysis & Architectural Motivation**:
+    - **Asymmetric Types & Forced Dereferencing**: Currently, `from_consumption` accepts
+      `bytes_consumed: ByteOffset` alongside `chunk_len: usize`, forcing a dereference
+      `if *bytes_consumed == chunk_len` back to primitive `usize`. Similarly,
+      `OscCircuitBreaker::Open` tracks `drained_bytes` as raw `usize`.
+    - **End-to-End Type Safety**: Replacing raw `usize` with `ByteOffset` across
+      `OscCircuitBreaker`, `trip()`, `reset_and_log()`, and `resolve_partial_esc()`
+      ensures direct strongly-typed comparison (`if bytes_consumed == chunk_len`) and
+      prevents coordinate confusion.
+    - **Harmonizing Sibling Parsers**: Extending this pattern to scanner helpers in
+      `keyboard.rs` (`extract_csi_params`), `terminal_events.rs`
+      (`parse_csi_terminal_parameters`, `check_st_terminator`), and `utf8.rs`
+      (`is_utf8_complete`) ensures that parsed sequence lengths are strongly typed at the
+      point of recognition.
+
+- [ ] **Phase 12.1: Full `ByteOffset` Integration in `OscCircuitBreaker`**:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`:
+        - Refactor `OscDrainResult::from_consumption`:
+            - Change `chunk_len: usize` to `chunk_len: ByteOffset`.
+            - Perform strongly-typed equality check `if bytes_consumed == chunk_len`
+              without dereferencing `*bytes_consumed`.
+        - Refactor `OscCircuitBreaker::Open`:
+            - Change `drained_bytes: usize` to `drained_bytes: ByteOffset`.
+        - Refactor `OscCircuitBreaker::trip`:
+            - Change `initial_bytes: usize` to `initial_bytes: ByteOffset`.
+        - Refactor `OscCircuitBreaker::reset_and_log`:
+            - Change `chunk_len: usize` to `chunk_len: ByteOffset`.
+            - Change `total_drained_bytes: usize` to `total_drained_bytes: ByteOffset`.
+            - Update structured tracing to log `%total_drained_bytes`.
+        - Refactor `OscCircuitBreaker::resolve_partial_esc`:
+            - Change `drained_bytes: usize` to `drained_bytes: ByteOffset`.
+            - Pass `byte_offset(0)` instead of raw literal `0` for empty chunk
+              consumption.
+        - Refactor `OscCircuitBreaker::drain_chunk`:
+            - Pass `byte_offset(chunk.len())` for chunk boundary / capacity.
+            - Accumulate drained bytes via `ByteOffset` addition (`+ byte_offset(1)`,
+              `+ byte_offset(ANSI_ST_7BIT_LEN)`).
+            - Evaluate safety ceiling via
+              `drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES)`.
+        - Update unit tests in `osc_circuit_breaker.rs` to pass `ByteOffset` values.
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`:
+        - Update call site in `InputByteStreamToIrParser::advance` to pass
+          `byte_offset(self.accumulator.len())` to `trip()`.
+
+- [ ] **Phase 12.2: Lexical Scanner and Helper Type Safety in Sibling Parsers**:
+    - In `tui/src/core/coordinates/byte/byte_offset.rs`:
+        - Add `const fn` constructor to `ByteOffset`:
+            - Add `pub const fn from_usize(val: usize) -> Self { ByteOffset(val) }` to
+              enable compile-time typed coordinates.
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
+        - Refactor `csi_scanner::extract_csi_params`:
+            - Change return type from `Option<(Vec<u16>, u8, usize)>` to
+              `Option<(Vec<u16>, u8, ByteOffset)>`.
+            - Update `parse_csi_parameters` to compute
+              `total_consumed = byte_offset(CSI_PREFIX_LEN) + bytes_scanned`.
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
+        - Refactor `parse_csi_terminal_parameters`:
+            - Type `bytes_scanned` and `total_consumed` using `ByteOffset`.
+        - Refactor `check_st_terminator`:
+            - Change `byte_index: usize` to `byte_index: ByteIndex` or `ByteOffset`.
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`:
+        - Refactor `is_utf8_complete` and `get_utf8_length`:
+            - Change return types from `Option<usize>` to `Option<ByteOffset>`.
+            - Eliminate raw `usize` conversions at the `parse_utf8_text` boundary.
+
+- [ ] **Phase 12.3: Verification**:
+    - Run `./check.fish --check`.
+    - Run `./check.fish --clippy`.
+    - Run `./check.fish --test`.
+    - Run `./check.fish --fmt`.
+    - Run `./check.fish --quick-doc`.
+
+- [ ] **Phase 12.4: Mandatory Manual Review**:
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`
     - [x] `tui/src/core/ansi/constants/input_sequences.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/maybe_more.rs`
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/clipboard_service_impl.rs`
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/clipboard_service.rs`
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/mod.rs`
+    - [ ] `tui/src/core/coordinates/byte/byte_offset.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
@@ -1397,7 +1475,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [ ] `tui/src/readline_async/choose_impl/select_component.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api_impl.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/constants.rs`
+    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_constants.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/mod.rs`
     - [ ] `tui/src/core/terminal_io/mod.rs`
     - [ ] `tui/src/core/mod.rs`
