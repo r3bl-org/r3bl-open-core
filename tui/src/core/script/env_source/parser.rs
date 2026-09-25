@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::EnvMap;
-use crate::NULL_CHAR;
+use crate::NUL_CHAR;
 
 /// Parses a null-delimited (`\0`) byte sequence of environment variables (such as output
 /// from [`env -0`]) into an [`EnvMap`].
@@ -38,14 +38,14 @@ use crate::NULL_CHAR;
 ///             └─────────┴───────────────────┘
 /// ```
 ///
-/// [`env -0`]: https://www.gnu.org/software/coreutils/manual/html_node/env.html
+/// [`env -0`]: https://en.wikipedia.org/wiki/Env
 /// [`EnvMap`]: crate::EnvMap
 #[must_use]
 pub fn parse_env_unix(bytes: &[u8]) -> EnvMap {
     let mut map = EnvMap::default();
     let text = String::from_utf8_lossy(bytes);
 
-    for record in text.split(NULL_CHAR) {
+    for record in text.split(NUL_CHAR) {
         if record.is_empty() {
             continue;
         }

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words unshifted
-
 use super::ProcessManager;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, Flat2DArray,
             FlushKind, GCStringOwned, LengthOps, NarrowingCastToU16, OfsBuf,

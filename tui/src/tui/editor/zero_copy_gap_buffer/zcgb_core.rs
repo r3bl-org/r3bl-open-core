@@ -9,8 +9,8 @@
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CHeight, CLength, CRow,
             CursorBoundsCheck, CursorPositionBoundsStatus, DocSeg, GetMemSize,
-            LINE_FEED_BYTE, NULL_BYTE, RangeExt, byte_index, byte_len, byte_offset,
-            c_len, c_row, c_width};
+            LINE_FEED_BYTE, NUL, RangeExt, byte_index, byte_len, byte_offset, c_len,
+            c_row, c_width};
 use std::{fmt::Display, mem::size_of};
 
 /// Zero-copy gap buffer data structure for storing editor content.
@@ -162,7 +162,7 @@ impl ZeroCopyGapBuffer {
 
         let shift_amount = INITIAL_LINE_SIZE;
         let old_buffer_len = self.buffer.len();
-        self.buffer.resize(old_buffer_len + shift_amount, NULL_BYTE);
+        self.buffer.resize(old_buffer_len + shift_amount, NUL);
 
         let shift_start = insert_offset.as_usize();
         if shift_start < old_buffer_len {
@@ -170,7 +170,7 @@ impl ZeroCopyGapBuffer {
                 .copy_within(shift_start..old_buffer_len, shift_start + shift_amount);
         }
 
-        self.buffer[shift_start..shift_start + shift_amount].fill(NULL_BYTE);
+        self.buffer[shift_start..shift_start + shift_amount].fill(NUL);
 
         self.buffer[shift_start] = LINE_FEED_BYTE;
 
@@ -214,7 +214,7 @@ impl ZeroCopyGapBuffer {
         };
 
         self.buffer
-            .resize(self.buffer.len() + INITIAL_LINE_SIZE, NULL_BYTE);
+            .resize(self.buffer.len() + INITIAL_LINE_SIZE, NUL);
 
         self.buffer[*buffer_pos] = LINE_FEED_BYTE;
 
@@ -333,8 +333,7 @@ impl ZeroCopyGapBuffer {
         let insert_pos = line_start + old_capacity;
 
         // Extend buffer to accommodate new capacity.
-        self.buffer
-            .resize(self.buffer.len() + shift_amount, NULL_BYTE);
+        self.buffer.resize(self.buffer.len() + shift_amount, NUL);
 
         // Shift all subsequent content to the right.
         for i in (insert_pos..self.buffer.len() - shift_amount).rev() {
@@ -342,7 +341,7 @@ impl ZeroCopyGapBuffer {
         }
 
         // Fill the newly allocated space with nulls.
-        self.buffer[insert_pos..insert_pos + shift_amount].fill(NULL_BYTE);
+        self.buffer[insert_pos..insert_pos + shift_amount].fill(NUL);
 
         // Update line capacity.
         self.lines[line_index.as_usize()].capacity = byte_len(new_capacity);
@@ -515,7 +514,7 @@ mod tests {
         {
             let i = buffer_start + 1 + idx;
             assert_eq!(
-                byte, NULL_BYTE,
+                byte, NUL,
                 "Buffer position {i} should be null-padded but found: {byte:?}"
             );
         }
@@ -543,7 +542,7 @@ mod tests {
         {
             let i = buffer_start + 1 + idx;
             assert_eq!(
-                byte, NULL_BYTE,
+                byte, NUL,
                 "Extended buffer position {i} should be null-padded but found: {byte:?}"
             );
         }

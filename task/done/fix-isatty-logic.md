@@ -1,5 +1,3 @@
-<!-- cspell:words SSOT -->
-
 # Task: Fix isatty detection logic
 
 ## Overview

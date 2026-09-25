@@ -123,17 +123,15 @@ pub enum RequestedScreenMode {
 pub mod terminal_mode_state_todo {
     /// Bracketed paste mode state.
     ///
-    /// Controls whether text pasted from clipboard is wrapped with special escape
-    /// sequences (`OSC 52`), allowing applications to distinguish pasted text from
-    /// keyboard input.
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// Controls whether text pasted into the terminal is bracketed by special escape
+    /// sequences (`CSI 200 ~` and `CSI 201 ~`), allowing applications to distinguish
+    /// pasted text from keyboard input.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[allow(dead_code)]
     pub enum BracketedPasteMode {
-        /// Bracketed paste mode enabled
+        /// Bracketed paste mode enabled.
         Enabled,
-        /// Bracketed paste mode disabled
+        /// Bracketed paste mode disabled.
         #[default]
         Disabled,
     }

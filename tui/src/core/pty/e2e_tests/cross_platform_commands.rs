@@ -86,5 +86,3 @@ pub fn printf(osc_sequence: &str) -> PtySessionBuilder {
         ])
     }
 }
-
-// cspell:words findstr

@@ -110,3 +110,41 @@ fn test_diff_identifies_added_modified_and_removed_variables() {
     assert_eq!(diff.removed, vec!["REMOVED".to_string()]);
 }
 ```
+
+---
+
+## Example 3: Filtering Raw `cargo-llvm-cov` Output Through the AST Model
+
+Suppose you run a surgical coverage check on a parser module:
+
+```bash
+cargo llvm-cov test -p r3bl_tui --test test_input_parser --show-missing-lines
+```
+
+`cargo-llvm-cov` reports the following unexecuted lines in `input_parser.rs`:
+
+```text
+input_parser.rs: 14, 15, 42-45, 118, 204
+```
+
+### Filtering the Findings
+
+| Line Range | Code at Line | AST Classification | Action | Rationale |
+| :--- | :--- | :--- | :--- | :--- |
+| `14-15` | `#[derive(Debug, Clone, PartialEq)]` | Upstream / Derive | **DISCARD** | Testing compiler derive boilerplate violates Zero Test Bloat |
+| `42-45` | `#[derive(Display, EnumString)]` | Upstream / Derive | **DISCARD** | Testing `strum` macro generation is third-party test bloat |
+| `118` | `Err(ParseError::InvalidUtf8)` | **OUR Custom Logic** | **ACTIONABLE GAP** | Custom error path was never exercised at runtime |
+| `204` | `unreachable!("caller verified input")` | Defensive assertion | **DISCARD** | Guard branch is mathematically unreachable by design |
+
+### Resolution
+
+* **Do NOT** write tests for lines `14-15`, `42-45`, or `204`.
+* **DO** write a single targeted test passing an invalid UTF-8 byte sequence to exercise line `118`:
+  ```rust
+  #[test]
+  fn test_parse_invalid_utf8_returns_error() {
+      let bad_input = &[0xFF, 0xFE];
+      assert!(matches!(parse_input(bad_input), Err(ParseError::InvalidUtf8)));
+  }
+  ```
+```

@@ -1,14 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR SIGWINCH epoll kqueue threadwaker rrtwaker rrtsoftwareinterrupt
-// cspell:words IORING
-
 //! Core traits for adding your business logic, using [dependency injection], into the
 //! reusable Resilient Reactor Thread ([`RRT`]) [framework]. See the following for more
 //! details: [`RRTWorker`], [`RRTSoftwareInterrupt`].
 //!
 //! [`RRT`]: super::RRT
-//! [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+//! [`syscalls`]: https://manpages.debian.org/syscalls.2
 //! [dependency injection]: https://en.wikipedia.org/wiki/Dependency_injection
 //! [framework]: super#the-rrt-contract-and-benefits
 
@@ -100,7 +97,7 @@ use tokio::sync::broadcast::Sender;
 ///
 /// [`'static`]: super::RRT#static-trait-bound-vs-static-lifetime-annotation
 /// [`Arc`]: std::sync::Arc
-/// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+/// [`epoll`]: https://manpages.debian.org/epoll.7
 /// [`InterruptHandle`]: super::InterruptHandle
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`lock()`]: super::ThreadLifecycleMonitor::lock
@@ -153,16 +150,16 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
     /// [`accept()`]: std::net::TcpListener::accept
     /// [`block_until_ready_then_dispatch()`]: RRTWorker::block_until_ready_then_dispatch
     /// [`create_and_register_os_sources()`]: RRTWorker::create_and_register_os_sources
-    /// [`eventfd`]: https://man7.org/linux/man-pages/man2/eventfd.2.html
+    /// [`eventfd`]: https://manpages.debian.org/eventfd.2
     /// [`Interrupt`]: Self
-    /// [`io_uring`]: https://man7.org/linux/man-pages/man7/io_uring.7.html
+    /// [`io_uring`]: https://manpages.debian.org/io_uring.7
     /// [`IORING_OP_MSG_RING`]:
-    ///     https://man7.org/linux/man-pages/man3/io_uring_prep_msg_ring.3.html
+    ///     https://manpages.debian.org/io_uring_prep_msg_ring.3
     /// [`Poll::poll()`]: mio::Poll::poll
     /// [`Poll`]: mio::Poll
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`SubscriberGuard`]: super::SubscriberGuard
-    /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`syscall`]: https://manpages.debian.org/syscalls.2
     /// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
     ///     super::ThreadLifecycleMonitor::interrupt_if_running
     /// [`Waker`]: mio::Waker
@@ -235,9 +232,9 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
 /// [`Output`]: Self::Output
 /// [`restart_policy()`]: Self::restart_policy
 /// [`RRT`]: super::RRT
-/// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`signals`]: https://manpages.debian.org/signal.7
 /// [`stdin`]: std::io::stdin
-/// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+/// [`syscalls`]: https://manpages.debian.org/syscalls.2
 /// [`try_subscribe()`]: super::RRT::try_subscribe
 /// [default policy]: RestartPolicy#impl-Default-for-RestartPolicy
 /// [DI overview]: super#separation-of-concerns-and-dependency-injection-di
@@ -355,7 +352,7 @@ pub trait RRTWorker: Send + Debug + 'static {
     /// [`Running`]: super::ThreadState::Running
     /// [`Self::Interrupt`]: Self::Interrupt
     /// [`SoftwareInterrupt`]: crate::mio_poller::MioSoftwareInterrupt
-    /// [`syscalls`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`syscalls`]: https://manpages.debian.org/syscalls.2
     /// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
     /// [`ThreadState`]: super::ThreadState
     /// [`try_subscribe()`]: super::RRT::try_subscribe

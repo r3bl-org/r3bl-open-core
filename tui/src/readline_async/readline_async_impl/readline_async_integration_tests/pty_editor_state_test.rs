@@ -1,7 +1,5 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words ONLCR
-
 //! [`PTY`]-based integration tests for [`Readline`] editor state.
 //!
 //! This test verifies that the internal state of the [`Readline`] editor (buffer content,
@@ -26,7 +24,7 @@
 //! ```
 //!
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
-//! [`ONLCR`]: https://man7.org/linux/man-pages/man4/tty_ioctl.4.html
+//! [`ONLCR`]: https://manpages.debian.org/tty_ioctl.4
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`Readline`]: crate::Readline
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS

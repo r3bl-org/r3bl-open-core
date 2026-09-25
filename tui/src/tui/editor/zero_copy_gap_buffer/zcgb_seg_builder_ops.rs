@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words Hllo
-
 //! Segment construction operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides centralized segment rebuilding functionality that maintains
@@ -267,7 +265,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{NULL_BYTE, c_col, c_index, c_row, c_width};
+    use crate::{NUL, c_col, c_index, c_row, c_width};
 
     #[test]
     fn test_rebuild_line_segments_empty_line() -> Result<()> {
@@ -360,7 +358,7 @@ mod tests {
             .enumerate()
         {
             let i = buffer_start + 5 + idx;
-            assert_eq!(byte, NULL_BYTE, "Expected null padding at position {i}");
+            assert_eq!(byte, NUL, "Expected null padding at position {i}");
         }
 
         // Rebuild segments - should only process "Test", not null padding.

@@ -5,7 +5,6 @@
     clippy::cast_sign_loss,
     clippy::as_conversions
 )]
-// cspell:words drwxr
 
 //! Real-world scenario tests using conformance data sequences.
 //!
@@ -17,7 +16,7 @@ use super::super::{conformance_data::{basic_sequences, cursor_sequences,
                                       emacs_sequences, styling_sequences,
                                       tmux_sequences, vim_sequences},
                    test_fixtures_vt_100_ansi_conformance::nz};
-use crate::{ANSIBasicColor, CsiCount, OfsBufVT100, PixelChar, TermCol,
+use crate::{ANSIBasicColor, CsiCount, NUL_CHAR, OfsBufVT100, PixelChar, TermCol,
             ofs_buf::test_fixtures_ofs_buf::*, tui_style_attrib, vp_col, vp_height,
             vp_row, vp_width};
 use std::cmp::min;
@@ -789,8 +788,8 @@ fn test_practical_vim_editing_patterns() {
     };
     // Note: The vim sequence functions may not place content exactly as expected
     // Just verify that vim operations were applied without exact character assertions
-    assert_ne!(first_char, '\0'); // Some character was placed
-    assert_ne!(third_line_char, '\0'); // Some character was placed
+    assert_ne!(first_char, NUL_CHAR); // Some character was placed
+    assert_ne!(third_line_char, NUL_CHAR); // Some character was placed
 
     // Verify file content (may have styling from vim functions, so just check characters
     // exist)

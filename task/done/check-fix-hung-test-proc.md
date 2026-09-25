@@ -1,5 +1,3 @@
-<!-- cspell:words ETXTBSY  -->
-
 # Fix Hung PTY Test Processes and Orphan Cleanup
 
 ## Context

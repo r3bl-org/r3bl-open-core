@@ -2,8 +2,6 @@
 
 // rustdoc-fmt: skip
 
-// cspell:words Blockquotes
-
 //! Orchestrate rustdoc formatting for files.
 //!
 //! Files containing `// rustdoc-fmt: skip` are skipped entirely. Place this comment

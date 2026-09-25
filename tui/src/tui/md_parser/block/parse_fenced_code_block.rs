@@ -1,8 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CodeBlockLine, CodeBlockLineContent, CodeBlockLines,
-            md_parser::md_parser_constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL,
-                                             NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR},
+use crate::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, CodeBlockLine,
+            CodeBlockLineContent, CodeBlockLines, NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR,
             parse_null_padded_line::{is, trim_optional_leading_newline_and_nulls}};
 use nom::{IResult, Parser,
           branch::alt,
@@ -16,7 +15,7 @@ use nom::{IResult, Parser,
 /// # Null Padding Invariant
 ///
 /// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses `NEWLINE_OR_NULL` constant to
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses `NEWLINE_OR_NUL` constant to
 /// handle both `\n` and `\0` as line terminators.
 ///
 /// # Sample inputs:
@@ -61,9 +60,9 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
                 /* prefix - discarded */ tag(CODE_BLOCK_START_PARTIAL),
                 /* output */
                 terminated(
-                    /* match */ is_not(NEWLINE_OR_NULL),
+                    /* match */ is_not(NEWLINE_OR_NUL),
                     /* ends with (discarded) */
-                    (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR))),
+                    (tag(NEW_LINE), /* zero or more */ take_while(is(NUL_CHAR))),
                 ),
             ),
             Some,
@@ -73,7 +72,7 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
             (
                 tag(CODE_BLOCK_START_PARTIAL),
                 tag(NEW_LINE),
-                /* zero or more */ take_while(is(NULL_CHAR))
+                /* zero or more */ take_while(is(NUL_CHAR))
             ),
             |_| None,
         ),
@@ -113,13 +112,13 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
         // This handles the most common case where a line has text content.
         terminated(
             // First part: capture all characters that are NOT newline or null
-            // is_not(NEWLINE_OR_NULL) matches any sequence of chars except '\n' and '\0'
-            map(is_not(NEWLINE_OR_NULL), |s: &str| s),
+            // is_not(NEWLINE_OR_NUL) matches any sequence of chars except '\n' and '\0'
+            map(is_not(NEWLINE_OR_NUL), |s: &str| s),
             // Second part: consume (but don't capture) the line ending
             // This handles both the newline character and any null padding that follows.
             (
                 tag(NEW_LINE),
-                /* zero or more */ take_while(is(NULL_CHAR)),
+                /* zero or more */ take_while(is(NUL_CHAR)),
             ),
         ),
         // CASE 2: Empty line (just a newline character, possibly with null padding)
@@ -129,7 +128,7 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
             // Match a newline followed by any number of null chars.
             (
                 tag(NEW_LINE),
-                /* zero or more */ take_while(is(NULL_CHAR)),
+                /* zero or more */ take_while(is(NUL_CHAR)),
             ),
             // Transform the matched pattern into an empty string.
             |_| "",
@@ -139,7 +138,7 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
         // This handles the edge case where the file doesn't end with a newline.
         terminated(
             // Match any characters except newline/null
-            is_not(NEWLINE_OR_NULL),
+            is_not(NEWLINE_OR_NUL),
             // But only if we're at the end of the input.
             eof,
         ),

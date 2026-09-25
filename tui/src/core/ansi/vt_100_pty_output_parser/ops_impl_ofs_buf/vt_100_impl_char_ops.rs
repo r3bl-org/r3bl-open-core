@@ -1,7 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words BCDEF
-
 //! Character operations for [`VT-100`]/[`ANSI`] terminal emulation.
 //!
 //! This module implements character-level operations that correspond to [`ANSI`] escape

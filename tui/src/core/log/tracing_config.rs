@@ -46,58 +46,6 @@ impl PartialEq for DisplayPreference {
     }
 }
 
-#[cfg(test)]
-mod tests_partial_eq_display_preference {
-    use super::*;
-
-    fn make_shared_writer() -> SharedWriter {
-        let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
-        SharedWriter::new(line_sender)
-    }
-
-    #[test]
-    fn test_display_preference_partial_eq_stdout() {
-        assert_eq!(DisplayPreference::Stdout, DisplayPreference::Stdout);
-        assert_ne!(DisplayPreference::Stdout, DisplayPreference::Stderr);
-        assert_ne!(
-            DisplayPreference::Stdout,
-            DisplayPreference::SharedWriter(make_shared_writer())
-        );
-    }
-
-    #[test]
-    fn test_display_preference_partial_eq_stderr() {
-        assert_eq!(DisplayPreference::Stderr, DisplayPreference::Stderr);
-        assert_ne!(DisplayPreference::Stderr, DisplayPreference::Stdout);
-        assert_ne!(
-            DisplayPreference::Stderr,
-            DisplayPreference::SharedWriter(make_shared_writer())
-        );
-    }
-
-    #[test]
-    fn test_display_preference_partial_eq_shared_writer() {
-        let writer_1 = make_shared_writer();
-        let writer_2 = make_shared_writer();
-        assert_eq!(
-            DisplayPreference::SharedWriter(writer_1.clone()),
-            DisplayPreference::SharedWriter(writer_1.clone())
-        );
-        assert_ne!(
-            DisplayPreference::SharedWriter(writer_1.clone()),
-            DisplayPreference::SharedWriter(writer_2.clone())
-        );
-        assert_ne!(
-            DisplayPreference::SharedWriter(writer_1.clone()),
-            DisplayPreference::Stdout
-        );
-        assert_ne!(
-            DisplayPreference::SharedWriter(writer_1.clone()),
-            DisplayPreference::Stderr
-        );
-    }
-}
-
 impl Debug for DisplayPreference {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -210,4 +158,56 @@ impl TracingConfig {
 
     #[must_use]
     pub fn get_level_filter(&self) -> LevelFilter { self.level_filter }
+}
+
+#[cfg(test)]
+mod tests_partial_eq_display_preference {
+    use super::*;
+
+    fn make_shared_writer() -> SharedWriter {
+        let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
+        SharedWriter::new(line_sender)
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_stdout() {
+        assert_eq!(DisplayPreference::Stdout, DisplayPreference::Stdout);
+        assert_ne!(DisplayPreference::Stdout, DisplayPreference::Stderr);
+        assert_ne!(
+            DisplayPreference::Stdout,
+            DisplayPreference::SharedWriter(make_shared_writer())
+        );
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_stderr() {
+        assert_eq!(DisplayPreference::Stderr, DisplayPreference::Stderr);
+        assert_ne!(DisplayPreference::Stderr, DisplayPreference::Stdout);
+        assert_ne!(
+            DisplayPreference::Stderr,
+            DisplayPreference::SharedWriter(make_shared_writer())
+        );
+    }
+
+    #[test]
+    fn test_display_preference_partial_eq_shared_writer() {
+        let writer_1 = make_shared_writer();
+        let writer_2 = make_shared_writer();
+        assert_eq!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::SharedWriter(writer_1.clone())
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::SharedWriter(writer_2.clone())
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::Stdout
+        );
+        assert_ne!(
+            DisplayPreference::SharedWriter(writer_1.clone()),
+            DisplayPreference::Stderr
+        );
+    }
 }

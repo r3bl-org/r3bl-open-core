@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words isatty ECHONL VMIN VTIME iflag cflag oflag icflag lflag Errno
-
 //! Unix/Linux/macOS implementation of raw mode using [`rustix`]'s safe [`termios`] API.
 //!
 //! For background on raw mode vs cooked mode, [`TTY`] history, line disciplines, and
@@ -38,12 +36,12 @@
 //! - [Parent module documentation] for conceptual overview
 //! - [`enable_raw_mode()`] and [`disable_raw_mode()`] for the public API
 //!
-//! [`c_cc`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`c_cflag`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`c_iflag`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`c_lflag`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`c_oflag`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`cfmakeraw()`]: https://man7.org/linux/man-pages/man3/cfmakeraw.3.html
+//! [`c_cc`]: https://manpages.debian.org/termios.3
+//! [`c_cflag`]: https://manpages.debian.org/termios.3
+//! [`c_iflag`]: https://manpages.debian.org/termios.3
+//! [`c_lflag`]: https://manpages.debian.org/termios.3
+//! [`c_oflag`]: https://manpages.debian.org/termios.3
+//! [`cfmakeraw()`]: https://manpages.debian.org/cfmakeraw.3
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`enable_raw_mode()`]: crate::enable_raw_mode
 //! [`rustix`]: https://docs.rs/rustix
@@ -53,12 +51,12 @@
 //! [`termios`]: rustix::termios
 //! [`Termios`]: rustix::termios::Termios
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-//! [`VMIN`]: https://man7.org/linux/man-pages/man3/termios.3.html
-//! [`VTIME`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`VMIN`]: https://manpages.debian.org/termios.3
+//! [`VTIME`]: https://manpages.debian.org/termios.3
 //! [Parent module documentation]: mod@crate::terminal_raw_mode
 //! [parent module's raw vs cooked section]:
 //!     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [termios]: https://manpages.debian.org/termios.3
 
 use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, ScopedMutex, TtyStatus,
             is_tty_stdin, ok, scoped_mutex};
@@ -154,24 +152,24 @@ pub static SAVED_TERMIOS: LazyLock<
 /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
 /// crate root documentation for details.
 ///
-/// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
-/// [`cfmakeraw`]: https://man7.org/linux/man-pages/man3/cfmakeraw.3.html
+/// [`/dev/tty`]: https://manpages.debian.org/tty.4
+/// [`cfmakeraw`]: https://manpages.debian.org/cfmakeraw.3
 /// [`crossterm-0.28/src/terminal/sys/unix.rs:124`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.28/src/terminal/sys/unix.rs#L124
 /// [`crossterm`]: https://docs.rs/crossterm
-/// [`ECHO`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`ECHONL`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`ICANON`]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [`ECHO`]: https://manpages.debian.org/termios.3
+/// [`ECHONL`]: https://manpages.debian.org/termios.3
+/// [`ICANON`]: https://manpages.debian.org/termios.3
 /// [`into_inner()`]: std::sync::PoisonError::into_inner
-/// [`ISIG`]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [`ISIG`]: https://manpages.debian.org/termios.3
 /// [`make_raw()`]: rustix::termios::Termios::make_raw
 /// [`rustix`]: https://docs.rs/rustix
 /// [`stdin`]: std::io::stdin
 /// [`termios`]: rustix::termios
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-/// [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`VMIN`]: https://man7.org/linux/man-pages/man3/termios.3.html
-/// [`VTIME`]: https://man7.org/linux/man-pages/man3/termios.3.html
+/// [`VEOF`]: https://manpages.debian.org/termios.3
+/// [`VMIN`]: https://manpages.debian.org/termios.3
+/// [`VTIME`]: https://manpages.debian.org/termios.3
 /// [module documentation]: mod@crate::terminal_raw_mode
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
@@ -222,7 +220,7 @@ pub fn enable_raw_mode() -> Result<(), RawModeError> {
 /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
 /// crate root documentation for details.
 ///
-/// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+/// [`/dev/tty`]: https://manpages.debian.org/tty.4
 /// [`enable_raw_mode()`]: crate::enable_raw_mode
 /// [`miette`]: mod@miette
 /// [`stdin`]: std::io::stdin
@@ -255,14 +253,14 @@ mod terminal_fd {
     /// usage) and where stdin is redirected (e.g., piped input), requiring us to use
     /// [`/dev/tty`].
     ///
-    /// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+    /// [`/dev/tty`]: https://manpages.debian.org/tty.4
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
     pub enum TerminalFd {
         /// Using standard input (when it's a terminal)
         Stdin(io::Stdin),
         /// Using [`/dev/tty`] (when stdin is redirected)
         ///
-        /// [`/dev/tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
+        /// [`/dev/tty`]: https://manpages.debian.org/tty.4
         DevTty(File),
     }
 

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words tcgetwinsize
-
 //! [`PTY`] integration test for [`SIGWINCH`] signal handling.
 //!
 //! This test validates that [`DirectToAnsiInputDevice`] correctly receives and handles
@@ -60,7 +58,7 @@
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`pty_terminal_events_test`]: super::pty_terminal_events_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`SIGWINCH`]: https://manpages.debian.org/signal.7
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
             GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
@@ -80,7 +78,7 @@ generate_pty_test! {
 /// [`SIGWINCH`].
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`SIGWINCH`]: https://manpages.debian.org/signal.7
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         mut pty_pair,
@@ -136,7 +134,7 @@ fn controller(context: PtyTestContext) {
 /// performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
+/// [`SIGWINCH`]: https://manpages.debian.org/signal.7
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{MSG_CONTROLLED_STARTING}");

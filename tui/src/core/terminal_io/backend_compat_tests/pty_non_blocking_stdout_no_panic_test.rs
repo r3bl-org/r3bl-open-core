@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words fcntl getfl setfl EAGAIN NONBLOCK POLLOUT EINTR
-
 //! [`PTY`] integration test for [`BackpressureStdout`] /
 //! [`OutputDevice::new_stdout()`] ensuring that setting [`O_NONBLOCK`] on [`stdin`] does
 //! not cause [`stdout`] writes to panic the application under heavy load.
@@ -31,7 +29,7 @@
 //! [`BackpressureStdout`]: BackpressureStdout
 //! [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 //! [`OutputDevice::new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
-//! [`POLLOUT`]: https://man7.org/linux/man-pages/man2/poll.2.html
+//! [`POLLOUT`]: https://manpages.debian.org/poll.2
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout

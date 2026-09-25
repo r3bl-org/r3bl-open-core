@@ -26,6 +26,10 @@ Code should be easy to understand without loading too much into working memory.
 - Limit the number of concepts a reader must hold simultaneously
 - **Clean Imports**: Use `use` statements at the top of files rather than inline absolute paths (e.g. `crate::Type`) to reduce visual noise and cognitive clutter in function bodies.
 - **No Magic Numbers/Strings**: Extract domain-specific numbers and strings (like ANSI mode integers or escape sequences) into named constants (e.g., in `tui/src/core/ansi/constants/`). Do not use magic numbers directly in business logic or pattern matches, as this requires readers to memorize their meaning.
+- **Single Source of Truth for Constants**: Never duplicate raw literals across byte, string, and length constants. Follow the Constant Derivation Hierarchy:
+  - **Atomic Primitives (Single byte/char)**: `u8` is the SSOT (`u8` to `char` via `ascii_byte_to_char` to `&str` via `ascii_byte_to_str`).
+  - **Composed Sequences (Multi-byte strings)**: `&str` is the SSOT (`&str` via compile-time concatenation/macro to `&[u8]` via `.as_bytes()` to `usize` via `.len()`).
+  See [Constant Design Patterns in `patterns.md`](patterns.md#constant-design-patterns).
 - **Technical Precision**: Use standard, precise terminology (e.g., Parameter vs. Argument) to ensure the reader's mental model matches the implementation exactly. See the [Terminology Precision] guide.
 
 [Terminology Precision]: ../write-documentation/terminology-precision.md
@@ -40,6 +44,10 @@ Reveal complexity only when needed.
 - Advanced features should be discoverable but not in-your-face
 - Documentation follows inverted pyramid: high-level first, details later
 - Module structure should guide users from simple to advanced
+- **Type-Centric Co-location (Associated Functions over Floating Functions)**: Prefer associated functions and methods on domain types over free-floating helper functions.
+  - **Co-locate with Return Type**: When a function's primary job is constructing, parsing, or classifying a domain type `T` (e.g. `classify_csi_buffer -> CsiBufferKind`), make it an associated function on `T` (`CsiBufferKind::classify`).
+  - **Co-locate with Subject Type**: When a function interprets, translates, or queries `T` (e.g. `parse_ss3_command(byte) -> Option<VT100KeyCodeIR>`), make it an associated method or function on `T` (`Ss3BufferKind::decode(self)` / `Ss3BufferKind::parse_command(byte)`).
+  - **Keep Floating When Appropriate**: Reserve floating functions for high-level pipeline entry points / coordinators (e.g. `parse_keyboard_sequence` returning generic IR), multi-type algorithms, or functions returning external/standard library types (`u32`, `String`).
 
 ### 3. Make Illegal States Unrepresentable
 

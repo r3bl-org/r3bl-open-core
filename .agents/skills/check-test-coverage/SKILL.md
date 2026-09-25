@@ -139,6 +139,64 @@ Provide a concise, high-signal report:
 
 ---
 
+## Empirical Verification via `cargo-llvm-cov` (Semantic Filter + LLVM Runtime Truth)
+
+While the 5-step inside-out audit maps what we *intended* to test based on code structure, runtime execution can occasionally diverge due to early returns, short-circuiting operators, or mock state. When deep assurance is needed on complex algorithms, state machines, or parsers, use `cargo-llvm-cov` as an empirical verification tool.
+
+### Never Use as a Blanket Metric
+
+- **Do NOT** enforce blanket whole-project line-coverage percentages (e.g., `80%` or `90%`). That creates Goodhart's Law perverse incentives to test compiler derives, getters, and standard library forwards.
+- **Do NOT** add `cargo-llvm-cov` to routine `./check.fish --check` or `--full` pipelines (re-compilation with `-C instrument-coverage` slows down developer iteration).
+
+### Surgical Invocation Pattern
+
+To avoid large terminal dumps from un-run files across the crate, use the `cov` helper in `run.fish` which automatically filters output:
+
+```bash
+# Filtered terminal report (table header + target file row + uncovered lines):
+fish run.fish cov <package> <test_filter> [file_filter]
+
+# Example:
+fish run.fish cov r3bl_tui osc_color
+
+# Interactive visual browser report (highlighted source lines):
+fish run.fish cov r3bl_tui osc_color --html
+```
+
+Or run raw `cargo-llvm-cov` directly:
+
+```bash
+cargo llvm-cov test -p <crate_name> --lib <test_name> --show-missing-lines | grep -E "(Filename.*Cover|<file_name>)"
+```
+
+### Filtering LLVM Coverage Data Through the AST Model
+
+Raw `cargo-llvm-cov` output reports every unexecuted line, including macro expansions, derived traits, and trivial forwards. Cross-reference the output through our Step 2 classification matrix:
+
+```
+                            ┌────────────────────────────┐
+                            │  cargo-llvm-cov line report│
+                            │   (Raw unexecuted lines)   │
+                            └─────────────┬──────────────┘
+                                          │
+                                          ▼
+┌────────────────────────────┐      [ INTERSECT ]
+│    Inside-Out AST Model    ├────────────┼───────────► 1. Uncovered Derives / Upstream
+│ (Our Custom Logic Ranges)  │            │                └─► DISCARD (Zero Test Bloat)
+└────────────────────────────┘            │
+                                          ▼
+                                2. Uncovered Custom Logic
+                                   └─► REAL GAP DETECTED!
+                                       (Write targeted test)
+```
+
+1. **Uncovered line falls within Upstream / Derives** (`#[derive(...)]`, `strum`, `clap`, `std` wrappers):
+   - **Discard it immediately.** Do NOT write a test to cover it.
+2. **Uncovered line falls within OUR Custom Logic** (custom match arm, error fallback closure, boundary check):
+   - **Actionable Gap!** An intended branch was never executed at runtime. Add a targeted test case specifically exercising that branch.
+
+---
+
 ## Related Skills
 
 - `organize-tests`: Test directory taxonomy, isolation patterns, and zero test-bloat directive.

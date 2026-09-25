@@ -19,7 +19,8 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{EscSequence, TermColDelta, TermRow, TermRowDelta, WideningCastToUsize,
+use crate::{ESC_STR, EscSequence, NEL_NEXT_LINE_CHAR, TermColDelta, TermRow,
+            TermRowDelta, WideningCastToUsize,
             core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_col_delta,
             term_row, term_row_delta};
 use std::num::NonZeroU16;
@@ -225,7 +226,7 @@ pub fn save_do_restore(operation: &str, use_esc: bool) -> String {
 ///
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 #[must_use]
-pub fn next_line() -> String { "\x1bE".to_string() }
+pub fn next_line() -> String { format!("{ESC_STR}{NEL_NEXT_LINE_CHAR}") }
 
 /// Move cursor to specific row while maintaining current column.
 ///

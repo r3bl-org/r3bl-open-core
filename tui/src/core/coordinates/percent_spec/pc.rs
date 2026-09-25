@@ -20,6 +20,7 @@ use std::{fmt::{Debug, Formatter},
 ///
 /// - [`Deref`]: Dereferences to [`u8`].
 /// - [`std::fmt::Debug`]: Formats the percentage value followed by a `%` sign.
+/// - [`TryFrom`]: Attempts to convert a [`u8`] to a [`pc`].
 /// - [`TryFrom`]: Attempts to convert a [`u16`] to a [`pc`].
 /// - [`TryFrom`]: Attempts to convert an [`i32`] to a [`pc`].
 ///
@@ -98,6 +99,17 @@ impl Debug for Pc {
 #[derive(thiserror::Error, Debug, miette::Diagnostic, Clone, PartialEq, Eq)]
 #[error("Invalid percentage value: must be between 0 and 100")]
 pub struct InvalidPercentageError;
+
+impl TryFrom<u8> for Pc {
+    type Error = InvalidPercentageError;
+
+    fn try_from(arg: u8) -> std::result::Result<Self, Self::Error> {
+        let Some(pc) = Pc::try_and_convert(arg) else {
+            return Err(InvalidPercentageError);
+        };
+        Ok(pc)
+    }
+}
 
 impl TryFrom<u16> for Pc {
     type Error = InvalidPercentageError;
@@ -209,12 +221,15 @@ mod tests {
 
         Pc::try_from(0i32).expect("conversion error");
         Pc::try_from(0u16).expect("conversion error");
+        Pc::try_from(0u8).expect("conversion error");
 
         Pc::try_from(100i32).expect("conversion error");
         Pc::try_from(100u16).expect("conversion error");
+        Pc::try_from(100u8).expect("conversion error");
 
         Pc::try_from(101i32).unwrap_err();
         Pc::try_from(101u16).unwrap_err();
+        Pc::try_from(101u8).unwrap_err();
     }
 
     #[test]

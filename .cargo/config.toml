@@ -1,5 +1,3 @@
-# cspell:words incompat
-
 # Compiler and Linker Speedups:
 # 1. Parallel frontend compiler (`-Z threads=8`)
 # 2. Fast bundled `rust-lld` linker (`-C linker-features=+lld`)

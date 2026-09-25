@@ -2,8 +2,6 @@
 
 use std::any::Any;
 
-// cspell:words FAILCRITICALERRORS HKLM NOGPFAULTERRORBOX
-
 // Attach sources.
 pub mod input_device_fixtures;
 pub mod isolated_process_fixtures;

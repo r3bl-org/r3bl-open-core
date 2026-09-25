@@ -1,5 +1,3 @@
-// cspell:words cecton Buttonless URXVT trackpoint
-
 # Task: PR 448 Integration & Fixes
 
 ## Overview

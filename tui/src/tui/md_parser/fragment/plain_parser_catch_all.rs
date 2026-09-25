@@ -17,11 +17,9 @@
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
 //! tests in [`crate::parse_fragments_in_a_line`].
 
-use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_magenta, fg_red, is_any_of,
-            md_parser::md_parser_constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE,
-                                             NEW_LINE, NEW_LINE_CHAR, NULL_CHAR,
-                                             NULL_STR, STAR, UNDERSCORE},
-            specialized_parser_delim_matchers};
+use crate::{BACK_TICK, DEBUG_MD_PARSER_STDOUT, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
+            NEW_LINE_CHAR, NUL_CHAR, NUL_STR, STAR, UNDERSCORE, fg_blue, fg_magenta,
+            fg_red, is_any_of, specialized_parser_delim_matchers};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{tag, take_till1},
@@ -72,7 +70,7 @@ use nom::{IResult, Parser,
 ///
 /// This parser expects input where lines end with `\n` followed by zero or more `\0`
 /// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses
-/// `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])` to handle both newline and null characters as
+/// `is_any_of(&[NEW_LINE_CHAR, NUL_CHAR])` to handle both newline and null characters as
 /// line terminators.
 ///
 /// # Errors
@@ -167,7 +165,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     // # Edge case -> Normal case:
     // Take till the first new line or null char, as [MdLineFragment::Plain], since the
     // specialized parsers did not match the input.
-    let it = take_till1(is_any_of(&[NEW_LINE_CHAR, NULL_CHAR]))(input);
+    let it = take_till1(is_any_of(&[NEW_LINE_CHAR, NUL_CHAR]))(input);
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} edge case -> normal case :: {:?}",
@@ -226,7 +224,7 @@ fn get_sp_char_set_3<'a>() -> [&'a str; 7] {
     )]
     get_sp_char_set_2()
         .iter()
-        .chain([NEW_LINE, NULL_STR].iter())
+        .chain([NEW_LINE, NUL_STR].iter())
         .copied()
         .collect::<Vec<_>>()
         .try_into()

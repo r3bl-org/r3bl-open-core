@@ -1,11 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{MdDocument, MdElement, ParseList, ZeroCopyGapBuffer,
-            md_parser::md_parser_constants::{AUTHORS, DATE, NULL_CHAR, TAGS, TITLE},
-            parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
-            parse_fenced_code_block, parse_heading_in_single_line,
-            parse_null_padded_line::is,
-            parse_smart_list_block, parse_unique_kv_opt_eol};
+use crate::{AUTHORS, DATE, MdDocument, MdElement, NUL_CHAR, ParseList, TAGS, TITLE,
+            ZeroCopyGapBuffer, parse_block_markdown_text_with_or_without_new_line,
+            parse_csv_opt_eol, parse_fenced_code_block, parse_heading_in_single_line,
+            parse_null_padded_line::is, parse_smart_list_block, parse_unique_kv_opt_eol};
 use nom::{IResult, Parser, branch::alt, bytes::complete::take_while, combinator::map,
           multi::many0};
 
@@ -57,7 +55,7 @@ pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>
     ).parse(str_input)?;
 
     // Handle any trailing null bytes at the end of the document.
-    let (input, _discarded) = /* zero or more */ take_while(is(NULL_CHAR)).parse(input)?;
+    let (input, _discarded) = /* zero or more */ take_while(is(NUL_CHAR)).parse(input)?;
 
     let it = ParseList::from(output);
     Ok((input, it))

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words SIGABRT ONLCR waitpid
-
 //! This integration test verifies that [`Readline::drop()`] is resilient to mutex
 //! poisoning.
 //!
@@ -39,11 +37,11 @@
 //! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`drop()`]: Readline::drop()
 //! [`into_inner()`]: std::sync::Mutex::into_inner
-//! [`ONLCR`]: https://man7.org/linux/man-pages/man4/tty_ioctl.4.html
+//! [`ONLCR`]: https://manpages.debian.org/tty_ioctl.4
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`Readline::drop()`]: Readline::drop()
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
-//! [`SIGABRT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`SIGABRT`]: https://manpages.debian.org/signal.7
 //! [`TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
 
 use crate::{CaughtPanicResult, ChannelCapacity, GLYPH_CONTROLLED, GLYPH_CONTROLLER,

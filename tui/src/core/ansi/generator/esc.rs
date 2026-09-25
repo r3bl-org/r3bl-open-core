@@ -36,7 +36,7 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`CSI`]: crate::CsiSequence
 //! [`ESC`]: crate::EscSequence
-//! [`reset`]: https://man7.org/linux/man-pages/man1/reset.1.html
+//! [`reset`]: https://manpages.debian.org/reset.1
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{BufTextStorage, ESC_INDEX_DOWN_STR, ESC_RESET_TERMINAL_STR,

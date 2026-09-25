@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno
-
 //! Backend compatibility tests for [`DirectToAnsiInputDevice`] and
 //! [`CrosstermInputDevice`].
 //!
@@ -13,9 +11,10 @@
 //!
 //! # Platform
 //!
-//! **Linux only.** These tests are gated by `#[cfg(all(any(test, doc), target_os =
-//! "linux"))]` because [`DirectToAnsi`] is currently Linux-only. The raw mode
-//! implementations used are:
+//! [`DirectToAnsi`] is currently Linux-only. That is why they're gated by this:
+//! `#[cfg(all(any(test, doc), target_os = "linux"))]`
+//!
+//! The raw mode implementations used are:
 //!
 //! | Backend          | Raw Mode Implementation                                              |
 //! | ---------------- | -------------------------------------------------------------------- |
@@ -41,13 +40,41 @@
 //!   └── compares parsed InputEvents from both
 //! ```
 //!
+//! # Scope & Limitations ([`OSC`] Sequences Not Covered)
+//!
+//! This compatibility test deliberately excludes [`OSC`] query and response sequences
+//! (such as [`OSC`] 10/11 dynamic color queries and [`OSC`] 52 clipboard responses).
+//! [`CrosstermInputDevice`] does not support parsing inbound [`OSC`] responses and will
+//! either drop them or misinterpret them as unexpected keyboard events.
+//!
+//! For [`DirectToAnsiInputDevice`], bidirectional [`OSC`] query/report handling,
+//! outbound command emission, and security absorption are tested in dedicated test
+//! suites:
+//! - [`pty_osc_color_test`]: End-to-end [`PTY`] test for [`OSC`] color queries/reports
+//!   across all 7 roles, multi-format hex specs, and [`OSC`] 52 clipboard payload
+//!   absorption.
+//! - [`pty_osc_sender_test`]: End-to-end [`PTY`] test validating outbound one-way
+//!   commands (titles, hyperlinks, taskbar progress, clipboard payloads) emitted via
+//!   [`OscSender`].
+//! - [`pty_osc_safety_test`]: End-to-end [`PTY`] test for stream safety under live
+//!   asynchronous streaming (runaway >1 MiB payload drain, unknown command absorption,
+//!   malformed color specs).
+//! - [`osc_and_unrecognized_tests`]: Unit tests for [`OSC`] stream framing with `ST` and
+//!   `BEL` terminators.
+//! - [`osc_scanner`]: Parser tests decoding dynamic color reports into IR events.
+//!
+//! For real terminal emulator probing and diagnostics, see the `osc_diagnostics` example:
+//! ```bash
+//! cargo run -p r3bl_tui --example osc_diagnostics
+//! ```
+//!
 //! # Module Structure
 //!
-//! - [`generate_test_sequences`] - [`ANSI`] sequence builders and test data.
-//! - [`controller`] - [`PTY`] controller logic.
-//! - [`controlled_common`] - Shared setup/teardown for controlled processes.
-//! - [`controlled_crossterm`] - Crossterm backend controlled process.
-//! - [`controlled_direct_to_ansi`] - `DirectToAnsi` backend controlled process.
+//! - [`generate_test_sequences`]: [`ANSI`] sequence builders and test data.
+//! - [`controller`]: [`PTY`] controller logic.
+//! - [`controlled_common`]: Shared setup/teardown for controlled processes.
+//! - [`controlled_crossterm`]: Crossterm backend controlled process.
+//! - [`controlled_direct_to_ansi`]: [`DirectToAnsi`] backend controlled process.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
@@ -55,21 +82,28 @@
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`osc_and_unrecognized_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::unit_tests::osc_and_unrecognized_tests
+//! [`osc_scanner`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
+//! [`OscSender`]: crate::core::ansi::osc::OscSender
+//! [`pty_osc_color_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_color_test
+//! [`pty_osc_safety_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_safety_test
+//! [`pty_osc_sender_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_sender_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
-//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
 use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice, EIO,
+            ASCII_DEL, CONTROL_A, CONTROL_C, CONTROL_ENTER, CONTROL_TAB,
+            CrosstermInputDevice, DEFAULT_COL_WIDTH, DEFAULT_ROW_HEIGHT, EIO,
             FUNCTION_F5_CODE, GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS,
             GLYPH_WAITING, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
             MODIFIER_SHIFT, MSG_CONTROLLED_READY, PtyPair, PtyTestChild,
             SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
             SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
             SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL,
-            core::ansi::{generator::{csi, csi_modified, csi_tilde, ss3},
+            core::ansi::{generator::{alt_key, csi, csi_modified, csi_tilde, csi_u, ss3},
                          terminal_raw_mode},
             ok, retry_until_success_test, spawn_controlled_in_pty,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
@@ -103,8 +137,8 @@ pub fn test_backend_compat_input_compare() {
     // Check if we're running as a controlled process.
     if let Ok(backend) = std::env::var(INPUT_TEST_ENV_VAR) {
         match backend.as_str() {
-            "direct_to_ansi" => controlled_direct_to_ansi::run(),
-            "crossterm" => controlled_crossterm::run(),
+            BACKEND_NAME_DIRECT_TO_ANSI => controlled_direct_to_ansi::run(),
+            BACKEND_NAME_CROSSTERM => controlled_crossterm::run(),
             _ => panic!("Unknown backend: {backend}"),
         }
     }
@@ -123,11 +157,11 @@ fn run_single_test_attempt() -> Result<(), String> {
     // Run DirectToAnsi backend via PTY.
     eprintln!("\n{GLYPH_WAITING} Running DirectToAnsi backend...");
     let (name, pty_pair, child) = spawn_controlled_in_pty(
-        "direct_to_ansi",
+        BACKEND_NAME_DIRECT_TO_ANSI,
         INPUT_TEST_ENV_VAR,
         "test_backend_compat_input_compare",
-        24,
-        80,
+        DEFAULT_ROW_HEIGHT,
+        DEFAULT_COL_WIDTH,
     );
     let direct_events = controller::run_and_collect((name, pty_pair, &child))?;
     eprintln!("  Captured {} events", direct_events.len());
@@ -135,11 +169,11 @@ fn run_single_test_attempt() -> Result<(), String> {
     // Run Crossterm backend via PTY.
     eprintln!("\n{GLYPH_WAITING} Running Crossterm backend...");
     let (name, pty_pair, child) = spawn_controlled_in_pty(
-        "crossterm",
+        BACKEND_NAME_CROSSTERM,
         INPUT_TEST_ENV_VAR,
         "test_backend_compat_input_compare",
-        24,
-        80,
+        DEFAULT_ROW_HEIGHT,
+        DEFAULT_COL_WIDTH,
     );
     let crossterm_events = controller::run_and_collect((name, pty_pair, &child))?;
     eprintln!("  Captured {} events", crossterm_events.len());
@@ -375,7 +409,7 @@ pub mod controlled_direct_to_ansi {
     ///
     /// [`tokio`]: tokio
     pub fn run() -> ! {
-        // 1. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
+        // 1. Enable raw mode using DirectToAnsi raw mode (rustix-based).
         drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
 
         let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
@@ -403,33 +437,43 @@ pub mod generate_test_sequences {
     #[must_use]
     pub fn all() -> Vec<(&'static str, Vec<u8>)> {
         vec![
-            // Arrow keys (CSI sequences): ESC [ A/B/C/D.
+            // Arrow keys (CSI sequences): `ESC [ A/B/C/D`.
             ("Up Arrow", csi(ARROW_UP_FINAL).to_vec()),
             ("Down Arrow", csi(ARROW_DOWN_FINAL).to_vec()),
             ("Right Arrow", csi(ARROW_RIGHT_FINAL).to_vec()),
             ("Left Arrow", csi(ARROW_LEFT_FINAL).to_vec()),
-            // Navigation keys: ESC [ H/F for Home/End, ESC [ n ~ for others.
+            // Navigation keys: `ESC [ H/F` for Home/End, `ESC [ n ~` for others.
             ("Home", csi(SPECIAL_HOME_FINAL).to_vec()),
             ("End", csi(SPECIAL_END_FINAL).to_vec()),
             ("Page Up", csi_tilde(SPECIAL_PAGE_UP_CODE)),
             ("Page Down", csi_tilde(SPECIAL_PAGE_DOWN_CODE)),
             ("Insert", csi_tilde(SPECIAL_INSERT_CODE)),
             ("Delete", csi_tilde(SPECIAL_DELETE_CODE)),
-            // Function keys (SS3 format): ESC O P/Q/R/S.
+            // Function keys (SS3 format): `ESC O P/Q/R/S`.
             ("F1", ss3(SS3_F1_FINAL).to_vec()),
             ("F2", ss3(SS3_F2_FINAL).to_vec()),
             ("F3", ss3(SS3_F3_FINAL).to_vec()),
             ("F4", ss3(SS3_F4_FINAL).to_vec()),
-            // Function keys (CSI format): ESC [ 15 ~.
+            // Function keys (CSI format): `ESC [ 15 ~`.
             ("F5", csi_tilde(FUNCTION_F5_CODE)),
             // Control characters (single bytes).
-            ("Ctrl+A", vec![1]), // Ctrl+A = 0x01 = 'A' & 0x1F.
+            ("Ctrl+A", vec![CONTROL_A]),
             ("Ctrl+C", vec![CONTROL_C]),
             // Special keys.
             ("Enter", vec![CONTROL_ENTER]),
             ("Tab", vec![CONTROL_TAB]),
             ("Backspace", vec![ASCII_DEL]),
-            // Arrow keys with modifiers (xterm format): ESC [ 1 ; <mod+1> A.
+            // Alt key sequences for bracket characters.
+            // '[' and ']' are the syntactic introducers of CSI ("ESC [") and OSC ("ESC
+            // ]"). Testing Alt+] and Alt+[ verifies that neither backend
+            // misinterprets these keystrokes as incomplete control sequences
+            // or hangs waiting for CSI/OSC payloads:
+            // 1. Alt+] emits standard ESC + ']' (which collides with OSC prefix).
+            // 2. Alt+[ emits Kitty `CSI u` for '[' (to prevent collision with CSI
+            //    prefix).
+            ("Alt+]", alt_key(']')),
+            ("Alt+[", csi_u('[', MODIFIER_ALT)),
+            // Arrow keys with modifiers (xterm format): `ESC [ 1 ; <mod+1> A`.
             ("Shift+Up", csi_modified(MODIFIER_SHIFT, ARROW_UP_FINAL)),
             ("Ctrl+Up", csi_modified(MODIFIER_CTRL, ARROW_UP_FINAL)),
             ("Alt+Up", csi_modified(MODIFIER_ALT, ARROW_UP_FINAL)),
@@ -437,6 +481,14 @@ pub mod generate_test_sequences {
                 "Ctrl+Shift+Up",
                 csi_modified(MODIFIER_CTRL_SHIFT, ARROW_UP_FINAL),
             ),
+            // Navigation keys with modifiers: `ESC [ 1 ; <mod+1> H/F`.
+            (
+                "Shift+Home",
+                csi_modified(MODIFIER_SHIFT, SPECIAL_HOME_FINAL),
+            ),
+            ("Ctrl+Home", csi_modified(MODIFIER_CTRL, SPECIAL_HOME_FINAL)),
+            ("Shift+End", csi_modified(MODIFIER_SHIFT, SPECIAL_END_FINAL)),
+            ("Ctrl+End", csi_modified(MODIFIER_CTRL, SPECIAL_END_FINAL)),
         ]
     }
 }

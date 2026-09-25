@@ -2,98 +2,124 @@
   <img src="./r3bl-term.svg" height="128px">
 </p>
 
-# 🎨🖌️ Contributing to r3bl-open-core repo
+# 🎨 Contributing to r3bl-open-core
 
-<a id="markdown-%F0%9F%8E%A8%F0%9F%96%8C%EF%B8%8F-contributing-to-r3bl-open-core-repo" name="%F0%9F%8E%A8%F0%9F%96%8C%EF%B8%8F-contributing-to-r3bl-open-core-repo"></a>
-
-Thank you for considering contributing to the `r3bl-open-core` repo! We welcome contributions from
-everyone, regardless of your level of experience or expertise. If you would like to contribute, but
-don't know where to start, check out the issues that are labeled `good first issue` or
-`help wanted`.
+Thank you for considering contributing to `r3bl-open-core`! We welcome contributions from
+everyone, regardless of your level of experience.
 
 <!-- TOC -->
 
-- [Code of conduct](#code-of-conduct)
-- [Style guide](#style-guide)
-- [🤝 Contribute](#-contribute)
-  - [Explore our guides](#explore-our-guides)
-  - [Working on issues](#working-on-issues)
-  - [Feature requests and bug reports](#feature-requests-and-bug-reports)
-  - [Documentation improvements](#documentation-improvements)
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [Branch Naming](#branch-naming)
+- [Commit Message Guidelines](#commit-message-guidelines)
+- [Local Development and Checks](#local-development-and-checks)
+- [Submitting a Pull Request](#submitting-a-pull-request)
+- [Reporting Issues and Feature Requests](#reporting-issues-and-feature-requests)
+- [Design and Engineering Philosophy](#design-and-engineering-philosophy)
 - [License](#license)
 
 <!-- /TOC -->
 
-### Code of conduct
+## Code of Conduct
 
-<a id="markdown-code-of-conduct" name="code-of-conduct"></a>
+All contributors are expected to adhere to the
+[Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) in all
+interactions related to this project.
 
-Before you start contributing, please take a moment to read the
-[code of conduct](https://www.rust-lang.org/policies/code-of-conduct). We expect all contributors to
-abide by this code of conduct in all interactions related to the project.
+## Getting Started
 
-### Style guide
+1. **Find an Issue**: Browse issues tagged
+   [`good first issue`](https://github.com/r3bl-org/r3bl-open-core/labels/good%20first%20issue)
+   or [`help wanted`](https://github.com/r3bl-org/r3bl-open-core/labels/help%20wanted).
+2. **Claim the Issue**: Leave a comment on the issue asking to be assigned before starting
+   work so effort is not duplicated.
+3. **Fork and Clone**: Fork the repository on GitHub and clone your fork locally.
 
-<a id="markdown-style-guide" name="style-guide"></a>
+## Branch Naming
 
-Please make sure your code adheres to our
-[code style guide](docs/contributing_guides/STYLE_GUIDE.md). We also recommend that you open an 🗒️
-issue to discuss your proposed changes before submitting a pull request.
+Use the format `username/short-description`:
 
-If you're new to the project, you may want to check out our [README](README.md) file for an overview
-of the project and its goals.
+```bash
+git checkout -b yourusername/fix-osc-color-parser
+# Or with issue number:
+git checkout -b yourusername/123-fix-osc-color-parser
+```
 
-## 🤝 Contribute
+- Keep the description concise and kebab-cased.
+- Prefix with your GitHub username so branches are easy to identify.
 
-<a id="markdown-%F0%9F%A4%9D-contribute" name="%F0%9F%A4%9D-contribute"></a>
+## Commit Message Guidelines
 
-We welcome contributions in the form of bug reports, feature requests, documentation improvements,
-and code contributions.
+We follow conventional commit formatting with component prefixes:
 
-### Explore our guides
+```text
+[component] Short imperative subject line (< 50 chars)
 
-<a id="markdown-explore-our-guides" name="explore-our-guides"></a>
+Optional detailed body explaining the "why" and non-obvious rationale.
+Wrap lines at 72 characters.
 
-Below are some guides to help you get started:
+Fixes #123
+```
 
-- [How to create an issue](docs/contributing_guides/ISSUE.md)
-- [How to name a branch](docs/contributing_guides/BRANCH.md)
-- [How to write a commit message](docs/contributing_guides/COMMIT_MESSAGE.md)
-- [How to create a pull request](docs/contributing_guides/PULL_REQUEST.md)
+- **Subject line**: Less than 50 characters, imperative mood ("Add feature", "Fix bug",
+  not "Added" or "Fixes"), no trailing period.
+- **Component prefix**: Identify the crate or domain affected:
+    - `[tui]` - Terminal UI crate
+    - `[cmdr]` - CLI apps (`edi`, `giti`, `rc`)
+    - `[build-infra]` - Tooling and build infrastructure
+    - `[docs]` - Documentation and guides
+    - `[core]` - Core engine logic
+- **Body (optional)**: Explain what problem is being solved and why this solution was
+  chosen.
 
-### Working on issues
+## Local Development and Checks
 
-<a id="markdown-working-on-issues" name="working-on-issues"></a>
+We use `check.fish` and `run.fish` for all development workflows.
 
-If you want to work on an issue, please comment on the issue asking to be assigned to it, so that we
-can assign the issue to you. If you have any questions about the issue, we can discuss them in the
-comments.
+| Task                    | Command                          | Description                                          |
+| :---------------------- | :------------------------------- | :--------------------------------------------------- |
+| **Fast Typecheck**      | `./check.fish --check`           | Quick `cargo check` across the workspace             |
+| **Run Tests**           | `./check.fish --test`            | Run all unit tests, integration tests, and doctests  |
+| **Targeted Coverage**   | `fish run.fish cov <pkg> [test]` | Run `cargo-llvm-cov` with filtered output            |
+| **Linting**             | `./check.fish --clippy`          | Run Clippy across all targets                        |
+| **Code Formatting**     | `./check.fish --fmt`             | Format code and rustdoc comments                     |
+| **Comprehensive Check** | `./check.fish --full`            | Run complete validation suite before submitting a PR |
 
-### Feature requests and bug reports
+> [!TIP] Always run `./check.fish --check` frequently while developing, and
+> `./check.fish --full` before submitting your PR.
 
-<a id="markdown-feature-requests-and-bug-reports" name="feature-requests-and-bug-reports"></a>
+## Submitting a Pull Request
 
-If you encounter a bug or have an idea for a new feature, please open an issue on our
-[GitHub repository](https://github.com/r3bl-org/r3bl-open-core/issues). Please provide as much
-detail as possible, including steps to reproduce the issue and any relevant error messages.
+1. **Verify Locally**: Ensure `./check.fish --full` passes with zero errors or warnings.
+2. **Clean History**: Squash incremental work into clean, descriptive commits following
+   the commit guidelines above.
+3. **Push to Your Fork**: Push your branch to GitHub.
+4. **Open a PR**: Open a pull request against the `main` branch.
+    - Describe the changes and link the relevant issue (`Fixes #123`).
+    - If your work is in progress and you want early design feedback, mark the PR as a
+      **Draft**. We welcome early iteration.
 
-Read more on
-[how to create a good issue](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/ISSUE.md).
+## Reporting Issues and Feature Requests
 
-### Documentation improvements
+- **Bug Reports & Features**: Use our interactive
+  [GitHub Issue Templates](https://github.com/r3bl-org/r3bl-open-core/issues/new/choose).
+- Include clear reproduction steps, environment details (OS, terminal emulator), and
+  expected vs. actual behavior.
 
-<a id="markdown-documentation-improvements" name="documentation-improvements"></a>
+## Design and Engineering Philosophy
 
-If you notice any errors or omissions in our documentation, please open an issue on our
-[GitHub repository](https://github.com/r3bl-org/r3bl-open-core/issues) or submit a pull request with
-your proposed changes.
+When writing code for `r3bl-open-core`:
 
-Read more on
-[how to create a good issue](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/ISSUE.md).
+- **Make illegal states unrepresentable**: Prefer type-safe enums and newtypes over loose
+  primitives and booleans.
+- **Zero test bloat**: Test our custom logic, state transitions, and error branches; avoid
+  writing redundant tests that merely re-test standard library or external crate behavior.
+- **Documentation integrity**: Rustdoc comments are first-class code. Preserve doc
+  comments, diagrams, and use reference-style links.
+
+For more details on the architecture and features, see the [main README](README.md).
 
 ## License
 
-<a id="markdown-license" name="license"></a>
-
-[`r3bl-open-core`](https://github.com/r3bl-org/r3bl-open-core) is released under the
-[Apache 2.0](LICENSE).
+`r3bl-open-core` is released under the [Apache 2.0](LICENSE) license.

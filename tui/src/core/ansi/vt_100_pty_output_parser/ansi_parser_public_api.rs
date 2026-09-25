@@ -1,15 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words Homet Min End
-
 //! Public API for [`ANSI`]/[`VT-100`] sequence processing.
 //!
 //! # Entry Point
 //!
 //! **[`apply_ansi_bytes`]** is the main entry point for processing [`ANSI`] sequences
 //! from [`PTY`] output. This method is called by the [`PTY`] multiplexer after receiving
-//! bytes from a child process (like vim, bash, etc.) and updates the
-//! [`OfsBuf`]'s display content, cursor position, and text styles accordingly.
+//! bytes from a child process (like vim, bash, etc.) and updates the following in the
 //!
 //! ```rust
 //! use r3bl_tui::{*, vp_height, vp_width};
@@ -28,7 +25,7 @@
 //!
 //! [`OSC`] events (window titles, etc.) and [`DSR`] responses (terminal status queries).
 //!
-//! For implementation details, architecture patterns, and testing strategy, see the the
+//! For implementation details, architecture patterns, and testing strategy, see the
 //! architecture and testing strategy which covers the shim → impl → test design pattern.
 //!
 //! # [`ANSI`] Sequence Types from [`PTY`] Output
@@ -127,12 +124,12 @@
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 //! [`OfsBuf`]: crate::tui::OfsBuf
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 
-use crate::{OfsBufVT100, PtyResponseEvent, core::osc::OscEvent};
+use crate::{OfsBufVT100, PtyResponseEvent, core::osc::OscPtyEvent};
 use std::mem::take;
 
 /// Terminal state context for [`ANSI`] sequence processing.
@@ -211,11 +208,10 @@ impl OfsBufVT100 {
     /// # Returns
     ///
     /// A tuple containing:
-    /// - A vector of [`OSC events`] that were detected during processing (e.g., title
-    ///   changes, hyperlinks). Returns an empty vector if no [`OSC events`] were
-    ///   detected.
-    /// - A vector of [`DSR response events`] that need to be sent back to the child
-    ///   process through the [`PTY`] input channel.
+    /// - A vector of [`OscPtyEvent`] that were detected during processing (e.g., title
+    ///   changes, hyperlinks). Returns an empty vector if no events were detected.
+    /// - A vector of [`PtyResponseEvent`] that need to be sent back to the child process
+    ///   through the [`PTY`] input channel.
     ///
     /// # Example
     ///
@@ -248,14 +244,14 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`cursor_pos`]: crate::tui::OfsBuf::get_cursor_pos
-    /// [`DSR response events`]: PtyResponseEvent
     /// [`get_parser_global_state`]: OfsBufVT100::get_parser_global_state
     /// [`OfsBuf::get_cursor_pos`]: crate::tui::OfsBuf::get_cursor_pos
     /// [`OfsBuf`]: crate::tui::OfsBuf
-    /// [`OSC events`]: crate::core::osc::OscEvent
+    /// [`OscPtyEvent`]: crate::OscPtyEvent
     /// [`PixelChar`]: crate::tui::PixelChar
     /// [`Process`]: crate::pty_mux::Process
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    /// [`PtyResponseEvent`]: crate::PtyResponseEvent
     /// [`SGR`]: crate::SgrCode
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     /// [`VTE parser`]: vte::Parser
@@ -263,11 +259,11 @@ impl OfsBufVT100 {
     pub fn apply_ansi_bytes(
         &mut self,
         bytes: impl AsRef<[u8]>,
-    ) -> (Vec<OscEvent>, Vec<PtyResponseEvent>) {
+    ) -> (Vec<OscPtyEvent>, Vec<PtyResponseEvent>) {
         let mut performer = AnsiToOfsBufPerformer::new(self);
         performer.apply_ansi_bytes(bytes.as_ref());
 
-        // Use std::mem::take to move events out and leave empty vectors.
+        // Use `std::mem::take` to move events out and leave empty vectors.
         let osc_events = take(
             &mut performer
                 .ofs_buf_vt_100
@@ -291,7 +287,7 @@ mod tests {
         core::ansi::constants::{CSI_START, DA_DEVICE_ATTRIBUTES},
         core::osc::osc_codes::OscSequence,
         ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
-        DSR_STATUS_REQUEST, OscEvent, PtyResponseEvent::{self, TerminalStatus},
+        DSR_STATUS_REQUEST, OscPtyEvent, PtyResponseEvent::{self, TerminalStatus},
         NarrowingCastToU16, SgrCode,
         ofs_buf::test_fixtures_ofs_buf::{
             assert_empty_at, assert_plain_char_at, assert_plain_text_at,
@@ -313,7 +309,7 @@ mod tests {
 
         const TEXT: &str = "Hello";
 
-        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc.) uses
         // 1-based index.
         //
         // Buffer layout with plain text:
@@ -349,7 +345,7 @@ mod tests {
 
         const TEXT: &str = "Red Text";
 
-        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc.) uses
         // 1-based index.
         //
         // Buffer layout with colored text:
@@ -402,7 +398,7 @@ mod tests {
     fn test_public_api_cursor_movement() {
         let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
 
-        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // Note: OfsBuf uses 0-based index, and terminal (CSI, ESC seq, etc.) uses
         // 1-based index.
         //
         // Buffer layout after cursor movements:
@@ -414,7 +410,7 @@ mod tests {
         //                               ╰─── cursor ends after writing 'D'
         //
         // Sequence breakdown:
-        // 1. Write 'A' at (0,0) → cursor moves to (0,1)
+        // 1. Write `A` at (0,0) → cursor moves to (0,1)
         // 2. CursorForward(2) → cursor moves to (0,3)
         // 3. Write 'B' at (0,3) → cursor moves to (0,4)
         // 4. CursorUp(1) → cursor stays at (0,4) (can't go up from row 0)
@@ -459,7 +455,7 @@ mod tests {
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         match &osc_events[0] {
-            OscEvent::SetTitleAndTab(title) => {
+            OscPtyEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "First Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
@@ -477,7 +473,7 @@ mod tests {
         assert_eq!(dsr_responses2.len(), 0, "no DSR responses expected");
 
         match &osc_events2[0] {
-            OscEvent::SetTitleAndTab(title) => {
+            OscPtyEvent::SetTitleAndTab(title) => {
                 assert_eq!(
                     title, "Second Title",
                     "should be the new title, not accumulated with first"
@@ -569,7 +565,7 @@ mod tests {
         // Should get exactly one OSC event.
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         match &osc_events[0] {
-            OscEvent::SetTitleAndTab(title) => {
+            OscPtyEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "Mixed Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
@@ -614,7 +610,7 @@ mod tests {
         // All should be SetTitleAndTab events.
         for event in &osc_events {
             match event {
-                OscEvent::SetTitleAndTab(_) => {}
+                OscPtyEvent::SetTitleAndTab(_) => {}
                 _ => panic!("Expected SetTitleAndTab event"),
             }
         }
@@ -627,7 +623,7 @@ mod tests {
     }
 
     /// Note: [`OfsBuf`] uses 0-based index, and terminal ([`CSI`], [`ESC`] seq,
-    /// etc) uses 1-based index.
+    /// etc.) uses 1-based index.
     ///
     /// Buffer layout after cursor position changes:
     /// ```txt
@@ -728,7 +724,7 @@ mod tests {
             PendingWrap::Yes
         );
 
-        // 2. Apply a CR (\r) -> clears pending wrap.
+        // 2. Apply a CR (`\r`) -> clears pending wrap.
         let _unused = ofs_buf_vt_100.apply_ansi_bytes([CARRIAGE_RETURN]);
 
         // 3. Verify wrap was cleared and cursor moved to column 0.

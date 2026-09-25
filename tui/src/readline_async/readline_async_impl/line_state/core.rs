@@ -530,5 +530,3 @@ mod tests {
         assert_eq!(state, PauseState::PausedBySpinner);
     }
 }
-
-// cspell:words testx mprompt

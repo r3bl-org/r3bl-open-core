@@ -21,10 +21,10 @@
 //! internal types -->
 //!
 //! ```ignore
-//! // ❌ Traditional approach: hardcoded, error-prone
+//! // Traditional approach: hardcoded, error-prone.
 //! let old_way = b"\x1b[2J\x1b[H\x1b[31mError\x1b[0m";
 //!
-//! // ✅ Builder approach: type-safe, self-documenting
+//! // Builder approach: type-safe, self-documenting.
 //! let new_way = format!("{}{}{}Error{}",
 //!     CsiSequence::EraseDisplay(2),           // Clear entire screen
 //!     CsiSequence::CursorPosition {           // Move to home

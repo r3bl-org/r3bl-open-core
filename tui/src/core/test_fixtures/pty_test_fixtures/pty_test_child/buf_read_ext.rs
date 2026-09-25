@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno EPERM
-
 use crate::EIO;
 use std::io::BufRead;
 
@@ -15,7 +13,7 @@ use std::io::BufRead;
 /// For a detailed explanation of why this is necessary, see the [POSIX `EOF` vs Linux
 /// `EIO`] section in [`PtyPair`].
 ///
-/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`PTY`]: crate::pty_pair#what-is-a-pty
 /// [`PtyPair`]: crate::PtyPair
@@ -28,7 +26,7 @@ pub trait BufReadExt: BufRead {
     /// Returns any I/O error encountered during reading, except for [`EIO`], which is
     /// mapped to `Ok(0)` (same as [`EOF`]).
     ///
-    /// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+    /// [`EIO`]: https://manpages.debian.org/errno.3
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     fn read_line_eio_to_eof(&mut self, buf: &mut String) -> std::io::Result<usize> {
         match self.read_line(buf) {

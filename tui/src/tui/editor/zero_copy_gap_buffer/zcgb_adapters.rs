@@ -19,7 +19,7 @@
 //! [`GCStringOwned`]: crate::GCStringOwned
 
 #[cfg(test)]
-use crate::NULL_CHAR;
+use crate::NUL_CHAR;
 use crate::{GCStringOwned, ZeroCopyGapBuffer,
             md_parser::md_parser_constants::NEW_LINE_CHAR};
 
@@ -158,7 +158,7 @@ mod tests {
         // Check that the buffer has proper null padding.
         let full_str = buffer.as_str();
         assert!(full_str.starts_with("Hello, world!\n"));
-        assert!(full_str.contains(NULL_CHAR));
+        assert!(full_str.contains(NUL_CHAR));
     }
 
     #[test]
@@ -271,7 +271,7 @@ mod tests {
 
         // Verify null padding is present.
         let full_str = buffer.as_str();
-        assert!(full_str.contains(NULL_CHAR));
+        assert!(full_str.contains(NUL_CHAR));
     }
 
     #[test]

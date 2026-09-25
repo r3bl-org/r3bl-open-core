@@ -325,8 +325,19 @@ end
 # Usage:
 #   install_cargo_tool "bacon"
 #   install_cargo_tool "flamegraph"
-function install_cargo_tool --argument-names tool_name
-    if not command -v $tool_name >/dev/null
+function install_cargo_tool --argument-names tool_name binary_name
+    if test -z "$binary_name"
+        switch $tool_name
+            case "inferno"
+                set binary_name "inferno-flamegraph"
+            case "typos-cli"
+                set binary_name "typos"
+            case '*'
+                set binary_name $tool_name
+        end
+    end
+
+    if not command -v $binary_name >/dev/null
         echo "Installing $tool_name..."
         if command -v cargo-binstall >/dev/null
             # Use --force because binstall metadata may be stale: the binary
@@ -2202,7 +2213,7 @@ function toolchain_install_rust_analyzer
     return 0
 end
 
-# Installs additional components (rust-src) for IDE support.
+# Installs additional components (rust-src, llvm-tools) for IDE and coverage support.
 #
 # Uses globals: $target_toolchain, $LOG_FILE
 #
@@ -2215,6 +2226,13 @@ function toolchain_install_additional_components
         toolchain_log "✅ Successfully installed rust-src component"
     else
         toolchain_log "⚠️  Failed to install rust-src component (continuing anyway)"
+    end
+
+    # Install llvm-tools for source-based code coverage profiling
+    if toolchain_log_command "Adding llvm-tools component..." rustup component add llvm-tools --toolchain $target_toolchain
+        toolchain_log "✅ Successfully installed llvm-tools component"
+    else
+        toolchain_log "⚠️  Failed to install llvm-tools component (continuing anyway)"
     end
 
     return 0

@@ -561,5 +561,3 @@ behaviors across clean container environments for 3 major Linux distributions:
       writes new `.exe`, marks `.old` for deletion).
 - [ ] Test fallback source compilation with Windows ConPTY (`CreatePseudoConsole`).
 - [ ] Test Ctrl+C cancellation during download and compilation under Windows console.
-
-<!-- cspell:words USERPROFILE -->

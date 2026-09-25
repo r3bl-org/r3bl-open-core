@@ -20,7 +20,7 @@
 //! cargo test -p r3bl_tui test_raw_mode_input_behavior -- --nocapture
 //! ```
 //!
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`epoll`]: https://manpages.debian.org/epoll.7
 //! [`kqueue`]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
 //! [`stdin`]: std::io::stdin

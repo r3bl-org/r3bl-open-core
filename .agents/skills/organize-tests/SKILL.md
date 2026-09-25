@@ -76,7 +76,23 @@ Tests must exclusively target the branches, state transitions, error paths, and 
    - Redundant permutations of valid inputs (such as testing multiple languages, emojis, whitespace variants, or path styles on a method that simply forwards to a standard library function) test the standard library, not our logic.
 3. **High Signal, Low Cognitive Load**: Every test in the repository must serve a distinct purpose by covering a specific branch or boundary condition of our implementation. Proactively remove redundant, needless, or duplicative tests that only inflate maintenance overhead.
 
+### 8. Three-Tiered Protocol & Parser Testing (Ground Truth vs. Test Fixtures)
+When testing terminal protocols, parsers, and escape sequences, prevent circular tautology by adhering to the three-tier division of labor:
+
+1. **Validation Tests (`validation_tests/`)**:
+   - **Ground truth only**: Assertions and inputs must use hardcoded raw byte literals (`b"\x1b[..."`) captured from real terminals (`showkey -a`, `sed -n l`).
+   - **No generators or constants**: Never refactor validation tests to use generator functions or Tier 1 constants. These tests validate the constants and generators; they must not depend on them.
+
+2. **Unit & Component Tests (`unit_tests/`, `chunk_framer/`, `chunk_decoder/`)**:
+   - **Use Tier 1 constants & generator helpers**: Once validated by Tier 1 tests, use named constants (`MODIFIER_PARAMETER_SHIFT`) and generator helpers (`csi_tilde`) to test internal state machines and decoding logic without scattering magic byte sequences.
+
+3. **PTY Integration Tests (`<prefix>_integration_tests/`)**:
+   - **Use generated sequences**: PTY tests validate end-to-end subsystem integration and scalability by generating sequences through our generator functions.
+
+See [Taxonomy](taxonomy.md) for full directory and tier details.
+
 ## Related Skills
 - `organize-modules`: Use for general module structure and re-exports.
 - `write-documentation`: Use for formatting "Run with:" blocks and intra-doc links.
 - `check-code-quality`: Use for comprehensive quality checklists and test execution.
+

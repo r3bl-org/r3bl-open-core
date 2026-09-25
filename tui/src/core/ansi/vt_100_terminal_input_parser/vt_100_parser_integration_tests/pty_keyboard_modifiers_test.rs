@@ -1,14 +1,50 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// XMARK: pty test faking terminal emulator (in controller)
+
 //! [`PTY`]-based integration test for keyboard modifiers (Shift, Ctrl, Alt).
 //!
-//! Validates that the [`DirectToAnsiInputDevice`] correctly parses keyboard sequences
-//! with various modifier combinations:
-//! - Single modifiers: Shift, Ctrl, Alt
-//! - Combined modifiers: Shift+Alt, Shift+Ctrl, Alt+Ctrl
-//! - Triple modifiers: Shift+Alt+Ctrl
+//! Validates that [`DirectToAnsiInputDevice`] correctly parses keyboard sequences with
+//! various modifier combinations in a real pseudoterminal environment:
+//! - Single modifiers: Shift, Ctrl, Alt (`Shift+Up`, `Ctrl+Up`, `Alt+Down`)
+//! - Combined dual modifiers: `Shift+Alt+Left`, `Ctrl+Shift+Right`
+//! - Triple modifiers: `Ctrl+Alt+Shift+F1`
+//! - Modified navigation keys: `Shift+Home`, `Shift+End`, `Ctrl+Home`, `Alt+End`
+//! - Modified editing keys: `Shift+Insert`, `Ctrl+Delete`, `Alt+PageUp`,
+//!   `Ctrl+Shift+PageDown`
+//! - Modified function keys: `Shift+F5`, `Ctrl+F12`
+//! - Alt+letter combinations: `Alt+a` (`ESC a`)
 //!
-//! Tests with arrow keys and function keys to validate round-trip generation and parsing.
+//! # Architecture and Process Roles
+//!
+//! In this test, the controller process simulates a host terminal emulator while the
+//! controlled child runs our TUI input engine. For the overall architecture and testing
+//! philosophy, see the [process roles documentation].
+//!
+//! 1. **[`PTY`] Controller (Simulated Terminal Emulator)**:
+//!    - Simulates an external host terminal emulator synthesizing XTerm-style modified
+//!      key sequences (`CSI 1 ; <modifier> <char>` for arrows and navigation, `CSI <code
+//!      ; <modifier> ~` for editing and function keys, and `ESC <char>` for Alt
+//!      combinations).
+//!    - Generates sequence byte buffers using [`generate_keyboard_sequence`] and writes
+//!      them directly into the controller side of the [`PTY`], which the operating system
+//!      delivers to the controlled process's [`stdin`].
+//!    - Reads line-by-line event confirmation strings from the controlled child's
+//!      [`stdout`] and asserts that the child decoded the expected
+//!      [`InputEvent::Keyboard`].
+//!
+//! 2. **[`PTY`] Controlled (System Under Test / TUI Input Engine)**:
+//!    - Represents the real TUI application running inside the child subprocess connected
+//!      to the controlled side of the [`PTY`].
+//!    - Initializes [`DirectToAnsiInputDevice`].
+//!    - Behind the scenes, the background [`mio`] polling thread watches [`stdin`],
+//!      feeding raw bytes into [`ChunkFramer`] and the Sans-IO [`vt_100`] parser.
+//!    - Runs a Tokio asynchronous event loop consuming from `input_device.next().await`.
+//!    - Maps parsed intermediate representation events into domain
+//!      [`InputEvent::Keyboard`] structures containing exact [`ModifierKeysMask`] flags
+//!      (Shift, Ctrl, Alt).
+//!    - Formats and echoes each received event over [`stdout`] so the controller can
+//!      verify parsing accuracy.
 //!
 //! # Run with:
 //!
@@ -16,12 +52,21 @@
 //! cargo test -p r3bl_tui test_pty_keyboard_modifiers -- --nocapture
 //! ```
 //!
+//! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
+//! [`generate_keyboard_sequence`]: crate::core::ansi::generator::generate_keyboard_sequence
+//! [`InputEvent::Keyboard`]: crate::InputEvent::Keyboard
+//! [`mio`]: https://crates.io/crates/mio
+//! [`ModifierKeysMask`]: crate::ModifierKeysMask
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
+//! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
+//! [process roles documentation]: mod@super#architecture-and-process-roles
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
-            GLYPH_WAITING, InputEvent, KeyState, MSG_CONTROLLED_READY,
-            MSG_CONTROLLED_STARTING, PtyTestContext, PtyTestMode,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            PtyTestContext, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
@@ -40,7 +85,6 @@ generate_pty_test! {
 /// [`PTY`] Controller: Send keyboard sequences with modifiers and verify parsing
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-#[allow(clippy::too_many_lines)]
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
@@ -61,87 +105,23 @@ fn controller(context: PtyTestContext) {
         .expect("Failed to wait for MSG_CONTROLLED_READY");
     eprintln!("  {GLYPH_SUCCESS} Controlled is ready (input device created)");
 
-    // Build test sequences with various modifier combinations
-    let modifier_combos = vec![
-        (
-            "Shift+Up",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Up,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                },
-            },
-        ),
-        (
-            "Ctrl+Up",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Up,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                },
-            },
-        ),
-        (
-            "Alt+Down",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Down,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                },
-            },
-        ),
-        (
-            "Shift+Alt+Left",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Left,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                },
-            },
-        ),
-        (
-            "Ctrl+Shift+Right",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Right,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                },
-            },
-        ),
-        (
-            "Ctrl+Alt+Shift+F1",
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Function(1),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::Pressed,
-                },
-            },
-        ),
-    ];
+    let test_cases = generate_test_cases();
+
+    assert_eq!(test_cases.len(), TOTAL_EXPECTED_EVENTS);
 
     eprintln!(
         "{} PTY Controller: Sending {} keyboard modifier combinations...",
         GLYPH_WAITING,
-        modifier_combos.len()
+        test_cases.len()
     );
 
-    for (desc, event) in &modifier_combos {
-        let sequence = generate_keyboard_sequence(event)
-            .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
+    for test_case in &test_cases {
+        let TestCase { description, ir } = test_case;
 
-        eprintln!("  → Sending: {desc} ({sequence:?})");
+        let sequence = generate_keyboard_sequence(ir)
+            .unwrap_or_else(|| panic!("Failed to generate sequence for: {description}"));
+
+        eprintln!("  → Sending: {description} ({sequence:?})");
 
         writer
             .write_all(&sequence)
@@ -153,7 +133,11 @@ fn controller(context: PtyTestContext) {
         let event_line =
             child.read_line_state(&mut buf_reader, |line| line.starts_with("Keyboard:"));
 
-        eprintln!("  {GLYPH_SUCCESS} {desc}: {event_line}");
+        assert!(
+            !event_line.contains("Unexpected"),
+            "Received unexpected event line: {event_line}"
+        );
+        eprintln!("  {GLYPH_SUCCESS} {description}: {event_line}");
     }
 
     eprintln!("{GLYPH_CONTROLLER_CLEANUP} PTY Controller: Cleaning up...");
@@ -212,7 +196,7 @@ fn controlled() {
                             println!("{output}");
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
-                            if event_count >= 6 {
+                            if event_count >= TOTAL_EXPECTED_EVENTS {
                                 eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Processed {event_count} events, exiting");
                                 break;
                             }
@@ -232,4 +216,144 @@ fn controlled() {
 
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Completed, exiting");
     });
+}
+
+/// Expected number of keyboard events processed by the controlled process:
+/// - 17 modifier combinations across arrow, function, navigation, and editing keys
+const TOTAL_EXPECTED_EVENTS: usize = 17;
+
+/// A single test case for keyboard modifier combination verification.
+struct TestCase {
+    description: &'static str,
+    ir: VT100InputEventIR,
+}
+
+/// Generate the structured test cases for keyboard modifier testing.
+#[allow(clippy::too_many_lines)]
+fn generate_test_cases() -> Vec<TestCase> {
+    vec![
+        TestCase {
+            description: "Shift+Up",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: VT100KeyModifiersIR::SHIFT,
+            },
+        },
+        TestCase {
+            description: "Ctrl+Up",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Up,
+                modifiers: VT100KeyModifiersIR::CTRL,
+            },
+        },
+        TestCase {
+            description: "Alt+Down",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Down,
+                modifiers: VT100KeyModifiersIR::ALT,
+            },
+        },
+        TestCase {
+            description: "Shift+Alt+Left",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Left,
+                modifiers: VT100KeyModifiersIR::SHIFT.with_alt(),
+            },
+        },
+        TestCase {
+            description: "Ctrl+Shift+Right",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Right,
+                modifiers: VT100KeyModifiersIR::CTRL.with_shift(),
+            },
+        },
+        TestCase {
+            description: "Ctrl+Alt+Shift+F1",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(1),
+                modifiers: VT100KeyModifiersIR::CTRL.with_alt().with_shift(),
+            },
+        },
+        // Navigation keys with modifiers (validating Shift+Home / Shift+End fix)
+        TestCase {
+            description: "Shift+Home",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers: VT100KeyModifiersIR::SHIFT,
+            },
+        },
+        TestCase {
+            description: "Shift+End",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers: VT100KeyModifiersIR::SHIFT,
+            },
+        },
+        TestCase {
+            description: "Ctrl+Home",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Home,
+                modifiers: VT100KeyModifiersIR::CTRL,
+            },
+        },
+        TestCase {
+            description: "Alt+End",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::End,
+                modifiers: VT100KeyModifiersIR::ALT,
+            },
+        },
+        // Editing keys with modifiers
+        TestCase {
+            description: "Shift+Insert",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Insert,
+                modifiers: VT100KeyModifiersIR::SHIFT,
+            },
+        },
+        TestCase {
+            description: "Ctrl+Delete",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Delete,
+                modifiers: VT100KeyModifiersIR::CTRL,
+            },
+        },
+        TestCase {
+            description: "Alt+PageUp",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::PageUp,
+                modifiers: VT100KeyModifiersIR::ALT,
+            },
+        },
+        TestCase {
+            description: "Ctrl+Shift+PageDown",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::PageDown,
+                modifiers: VT100KeyModifiersIR::CTRL.with_shift(),
+            },
+        },
+        // Function keys F5-F12 with modifiers
+        TestCase {
+            description: "Shift+F5",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(5),
+                modifiers: VT100KeyModifiersIR::SHIFT,
+            },
+        },
+        TestCase {
+            description: "Ctrl+F12",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Function(12),
+                modifiers: VT100KeyModifiersIR::CTRL,
+            },
+        },
+        // Alt+letter combination
+        TestCase {
+            description: "Alt+a",
+            ir: VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('a'),
+                modifiers: VT100KeyModifiersIR::ALT,
+            },
+        },
+    ]
 }

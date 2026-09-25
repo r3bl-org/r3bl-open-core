@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{OscEvent, PtyControlledChildExitStatus};
+use crate::{OscPtyEvent, PtyControlledChildExitStatus};
 
 // Output event definitions.
 
@@ -14,10 +14,10 @@ pub enum PtyOutputEvent {
     /// Raw output from the child process.
     Output(Vec<u8>),
 
-    /// [`OSC`] (Operating System Command) sequences.
+    /// [`OSC`] (Operating System Command) sequences emitted by the child process.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Osc(OscEvent),
+    /// [`OSC`]: crate::OscPtyEvent
+    Osc(OscPtyEvent),
 
     /// Child process exited normally.
     Exit(PtyControlledChildExitStatus),

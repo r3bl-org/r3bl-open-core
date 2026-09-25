@@ -1,5 +1,3 @@
-<!-- cspell:words ofsbuf -->
-
 # Task: Refactor Coordinate Traits and Storage Types
 
 ## Overview

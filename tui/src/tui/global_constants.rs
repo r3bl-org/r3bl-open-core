@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno
-
-use crate::{WideningCastToU16, WideningCastToU64, WideningCastToUsize};
+use crate::{WideningCastToU16, WideningCastToU64, WideningCastToUsize,
+            ascii_byte_to_char, ascii_byte_to_str};
 use std::time::Duration;
 use strum_macros::AsRefStr;
 
@@ -162,17 +161,20 @@ pub const LINE_FEED_BYTE: u8 = b'\n';
 /// Carriage return byte used in CRLF line endings.
 pub const CARRIAGE_RETURN_BYTE: u8 = b'\r';
 
-/// Null byte used for padding unused capacity.
-pub const NULL_BYTE: u8 = b'\0';
+/// Null byte (NUL) used for padding unused capacity, string termination, or C0 control.
+pub const NUL: u8 = 0;
 
-/// Null character used to delimit records or pad unused capacity.
-pub const NULL_CHAR: char = '\0';
+/// Null character (NUL) used to delimit records or pad unused capacity.
+pub const NUL_CHAR: char = ascii_byte_to_char(NUL);
+
+/// Null string slice (NUL).
+pub const NUL_STR: &str = ascii_byte_to_str(&[NUL]);
 
 /// [`EIO`] (`errno` `5`) is how Linux signals that the controlled side of a [`PTY`] has
 /// closed. See [POSIX `EOF` vs Linux `EIO`] and [`BufReadExt`] for more info.
 ///
 /// [`BufReadExt`]: crate::test_fixtures::pty_test_fixtures::BufReadExt
-/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [POSIX `EOF` vs Linux `EIO`]: crate::PtyPair#posix-eof-vs-linux-eio
 pub const EIO: i32 = 5;

@@ -106,7 +106,7 @@ impl CommandOutputResult {
     /// [`DWORD`]:
     ///     https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types
     /// [`ExitStatus`]: std::process::ExitStatus
-    /// [`waitpid(2)`]: https://man7.org/linux/man-pages/man2/waitpid.2.html
+    /// [`waitpid(2)`]: https://manpages.debian.org/waitpid.2
     /// [`WEXITSTATUS`]:
     ///     https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/sys_wait.h.html
     #[must_use]
@@ -192,5 +192,3 @@ mod tests {
         assert_eq!(custom.code(), Some(42));
     }
 }
-
-// cspell:word waitpid WEXITSTATUS

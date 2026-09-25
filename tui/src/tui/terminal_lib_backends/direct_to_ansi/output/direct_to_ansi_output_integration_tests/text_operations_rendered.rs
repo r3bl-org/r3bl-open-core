@@ -348,19 +348,22 @@ fn run_all_rendered_tests_sequentially() {
 generate_isolated_process_test!(
     /// Runs all rendered output tests in an isolated process.
     ///
-    /// This test coordinator spawns itself in a subprocess with `ISOLATED_RENDERED_TEST=1`,
-    /// where it runs all rendered tests sequentially with controlled global state. This
-    /// prevents race conditions when tests run in parallel.
+    /// This test coordinator spawns itself in a subprocess with
+    /// `ISOLATED_RENDERED_TEST=1`, where it runs all rendered tests sequentially
+    /// with controlled global state. This prevents race conditions when tests run in
+    /// parallel.
     ///
     /// # Why Process Isolation?
     ///
-    /// These tests use [`global_color_support::set_override`] which modifies a static mutable
-    /// variable. When tests run in parallel:
-    /// - Test A sets override → Test B sets override → Test A clears → Test B gets `NoColor`
-    /// - `degrade_color(yellow, NoColor)` returns black (index 0) instead of yellow (index 3)
+    /// These tests use [`global_color_support::set_override`] which modifies a static
+    /// mutable variable. When tests run in parallel:
+    /// - Test A sets override → Test B sets override → Test A clears → Test B gets
+    ///   `NoColor`
+    /// - `degrade_color(yellow, NoColor)` returns black (index 0) instead of yellow
+    ///   (index 3)
     ///
-    /// By running in an isolated process, we ensure the global state is controlled and cannot
-    /// be affected by other tests.
+    /// By running in an isolated process, we ensure the global state is controlled and
+    /// cannot be affected by other tests.
     test_all_rendered_output_in_isolated_process,
     controller_fn,
     run_all_rendered_tests_sequentially,

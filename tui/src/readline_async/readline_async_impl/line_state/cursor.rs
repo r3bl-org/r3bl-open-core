@@ -264,7 +264,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ANSI_CSI_BRACKET, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
+    use crate::{ANSI_CSI_BRACKET_CHAR, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
                 ESC_START, core::test_fixtures::StdoutMock, vp_height, vp_width};
     use test_case::test_case;
 
@@ -276,10 +276,10 @@ mod tests {
         // We look for patterns like "\x1b[5C" or "\x1b[10C".
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
-            if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
+            if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET_CHAR) {
                 // Read digits.
                 let mut has_digits = false;
-                while let Some(&next) = chars.peek() {
+                while let Some(next) = chars.peek().copied() {
                     if next.is_ascii_digit() {
                         has_digits = true;
                         chars.next();
@@ -302,9 +302,9 @@ mod tests {
     fn contains_move_cursor_down(s: &str) -> bool {
         let mut chars = s.chars().peekable();
         while let Some(c) = chars.next() {
-            if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
+            if c == ESC_START && chars.next() == Some(ANSI_CSI_BRACKET_CHAR) {
                 let mut has_digits = false;
-                while let Some(&next) = chars.peek() {
+                while let Some(next) = chars.peek().copied() {
                     if next.is_ascii_digit() {
                         has_digits = true;
                         chars.next();

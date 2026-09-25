@@ -1,6 +1,7 @@
 # Intra-doc Link Patterns and Examples
 
-This document provides comprehensive examples of intra-doc link patterns for different scenarios.
+This document provides comprehensive examples of intra-doc link patterns for different
+scenarios.
 
 ---
 
@@ -8,15 +9,16 @@ This document provides comprehensive examples of intra-doc link patterns for dif
 
 When deciding between local intra-doc links vs external URLs, follow this priority order:
 
-| Priority | Source Type | Link Style | Example |
-|----------|-------------|------------|---------|
-| 1 | Code in this monorepo | Local path | `[`Foo`]: crate::module::Foo` |
-| 2 | Dependency in Cargo.toml | Crate path | `[`mio`]: mio` |
-| 3 | OS/CS/hardware terminology | External URL | `[`epoll`]: https://man7.org/...` |
-| 4 | Pedagogical/domain terms | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
-| 5 | Non-dependency crates | docs.rs URL | `[`some_crate`]: https://docs.rs/some_crate` |
+| Priority | Source Type                | Link Style    | Example                                          |
+| -------- | -------------------------- | ------------- | ------------------------------------------------ |
+| 1        | Code in this monorepo      | Local path    | `[`Foo`]: crate::module::Foo`                    |
+| 2        | Dependency in Cargo.toml   | Crate path    | `[`mio`]: mio`                                   |
+| 3        | OS/CS/hardware terminology | External URL  | `[`epoll`]: https://manpages.debian.org/epoll.7` |
+| 4        | Pedagogical/domain terms   | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
+| 5        | Non-dependency crates      | docs.rs URL   | `[`some_crate`]: https://docs.rs/some_crate`     |
 
 **Key principle:** If it's in your Cargo.toml, use local links. This enables:
+
 - **Offline docs** - works without internet
 - **Version-matched** - links to the exact version you depend on
 - **Rustdoc-validated** - broken links caught at build time
@@ -31,15 +33,21 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 //! [`mio`]: https://docs.rs/mio
 
 // ✅ Good: OS concept (not a Rust crate), use external URL
-//! [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
+//! [`epoll`]: https://manpages.debian.org/epoll.7
 
 // ✅ Good: Wikipedia for CS terminology
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 ```
 
-> **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional -prioritizing reliable
-> application over efficiency. SKILL.md content loads when the skill triggers (ensuring correct
-> behavior during doc generation), while this file serves as detailed reference for auditing.
+> [!IMPORTANT]
+> **Link Checker Safety (`lychee`)**:
+> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g. `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or drops connections for link checkers).
+> - **GNU tools & utilities**: Always link to Wikipedia (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker traffic).
+
+> **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional -prioritizing
+> reliable application over efficiency. SKILL.md content loads when the skill triggers
+> (ensuring correct behavior during doc generation), while this file serves as detailed
+> reference for auditing.
 
 ---
 
@@ -106,7 +114,8 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 /// [`new()`]: Self::new
 ```
 
-**Rule:** Always include `()` for methods and functions to distinguish them from fields and types.
+**Rule:** Always include `()` for methods and functions to distinguish them from fields
+and types.
 
 ---
 
@@ -128,7 +137,8 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 /// [`parser`]: crate::core::parser
 ```
 
-**Why risky:** If there's a `struct Parser` or `fn parser()`, rustdoc might resolve incorrectly.
+**Why risky:** If there's a `struct Parser` or `fn parser()`, rustdoc might resolve
+incorrectly.
 
 ### ✅ Good: Full Path with mod@
 
@@ -188,13 +198,14 @@ pub struct TerminalState {
 
 ### Simpler Alternative: Just Make It `pub`
 
-The conditional visibility pattern above is for **modules**. For **functions, structs, and other
-items** inside a private module, there's a simpler approach: just make the item `pub`.
+The conditional visibility pattern above is for **modules**. For **functions, structs, and
+other items** inside a private module, there's a simpler approach: just make the item
+`pub`.
 
-This is safe because of our **private modules with public re-exports** (barrel export) pattern. An item being
-`pub` inside its containing module doesn't mean it escapes into the wild - `mod.rs` is the
-gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control which symbols are visible
-to other modules, docs, and tests.
+This is safe because of our **private modules with public re-exports** (barrel export)
+pattern. An item being `pub` inside its containing module doesn't mean it escapes into the
+wild - `mod.rs` is the gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control
+which symbols are visible to other modules, docs, and tests.
 
 ```rust
 // rrt.rs - internal function, safe to be pub
@@ -216,10 +227,10 @@ Now intra-doc links resolve:
 
 **When to use which approach:**
 
-| Situation | Approach |
-| :-------- | :------- |
-| Private **module** needs doc links | Conditional visibility (`#[cfg(any(test, doc))]`) |
-| Private **item** inside a module | Just make it `pub` - `mod.rs` re-exports are the real gate |
+| Situation                          | Approach                                                   |
+| :--------------------------------- | :--------------------------------------------------------- |
+| Private **module** needs doc links | Conditional visibility (`#[cfg(any(test, doc))]`)          |
+| Private **item** inside a module   | Just make it `pub` - `mod.rs` re-exports are the real gate |
 
 ---
 
@@ -394,7 +405,7 @@ Or even simpler (rustdoc auto-resolves):
 
 ### ✅ Good: All Links at Bottom
 
-```rust
+````rust
 /// This module handles [`Input`] processing.
 ///
 /// ## Overview
@@ -416,7 +427,7 @@ Or even simpler (rustdoc auto-resolves):
 /// [`Stream`]: crate::Stream
 /// [`Event`]: crate::Event
 /// [`Output`]: mod@crate::Output
-```
+````
 
 ### ❌ Bad: Links Scattered Throughout
 
@@ -456,6 +467,7 @@ When names could be ambiguous:
 ```
 
 **Available prefixes:**
+
 - `mod@` - Module
 - `struct@` - Struct
 - `enum@` - Enum
@@ -498,8 +510,8 @@ impl TerminalState {
 ### Using super:: Paths (For Co-located Items with Long crate:: Paths)
 
 `super::` paths are valid in intra-doc links. Prefer `crate::` paths since they tend to be
-shorter, but use `super::` when the `crate::` path would be excessively long and the target
-symbol is co-located (in the same parent module).
+shorter, but use `super::` when the `crate::` path would be excessively long and the
+target symbol is co-located (in the same parent module).
 
 ```rust
 // ✅ Good: crate:: is short and clear
@@ -514,10 +526,12 @@ symbol is co-located (in the same parent module).
 ```
 
 **When to use `super::`:**
+
 - The `crate::` path has 3+ segments and the target is in a sibling or parent module
 - The symbol is co-located with the file where the link is being added
 
 **When to stick with `crate::`:**
+
 - The path is short (1-2 segments after `crate::`)
 - The symbol is re-exported at the crate root
 - Clarity matters more than brevity
@@ -577,11 +591,13 @@ pub fn process<T: Display>(item: T) { /* ... */ }
 
 ## Pattern 15: Linking to Section Headings (Fragments)
 
-You can link directly to `## Section Heading` in module documentation using fragment identifiers.
+You can link directly to `## Section Heading` in module documentation using fragment
+identifiers.
 
 ### Fragment Format
 
 Section headings are converted to fragments:
+
 - `## My Section Title` → `#my-section-title` (lowercase, spaces become hyphens)
 - `## UTF-8 Encoding Explained` → `#utf-8-encoding-explained`
 
@@ -609,7 +625,8 @@ Section headings are converted to fragments:
 /// [`utf8` encoding]: mod@super::utf8#utf-8-encoding-explained  // ⚠️ rustdoc recursion!
 ```
 
-**Why bad:** Combining `mod@` + `super::path` (with `::`) + `#fragment` can cause rustdoc to enter an infinite loop during documentation generation.
+**Why bad:** Combining `mod@` + `super::path` (with `::`) + `#fragment` can cause rustdoc
+to enter an infinite loop during documentation generation.
 
 ### ❌ Bad: super:: Path without mod@ (Also Problematic)
 
@@ -621,24 +638,31 @@ Section headings are converted to fragments:
 
 ### Rule Summary
 
-| Pattern | Works? | Example |
-|---------|--------|---------|
-| `mod@super#fragment` | ✅ | `mod@super#testing-strategy` |
-| `mod@crate::full::path#fragment` | ✅ | `mod@crate::core::parser#overview` |
-| `mod@super::sibling#fragment` | ❌ | Causes rustdoc recursion |
-| `super::sibling#fragment` | ❌ | May cause issues |
+| Pattern                          | Works? | Example                            |
+| -------------------------------- | ------ | ---------------------------------- |
+| `mod@super#fragment`             | ✅     | `mod@super#testing-strategy`       |
+| `mod@crate::full::path#fragment` | ✅     | `mod@crate::core::parser#overview` |
+| `mod@super::sibling#fragment`    | ❌     | Causes rustdoc recursion           |
+| `super::sibling#fragment`        | ❌     | May cause issues                   |
 
-**Best Practice:** When linking to a section in another module, always use the full `crate::` path.
+**Best Practice:** When linking to a section in another module, always use the full
+`crate::` path.
 
 ### ⚠️ Rustfmt Comment-Wrapping Bug with Fragment Anchor Links
 
-When `wrap_comments = true` is configured in `rustfmt.toml` (with a specific `comment_width`, e.g., `90`), any doc comment line that exceeds the width limit will be wrapped by `rustfmt`. 
+When `wrap_comments = true` is configured in `rustfmt.toml` (with a specific
+`comment_width`, e.g., `90`), any doc comment line that exceeds the width limit will be
+wrapped by `rustfmt`.
 
-While `rustfmt` is smart enough to avoid wrapping standard HTTP/HTTPS URLs, **it does not natively recognize Rust intra-doc paths (or relative paths) as URLs.**
+While `rustfmt` is smart enough to avoid wrapping standard HTTP/HTTPS URLs, **it does not
+natively recognize Rust intra-doc paths (or relative paths) as URLs.**
 
-If you have a reference definition pointing to an intra-doc path with a fragment (e.g., `#section-name`), and the total line length exceeds the comment width:
+If you have a reference definition pointing to an intra-doc path with a fragment (e.g.,
+`#section-name`), and the total line length exceeds the comment width:
+
 1. `rustfmt` will force-wrap the line, breaking the path right after the `#` character.
-2. It then treats the subsequent line in the doc comment as part of the same paragraph, wrapping them together and completely corrupting the reference link block.
+2. It then treats the subsequent line in the doc comment as part of the same paragraph,
+   wrapping them together and completely corrupting the reference link block.
 
 #### ❌ Bad: Long Relative/Absolute Path triggers `rustfmt` wrapping
 
@@ -647,7 +671,8 @@ If you have a reference definition pointing to an intra-doc path with a fragment
 ///     super::handler_stdin::consume_stdin_input_with_sender#how-this-affects-stdout-as-well
 ```
 
-Because the second line (indented URL) is 93 characters (exceeding 90), `rustfmt` wraps it, corrupting it into:
+Because the second line (indented URL) is 93 characters (exceeding 90), `rustfmt` wraps
+it, corrupting it into:
 
 ```rust
 /// [How this affects stdout as well]:
@@ -657,33 +682,40 @@ Because the second line (indented URL) is 93 characters (exceeding 90), `rustfmt
 
 #### ✅ Clever Workaround: Import the Symbol and Shorten the Link
 
-To prevent `rustfmt` from wrapping, keep the line length under the `comment_width` limit. The cleanest way to do this is to **import the target symbol into the current module** so that you can reference it directly by name instead of using a long relative or absolute path.
+To prevent `rustfmt` from wrapping, keep the line length under the `comment_width` limit.
+The cleanest way to do this is to **import the target symbol into the current module** so
+that you can reference it directly by name instead of using a long relative or absolute
+path.
 
 To avoid compiler warnings about unused imports, always:
+
 1. **Separate** the doc-only import from the main, nested `use` group of the file.
 2. Tag it with `#[allow(unused_imports)]` and add an explanatory comment.
 
-1. **Import the symbol:**
-   ```rust
-   // Imported specifically for the intra-doc links in the struct documentation.
-   #[allow(unused_imports)]
-   use super::handler_stdin::consume_stdin_input_with_sender;
-   ```
+3. **Import the symbol:**
 
-2. **Use the shorter direct reference:**
-   ```rust
-   /// [How this affects stdout as well]:
-   ///     consume_stdin_input_with_sender#how-this-affects-stdout-as-well
-   ```
-   *Line length is now only 71 characters, safely below the 90-character wrapping threshold!*
+    ```rust
+    // Imported specifically for the intra-doc links in the struct documentation.
+    #[allow(unused_imports)]
+    use super::handler_stdin::consume_stdin_input_with_sender;
+    ```
+
+4. **Use the shorter direct reference:**
+    ```rust
+    /// [How this affects stdout as well]:
+    ///     consume_stdin_input_with_sender#how-this-affects-stdout-as-well
+    ```
+    _Line length is now only 71 characters, safely below the 90-character wrapping
+    threshold!_
 
 ### Heading Renames Break Fragment Links Silently
 
 Rustdoc slugifies heading text into a heading anchor (e.g., `## My Section` becomes
-`id="my-section"`). When you rename a heading, the slugified heading anchor changes - and any
-reference-style link definitions targeting the old anchor will **silently break**. Unlike symbol
-links (which `cargo doc` validates at build time), fragment links to heading anchors are not
-validated by rustdoc. The link renders as clickable text but navigates nowhere.
+`id="my-section"`). When you rename a heading, the slugified heading anchor changes - and
+any reference-style link definitions targeting the old anchor will **silently break**.
+Unlike symbol links (which `cargo doc` validates at build time), fragment links to heading
+anchors are not validated by rustdoc. The link renders as clickable text but navigates
+nowhere.
 
 ```rust
 // Heading was: ## Understanding "Blocking I/O"
@@ -699,8 +731,9 @@ validated by rustdoc. The link renders as clickable text but navigates nowhere.
 //! [blocks on I/O]: #example-terminal-input-across-operating-systems
 ```
 
-**After renaming any heading**, search the file for fragment links (`#old-anchor-text`) and update
-them to match the new heading anchor. Anchor generation rules:
+**After renaming any heading**, search the file for fragment links (`#old-anchor-text`)
+and update them to match the new heading anchor. Anchor generation rules:
+
 - Lowercase everything
 - Replace spaces with hyphens
 - Strip punctuation (quotes, colons, parentheses)
@@ -710,30 +743,32 @@ them to match the new heading anchor. Anchor generation rules:
 
 ## Pattern 16: Linking to Trait Impl Sections
 
-Rustdoc generates HTML anchors for each trait implementation on a type's page. You can link
-to these using the `#impl-TraitName-for-TypeName` fragment.
+Rustdoc generates HTML anchors for each trait implementation on a type's page. You can
+link to these using the `#impl-TraitName-for-TypeName` fragment.
 
 ### Anchor Format
 
 The anchor follows the pattern: `#impl-{TraitName}-for-{TypeName}`
 
 Examples:
+
 - `impl Default for RestartPolicy` -> `#impl-Default-for-RestartPolicy`
 - `impl Display for MyType` -> `#impl-Display-for-MyType`
 - `impl From<String> for MyType` -> `#impl-From<String>-for-MyType`
-- `impl From<&SharedWakerSlot<K>> for WakerSlotReader<K>` -> `#impl-From<%26Arc<Mutex<Option<K>>>>-for-WakerSlotReader<K>`
+- `impl From<&SharedWakerSlot<K>> for WakerSlotReader<K>` ->
+  `#impl-From<%26Arc<Mutex<Option<K>>>>-for-WakerSlotReader<K>`
 
 ### URL-Encoding Rules
 
-Only `&` needs URL-encoding (`%26`) in anchor fragments. Angle brackets `<>` can stay as-is.
-Rustdoc expands type aliases to their underlying types in anchor IDs (e.g., `SharedWakerSlot<K>`
-becomes `Arc<Mutex<Option<K>>>`).
+Only `&` needs URL-encoding (`%26`) in anchor fragments. Angle brackets `<>` can stay
+as-is. Rustdoc expands type aliases to their underlying types in anchor IDs (e.g.,
+`SharedWakerSlot<K>` becomes `Arc<Mutex<Option<K>>>`).
 
-| Character | Encode? | Example |
-|:----------|:--------|:--------|
-| `<` `>` | No | `From<String>` stays as-is |
-| `&` | Yes → `%26` | `&Arc` becomes `%26Arc` |
-| Type aliases | Expanded | `SharedWakerSlot<K>` becomes `Arc<Mutex<Option<K>>>` |
+| Character    | Encode?     | Example                                              |
+| :----------- | :---------- | :--------------------------------------------------- |
+| `<` `>`      | No          | `From<String>` stays as-is                           |
+| `&`          | Yes → `%26` | `&Arc` becomes `%26Arc`                              |
+| Type aliases | Expanded    | `SharedWakerSlot<K>` becomes `Arc<Mutex<Option<K>>>` |
 
 ### Reference-Style (Preferred)
 
@@ -754,7 +789,8 @@ becomes `Arc<Mutex<Option<K>>>`).
 
 ### Linking to a Method Within a Trait Impl
 
-To link directly to a specific method (not just the impl block), use `#method.method_name`:
+To link directly to a specific method (not just the impl block), use
+`#method.method_name`:
 
 ```rust
 /// Its [Drop implementation] calls
@@ -763,9 +799,8 @@ To link directly to a specific method (not just the impl block), use `#method.me
 /// [Drop implementation]: WakeOnDrop#method.drop
 ```
 
-This is more precise than `#impl-Drop-for-WakeOnDrop<K>`, which anchors to the
-impl block header. `#method.drop` scrolls directly to the `fn drop` method and its
-rustdoc comments.
+This is more precise than `#impl-Drop-for-WakeOnDrop<K>`, which anchors to the impl block
+header. `#method.drop` scrolls directly to the `fn drop` method and its rustdoc comments.
 
 **Three equivalent path forms** - all resolve to the same anchor on the type's page:
 
@@ -775,32 +810,32 @@ rustdoc comments.
 /// [`Drop`]: #method.drop                  // Same-page fragment (shortest)
 ```
 
-| Form | When to use |
-| :--- | :---------- |
-| `Self#method.drop` | In the type's own doc comment (idiomatic) |
-| `TypeName#method.drop` | From another type's or module's doc comment |
-| `#method.drop` | Same-page shorthand (most concise, works on the type's own page) |
+| Form                   | When to use                                                      |
+| :--------------------- | :--------------------------------------------------------------- |
+| `Self#method.drop`     | In the type's own doc comment (idiomatic)                        |
+| `TypeName#method.drop` | From another type's or module's doc comment                      |
+| `#method.drop`         | Same-page shorthand (most concise, works on the type's own page) |
 
 **When to use which:**
 
-| Scenario | Anchor | Example |
-|:---------|:-------|:--------|
-| Linking to a specific method's docs | `#method.method_name` | `WakeOnDrop#method.drop` |
+| Scenario                                                               | Anchor                 | Example                                        |
+| :--------------------------------------------------------------------- | :--------------------- | :--------------------------------------------- |
+| Linking to a specific method's docs                                    | `#method.method_name`  | `WakeOnDrop#method.drop`                       |
 | Linking to the impl as a whole (e.g., default values, derive behavior) | `#impl-Trait-for-Type` | `RestartPolicy#impl-Default-for-RestartPolicy` |
-| Trait has only one method and you want its docs | `#method.method_name` | `TerminationGuard#method.drop` |
-| Trait has multiple methods and you want the overview | `#impl-Trait-for-Type` | `MyType#impl-Iterator-for-MyType` |
+| Trait has only one method and you want its docs                        | `#method.method_name`  | `TerminationGuard#method.drop`                 |
+| Trait has multiple methods and you want the overview                   | `#impl-Trait-for-Type` | `MyType#impl-Iterator-for-MyType`              |
 
 ### Key Differences from Heading Anchors
 
-| Aspect | Heading anchors (`#my-heading`) | Impl anchors (`#impl-Trait-for-Type`) |
-|:-------|:-------------------------------|:--------------------------------------|
-| Source | `## My Heading` in `//!` docs | Auto-generated by rustdoc HTML renderer |
-| Validated at build time? | No (silent breakage) | No (silent breakage) |
-| Works with `mod@super::path`? | Yes (for module headings) | N/A (lives on type pages) |
-| Path syntax | `mod@super#heading` or `crate::path#heading` | `TypeName#impl-Trait-for-TypeName` |
+| Aspect                        | Heading anchors (`#my-heading`)              | Impl anchors (`#impl-Trait-for-Type`)   |
+| :---------------------------- | :------------------------------------------- | :-------------------------------------- |
+| Source                        | `## My Heading` in `//!` docs                | Auto-generated by rustdoc HTML renderer |
+| Validated at build time?      | No (silent breakage)                         | No (silent breakage)                    |
+| Works with `mod@super::path`? | Yes (for module headings)                    | N/A (lives on type pages)               |
+| Path syntax                   | `mod@super#heading` or `crate::path#heading` | `TypeName#impl-Trait-for-TypeName`      |
 
-**Note:** These anchors are NOT validated by `cargo doc` - if you rename the type or trait,
-the link breaks silently (same caveat as heading anchors).
+**Note:** These anchors are NOT validated by `cargo doc` - if you rename the type or
+trait, the link breaks silently (same caveat as heading anchors).
 
 ---
 
@@ -808,7 +843,7 @@ the link breaks silently (same caveat as heading anchors).
 
 When fixing links, ensure:
 
-- [ ] All symbols in backticks are links: `` `Symbol` `` → `` [`Symbol`] ``
+- [ ] All symbols in backticks are links: `` `Symbol` `` → ``[`Symbol`]``
 - [ ] All links use reference-style, not inline
 - [ ] All link definitions are at the bottom of the comment block
 - [ ] Methods and functions include parentheses: `fn()`
@@ -829,7 +864,9 @@ When reference links fail despite correct syntax, check these hidden causes:
 
 ### Angle Brackets in Link Reference Text
 
-**Symptom:** All reference links after a certain link definition fail with "unresolved link" warnings, but the links themselves look completely correct. `cargo doc` does not warn about the actual root cause.
+**Symptom:** All reference links after a certain link definition fail with "unresolved
+link" warnings, but the links themselves look completely correct. `cargo doc` does not
+warn about the actual root cause.
 
 ```rust
 // ❌ BROKEN - angle brackets in the definition name scrambles the parser
@@ -845,16 +882,25 @@ When reference links fail despite correct syntax, check these hidden causes:
 /// [`Bar`]: crate::Bar            ← works
 ```
 
-**Why:** If you include generic angle brackets (`<`, `>`) inside the definition text (e.g. `/// [`Box<[T]>`]: ...`), the rustdoc Markdown parser becomes scrambled. Not only does that specific link fail, but rustdoc silently gives up on parsing **all subsequent reference links** in that block, causing a cascade of confusing "unresolved link" warnings that `cargo doc` blames on the other correctly-written links!
+**Why:** If you include generic angle brackets (`<`, `>`) inside the definition text (e.g.
+`/// [`Box<[T]>`]: ...`), the rustdoc Markdown parser becomes scrambled. Not only does
+that specific link fail, but rustdoc silently gives up on parsing **all subsequent
+reference links** in that block, causing a cascade of confusing "unresolved link" warnings
+that `cargo doc` blames on the other correctly-written links!
 
-**How to detect:** Look for any `<` or `>` characters inside the square brackets of your link definitions at the bottom of the comment block.
+**How to detect:** Look for any `<` or `>` characters inside the square brackets of your
+link definitions at the bottom of the comment block.
 
-**Solution:** Remove the generic parameters from the link text (e.g., use ``[`Box`]`` instead of ``[`Box<[T]>`]``). If you must display the generics in the inline text, place them outside the link brackets.
+**Solution:** Remove the generic parameters from the link text (e.g., use ``[`Box`]``
+instead of ``[`Box<[T]>`]``). If you must display the generics in the inline text, place
+them outside the link brackets.
 
 ### ✅ Excellent Real-World Example
+
 From `tui/src/core/common/flat_2d_array.rs`:
 
 **Inline Text (Generics Outside Brackets):**
+
 ```rust
 /// This array uses a [`Box`]`<[T]>` instead of a [`Vec`]`<T>`. This is a deliberate
 /// design choice to make illegal states unrepresentable. A [`Vec`]`<T>` contains a
@@ -870,6 +916,7 @@ From `tui/src/core/common/flat_2d_array.rs`:
 ```
 
 **Reference Definitions (Clean Link Names):**
+
 ```rust
 /// [`Box`]: std::boxed::Box
 /// [`Vec`]: std::vec::Vec
@@ -895,13 +942,14 @@ From `tui/src/core/common/flat_2d_array.rs`:
 /// [`Bar`]: crate::Bar    ← link works
 ```
 
-**Why:** Rustdoc's reference link parser is whitespace-sensitive. A `/// ` line (with trailing
-space) breaks the parsing of the entire reference definition block that follows.
+**Why:** Rustdoc's reference link parser is whitespace-sensitive. A `/// ` line (with
+trailing space) breaks the parsing of the entire reference definition block that follows.
 
-**How to detect:** Run `grep -n '/// $' src/**/*.rs` to find lines ending with `/// ` (space).
+**How to detect:** Run `grep -n '/// $' src/**/*.rs` to find lines ending with `/// `
+(space).
 
-**Editor tip:** Configure your editor to strip trailing whitespace on save, but be aware that
-some doc comments intentionally use trailing whitespace for formatting (rare).
+**Editor tip:** Configure your editor to strip trailing whitespace on save, but be aware
+that some doc comments intentionally use trailing whitespace for formatting (rare).
 
 ### Field/Method Name Collisions
 
@@ -920,6 +968,7 @@ impl ThreadLiveness {
 ```
 
 **Linking correctly (prefer explicit disambiguators):**
+
 ```rust
 /// - [`is_running`]: The field
 /// - [`is_running()`]: The method
@@ -928,26 +977,26 @@ impl ThreadLiveness {
 /// [`is_running()`]: Self::is_running()     ← resolves to method (note the () in target too)
 ```
 
-Using `field@` makes the intent explicit and ensures the link won't silently change
-target if the field or method is renamed.
+Using `field@` makes the intent explicit and ensures the link won't silently change target
+if the field or method is renamed.
 
 ---
 
 ## Quick Reference
 
-| Link To              | Pattern Example                                  |
-|----------------------|--------------------------------------------------|
-| Struct               | `` [`Foo`]: crate::Foo ``                        |
-| Enum                 | `` [`Bar`]: crate::Bar ``                        |
-| Trait                | `` [`Display`]: std::fmt::Display ``             |
-| Function             | `` [`process()`]: crate::process ``              |
-| Method               | `` [`run()`]: Self::run ``                       |
-| Field                | `` [`field`]: field@Self::field ``                |
-| Module               | `` [`parser`]: mod@crate::parser ``              |
-| Re-export            | `` [`Type`]: crate::Type ``                      |
-| Test function        | `` [`test_foo`]: crate::tests::test_foo ``       |
-| Private type (pub for doc) | `` [`Internal`]: struct@crate::internal::Internal `` |
-| Section heading (fragment) | `` [`docs`]: mod@crate::path::module#section-name `` |
-| Trait impl section   | `` [default]: TypeName#impl-TraitName-for-TypeName `` |
+| Link To                    | Pattern Example                                    |
+| -------------------------- | -------------------------------------------------- |
+| Struct                     | ``[`Foo`]: crate::Foo``                            |
+| Enum                       | ``[`Bar`]: crate::Bar``                            |
+| Trait                      | ``[`Display`]: std::fmt::Display``                 |
+| Function                   | ``[`process()`]: crate::process``                  |
+| Method                     | ``[`run()`]: Self::run``                           |
+| Field                      | ``[`field`]: field@Self::field``                   |
+| Module                     | ``[`parser`]: mod@crate::parser``                  |
+| Re-export                  | ``[`Type`]: crate::Type``                          |
+| Test function              | ``[`test_foo`]: crate::tests::test_foo``           |
+| Private type (pub for doc) | ``[`Internal`]: struct@crate::internal::Internal`` |
+| Section heading (fragment) | ``[`docs`]: mod@crate::path::module#section-name`` |
+| Trait impl section         | `[default]: TypeName#impl-TraitName-for-TypeName`  |
 
 All links go **at the bottom** of the rustdoc comment block!

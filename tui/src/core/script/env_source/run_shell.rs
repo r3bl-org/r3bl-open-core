@@ -154,7 +154,7 @@ pub fn try_source_and_export_env(
 /// [`__bass.py`]: https://github.com/edc/bass/blob/master/functions/__bass.py
 /// [`bass`]: https://github.com/edc/bass
 /// [`Command`]: std::process::Command
-/// [`env -0`]: https://www.gnu.org/software/coreutils/manual/html_node/env.html
+/// [`env -0`]: https://en.wikipedia.org/wiki/Env
 /// [`parse_env_unix`]: parser::parse_env_unix
 /// [`stderr`]: std::io::stderr
 /// [`stdout`]: std::io::stdout
@@ -430,5 +430,3 @@ mod tests_run_shell_windows {
         Ok(())
     }
 }
-
-// cspell:words Popen

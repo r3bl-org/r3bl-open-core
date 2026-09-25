@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Rust uses [`UTF-8`] to represent text in [String]. [`UTF-8`] is a variable width
+//! Rust uses [`UTF-8`] to represent text in [`String`]. [`UTF-8`] is a variable width
 //! encoding, so each character can take up a different number of bytes, between 1 and 4,
-//! and 1 byte is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
+//! and 1 byte is 8 bits; this is why we use [`Vec`] of [`u8`] to represent a [`String`].
 //!
 //! For example, the character `H` takes up 1 byte. [`UTF-8`] is also backward compatible
 //! with [`ASCII`], meaning that the first 128 characters (the [`ASCII`] characters) are
@@ -29,13 +29,13 @@
 //! - [Grapheme clusters]
 //! - [UTF-8 String]
 //!
-//! There is a discrepancy between how a [String] that contains grapheme clusters is
-//! represented in memory and how it is rendered in a terminal. When writing an TUI editor
+//! There is a discrepancy between how a [`String`] that contains grapheme clusters is
+//! represented in memory and how it is rendered in a terminal. When writing a TUI editor
 //! it is necessary to have a caret (cursor position) that the user can move by pressing
 //! up, down, left, right, etc. For left, this is assumed to move the caret or cursor one
 //! position to the left, regardless of how wide that character may be. Let's unpack that.
 //!
-//! - If we use byte boundaries in the [String] we can move the cursor one byte to the
+//! - If we use byte boundaries in the [`String`] we can move the cursor one byte to the
 //!   left.
 //! - This falls apart when we have a grapheme cluster.
 //! - A grapheme cluster can take up more than one byte, and they don't fall cleanly into
@@ -63,7 +63,8 @@
 //! | 5. Multi-Column (Wide) Compound Emoji    | `🙏🏽`     | 8         | 2                    | Yes      |
 //!
 //! > **Note**: For input parsing of [`UTF-8`] byte sequences from terminal input, see
-//! > [`mod@crate::vt_100_terminal_input_parser::utf8`]. That module
+//! > [`mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::utf8`]. That
+//! > module
 //! > handles byte-level decoding (converting raw bytes to characters), while this
 //! > module handles display width calculation (determining how many terminal columns
 //! > a character occupies for rendering).
@@ -175,8 +176,8 @@
 //! Please take a look at [`crate::graphemes::GCStringOwned`] for the following
 //! items:
 //! - Methods in [`mod@crate::graphemes::gc_string`] for more details on how the
-//!   conversion between "display" (or `display_col_index`), ie, [`crate::VPCol`] and
-//!   "logical" or "segment", ie, [`SegIndex`] is done.
+//!   conversion between "display" (or `display_col_index`), i.e., [`crate::VPCol`] and
+//!   "logical" or "segment", i.e., [`SegIndex`] is done.
 //! - The choices that were made in the design of the [`GCStringOwned`] struct for
 //!   performance to minimize memory latency (for access and allocation). The results
 //!   might surprise you, as intuition around performance is often not reliable.
@@ -208,7 +209,10 @@
 //! - Text editing operations (insert/delete should work on whole characters)
 //! - Logical text manipulation
 //!
-//! Example: In "H😀!", there are 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
+//! Example: In "H😀!", there are 3 segments:
+//! 1. `seg\[0\]='H'`
+//! 2. `seg\[1\]='😀'`
+//! 3. `seg\[2\]='!'`
 //!
 //! ## 3. `VPCol` - Display Position
 //!

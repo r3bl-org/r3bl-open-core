@@ -71,7 +71,7 @@ use crate::{PtyCommand, PtyPair, PtyTestChild, vp_height, vp_width};
 ///     mod@crate::backend_compat_tests::backend_compat_input_test
 /// [`backend_compat_output_test`]:
 ///     mod@crate::backend_compat_tests::backend_compat_output_test
-/// [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
+/// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent

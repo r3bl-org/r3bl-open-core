@@ -1,7 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words urxvt wezterm konsole
-
 use crate::{TtyStatus, is_tty_stderr, is_tty_stdout};
 use std::{env,
           sync::atomic::{AtomicI8, Ordering}};
@@ -453,9 +451,9 @@ pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
 /// [`FORCE_COLOR`]: https://force-color.org/
 /// [`NO_COLOR`]: https://no-color.org/
 /// [`NoColor`]: ColorSupport::NoColor
-/// [`TERM=dumb`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`TERM=dumb`]: https://manpages.debian.org/term.7
 /// [`TERM_PROGRAM`]: https://github.com/termstandard/colors#querying-the-terminal
-/// [`TERM`]: https://man7.org/linux/man-pages/man7/term.7.html
+/// [`TERM`]: https://manpages.debian.org/term.7
 /// [`Truecolor`]: ColorSupport::Truecolor
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 #[must_use]

@@ -1,14 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Button, KeyState, MouseInput, MouseInputKind, TermCol, TermRow,
-            core::ansi::constants::{MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
+            core::ansi::constants::{ANSI_PARAM_SEPARATOR_CHAR, CSI_START,
+                                    MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
                                     MOUSE_RELEASE_BUTTON_CODE, MOUSE_RIGHT_BUTTON_CODE,
                                     MOUSE_SCROLL_DOWN_BUTTON, MOUSE_SCROLL_LEFT_BUTTON,
                                     MOUSE_SCROLL_RIGHT_BUTTON, MOUSE_SCROLL_UP_BUTTON,
-                                    MOUSE_SGR_PREFIX, MOUSE_SGR_PRESS,
-                                    MOUSE_SGR_RELEASE}};
+                                    MOUSE_SGR_MARKER_CHAR, MOUSE_SGR_PRESS_CHAR,
+                                    MOUSE_SGR_RELEASE_CHAR}};
 
 /// Generates an [`ANSI`] [`SGR`] mouse sequence for the given `MouseInput`.
 ///
@@ -51,21 +52,17 @@ pub fn generate(mouse_input: &MouseInput, x: TermCol, y: TermRow) -> Option<Vec<
     }
 
     let suffix = if is_release {
-        MOUSE_SGR_RELEASE
+        MOUSE_SGR_RELEASE_CHAR
     } else {
-        MOUSE_SGR_PRESS
+        MOUSE_SGR_PRESS_CHAR
     };
-
-    let prefix_str = std::str::from_utf8(MOUSE_SGR_PREFIX).unwrap_or("\x1b[<");
 
     Some(
         format!(
-            "{}{};{};{}{}",
-            prefix_str,
-            button_code,
-            x_val,
-            y_val,
-            char::from(suffix)
+            "{CSI_START}{MOUSE_SGR_MARKER_CHAR}{button_code}\
+            {ANSI_PARAM_SEPARATOR_CHAR}{x_val}\
+            {ANSI_PARAM_SEPARATOR_CHAR}{y_val}\
+            {suffix}"
         )
         .into_bytes(),
     )
@@ -82,14 +79,14 @@ fn get_button_code(button: Button) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Button, KeyState, ModifierKeysMask, MouseInput, MouseInputKind,
-                term_col, term_row, vp_col, vp_row};
+    use crate::{Button, KeyState, MOUSE_SGR_PREFIX_STR, ModifierKeysMask, MouseInput,
+                MouseInputKind, term_col, term_row, vp_col, vp_row};
     use core::num::NonZeroU16;
 
     #[test]
     #[allow(clippy::too_many_lines)]
     fn test_sgr_mouse_sequence() {
-        let prefix_str = std::str::from_utf8(MOUSE_SGR_PREFIX).unwrap_or("\x1b[<");
+        let prefix_str = MOUSE_SGR_PREFIX_STR.to_string();
 
         let term_col_val = term_col(NonZeroU16::new(10).unwrap());
         let term_row_val = term_row(NonZeroU16::new(10).unwrap());
@@ -105,10 +102,10 @@ mod tests {
         assert_eq!(
             bytes1,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_LEFT_BUTTON_CODE,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{MOUSE_LEFT_BUTTON_CODE}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}"
             )
             .into_bytes()
         );
@@ -124,10 +121,10 @@ mod tests {
         assert_eq!(
             bytes2,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_LEFT_BUTTON_CODE,
-                char::from(MOUSE_SGR_RELEASE)
+                "{prefix_str}{MOUSE_LEFT_BUTTON_CODE}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_RELEASE_CHAR}"
             )
             .into_bytes()
         );
@@ -145,10 +142,11 @@ mod tests {
         assert_eq!(
             bytes3,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_RIGHT_BUTTON_CODE | MOUSE_MODIFIER_SHIFT,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{a}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}",
+                a = MOUSE_RIGHT_BUTTON_CODE | MOUSE_MODIFIER_SHIFT
             )
             .into_bytes()
         );
@@ -164,10 +162,10 @@ mod tests {
         assert_eq!(
             bytes4,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_SCROLL_UP_BUTTON,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{MOUSE_SCROLL_UP_BUTTON}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}"
             )
             .into_bytes()
         );
@@ -183,10 +181,10 @@ mod tests {
         assert_eq!(
             bytes5,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_SCROLL_DOWN_BUTTON,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{MOUSE_SCROLL_DOWN_BUTTON}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}"
             )
             .into_bytes()
         );
@@ -202,10 +200,11 @@ mod tests {
         assert_eq!(
             bytes6,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_RELEASE_BUTTON_CODE | MOUSE_MOTION_FLAG,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{a}\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}",
+                a = MOUSE_RELEASE_BUTTON_CODE | MOUSE_MOTION_FLAG
             )
             .into_bytes()
         );
@@ -221,10 +220,10 @@ mod tests {
         assert_eq!(
             bytes7,
             format!(
-                "{}{};10;10{}",
-                prefix_str,
-                MOUSE_MIDDLE_BUTTON_CODE | MOUSE_MOTION_FLAG,
-                char::from(MOUSE_SGR_PRESS)
+                "{prefix_str}{a}{ANSI_PARAM_SEPARATOR_CHAR}10\
+                {ANSI_PARAM_SEPARATOR_CHAR}10\
+                {MOUSE_SGR_PRESS_CHAR}",
+                a = MOUSE_MIDDLE_BUTTON_CODE | MOUSE_MOTION_FLAG
             )
             .into_bytes()
         );

@@ -38,22 +38,22 @@ use std::fmt::{self};
 pub enum DaSequence {
     /// Primary Device Attributes response.
     ///
-    /// Indicates a `VT220`-family terminal with `ANSI` color support (`ESC [ ? 62 ; 22
+    /// Indicates a `VT-220`-family terminal with [`ANSI`] color support (`ESC [ ? 62 ; 22
     /// c`).
     ///
-    /// - The `VT200` series (specifically `VT220`) is a strict superset of `VT100`. By
-    ///   responding with `62` (`VT220`-family) and the parameter `22` ([`ANSI`] color
-    ///   support), we are essentially telling the child application: "I fully support the
-    ///   `VT100` specification, but I also support modern extensions like [`ANSI`] color
-    ///   and advanced control sequences."
+    /// - The `VT-200` series (specifically [`VT-220`]) is a strict superset of
+    ///   [`VT-100`]. By responding with `62` ([`VT-220`]-family) and the parameter `22`
+    ///   ([`ANSI`] color support), we are essentially telling the child application: "I
+    ///   fully support the [`VT-100`] specification, but I also support modern extensions
+    ///   like [`ANSI`] color and advanced control sequences."
     /// - This is a standard industry practice. Almost all modern terminal emulators (like
     ///   [`WezTerm`], [`Alacritty`], [`GNOME Terminal`], etc.) identify themselves as
-    ///   `VT220`, `VT320`, or `VT420` for exactly this reason: to unlock colors and
+    ///   [`VT-220`], `VT320`, or `VT420` for exactly this reason: to unlock colors and
     ///   modern features in child apps while remaining backwards compatible with the
-    ///   `VT100` standard.
-    /// - Note - In our codebase we use the `VT100` in our type & module names because
+    ///   [`VT-100`] standard.
+    /// - Note - In our codebase we use the [`VT-100`] in our type & module names because
     ///   it's the universally recognized name for the technology and protocol. It
-    ///   encompasses `VT220` with color extensions, etc. It's very similar to how we
+    ///   encompasses [`VT-220`] with color extensions, etc. It's very similar to how we
     ///   still use the term [`TTY`] (which stands for Teletypewriter) even though we
     ///   haven't used mechanical teletypewriters with ink and paper in over 40 years.
     ///
@@ -61,6 +61,8 @@ pub enum DaSequence {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`GNOME Terminal`]: https://help.gnome.org/users/gnome-terminal/stable/
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`VT-220`]: https://en.wikipedia.org/wiki/VT220
     /// [`WezTerm`]: https://wezfurlong.org/wezterm/
     PrimaryDeviceAttributes,
 }

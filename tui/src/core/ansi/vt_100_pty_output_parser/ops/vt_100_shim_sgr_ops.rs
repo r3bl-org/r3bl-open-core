@@ -3,8 +3,8 @@
 //! Style/Graphics Rendition operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! Refer to the module-level documentation in the ops module for details on the
-//! "shim → impl → test" architecture and naming conventions.
+//! Refer to the module-level documentation in the ops module for details on the "shim →
+//! impl → test" architecture and naming conventions.
 //!
 //! **Related Files:**
 //! - **Implementation**: [`vt_100_impl_sgr_ops`] - Business logic with unit tests
@@ -14,13 +14,13 @@
 //!
 //! **This shim layer intentionally has no direct unit tests.**
 //!
-//! This is a deliberate architectural decision: these functions are pure delegation
+//! This is a deliberate architectural decision. These functions are pure delegation
 //! layers with no business logic. Testing is comprehensively handled by:
 //! - **Unit tests** in the implementation layer (with `#[test]` functions)
 //! - **Integration tests** in the conformance tests validating the full pipeline
 //!
-//! For the complete testing philosophy and rationale behind this approach,
-//! see the [ops module].
+//! For the complete testing philosophy and rationale behind this approach, see the [ops
+//! module].
 //!
 //! # Architecture Overview
 //!
@@ -228,10 +228,11 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
             continue;
         }
 
-        // Case 2: Check for semicolon-separated extended color (single-element slice).
-        if let Some(&first_param) = param_slice.first() {
-            if param_slice.len() == 1
-                && (first_param == SGR_FG_EXTENDED || first_param == SGR_BG_EXTENDED)
+        // Case 2 & 3: Match on param_slice with slice patterns.
+        match *param_slice {
+            // Case 2: Semicolon-separated extended color (single-element slice).
+            [first_param]
+                if first_param == SGR_FG_EXTENDED || first_param == SGR_BG_EXTENDED =>
             {
                 // Try to collect semicolon-separated extended color params.
                 if let Some(consumed) = try_parse_semicolon_extended_color(
@@ -243,9 +244,14 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
                     idx += consumed;
                     continue;
                 }
+                // Fallback if not valid extended color.
+                apply_sgr_param(performer, first_param);
             }
             // Case 3: Regular single SGR parameter.
-            apply_sgr_param(performer, first_param);
+            [first_param, ..] => {
+                apply_sgr_param(performer, first_param);
+            }
+            [] => {}
         }
         idx += 1;
     }
@@ -273,6 +279,7 @@ fn try_parse_semicolon_extended_color(
     let mode = params.extract_nth_single_opt_raw(start_idx + 1)?;
 
     match mode {
+        // Handle 256-color.
         SGR_COLOR_MODE_256 => {
             // 256-color: need 1 more param (color index).
             let index = params.extract_nth_single_opt_raw(start_idx + 2)?;
@@ -288,10 +295,13 @@ fn try_parse_semicolon_extended_color(
             performer
                 .ofs_buf_vt_100
                 .apply_extended_color_sequence(color_seq);
-            Some(3) // Consumed: [38/48], [5], [index]
+            // Consumed 3 parameters: target (38 or 48), mode (5), and color index.
+            Some(3)
         }
+
+        // Handle RGB true color.
         SGR_COLOR_MODE_RGB => {
-            // RGB: need 3 more params (r, g, b).
+            // RGB: need 3 more params (`r`, `g`, `b`).
             let r = params.extract_nth_single_opt_raw(start_idx + 2)?;
             let g = params.extract_nth_single_opt_raw(start_idx + 3)?;
             let b = params.extract_nth_single_opt_raw(start_idx + 4)?;
@@ -312,11 +322,15 @@ fn try_parse_semicolon_extended_color(
                     b.as_u8_narrowing(),
                 )
             };
+
             performer
                 .ofs_buf_vt_100
                 .apply_extended_color_sequence(color_seq);
-            Some(5) // Consumed: [38/48], [2], [r], [g], [b]
+            // Consumed 5 parameters: target (38 or 48), mode (2), and channels (r, g, b).
+            Some(5)
         }
-        _ => None, // Unknown mode, not an extended color.
+
+        // Unknown mode, not an extended color.
+        _ => None,
     }
 }

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen EINVAL
-
 //! # Architecture Overview
 //!
 //! This module encapsulates all state and logic for the [`mio`] poller thread. It owns

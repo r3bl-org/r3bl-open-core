@@ -223,5 +223,3 @@ mod impl_windows_conpty {
         }
     }
 }
-
-// cspell:words pseudoconsole PSEUDOCONSOLE conhost

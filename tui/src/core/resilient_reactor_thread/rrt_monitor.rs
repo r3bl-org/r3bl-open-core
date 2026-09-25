@@ -297,7 +297,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     /// [`Stopped`]: ThreadState::Stopped
     /// [`Stopping`]: ThreadState::Stopping
     /// [`SubscriberGuard`]: crate::resilient_reactor_thread::SubscriberGuard
-    /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
+    /// [`syscall`]: https://manpages.debian.org/syscalls.2
     /// [`try_subscribe()`]: crate::resilient_reactor_thread::RRT::try_subscribe
     /// [`Why This Wrapper Exists`]: super::InterruptHandle#why-this-wrapper-exists
     /// [`zombie interrupt bug`]: super#the-zombie-interrupt-bug

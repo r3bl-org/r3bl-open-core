@@ -85,15 +85,8 @@ pub fn device_attributes(
         return;
     }
 
-    // According to specs, CSI c is the same as CSI 0 c for DA1.
-    // vte::Params iterates over array elements representing parameters.
-    let mut param_iter = params.iter();
-    let is_da1 = match param_iter.next() {
-        // CSI c (no params)
-        None => true,
-        // CSI 0 c (param = 0)
-        Some(param) => param[0] == 0,
-    };
+    // CSI c (no params) or CSI 0 c (param = 0).
+    let is_da1 = matches!(params.iter().next(), None | Some([0, ..]));
 
     if is_da1 {
         performer.ofs_buf_vt_100.handle_device_attributes_request();

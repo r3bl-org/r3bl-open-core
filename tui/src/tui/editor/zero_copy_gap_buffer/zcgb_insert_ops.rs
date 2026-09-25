@@ -103,7 +103,7 @@
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CRow,
             CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
-            NULL_BYTE, byte_offset, c_len, ok};
+            NUL, byte_offset, c_len, ok};
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
@@ -271,7 +271,7 @@ impl ZeroCopyGapBuffer {
             }
 
             // Clear the gap left behind by the move.
-            self.buffer[move_from..move_from + text_len.as_usize()].fill(NULL_BYTE);
+            self.buffer[move_from..move_from + text_len.as_usize()].fill(NUL);
         }
 
         // Copy the new text into the buffer.
@@ -302,7 +302,7 @@ impl ZeroCopyGapBuffer {
             let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
 
             // Fill unused capacity with null bytes.
-            self.buffer[line_end..capacity_end].fill(NULL_BYTE);
+            self.buffer[line_end..capacity_end].fill(NUL);
         }
 
         ok!()
@@ -564,7 +564,7 @@ mod tests {
         {
             let i = unused_start + idx;
             assert_eq!(
-                byte, NULL_BYTE,
+                byte, NUL,
                 "Unused buffer position {i} should be null-padded after insertion but found: {byte:?}"
             );
         }
@@ -605,7 +605,7 @@ mod tests {
         {
             let i = unused_start + idx;
             assert_eq!(
-                byte, NULL_BYTE,
+                byte, NUL,
                 "Unused buffer position {i} should be null-padded after middle insertion but found: {byte:?}"
             );
         }
@@ -647,7 +647,7 @@ mod tests {
         {
             let i = unused_start + idx;
             assert_eq!(
-                byte, NULL_BYTE,
+                byte, NUL,
                 "Extended unused buffer position {i} should be null-padded but found: {byte:?}"
             );
         }

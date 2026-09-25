@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words iflag cflag lflag
-
 //! Terminal raw mode implementation for [`ANSI`] terminals.
 //!
 //! This module provides functionality to enable and disable raw mode on terminals,
@@ -236,18 +234,18 @@
 //! [`portable_pty` crate]: https://docs.rs/portable-pty
 //! [`PTY`]: crate::pty
 //! [`rustix`]: https://docs.rs/rustix
-//! [`SIGINT`]: https://man7.org/linux/man-pages/man7/signal.7.html
+//! [`SIGINT`]: https://manpages.debian.org/signal.7
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`Terminator`]: https://gnome-terminator.org/
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-//! [`VEOF`]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [`VEOF`]: https://manpages.debian.org/termios.3
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
-//! [Bash]: https://www.gnu.org/software/bash/
+//! [Bash]: https://en.wikipedia.org/wiki/Bash_(Unix_shell)
 //! [Fish]: https://fishshell.com/docs/current/interactive.html
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
-//! [termios]: https://man7.org/linux/man-pages/man3/termios.3.html
+//! [termios]: https://manpages.debian.org/termios.3
 //! [Unix implementation's termios section]: mod@crate::terminal_raw_mode::raw_mode_unix#the-termios-interface
 
 // Private modules (hide internal structure).

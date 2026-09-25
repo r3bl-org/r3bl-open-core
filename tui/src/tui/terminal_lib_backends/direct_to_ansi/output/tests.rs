@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words URXVT
-
 //! Unit tests for [`ansi_output`]
 //!
 //! Tests all static methods to verify correct [`ANSI`] escape sequence generation.
@@ -128,7 +126,8 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{AnsiValue, SgrColorSequence, TuiColor, tui_color};
+    use crate::{AnsiValue, SgrAttributeSequence, SgrColorSequence, TuiColor, TuiStyle,
+                TuiStyleAttribs, tui_color, tui_style_attrib};
 
     #[test]
     fn test_reset_color() {
@@ -313,6 +312,92 @@ mod color_tests {
         let seq = crate::ansi_output::color_ops::bg_color(color);
         assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(12).to_string());
     }
+
+    #[test]
+    fn test_text_attributes_empty() {
+        let style = TuiStyle::default();
+        let seq = crate::ansi_output::color_ops::text_attributes(&style);
+        assert_eq!(seq, "");
+    }
+
+    #[test]
+    fn test_text_attributes_single() {
+        let mut style = TuiStyle::default();
+        style.attribs.bold = Some(tui_style_attrib::Bold);
+        let seq = crate::ansi_output::color_ops::text_attributes(&style);
+        assert_eq!(seq, "\x1b[1m");
+        assert_eq!(seq, SgrAttributeSequence::from(&style).to_string());
+    }
+
+    #[test]
+    fn test_text_attributes_multiple() {
+        let mut style = TuiStyle::default();
+        style.attribs.bold = Some(tui_style_attrib::Bold);
+        style.attribs.italic = Some(tui_style_attrib::Italic);
+        style.attribs.underline = Some(tui_style_attrib::Underline);
+        let seq = crate::ansi_output::color_ops::text_attributes(&style);
+        assert_eq!(seq, "\x1b[1;3;4m");
+        assert_eq!(seq, SgrAttributeSequence::from(&style).to_string());
+    }
+
+    #[test]
+    fn test_text_attributes_all_variants() {
+        // Dim
+        let mut style = TuiStyle {
+            attribs: tui_style_attrib::Dim.into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[2m"
+        );
+
+        // Blink slow & rapid
+        style.attribs = TuiStyleAttribs::default();
+        style.attribs.blink = Some(tui_style_attrib::BlinkMode::Slow);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[5m"
+        );
+
+        style.attribs.blink = Some(tui_style_attrib::BlinkMode::Rapid);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[6m"
+        );
+
+        // Reverse
+        style.attribs = TuiStyleAttribs::default();
+        style.attribs.reverse = Some(tui_style_attrib::Reverse);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[7m"
+        );
+
+        // Hidden
+        style.attribs = TuiStyleAttribs::default();
+        style.attribs.hidden = Some(tui_style_attrib::Hidden);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[8m"
+        );
+
+        // Strikethrough
+        style.attribs = TuiStyleAttribs::default();
+        style.attribs.strikethrough = Some(tui_style_attrib::Strikethrough);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[9m"
+        );
+
+        // Overline
+        style.attribs = TuiStyleAttribs::default();
+        style.attribs.overline = Some(tui_style_attrib::Overline);
+        assert_eq!(
+            crate::ansi_output::color_ops::text_attributes(&style),
+            "\x1b[53m"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -403,5 +488,17 @@ mod terminal_mode_tests {
             ])
         );
         assert_eq!(seq, expected);
+    }
+
+    #[test]
+    fn test_enable_keyboard_enhancement() {
+        let seq = ansi_output::terminal_modes::enable_keyboard_enhancement();
+        assert_eq!(seq, "\x1b[>1u");
+    }
+
+    #[test]
+    fn test_disable_keyboard_enhancement() {
+        let seq = ansi_output::terminal_modes::disable_keyboard_enhancement();
+        assert_eq!(seq, "\x1b[<1u");
     }
 }
