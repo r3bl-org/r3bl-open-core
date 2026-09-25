@@ -21,14 +21,14 @@
 #[allow(unused_imports)]
 use super::handler_stdin::consume_stdin_input_with_sender;
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
-                    paste_state_machine::PasteCollectionState,
-                    stateful_parser::StatefulInputParser},
+                    paste_state_machine::PasteCollectionState},
             MioSoftwareInterrupt, SourceKindReady,
             dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             sources::SourceRegistry};
 use crate::{Continuation,
-            core::resilient_reactor_thread::{RRTEvent, RRTWorker}};
+            core::{ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser,
+                   resilient_reactor_thread::{RRTEvent, RRTWorker}}};
 use miette::Diagnostic;
 use mio::{Events, Interest, Poll, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
@@ -54,7 +54,7 @@ const EVENTS_CAPACITY: usize = 8;
 /// | [`poll_handle`]       | Efficient I/O multiplexing via epoll       |
 /// | [`sources`]           | stdin and SIGWINCH signal handles          |
 /// | [`stdin_buffer`]      | Raw bytes read from stdin                  |
-/// | [`parser`]            | VT100 input sequence parser                |
+/// | [`parser`]            | [`VT-100`] input sequence parser           |
 /// | [`paste_state`]       | Bracketed paste mode state machine         |
 ///
 /// ## How this affects [`stdout`] as well
@@ -77,6 +77,7 @@ const EVENTS_CAPACITY: usize = 8;
 /// [`stdin_buffer`]: field@MioPollWorker::stdin_unparsed_byte_buffer
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [How this affects stdout as well]:
 ///     consume_stdin_input_with_sender#how-this-affects-stdout-as-well
 /// [Why We Need Non-Blocking Read]:
@@ -95,8 +96,10 @@ pub struct MioPollWorker {
     /// Buffer for reading unparsed bytes from stdin.
     pub stdin_unparsed_byte_buffer: [u8; STDIN_READ_BUFFER_SIZE],
 
-    /// Stateful VT100 input sequence parser.
-    pub vt_100_input_seq_parser: StatefulInputParser,
+    /// Stateful [`VT-100`] input sequence parser.
+    ///
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    pub vt_100_input_seq_parser: InputByteStreamToIrParser,
 
     /// Paste state machine for bracketed paste handling.
     pub paste_collection_state: PasteCollectionState,
@@ -195,7 +198,7 @@ impl RRTWorker for MioPollWorker {
                 ready_events_buffer: Events::with_capacity(EVENTS_CAPACITY),
                 sources: SourceRegistry { stdin, signals },
                 stdin_unparsed_byte_buffer: [0u8; STDIN_READ_BUFFER_SIZE],
-                vt_100_input_seq_parser: StatefulInputParser::default(),
+                vt_100_input_seq_parser: InputByteStreamToIrParser::default(),
                 paste_collection_state: PasteCollectionState::Inactive,
                 original_stdin_flags,
             },

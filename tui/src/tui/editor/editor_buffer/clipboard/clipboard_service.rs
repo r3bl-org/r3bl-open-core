@@ -1,59 +1,306 @@
-// Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{ClipboardResult, ClipboardService};
-use crate::{DEBUG_TUI_COPY_PASTE, ok, throws};
-use copypasta::{ClipboardContext, ClipboardProvider};
+// cspell:words npqr
 
-#[derive(Debug)]
-pub struct SystemClipboard;
+use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
+use std::error::Error;
 
-impl ClipboardService for SystemClipboard {
+pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
+
+/// Abstraction for the clipboard service for dependency injection.
+///
+/// This trait provides a unified clipboard architecture for both local desktop
+/// environments and remote/headless terminal sessions. It is implemented by
+/// [`SystemClipboard`], [`Osc52Clipboard`], and test fixtures.
+///
+/// # Architecture & Hybrid Fallback
+///
+/// The clipboard architecture is composed of two clipboard providers coordinated by a
+/// hybrid fallback service:
+///
+/// 1. **Desktop Display Server Provider ([`copypasta`])**: When running locally on a
+///    desktop with an active display server (Wayland, macOS Cocoa `NSPasteboard`, or
+///    Windows Win32 API), clipboard operations talk directly to the operating system
+///    clipboard service.
+///
+/// 2. **In-Band Terminal Provider ([`Osc52Clipboard`])**: When running in a remote SSH
+///    session, Docker container, or headless environment where `$DISPLAY` and
+///    `$WAYLAND_DISPLAY` are unset, desktop display server connections fail.
+///    [`Osc52Clipboard`] formats an [`OSC`] 52 sequence (`ESC ] 52 ; c ; <base64> BEL`)
+///    and writes it directly to standard output, instructing the client host terminal
+///    emulator to place the text onto the client desktop clipboard.
+///
+/// 3. **Hybrid Fallback ([`SystemClipboard`])**: [`SystemClipboard`] implements automatic
+///    fallback: it attempts the local desktop display server first; if that fails, it
+///    seamlessly falls back to [`Osc52Clipboard`].
+///
+/// 4. **Paste vs Copy Separation**: While copying (outbound) writes to `stdout` via
+///    [`OscSequence::ClipboardSet`], pasting (inbound) is driven asynchronously by
+///    [`DEC`] Private Mode 2004 Bracketed Paste (`CSI 200 ~ <content> CSI 201 ~`),
+///    triggered when the user executes a paste action in their terminal emulator.
+///
+/// [`copypasta`]: copypasta
+/// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+/// [`Osc52Clipboard`]: crate::Osc52Clipboard
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OscSequence::ClipboardSet`]: crate::osc_codes::OscSequence::ClipboardSet
+/// [`SystemClipboard`]: crate::SystemClipboard
+pub trait ClipboardService {
+    /// # Errors
+    ///
+    /// Returns an error if the clipboard operation fails.
     fn try_to_put_content_into_clipboard(
         &mut self,
         content: String,
-    ) -> ClipboardResult<()> {
-        throws!({
-            let mut ctx = ClipboardContext::new()?;
-            ctx.set_contents(content.clone())?;
+    ) -> ClipboardResult<()>;
+    /// # Errors
+    ///
+    /// Returns an error if the clipboard operation fails.
+    fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String>;
+}
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "📋📋📋 Selected Text was copied to clipboard",
-                    copied = %content,
-                );
-            });
-        })
+pub fn copy_to_clipboard(
+    buffer: &EditorBuffer,
+    clipboard_service_provider: &mut impl ClipboardService,
+) {
+    let sel_container = buffer.get_selection_container();
+
+    let selected_lines = sel_container.get_selected_lines(buffer);
+    let mut acc_lines = InlineVecStr::with_capacity(selected_lines.len());
+    for (_, sel_text) in selected_lines {
+        acc_lines.push(sel_text);
     }
 
-    fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String> {
-        let mut ctx = ClipboardContext::new()?;
-        let content = ctx.get_contents()?;
+    let result = clipboard_service_provider
+        .try_to_put_content_into_clipboard(acc_lines.join("\n"));
 
-        Ok(content)
+    if let Err(error) = result {
+        DEBUG_TUI_COPY_PASTE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "📋📋📋 Failed to copy selected text to clipboard",
+                error = ?error,
+            );
+        });
     }
 }
 
-pub mod clipboard_test_fixtures {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
+#[cfg(test)]
+mod tests {
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
+                FileExtensionToken, SelectionAction, assert_eq2,
+                clipboard_test_fixtures::TestClipboard,
+                editor::test_fixtures_editor::mock_real_objects_for_editor};
 
-    #[derive(Debug, Default)]
-    pub struct TestClipboard {
-        pub content: String,
-    }
+    #[test]
+    fn test_copy() {
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
+        let mut test_clipboard = TestClipboard::default();
+        // Single Line copying.
+        {
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
 
-    impl ClipboardService for TestClipboard {
-        fn try_to_put_content_into_clipboard(
-            &mut self,
-            content: String,
-        ) -> ClipboardResult<()> {
-            self.content = content;
-            ok!()
+            // Copying the contents from Selection.
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string());
         }
 
-        fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String> {
-            ok!(self.content.clone())
+        // Multi-line Copying.
+        {
+            // Current Caret Position : [row : 0, col : 12]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::PageDown)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 12]
+
+            // Copying the contents from Selection.
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            assert_eq2!(content, "abc r3bl xyz\npqr rust uvw".to_string());
+        }
+    }
+
+    #[test]
+    fn test_paste() {
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
+
+        // Single Line Pasting.
+        {
+            let mut test_clipboard = TestClipboard {
+                content: "copied text ".to_string(),
+            };
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
+                &mut test_clipboard,
+            );
+
+            // Current Caret Position : [row : 0, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines = vec!["abc copied text r3bl xyz", "pqr rust uvw"];
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
+        }
+
+        // Multi-line Pasting.
+        {
+            // Current Caret Position : [row : 0, col : 4]
+            let mut test_clipboard = TestClipboard {
+                content: "old line\nnew line ".to_string(),
+            };
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines = vec![
+                "abc copied text old line",
+                "new line r3bl xyz",
+                "pqr rust uvw",
+            ];
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn test_cut() {
+        let mut buffer =
+            EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
+
+        // Single Line cutting.
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Cutting the contents from Selection and pasting to clipboard.
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 0]
+
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
+
+            let new_lines = vec![
+                "pqr rust uvw", // First line 'abc r3bl xyz' is cut
+            ];
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
+        }
+
+        // Multi-line Cutting.
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+                &mut test_clipboard,
+            );
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], /* Move caret by 4 positions */
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionAction::PageUp)], /* Select by pressing PageUp */
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 4]
+
+            // Cutting the contents from Selection and pasting to clipboard.
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
+            let new_lines = vec!["abc ", "rust uvw"];
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
         }
     }
 }

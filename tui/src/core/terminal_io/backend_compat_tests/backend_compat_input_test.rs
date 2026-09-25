@@ -61,14 +61,15 @@
 //! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
 //!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
-use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice, EIO,
-            FUNCTION_F5_CODE, GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS,
-            GLYPH_WAITING, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
-            MODIFIER_SHIFT, MSG_CONTROLLED_READY, PtyPair, PtyTestChild,
-            SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
-            SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-            SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL,
+use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ARROW_DOWN_FINAL,
+            ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DEL, CONTROL_C,
+            CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice, EIO, FUNCTION_F5_CODE,
+            GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS, GLYPH_WAITING, MODIFIER_ALT,
+            MODIFIER_CTRL, MODIFIER_CTRL_SHIFT, MODIFIER_SHIFT, MSG_CONTROLLED_READY,
+            PtyPair, PtyTestChild, SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
+            SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+            SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL,
+            SS3_F4_FINAL,
             core::ansi::{generator::{csi, csi_modified, csi_tilde, ss3},
                          terminal_raw_mode},
             ok, retry_until_success_test, spawn_controlled_in_pty,
@@ -429,6 +430,12 @@ pub mod generate_test_sequences {
             ("Enter", vec![CONTROL_ENTER]),
             ("Tab", vec![CONTROL_TAB]),
             ("Backspace", vec![ASCII_DEL]),
+            // Alt key sequences.
+            ("Alt+]", vec![ANSI_ESC, ANSI_OSC_CLOSE_BRACKET]),
+            (
+                "Alt+[",
+                vec![ANSI_ESC, ANSI_CSI_BRACKET, b'9', b'1', b';', b'3', b'u'],
+            ),
             // Arrow keys with modifiers (xterm format): ESC [ 1 ; <mod+1> A.
             ("Shift+Up", csi_modified(MODIFIER_SHIFT, ARROW_UP_FINAL)),
             ("Ctrl+Up", csi_modified(MODIFIER_CTRL, ARROW_UP_FINAL)),
@@ -437,6 +444,14 @@ pub mod generate_test_sequences {
                 "Ctrl+Shift+Up",
                 csi_modified(MODIFIER_CTRL_SHIFT, ARROW_UP_FINAL),
             ),
+            // Navigation keys with modifiers: ESC [ 1 ; <mod+1> H/F.
+            (
+                "Shift+Home",
+                csi_modified(MODIFIER_SHIFT, SPECIAL_HOME_FINAL),
+            ),
+            ("Ctrl+Home", csi_modified(MODIFIER_CTRL, SPECIAL_HOME_FINAL)),
+            ("Shift+End", csi_modified(MODIFIER_SHIFT, SPECIAL_END_FINAL)),
+            ("Ctrl+End", csi_modified(MODIFIER_CTRL, SPECIAL_END_FINAL)),
         ]
     }
 }

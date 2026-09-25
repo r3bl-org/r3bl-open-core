@@ -92,7 +92,7 @@ impl<T> IntoErr for TuiAvailability<T> {
 /// | **Redirected Stderr** | Error stream redirected to a file   | TTY ([`/dev/pts/*`])   | TTY ([`/dev/pts/*`])    | File (`false`)          | [`Available`] (logs decoupled)         |
 ///
 /// Examples in bash:
-/// 
+///
 /// ```bash
 /// # Normal terminal:
 /// my_app

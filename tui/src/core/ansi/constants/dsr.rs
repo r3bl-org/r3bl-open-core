@@ -41,7 +41,7 @@ pub const DSR_STATUS_OK_CODE: &str = "0";
 
 /// Status Response Terminator ([`DSR`]): Final byte `n` in status response sequences.
 ///
-/// Value: `'n'` dec, `6E` hex.
+/// Value: `110` dec, `6E` hex.
 ///
 /// Sequence: `CSI 0 n`.
 ///
@@ -52,7 +52,7 @@ pub const DSR_STATUS_RESPONSE_END: char = 'n';
 /// Cursor Position Response Terminator ([`DSR`]): Final byte `R` in cursor position
 /// responses.
 ///
-/// Value: `'R'` dec, `52` hex.
+/// Value: `82` dec, `52` hex.
 ///
 /// Sequence: `CSI row ; col R`.
 ///

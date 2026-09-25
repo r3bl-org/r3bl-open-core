@@ -47,10 +47,10 @@
 //! This module translates [`VT-100`] IR produced by
 //! [`vt_100_terminal_input_parser`].
 //!
-//! * **No Enhanced Keyboard Protocol Support**: The [`direct_to_ansi`] input pipeline
-//!   currently does not support [`Fixterms`] or the [`Kitty`] keyboard protocol. Incoming
-//!   escape sequences using [`CSI u`] (such as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by
-//!   [`vt_100_terminal_input_parser`] before reaching this module.
+//! * **Enhanced Keyboard Protocol Support ([`Kitty`] / [`CSI u`])**: The
+//!   [`direct_to_ansi`] input pipeline parses incoming [`CSI u`] sequences via
+//!   progressive enhancement, resolving key collisions such as `Alt+[` (`ESC [ 91 ; 3
+//!   u`), `Shift+Enter`, and `Ctrl+Tab`.
 //! * **Platform Backend Selection**: On Linux, [`TERMINAL_LIB_BACKEND`] selects
 //!   [`direct_to_ansi`]. On macOS and Windows, [`TERMINAL_LIB_BACKEND`] selects
 //!   [`Crossterm`], which supports enhanced keyboard protocols.
@@ -187,6 +187,7 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
                  and should never reach convert_input_event()"
             )
         }
+        VT100InputEventIR::Ignored => None,
     }
 }
 
@@ -843,6 +844,36 @@ mod tests {
                 KeyPress::WithModifiers { key, mask } => {
                     assert_eq!(key, Key::Character('x'));
                     assert_eq!(mask.ctrl_key_state, KeyState::Pressed);
+                }
+                KeyPress::Plain { .. } => panic!("Expected WithModifiers keypress"),
+            },
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_convert_ignored_event() {
+        assert_eq!(convert_input_event(VT100InputEventIR::Ignored), None);
+    }
+
+    #[test]
+    fn test_convert_alt_left_bracket() {
+        let vt100_event = VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char('['),
+            modifiers: VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+            },
+        };
+
+        match convert_input_event(vt100_event) {
+            Some(InputEvent::Keyboard(keypress)) => match keypress {
+                KeyPress::WithModifiers { key, mask } => {
+                    assert_eq!(key, Key::Character('['));
+                    assert_eq!(mask.alt_key_state, KeyState::Pressed);
+                    assert_eq!(mask.ctrl_key_state, KeyState::NotPressed);
+                    assert_eq!(mask.shift_key_state, KeyState::NotPressed);
                 }
                 KeyPress::Plain { .. } => panic!("Expected WithModifiers keypress"),
             },

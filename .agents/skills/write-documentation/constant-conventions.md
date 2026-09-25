@@ -81,7 +81,7 @@ template to ensure they are discoverable and transparent.
 
 Applied manually to foundational parts (single bytes/chars):
 1.  **Summary line:** `Name ([Protocol Link]): Brief description.`
-2.  **Technical detail:** `Value: 'X' dec, 'YY' hex` or `Sequence: ESC X`.
+2.  **Technical detail:** `Value: <dec> dec, <hex> hex` or `Sequence: ESC X`.
 3.  **Context:** What the constant represents and where it fits in the protocol.
 
 **Example:**

@@ -19,11 +19,11 @@
 //!
 //! Each definition should include:
 //!
-//! | Element              | Description                                      |
-//! | :------------------- | :----------------------------------------------- |
-//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`     |
-//! | **Technical detail** | `Value: 'X' dec, 'YY' hex` or `Sequence: ESC X`. |
-//! | **Context**          | Representation and protocol fit.                 |
+//! | Element              | Description                                         |
+//! | :------------------- | :-------------------------------------------------- |
+//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`        |
+//! | **Technical detail** | `Value: <dec> dec, <hex> hex` or `Sequence: ESC X`. |
+//! | **Context**          | Representation and protocol fit.                    |
 //!
 //! Here's an example:
 //! ```no_run

@@ -81,6 +81,8 @@ a better understanding of the context in which this crate is meant to exist.
 - [Changelog](#changelog)
 - [Learn how these crates are built, provide
   feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Getting started: Add `r3bl_tui` to your
+  project](#getting-started-add-r3bl_tui-to-your-project)
 - [Run the demo locally](#run-the-demo-locally)
   - [Prerequisites](#prerequisites)
   - [Running examples](#running-examples)
@@ -220,33 +222,35 @@ a better understanding of the context in which this crate is meant to exist.
 ## Modernizing the Terminal: Taking Inspiration From Web and Desktop Apps
 
 Despite the massive rise of AI/LLM coding agents & execution harnesses and cloud VM
-administration over SSH, terminal UI innovation has largely stagnated since
-the 1970s. Most CLI tools still rely on blocking single-threaded I/O, [curses]-era
-APIs, and fragile platform hacks - or rely on the heavy, fragile workaround of
-layering web stacks like [`Node.js`], [`React`], and [`ink`] onto the console. This
-introduces unreasonable memory bloat, high latency, broken keyboard shortcuts, and
-unpredictable instability that breaks down during long-horizon agentic workflows and
-sub-process orchestration.
+administration over SSH, terminal UI innovation has largely stagnated since the 1970s.
+Most CLI tools still rely on blocking single-threaded I/O, [`curses`]-era APIs, and
+fragile platform hacks - or rely on the heavy, fragile workaround of layering web
+stacks like [`Node.js`], [`React`], and [`ink`] onto the console. This introduces
+unreasonable memory bloat, high latency, broken keyboard shortcuts, and unpredictable
+instability that breaks down during long-horizon agentic workflows and sub-process
+orchestration.
 
-**r3bl_tui moves the terminal forward (with love & respect) into 2026 and beyond. ❤️**
+**`r3bl_tui` moves the terminal forward (with love & respect) into 2026 and beyond.
+❤️**
 
 It brings the ergonomics of modern web development ([React], [flexbox], [CSS]) to the
 terminal, turning it into a place of focused productivity to build delightful,
 ergonomic, and rich text user interface (TUI) experiences.
 
 Representing years of systems programming, performance optimization, and
-production-grade infrastructure design in Rust, **r3bl_tui** re-imagines the terminal
-for the modern era - making rich, reactive TUI applications accessible over SSH to any
-terminal emulator across Linux, macOS, Windows, and Unix/BSDs (such as FreeBSD).
+production-grade infrastructure design in Rust, **`r3bl_tui`** re-imagines the
+terminal for the modern era - making rich, reactive TUI applications accessible over
+SSH to any terminal emulator across Linux, macOS, Windows, and Unix/BSDs (such as
+FreeBSD).
 
-**r3bl_tui** is fundamentally different from [`vim`], [`neovim`], and [`ratatui`]
+**`r3bl_tui`** is fundamentally different from [`vim`], [`neovim`], and [`ratatui`]
 through its immediate mode reactive UI, clean separation between rendering and state
 mutation, and purely async architecture - it never blocks the main thread, and
 natively embraces multithreaded execution and multi-process orchestration.
 
 ### Primary Use Cases
 
-**r3bl_tui** is designed to power four primary use cases:
+**`r3bl_tui`** is designed to power four primary use cases:
 
 - 🤖 **AI/LLM Coding Agents & Execution Harnesses**: Building fast, interactive
   terminal interfaces and execution harnesses for AI/LLM coding agents in pure Rust.
@@ -255,21 +259,24 @@ natively embraces multithreaded execution and multi-process orchestration.
   sub-process control, and unstable PTY session management when orchestrating heavy,
   long-running tools in sandboxed environments (containers, microVMs, systemd-nspawn
   machines, etc.). Furthermore, Node-based runtimes struggle with terminal input
-  decoding, frequently dropping modifier keys, mangling keyboard chords, and introducing
-  sluggish ESC key disambiguation lag. **r3bl_tui** provides a rock-solid, pure Rust
-  foundation engineered for native PTY orchestration, zero-latency ANSI input decoding,
-  deterministic process lifecycles, flicker-free diff rendering, and minimal resource
-  overhead.
-- ☁️ **DevOps & Cloud Workflows**: Administering modern cloud infrastructure
-  shouldn't feel like using stone-age tools to build a satellite. Juggling remote VMs,
+  decoding, frequently dropping modifier keys, mangling keyboard chords, and
+  introducing sluggish ESC key disambiguation lag. **`r3bl_tui`** provides a
+  rock-solid, pure Rust foundation engineered for native PTY orchestration,
+  zero-latency ANSI input decoding, deterministic process lifecycles, flicker-free
+  diff rendering, and minimal resource overhead.
+
+- ☁️ **DevOps & Cloud Workflows**: Administering modern cloud infrastructure shouldn't
+  feel like using stone-age tools to build a satellite. Juggling remote VMs,
   containers, and multi-process server environments through bare terminal sessions is
-  slow and error-prone. **r3bl_tui** transforms terminal workflows into a rich,
+  slow and error-prone. **`r3bl_tui`** transforms terminal workflows into a rich,
   responsive workspace with in-memory virtual terminal emulation, virtual tabs, 2D
   horizontal panning across wide logs, and double-buffered diff rendering that stays
   lag-free even over high-latency SSH connections.
+
 - 📝 **Interactive Document & Markdown Workflows**: Rich interactive editing, syntax
   highlighting, and real-time code block execution directly inside Markdown documents
   in the terminal, bridging documentation directly with live operations.
+
 - 🛠️ **Developer Productivity Infrastructure**: High-efficiency developer tooling and
   composable terminal infrastructure to enhance knowledge capture, eliminate friction,
   and streamline everyday command-line workflows.
@@ -283,15 +290,18 @@ ground up in pure Rust:
    single-threaded and blocking, our implementation is fully async, interruptable, and
    non-blocking, allowing background tasks and spinners to print concurrently without
    pausing line editing or blocking your main thread.
+
 2. 📑 **Inline / Partial TUI ([`choose()`])**: Single-shot interactive multi-select
-   dialogs that enter raw mode and render inline in terminal scrollback without
-   taking over the screen or disrupting the back buffer (similar to `fzf` in spirit).
-3. 🖥️ **Full-Screen TUI**: Complete raw mode with alternate screen support, fully async
-   and panic-safe terminal restoration. Build [React] and [Elm] inspired apps with
-   [unidirectional data flow], [responsive] [flexbox] layouts, [declarative]
+   dialogs that enter raw mode and render inline in terminal scrollback without taking
+   over the screen or disrupting the back buffer (similar to `fzf` in spirit).
+
+3. 🖥️ **Full-Screen TUI**: Complete raw mode with alternate screen support, fully
+   async and panic-safe terminal restoration. Build [React] and [Elm] inspired apps
+   with [unidirectional data flow], [responsive] [flexbox] layouts, [declarative]
    [CSS-like] styling, reactive state architecture, reusable modal dialogs with
    asynchronous autocomplete, and a full-featured Markdown editor component with
    custom parser, custom syntax highlighter, and fast zero-copy gap buffer.
+
 4. 🔀 **Terminal Multiplexing & PTY**: In-memory virtual terminals, virtual terminal
    tabs, deterministic process orchestration, and multiplexing primitives (build your
    own [`tmux`] or sandboxed AI/LLM coding agent execution harness) featuring 2D
@@ -308,29 +318,29 @@ application state without process restarts.
 
 ### Automated Headless Testing & Benchmarking
 
-The entire framework across all 4 pillars is testable across Linux, macOS, and Windows.
-Powered by our own PTY pillar, real production code runs headlessly in an isolated
-virtual terminal environment, enabling end-to-end testing of interactive apps
+The entire framework across all 4 pillars is testable across Linux, macOS, and
+Windows. Powered by our own PTY pillar, real production code runs headlessly in an
+isolated virtual terminal environment, enabling end-to-end testing of interactive apps
 without requiring human interaction:
 
 - **PTY Automated Interactive Testing**: Enables end-to-end testing of interactive
-  apps via headless PTY subprocess orchestration with the `generate_pty_test!`
-  macro. Automate key sequences, window resizing, and screen output verification in
-  completely isolated child processes without someone having to sit and manually
-  type at a keyboard.
+  apps via headless PTY subprocess orchestration with the `generate_pty_test!` macro.
+  Automate key sequences, window resizing, and screen output verification in
+  completely isolated child processes without someone having to sit and manually type
+  at a keyboard.
 - **Visual UI Snapshot Testing**: Everything renders to an offscreen buffer
-  ([`OfsBuf`]), providing built-in visual snapshot testing. Easily diff and assert
-  the actual rendered terminal screen state headlessly generated in a real PTY
-  environment.
+  ([`OfsBuf`]), providing built-in visual snapshot testing. Easily diff and assert the
+  actual rendered terminal screen state headlessly generated in a real PTY
+  environment.H
 - **Sans-IO In-Memory Terminal**: Pure functional VT-100 parser verifies virtual
   terminal screen state buffers directly in RAM with zero OS syscalls.
 - **Decoupled I/O Devices**: [`InputDevice`] and [`OutputDevice`] abstract terminal
   I/O away from physical [`stdin`] and [`stdout`], allowing input events and output
   streams to be driven and inspected directly in tests without taking over your
   terminal.
-- **Empirical Benchmarking & Flamegraph Profiling**: Continuous performance measurement
-  via Rust's built-in benchmarking suites and automated flamegraph profiling against
-  established baselines rather than guesswork:
+- **Empirical Benchmarking & Flamegraph Profiling**: Continuous performance
+  measurement via Rust's built-in benchmarking suites and automated flamegraph
+  profiling against established baselines rather than guesswork:
   - **Built-in Benchmarking**: Rust's built-in benchmarking suites detect regressions
     across memory allocations, SIMD traversals, and coordinate math.
   - **Flamegraph Profiling**: Automated flamegraph profiling infrastructure to
@@ -344,8 +354,8 @@ without requiring human interaction:
   formal type theory and trait hierarchies [make illegal states unrepresentable]:
   - **The Newtype Pattern for Domain Separation & Coordinate Safety**: Replaces raw
     primitive integers with zero-cost newtypes ([`CRow`], [`VPRow`], [`CHeight`]),
-    eliminating primitive obsession and transposition bugs with zero runtime memory
-    or performance overhead:
+    eliminating primitive obsession and transposition bugs with zero runtime memory or
+    performance overhead:
     - **0-Index vs 1-Index Separation**: Strongly types the distinction between
       0-based buffer positions (`IndexOps`: [`VPRow`], [`VPCol`], [`CRow`], [`CCol`]),
       1-based terminal coordinates ([`TermRow`], [`TermCol`]), and 1-based lengths
@@ -354,9 +364,10 @@ without requiring human interaction:
       between 0-based and 1-based domains ([`TermRow::to_zero_based()`],
       [`TermRow::from_zero_based()`], `convert_to_length()`).
     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
-      (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous manual
-      arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`), negative
-      underflow, and CSI zero-index terminal crashes ([`TermRowDelta`], [`TermColDelta`]).
+      (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous
+      manual arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`),
+      negative underflow, and CSI zero-index terminal crashes ([`TermRowDelta`],
+      [`TermColDelta`]).
     - **Empirically Proven Zero-Cost Layout**: Newtypes share the identical memory
       layout, size, and ABI of raw primitives (passed in CPU registers with zero heap
       allocation or indirection) and are completely erased during LLVM compilation;
@@ -368,27 +379,30 @@ without requiring human interaction:
     viewport transformations.
   - **Explicit Narrowing/Widening Traits & Zero Raw `as` Casts**: Replaces dangerous,
     silent primitive `as` casting across the codebase with explicit, type-safe traits
-    (`WideningCastTo` for lossless promotions and `NarrowingCastTo` for checked/clamped
-    reductions), preventing accidental truncations and sign-loss bugs.
+    (`WideningCastTo` for lossless promotions and `NarrowingCastTo` for
+    checked/clamped reductions), preventing accidental truncations and sign-loss bugs.
   - **Eliminating Boolean Blindness with Witness Enums**: Grounded in ACM research
     ([FUNARCH 2023 paper] and [Parse, don't validate]), boundary and bounds checks
     never return uninformative `bool` flags. Instead, they return structured witness
     enums ([`ArrayOverflowResult`], [`RangeBoundsResult`]), forcing callers to
     exhaustively handle all boundary states at compile time.
+
 - 🦄 **First-Class Unicode & Complex Emoji Engine ([`GCStringOwned`])**: Most terminal
   emulators and TUI libraries break when handling "jumbo emojis", zero-width joiners
   (ZWJ), skin tone modifiers, and wide characters (display width > 1), causing visual
   tearing, misaligned borders, and string-slicing panics. ROC solves this from the
   ground up via [`GCStringOwned`]:
   - **Tri-Index Separation**: Strictly decouples memory position ([`ByteIndex`], UTF-8
-    offset), logical editing position ([`SegIndex`], user-perceived grapheme clusters),
-    and visual column position ([`VPCol`], actual terminal display width).
-  - **Complex Emoji & Modifier Support**: Correctly measures and renders multi-codepoint
-    sequences (e.g., `👨🏾‍🤝‍👨🏿` spans 5 codepoints and 7 code units, but resolves to 1 logical
-    grapheme segment and 2 visual columns).
-  - **Panic-Proof Slicing & Boundary Safety**: Guarantees cursor navigation, backspace,
-    and substring slicing never split UTF-8 codepoints or mid-grapheme clusters,
-    eliminating runtime slicing panics across editors, line inputs, and diff rendering.
+    offset), logical editing position ([`SegIndex`], user-perceived grapheme
+    clusters), and visual column position ([`VPCol`], actual terminal display width).
+  - **Complex Emoji & Modifier Support**: Correctly measures and renders
+    multi-codepoint sequences (e.g., `👨🏾‍🤝‍👨🏿` spans 5 codepoints and 7 code
+    units, but resolves to 1 logical grapheme segment and 2 visual columns).
+  - **Panic-Proof Slicing & Boundary Safety**: Guarantees cursor navigation,
+    backspace, and substring slicing never split UTF-8 codepoints or mid-grapheme
+    clusters, eliminating runtime slicing panics across editors, line inputs, and diff
+    rendering.
+
 - 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain
   attacks, maintainer burnout, and abandonware, our explicit architectural goal is to
   **own our Bill of Materials (BOM)**. Critical primitives (including our custom
@@ -398,22 +412,27 @@ without requiring human interaction:
   industry foundations (such as `tokio`, `mio`, and `mimalloc`), safeguarding
   production applications against transitive bloat, sudden deprecations, and upstream
   vulnerabilities.
+
 - 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native,
   first-class support across platforms using the best backend for each OS:
   - **Linux**: Our custom high-performance, Linux-native [`direct_to_ansi`] engine
     (talking directly to the terminal device via `mio`/epoll for minimal latency and
     maximum throughput, without the use of `crossterm`).
-  - **macOS, Windows & Unix/BSDs**: Currently powered by `crossterm`. We
-    plan to expand [`direct_to_ansi`] in the future to replace `crossterm` across all
+  - **macOS, Windows & Unix/BSDs**: Currently powered by `crossterm`. We plan to
+    expand [`direct_to_ansi`] in the future to replace `crossterm` across all
     platforms.
+
 - 🚀 **SIMD Contiguous Memory Layout ([`Flat2DArray`])**: Single contiguous 1D
   allocation indexed as 2D, delivering 2.3x rendering speedups, SIMD chunk batching,
-  and eliminating pointer indirection ([implementation deep dive][High-Performance Flat 2D Arrays in Rust (SIMD, L1 Cache)]
-  and [memory latency theory][Rust, Memory performance & latency]).
-- 🧑‍🤝‍🧑 **Double-Buffered SSH-Optimized Diff Rendering**: Double-buffered compositor computes
-  minimal cell-level diffs between frames, painting only what changed for smooth,
-  flicker-free performance over high-latency SSH connections, with multi-layer Z-order
-  compositing for modal overlays and popups.
+  and eliminating pointer indirection ([implementation deep dive][High-Performance
+  Flat 2D Arrays in Rust (SIMD, L1 Cache)] and [memory latency theory][Rust, Memory
+  performance & latency]).
+
+- 🧑‍🤝‍🧑 **Double-Buffered SSH-Optimized Diff Rendering**: Double-buffered
+  compositor computes minimal cell-level diffs between frames, painting only what
+  changed for smooth, flicker-free performance over high-latency SSH connections, with
+  multi-layer Z-order compositing for modal overlays and popups.
+
 - 🔀 **Terminal Multiplexing & PTY Architecture ([`PTYMux`])**: Decouples physical
   display constraints from subprocess execution via virtual terminals and process
   orchestration:
@@ -423,37 +442,41 @@ without requiring human interaction:
     hard-wrapping wide lines across rows and mangling tabular data, JSON, or stack
     traces into unreadable spaghetti. When running any CLI program inside a ROC PTY
     session (a concrete manifestation of which is [`pty_mux_example`], powered by
-    [`GrowableBuffer`] and [`PTYMux`]), **r3bl_tui** decouples the physical
-    viewport from the virtual terminal canvas width (e.g., 1,000+ columns). The
-    child process writes into this wide virtual canvas without line wrapping,
-    allowing users to smoothly pan horizontally (`Shift + Mouse Wheel` or trackpad
-    gestures) across the output without layout destruction.
+    [`GrowableBuffer`] and [`PTYMux`]), **`r3bl_tui`** decouples the physical viewport
+    from the virtual terminal canvas width (e.g., 1,000+ columns). The child process
+    writes into this wide virtual canvas without line wrapping, allowing users to
+    smoothly pan horizontally (`Shift + Mouse Wheel` or trackpad gestures) across the
+    output without layout destruction.
   - **Decoupled Throughput vs. Terminal Bottlenecks (Faster Than Bare `xterm`)**: In
     traditional terminal emulators (like `xterm`), running a command that dumps
     megabytes of text (e.g., `cat large.log`) blocks the process on [`stdout`] I/O
-    while the terminal synchronously parses escape codes, recalculates line
-    wrapping, and rasterizes every glyph. Counter-intuitively, running that same
-    command inside a ROC PTY session (such as [`pty_mux_example`]) running *inside*
-    `xterm` is often significantly **faster than running the command directly in bare
-    `xterm`**. **r3bl_tui**'s headless VT-100 parser ([`OfsBufVT100`]) acts as an
-    in-memory shock absorber, ingesting raw subprocess output at memory bus speeds,
-    while double-buffered diff rendering paints only the visible viewport to the
-    host terminal at controlled display intervals. Subprocesses drain [`stdout`]
-    without stalling on terminal drawing or network I/O backpressure.
+    while the terminal synchronously parses escape codes, recalculates line wrapping,
+    and rasterizes every glyph. Counter-intuitively, running that same command inside
+    a ROC PTY session (such as [`pty_mux_example`]) running *inside* `xterm` is often
+    significantly **faster than running the command directly in bare `xterm`**.
+    **`r3bl_tui`**'s headless VT-100 parser ([`OfsBufVT100`]) acts as an in-memory
+    shock absorber, ingesting raw subprocess output at memory bus speeds, while
+    double-buffered diff rendering paints only the visible viewport to the host
+    terminal at controlled display intervals. Subprocesses drain [`stdout`] without
+    stalling on terminal drawing or network I/O backpressure.
+
 - 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy
-  `terminfo` / `termcap` databases and [ncurses] baggage by querying modern ANSI
+  `terminfo` / `termcap` databases and [`ncurses`] baggage by querying modern ANSI
   protocols directly at runtime.
+
 - 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
   [declarative] [CSS-like] styling inspired by [React] and [Elm].
-- 🎨 **Intelligent Color Degradation**: Automatically detects terminal capabilities and
-  gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 ANSI colors ->
-  Monochrome** (black & white). Gracefully handles environments lacking truecolor
+
+- 🎨 **Intelligent Color Degradation**: Automatically detects terminal capabilities
+  and gracefully degrades colors: **24-bit Truecolor -> 256 colors -> 16 ANSI colors
+  -> Monochrome** (black & white). Gracefully handles environments lacking truecolor
   support (such as pre-macOS 26 Tahoe `Terminal.app`, Linux virtual consoles, or
   headless CI runners), complete with dynamic lolcat rainbow color-wheel palettes that
   automatically adapt to terminal color capability.
-- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines
-  Linux-native kernel TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol
-  state machine for robust, zero-latency input handling across local terminals and SSH:
+
+- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines Linux-native
+  kernel TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol state
+  machine for robust, zero-latency input handling across local terminals and SSH:
   - **Linux-Native `direct_to_ansi` Driver**: Bypasses `crossterm` and `libc` FFI
     wrappers on Linux by talking directly to `/dev/tty` via `mio`/`epoll(7)`,
     eliminating thread-blocking reads and CPU-spinning loops.
@@ -462,17 +485,18 @@ without requiring human interaction:
     [`Shift+Enter`], `Ctrl+Enter`, `Ctrl+Tab`, `Ctrl+Number/Punctuation`, `Ctrl+I` vs
     `Tab`, and `Alt+[` collisions.
   - **Kitty Keyboard Protocol (`CSI u`) Progressive Enhancement**: Negotiates advanced
-    keyboard protocols with modern terminals ([Kitty keyboard protocol]), enabling full
-    modifier reporting, key-release events, and unambiguous key sequences with graceful
-    legacy fallback.
-  - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms timeout
-    heuristics with an internal state machine (`Drained`, `KernelMayHaveMore`,
-    `RemainingInReadBuffer`), achieving 0ms zero-latency ESC handling while correctly
+    keyboard protocols with modern terminals ([Kitty keyboard protocol]), enabling
+    full modifier reporting, key-release events, and unambiguous key sequences with
+    graceful legacy fallback.
+  - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms
+    timeout heuristics with an internal state machine (`KernelDrained`,
+    `KernelMayHaveMore`), achieving 0ms zero-latency ESC handling while correctly
     reassembling multi-packet escape sequences across SSH.
   - **OSC Terminal Query Absorption & SGR Mouse Reporting**: Frames and absorbs
-    background terminal responses (such as OSC 10/11 color queries and OSC 52 clipboard)
-    on `stdin` to prevent terminal text leakage, while supporting full SGR mouse
-    tracking (clicks, drags, scroll wheel).
+    background terminal responses (such as OSC 10/11 color queries and OSC 52
+    clipboard) on `stdin` to prevent terminal text leakage, while supporting full SGR
+    mouse tracking (clicks, drags, scroll wheel).
+
 - 🧩 **Composable "Applet" Architecture & Shared State**: Enables multiple integrated
   TUI experiences ("applets") to run within the same process and terminal window.
   Supports shared application state across sub-apps alongside local view state,
@@ -514,8 +538,8 @@ Each internalizes terminal availability and size checks, and returns a
 | [`PTYMuxBuilder::build()`]            | Terminal Multiplexer    | [`TuiAvailability<PTYMux>`]               | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
 | [`Spinner::try_start()`]              | Indeterminate Progress  | [`TuiAvailability<Spinner>`]              | Long-running tasks needing visual feedback (standalone or embedded).   |
 
-[`Spinner::try_start()`] only checks [`stdout`] interactivity (not [`stdin`]), so it works
-with piped [`stdin`]. It can run standalone or embedded within a
+[`Spinner::try_start()`] only checks [`stdout`] interactivity (not [`stdin`]), so it
+works with piped [`stdin`]. It can run standalone or embedded within a
 [`ReadlineAsyncContext`] session.
 
 ### Partial TUI for simple choice
@@ -539,10 +563,10 @@ user input in a line editor. You can customize the prompt, and other behaviors, 
 input history.
 
 Using this, you can build your own async shell programs using "async readline &
-[`stdout`]". Use advanced features like showing indeterminate progress spinners, and even
-write to [`stdout`] in an async manner, without clobbering the prompt / async readline, or
-the spinner. When the spinner is active, it pauses output to [`stdout`], and resumes it
-when the spinner is stopped.
+[`stdout`]". Use advanced features like showing indeterminate progress spinners, and
+even write to [`stdout`] in an async manner, without clobbering the prompt / async
+readline, or the spinner. When the spinner is active, it pauses output to [`stdout`],
+and resumes it when the spinner is stopped.
 
 An example of this is this "Partial TUI" app `giti` in the [`r3bl-cmdr`]. You can
 install & run this with the following command:
@@ -649,6 +673,42 @@ To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel]. Please consider
   [subscribing].
 - If you like consuming written content, here's our developer [site].
+
+## Getting started: Add `r3bl_tui` to your project
+
+Add `r3bl_tui` as a dependency in your `Cargo.toml`. You can choose between the
+published crates.io release or the latest `main` branch on GitHub.
+
+### Option 1: crates.io (stable release)
+
+Use this if you prefer stable, versioned releases:
+
+```bash
+cargo add r3bl_tui
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = "0.7.8"
+```
+
+### Option 2: GitHub main branch (bleeding edge)
+
+Bug fixes and patches land on `main` immediately before being published to crates.io.
+If you need the latest fixes or rapid iteration:
+
+```bash
+cargo add r3bl_tui --git https://github.com/r3bl-org/r3bl-open-core.git --branch main
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = { git = "https://github.com/r3bl-org/r3bl-open-core.git", branch = "main" }
+```
 
 ## Run the demo locally
 
@@ -1663,9 +1723,9 @@ infrastructure for input and output devices. In fact the [`crate::InputDevice`] 
   their components). This makes the entire UI composable, and removes the monolithic
   approaches to building complex UI and large apps that may consist of many reusable
   components and applets.
-- It is easy to swap out implementations of input and output devices away from [`stdin`]
-  and [`stdout`] while preserving all the existing code and functionality. This can
-  produce some interesting headless apps in the future, where the UI might be
+- It is easy to swap out implementations of input and output devices away from
+  [`stdin`] and [`stdout`] while preserving all the existing code and functionality.
+  This can produce some interesting headless apps in the future, where the UI might be
   delegated to a window using [eGUI] or [iced-rs] or [wgpu].
 
 ## Life of an input event for a Full TUI app
@@ -2279,6 +2339,64 @@ terminal libraries. It provides:
 - **Crossterm**: When you need cross-platform compatibility or target macOS/Windows
 - **[`direct_to_ansi`]**: When targeting Linux and want maximum performance
 
+### Terminal Input Capabilities: Legacy VT-100 vs. Kitty Keyboard Protocol
+
+In terminal applications, input handling is inherently split between traditional
+legacy VT-100 conventions (which date back to 1978 and lack distinction for many key
+combinations) and modern enhanced protocols like the [Kitty Keyboard Protocol].
+
+#### Sans-IO Protocol Architecture
+
+Crucially, input parsing in `r3bl_tui` follows a **Sans-IO architecture**:
+- The protocol parser ([`vt_100_terminal_input_parser`]) is purely functional: it
+  consumes raw byte slices (`&[u8]`) and produces structured intermediate
+  representations ([`VT100InputEventIR`]) with zero knowledge of threads, file
+  descriptors, or operating system I/O syscalls.
+- The I/O layer ([`direct_to_ansi`]) uses an asynchronous [`mio`] poller thread to
+  read from non-blocking [`stdin`], buffering bytes into [`InputByteStreamToIrParser`]
+  before passing them to the Sans-IO parser.
+- This decoupling means [`vt_100_terminal_input_parser`] is fully reusable across
+  multiple consumers, including [`pty_mux`] multiplexer sessions, headless test
+  harnesses, session replay tools, and future platform backends.
+
+#### Capability Matrix
+
+The following matrix establishes the ground truth for input handling capabilities
+across both modes in `r3bl_tui`:
+
+| Keystroke / Protocol Event                         | Legacy VT-100 / xterm (Default)               | Kitty Keyboard Protocol (`CSI u`)        | Technical Reason & Ambiguity                                   |
+| :------------------------------------------------- | :-------------------------------------------- | :--------------------------------------- | :------------------------------------------------------------- |
+| **Standard Characters (`a-z`, `0-9`, UTF-8)**      | ✅ Supported (`UTF-8` bytes)                  | ✅ Supported (`UTF-8` bytes)               | Unambiguous in both modes.                                     |
+| **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**      | ✅ Supported (`0x01` .. `0x1A`)               | ✅ Supported                               | Standard ASCII control characters.                             |
+| **Enter / Return**                                 | ✅ Supported (`\r`, `0x0D`)                   | ✅ Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                      |
+| **`Shift + Enter`**                                | ❌ **Collides with Enter** (`\r`)             | ✅ **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.               |
+| **Tab**                                            | ✅ Supported (`\t`, `0x09`)                   | ✅ Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                       |
+| **`Shift + Tab` (`BackTab`)**                      | ✅ Supported (`ESC [ Z`)                      | ✅ Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                        |
+| **`Ctrl + Tab`**                                   | ❌ **Collides with Tab** (`\t`)               | ✅ **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.               |
+| **Distinct `Ctrl+I` vs. `Tab`**                    | ❌ **Indistinguishable** (`0x09`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+I` is literally `0x09` (`Tab`).                    |
+| **Distinct `Ctrl+M` vs. `Enter`**                  | ❌ **Indistinguishable** (`0x0D`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+M` is literally `0x0D` (`Enter`).                  |
+| **Standalone `Escape` Key**                        | ✅ Supported (0ms latency)                    | ✅ Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; Kitty is unambiguous.  |
+| **Navigation Keys (Arrows, Home, End, PageUp/Dn)** | ✅ Supported (`CSI` / `SS3`)                  | ✅ Supported (`CSI` / `CSI u`)             | Standard xterm / VT220 sequences.                              |
+| **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**  | ✅ Supported (`ESC [ 1 ; <m> <final>`)        | ✅ Supported                               | Standard xterm parameter encoding.                             |
+| **Function Keys (`F1` .. `F12`)**                  | ✅ Supported (VT220 `~` / `SS3`)              | ✅ Supported                               | Standard escape encodings.                                     |
+| **`Alt + Key` (Letters & Digits)**                 | ✅ Supported (`ESC <char>`)                   | ✅ Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                   |
+| **`Alt + ]` (OSC Prefix Collision)**               | ✅ **Solved in Step 8** (`scan_osc_sequence`) | ✅ **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.   |
+| **`Alt + [` (CSI Prefix Collision)**               | ❌ **Unresolvable in Legacy**                 | ✅ **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to `CSI` (`\x1b[`).  |
+| **Terminal OSC Query Replies (Theme, Clipboard)**  | ✅ **Solved in Step 8** (Framed & Absorbed)   | ✅ Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage. |
+| **OSC 52 Clipboard Copy (SSH & Headless)**        | ✅ **Solved in Step 10** (`Osc52Clipboard`)   | ✅ Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable. |
+| **Key Release & Repeat Events**                    | ❌ Unsupported by VT-100                      | ✅ Supported (via Kitty Flag 2)            | Legacy terminals only report key press down events.            |
+
+For deeper protocol architecture and parser implementation, see the
+[`vt_100_terminal_input_parser`] module.
+
+[Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+[`VT100InputEventIR`]:
+    crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+[`direct_to_ansi`]: crate::direct_to_ansi
+[`mio`]: https://docs.rs/mio
+[`pty_mux`]: crate::core::pty_mux
+[`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+
 ### Architecture
 
 Both backends plug into **Stage 5** of the 6-stage rendering pipeline:
@@ -2322,8 +2440,8 @@ that block on I/O operations. This powers the [`direct_to_ansi`] backend's
 ### The problem
 
 Async executors (like Tokio) use thread pools that shouldn't block. Terminal input
-requires blocking on [`stdin`], which would starve other async tasks. RRT solves this by
-dedicating a thread to blocking I/O.
+requires blocking on [`stdin`], which would starve other async tasks. RRT solves this
+by dedicating a thread to blocking I/O.
 
 ### How it works
 
@@ -3424,8 +3542,8 @@ feel free to add them there too 👍.
 [Video: Markdown Parser Deep Dive]: https://youtu.be/SbwvSHZRb1E
 [`crossterm::cursor`]: https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html
 [issue tracker]: https://github.com/r3bl-org/r3bl-rs-utils/issues
-[curses]: https://en.wikipedia.org/wiki/Curses_(programming_library)
-[ncurses]: https://en.wikipedia.org/wiki/Ncurses
+[`curses`]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+[`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 [`Shift+Enter`]:
     https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
 [Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855

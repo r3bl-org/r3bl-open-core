@@ -267,5 +267,5 @@ define_ansi_const!(@esc_str : ESC_SELECT_DEC_GRAPHICS_STR = ["(0"] =>
 
 /// G0 character set selector intermediate.
 ///
-/// Value: `'('` dec, `28` hex.
+/// Value: `40` dec, `28` hex.
 pub const CHARSET_SELECTOR_G0: char = '(';

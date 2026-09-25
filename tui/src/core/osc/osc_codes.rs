@@ -4,15 +4,24 @@
 //!
 //! [`OSC`] sequences allow child processes to send commands to the terminal emulator
 //! for features that affect the terminal's operating system integration, such as
-//! window titles, notifications, and hyperlinks.
+//! window titles, notifications, hyperlinks, and clipboard management.
 //!
 //! # Data Flow
 //!
-//! **Child process → [`PTY`] → Terminal emulator**: Child process sends [`OSC`] commands
-//! to control terminal features (titles, hyperlinks, notifications, etc.)
+//! **Bidirectional (Child Process <-> [`PTY`] <-> Terminal Emulator)**:
 //!
-//! Unlike [`DSR`] sequences, [`OSC`] sequences are typically unidirectional - the child
-//! process sends commands to the terminal but doesn't expect responses back.
+//! Historically, [`OSC`] sequences were considered unidirectional (the child process
+//! sends commands to the terminal to set titles, hyperlinks, or notifications). In modern
+//! terminals, however, [`OSC`] sequences are frequently **bidirectional**:
+//!
+//! - **Queries to [`stdout`]**: A TUI app writes queries to the terminal (e.g., color
+//!   queries `OSC 10`/`11`, clipboard queries `OSC 52`).
+//! - **Responses to [`stdin`]**: The terminal emulator synthesizes responses and writes
+//!   them back into [`stdin`].
+//!
+//! For a comprehensive explanation of bidirectional terminal communication and how
+//! incoming [`OSC`] responses are safely parsed and framed on [`stdin`], see the
+//! [`vt_100_terminal_input_parser`] module.
 //!
 //! # Structure
 //! [`OSC`] sequences follow the pattern: `ESC ] code ; parameters ST`
@@ -32,17 +41,22 @@
 //! - `ESC ] 2 ; Window Title ESC \` - Set window title only
 //! - `ESC ] 8 ; ; https://example.com ESC \ Link Text ESC ] 8 ; ; ESC \` - Create
 //!   hyperlink
+//! - `ESC ] 52 ; c ; SGVsbG8= BEL` - Set system clipboard content
 //!
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`ST`]: OSC_TERMINATOR_ST
+//! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
+//! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
 
-use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
+use crate::{core::{ansi::constants,
+                   common::fast_stringify::{BufTextStorage, FastStringify}},
             define_ansi_const, generate_impl_display_for_fast_stringify, ok};
+use base64::prelude::*;
 use std::fmt;
-use crate::core::ansi::constants;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // OSC sequence components
@@ -51,10 +65,8 @@ use crate::core::ansi::constants;
 /// [`OSC`] Start: Generic start: `ESC ]`.
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
-pub const OSC_START: &str = const_format::formatcp!(
-    "{ESC_STR}]",
-    ESC_STR = constants::ESC_STR
-);
+pub const OSC_START: &str =
+    const_format::formatcp!("{ESC_STR}]", ESC_STR = constants::ESC_STR);
 
 define_ansi_const!(@osc_str : OSC_PROGRESS_START = ["9;4;"] =>
     "Progress Start (OSC 9;4)" : "Progress start: `ESC ] 9 ; 4 ;`."
@@ -119,6 +131,37 @@ pub const OSC_CODE_TITLE: &str = "2";
 /// `8` - Code for Hyperlink
 pub const OSC_CODE_HYPERLINK: &str = "8";
 
+/// Target clipboard buffer for [`OscSequence::ClipboardSet`].
+///
+/// Corresponds to the target parameter in the [`OSC`] 52 sequence:
+/// - [`ClipboardTarget::System`] (`'c'`): standard desktop system clipboard.
+/// - [`ClipboardTarget::Primary`] (`'p'`): primary selection buffer (primarily
+///   Wayland/Linux).
+///
+/// [`OSC`]: crate::osc_codes::OscSequence
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClipboardTarget {
+    /// System clipboard (`'c'`).
+    System,
+    /// Primary selection buffer (`'p'`).
+    Primary,
+}
+
+impl ClipboardTarget {
+    /// Returns the single-character representation of the target buffer
+    /// ([`CLIPBOARD_TARGET_CLIPBOARD`] or [`CLIPBOARD_TARGET_PRIMARY`]).
+    ///
+    /// [`CLIPBOARD_TARGET_CLIPBOARD`]: crate::core::ansi::constants::CLIPBOARD_TARGET_CLIPBOARD
+    /// [`CLIPBOARD_TARGET_PRIMARY`]: crate::core::ansi::constants::CLIPBOARD_TARGET_PRIMARY
+    #[must_use]
+    pub fn as_char(&self) -> char {
+        match self {
+            ClipboardTarget::System => char::from(constants::CLIPBOARD_TARGET_CLIPBOARD),
+            ClipboardTarget::Primary => char::from(constants::CLIPBOARD_TARGET_PRIMARY),
+        }
+    }
+}
+
 /// [`OSC`] ([`OSC` spec]) sequence builder enum that provides type-safe construction of
 /// Operating System Command sequences.
 ///
@@ -164,6 +207,15 @@ pub enum OscSequence {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     ProgressUpdate(u8),
+
+    /// `ESC ] 52 ; target ; <base64_data> ST` - Write text to the system or primary
+    /// clipboard.
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    ClipboardSet {
+        target: ClipboardTarget,
+        data: String,
+    },
 }
 
 impl FastStringify for OscSequence {
@@ -208,6 +260,14 @@ impl FastStringify for OscSequence {
                 acc.push(OSC_DELIMITER);
                 acc.push(OSC_DELIMITER);
                 OSC_HYPERLINK_END
+            }
+            OscSequence::ClipboardSet { target, data } => {
+                acc.push_str(constants::OSC_CODE_CLIPBOARD);
+                acc.push(OSC_DELIMITER);
+                acc.push(target.as_char());
+                acc.push(OSC_DELIMITER);
+                BASE64_STANDARD.encode_string(data, acc);
+                OSC_TERMINATOR_BEL
             }
         };
         acc.push_str(terminator);
@@ -315,4 +375,68 @@ mod tests {
         );
         assert_eq!(complete_link, expected);
     }
+
+    #[test]
+    fn test_osc_sequence_clipboard_set_ascii() {
+        let sequence = OscSequence::ClipboardSet {
+            target: ClipboardTarget::System,
+            data: "Hello, World!".to_string(),
+        };
+        let result = sequence.to_string();
+        let expected =
+            format!("{OSC_START}52;c;SGVsbG8sIFdvcmxkIQ=={OSC_TERMINATOR_BEL}");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_clipboard_set_empty() {
+        let sequence = OscSequence::ClipboardSet {
+            target: ClipboardTarget::Primary,
+            data: String::new(),
+        };
+        let result = sequence.to_string();
+        let expected = format!("{OSC_START}52;p;{OSC_TERMINATOR_BEL}");
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_clipboard_set_utf8_checkmark() {
+        use base64::prelude::*;
+        let data = "Task done ✓".to_string();
+        let encoded_b64 = BASE64_STANDARD.encode(&data);
+        let sequence = OscSequence::ClipboardSet {
+            target: ClipboardTarget::System,
+            data: data.clone(),
+        };
+        let result = sequence.to_string();
+        let expected = format!("{OSC_START}52;c;{encoded_b64}{OSC_TERMINATOR_BEL}");
+        assert_eq!(result, expected);
+
+        // Verify base64 decode round-trip.
+        let payload = result
+            .strip_prefix("\x1b]52;c;")
+            .unwrap()
+            .strip_suffix("\x07")
+            .unwrap();
+        let decoded =
+            String::from_utf8(BASE64_STANDARD.decode(payload).unwrap()).unwrap();
+        assert_eq!(decoded, data);
+    }
+
+    #[test]
+    fn test_clipboard_target_as_char() {
+        assert_eq!(
+            ClipboardTarget::System.as_char(),
+            char::from(constants::CLIPBOARD_TARGET_CLIPBOARD)
+        );
+        assert_eq!(ClipboardTarget::System.as_char(), 'c');
+
+        assert_eq!(
+            ClipboardTarget::Primary.as_char(),
+            char::from(constants::CLIPBOARD_TARGET_PRIMARY)
+        );
+        assert_eq!(ClipboardTarget::Primary.as_char(), 'p');
+    }
 }
+
+// cspell:words Fdvcmxk

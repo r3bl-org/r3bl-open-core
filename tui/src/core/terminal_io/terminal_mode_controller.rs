@@ -5,32 +5,12 @@ use crate::{OutputDevice, RawModeGuard, TERMINAL_LIB_BACKEND, TerminalLibBackend
 use crossterm::{QueueableCommand,
                 cursor::{Hide, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
-                        EnableBracketedPaste, EnableMouseCapture},
-                terminal::{EnterAlternateScreen, LeaveAlternateScreen}};
+                        EnableBracketedPaste, EnableMouseCapture,
+                        KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+                        PushKeyboardEnhancementFlags},
+                terminal::{Clear, ClearType, DisableLineWrap, EnableLineWrap,
+                           EnterAlternateScreen, LeaveAlternateScreen}};
 use miette::IntoDiagnostic;
-
-/// An [`RAII`] guard that tears down the TUI environment when dropped.
-///
-/// This is returned by [`OutputDevice::setup_full_screen_tui()`] and ensures that the
-/// terminal is properly restored (cursor shown, alternate screen exited, mouse and
-/// bracketed paste tracking disabled) even if a panic occurs or the future returns early,
-/// avoiding a [Double Panic Abort].
-///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [Double Panic Abort]: crate#the-double-panic-abort-risk
-#[must_use = "The full screen TUI mode guard must be held as long as the TUI is active."]
-#[allow(missing_debug_implementations)]
-pub struct FullScreenTuiModeGuard {
-    pub(crate) output_device: OutputDevice,
-}
-
-impl Drop for FullScreenTuiModeGuard {
-    /// We prioritize Resilience over Integrity here to prevent a [Double Panic Abort].
-    /// The teardown methods underneath are poison-safe.
-    ///
-    /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn drop(&mut self) { drop(self.output_device.teardown_full_screen_tui()); }
-}
 
 /// Provides an ergonomic API to explicitly control global terminal states (modes):
 /// - Raw mode vs Cooked mode.
@@ -197,6 +177,77 @@ pub trait TerminalModeController {
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     fn disable_bracketed_paste(&self) -> miette::Result<()>;
+
+    /// Enables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
+    ///
+    /// When enabled, the terminal uses `CSI u` escape sequences to encode keys
+    /// unambiguously, allowing modifiers such as `Alt+[`, `Shift+Enter`, `Ctrl+Tab`,
+    /// and `Alt+Escape` to be distinguished without ambiguity or collision.
+    ///
+    /// Remember to call [`TerminalModeController::disable_keyboard_enhancement`] when
+    /// keyboard enhancement is no longer needed.
+    ///
+    /// Maps to [`CSI`] `>1u` [`ANSI`] sequence (Push flags: 1 =
+    /// `DISAMBIGUATE_ESCAPE_CODES`).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying I/O fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+    fn enable_keyboard_enhancement(&self) -> miette::Result<()>;
+
+    /// Disables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
+    ///
+    /// Restores standard keyboard reporting. Called when keyboard enhancement is no
+    /// longer needed following a call to
+    /// [`TerminalModeController::enable_keyboard_enhancement`].
+    ///
+    /// Maps to [`CSI`] `<1u` [`ANSI`] sequence (Pop 1 level of flags).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying I/O fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+    fn disable_keyboard_enhancement(&self) -> miette::Result<()>;
+
+    /// Enables line wrapping at the right margin.
+    ///
+    /// Maps to [`CSI`] `?7h` [`ANSI`] sequence ([`DEC`] Private Mode Set for autowrap).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying I/O fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    fn enable_line_wrap(&self) -> miette::Result<()>;
+
+    /// Disables line wrapping at the right margin.
+    ///
+    /// Maps to [`CSI`] `?7l` [`ANSI`] sequence ([`DEC`] Private Mode Reset for autowrap).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying I/O fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
+    fn disable_line_wrap(&self) -> miette::Result<()>;
+
+    /// Clears the entire terminal screen.
+    ///
+    /// Maps to [`CSI`] `2J` [`ANSI`] sequence (Erase in Display: entire display).
+    ///
+    /// # Errors
+    /// Returns an error if the underlying I/O fails.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`CSI`]: crate::CsiSequence
+    fn clear_screen(&self) -> miette::Result<()>;
 }
 
 impl TerminalModeController for OutputDevice {
@@ -346,6 +397,125 @@ impl TerminalModeController for OutputDevice {
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::disable_bracketed_paste();
+                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+            }
+            ok!()
+        })
+    }
+
+    /// Setup method: Fail-fast if the terminal is poisoned.
+    fn enable_keyboard_enhancement(&self) -> miette::Result<()> {
+        self.write(|writer| {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    let result = writer
+                        .queue(PushKeyboardEnhancementFlags(
+                            KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES,
+                        ))
+                        .and_then(std::io::Write::flush);
+                    if let Err(e) = result {
+                        // On platforms or terminals that do not support progressive
+                        // keyboard enhancement (such as the
+                        // legacy Windows console API), gracefully degrade.
+                        if e.kind() == std::io::ErrorKind::Unsupported
+                            || e.to_string().contains("legacy Windows API")
+                        {
+                            return ok!();
+                        }
+                        return Err(e).into_diagnostic();
+                    }
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    let ansi = ansi_output::terminal_modes::enable_keyboard_enhancement();
+                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+            }
+            ok!()
+        })
+    }
+
+    /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
+    ///
+    /// [Double Panic Abort]: crate#the-double-panic-abort-risk
+    fn disable_keyboard_enhancement(&self) -> miette::Result<()> {
+        self.lock_raw_poison_safe(|writer| {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    let result = writer
+                        .queue(PopKeyboardEnhancementFlags)
+                        .and_then(std::io::Write::flush);
+                    if let Err(e) = result {
+                        // On platforms or terminals that do not support progressive
+                        // keyboard enhancement (such as the
+                        // legacy Windows console API), gracefully degrade.
+                        if e.kind() == std::io::ErrorKind::Unsupported
+                            || e.to_string().contains("legacy Windows API")
+                        {
+                            return ok!();
+                        }
+                        return Err(e).into_diagnostic();
+                    }
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    let ansi =
+                        ansi_output::terminal_modes::disable_keyboard_enhancement();
+                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+            }
+            ok!()
+        })
+    }
+
+    /// Setup method: Fail-fast if the terminal is poisoned.
+    fn enable_line_wrap(&self) -> miette::Result<()> {
+        self.write(|writer| {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    writer.queue(EnableLineWrap).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    let ansi = ansi_output::terminal_modes::enable_line_wrap();
+                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+            }
+            ok!()
+        })
+    }
+
+    /// Setup method: Fail-fast if the terminal is poisoned.
+    fn disable_line_wrap(&self) -> miette::Result<()> {
+        self.write(|writer| {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    writer.queue(DisableLineWrap).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    let ansi = ansi_output::terminal_modes::disable_line_wrap();
+                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+            }
+            ok!()
+        })
+    }
+
+    /// Setup method: Fail-fast if the terminal is poisoned.
+    fn clear_screen(&self) -> miette::Result<()> {
+        self.write(|writer| {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    writer.queue(Clear(ClearType::All)).into_diagnostic()?;
+                    writer.flush().into_diagnostic()?;
+                }
+                TerminalLibBackend::DirectToAnsi => {
+                    let ansi = ansi_output::screen_clearing::clear_screen();
                     writer.write_all(ansi.as_bytes()).into_diagnostic()?;
                     writer.flush().into_diagnostic()?;
                 }

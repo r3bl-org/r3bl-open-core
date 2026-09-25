@@ -73,13 +73,13 @@ pub const DEBUG_TUI_PTY_MUX: bool = true;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 
-/// Controls debug logging for the [VT100 PTY output parser].
+/// Controls debug logging for the [`VT-100` PTY output parser].
 ///
 /// Logs unhandled [`ANSI`] escape sequences, unsupported private modes, and parsing
 /// errors directly from the [`AnsiToOfsBufPerformer`]. Generates extremely
 /// high-volume output when running interactive TUIs, so defaults to `false`.
 ///
-/// [VT100 PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
+/// [`VT-100` PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
 /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 pub const DEBUG_TUI_VT100_PARSER: bool = false;

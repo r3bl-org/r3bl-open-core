@@ -6,7 +6,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{TermPos, VPWidth, VPHeight, terminal_io::KeyState};
+use crate::{TermPos, VPHeight, VPWidth, terminal_io::KeyState};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///
@@ -124,6 +124,12 @@ pub enum VT100InputEventIR {
     Focus(VT100FocusStateIR),
     /// Paste mode notification (start or end).
     Paste(VT100PasteModeIR),
+    /// Protocol control sequence that is recognized and consumed, but does not generate
+    /// an application-level input event (such as framed terminal query responses like
+    /// [`OSC`] 10/11/52).
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    Ignored,
 }
 
 /// Keyboard modifiers for input events.

@@ -538,7 +538,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`Shutdown(Panic)`]: super::ShutdownReason::Panic
 /// [`signals`]: https://man7.org/linux/man-pages/man7/signal.7.html
 /// [`Starting`]: super::ThreadState::Starting
-/// [`stdin`]: https://en.wikipedia.org/wiki/Standard_streams#Standard_input_(stdin)
+/// [`stdin`]: std::io::stdin
 /// [`Stopped`]: super::ThreadState::Stopped
 /// [`Stopping`]: super::ThreadState::Stopping
 /// [`StopReason::WorkerRequested`]: super::StopReason::WorkerRequested

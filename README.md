@@ -29,11 +29,11 @@ height="256px">
 
 Despite the massive rise of AI/LLM coding agents & execution harnesses and cloud VM
 administration over SSH, terminal UI innovation has largely stagnated since the 1970s.
-Most CLI tools still rely on blocking single-threaded I/O, [curses]-era APIs, and fragile
-platform hacks - or rely on the heavy, fragile workaround of layering web stacks like
-[`Node.js`], [`React`], and [`ink`] onto the console. This introduces unreasonable memory
-bloat, high latency, broken keyboard shortcuts, and unpredictable instability that breaks
-down during long-horizon agentic workflows and sub-process orchestration.
+Most CLI tools still rely on blocking single-threaded I/O, [`curses`]-era APIs, and
+fragile platform hacks - or rely on the heavy, fragile workaround of layering web stacks
+like [`Node.js`], [`React`], and [`ink`] onto the console. This introduces unreasonable
+memory bloat, high latency, broken keyboard shortcuts, and unpredictable instability that
+breaks down during long-horizon agentic workflows and sub-process orchestration.
 
 **ROC (`r3bl-open-core`) moves the terminal forward (with love & respect) into 2026 and
 beyond. ❤️**
@@ -157,9 +157,9 @@ human interaction:
 
 ### Engineered for Performance, Correctness & Reliability
 
-- 📐 **Zero-Cost Type-Proof Architecture & Mathematical Correctness**: Rather than relying on
-  ambiguous primitive integers (`usize`, `u16`) and runtime assertions, formal type theory
-  and trait hierarchies [make illegal states unrepresentable]:
+- 📐 **Zero-Cost Type-Proof Architecture & Mathematical Correctness**: Rather than relying
+  on ambiguous primitive integers (`usize`, `u16`) and runtime assertions, formal type
+  theory and trait hierarchies [make illegal states unrepresentable]:
     - **The Newtype Pattern for Domain Separation & Coordinate Safety**: Replaces raw
       primitive integers with zero-cost newtypes (`CRow`, `VPRow`, `CHeight`), eliminating
       primitive obsession and transposition bugs with zero runtime memory or performance
@@ -195,10 +195,10 @@ human interaction:
       structured witness enums (`ArrayOverflowResult`, `RangeBoundsResult`), forcing
       callers to exhaustively handle all boundary states at compile time.
 
-- 🦄 **First-Class Unicode & Complex Emoji Engine (`GCString`)**: Most terminal emulators and
-  TUI libraries break when handling "jumbo emojis", zero-width joiners (ZWJ), skin tone
-  modifiers, and wide characters (display width > 1), causing visual tearing, misaligned
-  borders, and string-slicing panics. ROC solves this from the ground up via
+- 🦄 **First-Class Unicode & Complex Emoji Engine (`GCString`)**: Most terminal emulators
+  and TUI libraries break when handling "jumbo emojis", zero-width joiners (ZWJ), skin
+  tone modifiers, and wide characters (display width > 1), causing visual tearing,
+  misaligned borders, and string-slicing panics. ROC solves this from the ground up via
   `GCStringOwned`:
     - **Tri-Index Separation**: Strictly decouples memory position (`ByteIndex`, UTF-8
       offset), logical editing position (`SegIndex`, user-perceived grapheme clusters),
@@ -210,17 +210,18 @@ human interaction:
       and substring slicing never split UTF-8 codepoints or mid-grapheme clusters,
       eliminating runtime slicing panics across editors, line inputs, and diff rendering.
 
-- 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain attacks,
-  maintainer burnout, and abandonware, our explicit architectural goal is to **own our
-  Bill of Materials (BOM)**. Critical primitives (including our custom `direct_to_ansi`
-  terminal I/O backend, VT-100/ANSI parser, zero-copy gap buffer, and Markdown parser) are
-  engineered in-house in pure Rust. We strictly limit external dependencies to actively
-  funded, strongly supported, and battle-tested industry foundations (such as `tokio`,
-  `mio`, and `mimalloc`), safeguarding production applications against transitive bloat,
-  sudden deprecations, and upstream vulnerabilities.
+- 🔒 **Supply-Chain Integrity & Owning Our BOM**: In an era of software supply-chain
+  attacks, maintainer burnout, and abandonware, our explicit architectural goal is to
+  **own our Bill of Materials (BOM)**. Critical primitives (including our custom
+  `direct_to_ansi` terminal I/O backend, VT-100/ANSI parser, zero-copy gap buffer, and
+  Markdown parser) are engineered in-house in pure Rust. We strictly limit external
+  dependencies to actively funded, strongly supported, and battle-tested industry
+  foundations (such as `tokio`, `mio`, and `mimalloc`), safeguarding production
+  applications against transitive bloat, sudden deprecations, and upstream
+  vulnerabilities.
 
-- 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native, first-class
-  support across platforms using the best backend for each OS:
+- 🌍 **Multi-Backend Architecture (Linux, macOS, Windows, Unix/BSDs)**: Native,
+  first-class support across platforms using the best backend for each OS:
     - **Linux**: Our custom high-performance, Linux-native `direct_to_ansi` engine
       (talking directly to the terminal device via `mio`/epoll for minimal latency and
       maximum throughput, without the use of `crossterm`).
@@ -265,8 +266,8 @@ human interaction:
       or network I/O backpressure.
 
 - 🕊️ **Terminfo Liberation**: Completely frees your applications from legacy `terminfo` /
-  `termcap` databases and [ncurses] baggage by querying modern ANSI protocols directly at
-  runtime.
+  `termcap` databases and [`ncurses`] baggage by querying modern ANSI protocols directly
+  at runtime.
 
 - 📜 **`CSS`-Like Styling & Declarative Layouts**: Responsive [flexbox] layouts and
   [declarative] [CSS-like] styling inspired by [React] and [Elm].
@@ -278,9 +279,9 @@ human interaction:
   runners), complete with dynamic lolcat rainbow color-wheel palettes that automatically
   adapt to terminal color capability.
 
-- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines Linux-native kernel
-  TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol state machine for
-  robust, zero-latency input handling across local terminals and SSH:
+- ⌨️ **Modern Terminal Input & Keyboard Protocol Architecture**: Combines Linux-native
+  kernel TTY polling via `direct_to_ansi` with an IO-free Sans-IO protocol state machine
+  for robust, zero-latency input handling across local terminals and SSH:
     - **Linux-Native `direct_to_ansi` Driver**: Bypasses `crossterm` and `libc` FFI
       wrappers on Linux by talking directly to `/dev/tty` via `mio`/`epoll(7)`,
       eliminating thread-blocking reads and CPU-spinning loops.
@@ -293,9 +294,9 @@ human interaction:
       modifier reporting, key-release events, and unambiguous key sequences with graceful
       legacy fallback.
     - **Zero-Latency ESC Disambiguation (`MaybeMore`)**: Replaces brittle 50-100ms timeout
-      heuristics with an internal state machine (`Drained`, `KernelMayHaveMore`,
-      `RemainingInReadBuffer`), achieving 0ms zero-latency ESC handling while correctly
-      reassembling multi-packet escape sequences across SSH.
+      heuristics with an internal state machine (`KernelDrained`, `KernelMayHaveMore`),
+      achieving 0ms zero-latency ESC handling while correctly reassembling multi-packet
+      escape sequences across SSH.
     - **OSC Terminal Query Absorption & SGR Mouse Reporting**: Frames and absorbs
       background terminal responses (such as OSC 10/11 color queries and OSC 52 clipboard)
       on `stdin` to prevent terminal text leakage, while supporting full SGR mouse
@@ -417,6 +418,39 @@ need. `r3bl_tui` allows you to create application state that can be moved betwee
 ### Main library crate
 
 There is just one main library crate in this workspace: [`r3bl_tui`].
+
+To add `r3bl_tui` to your own Rust project:
+
+**Option 1: crates.io (stable release)**
+
+Use this if you prefer stable, versioned releases:
+
+```bash
+cargo add r3bl_tui
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = "0.7.8"
+```
+
+**Option 2: GitHub main branch (bleeding edge)**
+
+Bug fixes and patches land on `main` immediately before being published to crates.io. If
+you need the latest fixes or rapid iteration:
+
+```bash
+cargo add r3bl_tui --git https://github.com/r3bl-org/r3bl-open-core.git --branch main
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+r3bl_tui = { git = "https://github.com/r3bl-org/r3bl-open-core.git", branch = "main" }
+```
 
 ### Main binary crate
 
@@ -1877,8 +1911,8 @@ know.
 [Platform-Specific Backends]: ./tui/README.md#platform-specific-backends
 [`script_lib.fish`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish
 [`r3bl-open-core-archive`]: https://github.com/r3bl-org/r3bl-open-core-archive
-[curses]: https://en.wikipedia.org/wiki/Curses_(programming_library)
-[ncurses]: https://en.wikipedia.org/wiki/Ncurses
+[`curses`]: https://en.wikipedia.org/wiki/Curses_(programming_library)
+[`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 [`Shift+Enter`]:
     https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#terminal-setup
 [Kitty keyboard protocol]: https://github.com/vadimdemedes/ink/pull/855
