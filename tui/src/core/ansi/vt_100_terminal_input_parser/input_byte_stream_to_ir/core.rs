@@ -7,6 +7,7 @@ use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
             CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OSC_PREFIX, SS3_PREFIX,
             SS3_SEQ_LEN, byte_offset,
             core::ansi::vt_100_terminal_input_parser::{MaybeMore, OscScanResult,
+                                                       ParsedInputEventIR,
                                                        VT100InputEventIR,
                                                        scan_osc_sequence,
                                                        try_parse_input_event}};
@@ -229,7 +230,10 @@ impl InputByteStreamToIrParser {
         self.accumulator.extend_from_slice(slice_mut);
         while !self.accumulator.is_empty() {
             match try_parse_input_event(&self.accumulator, maybe_more) {
-                Some((event, bytes_consumed)) => {
+                Some(ParsedInputEventIR {
+                    event,
+                    bytes_consumed,
+                }) => {
                     let consumed = bytes_consumed.as_usize();
                     debug_assert!(
                         consumed > 0,

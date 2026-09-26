@@ -154,7 +154,8 @@ mod tests {
     use super::super::{paste_state_machine::PasteCollectionState,
                        protocol_conversion::convert_input_event};
     use crate::{InputEvent, byte_offset,
-                core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                core::ansi::vt_100_terminal_input_parser::{ParsedInputEventIR,
+                                                           VT100InputEventIR,
                                                            VT100KeyCodeIR,
                                                            VT100KeyModifiersIR,
                                                            VT100PasteModeIR,
@@ -169,7 +170,11 @@ mod tests {
 
         // Test 1: Parse UTF-8 text (simplest case).
         let buffer: &[u8] = b"A";
-        if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(buffer) {
+        if let Some(ParsedInputEventIR {
+            event: vt100_event,
+            bytes_consumed,
+        }) = parse_utf8_text(buffer)
+        {
             assert_eq!(bytes_consumed, byte_offset(1));
             if let Some(canonical_event) = convert_input_event(vt100_event) {
                 assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
@@ -187,7 +192,10 @@ mod tests {
 
         // Test 3: CSI sequence for keyboard (Up Arrow: ESC [ A).
         let csi_buffer: [u8; 3] = [0x1B, 0x5B, 0x41];
-        if let Some((vt100_event, bytes_consumed)) = parse_keyboard_sequence(&csi_buffer)
+        if let Some(ParsedInputEventIR {
+            event: vt100_event,
+            bytes_consumed,
+        }) = parse_keyboard_sequence(&csi_buffer)
         {
             assert_eq!(bytes_consumed, byte_offset(3));
             if let Some(canonical_event) = convert_input_event(vt100_event) {

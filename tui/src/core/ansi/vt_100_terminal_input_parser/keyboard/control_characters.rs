@@ -4,9 +4,9 @@
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 
-use super::super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR,
-                                   VT100KeyModifiersIR};
-use crate::{ByteOffset, KeyState, byte_offset,
+use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                   VT100KeyCodeIR, VT100KeyModifiersIR};
+use crate::{KeyState, byte_offset,
             core::ansi::constants::{ASCII_DEL, CONTROL_BACKSPACE, CONTROL_ENTER,
                                     CONTROL_ESC, CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
                                     CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK}};
@@ -35,7 +35,7 @@ use crate::{ByteOffset, KeyState, byte_offset,
 /// [`router`]: mod@super::super::router
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
-pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Check minimum length
     if buffer.is_empty() {
         return None;
@@ -45,7 +45,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
 
     // Handle ASCII DEL (0x7F) - common Backspace encoding
     if byte == ASCII_DEL {
-        return Some((
+        return Some(ParsedInputEventIR::new(
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Backspace,
                 modifiers: VT100KeyModifiersIR::default(),
@@ -64,7 +64,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
         CONTROL_NUL => {
             // Ctrl+Space (or Ctrl+@) generates NUL
             // Treat as Ctrl+Space for better usability
-            return Some((
+            return Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Char(' '),
                     modifiers: VT100KeyModifiersIR {
@@ -78,7 +78,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
         }
         CONTROL_TAB => {
             // Tab key (0x09) - treated as Tab, not Ctrl+I
-            return Some((
+            return Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Tab,
                     modifiers: VT100KeyModifiersIR::default(),
@@ -88,7 +88,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
         }
         CONTROL_LF | CONTROL_ENTER => {
             // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal
-            return Some((
+            return Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Enter,
                     modifiers: VT100KeyModifiersIR::default(),
@@ -98,7 +98,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
         }
         CONTROL_BACKSPACE => {
             // Backspace can send BS (0x08) or DEL (0x7F)
-            return Some((
+            return Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Backspace,
                     modifiers: VT100KeyModifiersIR::default(),
@@ -116,7 +116,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
     // Example: 0x01 | 0x60 = 0x61 = 'a'
     let letter = char::from(byte | CTRL_TO_LOWERCASE_MASK);
 
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char(letter),
             modifiers: VT100KeyModifiersIR {
@@ -135,7 +135,10 @@ mod tests {
 
     #[test]
     fn test_del_is_backspace() {
-        let (event, len) = parse_control_character(&[ASCII_DEL]).unwrap();
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&[ASCII_DEL]).unwrap();
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -148,7 +151,10 @@ mod tests {
 
     #[test]
     fn test_control_nul_is_ctrl_space() {
-        let (event, len) = parse_control_character(&[CONTROL_NUL]).unwrap();
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&[CONTROL_NUL]).unwrap();
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -165,7 +171,10 @@ mod tests {
 
     #[test]
     fn test_control_tab() {
-        let (event, len) = parse_control_character(&[CONTROL_TAB]).unwrap();
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&[CONTROL_TAB]).unwrap();
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -178,7 +187,9 @@ mod tests {
 
     #[test]
     fn test_control_enter_lf_and_cr() {
-        let (event_lf, _) = parse_control_character(&[CONTROL_LF]).unwrap();
+        let ParsedInputEventIR {
+            event: event_lf, ..
+        } = parse_control_character(&[CONTROL_LF]).unwrap();
         assert_eq!(
             event_lf,
             VT100InputEventIR::Keyboard {
@@ -187,7 +198,9 @@ mod tests {
             }
         );
 
-        let (event_cr, _) = parse_control_character(&[CONTROL_ENTER]).unwrap();
+        let ParsedInputEventIR {
+            event: event_cr, ..
+        } = parse_control_character(&[CONTROL_ENTER]).unwrap();
         assert_eq!(
             event_cr,
             VT100InputEventIR::Keyboard {
@@ -199,7 +212,8 @@ mod tests {
 
     #[test]
     fn test_control_backspace() {
-        let (event, _) = parse_control_character(&[CONTROL_BACKSPACE]).unwrap();
+        let ParsedInputEventIR { event, .. } =
+            parse_control_character(&[CONTROL_BACKSPACE]).unwrap();
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -216,7 +230,8 @@ mod tests {
 
     #[test]
     fn test_ctrl_letters() {
-        let (event_a, _) = parse_control_character(&[0x01]).unwrap(); // Ctrl+A
+        let ParsedInputEventIR { event: event_a, .. } =
+            parse_control_character(&[0x01]).unwrap(); // Ctrl+A
         assert_eq!(
             event_a,
             VT100InputEventIR::Keyboard {
@@ -229,7 +244,8 @@ mod tests {
             }
         );
 
-        let (event_z, _) = parse_control_character(&[0x1A]).unwrap(); // Ctrl+Z
+        let ParsedInputEventIR { event: event_z, .. } =
+            parse_control_character(&[0x1A]).unwrap(); // Ctrl+Z
         assert_eq!(
             event_z,
             VT100InputEventIR::Keyboard {

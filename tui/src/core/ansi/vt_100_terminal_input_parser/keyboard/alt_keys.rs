@@ -5,9 +5,9 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`ESC`]: crate::EscSequence
 
-use super::super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR,
-                                   VT100KeyModifiersIR};
-use crate::{ByteOffset, KeyState, byte_offset,
+use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                   VT100KeyCodeIR, VT100KeyModifiersIR};
+use crate::{KeyState, byte_offset,
             core::ansi::constants::{ANSI_ESC, ASCII_DEL, PRINTABLE_ASCII_MAX,
                                     PRINTABLE_ASCII_MIN}};
 
@@ -35,7 +35,7 @@ use crate::{ByteOffset, KeyState, byte_offset,
 /// [`router`]: mod@super::super::router
 /// [`Why Alt Uses ESC Prefix`]: mod@super#why-alt-uses-esc-prefix-not-csi
 #[must_use]
-pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Need at least 2 bytes: ESC + key
     if buffer.len() < 2 {
         return None;
@@ -50,7 +50,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
 
     // Handle Alt+Backspace (ESC + DEL)
     if second == ASCII_DEL {
-        return Some((
+        return Some(ParsedInputEventIR::new(
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Backspace,
                 modifiers: VT100KeyModifiersIR {
@@ -72,7 +72,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)
     // Convert to character
     let ch = char::from(second);
 
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char(ch),
             modifiers: VT100KeyModifiersIR {
@@ -92,8 +92,10 @@ mod tests {
     #[test]
     fn test_alt_letter_b() {
         let input = &[ANSI_ESC, b'b']; // ESC b → Alt+b
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+b");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+b");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('b'));
@@ -109,8 +111,10 @@ mod tests {
     #[test]
     fn test_alt_letter_f() {
         let input = &[ANSI_ESC, b'f']; // ESC f → Alt+f
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+f");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+f");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('f'));
@@ -126,8 +130,10 @@ mod tests {
     #[test]
     fn test_alt_letter_uppercase() {
         let input = &[ANSI_ESC, b'B']; // ESC B → Alt+B (uppercase)
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+B");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+B");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('B'));
@@ -143,8 +149,10 @@ mod tests {
     #[test]
     fn test_alt_digit() {
         let input = &[ANSI_ESC, b'3']; // ESC 3 → Alt+3
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+3");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+3");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('3'));
@@ -160,8 +168,10 @@ mod tests {
     #[test]
     fn test_alt_space() {
         let input = &[ANSI_ESC, b' ']; // ESC space → Alt+space
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+space");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+space");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char(' '));
@@ -177,8 +187,10 @@ mod tests {
     #[test]
     fn test_alt_backspace() {
         let input = &[ANSI_ESC, ASCII_DEL]; // ESC DEL → Alt+Backspace
-        let (event, bytes_consumed) =
-            parse_alt_letter(input).expect("Should parse Alt+Backspace");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(input).expect("Should parse Alt+Backspace");
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Backspace);

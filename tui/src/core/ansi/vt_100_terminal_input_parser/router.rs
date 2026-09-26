@@ -69,9 +69,9 @@
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use super::{MaybeMore, VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR, keyboard,
-            mouse, terminal_events, utf8};
-use crate::{ByteOffset, byte_offset,
+use super::{MaybeMore, ParsedInputEventIR, VT100InputEventIR, VT100KeyCodeIR,
+            VT100KeyModifiersIR, keyboard, mouse, terminal_events, utf8};
+use crate::{byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET,
                                     ANSI_SS3_O}};
 
@@ -215,7 +215,7 @@ use crate::{ByteOffset, byte_offset,
 ///
 /// # Returns
 ///
-/// - The parsed [`VT100InputEventIR`] and [`ByteOffset`] byte count on success.
+/// - The parsed [`ParsedInputEventIR`] on success.
 /// - Nothing if `accumulated_bytes` contains an incomplete sequence (more bytes needed),
 ///   or if `maybe_more == MaybeMore::KernelMayHaveMore` and `accumulated_bytes` is
 ///   `[ESC]` (waiting for a potential escape sequence).
@@ -233,6 +233,7 @@ use crate::{ByteOffset, byte_offset,
 /// [`MaybeMore::KernelMayHaveMore`]: super::MaybeMore::KernelMayHaveMore
 /// [`MaybeMore`]: super::MaybeMore
 /// [`mouse`]: mod@super::mouse
+/// [`ParsedInputEventIR`]: super::ParsedInputEventIR
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html
 /// [`stdin`]: std::io::stdin
@@ -246,7 +247,7 @@ use crate::{ByteOffset, byte_offset,
 pub fn try_parse_input_event(
     accumulated_bytes: &[u8],
     maybe_more: MaybeMore,
-) -> Option<(VT100InputEventIR, ByteOffset)> {
+) -> Option<ParsedInputEventIR> {
     // Routing table.
     match accumulated_bytes {
         // Empty buffer.
@@ -257,7 +258,9 @@ pub fn try_parse_input_event(
         // - MaybeMore::KernelDrained: Emit ESC key immediately (no more input).
         [ANSI_ESC] => match maybe_more {
             MaybeMore::KernelMayHaveMore => None,
-            MaybeMore::KernelDrained => Some((esc_key_event(), byte_offset(1))),
+            MaybeMore::KernelDrained => {
+                Some(ParsedInputEventIR::new(esc_key_event(), byte_offset(1)))
+            }
         },
 
         // CSI sequence (ESC [) - keyboard/mouse/terminal events.
@@ -281,7 +284,7 @@ pub fn try_parse_input_event(
         // ESC + other byte - try Alt+letter (e.g., Alt+B, Alt+F), else emit standalone
         // ESC.
         [ANSI_ESC, _, ..] => keyboard::parse_alt_letter(accumulated_bytes)
-            .or_else(|| Some((esc_key_event(), byte_offset(1)))),
+            .or_else(|| Some(ParsedInputEventIR::new(esc_key_event(), byte_offset(1)))),
 
         // Not ESC - raw byte input (control characters or UTF-8 text).
         // Control characters (0x00-0x1F) must be tried before UTF-8 because they are
@@ -321,7 +324,10 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse Up Arrow");
 
         assert_eq!(event, expected);
@@ -331,7 +337,10 @@ mod tests_csi_routing {
     #[test]
     fn raw_csi_arrow_key() {
         let buffer = &[0x1B, b'[', b'A'];
-        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(buffer, MaybeMore::KernelDrained)
             .expect("Should parse Up Arrow");
 
         assert_eq!(
@@ -353,7 +362,10 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse mouse event");
 
         assert_eq!(event, expected);
@@ -369,7 +381,10 @@ mod tests_csi_routing {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = &[0x1B, b'O', b'P']; // ESC O P
-        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(buffer, MaybeMore::KernelDrained)
             .expect("Should parse F1");
 
         assert_eq!(event, expected);
@@ -381,7 +396,10 @@ mod tests_csi_routing {
         // Focus gained.
         let focus_gained = VT100InputEventIR::Focus(VT100FocusStateIR::Gained);
         let buffer = generate_keyboard_sequence(&focus_gained).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse focus gained");
 
         assert_eq!(event, focus_gained);
@@ -390,7 +408,10 @@ mod tests_csi_routing {
         // Focus lost.
         let focus_lost = VT100InputEventIR::Focus(VT100FocusStateIR::Lost);
         let buffer = generate_keyboard_sequence(&focus_lost).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse focus lost");
 
         assert_eq!(event, focus_lost);
@@ -402,7 +423,10 @@ mod tests_csi_routing {
         // Bracketed paste start.
         let paste_start = VT100InputEventIR::Paste(VT100PasteModeIR::Start);
         let buffer = generate_keyboard_sequence(&paste_start).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse paste start");
 
         assert_eq!(event, paste_start);
@@ -411,7 +435,10 @@ mod tests_csi_routing {
         // Bracketed paste end.
         let paste_end = VT100InputEventIR::Paste(VT100PasteModeIR::End);
         let buffer = generate_keyboard_sequence(&paste_end).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse paste end");
 
         assert_eq!(event, paste_end);
@@ -438,7 +465,10 @@ mod tests_non_csi_input {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse ESC key");
 
         assert_eq!(event, expected);
@@ -466,7 +496,10 @@ mod tests_non_csi_input {
             },
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse Alt+b");
 
         assert_eq!(event, expected);
@@ -484,7 +517,10 @@ mod tests_non_csi_input {
             },
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse Ctrl+A");
 
         assert_eq!(event, expected);
@@ -499,7 +535,10 @@ mod tests_non_csi_input {
             modifiers: VT100KeyModifiersIR::default(),
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
-        let (event, consumed) = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(&buffer, MaybeMore::KernelDrained)
             .expect("Should parse 'H'");
 
         assert_eq!(event, expected);
@@ -509,7 +548,10 @@ mod tests_non_csi_input {
     #[test]
     fn utf8_text_in_longer_buffer() {
         let buffer = b"Hello";
-        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(buffer, MaybeMore::KernelDrained)
             .expect("Should parse 'H'");
 
         assert_eq!(
@@ -546,7 +588,10 @@ mod tests_invalid_input {
     fn unknown_esc_emits_standalone_esc() {
         // ESC + invalid byte -> emit standalone ESC, leave invalid byte for next cycle.
         let buffer = &[0x1B, 0xFF];
-        let (event, consumed) = try_parse_input_event(buffer, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(buffer, MaybeMore::KernelDrained)
             .expect("Should emit standalone ESC");
 
         assert_eq!(
@@ -582,7 +627,10 @@ mod tests_osc_routing {
 
     #[test]
     fn lone_alt_bracket_drained() {
-        let (event, consumed) = try_parse_input_event(b"\x1b]", MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(b"\x1b]", MaybeMore::KernelDrained)
             .expect("Should emit Alt+]");
         assert_eq!(event, alt_bracket_expected());
         assert_eq!(consumed, byte_offset(2));
@@ -595,18 +643,22 @@ mod tests_osc_routing {
 
     #[test]
     fn alt_bracket_followed_by_non_digit() {
-        let (event, consumed) =
-            try_parse_input_event(b"\x1b]a", MaybeMore::KernelMayHaveMore)
-                .expect("Should emit Alt+]");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(b"\x1b]a", MaybeMore::KernelMayHaveMore)
+            .expect("Should emit Alt+]");
         assert_eq!(event, alt_bracket_expected());
         assert_eq!(consumed, byte_offset(2));
     }
 
     #[test]
     fn alt_bracket_followed_by_digit_drained() {
-        let (event, consumed) =
-            try_parse_input_event(b"\x1b]5", MaybeMore::KernelDrained)
-                .expect("Should emit Alt+] when drained");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(b"\x1b]5", MaybeMore::KernelDrained)
+            .expect("Should emit Alt+] when drained");
         assert_eq!(event, alt_bracket_expected());
         assert_eq!(consumed, byte_offset(2));
     }
@@ -619,7 +671,10 @@ mod tests_osc_routing {
     #[test]
     fn candidate_osc_complete() {
         let seq = b"\x1b]0;my title\x07";
-        let (event, consumed) = try_parse_input_event(seq, MaybeMore::KernelDrained)
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(seq, MaybeMore::KernelDrained)
             .expect("Should consume OSC sequence");
         assert_eq!(event, VT100InputEventIR::Ignored);
         assert_eq!(consumed, byte_offset(seq.len()));
@@ -636,9 +691,11 @@ mod tests_osc_routing {
     #[test]
     fn candidate_osc_invalid_syntax() {
         // Embedded newline in payload violates OSC syntax -> emits Alt+]
-        let (event, consumed) =
-            try_parse_input_event(b"\x1b]0;line\nbreak\x07", MaybeMore::KernelDrained)
-                .expect("Should emit Alt+] on invalid syntax");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = try_parse_input_event(b"\x1b]0;line\nbreak\x07", MaybeMore::KernelDrained)
+            .expect("Should emit Alt+] on invalid syntax");
         assert_eq!(event, alt_bracket_expected());
         assert_eq!(consumed, byte_offset(2));
     }

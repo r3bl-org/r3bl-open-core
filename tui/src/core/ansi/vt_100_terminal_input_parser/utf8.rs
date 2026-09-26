@@ -135,9 +135,8 @@
 //! | **[`UTF-8`] byte length** (this module) | Memory size in bytes      | 4 bytes       |
 //! | **Display width** (graphemes module)    | Terminal columns occupied | 2 columns     |
 //!
-//! - **This module**: Returns `(`[`VT100InputEventIR`]`, `[`ByteOffset`]`)` where
-//!   `bytes_consumed` is the number of bytes to advance in the input buffer (1-4 bytes
-//!   for [`UTF-8`]).
+//! - **This module**: Returns [`ParsedInputEventIR`] where `bytes_consumed` is the number
+//!   of bytes to advance in the input buffer (1-4 bytes for [`UTF-8`]).
 //!
 //! - **Display rendering**: Calculated separately using the [`unicode_width`] crate. See
 //!   [`mod@crate::graphemes`] for comprehensive documentation on Unicode display width,
@@ -169,6 +168,7 @@
 //!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
+//! [`ParsedInputEventIR`]: super::ParsedInputEventIR
 //! [`router`]: mod@super::router
 //! [`SegIndex`]: crate::SegIndex
 //! [`terminal_events`]: mod@super::terminal_events
@@ -178,7 +178,8 @@
 //! [`VT100KeyCodeIR::Char`]: super::VT100KeyCodeIR::Char
 //! [parent module documentation]: mod@super#primary-consumer
 
-use super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR, VT100KeyModifiersIR};
+use super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR, VT100KeyCodeIR,
+                            VT100KeyModifiersIR};
 use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
             UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX,
             UTF8_3BYTE_MIN, UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
@@ -213,7 +214,7 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
 /// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::input::DirectToAnsiInputDevice
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
-pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_utf8_text(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Check if we have a complete UTF-8 sequence
     let bytes_consumed = is_utf8_complete(buffer)?;
 
@@ -221,7 +222,7 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)>
     let ch = decode_utf8(buffer)?;
 
     // Return keyboard event with the decoded character
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char(ch),
             modifiers: VT100KeyModifiersIR::default(),
@@ -396,7 +397,10 @@ mod tests {
     fn test_ascii_character() {
         // Single ASCII character: 'a' (0x61)
         let buffer = b"a";
-        let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse ASCII");
 
         assert_eq!(consumed, byte_offset(1));
         match event {
@@ -413,7 +417,10 @@ mod tests {
         let buffer = b"hello";
 
         // Parse 'h'
-        let (event, consumed) = parse_utf8_text(buffer).expect("Should parse first char");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse first char");
         assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -423,8 +430,10 @@ mod tests {
         }
 
         // Parse 'e' from remainder
-        let (event, consumed) =
-            parse_utf8_text(&buffer[1..]).expect("Should parse second char");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(&buffer[1..]).expect("Should parse second char");
         assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -438,8 +447,10 @@ mod tests {
     fn test_two_byte_utf8() {
         // Two-byte character: '©' (0xC2 0xA9)
         let buffer = b"\xC2\xA9";
-        let (event, consumed) =
-            parse_utf8_text(buffer).expect("Should parse 2-byte UTF-8");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse 2-byte UTF-8");
 
         assert_eq!(consumed, byte_offset(2));
         match event {
@@ -454,8 +465,10 @@ mod tests {
     fn test_three_byte_utf8() {
         // Three-byte character: '€' (0xE2 0x82 0xAC)
         let buffer = b"\xE2\x82\xAC";
-        let (event, consumed) =
-            parse_utf8_text(buffer).expect("Should parse 3-byte UTF-8");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse 3-byte UTF-8");
 
         assert_eq!(consumed, byte_offset(3));
         match event {
@@ -470,8 +483,10 @@ mod tests {
     fn test_four_byte_utf8() {
         // Four-byte character: '😀' (0xF0 0x9F 0x98 0x80)
         let buffer = b"\xF0\x9F\x98\x80";
-        let (event, consumed) =
-            parse_utf8_text(buffer).expect("Should parse 4-byte UTF-8");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse 4-byte UTF-8");
 
         assert_eq!(consumed, byte_offset(4));
         match event {
@@ -554,7 +569,10 @@ mod tests {
         let buffer = b"a\xC2\xA9b";
 
         // Parse ASCII 'a'
-        let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(buffer).expect("Should parse ASCII");
         assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -564,8 +582,10 @@ mod tests {
         }
 
         // Parse 2-byte '©'
-        let (event, consumed) =
-            parse_utf8_text(&buffer[1..]).expect("Should parse 2-byte");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(&buffer[1..]).expect("Should parse 2-byte");
         assert_eq!(consumed, byte_offset(2));
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -575,8 +595,10 @@ mod tests {
         }
 
         // Parse ASCII 'b'
-        let (event, consumed) =
-            parse_utf8_text(&buffer[3..]).expect("Should parse ASCII");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_utf8_text(&buffer[3..]).expect("Should parse ASCII");
         assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {

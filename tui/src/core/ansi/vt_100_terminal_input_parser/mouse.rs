@@ -170,8 +170,9 @@
 //! [Raw Mode]: crate::core::ansi::terminal_raw_mode
 //! [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
 
-use super::ir_event_types::{VT100InputEventIR, VT100KeyModifiersIR, VT100MouseActionIR,
-                            VT100MouseButtonIR, VT100ScrollDirectionIR};
+use super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR, VT100KeyModifiersIR,
+                            VT100MouseActionIR, VT100MouseButtonIR,
+                            VT100ScrollDirectionIR};
 use crate::{ByteOffset, KeyState, TermPos, WideningCastToU16, byte_offset,
             core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
@@ -186,7 +187,7 @@ use crate::{ByteOffset, KeyState, TermPos, WideningCastToU16, byte_offset,
                                     MOUSE_X10_MIN_LEN, MOUSE_X10_PREFIX}};
 
 #[must_use]
-pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Check for SGR mouse protocol (most reliable).
     // SGR sequence is at least MOUSE_SGR_MIN_LEN bytes: ESC [ < Cb ; Cx ; Cy M
     if buffer.len() >= MOUSE_SGR_MIN_LEN && buffer.starts_with(MOUSE_SGR_PREFIX) {
@@ -229,7 +230,7 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
 /// - `M` = press, `m` = release
 ///
 /// [`SGR`]: crate::SgrCode
-fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+fn parse_sgr_mouse(sequence: &[u8]) -> Option<ParsedInputEventIR> {
     // Minimum: ESC[<0;1;1M (9 bytes)
     if sequence.len() < MOUSE_SGR_MIN_LEN {
         return None;
@@ -277,7 +278,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 
     // Check for scroll events first (buttons 64-67).
     if let Some(scroll_dir) = detect_scroll_event(part_button_byte) {
-        return Some((
+        return Some(ParsedInputEventIR::new(
             VT100InputEventIR::Mouse {
                 button: VT100MouseButtonIR::Unknown,
                 pos: TermPos::from_one_based(part_cx, part_cy),
@@ -309,7 +310,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
         (false, false, _) => VT100MouseActionIR::Release,
     };
 
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Mouse {
             button,
             pos: TermPos::from_one_based(part_cx, part_cy),
@@ -348,7 +349,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
 /// Motion flag (bit 5, value 32): Set when mouse moved without button press
 ///
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+fn parse_x10_mouse(sequence: &[u8]) -> Option<ParsedInputEventIR> {
     // X10 format: ESC [ M Cb Cx Cy (5 bytes minimum)
     if sequence.len() < MOUSE_X10_MIN_LEN {
         return None;
@@ -394,13 +395,13 @@ fn parse_legacy_mouse_event(
     col: u16,
     row: u16,
     bytes_consumed: ByteOffset,
-) -> Option<(VT100InputEventIR, ByteOffset)> {
+) -> Option<ParsedInputEventIR> {
     let modifiers = extract_modifiers(button_byte);
     let pos = TermPos::from_one_based(col, row);
 
     // Check for scroll events first (buttons 64-67).
     if let Some(scroll_dir) = detect_scroll_event(button_byte) {
-        return Some((
+        return Some(ParsedInputEventIR::new(
             VT100InputEventIR::Mouse {
                 button: VT100MouseButtonIR::Unknown,
                 pos,
@@ -429,7 +430,7 @@ fn parse_legacy_mouse_event(
         (false, _) => VT100MouseActionIR::Press,
     };
 
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Mouse {
             button,
             pos,
@@ -471,7 +472,7 @@ fn parse_legacy_mouse_event(
 /// [`SGR`]: crate::SgrCode
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 #[allow(clippy::too_many_lines)]
-fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+fn parse_rxvt_mouse(sequence: &[u8]) -> Option<ParsedInputEventIR> {
     // RXVT format: ESC [ Cb ; Cx ; Cy M (minimum 8 bytes: ESC[0;1;1M)
     if sequence.len() < MOUSE_RXVT_MIN_LEN {
         return None;
@@ -702,8 +703,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -737,8 +740,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -760,8 +765,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -783,8 +790,10 @@ mod tests {
             VT100MouseActionIR::Release,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -805,8 +814,10 @@ mod tests {
             VT100MouseActionIR::Motion,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -832,8 +843,10 @@ mod tests {
                 alt: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -860,8 +873,10 @@ mod tests {
                 alt: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -888,8 +903,10 @@ mod tests {
                 alt: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -912,8 +929,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
@@ -935,7 +954,8 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         match event {
             VT100InputEventIR::Mouse { pos, .. } => {
@@ -956,8 +976,10 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
         assert_eq!(bytes_consumed, byte_offset(MOUSE_X10_MIN_LEN));
 
         match event {
@@ -990,8 +1012,10 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse X10");
         assert_eq!(bytes_consumed, byte_offset(MOUSE_X10_MIN_LEN));
 
         match event {
@@ -1021,7 +1045,8 @@ mod tests {
             modifiers,
         );
 
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse X10");
         match event {
             VT100InputEventIR::Mouse {
                 action,
@@ -1074,8 +1099,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1109,8 +1136,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1132,8 +1161,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1155,8 +1186,10 @@ mod tests {
             VT100MouseActionIR::Release,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1177,8 +1210,10 @@ mod tests {
             VT100MouseActionIR::Motion,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1204,8 +1239,10 @@ mod tests {
                 alt: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1232,8 +1269,10 @@ mod tests {
                 alt: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1260,8 +1299,10 @@ mod tests {
                 alt: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1284,8 +1325,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1307,7 +1350,8 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         match event {
             VT100InputEventIR::Mouse { pos, .. } => {
@@ -1337,7 +1381,8 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         match event {
             VT100InputEventIR::Mouse {
@@ -1369,7 +1414,8 @@ mod tests {
             VT100KeyModifiersIR::default(),
         );
 
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         match event {
             VT100InputEventIR::Mouse { action, .. } => {
@@ -1398,7 +1444,8 @@ mod tests {
             modifiers,
         );
 
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
         match event {
             VT100InputEventIR::Mouse {
                 action,
@@ -1468,7 +1515,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1503,7 +1553,10 @@ mod tests {
             VT100MouseActionIR::Release,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1525,7 +1578,10 @@ mod tests {
             VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up),
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1550,7 +1606,10 @@ mod tests {
             VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down),
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1580,7 +1639,8 @@ mod tests {
             modifiers,
         );
 
-        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR { event, .. } =
+            parse_mouse_sequence(&seq).expect("Should parse");
         match event {
             VT100InputEventIR::Mouse {
                 action,
@@ -1608,7 +1668,10 @@ mod tests {
             VT100MouseActionIR::Drag,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1635,7 +1698,10 @@ mod tests {
                 alt: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
@@ -1659,7 +1725,10 @@ mod tests {
             VT100MouseActionIR::Press,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {

@@ -76,8 +76,8 @@
 //!     mod@super#bidirectional-communication-user-input-vs-terminal-responses
 //! [parent module documentation]: mod@super#primary-consumer
 
-use super::{ir_event_types::{VT100FocusStateIR, VT100InputEventIR, VT100KeyCodeIR,
-                             VT100KeyModifiersIR, VT100PasteModeIR},
+use super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR, VT100InputEventIR,
+                             VT100KeyCodeIR, VT100KeyModifiersIR, VT100PasteModeIR},
             maybe_more::MaybeMore};
 use crate::{ByteOffset, KeyState, byte_offset,
             core::ansi::constants::{ANSI_BEL, ANSI_CSI_BRACKET, ANSI_ESC,
@@ -107,7 +107,7 @@ use crate::{ByteOffset, KeyState, byte_offset,
 /// - `ESC [ 2 0 0 ~` - Bracketed paste start
 /// - `ESC [ 2 0 1 ~` - Bracketed paste end
 #[must_use]
-pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -122,13 +122,13 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     if buffer.len() == 3 {
         match buffer[2] {
             FOCUS_GAINED_FINAL => {
-                return Some((
+                return Some(ParsedInputEventIR::new(
                     VT100InputEventIR::Focus(VT100FocusStateIR::Gained),
                     byte_offset(3),
                 ));
             }
             FOCUS_LOST_FINAL => {
-                return Some((
+                return Some(ParsedInputEventIR::new(
                     VT100InputEventIR::Focus(VT100FocusStateIR::Lost),
                     byte_offset(3),
                 ));
@@ -144,9 +144,7 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
 /// Parse [`CSI`] sequences with parameters for terminal events.
 ///
 /// [`CSI`]: crate::CsiSequence
-fn parse_csi_terminal_parameters(
-    buffer: &[u8],
-) -> Option<(VT100InputEventIR, ByteOffset)> {
+fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     // Extract parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();
@@ -198,7 +196,7 @@ fn parse_csi_terminal_parameters(
         // Window resize: CSI 8 ; rows ; cols t
         let rows = params[1];
         let columns = params[2];
-        Some((
+        Some(ParsedInputEventIR::new(
             VT100InputEventIR::Resize {
                 col_width: crate::VPWidth::from(columns),
                 row_height: crate::VPHeight::from(rows),
@@ -208,12 +206,12 @@ fn parse_csi_terminal_parameters(
     } else if params.len() == 1 && final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         if params[0] == PASTE_START_PARSE_PARAM {
-            Some((
+            Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Paste(VT100PasteModeIR::Start),
                 total_consumed,
             ))
         } else if params[0] == PASTE_END_PARSE_PARAM {
-            Some((
+            Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Paste(VT100PasteModeIR::End),
                 total_consumed,
             ))
@@ -445,7 +443,7 @@ fn check_st_terminator(
 pub fn try_disambiguate_osc_or_alt_bracket(
     buffer: &[u8],
     maybe_more: MaybeMore,
-) -> Option<(VT100InputEventIR, ByteOffset)> {
+) -> Option<ParsedInputEventIR> {
     if !buffer.starts_with(OSC_PREFIX) {
         return None;
     }
@@ -466,12 +464,18 @@ pub fn try_disambiguate_osc_or_alt_bracket(
                     consumed_bytes = len,
                 };
             });
-            Some((VT100InputEventIR::Ignored, consumed))
+            Some(ParsedInputEventIR::new(
+                VT100InputEventIR::Ignored,
+                consumed,
+            ))
         }
         OscScanResult::InvalidSyntax => {
             // Violated OSC syntax; cannot be OSC. Emit Alt+] (2 bytes)
             // and leave trailing bytes in buffer for next cycle.
-            Some((alt_bracket_event(), byte_offset(OSC_PREFIX_LEN)))
+            Some(ParsedInputEventIR::new(
+                alt_bracket_event(),
+                byte_offset(OSC_PREFIX_LEN),
+            ))
         }
         OscScanResult::IncompleteDigits => match maybe_more {
             MaybeMore::KernelMayHaveMore => None, /* In-flight burst; wait for */
@@ -480,7 +484,10 @@ pub fn try_disambiguate_osc_or_alt_bracket(
                 // Stream drained before delimiter arrived. Human typed Alt+] (alone or
                 // with digits). Emit Alt+] (2 bytes) and leave any
                 // trailing digits in buffer.
-                Some((alt_bracket_event(), byte_offset(OSC_PREFIX_LEN)))
+                Some(ParsedInputEventIR::new(
+                    alt_bracket_event(),
+                    byte_offset(OSC_PREFIX_LEN),
+                ))
             }
         },
         OscScanResult::IncompletePayload => {
@@ -534,8 +541,10 @@ mod tests {
         let sequence = generate_keyboard_sequence(&original_event)
             .expect("Failed to generate resize sequence");
 
-        let (parsed_event, bytes_consumed) =
-            parse_terminal_event(&sequence).expect("Should parse resize");
+        let ParsedInputEventIR {
+            event: parsed_event,
+            bytes_consumed,
+        } = parse_terminal_event(&sequence).expect("Should parse resize");
 
         assert_eq!(bytes_consumed.as_usize(), sequence.len());
         assert_eq!(parsed_event, original_event);
@@ -548,8 +557,10 @@ mod tests {
         let sequence_gained = generate_keyboard_sequence(&original_gained)
             .expect("Failed to generate focus gained sequence");
 
-        let (parsed_event, bytes_consumed) =
-            parse_terminal_event(&sequence_gained).expect("Should parse focus gained");
+        let ParsedInputEventIR {
+            event: parsed_event,
+            bytes_consumed,
+        } = parse_terminal_event(&sequence_gained).expect("Should parse focus gained");
 
         assert_eq!(bytes_consumed.as_usize(), sequence_gained.len());
         assert_eq!(parsed_event, original_gained);
@@ -559,8 +570,10 @@ mod tests {
         let sequence_lost = generate_keyboard_sequence(&original_lost)
             .expect("Failed to generate focus lost sequence");
 
-        let (parsed_event, bytes_consumed) =
-            parse_terminal_event(&sequence_lost).expect("Should parse focus lost");
+        let ParsedInputEventIR {
+            event: parsed_event,
+            bytes_consumed,
+        } = parse_terminal_event(&sequence_lost).expect("Should parse focus lost");
 
         assert_eq!(bytes_consumed.as_usize(), sequence_lost.len());
         assert_eq!(parsed_event, original_lost);
@@ -573,8 +586,10 @@ mod tests {
         let sequence_start = generate_keyboard_sequence(&original_start)
             .expect("Failed to generate paste start sequence");
 
-        let (parsed_event, bytes_consumed) =
-            parse_terminal_event(&sequence_start).expect("Should parse paste start");
+        let ParsedInputEventIR {
+            event: parsed_event,
+            bytes_consumed,
+        } = parse_terminal_event(&sequence_start).expect("Should parse paste start");
 
         assert_eq!(bytes_consumed.as_usize(), sequence_start.len());
         assert_eq!(parsed_event, original_start);
@@ -584,8 +599,10 @@ mod tests {
         let sequence_end = generate_keyboard_sequence(&original_end)
             .expect("Failed to generate paste end sequence");
 
-        let (parsed_event, bytes_consumed) =
-            parse_terminal_event(&sequence_end).expect("Should parse paste end");
+        let ParsedInputEventIR {
+            event: parsed_event,
+            bytes_consumed,
+        } = parse_terminal_event(&sequence_end).expect("Should parse paste end");
 
         assert_eq!(bytes_consumed.as_usize(), sequence_end.len());
         assert_eq!(parsed_event, original_end);
@@ -719,11 +736,11 @@ mod tests {
     #[test]
     fn test_try_disambiguate_osc_or_alt_bracket() {
         // Lone Alt+] with KernelDrained: emits Alt+]
-        let (event, consumed) =
+        let parsed =
             try_disambiguate_osc_or_alt_bracket(OSC_PREFIX, MaybeMore::KernelDrained)
                 .expect("Should emit Alt+]");
-        assert_eq!(event, alt_bracket_event());
-        assert_eq!(consumed.as_usize(), 2);
+        assert_eq!(parsed.event, alt_bracket_event());
+        assert_eq!(parsed.consumed_usize(), 2);
 
         // Lone Alt+] with KernelMayHaveMore: waits
         assert_eq!(
@@ -733,21 +750,21 @@ mod tests {
 
         // Alt+] followed by invalid syntax: emits Alt+] (2 bytes)
         let invalid_syntax_seq = [OSC_PREFIX, b"a"].concat();
-        let (event, consumed) = try_disambiguate_osc_or_alt_bracket(
+        let parsed = try_disambiguate_osc_or_alt_bracket(
             &invalid_syntax_seq,
             MaybeMore::KernelMayHaveMore,
         )
         .expect("Should emit Alt+] on invalid syntax");
-        assert_eq!(event, alt_bracket_event());
-        assert_eq!(consumed.as_usize(), 2);
+        assert_eq!(parsed.event, alt_bracket_event());
+        assert_eq!(parsed.consumed_usize(), 2);
 
         // Alt+] followed by digits with KernelDrained: emits Alt+] (2 bytes)
         let digits_seq = [OSC_PREFIX, b"5"].concat();
-        let (event, consumed) =
+        let parsed =
             try_disambiguate_osc_or_alt_bracket(&digits_seq, MaybeMore::KernelDrained)
                 .expect("Should emit Alt+] when drained");
-        assert_eq!(event, alt_bracket_event());
-        assert_eq!(consumed.as_usize(), 2);
+        assert_eq!(parsed.event, alt_bracket_event());
+        assert_eq!(parsed.consumed_usize(), 2);
 
         // Alt+] followed by digits with KernelMayHaveMore: waits
         assert_eq!(
@@ -761,13 +778,13 @@ mod tests {
         // Candidate OSC complete with BEL: emits Ignored
         let complete_bel = format!("{OSC_START}11;rgb:00/00/00{OSC_TERMINATOR_BEL}");
         let complete_bel_bytes = complete_bel.as_bytes();
-        let (event, consumed) = try_disambiguate_osc_or_alt_bracket(
+        let parsed = try_disambiguate_osc_or_alt_bracket(
             complete_bel_bytes,
             MaybeMore::KernelDrained,
         )
         .expect("Should parse complete OSC");
-        assert_eq!(event, VT100InputEventIR::Ignored);
-        assert_eq!(consumed.as_usize(), complete_bel_bytes.len());
+        assert_eq!(parsed.event, VT100InputEventIR::Ignored);
+        assert_eq!(parsed.consumed_usize(), complete_bel_bytes.len());
 
         // In-flight payload with KernelDrained: waits
         let inflight_payload = format!("{OSC_START}11;rgb:00/00/00");
@@ -787,13 +804,13 @@ mod tests {
         }
         .to_string();
         let osc52_bel_bytes = osc52_bel.as_bytes();
-        let (event, consumed) = try_disambiguate_osc_or_alt_bracket(
+        let parsed = try_disambiguate_osc_or_alt_bracket(
             osc52_bel_bytes,
             MaybeMore::KernelDrained,
         )
         .expect("Should parse complete OSC 52 with BEL");
-        assert_eq!(event, VT100InputEventIR::Ignored);
-        assert_eq!(consumed.as_usize(), osc52_bel_bytes.len());
+        assert_eq!(parsed.event, VT100InputEventIR::Ignored);
+        assert_eq!(parsed.consumed_usize(), osc52_bel_bytes.len());
 
         // Complete OSC 52 clipboard with 7-bit ST: emits Ignored
         let target_char = char::from(CLIPBOARD_TARGET_CLIPBOARD);
@@ -801,25 +818,25 @@ mod tests {
             "{OSC_START}{OSC_CODE_CLIPBOARD}{OSC_DELIMITER}{target_char}{OSC_DELIMITER}SGVsbG8={OSC_TERMINATOR_ST}"
         );
         let osc52_st_bytes = osc52_st.as_bytes();
-        let (event, consumed) = try_disambiguate_osc_or_alt_bracket(
+        let parsed = try_disambiguate_osc_or_alt_bracket(
             osc52_st_bytes,
             MaybeMore::KernelMayHaveMore,
         )
         .expect("Should parse complete OSC 52 with ST");
-        assert_eq!(event, VT100InputEventIR::Ignored);
-        assert_eq!(consumed.as_usize(), osc52_st_bytes.len());
+        assert_eq!(parsed.event, VT100InputEventIR::Ignored);
+        assert_eq!(parsed.consumed_usize(), osc52_st_bytes.len());
 
         // Complete OSC 52 with UTF-8 checkmark continuation byte 0x9C: emits Ignored
         let osc52_checkmark = format!(
             "{OSC_START}{OSC_CODE_CLIPBOARD}{OSC_DELIMITER}{target_char}{OSC_DELIMITER}\u{2713}{OSC_TERMINATOR_BEL}"
         );
         let osc52_checkmark_bytes = osc52_checkmark.as_bytes();
-        let (event, consumed) = try_disambiguate_osc_or_alt_bracket(
+        let parsed = try_disambiguate_osc_or_alt_bracket(
             osc52_checkmark_bytes,
             MaybeMore::KernelDrained,
         )
         .expect("Should parse complete OSC 52 with UTF-8 continuation byte");
-        assert_eq!(event, VT100InputEventIR::Ignored);
-        assert_eq!(consumed.as_usize(), osc52_checkmark_bytes.len());
+        assert_eq!(parsed.event, VT100InputEventIR::Ignored);
+        assert_eq!(parsed.consumed_usize(), osc52_checkmark_bytes.len());
     }
 }

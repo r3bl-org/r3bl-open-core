@@ -6,10 +6,10 @@
 
 #[cfg(test)]
 use super::super::ir_event_types::VT100KeyModifiersIR;
-use super::{super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR},
+use super::{super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                    VT100KeyCodeIR},
             modifiers};
-use crate::{ByteOffset, NarrowingCastToU8, WideningCastToU16, WideningCastToU32,
-            byte_offset,
+use crate::{NarrowingCastToU8, WideningCastToU16, WideningCastToU32, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_CSI_U, ANSI_ESC,
                                     ANSI_PARAM_SEPARATOR, ASCII_DIGIT_0, ASCII_DIGIT_9,
                                     CSI_PREFIX_LEN}};
@@ -29,7 +29,7 @@ use crate::{ByteOffset, NarrowingCastToU8, WideningCastToU16, WideningCastToU32,
 ///
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 #[must_use]
-pub fn parse_csi_u_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_csi_u_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     if buffer.len() < 4 || buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET {
         return None;
     }
@@ -117,13 +117,16 @@ pub fn parse_csi_u_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOff
     // Event type: 1 = press, 2 = repeat, 3 = release.
     // Releases (event_type == 3) are consumed and ignored.
     if event_type == 3 {
-        return Some((VT100InputEventIR::Ignored, consumed));
+        return Some(ParsedInputEventIR::new(
+            VT100InputEventIR::Ignored,
+            consumed,
+        ));
     }
 
     let key_modifiers = modifiers::decode_modifiers(modifier_param);
     let key_code = decode_csi_u_codepoint(codepoint)?;
 
-    Some((
+    Some(ParsedInputEventIR::new(
         VT100InputEventIR::Keyboard {
             code: key_code,
             modifiers: key_modifiers,
@@ -169,8 +172,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_alt_bracket() {
         let input = b"\x1b[91;3u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse CSI u Alt+[");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse CSI u Alt+[");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -188,8 +193,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_shift_enter() {
         let input = b"\x1b[13;2u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse CSI u Shift+Enter");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse CSI u Shift+Enter");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -207,8 +214,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_ctrl_tab() {
         let input = b"\x1b[9;5u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse CSI u Ctrl+Tab");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse CSI u Ctrl+Tab");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -226,8 +235,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_alt_escape() {
         let input = b"\x1b[27;3u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse CSI u Alt+Escape");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse CSI u Alt+Escape");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -246,8 +257,10 @@ mod tests {
     fn test_parse_csi_u_event_types() {
         // Event type 1 (press): accepted
         let input_press = b"\x1b[91;3:1u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input_press).expect("Should parse press event");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input_press).expect("Should parse press event");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -263,8 +276,10 @@ mod tests {
 
         // Event type 2 (repeat): accepted
         let input_repeat = b"\x1b[91;3:2u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input_repeat).expect("Should parse repeat event");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input_repeat).expect("Should parse repeat event");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -280,8 +295,10 @@ mod tests {
 
         // Event type 3 (release): emitted as Ignored
         let input_release = b"\x1b[91;3:3u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input_release).expect("Should parse release event");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input_release).expect("Should parse release event");
         assert_eq!(event, VT100InputEventIR::Ignored);
         assert_eq!(consumed.as_usize(), input_release.len());
     }
@@ -289,8 +306,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_omitted_modifiers() {
         let input = b"\x1b[91u";
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse plain CSI u");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse plain CSI u");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -304,8 +323,10 @@ mod tests {
     #[test]
     fn test_parse_csi_u_pua_functional_keys() {
         let input = b"\x1b[57366;2u"; // Home + Shift
-        let (event, consumed) =
-            parse_csi_u_sequence(input).expect("Should parse Shift+Home PUA");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: consumed,
+        } = parse_csi_u_sequence(input).expect("Should parse Shift+Home PUA");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {

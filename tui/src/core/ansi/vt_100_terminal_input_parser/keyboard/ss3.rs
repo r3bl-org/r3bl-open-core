@@ -4,9 +4,9 @@
 //!
 //! [`ESC`]: crate::EscSequence
 
-use super::super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR,
-                                   VT100KeyModifiersIR};
-use crate::{ByteOffset, byte_offset,
+use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                   VT100KeyCodeIR, VT100KeyModifiersIR};
+use crate::{byte_offset,
             core::ansi::constants::{ANSI_ESC, ANSI_SS3_O, ARROW_DOWN_FINAL,
                                     ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL,
                                     ARROW_UP_FINAL, SPECIAL_END_FINAL,
@@ -44,11 +44,11 @@ use crate::{ByteOffset, byte_offset,
 /// [`router`]: mod@super::super::router
 /// [`SS3 Sequences`]: mod@super#ss3-sequences-esc-o
 #[must_use]
-pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     match classify_ss3_buffer(buffer) {
         Ss3BufferKind::Command(command_byte) => {
             let code = parse_ss3_command(command_byte)?;
-            Some((
+            Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code,
                     modifiers: VT100KeyModifiersIR::default(),
@@ -139,8 +139,10 @@ mod tests {
     #[test]
     fn test_ss3_arrow_up() {
         let input = b"\x1bOA"; // ESC O A
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 up");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -154,8 +156,10 @@ mod tests {
     #[test]
     fn test_ss3_arrow_down() {
         let input = b"\x1bOB"; // ESC O B
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 down");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 down");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -169,8 +173,10 @@ mod tests {
     #[test]
     fn test_ss3_arrow_right() {
         let input = b"\x1bOC"; // ESC O C
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 right");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 right");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -184,8 +190,10 @@ mod tests {
     #[test]
     fn test_ss3_arrow_left() {
         let input = b"\x1bOD"; // ESC O D
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 left");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 left");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -199,8 +207,10 @@ mod tests {
     #[test]
     fn test_ss3_home() {
         let input = b"\x1bOH"; // ESC O H
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 home");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 home");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -214,8 +224,10 @@ mod tests {
     #[test]
     fn test_ss3_end() {
         let input = b"\x1bOF"; // ESC O F
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 end");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 end");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -229,8 +241,10 @@ mod tests {
     #[test]
     fn test_ss3_f1() {
         let input = b"\x1bOP"; // ESC O P
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F1");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 F1");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -244,8 +258,10 @@ mod tests {
     #[test]
     fn test_ss3_f2() {
         let input = b"\x1bOQ"; // ESC O Q
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F2");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 F2");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -259,8 +275,10 @@ mod tests {
     #[test]
     fn test_ss3_f3() {
         let input = b"\x1bOR"; // ESC O R
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F3");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 F3");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -274,8 +292,10 @@ mod tests {
     #[test]
     fn test_ss3_f4() {
         let input = b"\x1bOS"; // ESC O S
-        let (event, bytes_consumed) =
-            parse_ss3_sequence(input).expect("Should parse SS3 F4");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_ss3_sequence(input).expect("Should parse SS3 F4");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {

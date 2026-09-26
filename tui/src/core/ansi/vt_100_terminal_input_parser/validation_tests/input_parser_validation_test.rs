@@ -146,7 +146,8 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 use crate::{KeyState, byte_offset,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+            core::ansi::vt_100_terminal_input_parser::{ParsedInputEventIR,
+                                                       VT100InputEventIR,
                                                        VT100KeyCodeIR,
                                                        VT100MouseActionIR,
                                                        VT100MouseButtonIR,
@@ -167,8 +168,10 @@ mod mouse_events {
     fn test_left_click_at_top_left() {
         // CONFIRMED: showkey -a showed ESC[<0;1;1M for left click at top-left
         let seq = b"\x1b[<0;1;1M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse observed sequence");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse observed sequence");
 
         match event {
             VT100InputEventIR::Mouse {
@@ -196,8 +199,10 @@ mod mouse_events {
     fn test_left_click_release() {
         // CONFIRMED: lowercase 'm' indicates release in SGR protocol
         let seq = b"\x1b[<0;1;1m";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse release");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse release");
 
         match event {
             VT100InputEventIR::Mouse { action, .. } => {
@@ -211,8 +216,10 @@ mod mouse_events {
     fn test_scroll_left() {
         // CONFIRMED: Button 66 = scroll left at col 37, row 14
         let seq = b"\x1b[<66;37;14M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
 
         match event {
             VT100InputEventIR::Mouse { action, pos, .. } => {
@@ -231,8 +238,10 @@ mod mouse_events {
     fn test_middle_button_click() {
         // Middle button = button code 1
         let seq = b"\x1b[<1;10;5M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse middle button");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse middle button");
 
         match event {
             VT100InputEventIR::Mouse { button, .. } => {
@@ -246,8 +255,10 @@ mod mouse_events {
     fn test_right_button_click() {
         // Right button = button code 2
         let seq = b"\x1b[<2;10;5M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse right button");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse right button");
 
         match event {
             VT100InputEventIR::Mouse { button, .. } => {
@@ -261,8 +272,10 @@ mod mouse_events {
     fn test_mouse_drag() {
         // Drag = button 0 + drag flag (bit 5 = 32)
         let seq = b"\x1b[<32;15;8M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse drag");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse drag");
 
         match event {
             VT100InputEventIR::Mouse { button, action, .. } => {
@@ -277,8 +290,10 @@ mod mouse_events {
     fn test_ctrl_left_click() {
         // Ctrl modifier = bit 4 (value 16)
         let seq = b"\x1b[<16;5;5M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
 
         match event {
             VT100InputEventIR::Mouse {
@@ -301,8 +316,10 @@ mod mouse_events {
     fn test_shift_alt_left_click() {
         // Shift (4) + Alt (8) = 12
         let seq = b"\x1b[<12;10;10M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
 
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
@@ -322,7 +339,10 @@ mod mouse_events {
     fn test_coordinates_are_1_based() {
         // Verify observed behavior: VT-100 coordinates are 1-based
         let seq = b"\x1b[<0;1;1M";
-        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse");
 
         match event {
             VT100InputEventIR::Mouse { pos, .. } => {
@@ -353,8 +373,10 @@ mod keyboard_events {
     fn test_ctrl_up() {
         // CONFIRMED: showkey -a showed ESC[1;5A for Ctrl+Up (parameter 5 = Ctrl)
         let seq = b"\x1b[1;5A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -378,8 +400,10 @@ mod keyboard_events {
     #[test]
     fn test_plain_arrow_up() {
         let seq = b"\x1b[A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse plain Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse plain Up");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -398,8 +422,10 @@ mod keyboard_events {
     fn test_shift_up() {
         // Shift modifier: parameter 2 (1 + 1 where Shift bit = 1)
         let seq = b"\x1b[1;2A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -418,8 +444,10 @@ mod keyboard_events {
     fn test_alt_up() {
         // Alt modifier: parameter 3 (1 + 2 where Alt bit = 2)
         let seq = b"\x1b[1;3A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -438,8 +466,10 @@ mod keyboard_events {
     fn test_ctrl_alt_up() {
         // Ctrl (4) + Alt (2) = 6, plus 1 = parameter 7
         let seq = b"\x1b[1;7A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
 
         match event {
             VT100InputEventIR::Keyboard { modifiers, .. } => {
@@ -455,8 +485,10 @@ mod keyboard_events {
     fn test_shift_alt_ctrl_up() {
         // Shift (1) + Alt (2) + Ctrl (4) = 7, plus 1 = parameter 8
         let seq = b"\x1b[1;8A";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
 
         match event {
             VT100InputEventIR::Keyboard { modifiers, .. } => {
@@ -471,8 +503,10 @@ mod keyboard_events {
     #[test]
     fn test_f1_key() {
         let seq = b"\x1b[11~";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse F1");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse F1");
 
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -486,8 +520,10 @@ mod keyboard_events {
     fn test_shift_f5() {
         // F5 = 15, Shift modifier = parameter 2
         let seq = b"\x1b[15;2~";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -502,8 +538,10 @@ mod keyboard_events {
     fn test_ctrl_alt_f10() {
         // F10 = 21, Ctrl+Alt = parameter 7
         let seq = b"\x1b[21;7~";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
 
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -518,8 +556,10 @@ mod keyboard_events {
     #[test]
     fn test_home_key() {
         let seq = b"\x1b[H";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Home");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Home");
 
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -532,8 +572,10 @@ mod keyboard_events {
     #[test]
     fn test_end_key() {
         let seq = b"\x1b[F";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse End");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse End");
 
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -546,8 +588,10 @@ mod keyboard_events {
     #[test]
     fn test_delete_key() {
         let seq = b"\x1b[3~";
-        let (event, _bytes_consumed) =
-            parse_keyboard_sequence(seq).expect("Should parse Delete");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_keyboard_sequence(seq).expect("Should parse Delete");
 
         match event {
             VT100InputEventIR::Keyboard { code, .. } => {
@@ -599,8 +643,10 @@ mod edge_cases {
     fn test_very_large_coordinates() {
         // Test coordinates near u16::MAX
         let seq = b"\x1b[<0;65535;65535M";
-        let (event, _bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse large coords");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse large coords");
 
         match event {
             VT100InputEventIR::Mouse { pos, .. } => {
@@ -650,7 +696,10 @@ mod modifier_encoding {
 
         for (param, expect_shift, expect_alt, expect_ctrl) in test_cases {
             let seq = format!("\x1b[1;{param}A");
-            let (event, _bytes_consumed) = parse_keyboard_sequence(seq.as_bytes())
+            let ParsedInputEventIR {
+                event,
+                bytes_consumed: _bytes_consumed,
+            } = parse_keyboard_sequence(seq.as_bytes())
                 .unwrap_or_else(|| panic!("Should parse parameter {param}"));
 
             match event {
@@ -684,8 +733,10 @@ mod control_character_tests {
     fn test_ctrl_a() {
         // Ctrl+A sends 0x01 (SOH - Start of Heading)
         let seq = b"\x01";
-        let (event, bytes_consumed) =
-            parse_control_character(seq).expect("Should parse Ctrl+A");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_control_character(seq).expect("Should parse Ctrl+A");
 
         assert_eq!(bytes_consumed, byte_offset(1));
         match event {
@@ -703,8 +754,10 @@ mod control_character_tests {
     fn test_ctrl_d() {
         // Ctrl+D sends 0x04 (EOT - End of Transmission)
         let seq = b"\x04";
-        let (event, bytes_consumed) =
-            parse_control_character(seq).expect("Should parse Ctrl+D");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_control_character(seq).expect("Should parse Ctrl+D");
 
         assert_eq!(bytes_consumed, byte_offset(1));
         match event {
@@ -722,8 +775,10 @@ mod control_character_tests {
     fn test_ctrl_w() {
         // Ctrl+W sends 0x17 (ETB - End of Transmission Block)
         let seq = b"\x17";
-        let (event, bytes_consumed) =
-            parse_control_character(seq).expect("Should parse Ctrl+W");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_control_character(seq).expect("Should parse Ctrl+W");
 
         assert_eq!(bytes_consumed, byte_offset(1));
         match event {
@@ -741,8 +796,10 @@ mod control_character_tests {
     fn test_ctrl_u() {
         // Ctrl+U sends 0x15 (NAK - Negative Acknowledge)
         let seq = b"\x15";
-        let (event, bytes_consumed) =
-            parse_control_character(seq).expect("Should parse Ctrl+U");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_control_character(seq).expect("Should parse Ctrl+U");
 
         assert_eq!(bytes_consumed, byte_offset(1));
         match event {
@@ -760,8 +817,10 @@ mod control_character_tests {
     fn test_ctrl_k() {
         // Ctrl+K sends 0x0B (VT - Vertical Tab)
         let seq = b"\x0B";
-        let (event, bytes_consumed) =
-            parse_control_character(seq).expect("Should parse Ctrl+K");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_control_character(seq).expect("Should parse Ctrl+K");
 
         assert_eq!(bytes_consumed, byte_offset(1));
         match event {
@@ -779,8 +838,10 @@ mod control_character_tests {
     fn test_ctrl_space() {
         // Ctrl+Space generates NUL (0x00) and is parsed as Ctrl+Space
         let nul = b"\x00";
-        let (event, bytes) =
-            parse_control_character(nul).expect("Ctrl+Space should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: bytes,
+        } = parse_control_character(nul).expect("Ctrl+Space should parse");
         assert_eq!(bytes, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -797,7 +858,10 @@ mod control_character_tests {
     fn test_ctrl_special_cases_parsed_as_dedicated_keys() {
         // Tab (0x09) is parsed as Tab, not Ctrl+I
         let tab = b"\x09";
-        let (event, bytes) = parse_control_character(tab).expect("Tab should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: bytes,
+        } = parse_control_character(tab).expect("Tab should parse");
         assert_eq!(bytes, byte_offset(1));
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
@@ -813,7 +877,8 @@ mod control_character_tests {
 
         // Enter (0x0A and 0x0D) is parsed as Enter
         let lf = b"\x0A";
-        let (event, _) = parse_control_character(lf).expect("LF should parse as Enter");
+        let ParsedInputEventIR { event, .. } =
+            parse_control_character(lf).expect("LF should parse as Enter");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -823,7 +888,8 @@ mod control_character_tests {
         ));
 
         let cr = b"\x0D";
-        let (event, _) = parse_control_character(cr).expect("CR should parse as Enter");
+        let ParsedInputEventIR { event, .. } =
+            parse_control_character(cr).expect("CR should parse as Enter");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -849,7 +915,10 @@ mod alt_letter_tests {
     fn test_alt_b() {
         // Alt+B sends ESC (0x1B) + 'b' (0x62)
         let seq = b"\x1bb";
-        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+B");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(seq).expect("Should parse Alt+B");
 
         assert_eq!(bytes_consumed, byte_offset(2));
         match event {
@@ -867,7 +936,10 @@ mod alt_letter_tests {
     fn test_alt_f() {
         // Alt+F sends ESC (0x1B) + 'f' (0x66)
         let seq = b"\x1bf";
-        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+F");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(seq).expect("Should parse Alt+F");
 
         assert_eq!(bytes_consumed, byte_offset(2));
         match event {
@@ -885,7 +957,10 @@ mod alt_letter_tests {
     fn test_alt_d() {
         // Alt+D sends ESC (0x1B) + 'd' (0x64)
         let seq = b"\x1bd";
-        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+D");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(seq).expect("Should parse Alt+D");
 
         assert_eq!(bytes_consumed, byte_offset(2));
         match event {
@@ -912,8 +987,10 @@ mod alt_letter_tests {
         // Note: The Shift modifier is encoded in the uppercase letter itself,
         // not in the modifiers struct (terminals don't send separate Shift info)
         let seq = b"\x1bB";
-        let (event, bytes_consumed) =
-            parse_alt_letter(seq).expect("Should parse Alt+Shift+B");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_alt_letter(seq).expect("Should parse Alt+Shift+B");
 
         assert_eq!(bytes_consumed, byte_offset(2));
         match event {

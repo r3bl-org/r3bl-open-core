@@ -4,10 +4,10 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 
-use super::{super::ir_event_types::{VT100InputEventIR, VT100KeyCodeIR,
-                                    VT100KeyModifiersIR},
+use super::{super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                    VT100KeyCodeIR, VT100KeyModifiersIR},
             csi_scanner, csi_u, modifiers};
-use crate::{ByteOffset, byte_offset,
+use crate::{byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ARROW_DOWN_FINAL,
                                     ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL,
@@ -47,7 +47,7 @@ use crate::{ByteOffset, byte_offset,
 /// [`Parser Dispatch Priority Pipeline`]: mod@super::super::router#parser-dispatch-priority-pipeline
 /// [`router`]: mod@super::super::router
 #[must_use]
-pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     if let Some(csi_u_event) = csi_u::parse_csi_u_sequence(buffer) {
         return Some(csi_u_event);
     }
@@ -55,7 +55,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, Byte
     match classify_csi_buffer(buffer) {
         CsiBufferKind::SingleChar(final_byte) => {
             let event = parse_csi_single_char(final_byte)?;
-            Some((event, byte_offset(CSI_MIN_LEN)))
+            Some(ParsedInputEventIR::new(event, byte_offset(CSI_MIN_LEN)))
         }
         CsiBufferKind::Parameterized(buf) => parse_csi_parameters(buf),
         CsiBufferKind::Invalid => None,
@@ -144,13 +144,13 @@ pub fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
 /// [`ByteOffset`]: crate::ByteOffset
 /// [`CSI`]: crate::CsiSequence
 #[must_use]
-pub fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)> {
+pub fn parse_csi_parameters(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     let extracted = csi_scanner::extract_csi_params(buffer)?;
 
     // Parse based on parameters and final byte.
     let event = decode_csi_event(&extracted.params, extracted.final_byte)?;
 
-    Some((event, extracted.total_consumed()))
+    Some(ParsedInputEventIR::new(event, extracted.total_consumed()))
 }
 
 /// Parameter structure of a parsed [`CSI`] keyboard sequence.
@@ -337,8 +337,10 @@ mod tests {
         // Use generator to build the sequence (self-documenting)
         let input =
             arrow_key_sequence(VT100KeyCodeIR::Up, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -353,8 +355,10 @@ mod tests {
     fn test_arrow_down() {
         let input =
             arrow_key_sequence(VT100KeyCodeIR::Down, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -369,8 +373,10 @@ mod tests {
     fn test_arrow_right() {
         let input =
             arrow_key_sequence(VT100KeyCodeIR::Right, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -385,8 +391,10 @@ mod tests {
     fn test_arrow_left() {
         let input =
             arrow_key_sequence(VT100KeyCodeIR::Left, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -410,8 +418,10 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -436,8 +446,10 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Right,
@@ -463,8 +475,10 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Up,
@@ -493,8 +507,10 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Down,
@@ -519,8 +535,10 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Left,
@@ -545,8 +563,10 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Left,
@@ -567,8 +587,10 @@ mod tests {
     fn test_home_key() {
         let input =
             special_key_sequence(VT100KeyCodeIR::Home, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -583,8 +605,10 @@ mod tests {
     fn test_end_key() {
         let input =
             special_key_sequence(VT100KeyCodeIR::End, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -598,8 +622,10 @@ mod tests {
     #[test]
     fn test_shift_home() {
         let input = b"\x1b[1;2H";
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(input).expect("Should parse Shift+Home");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(input).expect("Should parse Shift+Home");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -617,8 +643,10 @@ mod tests {
     #[test]
     fn test_ctrl_home() {
         let input = b"\x1b[1;5H";
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(input).expect("Should parse Ctrl+Home");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(input).expect("Should parse Ctrl+Home");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -636,8 +664,10 @@ mod tests {
     #[test]
     fn test_shift_end() {
         let input = b"\x1b[1;2F";
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(input).expect("Should parse Shift+End");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(input).expect("Should parse Shift+End");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -655,8 +685,10 @@ mod tests {
     #[test]
     fn test_ctrl_end() {
         let input = b"\x1b[1;5F";
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(input).expect("Should parse Ctrl+End");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(input).expect("Should parse Ctrl+End");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -673,8 +705,10 @@ mod tests {
 
     #[test]
     fn test_xterm_modified_f1_to_f4() {
-        let (event_f1, consumed_f1) =
-            parse_keyboard_sequence(b"\x1b[1;2P").expect("Should parse Shift+F1");
+        let ParsedInputEventIR {
+            event: event_f1,
+            bytes_consumed: consumed_f1,
+        } = parse_keyboard_sequence(b"\x1b[1;2P").expect("Should parse Shift+F1");
         assert_eq!(
             event_f1,
             VT100InputEventIR::Keyboard {
@@ -688,8 +722,10 @@ mod tests {
         );
         assert_eq!(consumed_f1, byte_offset(6));
 
-        let (event_f4, consumed_f4) =
-            parse_keyboard_sequence(b"\x1b[1;5S").expect("Should parse Ctrl+F4");
+        let ParsedInputEventIR {
+            event: event_f4,
+            bytes_consumed: consumed_f4,
+        } = parse_keyboard_sequence(b"\x1b[1;5S").expect("Should parse Ctrl+F4");
         assert_eq!(
             event_f4,
             VT100InputEventIR::Keyboard {
@@ -706,8 +742,10 @@ mod tests {
 
     #[test]
     fn test_single_param_home_end_backtab() {
-        let (event_home, consumed_home) =
-            parse_keyboard_sequence(b"\x1b[1H").expect("Should parse CSI 1 H");
+        let ParsedInputEventIR {
+            event: event_home,
+            bytes_consumed: consumed_home,
+        } = parse_keyboard_sequence(b"\x1b[1H").expect("Should parse CSI 1 H");
         assert_eq!(
             event_home,
             VT100InputEventIR::Keyboard {
@@ -717,8 +755,10 @@ mod tests {
         );
         assert_eq!(consumed_home, byte_offset(4));
 
-        let (event_end, consumed_end) =
-            parse_keyboard_sequence(b"\x1b[1F").expect("Should parse CSI 1 F");
+        let ParsedInputEventIR {
+            event: event_end,
+            bytes_consumed: consumed_end,
+        } = parse_keyboard_sequence(b"\x1b[1F").expect("Should parse CSI 1 F");
         assert_eq!(
             event_end,
             VT100InputEventIR::Keyboard {
@@ -728,8 +768,10 @@ mod tests {
         );
         assert_eq!(consumed_end, byte_offset(4));
 
-        let (event_backtab, consumed_backtab) =
-            parse_keyboard_sequence(b"\x1b[1Z").expect("Should parse CSI 1 Z");
+        let ParsedInputEventIR {
+            event: event_backtab,
+            bytes_consumed: consumed_backtab,
+        } = parse_keyboard_sequence(b"\x1b[1Z").expect("Should parse CSI 1 Z");
         assert_eq!(
             event_backtab,
             VT100InputEventIR::Keyboard {
@@ -744,8 +786,10 @@ mod tests {
     fn test_insert_key() {
         let input =
             special_key_sequence(VT100KeyCodeIR::Insert, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -760,8 +804,10 @@ mod tests {
     fn test_delete_key() {
         let input =
             special_key_sequence(VT100KeyCodeIR::Delete, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -776,8 +822,10 @@ mod tests {
     fn test_page_up() {
         let input =
             special_key_sequence(VT100KeyCodeIR::PageUp, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -794,8 +842,10 @@ mod tests {
             VT100KeyCodeIR::PageDown,
             VT100KeyModifiersIR::default(),
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("Should parse");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEventIR::Keyboard {
@@ -811,8 +861,10 @@ mod tests {
     #[test]
     fn test_f1_key() {
         let input = function_key_sequence(1, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -828,8 +880,10 @@ mod tests {
     #[test]
     fn test_f6_key() {
         let input = function_key_sequence(6, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -846,8 +900,10 @@ mod tests {
     fn test_f12_key() {
         // Build F12 sequence (ANSI code 24) using generator
         let input = function_key_sequence(12, VT100KeyModifiersIR::default());
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -870,8 +926,10 @@ mod tests {
                 ctrl: KeyState::NotPressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),
@@ -897,8 +955,10 @@ mod tests {
                 ctrl: KeyState::Pressed,
             },
         );
-        let (event, bytes_consumed) =
-            parse_keyboard_sequence(&input).expect("conversion error");
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed,
+        } = parse_keyboard_sequence(&input).expect("conversion error");
         match event {
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(n),

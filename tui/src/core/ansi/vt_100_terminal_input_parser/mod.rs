@@ -83,7 +83,7 @@
 //!    ▼                       ┌──────────────────┐
 //! try_parse_input_event() ◄──┤ **YOU ARE HERE** │
 //!    │                       └──────────────────┘
-//!    │ Code in this parser runs and returns Option<(VT100InputEventIR, ByteOffset)>
+//!    │ Code in this parser runs and returns Option<ParsedInputEventIR>
 //!    ▼
 //! convert_input_event() (protocol_conversion.rs)
 //!    │

@@ -6,7 +6,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{TermPos, VPHeight, VPWidth, terminal_io::KeyState};
+use crate::{ByteOffset, TermPos, VPHeight, VPWidth, terminal_io::KeyState};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///
@@ -130,6 +130,28 @@ pub enum VT100InputEventIR {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     Ignored,
+}
+
+/// Result of parsing an input byte sequence into an intermediate representation event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedInputEventIR {
+    /// The parsed intermediate representation event.
+    pub event: VT100InputEventIR,
+    /// Total bytes consumed from the buffer.
+    pub bytes_consumed: ByteOffset,
+}
+
+impl ParsedInputEventIR {
+    #[must_use]
+    pub const fn new(event: VT100InputEventIR, bytes_consumed: ByteOffset) -> Self {
+        Self {
+            event,
+            bytes_consumed,
+        }
+    }
+
+    #[must_use]
+    pub fn consumed_usize(&self) -> usize { self.bytes_consumed.as_usize() }
 }
 
 /// Keyboard modifiers for input events.
