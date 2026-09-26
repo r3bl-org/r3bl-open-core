@@ -215,16 +215,13 @@ impl InputByteStreamToIrParser {
 
         // If the circuit breaker is open (draining a runaway OSC sequence), consume bytes
         // directly without appending to self.accumulator.
-        match self.osc_circuit_breaker {
-            OscCircuitBreaker::Open { .. } => {
-                match self.osc_circuit_breaker.drain_chunk(slice_mut) {
-                    OscDrainResult::Full { .. } => return,
-                    OscDrainResult::Partial { bytes_consumed, .. } => {
-                        slice_mut = &slice_mut[bytes_consumed.as_usize()..];
-                    }
+        if self.osc_circuit_breaker.is_open() {
+            match self.osc_circuit_breaker.drain_chunk(slice_mut) {
+                OscDrainResult::Full { .. } => return,
+                OscDrainResult::Partial { bytes_consumed, .. } => {
+                    slice_mut = &slice_mut[bytes_consumed.as_usize()..];
                 }
             }
-            OscCircuitBreaker::Closed => {}
         }
 
         self.accumulator.extend_from_slice(slice_mut);
@@ -1148,7 +1145,6 @@ mod tests_osc_and_alt_bracket {
         assert_eq!(
             parser.osc_circuit_breaker(),
             OscCircuitBreaker::Open {
-                saw_partial_esc: false,
                 drained_bytes: byte_offset(runaway.len()),
             }
         );
@@ -1219,13 +1215,12 @@ mod tests_osc_and_alt_bracket {
         let chunk2 = [b"payload_data".as_slice(), &[ANSI_ESC]].concat();
         parser.advance(&chunk2, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
-        assert!(matches!(
+        assert_eq!(
             parser.osc_circuit_breaker(),
-            OscCircuitBreaker::Open {
-                saw_partial_esc: true,
-                ..
+            OscCircuitBreaker::OpenAwaitingTrailingEsc {
+                drained_bytes: byte_offset(runaway.len() + chunk2.len()),
             }
-        ));
+        );
 
         // Chunk 3: begins with '\' completing 7-bit ST (\x1b\), followed by typed 'w'
         parser.advance(&[ANSI_ST_FINAL, b'w'], MaybeMore::KernelDrained);

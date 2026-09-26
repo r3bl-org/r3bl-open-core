@@ -35,13 +35,6 @@ pub enum OscCircuitBreaker {
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
     /// [`OSC`]: crate::osc_codes::OscSequence
     Open {
-        /// If the previous chunk ended in a lone [`ANSI_ESC`] (`0x1B`), this tracks
-        /// whether the next byte completes a 7-bit [`ANSI_ST_7BIT`] (`\x1b\\`).
-        ///
-        /// [`ANSI_ESC`]: crate::ANSI_ESC
-        /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
-        saw_partial_esc: bool,
-
         /// Total bytes drained so far across chunks (bounded by
         /// [`MAX_OSC_DRAIN_BYTES`]).
         ///
@@ -58,9 +51,36 @@ pub enum OscCircuitBreaker {
         ///     crate::ByteOffset#distance-vs-capacity-byteoffset-vs-bytelength
         drained_bytes: ByteOffset,
     },
+
+    /// Circuit breaker tripped (open) and awaiting resolution of a chunk-boundary escape.
+    ///
+    /// The immediately preceding chunk ended in an isolated [`ANSI_ESC`] (`0x1B`). The
+    /// very next incoming byte must be inspected to determine if it completes a 7-bit
+    /// string terminator [`ANSI_ST_7BIT`] (`\x1b\\`) or aborts the [`OSC`] sequence.
+    ///
+    /// [`ANSI_ESC`]: crate::ANSI_ESC
+    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    OpenAwaitingTrailingEsc {
+        /// Total bytes drained so far across chunks (bounded by
+        /// [`MAX_OSC_DRAIN_BYTES`]).
+        ///
+        /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
+        drained_bytes: ByteOffset,
+    },
 }
 
 impl OscCircuitBreaker {
+    /// Returns `true` if the circuit breaker is currently open (actively draining runaway
+    /// bytes).
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        matches!(
+            self,
+            Self::Open { .. } | Self::OpenAwaitingTrailingEsc { .. }
+        )
+    }
+
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
@@ -68,7 +88,6 @@ impl OscCircuitBreaker {
     /// reached by the accumulator scanner when the runaway sequence was detected.
     pub fn trip(&mut self, initial_bytes: ByteOffset) {
         *self = Self::Open {
-            saw_partial_esc: false,
             drained_bytes: initial_bytes,
         };
     }
@@ -128,116 +147,108 @@ impl OscCircuitBreaker {
     pub fn drain_chunk(&mut self, chunk: &[u8]) -> OscDrainResult {
         let chunk_len = byte_offset(chunk.len());
 
-        // Early return if not in Open state.
-        let Self::Open {
-            saw_partial_esc,
-            mut drained_bytes,
-        } = *self
-        else {
-            return OscDrainResult::from_consumption(
+        match *self {
+            Self::Closed => OscDrainResult::from_consumption(
                 OscDrainReason::RunawayPayloadOngoing,
                 byte_offset(0),
                 chunk_len,
-            );
-        };
+            ),
 
-        // Resolve partial ESC from previous chunk.
-        if saw_partial_esc {
-            return self.resolve_partial_esc(chunk, drained_bytes);
-        }
+            // Resolve partial ESC from previous chunk boundary.
+            Self::OpenAwaitingTrailingEsc { drained_bytes } => {
+                self.resolve_partial_esc(chunk, drained_bytes)
+            }
 
-        let mut byte_index_in_chunk = 0;
+            Self::Open { mut drained_bytes } => {
+                let mut byte_index_in_chunk = 0;
 
-        while byte_index_in_chunk < chunk.len() {
-            // Check safety ceiling.
-            if drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES) {
-                return self.reset_and_log(
-                    Level::WARN,
-                    OscDrainReason::ExceededSafetyCeiling,
-                    byte_offset(byte_index_in_chunk),
+                while byte_index_in_chunk < chunk.len() {
+                    // Check safety ceiling.
+                    if drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES) {
+                        return self.reset_and_log(
+                            Level::WARN,
+                            OscDrainReason::ExceededSafetyCeiling,
+                            byte_offset(byte_index_in_chunk),
+                            chunk_len,
+                            drained_bytes,
+                        );
+                    }
+
+                    match chunk[byte_index_in_chunk..] {
+                        // Terminated by BEL (0x07).
+                        [ANSI_BEL, ..] => {
+                            return self.reset_and_log(
+                                Level::INFO,
+                                OscDrainReason::TerminatedByBel,
+                                byte_offset(byte_index_in_chunk + 1),
+                                chunk_len,
+                                drained_bytes + byte_offset(1),
+                            );
+                        }
+
+                        // Terminated by 7-bit ST (\x1b\).
+                        [ANSI_ESC, ANSI_ST_FINAL, ..] => {
+                            return self.reset_and_log(
+                                Level::INFO,
+                                OscDrainReason::TerminatedBySt,
+                                byte_offset(byte_index_in_chunk + ANSI_ST_7BIT_LEN),
+                                chunk_len,
+                                drained_bytes + byte_offset(ANSI_ST_7BIT_LEN),
+                            );
+                        }
+
+                        // ESC followed by non-backslash: aborts OSC string! Leave ESC for
+                        // normal parsing.
+                        [ANSI_ESC, _, ..] => {
+                            return self.reset_and_log(
+                                Level::INFO,
+                                OscDrainReason::AbortedByNewEsc,
+                                byte_offset(byte_index_in_chunk),
+                                chunk_len,
+                                drained_bytes,
+                            );
+                        }
+
+                        // Lone ESC at end of chunk: remember across chunk boundaries.
+                        [ANSI_ESC] => {
+                            drained_bytes += byte_offset(1);
+                            *self = Self::OpenAwaitingTrailingEsc { drained_bytes };
+                            return OscDrainResult::from_consumption(
+                                OscDrainReason::LoneEscAtBoundary,
+                                chunk_len,
+                                chunk_len,
+                            );
+                        }
+
+                        // Raw newline/CR aborts OSC syntax. Leave newline for normal
+                        // parsing.
+                        [CARRIAGE_RETURN | LINE_FEED, ..] => {
+                            return self.reset_and_log(
+                                Level::INFO,
+                                OscDrainReason::AbortedByNewline,
+                                byte_offset(byte_index_in_chunk),
+                                chunk_len,
+                                drained_bytes,
+                            );
+                        }
+
+                        // Regular payload byte: consume and continue draining.
+                        _ => {
+                            drained_bytes += byte_offset(1);
+                            byte_index_in_chunk += 1;
+                        }
+                    }
+                }
+
+                // Entire chunk consumed without encountering terminator or abort.
+                *self = Self::Open { drained_bytes };
+                OscDrainResult::from_consumption(
+                    OscDrainReason::RunawayPayloadOngoing,
                     chunk_len,
-                    drained_bytes,
-                );
-            }
-
-            match chunk[byte_index_in_chunk..] {
-                // Terminated by BEL (0x07).
-                [ANSI_BEL, ..] => {
-                    return self.reset_and_log(
-                        Level::INFO,
-                        OscDrainReason::TerminatedByBel,
-                        byte_offset(byte_index_in_chunk + 1),
-                        chunk_len,
-                        drained_bytes + byte_offset(1),
-                    );
-                }
-
-                // Terminated by 7-bit ST (\x1b\).
-                [ANSI_ESC, ANSI_ST_FINAL, ..] => {
-                    return self.reset_and_log(
-                        Level::INFO,
-                        OscDrainReason::TerminatedBySt,
-                        byte_offset(byte_index_in_chunk + ANSI_ST_7BIT_LEN),
-                        chunk_len,
-                        drained_bytes + byte_offset(ANSI_ST_7BIT_LEN),
-                    );
-                }
-
-                // ESC followed by non-backslash: aborts OSC string! Leave ESC for normal
-                // parsing.
-                [ANSI_ESC, _, ..] => {
-                    return self.reset_and_log(
-                        Level::INFO,
-                        OscDrainReason::AbortedByNewEsc,
-                        byte_offset(byte_index_in_chunk),
-                        chunk_len,
-                        drained_bytes,
-                    );
-                }
-
-                // Lone ESC at end of chunk: remember across chunk boundaries.
-                [ANSI_ESC] => {
-                    drained_bytes += byte_offset(1);
-                    *self = Self::Open {
-                        saw_partial_esc: true,
-                        drained_bytes,
-                    };
-                    return OscDrainResult::from_consumption(
-                        OscDrainReason::LoneEscAtBoundary,
-                        chunk_len,
-                        chunk_len,
-                    );
-                }
-
-                // Raw newline/CR aborts OSC syntax. Leave newline for normal parsing.
-                [CARRIAGE_RETURN | LINE_FEED, ..] => {
-                    return self.reset_and_log(
-                        Level::INFO,
-                        OscDrainReason::AbortedByNewline,
-                        byte_offset(byte_index_in_chunk),
-                        chunk_len,
-                        drained_bytes,
-                    );
-                }
-
-                // Regular payload byte: consume and continue draining.
-                _ => {
-                    drained_bytes += byte_offset(1);
-                    byte_index_in_chunk += 1;
-                }
+                    chunk_len,
+                )
             }
         }
-
-        // Entire chunk consumed without encountering terminator or abort.
-        *self = Self::Open {
-            saw_partial_esc: false,
-            drained_bytes,
-        };
-        OscDrainResult::from_consumption(
-            OscDrainReason::RunawayPayloadOngoing,
-            chunk_len,
-            chunk_len,
-        )
     }
 
     /// Resolves a lone [`ANSI_ESC`] that occurred at the end of the previous chunk.
@@ -398,8 +409,8 @@ pub enum OscDrainReason {
     RunawayPayloadOngoing,
 
     /// The chunk ended with a lone [`ANSI_ESC`] (`0x1B`). The byte was consumed, and
-    /// the circuit breaker remains in [`OscCircuitBreaker::Open`] waiting for the
-    /// next chunk.
+    /// the circuit breaker transitions to [`OscCircuitBreaker::OpenAwaitingTrailingEsc`]
+    /// waiting for the next chunk.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     LoneEscAtBoundary,
@@ -502,6 +513,7 @@ mod tests {
     fn test_drain_chunk_terminated_by_bel() {
         let mut breaker = OscCircuitBreaker::default();
         breaker.trip(byte_offset(100));
+        assert!(breaker.is_open());
         assert!(matches!(breaker, OscCircuitBreaker::Open { .. }));
         assert_ne!(breaker, OscCircuitBreaker::Closed);
 
@@ -515,6 +527,7 @@ mod tests {
             }
         );
         assert_eq!(breaker, OscCircuitBreaker::Closed);
+        assert!(!breaker.is_open());
     }
 
     #[test]
@@ -551,11 +564,11 @@ mod tests {
         );
         assert_eq!(
             breaker,
-            OscCircuitBreaker::Open {
-                saw_partial_esc: true,
+            OscCircuitBreaker::OpenAwaitingTrailingEsc {
                 drained_bytes: byte_offset(108),
             }
         );
+        assert!(breaker.is_open());
 
         // Chunk 2 starts with '\', completing ST.
         let chunk2 = b"\\trailing";
@@ -650,7 +663,6 @@ mod tests {
         assert_eq!(
             breaker,
             OscCircuitBreaker::Open {
-                saw_partial_esc: false,
                 drained_bytes: byte_offset(100 + chunk.len()),
             }
         );
