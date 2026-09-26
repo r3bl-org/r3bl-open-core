@@ -28,8 +28,8 @@ pub enum OscCircuitBreaker {
     Closed,
 
     /// Circuit breaker tripped (open). Discarding bytes of an in-flight runaway [`OSC`]
-    /// sequence until a terminator ([`ANSI_BEL`] `0x07` or 7-bit [`ANSI_ST_7BIT`]
-    /// `\x1b\\`) or abort condition is encountered.
+    /// sequence until a terminator ([`ANSI_BEL`] `0x07` or 7-bit [`ANSI_ST_7BIT`] `ESC
+    /// \`, `0x1B 0x5C`) or abort condition is encountered.
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
@@ -56,7 +56,8 @@ pub enum OscCircuitBreaker {
     ///
     /// The immediately preceding chunk ended in an isolated [`ANSI_ESC`] (`0x1B`). The
     /// very next incoming byte must be inspected to determine if it completes a 7-bit
-    /// string terminator [`ANSI_ST_7BIT`] (`\x1b\\`) or aborts the [`OSC`] sequence.
+    /// string terminator [`ANSI_ST_7BIT`] (`ESC \`, bytes `0x1B 0x5C`) or aborts the
+    /// [`OSC`] sequence.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
@@ -129,12 +130,12 @@ impl OscCircuitBreaker {
     ///
     /// Scans for:
     /// 1. `BEL` (`\x07`) -> cleanly terminates [`OSC`].
-    /// 2. `ST` (`\x1b\\`) -> cleanly terminates [`OSC`] (including across chunk boundary
-    ///    if previous chunk ended in lone [`ANSI_ESC`]).
+    /// 2. `ST` (`ESC \`, `0x1B 0x5C`) -> cleanly terminates [`OSC`] (including across
+    ///    chunk boundary if previous chunk ended in lone [`ANSI_ESC`]).
     /// 3. Abort conditions:
     ///    - Raw `\r` or `\n` (ECMA-48 / [`OSC`] payloads never contain raw CR/LF).
-    ///    - [`ANSI_ESC`] followed by any byte other than `\\` (starts a new escape
-    ///      sequence, aborting [`OSC`]).
+    ///    - [`ANSI_ESC`] followed by any byte other than backslash (`\`) (starts a new
+    ///      escape sequence, aborting [`OSC`]).
     /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
     ///
     /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or
@@ -186,7 +187,7 @@ impl OscCircuitBreaker {
                             );
                         }
 
-                        // Terminated by 7-bit ST (\x1b\).
+                        // Terminated by 7-bit ST (ESC \).
                         [ANSI_ESC, ANSI_ST_FINAL, ..] => {
                             return self.reset_and_log(
                                 Level::INFO,
@@ -372,15 +373,16 @@ pub enum OscDrainReason {
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     TerminatedByBel,
 
-    /// Terminated cleanly by 7-bit [`ANSI_ST_7BIT`] (`\x1b\\`).
+    /// Terminated cleanly by 7-bit [`ANSI_ST_7BIT`] (`ESC \`, `0x1B 0x5C`).
     ///
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
     TerminatedBySt,
 
-    /// Terminated cleanly by final byte of 7-bit [`ANSI_ST_7BIT`] (`\\`) across a chunk
-    /// boundary.
+    /// Terminated cleanly by final byte of 7-bit [`ANSI_ST_7BIT`] ([`ASCII`] `\`, `0x5C`)
+    /// across a chunk boundary.
     ///
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     TerminatedAcrossBoundary,
 
     /// Aborted by an [`ANSI_ESC`] followed by a non-backslash character (starting a

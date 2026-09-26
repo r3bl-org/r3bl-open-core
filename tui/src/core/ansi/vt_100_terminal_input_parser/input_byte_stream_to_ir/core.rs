@@ -1222,7 +1222,7 @@ mod tests_osc_and_alt_bracket {
             }
         );
 
-        // Chunk 3: begins with '\' completing 7-bit ST (\x1b\), followed by typed 'w'
+        // Chunk 3: begins with '\' completing 7-bit ST (ESC \), followed by typed 'w'
         parser.advance(&[ANSI_ST_FINAL, b'w'], MaybeMore::KernelDrained);
         assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();

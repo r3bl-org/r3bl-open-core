@@ -225,8 +225,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       `0x9C` is a valid continuation byte found in common characters like `£`
       (`0xC2 0x9C`), `œ` (`0xC5 0x93`), and `✓` (`0xE2 0x9C 0x93`). Matching `0x9C` as a
       terminator in UTF-8 streams causes premature truncation and leaks subsequent bytes.
-      Modern terminals in UTF-8 mode exclusively use 7-bit `ST` (`\x1b\\`) or `BEL`
-      (`\x07`).
+      Modern terminals in UTF-8 mode exclusively use 7-bit `ST` (`ESC \`, `0x1B 0x5C`) or
+      `BEL` (`\x07`).
     - **The Buffer Truncation Defect**: `StatefulInputParser::advance` unconditionally
       clears its buffer on any parsed event (`self.buffer.clear()`). If an escape sequence
       consumes fewer bytes than the buffer holds (e.g. `ESC ] a`), the trailing byte
@@ -325,7 +325,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         /// Outcome of scanning a byte buffer with the OSC lexical state machine.
         #[derive(Debug, PartialEq, Eq, Clone, Copy)]
         pub enum OscScanResult {
-            /// Sequence was syntactically valid and cleanly terminated by `BEL` (`\x07`) or 7-bit `ST` (`\x1b\\`).
+            /// Sequence was syntactically valid and cleanly terminated by `BEL` (`\x07`) or 7-bit `ST` (`ESC \`, `0x1B 0x5C`).
             /// Wraps total consumed bytes.
             Complete(ByteOffset),
             /// Sequence is scanning decimal command digits (no `;` or `?` delimiter seen yet).
@@ -561,7 +561,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 ///
                 /// Terminal query responses (e.g., background color OSC 11, clipboard OSC 52) start with
                 /// `ESC ]` (`0x1B 0x5D`), have a numeric command identifier, parameters, and terminate with
-                /// either `BEL` (`\x07`) or 7-bit `ST` (`\x1b\\`).
+                /// either `BEL` (`\x07`) or 7-bit `ST` (`ESC \`, `0x1B 0x5C`).
                 ///
                 /// # State Machine Grammar & Validation Rules
                 ///
@@ -799,7 +799,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - **In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`**:
         - [x] Test `scan_osc_sequence` with `BEL` (`\x07`) -> returns
               `OscScanResult::Complete`.
-        - [x] Test `scan_osc_sequence` with 7-bit `ST` (`\x1b\\`) -> returns
+        - [x] Test `scan_osc_sequence` with 7-bit `ST` (`ESC \`, `0x1B 0x5C`) -> returns
               `OscScanResult::Complete`.
         - [x] Test `scan_osc_sequence` with incomplete digits (e.g. `ESC ] 1 2`) ->
               returns `OscScanResult::IncompleteDigits`.
@@ -1264,10 +1264,10 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 #[default]
                 Closed,
                 /// Discarding bytes of an in-flight runaway OSC sequence until a terminator
-                /// (`BEL` 0x07 or 7-bit `ST` `\x1b\\`) or abort condition is encountered.
+                /// (`BEL` 0x07 or 7-bit `ST` `ESC \`, `0x1B 0x5C`) or abort condition is encountered.
                 Open {
                     /// If the previous chunk ended in a lone `ESC` (0x1B), this tracks whether
-                    /// the next byte completes a 7-bit `ST` (`\x1b\\`).
+                    /// the next byte completes a 7-bit `ST` (`ESC \`).
                     saw_partial_esc: bool,
                     /// Total bytes drained so far across chunks (bounded by `MAX_OSC_DRAIN_BYTES`).
                     drained_bytes: usize,
@@ -1326,9 +1326,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 - [x] **Phase 11.4: Unit Tests in `stateful_parser.rs`**:
     - Test runaway OSC terminated by `BEL` across separate chunks: verify 0 `InputEvent`
       emitted during drain, normal typing resumes after `BEL`.
-    - Test runaway OSC terminated by `ST` (`\x1b\\`) split across chunk boundary (`ESC` at
-      end of chunk 1, `\` at start of chunk 2): verify clean recovery and trailing text
-      parsing.
+    - Test runaway OSC terminated by `ST` (`ESC \`, `0x1B 0x5C`) split across chunk
+      boundary (`ESC` at end of chunk 1, `\` at start of chunk 2): verify clean recovery
+      and trailing text parsing.
     - Test runaway OSC aborted by embedded newline `\n`: verify drain aborts and
       subsequent keystrokes parse normally.
     - Test runaway OSC exceeding `MAX_OSC_DRAIN_BYTES`: verify safety ceiling terminates
@@ -1416,12 +1416,15 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 
 - [x] **Phase 12.2: Lexical Scanner and Helper Type Safety in Sibling Parsers**:
     - In `tui/src/core/coordinates/byte/byte_offset.rs`:
-        - Implement `AddAssign<ByteOffset>` on `ByteOffset` to support in-place offset accumulation.
+        - Implement `AddAssign<ByteOffset>` on `ByteOffset` to support in-place offset
+          accumulation.
         - Enhance documentation for scanner and stream parsing displacement semantics.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
         - Refactor `csi_scanner::extract_csi_params`:
-            - Introduce `ExtractedCsiParams` struct (`params`, `final_byte`, `bytes_scanned`, `total_consumed()`).
-            - Change return type from `Option<(Vec<u16>, u8, usize)>` to `Option<ExtractedCsiParams>`.
+            - Introduce `ExtractedCsiParams` struct (`params`, `final_byte`,
+              `bytes_scanned`, `total_consumed()`).
+            - Change return type from `Option<(Vec<u16>, u8, usize)>` to
+              `Option<ExtractedCsiParams>`.
             - Update `parse_csi_parameters` to consume `extracted.total_consumed()`.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
         - Refactor `parse_csi_terminal_parameters`:
@@ -1447,11 +1450,11 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/clipboard_service_impl.rs`
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/clipboard_service.rs`
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/mod.rs`
-    - [ ] `tui/src/core/coordinates/byte/byte_offset.rs`
+    - [x] `tui/src/core/coordinates/byte/byte_offset.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`
