@@ -1081,20 +1081,49 @@ mod csi_scanner {
         }
     }
 
+    /// Result of extracting parameters and command terminator from a [`CSI`] byte slice.
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct ExtractedCsiParams {
+        /// Parsed numeric arguments (e.g. `[1, 2]` from `ESC [ 1 ; 2 H`).
+        pub params: Vec<u16>,
+        /// Command terminator character (e.g. `b'H'`, `b'~'`).
+        pub final_byte: u8,
+        /// Scanner cursor displacement across the parameter body (from after `ESC [`
+        /// through `final_byte`).
+        pub bytes_scanned: ByteOffset,
+    }
+
+    impl ExtractedCsiParams {
+        /// Total bytes consumed from the buffer including the `ESC [` prefix
+        /// ([`CSI_PREFIX_LEN`]).
+        ///
+        /// [`CSI_PREFIX_LEN`]: crate::CSI_PREFIX_LEN
+        #[must_use]
+        pub fn total_consumed(&self) -> ByteOffset {
+            byte_offset(CSI_PREFIX_LEN) + self.bytes_scanned
+        }
+    }
+
     /// Extracts numeric parameters, final byte, and scanned byte count from a [`CSI`]
     /// buffer.
     ///
+    /// The returned [`ExtractedCsiParams`] contains the parsed parameters, terminator
+    /// byte, and scanner cursor displacement across the parameter body (from after
+    /// `ESC [` through the final byte).
+    ///
     /// [`CSI`]: crate::CsiSequence
-    pub fn extract_csi_params(buffer: &[u8]) -> Option<(Vec<u16>, u8, usize)> {
+    pub fn extract_csi_params(buffer: &[u8]) -> Option<ExtractedCsiParams> {
         const DECIMAL_RADIX: u16 = 10;
 
         let mut params = Vec::new();
         let mut acc_numeric_param: u16 = 0;
         let mut final_byte: Option<u8> = None;
-        let mut bytes_scanned = 0;
+        let mut bytes_scanned = byte_offset(0);
 
         for &byte in &buffer[CSI_PREFIX_LEN..] {
-            bytes_scanned += 1;
+            bytes_scanned += byte_offset(1);
 
             match classify_csi_byte(byte) {
                 CsiByteToken::Digit(digit) => {
@@ -1117,7 +1146,11 @@ mod csi_scanner {
 
         let final_byte = final_byte?;
 
-        Some((params, final_byte, bytes_scanned))
+        Some(ExtractedCsiParams {
+            params,
+            final_byte,
+            bytes_scanned,
+        })
     }
 }
 
@@ -1202,24 +1235,21 @@ mod csi_decoder {
     ///
     /// # Returns
     ///
-    /// - The parsed keyboard event and byte count on success.
+    /// - The parsed keyboard event and total byte consumption displacement
+    ///   ([`ByteOffset`]) on success.
     /// - Nothing if the sequence is invalid or incomplete.
     ///
+    /// [`ByteOffset`]: crate::ByteOffset
     /// [`CSI`]: crate::CsiSequence
     pub fn parse_csi_parameters(
         buffer: &[u8],
     ) -> Option<(VT100InputEventIR, ByteOffset)> {
-        let (params, final_byte, bytes_scanned) =
-            csi_scanner::extract_csi_params(buffer)?;
-
-        // Total bytes consumed: ESC [ (CSI_PREFIX_LEN) + scanned bytes (includes
-        // final_byte).
-        let total_consumed = CSI_PREFIX_LEN + bytes_scanned;
+        let extracted = csi_scanner::extract_csi_params(buffer)?;
 
         // Parse based on parameters and final byte.
-        let event = decode_csi_event(&params, final_byte)?;
+        let event = decode_csi_event(&extracted.params, extracted.final_byte)?;
 
-        Some((event, byte_offset(total_consumed)))
+        Some((event, extracted.total_consumed()))
     }
 
     /// Parameter structure of a parsed [`CSI`] keyboard sequence.
@@ -2496,5 +2526,31 @@ mod tests {
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
+    }
+
+    #[test]
+    fn test_extract_csi_params() {
+        use csi_scanner::extract_csi_params;
+
+        // Multi-parameter sequence: ESC [ 1 ; 2 H
+        let buffer = b"\x1b[1;2H";
+        let extracted = extract_csi_params(buffer).expect("Should extract CSI params");
+        assert_eq!(extracted.params, vec![1, 2]);
+        assert_eq!(extracted.final_byte, b'H');
+        assert_eq!(extracted.bytes_scanned, byte_offset(4));
+        assert_eq!(extracted.total_consumed(), byte_offset(6));
+
+        // Single parameter sequence: ESC [ 5 ~
+        let buffer_tilde = b"\x1b[5~";
+        let extracted_tilde =
+            extract_csi_params(buffer_tilde).expect("Should extract CSI params");
+        assert_eq!(extracted_tilde.params, vec![5]);
+        assert_eq!(extracted_tilde.final_byte, b'~');
+        assert_eq!(extracted_tilde.bytes_scanned, byte_offset(2));
+        assert_eq!(extracted_tilde.total_consumed(), byte_offset(4));
+
+        // Invalid byte in parameter body
+        let buffer_invalid = b"\x1b[1;?H";
+        assert!(extract_csi_params(buffer_invalid).is_none());
     }
 }

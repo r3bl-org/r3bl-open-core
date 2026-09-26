@@ -152,10 +152,10 @@ fn parse_csi_terminal_parameters(
     let mut params = Vec::new();
     let mut current_number_str = String::new();
     let mut final_byte = 0u8;
-    let mut bytes_scanned = 0;
+    let mut bytes_scanned = byte_offset(0);
 
     for (slice_index, &byte) in buffer[2..].iter().enumerate() {
-        bytes_scanned = slice_index + 1; // Track position relative to buffer[2..]
+        bytes_scanned = byte_offset(slice_index + 1); // Track position relative to buffer[2..]
 
         // IMPORTANT: We use if/else chains instead of match arms because Rust treats
         // constants in match patterns as variable bindings, not value comparisons.
@@ -187,7 +187,7 @@ fn parse_csi_terminal_parameters(
     }
 
     // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
-    let total_consumed = 2 + bytes_scanned;
+    let total_consumed = byte_offset(2) + bytes_scanned;
 
     // Parse based on parameters and final byte
     // Using if/else for consistency - avoiding all match statements when using constants
@@ -203,19 +203,19 @@ fn parse_csi_terminal_parameters(
                 col_width: crate::VPWidth::from(columns),
                 row_height: crate::VPHeight::from(rows),
             },
-            byte_offset(total_consumed),
+            total_consumed,
         ))
     } else if params.len() == 1 && final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         if params[0] == PASTE_START_PARSE_PARAM {
             Some((
                 VT100InputEventIR::Paste(VT100PasteModeIR::Start),
-                byte_offset(total_consumed),
+                total_consumed,
             ))
         } else if params[0] == PASTE_END_PARSE_PARAM {
             Some((
                 VT100InputEventIR::Paste(VT100PasteModeIR::End),
-                byte_offset(total_consumed),
+                total_consumed,
             ))
         } else {
             None
@@ -237,11 +237,12 @@ fn parse_csi_terminal_parameters(
 pub enum OscScanResult {
     /// A complete [`OSC`] sequence was recognized and terminated by either [`ANSI_BEL`]
     /// (`0x07`) or 7-bit [`ANSI_ST_7BIT`] (`0x1B 0x5C`). The wrapped [`ByteOffset`]
-    /// indicates the total number of bytes consumed from the buffer (prefix + payload
-    /// + terminator).
+    /// indicates the scanner cursor displacement (total bytes consumed) from the start
+    /// of the buffer through the terminator (prefix + payload + terminator).
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ByteOffset`]: crate::ByteOffset
     /// [`OSC`]: crate::osc_codes::OscSequence
     Complete(ByteOffset),
 
@@ -335,7 +336,7 @@ pub fn scan_osc_sequence(buffer: &[u8]) -> OscScanResult {
         } else if byte == ANSI_ESC {
             return check_st_terminator(
                 buffer,
-                byte_index,
+                byte_offset(byte_index),
                 OscScanResult::IncompleteDigits,
             );
         } else {
@@ -351,7 +352,7 @@ pub fn scan_osc_sequence(buffer: &[u8]) -> OscScanResult {
         } else if byte == ANSI_ESC {
             return check_st_terminator(
                 buffer,
-                byte_index,
+                byte_offset(byte_index),
                 OscScanResult::IncompletePayload,
             );
         } else if byte == CARRIAGE_RETURN || byte == LINE_FEED {
@@ -380,12 +381,12 @@ pub fn scan_osc_sequence(buffer: &[u8]) -> OscScanResult {
 #[inline]
 fn check_st_terminator(
     buffer: &[u8],
-    byte_index: usize,
+    byte_offset_esc: ByteOffset,
     incomplete_result: OscScanResult,
 ) -> OscScanResult {
-    if buffer[byte_index..].starts_with(ANSI_ST_7BIT) {
-        OscScanResult::Complete(byte_offset(byte_index + ANSI_ST_7BIT_LEN))
-    } else if byte_index + 1 < buffer.len() {
+    if buffer[*byte_offset_esc..].starts_with(ANSI_ST_7BIT) {
+        OscScanResult::Complete(byte_offset_esc + byte_offset(ANSI_ST_7BIT_LEN))
+    } else if *byte_offset_esc + 1 < buffer.len() {
         OscScanResult::InvalidSyntax
     } else {
         incomplete_result

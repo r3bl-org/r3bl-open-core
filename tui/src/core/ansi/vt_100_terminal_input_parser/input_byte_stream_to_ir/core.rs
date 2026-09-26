@@ -5,7 +5,7 @@
 use super::osc_circuit_breaker::{OscCircuitBreaker, OscDrainResult};
 use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
             CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OSC_PREFIX, SS3_PREFIX,
-            SS3_SEQ_LEN,
+            SS3_SEQ_LEN, byte_offset,
             core::ansi::vt_100_terminal_input_parser::{MaybeMore, OscScanResult,
                                                        VT100InputEventIR,
                                                        scan_osc_sequence,
@@ -208,23 +208,25 @@ impl InputByteStreamToIrParser {
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     pub fn advance(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
-        let mut slice = read_buffer;
+        // Local mutable binding allows sub-slicing when the circuit breaker partially
+        // drains a runaway OSC sequence, while keeping the public signature immutable.
+        let mut slice_mut = read_buffer;
 
         // If the circuit breaker is open (draining a runaway OSC sequence), consume bytes
         // directly without appending to self.accumulator.
         match self.osc_circuit_breaker {
             OscCircuitBreaker::Open { .. } => {
-                match self.osc_circuit_breaker.drain_chunk(slice) {
+                match self.osc_circuit_breaker.drain_chunk(slice_mut) {
                     OscDrainResult::Full { .. } => return,
                     OscDrainResult::Partial { bytes_consumed, .. } => {
-                        slice = &slice[bytes_consumed.as_usize()..];
+                        slice_mut = &slice_mut[bytes_consumed.as_usize()..];
                     }
                 }
             }
             OscCircuitBreaker::Closed => {}
         }
 
-        self.accumulator.extend_from_slice(slice);
+        self.accumulator.extend_from_slice(slice_mut);
         while !self.accumulator.is_empty() {
             match try_parse_input_event(&self.accumulator, maybe_more) {
                 Some((event, bytes_consumed)) => {
@@ -270,7 +272,8 @@ impl InputByteStreamToIrParser {
                                     buffer_len = self.accumulator.len(),
                                 };
                             });
-                            self.osc_circuit_breaker.trip(self.accumulator.len());
+                            self.osc_circuit_breaker
+                                .trip(byte_offset(self.accumulator.len()));
                             self.accumulator.clear();
                             break;
                         }
@@ -975,7 +978,7 @@ mod tests_modified_and_unrecognized_sequences {
 #[cfg(test)]
 mod tests_osc_and_alt_bracket {
     use super::test_fixtures::*;
-    use crate::{MAX_OSC_DRAIN_BYTES, MAX_OSC_SEQUENCE_LENGTH};
+    use crate::{MAX_OSC_DRAIN_BYTES, MAX_OSC_SEQUENCE_LENGTH, byte_offset};
 
     fn alt_bracket() -> VT100InputEventIR {
         keyboard_event_with_modifiers(
@@ -1142,7 +1145,7 @@ mod tests_osc_and_alt_bracket {
             parser.osc_circuit_breaker(),
             OscCircuitBreaker::Open {
                 saw_partial_esc: false,
-                drained_bytes: runaway.len(),
+                drained_bytes: byte_offset(runaway.len()),
             }
         );
 

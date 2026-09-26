@@ -226,20 +226,21 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)>
             code: VT100KeyCodeIR::Char(ch),
             modifiers: VT100KeyModifiersIR::default(),
         },
-        byte_offset(bytes_consumed),
+        bytes_consumed,
     ))
 }
 
 /// Checks if a [`UTF-8`] byte sequence is complete.
 ///
-///
 /// # Returns
 ///
-/// - The byte length of the character if the sequence is complete.
-/// - Nothing if more bytes are needed.
+/// - The scanner cursor displacement ([`ByteOffset`], 1-4 bytes) needed to consume the
+///   complete character from the input buffer.
+/// - Nothing if more bytes are needed or the sequence is invalid.
 ///
+/// [`ByteOffset`]: crate::ByteOffset
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
+fn is_utf8_complete(buffer: &[u8]) -> Option<ByteOffset> {
     if buffer.is_empty() {
         return None;
     }
@@ -248,12 +249,12 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     let required_len = get_utf8_length(first_byte)?;
 
     // Check if we have enough bytes in the buffer
-    if buffer.len() < required_len {
+    if buffer.len() < *required_len {
         return None; // Incomplete sequence
     }
 
     // Verify all continuation bytes are correctly formatted
-    for byte in buffer.iter().skip(1).take(required_len - 1) {
+    for byte in buffer.iter().skip(1).take(*required_len - 1) {
         // Continuation bytes must be 10xxxxxx (0x80-0xBF)
         if (byte & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PATTERN {
             return None; // Invalid continuation byte
@@ -330,7 +331,7 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 /// Gets the expected length of a [`UTF-8`] sequence from its first byte.
 ///
 /// This implements the same logic as the unstable [`core::str::utf8_char_width`], but
-/// uses [`Option<usize>`] for type-safe error handling. We maintain this custom
+/// uses [`Option<ByteOffset>`] for type-safe error handling. We maintain this custom
 /// implementation because:
 ///
 /// - The [`std`] library version requires nightly Rust ([`str_internals`] feature)
@@ -339,7 +340,8 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 ///
 /// # Returns
 ///
-/// - The total byte length of the [`UTF-8`] character (1-4).
+/// - The scanner cursor displacement ([`ByteOffset`], 1-4) required to consume the
+///   [`UTF-8`] character.
 /// - Nothing if the first byte is invalid (continuation byte or reserved).
 ///
 /// # Important: This is NOT the same as [`unicode_width`]
@@ -350,27 +352,28 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 ///
 /// - A 3-byte character like '€' occupies **1 column** (narrow)
 /// - A 3-byte character like '你' occupies **2 columns** (wide/fullwidth)
-/// - Both return `Some(3)` from this function (same byte length)
+/// - Both return `Some(byte_offset(3))` from this function (same byte length)
 ///
 /// For display width calculation, see the [`unicode_width`] crate used in
 /// [`mod@crate::graphemes`]. See also the [module-level documentation] for a
 /// comprehensive explanation of this distinction.
 ///
+/// [`ByteOffset`]: crate::ByteOffset
 /// [`core::str::utf8_char_width`]: https://en.wikipedia.org/wiki/UTF-8#Encoding
 /// [`str_internals`]:
 ///     https://doc.rust-lang.org/unstable-book/library-features/str-internals.html
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
-fn get_utf8_length(first_byte: u8) -> Option<usize> {
+fn get_utf8_length(first_byte: u8) -> Option<ByteOffset> {
     match first_byte {
         // ASCII: single byte (0xxxxxxx)
-        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(1),
+        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(byte_offset(1)),
         // Start byte for 2-byte sequence (110xxxxx)
-        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(2),
+        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(byte_offset(2)),
         // Start byte for 3-byte sequence (1110xxxx)
-        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(3),
+        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(byte_offset(3)),
         // Start byte for 4-byte sequence (11110xxx)
-        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(4),
+        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(byte_offset(4)),
         // Continuation byte (10xxxxxx) - invalid as start byte
         // Reserved/invalid bytes (11111xxx)
         _ => None,

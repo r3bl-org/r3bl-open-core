@@ -14,11 +14,11 @@ use std::ops::{Add, Deref, DerefMut};
 /// byte-oriented structure. Unlike [`ByteIndex`] which is 0-based (representing
 /// positions), [`ByteLength`] is 1-based (representing sizes/counts).
 ///
-/// > This newtype struct does not use [`ChUnit`] like other unit types because
-/// > offsets are inherently [`prim@usize`].
+/// > This newtype struct does not use [`ChUnit`] like other unit types because offsets
+/// > are inherently [`prim@usize`].
 ///
-/// This type enables semantic correctness in the bounds checking system by providing
-/// a proper length type that pairs with [`ByteIndex`] for byte-based operations,
+/// This type enables semantic correctness in the bounds checking system by providing a
+/// proper length type that pairs with [`ByteIndex`] for byte-based operations,
 /// eliminating the need for conversions to character-based [`VPLength`] types.
 ///
 /// # Type System Integration
@@ -48,7 +48,28 @@ use std::ops::{Add, Deref, DerefMut};
 /// assert_eq!(beyond_index.overflows(buffer_size), ArrayOverflowResult::Overflowed);
 /// ```
 ///
+/// # Semantics: Container Extent vs. Displacement
+///
+/// A [`ByteLength`] represents the capacity or extent of a container (a 1-based size,
+/// e.g. "a 10-byte buffer"). It does not represent a movement vector or distance.
+///
+/// To represent displacement or relative distance traveled (a vector) along a line or
+/// byte stream, use [`ByteOffset`].
+///
+/// ## Why `Length + Offset` is Semantically Meaningless
+///
+/// [`ByteLength`] deliberately does **not** implement `Add<ByteOffset>`. Adding a
+/// movement displacement to a container length is semantically meaningless (e.g. walking
+/// 5 steps inside a 10-foot room changes your position, but does not expand the room to
+/// 15 feet).
+///
+/// See [`ByteOffset` section on distance vs capacity][distance-vs-capacity]
+/// for the full architectural explanation.
+///
+/// [`ByteOffset`]: crate::ByteOffset
 /// [`VPLength`]: crate::VPLength
+/// [distance-vs-capacity]:
+///     crate::ByteOffset#distance-vs-capacity-byteoffset-vs-bytelength
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteLength(usize);
 
@@ -348,3 +369,5 @@ mod tests {
         assert!(zero_length.is_zero());
     }
 }
+
+// cspell:words byteoffset bytelength

@@ -1384,7 +1384,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       (`is_utf8_complete`) ensures that parsed sequence lengths are strongly typed at the
       point of recognition.
 
-- [ ] **Phase 12.1: Full `ByteOffset` Integration in `OscCircuitBreaker`**:
+- [x] **Phase 12.1: Full `ByteOffset` Integration in `OscCircuitBreaker`**:
     - In
       `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`:
         - Refactor `OscDrainResult::from_consumption`:
@@ -1414,17 +1414,15 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         - Update call site in `InputByteStreamToIrParser::advance` to pass
           `byte_offset(self.accumulator.len())` to `trip()`.
 
-- [ ] **Phase 12.2: Lexical Scanner and Helper Type Safety in Sibling Parsers**:
+- [x] **Phase 12.2: Lexical Scanner and Helper Type Safety in Sibling Parsers**:
     - In `tui/src/core/coordinates/byte/byte_offset.rs`:
-        - Add `const fn` constructor to `ByteOffset`:
-            - Add `pub const fn from_usize(val: usize) -> Self { ByteOffset(val) }` to
-              enable compile-time typed coordinates.
+        - Implement `AddAssign<ByteOffset>` on `ByteOffset` to support in-place offset accumulation.
+        - Enhance documentation for scanner and stream parsing displacement semantics.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
         - Refactor `csi_scanner::extract_csi_params`:
-            - Change return type from `Option<(Vec<u16>, u8, usize)>` to
-              `Option<(Vec<u16>, u8, ByteOffset)>`.
-            - Update `parse_csi_parameters` to compute
-              `total_consumed = byte_offset(CSI_PREFIX_LEN) + bytes_scanned`.
+            - Introduce `ExtractedCsiParams` struct (`params`, `final_byte`, `bytes_scanned`, `total_consumed()`).
+            - Change return type from `Option<(Vec<u16>, u8, usize)>` to `Option<ExtractedCsiParams>`.
+            - Update `parse_csi_parameters` to consume `extracted.total_consumed()`.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
         - Refactor `parse_csi_terminal_parameters`:
             - Type `bytes_scanned` and `total_consumed` using `ByteOffset`.
@@ -1435,12 +1433,12 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Change return types from `Option<usize>` to `Option<ByteOffset>`.
             - Eliminate raw `usize` conversions at the `parse_utf8_text` boundary.
 
-- [ ] **Phase 12.3: Verification**:
-    - Run `./check.fish --check`.
-    - Run `./check.fish --clippy`.
-    - Run `./check.fish --test`.
-    - Run `./check.fish --fmt`.
-    - Run `./check.fish --quick-doc`.
+- [x] **Phase 12.3: Verification**:
+    - [x] Run `./check.fish --check`.
+    - [x] Run `./check.fish --clippy`.
+    - [x] Run `./check.fish --test`.
+    - [x] Run `./check.fish --fmt`.
+    - [x] Run `./check.fish --quick-doc`.
 
 - [ ] **Phase 12.4: Mandatory Manual Review**:
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`
