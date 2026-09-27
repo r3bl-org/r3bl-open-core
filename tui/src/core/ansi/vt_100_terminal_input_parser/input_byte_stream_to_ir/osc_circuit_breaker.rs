@@ -234,13 +234,6 @@ impl OscCircuitBreaker {
         }
     }
 
-    /// Returns `true` if the circuit breaker is currently open (actively draining runaway
-    /// bytes).
-    #[must_use]
-    pub fn is_open(&self) -> bool {
-        matches!(self, Self::Open { .. } | Self::OpenAwaitingSt { .. })
-    }
-
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
@@ -526,7 +519,6 @@ mod tests {
     fn test_drain_chunk_terminated_by_bel() {
         let mut breaker = OscCircuitBreaker::default();
         breaker.trip(byte_offset(100));
-        assert!(breaker.is_open());
         assert!(matches!(breaker, OscCircuitBreaker::Open { .. }));
         assert_ne!(breaker, OscCircuitBreaker::Closed);
 
@@ -540,7 +532,6 @@ mod tests {
             }
         );
         assert_eq!(breaker, OscCircuitBreaker::Closed);
-        assert!(!breaker.is_open());
     }
 
     #[test]
@@ -580,7 +571,6 @@ mod tests {
                 drained_bytes: byte_offset(108),
             }
         );
-        assert!(breaker.is_open());
 
         // Chunk 2 starts with '\', completing ST.
         let chunk2 = b"\\trailing";

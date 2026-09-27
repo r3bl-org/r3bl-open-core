@@ -196,23 +196,16 @@ impl InputByteStreamToIrParser {
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     pub fn advance(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
-        // Local mutable binding allows sub-slicing when the circuit breaker partially
-        // drains a runaway OSC sequence, while keeping the public signature immutable.
-        let mut slice_mut = read_buffer;
-
-        // If the circuit breaker is open (draining a runaway OSC sequence), consume bytes
-        // directly without appending to self.accumulator.
-        if self.osc_circuit_breaker.is_open() {
-            match self.osc_circuit_breaker.drain_chunk(slice_mut) {
-                OscDrainResult::Full { .. } => return,
-                OscDrainResult::Partial { bytes_consumed, .. } => {
-                    slice_mut = &slice_mut[bytes_consumed.as_usize()..];
-                }
-                OscDrainResult::None => {}
+        // Drain runaway OSC bytes directly, buffering only any undrained bytes.
+        let undrained_bytes = match self.osc_circuit_breaker.drain_chunk(read_buffer) {
+            OscDrainResult::Full { .. } => return,
+            OscDrainResult::Partial { bytes_consumed, .. } => {
+                &read_buffer[bytes_consumed.as_usize()..]
             }
-        }
+            OscDrainResult::None => read_buffer,
+        };
 
-        self.accumulator.extend_from_slice(slice_mut);
+        self.accumulator.extend_from_slice(undrained_bytes);
         while !self.accumulator.is_empty() {
             match try_parse_input_event(&self.accumulator, maybe_more) {
                 Some(ParsedInputEventIR {
@@ -1350,3 +1343,6 @@ mod tests_classify_unparsed_buffer {
         );
     }
 }
+
+// cspell:words undrained
+
