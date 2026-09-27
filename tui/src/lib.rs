@@ -379,9 +379,8 @@
 //!       (`LengthOps`: [`VPHeight`], [`VPWidth`], [`CHeight`], [`CWidth`]).
 //!     - **Safe Bidirectional Conversions**: Pairing traits provide explicit conversions
 //!       between 0-based and 1-based domains ([`TermRow::to_zero_based()`],
-//!       [`TermRow::from_zero_based()`], `convert_to_length()`).
-//!     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws (`Index
-//!       + Length = Index`, `Index - Index = Length`) to eliminate dangerous manual
+//!     - **Algebraic Identities & CSI Zero Protection**: Enforces algebraic laws
+//!       (`Index + Length = Index`, `Index - Index = Length`) to eliminate dangerous manual
 //!       arithmetic on raw integers, preventing off-by-one errors (`<` vs `<=`), negative
 //!       underflow, and CSI zero-index terminal crashes ([`TermRowDelta`],
 //!       [`TermColDelta`]).
@@ -2401,12 +2400,12 @@
 //!
 //! ## Key components
 //!
-//! | Component                    | Purpose                                          |
-//! | ---------------------------- | ------------------------------------------------ |
-//! | [`RRT`]                      | Framework entry point for RRT instances          |
-//! | [`SubscriberGuard`]          | RAII guard managing subscription lifecycle       |
-//! | [`RRTWorker`]                | Trait for the blocking work loop                 |
-//! | [`RRTSoftwareInterrupt`]     | Trait for interrupting blocked threads           |
+//! | Component                | Purpose                                    |
+//! | ------------------------ | ------------------------------------------ |
+//! | [`RRT`]                  | Framework entry point for RRT instances    |
+//! | [`SubscriberGuard`]      | RAII guard managing subscription lifecycle |
+//! | [`RRTWorker`]            | Trait for the blocking work loop           |
+//! | [`RRTSoftwareInterrupt`] | Trait for interrupting blocked threads     |
 //!
 //! ## Key benefits
 //!
