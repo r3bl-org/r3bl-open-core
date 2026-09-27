@@ -13,17 +13,47 @@ use tracing::Level;
 
 /// Circuit breaker for discarding runaway or oversized escape sequences.
 ///
-/// Prevents framing desynchronization, text leakage, and spurious keystroke generation
+/// Prevents framing desynchronization and text leakage (where in-flight payload bytes
+/// lose their escape framing and generate spurious input events into the event stream)
 /// when an [`OSC`] sequence exceeds [`MAX_OSC_SEQUENCE_LENGTH`] (1 MiB).
 ///
+/// # State Machine Lifecycle
+///
+/// This enum is stored inside a private field in the [`InputByteStreamToIrParser`]
+/// struct.
+///
+/// The state machine transitions are driven entirely by
+/// [`InputByteStreamToIrParser::advance()`]. It calls [`trip()`] when a runaway sequence
+/// is detected, and [`drain_chunk()`] on all subsequent read chunks while the circuit
+/// breaker is open.
+///
+/// | From State         | Event / Condition                   | Transition Method | To State           |
+/// | :----------------- | :---------------------------------- | :---------------- | :----------------- |
+/// | [`Closed`]         | Accumulator exceeds 1 MiB runaway   | [`trip()`]        | [`Open`]           |
+/// | [`Open`]           | Lone [`ANSI_ESC`] at chunk boundary | [`drain_chunk()`] | [`OpenAwaitingSt`] |
+/// | [`Open`]           | Terminator or syntax abort          | [`drain_chunk()`] | [`Closed`]         |
+/// | [`OpenAwaitingSt`] | Resolving byte completes or aborts  | [`drain_chunk()`] | [`Closed`]         |
+///
+/// [`ANSI_ESC`]: crate::ANSI_ESC
+/// [`Closed`]: Self::Closed
+/// [`drain_chunk()`]: Self::drain_chunk
+/// [`InputByteStreamToIrParser::advance()`]: super::InputByteStreamToIrParser::advance
+/// [`InputByteStreamToIrParser`]: super::InputByteStreamToIrParser
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
+/// [`Open`]: Self::Open
+/// [`OpenAwaitingSt`]: Self::OpenAwaitingSt
 /// [`OSC`]: crate::osc_codes::OscSequence
+/// [`trip()`]: Self::trip
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OscCircuitBreaker {
     /// Normal parsing state (circuit closed). Bytes are accumulated into
     /// [`InputByteStreamToIrParser`]'s internal buffer.
     ///
+    /// Initial state, or reset by [`Self::drain_chunk()`]. See [State Machine Lifecycle]
+    /// for transitions.
+    ///
     /// [`InputByteStreamToIrParser`]: super::InputByteStreamToIrParser
+    /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     #[default]
     Closed,
 
@@ -31,9 +61,15 @@ pub enum OscCircuitBreaker {
     /// sequence until a terminator ([`ANSI_BEL`] `0x07` or 7-bit [`ANSI_ST_7BIT`] `ESC
     /// \`, `0x1B 0x5C`) or abort condition is encountered.
     ///
+    /// Tripped from [`Self::Closed`] via [`Self::trip()`] (called by
+    /// [`InputByteStreamToIrParser::advance()`]). See [State Machine Lifecycle] for
+    /// transitions.
+    ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`InputByteStreamToIrParser::advance()`]: super::InputByteStreamToIrParser::advance
     /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     Open {
         /// Total bytes drained so far across chunks (bounded by
         /// [`MAX_OSC_DRAIN_BYTES`]).
@@ -59,10 +95,14 @@ pub enum OscCircuitBreaker {
     /// string terminator [`ANSI_ST_7BIT`] (`ESC \`, bytes `0x1B 0x5C`) or aborts the
     /// [`OSC`] sequence.
     ///
+    /// Split across chunk boundaries by [`Self::drain_chunk()`]. See [State Machine
+    /// Lifecycle] for transitions.
+    ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
     /// [`OSC`]: crate::osc_codes::OscSequence
-    OpenAwaitingTrailingEsc {
+    /// [State Machine Lifecycle]: Self#state-machine-lifecycle
+    OpenAwaitingSt {
         /// Total bytes drained so far across chunks (bounded by
         /// [`MAX_OSC_DRAIN_BYTES`]).
         ///
@@ -76,10 +116,7 @@ impl OscCircuitBreaker {
     /// bytes).
     #[must_use]
     pub fn is_open(&self) -> bool {
-        matches!(
-            self,
-            Self::Open { .. } | Self::OpenAwaitingTrailingEsc { .. }
-        )
+        matches!(self, Self::Open { .. } | Self::OpenAwaitingSt { .. })
     }
 
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
@@ -138,29 +175,30 @@ impl OscCircuitBreaker {
     ///      escape sequence, aborting [`OSC`]).
     /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
     ///
-    /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or
-    /// partially consumed, along with the consumed [`ByteOffset`] (the displacement
-    /// of the scanner cursor across the chunk slice) and domain reason.
+    /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or partially
+    /// consumed, along with the consumed [`ByteOffset`] (the displacement of the scanner
+    /// cursor across the chunk slice) and domain reason.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn drain_chunk(&mut self, chunk: &[u8]) -> OscDrainResult {
+        use OscCircuitBreaker::{Closed, Open, OpenAwaitingSt};
+
         let chunk_len = byte_offset(chunk.len());
 
         match *self {
-            Self::Closed => OscDrainResult::from_consumption(
-                OscDrainReason::RunawayPayloadOngoing,
-                byte_offset(0),
-                chunk_len,
-            ),
+            Closed => OscDrainResult::Partial {
+                bytes_consumed: byte_offset(0),
+                reason: OscDrainReason::CircuitClosed,
+            },
 
             // Resolve partial ESC from previous chunk boundary.
-            Self::OpenAwaitingTrailingEsc { drained_bytes } => {
+            OpenAwaitingSt { drained_bytes } => {
                 self.resolve_partial_esc(chunk, drained_bytes)
             }
 
-            Self::Open { mut drained_bytes } => {
+            Open { mut drained_bytes } => {
                 let mut byte_index_in_chunk = 0;
 
                 while byte_index_in_chunk < chunk.len() {
@@ -213,7 +251,7 @@ impl OscCircuitBreaker {
                         // Lone ESC at end of chunk: remember across chunk boundaries.
                         [ANSI_ESC] => {
                             drained_bytes += byte_offset(1);
-                            *self = Self::OpenAwaitingTrailingEsc { drained_bytes };
+                            *self = Self::OpenAwaitingSt { drained_bytes };
                             return OscDrainResult::from_consumption(
                                 OscDrainReason::LoneEscAtBoundary,
                                 chunk_len,
@@ -362,12 +400,18 @@ impl OscDrainResult {
 /// during an [`OSC`] drain operation in [`OscCircuitBreaker`].
 ///
 /// Each variant represents a distinct parsing outcome (clean termination by `BEL`/`ST`,
-/// syntax abort by raw newline or new escape sequence, safety ceiling overflow, or
-/// ongoing runaway payload consumption).
+/// syntax abort by raw newline or new escape sequence, safety ceiling overflow,
+/// ongoing runaway payload consumption, or inactive circuit breaker).
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OscDrainReason {
+    /// The circuit breaker is in [`OscCircuitBreaker::Closed`]. No bytes were
+    /// drained, and any incoming bytes are preserved for normal input parsing.
+    ///
+    /// [`OscCircuitBreaker::Closed`]: OscCircuitBreaker::Closed
+    CircuitClosed,
+
     /// Terminated cleanly by [`ANSI_BEL`] (`0x07`).
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
@@ -411,7 +455,7 @@ pub enum OscDrainReason {
     RunawayPayloadOngoing,
 
     /// The chunk ended with a lone [`ANSI_ESC`] (`0x1B`). The byte was consumed, and
-    /// the circuit breaker transitions to [`OscCircuitBreaker::OpenAwaitingTrailingEsc`]
+    /// the circuit breaker transitions to [`OscCircuitBreaker::OpenAwaitingSt`]
     /// waiting for the next chunk.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
@@ -421,6 +465,7 @@ pub enum OscDrainReason {
 impl Display for OscDrainReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
+            Self::CircuitClosed => "circuit breaker closed; no payload drained",
             Self::TerminatedByBel => "runaway OSC terminated by BEL",
             Self::TerminatedBySt => "runaway OSC terminated by ST",
             Self::TerminatedAcrossBoundary => {
@@ -444,6 +489,10 @@ mod tests {
 
     #[test]
     fn test_osc_drain_reason_display() {
+        assert_eq!(
+            format!("{}", OscDrainReason::CircuitClosed),
+            "circuit breaker closed; no payload drained"
+        );
         assert_eq!(
             format!("{}", OscDrainReason::TerminatedByBel),
             "runaway OSC terminated by BEL"
@@ -566,7 +615,7 @@ mod tests {
         );
         assert_eq!(
             breaker,
-            OscCircuitBreaker::OpenAwaitingTrailingEsc {
+            OscCircuitBreaker::OpenAwaitingSt {
                 drained_bytes: byte_offset(108),
             }
         );
@@ -682,6 +731,35 @@ mod tests {
             OscDrainResult::Full {
                 bytes_consumed: byte_offset(8),
                 reason: OscDrainReason::TerminatedByBel,
+            }
+        );
+        assert_eq!(breaker, OscCircuitBreaker::Closed);
+    }
+
+    #[test]
+    fn test_drain_chunk_when_closed() {
+        let mut breaker = OscCircuitBreaker::Closed;
+
+        // Non-empty chunk preserves all bytes for normal parsing.
+        let chunk = b"regular_input_bytes";
+        let result = breaker.drain_chunk(chunk);
+        assert_eq!(
+            result,
+            OscDrainResult::Partial {
+                bytes_consumed: byte_offset(0),
+                reason: OscDrainReason::CircuitClosed,
+            }
+        );
+        assert_eq!(breaker, OscCircuitBreaker::Closed);
+
+        // Empty chunk also returns Partial with zero bytes consumed.
+        let empty_chunk = b"";
+        let result_empty = breaker.drain_chunk(empty_chunk);
+        assert_eq!(
+            result_empty,
+            OscDrainResult::Partial {
+                bytes_consumed: byte_offset(0),
+                reason: OscDrainReason::CircuitClosed,
             }
         );
         assert_eq!(breaker, OscCircuitBreaker::Closed);

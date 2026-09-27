@@ -188,19 +188,6 @@ impl Default for InputByteStreamToIrParser {
 }
 
 impl InputByteStreamToIrParser {
-    /// Returns the current state of the circuit breaker.
-    #[must_use]
-    pub fn osc_circuit_breaker(&self) -> OscCircuitBreaker { self.osc_circuit_breaker }
-
-    /// Drains bytes from an incoming chunk while in [`OscCircuitBreaker::Open`].
-    ///
-    /// Delegates to [`OscCircuitBreaker::drain_chunk`].
-    ///
-    /// [`OscCircuitBreaker::Open`]: OscCircuitBreaker::Open
-    pub fn drain_osc_payload(&mut self, chunk: &[u8]) -> OscDrainResult {
-        self.osc_circuit_breaker.drain_chunk(chunk)
-    }
-
     /// Processes incoming bytes and parses into events.
     /// - `read_buffer`: Raw bytes read from [`stdin`].
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
@@ -1143,7 +1130,7 @@ mod tests_osc_and_alt_bracket {
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert_eq!(
-            parser.osc_circuit_breaker(),
+            parser.osc_circuit_breaker,
             OscCircuitBreaker::Open {
                 drained_bytes: byte_offset(runaway.len()),
             }
@@ -1152,7 +1139,7 @@ mod tests_osc_and_alt_bracket {
         // Terminating the runaway sequence with BEL cleanly ends the drain and emits
         // typed 'z'
         parser.advance(&[ANSI_BEL, b'z'], MaybeMore::KernelDrained);
-        assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
+        assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('z'))]);
     }
@@ -1170,7 +1157,7 @@ mod tests_osc_and_alt_bracket {
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert!(matches!(
-            parser.osc_circuit_breaker(),
+            parser.osc_circuit_breaker,
             OscCircuitBreaker::Open { .. }
         ));
 
@@ -1181,7 +1168,7 @@ mod tests_osc_and_alt_bracket {
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert!(matches!(
-            parser.osc_circuit_breaker(),
+            parser.osc_circuit_breaker,
             OscCircuitBreaker::Open { .. }
         ));
 
@@ -1189,7 +1176,7 @@ mod tests_osc_and_alt_bracket {
         // "ok". BEL terminates the drain; "ok" is emitted as keystrokes.
         let term_chunk = [b"bbbb".as_slice(), &[ANSI_BEL], b"ok"].concat();
         parser.advance(&term_chunk, MaybeMore::KernelDrained);
-        assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
+        assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
             events,
@@ -1216,15 +1203,15 @@ mod tests_osc_and_alt_bracket {
         parser.advance(&chunk2, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert_eq!(
-            parser.osc_circuit_breaker(),
-            OscCircuitBreaker::OpenAwaitingTrailingEsc {
+            parser.osc_circuit_breaker,
+            OscCircuitBreaker::OpenAwaitingSt {
                 drained_bytes: byte_offset(runaway.len() + chunk2.len()),
             }
         );
 
         // Chunk 3: begins with '\' completing 7-bit ST (ESC \), followed by typed 'w'
         parser.advance(&[ANSI_ST_FINAL, b'w'], MaybeMore::KernelDrained);
-        assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
+        assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('w'))]);
     }
@@ -1244,7 +1231,7 @@ mod tests_osc_and_alt_bracket {
         // Newline is emitted as Enter, and subsequent characters as keystrokes.
         let chunk2 = [b"payload".as_slice(), &[LINE_FEED], b"hi"].concat();
         parser.advance(&chunk2, MaybeMore::KernelDrained);
-        assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
+        assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
             events,
@@ -1272,7 +1259,7 @@ mod tests_osc_and_alt_bracket {
         parser.advance(&massive_chunk, MaybeMore::KernelDrained);
 
         // Safety ceiling triggered: breaker resets to Closed
-        assert_eq!(parser.osc_circuit_breaker(), OscCircuitBreaker::Closed);
+        assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
     }
 }
 
