@@ -208,7 +208,7 @@ impl InputByteStreamToIrParser {
                 OscDrainResult::Partial { bytes_consumed, .. } => {
                     slice_mut = &slice_mut[bytes_consumed.as_usize()..];
                 }
-                OscDrainResult::None { .. } => {}
+                OscDrainResult::None => {}
             }
         }
 

@@ -19,6 +19,16 @@
 					"label": "complete this first, then go bac to stateful_parser.rs"
 				}
 			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs",
+			"bookmarks": [
+				{
+					"line": 133,
+					"column": 4,
+					"label": "explore circuit breaker state machine methods"
+				}
+			]
 		}
 	]
 }
