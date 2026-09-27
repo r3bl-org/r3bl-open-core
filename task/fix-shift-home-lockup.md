@@ -1375,7 +1375,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       `if *bytes_consumed == chunk_len` back to primitive `usize`. Similarly,
       `OscCircuitBreaker::Open` tracks `drained_bytes` as raw `usize`.
     - **End-to-End Type Safety**: Replacing raw `usize` with `ByteOffset` across
-      `OscCircuitBreaker`, `trip()`, `reset_and_log()`, and `resolve_partial_esc()`
+      `OscCircuitBreaker`, `trip()`, `reset_and_log()`, and `handle_awaiting_st()`
       ensures direct strongly-typed comparison (`if bytes_consumed == chunk_len`) and
       prevents coordinate confusion.
     - **Harmonizing Sibling Parsers**: Extending this pattern to scanner helpers in
@@ -1399,7 +1399,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Change `chunk_len: usize` to `chunk_len: ByteOffset`.
             - Change `total_drained_bytes: usize` to `total_drained_bytes: ByteOffset`.
             - Update structured tracing to log `%total_drained_bytes`.
-        - Refactor `OscCircuitBreaker::resolve_partial_esc`:
+        - Refactor `OscCircuitBreaker::handle_awaiting_st`:
             - Change `drained_bytes: usize` to `drained_bytes: ByteOffset`.
             - Pass `byte_offset(0)` instead of raw literal `0` for empty chunk
               consumption.

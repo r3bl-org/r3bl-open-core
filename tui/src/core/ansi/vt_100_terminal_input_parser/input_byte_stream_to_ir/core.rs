@@ -2,7 +2,7 @@
 
 //! Stateful parser for terminal input bytes. See [`InputByteStreamToIrParser`] docs.
 
-use super::osc_circuit_breaker::{OscCircuitBreaker, OscDrainResult};
+use super::osc_circuit_breaker::OscCircuitBreaker;
 use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
             CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OSC_PREFIX, SS3_PREFIX,
             SS3_SEQ_LEN, byte_offset,
@@ -191,21 +191,18 @@ impl InputByteStreamToIrParser {
     /// Processes incoming bytes and parses into events.
     /// - `read_buffer`: Raw bytes read from [`stdin`].
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
-    ///   [`MaybeMore`].
+    ///   [`MaybeMore`] for details.
     ///
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     pub fn advance(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
         // Drain runaway OSC bytes directly, buffering only any undrained bytes.
-        let undrained_bytes = match self.osc_circuit_breaker.drain_chunk(read_buffer) {
-            OscDrainResult::Full { .. } => return,
-            OscDrainResult::Partial { bytes_consumed, .. } => {
-                &read_buffer[bytes_consumed.as_usize()..]
-            }
-            OscDrainResult::None => read_buffer,
-        };
+        self.accumulator.extend_from_slice(
+            self.osc_circuit_breaker
+                .drain_chunk(read_buffer)
+                .undrained_bytes(),
+        );
 
-        self.accumulator.extend_from_slice(undrained_bytes);
         while !self.accumulator.is_empty() {
             match try_parse_input_event(&self.accumulator, maybe_more) {
                 Some(ParsedInputEventIR {
@@ -1343,6 +1340,3 @@ mod tests_classify_unparsed_buffer {
         );
     }
 }
-
-// cspell:words undrained
-
