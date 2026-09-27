@@ -11,16 +11,6 @@
 			]
 		},
 		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/maybe_more.rs",
-			"bookmarks": [
-				{
-					"line": 10,
-					"column": 0,
-					"label": "complete this first, then go bac to stateful_parser.rs"
-				}
-			]
-		},
-		{
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs",
 			"bookmarks": [
 				{
