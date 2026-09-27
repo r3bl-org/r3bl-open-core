@@ -354,23 +354,23 @@ use tokio::sync::broadcast::error::RecvError;
 /// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
 ///                                     │ broadcast channel
-/// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. mio-poller thread                                                      │
-/// │    std::thread::spawn("mio-poller")                                       │
-/// │                                                                           │
-/// │    Uses mio::Poll to wait on stdin data + SIGWINCH signals:               │
-/// │    ┌───────────────────────────────────────────────────────────────────┐  │
-/// │    │ loop {                                                            │  │
-/// │    │   poll.poll(&mut events, None)?;        // Wait for stdin/signal  │  │
-/// │    │   let bytes_read = stdin.read(&mut buffer)?; // Read available bytes│  │
-/// │    │   let maybe_more =                                                │  │
-/// │    │     MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE);│  │
-/// │    │   parser.advance(&buffer[..bytes_read], maybe_more);               │  │
-/// │    │   for event in parser { sender.send(Event(event))?; }             │  │
-/// │    │ }                                                                 │  │
-/// │    └───────────────────────────────────────────────────────────────────┘  │
-/// │    See module docs for thread lifecycle (exits when all receivers drop)   │
-/// └───────────────────────────────────────────────────────────────────────────┘
+/// ┌───────────────────────────────────┴─────────────────────────────────────────┐
+/// │ 2. mio-poller thread                                                        │
+/// │    std::thread::spawn("mio-poller")                                         │
+/// │                                                                             │
+/// │    Uses mio::Poll to wait on stdin data + SIGWINCH signals:                 │
+/// │    ┌─────────────────────────────────────────────────────────────────────┐  │
+/// │    │ loop {                                                              │  │
+/// │    │   poll.poll(&mut events, None)?;           // Wait for stdin/signal │  │
+/// │    │   let bytes_read = stdin.read(&mut buffer)?;    // Read avail bytes │  │
+/// │    │   let maybe_more =                                                  │  │
+/// │    │     MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE); │  │
+/// │    │   parser.process_incoming_bytes(&buffer[..bytes_read], maybe_more); │  │
+/// │    │   for event in parser { sender.send(Event(event))?; }               │  │
+/// │    │ }                                                                   │  │
+/// │    └─────────────────────────────────────────────────────────────────────┘  │
+/// │    See module docs for thread lifecycle (exits when all receivers drop)     │
+/// └─────────────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// # Underlying Protocol Parser

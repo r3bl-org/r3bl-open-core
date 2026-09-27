@@ -100,7 +100,7 @@ use crate::{byte_offset,
 /// ```text
 /// mio_poller thread (reads from stdin into read_buffer)
 ///    │
-///    │ InputByteStreamToIrParser::advance(read_buffer, maybe_more)
+///    │ InputByteStreamToIrParser::process_incoming_bytes(read_buffer, maybe_more)
 ///    ▼
 /// ┌──────────────────────────────────────────┐  ┌──────────────────┐
 /// │  try_parse_input_event()                 ◄──┤ YOU ARE HERE     │

@@ -291,7 +291,7 @@
 //! When bytes arrive from [`stdin`], they flow through a parsing pipeline:
 //!
 //! ```text
-//! Raw bytes → Parser::advance() → VT100InputEventIR → Paste state machine → InputEvent → Channel
+//! Raw bytes → Parser::process_incoming_bytes() → VT100InputEventIR → Paste state machine → InputEvent → Channel
 //! ```
 //!
 //! The parser handles three tricky cases:
@@ -330,7 +330,7 @@
 //! - `bytes_read < STDIN_READ_BUFFER_SIZE`: The OS read was smaller than the buffer; all
 //!   input from the kernel queue has been drained ([`MaybeMore::KernelDrained`]).
 //!
-//! This kernel heuristic is passed to [`InputByteStreamToIrParser::advance()`], which
+//! This kernel heuristic is passed to [`InputByteStreamToIrParser::process_incoming_bytes()`], which
 //! supplies it to [`try_parse_input_event()`]. See [`MaybeMore`] for the full
 //! architectural model and pipeline diagram.
 //!
@@ -393,8 +393,8 @@
 //! [`file descriptor`]: https://man7.org/linux/man-pages/man2/open.2.html
 //! [`handle_software_interrupt_with_sender()`]:
 //!     handler_software_interrupt::handle_software_interrupt_with_sender
-//! [`InputByteStreamToIrParser::advance()`]:
-//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::advance
+//! [`InputByteStreamToIrParser::process_incoming_bytes()`]:
+//!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::process_incoming_bytes
 //! [`InputByteStreamToIrParser`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser
 //! [`InputEvent`]: crate::InputEvent

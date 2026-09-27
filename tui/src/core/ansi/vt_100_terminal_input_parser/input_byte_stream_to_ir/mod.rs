@@ -68,7 +68,7 @@
 //! │                                                                                  │
 //! │  Terminal Emulator / Subprocess                     InputByteStreamToIrParser    │
 //! │  ┌───────────────────┐                             ┌──────────────────────────┐  │
-//! │  │ Inbound Responses │ ── stdin: "\x1b]52;..." ──► │  advance(chunk, maybe)   │  │
+//! │  │ Inbound Responses │ ── stdin: "\x1b]52;..." ──► │ process_incoming_bytes() │  │
 //! │  └───────────────────┘                             └────────────┬─────────────┘  │
 //! │                                                                 │                │
 //! │                                               ┌─────────────────┘                │
@@ -78,7 +78,7 @@
 //! │                       ┌───────────────────────┴──────────────────────┐           │
 //! │                       ▼ YES (Draining)                               ▼ NO        │
 //! │              ┌───────────────────┐                         ┌──────────────────┐  │
-//! │              │   drain_chunk()   │                         │                  │  │
+//! │              │    try_drain()    │                         │                  │  │
 //! │              │  (Zero-allocation │                         │                  │  │
 //! │              │   byte swallow)   │                         │                  │  │
 //! │              └────────┬──────────┘                         │                  │  │

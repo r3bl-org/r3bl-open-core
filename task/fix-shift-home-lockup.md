@@ -1403,7 +1403,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Change `drained_bytes: usize` to `drained_bytes: ByteOffset`.
             - Pass `byte_offset(0)` instead of raw literal `0` for empty chunk
               consumption.
-        - Refactor `OscCircuitBreaker::drain_chunk`:
+        - Refactor `OscCircuitBreaker::try_drain`:
             - Pass `byte_offset(chunk.len())` for chunk boundary / capacity.
             - Accumulate drained bytes via `ByteOffset` addition (`+ byte_offset(1)`,
               `+ byte_offset(ANSI_ST_7BIT_LEN)`).

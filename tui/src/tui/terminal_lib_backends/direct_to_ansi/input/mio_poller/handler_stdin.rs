@@ -192,9 +192,10 @@ pub fn parse_stdin_bytes_with_sender(
     let maybe_more = MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE);
 
     // Parse bytes into events.
-    worker
-        .vt_100_input_seq_parser
-        .advance(&worker.stdin_unparsed_byte_buffer[..bytes_read], maybe_more);
+    worker.vt_100_input_seq_parser.process_incoming_bytes(
+        &worker.stdin_unparsed_byte_buffer[..bytes_read],
+        maybe_more,
+    );
 
     // Process all parsed events through paste state machine.
     for vt100_event in worker.vt_100_input_seq_parser.by_ref() {
@@ -228,10 +229,10 @@ pub fn parse_stdin_bytes_with_sender(
 ///
 /// When `bytes_read == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the kernel
 /// buffer - this determines the [`MaybeMore::KernelMayHaveMore`] heuristic passed to
-/// [`InputByteStreamToIrParser::advance()`].
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`].
 ///
-/// [`InputByteStreamToIrParser::advance()`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::advance
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::process_incoming_bytes
 /// [`MaybeMore::KernelMayHaveMore`]:
 ///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
 pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;

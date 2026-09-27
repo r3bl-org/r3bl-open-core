@@ -49,16 +49,16 @@ use std::collections::VecDeque;
 ///    STDIN_READ_BUFFER_SIZE`), inferring whether more bytes may remain in the kernel's
 ///    [`PTY`] queue.
 /// 3. [`parse_stdin_bytes_with_sender()`] forwards both the read bytes and the
-///    [`MaybeMore`] hint to [`InputByteStreamToIrParser::advance()`], which delegates
-///    sequence dispatching to [`try_parse_input_event()`].
+///    [`MaybeMore`] hint to [`InputByteStreamToIrParser::process_incoming_bytes()`],
+///    which delegates sequence dispatching to [`try_parse_input_event()`].
 ///
 /// ## Accumulator Lifecycle by Stream Availability
 ///
 /// - [`MaybeMore::KernelMayHaveMore`]: The userspace read buffer is full, so trailing
 ///   bytes may still be queued in the kernel. Incomplete prefixes (like a lone [`ESC`])
 ///   return `None`, leaving unparsed bytes in the accumulator across calls to
-///   [`InputByteStreamToIrParser::advance()`] to be completed by subsequent [`read()`]
-///   chunks.
+///   [`InputByteStreamToIrParser::process_incoming_bytes()`] to be completed by
+///   subsequent [`read()`] chunks.
 /// - [`MaybeMore::KernelDrained`]: The userspace read buffer is not full, confirming the
 ///   kernel's [`PTY`] buffer was completely drained. Standalone keys (like [`ESC`]) are
 ///   parsed with 0ms latency, drained from the accumulator, and enqueued.
@@ -120,7 +120,8 @@ use std::collections::VecDeque;
 /// [`CSI`]: crate::CsiSequence
 /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
 /// [`ESC`]: crate::EscSequence
-/// [`InputByteStreamToIrParser::advance()`]: InputByteStreamToIrParser::advance
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
+///     InputByteStreamToIrParser::process_incoming_bytes
 /// [`InputByteStreamToIrParser`]: InputByteStreamToIrParser
 /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: MAX_ESCAPE_SEQUENCE_LENGTH
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
@@ -188,18 +189,27 @@ impl Default for InputByteStreamToIrParser {
 }
 
 impl InputByteStreamToIrParser {
-    /// Processes incoming bytes and parses into events.
+    /// Processes incoming byte chunks and parses them into discrete events.
+    ///
+    /// This method is called repeatedly in succession as streaming chunks arrive from
+    /// [`stdin`] (such as in the edge-triggered draining loop of [`MioPollWorker`] on the
+    /// dedicated I/O thread). Any incomplete escape sequences remain in the internal
+    /// accumulator to be reassembled and completed by subsequent calls.
+    ///
     /// - `read_buffer`: Raw bytes read from [`stdin`].
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
     ///   [`MaybeMore`] for details.
     ///
+    /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
+    /// [`MioPollWorker`]:
+    ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
-    pub fn advance(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
+    pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
         // Drain runaway OSC bytes directly, buffering only any undrained bytes.
         self.accumulator.extend_from_slice(
             self.osc_circuit_breaker
-                .drain_chunk(read_buffer)
+                .try_drain(read_buffer)
                 .undrained_bytes(),
         );
 
@@ -233,7 +243,7 @@ impl InputByteStreamToIrParser {
                             DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                                 // % is Display, ? is Debug.
                                 tracing::warn! {
-                                    message = "InputByteStreamToIrParser::advance",
+                                    message = "InputByteStreamToIrParser::process_incoming_bytes",
                                     status = "discarding unrecognized/malformed escape sequence",
                                     discarded_hex = %format!("{:02X?}", self.accumulator),
                                     discarded_str = %String::from_utf8_lossy(&self.accumulator),
@@ -246,7 +256,7 @@ impl InputByteStreamToIrParser {
                         UnparsedBufferClassification::RunawayOsc => {
                             DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                                 tracing::warn! {
-                                    message = "InputByteStreamToIrParser::advance",
+                                    message = "InputByteStreamToIrParser::process_incoming_bytes",
                                     status = "tripping circuit breaker for runaway OSC sequence",
                                     buffer_len = self.accumulator.len(),
                                 };
@@ -423,7 +433,7 @@ mod tests_basic_parsing {
     #[test]
     fn single_ascii_char() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(b"a", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"a", MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -433,7 +443,7 @@ mod tests_basic_parsing {
     #[test]
     fn multiple_ascii_chars_single_read() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(b"abc", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"abc", MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 3);
@@ -447,7 +457,7 @@ mod tests_basic_parsing {
         let mut parser = InputByteStreamToIrParser::default();
         // In raw mode, Enter sends CR (0D), not LF (0A).
         // The kernel's line discipline translates CR→LF, but raw mode bypasses this.
-        parser.advance(&[CONTROL_ENTER], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[CONTROL_ENTER], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -457,7 +467,7 @@ mod tests_basic_parsing {
     #[test]
     fn tab_key() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[CONTROL_TAB], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[CONTROL_TAB], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -469,7 +479,7 @@ mod tests_basic_parsing {
         let mut parser = InputByteStreamToIrParser::default();
         // Historical quirk: Backspace key sends DEL (7F), not BS (08).
         // DEC VT100 reserved BS for cursor-left; most terminals inherited this.
-        parser.advance(&[ASCII_DEL], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[ASCII_DEL], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -495,7 +505,7 @@ mod tests_esc_disambiguation {
     fn lone_esc_with_more_false_emits_escape_key() {
         // User pressed ESC key alone - no more data coming.
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[ANSI_ESC], MaybeMore::KernelDrained); // ESC byte, drained
+        parser.process_incoming_bytes(&[ANSI_ESC], MaybeMore::KernelDrained); // ESC byte, drained
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -506,7 +516,7 @@ mod tests_esc_disambiguation {
     fn esc_with_more_true_waits_for_sequence() {
         // ESC arrived but more bytes are coming - wait for full sequence.
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[ANSI_ESC], MaybeMore::KernelMayHaveMore); // ESC byte, kernel may have more
+        parser.process_incoming_bytes(&[ANSI_ESC], MaybeMore::KernelMayHaveMore); // ESC byte, kernel may have more
 
         // No event emitted yet - waiting for rest of sequence.
         let events: Vec<_> = parser.collect();
@@ -517,7 +527,7 @@ mod tests_esc_disambiguation {
     fn arrow_up_complete_sequence() {
         // Arrow Up: ESC [ A
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_ARROW_UP, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_ARROW_UP, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -528,7 +538,7 @@ mod tests_esc_disambiguation {
     fn arrow_down_complete_sequence() {
         // Arrow Down: ESC [ B
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_ARROW_DOWN, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_ARROW_DOWN, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -539,7 +549,7 @@ mod tests_esc_disambiguation {
     fn arrow_right_complete_sequence() {
         // Arrow Right: ESC [ C
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_ARROW_RIGHT, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_ARROW_RIGHT, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -550,7 +560,7 @@ mod tests_esc_disambiguation {
     fn arrow_left_complete_sequence() {
         // Arrow Left: ESC [ D
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_ARROW_LEFT, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_ARROW_LEFT, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -571,11 +581,11 @@ mod tests_chunked_input {
         let mut parser = InputByteStreamToIrParser::default();
 
         // First chunk: ESC only, but more anticipated (kernel read buffer was full).
-        parser.advance(&[SEQ_ARROW_UP[0]], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&[SEQ_ARROW_UP[0]], MaybeMore::KernelMayHaveMore);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0); // No event yet
 
         // Second chunk: [ A completes the sequence.
-        parser.advance(&SEQ_ARROW_UP[1..], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&SEQ_ARROW_UP[1..], MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));
@@ -586,13 +596,13 @@ mod tests_chunked_input {
         // Extreme fragmentation: ESC, then [, then A.
         let mut parser = InputByteStreamToIrParser::default();
 
-        parser.advance(&[SEQ_ARROW_UP[0]], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&[SEQ_ARROW_UP[0]], MaybeMore::KernelMayHaveMore);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-        parser.advance(&[SEQ_ARROW_UP[1]], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&[SEQ_ARROW_UP[1]], MaybeMore::KernelMayHaveMore);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-        parser.advance(&[SEQ_ARROW_UP[2]], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[SEQ_ARROW_UP[2]], MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));
@@ -603,14 +613,17 @@ mod tests_chunked_input {
         let mut parser = InputByteStreamToIrParser::default();
 
         // First chunk: 'a' and start of arrow sequence.
-        parser.advance(&[b'a', SEQ_ARROW_UP[0]], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(
+            &[b'a', SEQ_ARROW_UP[0]],
+            MaybeMore::KernelMayHaveMore,
+        );
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('a')));
 
         // Second chunk: completes arrow, adds 'b'.
         let second_chunk = [&SEQ_ARROW_UP[1..], b"b"].concat();
-        parser.advance(&second_chunk, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&second_chunk, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Up));
@@ -625,7 +638,7 @@ mod impl_tests_iterator {
     #[test]
     fn iterator_drains_internal_queue() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(b"xyz", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"xyz", MaybeMore::KernelDrained);
 
         // First iteration drains the queue.
         let events: Vec<_> = (&mut parser).collect();
@@ -639,7 +652,7 @@ mod impl_tests_iterator {
     #[test]
     fn iterator_returns_events_in_fifo_order() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(b"abc", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"abc", MaybeMore::KernelDrained);
 
         assert_eq!(
             parser.next(),
@@ -660,13 +673,13 @@ mod impl_tests_iterator {
     fn can_interleave_advance_and_iteration() {
         let mut parser = InputByteStreamToIrParser::default();
 
-        parser.advance(b"a", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"a", MaybeMore::KernelDrained);
         assert_eq!(
             parser.next(),
             Some(keyboard_event(VT100KeyCodeIR::Char('a')))
         );
 
-        parser.advance(b"b", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"b", MaybeMore::KernelDrained);
         assert_eq!(
             parser.next(),
             Some(keyboard_event(VT100KeyCodeIR::Char('b')))
@@ -684,7 +697,7 @@ mod tests_special_keys {
     fn home_key() {
         // Home: ESC [ H
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_HOME, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_HOME, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -695,7 +708,7 @@ mod tests_special_keys {
     fn end_key() {
         // End: ESC [ F
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(SEQ_END, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(SEQ_END, MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -706,7 +719,10 @@ mod tests_special_keys {
     fn delete_key() {
         // Delete: ESC [ 3 ~
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&csi_tilde(SPECIAL_DELETE_CODE), MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(
+            &csi_tilde(SPECIAL_DELETE_CODE),
+            MaybeMore::KernelDrained,
+        );
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -717,7 +733,10 @@ mod tests_special_keys {
     fn insert_key() {
         // Insert: ESC [ 2 ~
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&csi_tilde(SPECIAL_INSERT_CODE), MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(
+            &csi_tilde(SPECIAL_INSERT_CODE),
+            MaybeMore::KernelDrained,
+        );
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -728,7 +747,10 @@ mod tests_special_keys {
     fn page_up_key() {
         // Page Up: ESC [ 5 ~
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&csi_tilde(SPECIAL_PAGE_UP_CODE), MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(
+            &csi_tilde(SPECIAL_PAGE_UP_CODE),
+            MaybeMore::KernelDrained,
+        );
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -739,7 +761,10 @@ mod tests_special_keys {
     fn page_down_key() {
         // Page Down: ESC [ 6 ~
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&csi_tilde(SPECIAL_PAGE_DOWN_CODE), MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(
+            &csi_tilde(SPECIAL_PAGE_DOWN_CODE),
+            MaybeMore::KernelDrained,
+        );
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -755,7 +780,7 @@ mod tests_utf8_input {
     fn two_byte_utf8_char() {
         // 'é' is U+00E9, encoded as C3 A9
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[0xC3, 0xA9], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[0xC3, 0xA9], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -766,7 +791,7 @@ mod tests_utf8_input {
     fn three_byte_utf8_char() {
         // '中' is U+4E2D, encoded as E4 B8 AD
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[0xE4, 0xB8, 0xAD], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[0xE4, 0xB8, 0xAD], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -777,7 +802,8 @@ mod tests_utf8_input {
     fn four_byte_utf8_emoji() {
         // '😀' is U+1F600, encoded as F0 9F 98 80
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[0xF0, 0x9F, 0x98, 0x80], MaybeMore::KernelDrained);
+        parser
+            .process_incoming_bytes(&[0xF0, 0x9F, 0x98, 0x80], MaybeMore::KernelDrained);
 
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
@@ -789,10 +815,10 @@ mod tests_utf8_input {
         // 'é' split across two reads
         let mut parser = InputByteStreamToIrParser::default();
 
-        parser.advance(&[0xC3], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&[0xC3], MaybeMore::KernelMayHaveMore);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-        parser.advance(&[0xA9], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[0xA9], MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('é')));
@@ -806,7 +832,7 @@ mod tests_modified_and_unrecognized_sequences {
     #[test]
     fn shift_home_parsing() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(
+        parser.process_incoming_bytes(
             &csi_modified(MODIFIER_SHIFT, SPECIAL_HOME_FINAL),
             MaybeMore::KernelDrained,
         );
@@ -829,7 +855,7 @@ mod tests_modified_and_unrecognized_sequences {
     #[test]
     fn ctrl_home_parsing() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(
+        parser.process_incoming_bytes(
             &csi_modified(MODIFIER_CTRL, SPECIAL_HOME_FINAL),
             MaybeMore::KernelDrained,
         );
@@ -852,7 +878,7 @@ mod tests_modified_and_unrecognized_sequences {
     #[test]
     fn shift_end_parsing() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(
+        parser.process_incoming_bytes(
             &csi_modified(MODIFIER_SHIFT, SPECIAL_END_FINAL),
             MaybeMore::KernelDrained,
         );
@@ -875,7 +901,7 @@ mod tests_modified_and_unrecognized_sequences {
     #[test]
     fn ctrl_end_parsing() {
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(
+        parser.process_incoming_bytes(
             &csi_modified(MODIFIER_CTRL, SPECIAL_END_FINAL),
             MaybeMore::KernelDrained,
         );
@@ -901,13 +927,13 @@ mod tests_modified_and_unrecognized_sequences {
 
         // Send unrecognized CSI sequence (e.g., CSI 99 ; 99 z).
         let unrecognized_csi = [CSI_PREFIX, b"99;99z"].concat();
-        parser.advance(&unrecognized_csi, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&unrecognized_csi, MaybeMore::KernelDrained);
 
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 0);
 
         // Next character typed must be parsed cleanly without freeze.
-        parser.advance(b"a", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"a", MaybeMore::KernelDrained);
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('a')));
@@ -918,13 +944,13 @@ mod tests_modified_and_unrecognized_sequences {
         let mut parser = InputByteStreamToIrParser::default();
 
         // Send unrecognized SS3 sequence (ESC O X).
-        parser.advance(&ss3(b'X'), MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&ss3(b'X'), MaybeMore::KernelDrained);
 
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 0);
 
         // Next character typed must be parsed cleanly without freeze.
-        parser.advance(b"b", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"b", MaybeMore::KernelDrained);
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('b')));
@@ -938,13 +964,13 @@ mod tests_modified_and_unrecognized_sequences {
         // digits = 64 bytes).
         let mut long_unterminated = CSI_PREFIX.to_vec();
         long_unterminated.extend_from_slice(&[b'1'; 62]);
-        parser.advance(&long_unterminated, MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&long_unterminated, MaybeMore::KernelMayHaveMore);
 
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 0);
 
         // Next character typed must be parsed cleanly.
-        parser.advance(b"c", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"c", MaybeMore::KernelDrained);
         let events: Vec<_> = parser.collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('c')));
@@ -974,16 +1000,16 @@ mod tests_osc_and_alt_bracket {
     fn lone_alt_bracket_single_and_split_reads() {
         // Single chunk:
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(OSC_PREFIX, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(OSC_PREFIX, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![alt_bracket()]);
 
         // Split reads: ESC in chunk 1 (KernelMayHaveMore), ] in chunk 2 (Drained)
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&[ANSI_ESC], MaybeMore::KernelMayHaveMore);
+        parser.process_incoming_bytes(&[ANSI_ESC], MaybeMore::KernelMayHaveMore);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-        parser.advance(b"]", MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(b"]", MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![alt_bracket()]);
     }
@@ -992,7 +1018,7 @@ mod tests_osc_and_alt_bracket {
     fn alt_bracket_followed_by_multiple_characters_same_chunk() {
         let mut parser = InputByteStreamToIrParser::default();
         let input = [OSC_PREFIX, b"abc"].concat();
-        parser.advance(&input, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&input, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
             events,
@@ -1009,7 +1035,7 @@ mod tests_osc_and_alt_bracket {
     fn alt_bracket_followed_by_digit_same_chunk_drained() {
         let mut parser = InputByteStreamToIrParser::default();
         let input = [OSC_PREFIX, b"5"].concat();
-        parser.advance(&input, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&input, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
             events,
@@ -1021,11 +1047,11 @@ mod tests_osc_and_alt_bracket {
     fn osc_terminated_with_bel_and_st_absorbed() {
         let mut parser = InputByteStreamToIrParser::default();
         let bel_seq = [OSC_PREFIX, b"11;rgb:0000/0000/0000", &[ANSI_BEL]].concat();
-        parser.advance(&bel_seq, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&bel_seq, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
         let st_seq = [OSC_PREFIX, b"11;rgb:ffff/ffff/ffff", ANSI_ST_7BIT].concat();
-        parser.advance(&st_seq, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&st_seq, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
     }
 
@@ -1040,7 +1066,7 @@ mod tests_osc_and_alt_bracket {
         assert_eq!(long_osc.len(), 119);
 
         let mut parser = InputByteStreamToIrParser::default();
-        parser.advance(&long_osc, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&long_osc, MaybeMore::KernelDrained);
         // Completely absorbed, zero events leaked, buffer drained.
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
@@ -1063,7 +1089,7 @@ mod tests_osc_and_alt_bracket {
         let mut parser = InputByteStreamToIrParser::default();
         // UTF-8 checkmark ✓ contains 0x9C. Must be absorbed with 0 leakage.
         let seq = [OSC_PREFIX, b"52;c;\xe2\x9c\x93", &[ANSI_BEL]].concat();
-        parser.advance(&seq, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&seq, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
     }
@@ -1072,7 +1098,7 @@ mod tests_osc_and_alt_bracket {
     fn osc_followed_by_typing_same_chunk() {
         let mut parser = InputByteStreamToIrParser::default();
         let seq = [OSC_PREFIX, b"0;title", &[ANSI_BEL, b'a']].concat();
-        parser.advance(&seq, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&seq, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('a'))]);
     }
@@ -1082,12 +1108,12 @@ mod tests_osc_and_alt_bracket {
         let mut parser = InputByteStreamToIrParser::default();
         // Chunk 1: prefix + partial payload, read drained (more == false)
         let chunk1 = [OSC_PREFIX, b"11;rgb:00"].concat();
-        parser.advance(&chunk1, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk1, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
         // Chunk 2: rest of payload + terminator, read drained
         let chunk2 = [b"00/0000/0000".as_slice(), &[ANSI_BEL]].concat();
-        parser.advance(&chunk2, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk2, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
     }
@@ -1097,12 +1123,12 @@ mod tests_osc_and_alt_bracket {
         let mut parser = InputByteStreamToIrParser::default();
         // Chunk 1: incomplete OSC
         let chunk1 = [OSC_PREFIX, b"0;ti"].concat();
-        parser.advance(&chunk1, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk1, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
         // Chunk 2: end of OSC + user typed 'a'
         let chunk2 = [b"tle".as_slice(), &[ANSI_BEL, b'a']].concat();
-        parser.advance(&chunk2, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk2, MaybeMore::KernelDrained);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('a'))]);
     }
@@ -1117,19 +1143,19 @@ mod tests_osc_and_alt_bracket {
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'x');
 
-        parser.advance(&runaway, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&runaway, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert_eq!(
             parser.osc_circuit_breaker,
             OscCircuitBreaker::Open {
-                drained_bytes: byte_offset(runaway.len()),
+                already_drained_byte_count: byte_offset(runaway.len()),
             }
         );
 
         // Terminating the runaway sequence with BEL cleanly ends the drain and emits
         // typed 'z'
-        parser.advance(&[ANSI_BEL, b'z'], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[ANSI_BEL, b'z'], MaybeMore::KernelDrained);
         assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('z'))]);
@@ -1144,7 +1170,7 @@ mod tests_osc_and_alt_bracket {
         runaway.extend_from_slice(OSC_PREFIX);
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
-        parser.advance(&runaway, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&runaway, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert!(matches!(
@@ -1155,7 +1181,7 @@ mod tests_osc_and_alt_bracket {
         // Chunk 2: trailing payload chunk in the pipe without terminator.
         // MUST be swallowed and discarded silently (0 events, accumulator remains empty).
         let trailing_chunk = vec![b'b'; 4096];
-        parser.advance(&trailing_chunk, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&trailing_chunk, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert!(parser.accumulator.is_empty());
         assert!(matches!(
@@ -1166,7 +1192,7 @@ mod tests_osc_and_alt_bracket {
         // Chunk 3: trailing payload ending in BEL terminator, followed by human typing
         // "ok". BEL terminates the drain; "ok" is emitted as keystrokes.
         let term_chunk = [b"bbbb".as_slice(), &[ANSI_BEL], b"ok"].concat();
-        parser.advance(&term_chunk, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&term_chunk, MaybeMore::KernelDrained);
         assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
@@ -1187,21 +1213,21 @@ mod tests_osc_and_alt_bracket {
         runaway.extend_from_slice(OSC_PREFIX);
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
-        parser.advance(&runaway, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&runaway, MaybeMore::KernelDrained);
 
         // Chunk 2: ends in lone ESC
         let chunk2 = [b"payload_data".as_slice(), &[ANSI_ESC]].concat();
-        parser.advance(&chunk2, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk2, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
         assert_eq!(
             parser.osc_circuit_breaker,
             OscCircuitBreaker::OpenAwaitingSt {
-                drained_bytes: byte_offset(runaway.len() + chunk2.len()),
+                already_drained_byte_count: byte_offset(runaway.len() + chunk2.len()),
             }
         );
 
         // Chunk 3: begins with '\' completing 7-bit ST (ESC \), followed by typed 'w'
-        parser.advance(&[ANSI_ST_FINAL, b'w'], MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&[ANSI_ST_FINAL, b'w'], MaybeMore::KernelDrained);
         assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events, vec![keyboard_event(VT100KeyCodeIR::Char('w'))]);
@@ -1216,12 +1242,12 @@ mod tests_osc_and_alt_bracket {
         runaway.extend_from_slice(OSC_PREFIX);
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
-        parser.advance(&runaway, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&runaway, MaybeMore::KernelDrained);
 
         // Chunk 2: raw newline aborts OSC control string.
         // Newline is emitted as Enter, and subsequent characters as keystrokes.
         let chunk2 = [b"payload".as_slice(), &[LINE_FEED], b"hi"].concat();
-        parser.advance(&chunk2, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&chunk2, MaybeMore::KernelDrained);
         assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(
@@ -1243,11 +1269,11 @@ mod tests_osc_and_alt_bracket {
         runaway.extend_from_slice(OSC_PREFIX);
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
-        parser.advance(&runaway, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&runaway, MaybeMore::KernelDrained);
 
         // Chunk 2: massive unterminated chunk exceeding MAX_OSC_DRAIN_BYTES
         let massive_chunk = vec![b'b'; MAX_OSC_DRAIN_BYTES];
-        parser.advance(&massive_chunk, MaybeMore::KernelDrained);
+        parser.process_incoming_bytes(&massive_chunk, MaybeMore::KernelDrained);
 
         // Safety ceiling triggered: breaker resets to Closed
         assert_eq!(parser.osc_circuit_breaker, OscCircuitBreaker::Closed);
