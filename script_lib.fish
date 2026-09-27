@@ -1283,23 +1283,30 @@ end
 
 # Reads the toolchain channel from rust-toolchain.toml
 #
+# Arguments:
+#   $argv[1] (optional): Path to rust-toolchain.toml (defaults to "./rust-toolchain.toml")
+#
 # Returns: toolchain string (e.g., "nightly-2025-10-15")
 # Exit codes: 0=success, 1=error
 #
 # Usage:
 #   set toolchain (read_toolchain_from_toml)
+#   set toolchain (read_toolchain_from_toml "/path/to/rust-toolchain.toml")
 function read_toolchain_from_toml
     set -l toolchain_file "./rust-toolchain.toml"
+    if test (count $argv) -ge 1
+        set toolchain_file $argv[1]
+    end
 
-    if not test -f $toolchain_file
-        echo "ERROR: rust-toolchain.toml not found" >&2
+    if not test -f "$toolchain_file"
+        echo "ERROR: rust-toolchain.toml not found: $toolchain_file" >&2
         return 1
     end
 
-    set -l channel_line (grep '^channel = ' $toolchain_file)
+    set -l channel_line (grep '^channel = ' "$toolchain_file")
 
     if test -z "$channel_line"
-        echo "ERROR: No channel entry found in rust-toolchain.toml" >&2
+        echo "ERROR: No channel entry found in $toolchain_file" >&2
         return 1
     end
 
@@ -1335,18 +1342,32 @@ end
 
 # Updates the channel value in rust-toolchain.toml
 #
-# Usage: set_toolchain_in_toml "nightly-2025-10-15"
+# Arguments:
+#   $argv[1]: Toolchain channel string (e.g., "nightly-2025-10-15")
+#   $argv[2] (optional): Path to rust-toolchain.toml (defaults to "./rust-toolchain.toml")
+#
+# Usage:
+#   set_toolchain_in_toml "nightly-2025-10-15"
+#   set_toolchain_in_toml "nightly-2025-10-15" "/path/to/rust-toolchain.toml"
 function set_toolchain_in_toml
     set -l toolchain $argv[1]
     set -l toolchain_file "./rust-toolchain.toml"
+    if test (count $argv) -ge 2
+        set toolchain_file $argv[2]
+    end
+
+    if not test -f "$toolchain_file"
+        echo "ERROR: File not found: $toolchain_file" >&2
+        return 1
+    end
 
     # Replace the channel line (cross-platform: macOS uses BSD sed, Linux uses GNU sed)
     if test (uname) = "Darwin"
         # macOS: BSD sed requires -i '' for in-place without backup
-        sed -i '' "s/^channel = .*/channel = \"$toolchain\"/" $toolchain_file
+        sed -i '' "s/^channel = .*/channel = \"$toolchain\"/" "$toolchain_file"
     else
         # Linux: GNU sed works with -i directly
-        sed -i "s/^channel = .*/channel = \"$toolchain\"/" $toolchain_file
+        sed -i "s/^channel = .*/channel = \"$toolchain\"/" "$toolchain_file"
     end
     return $status
 end
