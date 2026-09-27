@@ -1801,4 +1801,81 @@ fn main() {}";
         let output = fs::read_to_string(&test_file).unwrap();
         assert_eq!(output, input);
     }
+
+    #[test]
+    fn test_lines_force_bypasses_rustdoc_fmt_skip() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_skip_bypass.rs");
+
+        let input = "// rustdoc-fmt: skip\n\n/// | A | B |\n/// |---|---|\n/// | 1 | 2 |\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // 1. Without line_range, file is skipped entirely
+        let options_normal = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: None,
+            check_only: false,
+            verbose: false,
+        };
+        let proc = processor::FileProcessor::new(options_normal);
+        let res1 = proc.process_file(&test_file);
+        assert!(!res1.modified);
+        assert_eq!(fs::read_to_string(&test_file).unwrap(), input);
+
+        // 2. With lines_force, // rustdoc-fmt: skip is bypassed
+        let options_force = FormatOptions {
+            format_tables: true,
+            convert_links: false,
+            link_terms: false,
+            line_range: Some(LineRange::new(3, 5)),
+            check_only: false,
+            verbose: false,
+        };
+        let proc_force = processor::FileProcessor::new(options_force);
+        let res2 = proc_force.process_file(&test_file);
+        assert!(res2.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        assert!(output.contains("// rustdoc-fmt: skip\n"));
+        assert!(
+            output.contains("/// | A   | B   |\n/// | --- | --- |\n/// | 1   | 2   |\n")
+        );
+    }
+
+    #[test]
+    fn test_lines_force_converts_inline_links_and_aggregates() {
+        use crate::cargo_rustdoc_fmt::types::LineRange;
+
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_links_range.rs");
+
+        let input = "/// Line 1 [first](https://example.com/first)\n///\n/// Line 3 [second](https://example.com/second)\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        // Target only Line 1 (line 1..=1)
+        let options = FormatOptions {
+            format_tables: true,
+            convert_links: true,
+            link_terms: false,
+            line_range: Some(LineRange::new(1, 1)),
+            check_only: false,
+            verbose: false,
+        };
+
+        let proc = processor::FileProcessor::new(options);
+        let res = proc.process_file(&test_file);
+        assert!(res.modified);
+
+        let output = fs::read_to_string(&test_file).unwrap();
+        // Line 1 link converted to reference style
+        assert!(output.contains("/// Line 1 [first]\n"));
+        // Line 3 link preserved as inline
+        assert!(output.contains("/// Line 3 [second](https://example.com/second)\n"));
+        // Reference aggregated at bottom of doc block
+        assert!(output.contains("/// [first]: https://example.com/first\n"));
+    }
 }

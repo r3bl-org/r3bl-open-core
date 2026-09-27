@@ -45,6 +45,10 @@ fn find_rustfmt_skip_line(source: &str) -> Option<usize> {
     None
 }
 
+/// Returns true if the source file contains `#![rustfmt::skip]` or similar.
+#[must_use]
+pub fn has_rustfmt_skip(source: &str) -> bool { find_rustfmt_skip_line(source).is_some() }
+
 /// Processes Rust files to format their rustdoc comments.
 #[derive(Debug)]
 pub struct FileProcessor<'a> {
@@ -88,8 +92,10 @@ impl<'a> FileProcessor<'a> {
             }
         };
 
-        // Skip entire file if it contains `// rustdoc-fmt: skip`.
-        if has_rustdoc_fmt_skip(&source) {
+        // Skip entire file if it contains `// rustdoc-fmt: skip`, UNLESS
+        // line_range is specified (e.g. `--lines-force`). Explicit line range
+        // overrides file-level skip directive for our binary.
+        if self.options.line_range.is_none() && has_rustdoc_fmt_skip(&source) {
             return result;
         }
 

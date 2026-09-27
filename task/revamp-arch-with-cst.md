@@ -17,9 +17,17 @@ This clean-break refactoring establishes a two-level CST:
    `BlankLine`).
 3. **First-Class Spans**: Every `DocNode` carries a 1-indexed `SourceSpan`
    (`start_line..=end_line`).
-4. **Unified Range Formatting (`--lines`)**: Range formatting becomes a simple predicate
-   (`node.span.overlaps(&range)`). Unmatched nodes remain untouched, eliminating the need
-   for separate bypass execution paths.
+4. **Unified Range Formatting (`--lines-force`)**:
+    - Focuses rustdoc-fmt changes (tables and inline links) strictly to the specified
+      lines in doc comments.
+    - For inline links inside the range, converts them to reference-style `[text]` and
+      appends/aggregates reference definitions to the enclosing doc block's bottom.
+    - **Overrides/bypasses `// rustdoc-fmt: skip`**: Because the user explicitly supplied
+      a line range targeting this file, our binary honors the explicit command and
+      bypasses its own file-level skip directive.
+    - **Respects `#![rustfmt::skip]`**: If `#![rustfmt::skip]` is present, `cargo fmt` is
+      suppressed to prevent clobbering hand-aligned code. If absent (and not
+      `--skip-cargo-fmt`), `cargo fmt` is run on the modified file.
 5. **Elimination of Sentinel Placeholders**: Because code fences, tables, and paragraphs
    are distinct CST types, `ContentProtector` and its Unicode sentinel strings
    (`\u{25C4}BTCK...`) are completely removed.
@@ -35,8 +43,8 @@ This clean-break refactoring establishes a two-level CST:
       `build-infra/src/cargo_rustdoc_fmt/types.rs`.
 - [x] Implement `FromStr` for `LineRange` with comprehensive delimiter and boundary
       validation (`start:end`, `start-end`, `start..end`, `start..=end`, `single_line`).
-- [x] Add `--lines` CLI argument and single-file target validation to `CLIArg` in
-      `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
+- [x] Add `--lines-force` CLI argument (with `--lines` alias) and single-file target
+      validation to `CLIArg` in `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
 - [x] Implement file partitioner `SourceFileCst::parse(source: &str) -> SourceFileCst` in
       `build-infra/src/cargo_rustdoc_fmt/cst.rs` to split files into `Code` and `DocBlock`
       chunks with line spans, newline detection (`\r\n` vs `\n`), and trailing newline
@@ -48,17 +56,17 @@ This clean-break refactoring establishes a two-level CST:
 - [x] Unit tests for parsing, span assignment, and lossless round-trip reassembly on
       unmodified files (asserting exact 100% byte-for-byte preservation).
 
-### [x] Phase 2: Table Formatter & Range Formatting (`--lines`)
+### [x] Phase 2: Table Formatter & Range Formatting (`--lines-force`)
 
 - [x] Port `table_formatter.rs` to parse table rows and alignments into `TableData` with
       GFM separator row syntax validation.
 - [x] Implement `format_table_node(table: &mut DocNode)` to compute display widths via
       `unicode_width` and format aligned columns.
-- [x] Integrate `--lines` range overlap filtering into CST traversal: only nodes whose
-      spans overlap `line_range` are transformed.
-- [x] Add `#![rustfmt::skip]` bypass in CST traversal when `--lines` is supplied while
-      respecting `// rustdoc-fmt: skip`.
-- [x] Suppress whole-file `cargo fmt` execution when `--lines` is active.
+- [x] Integrate `--lines-force` range overlap filtering into CST traversal: only nodes
+      whose spans overlap `line_range` are transformed.
+- [x] Bypass `// rustdoc-fmt: skip` when `--lines-force` is active.
+- [x] Respect `#![rustfmt::skip]`: suppress `cargo fmt` when `#![rustfmt::skip]` is
+      present, but allow `cargo fmt` to run when absent and not `--skip-cargo-fmt`.
 - [x] Unit and integration tests for table formatting: full-file mode, range-targeted
       mode, multi-table files, unicode/emoji cell widths, and non-overlapping ranges.
 
@@ -68,7 +76,7 @@ This clean-break refactoring establishes a two-level CST:
       converting inline `[text](url)` links to reference style `[text]` while ignoring
       backtick spans.
 - [x] Aggregate and sort extracted links into `DocNode::ReferenceDefinitions` at the
-      bottom of the `DocBlockCst`.
+      bottom of the `DocBlockCst`, supporting range filtering via `--lines-force`.
 - [x] Delete `build-infra/src/cargo_rustdoc_fmt/content_protector.rs` and remove all
       Unicode sentinel placeholder mechanics.
 - [x] Unit and integration tests for link conversion, reference aggregation, and code
@@ -86,11 +94,12 @@ This clean-break refactoring establishes a two-level CST:
 ### [ ] Phase 5: Changelog, Verification & Tool Installation
 
 - [x] **Update `CHANGELOG.md` (Accumulate for Upcoming Unreleased `v0.0.6`)**:
-    - Under `## r3bl-build-infra` -> `### v0.0.6 (2026-09-18)` -> `**Added:**`, add:
-        - `--lines <START>:<END>` argument allowing surgical range formatting of markdown
-          tables in doc comments.
-        - Automatic `#![rustfmt::skip]` bypass when `--lines` is supplied.
-        - Automatic whole-file `cargo fmt` skip to preserve untouched lines outside range.
+    - Under `## r3bl-build-infra` -> `### v0.0.6 (2026-09-18)` -> `**Added:**`, update:
+        - `--lines-force <START>:<END>` argument allowing surgical range formatting of
+          tables and inline links in doc comments.
+        - Automatic `// rustdoc-fmt: skip` bypass when `--lines-force` is supplied.
+        - Strict respecting of `#![rustfmt::skip]` (suppresses `cargo fmt` if present,
+          runs `cargo fmt` if absent).
         - Strict single-file target validation (`paths.len() == 1`, `.rs` extension, no
           `--workspace`).
 - [x] Run `./check.fish --check`.
@@ -99,7 +108,7 @@ This clean-break refactoring establishes a two-level CST:
 - [x] Run `./check.fish --quick-doc`.
 - [x] Run `./check.fish --test`.
 - [x] Verify manual test:
-      `cargo run -p r3bl-build-infra --bin cargo-rustdoc-fmt -- --lines 2404:2410 tui/src/lib.rs`.
+      `cargo run -p r3bl-build-infra --bin cargo-rustdoc-fmt -- --lines-force 2404:2410 tui/src/lib.rs`.
 - [x] Update installed binary: `cargo install --path build-infra --force`.
 - [ ] **Mandatory manual review:** Verify all modified files and build state across the
       entire task:

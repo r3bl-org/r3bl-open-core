@@ -69,14 +69,15 @@ pub struct CLIArg {
     pub dry_run: bool,
 
     /// Format only documentation within the specified line range (e.g. 10:20, 10..20,
-    /// 42)
+    /// 42), bypassing file-level skip directives.
     #[arg(
-        long = "lines",
+        long = "lines-force",
+        alias = "lines",
         value_name = "RANGE",
         allow_hyphen_values = true,
-        conflicts_with_all = ["links_only", "terms_only", "terms_file", "workspace"]
+        conflicts_with_all = ["terms_only", "terms_file", "workspace"]
     )]
-    pub lines: Option<LineRange>,
+    pub lines_force: Option<LineRange>,
 
     /// Specific files or directories to format.
     /// If not provided, formats git-changed files (or entire workspace with
@@ -91,20 +92,20 @@ impl CLIArg {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `--lines` is specified without an explicit target file path.
-    /// - More than one target file path is provided with `--lines`.
+    /// - `--lines-force` is specified without an explicit target file path.
+    /// - More than one target file path is provided with `--lines-force`.
     /// - The specified path does not exist, is a directory, or is not a `.rs` file.
-    /// - Both `--lines` and `--workspace` are specified.
+    /// - Both `--lines-force` and `--workspace` are specified.
     pub fn validate(&self) -> miette::Result<()> {
-        if self.lines.is_some() {
+        if self.lines_force.is_some() {
             if self.paths.is_empty() {
                 return Err(miette::miette!(
-                    "--lines requires an explicit target file path (e.g. 'cargo rustdoc-fmt --lines 10:20 src/lib.rs')"
+                    "--lines-force requires an explicit target file path (e.g. 'cargo rustdoc-fmt --lines-force 10:20 src/lib.rs')"
                 ));
             }
             if self.paths.len() > 1 {
                 return Err(miette::miette!(
-                    "--lines only supports formatting a single file at a time, but {} paths were provided",
+                    "--lines-force only supports formatting a single file at a time, but {} paths were provided",
                     self.paths.len()
                 ));
             }
@@ -114,7 +115,7 @@ impl CLIArg {
             }
             if path.is_dir() {
                 return Err(miette::miette!(
-                    "--lines requires a file, but directory was provided: '{}'",
+                    "--lines-force requires a file, but directory was provided: '{}'",
                     path.display()
                 ));
             }
@@ -124,7 +125,7 @@ impl CLIArg {
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"));
             if !is_rs {
                 return Err(miette::miette!(
-                    "--lines requires a Rust source file (.rs), but got: '{}'",
+                    "--lines-force requires a Rust source file (.rs), but got: '{}'",
                     path.display()
                 ));
             }
@@ -135,12 +136,12 @@ impl CLIArg {
     /// Converts CLI arguments to `FormatOptions`.
     #[must_use]
     pub fn to_format_options(&self) -> FormatOptions {
-        if self.lines.is_some() {
+        if self.lines_force.is_some() {
             FormatOptions {
-                format_tables: true,
-                convert_links: false,
+                format_tables: !self.links_only,
+                convert_links: !self.tables_only,
                 link_terms: false,
-                line_range: self.lines,
+                line_range: self.lines_force,
                 check_only: self.check,
                 verbose: self.verbose,
             }
@@ -205,13 +206,13 @@ mod tests {
     #[test]
     fn test_cli_lines_argument() {
         let cli = CLIArg {
-            lines: Some(LineRange::new(10, 20)),
+            lines_force: Some(LineRange::new(10, 20)),
             ..Default::default()
         };
 
         let opts = cli.to_format_options();
         assert!(opts.format_tables);
-        assert!(!opts.convert_links);
+        assert!(opts.convert_links);
         assert!(!opts.link_terms);
         assert_eq!(opts.line_range, Some(LineRange::new(10, 20)));
     }
@@ -220,7 +221,7 @@ mod tests {
     fn test_cli_validate_lines() {
         // Missing paths
         let cli = CLIArg {
-            lines: Some(LineRange::new(10, 20)),
+            lines_force: Some(LineRange::new(10, 20)),
             paths: vec![],
             ..Default::default()
         };
@@ -228,7 +229,7 @@ mod tests {
 
         // Multiple paths
         let cli = CLIArg {
-            lines: Some(LineRange::new(10, 20)),
+            lines_force: Some(LineRange::new(10, 20)),
             paths: vec![PathBuf::from("a.rs"), PathBuf::from("b.rs")],
             ..Default::default()
         };
@@ -236,7 +237,7 @@ mod tests {
 
         // Nonexistent path
         let cli = CLIArg {
-            lines: Some(LineRange::new(10, 20)),
+            lines_force: Some(LineRange::new(10, 20)),
             paths: vec![PathBuf::from("/nonexistent_file_xyz_123.rs")],
             ..Default::default()
         };
