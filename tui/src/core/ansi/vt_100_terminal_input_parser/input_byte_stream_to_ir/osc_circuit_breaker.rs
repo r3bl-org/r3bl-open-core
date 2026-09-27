@@ -112,57 +112,6 @@ pub enum OscCircuitBreaker {
 }
 
 impl OscCircuitBreaker {
-    /// Returns `true` if the circuit breaker is currently open (actively draining runaway
-    /// bytes).
-    #[must_use]
-    pub fn is_open(&self) -> bool {
-        matches!(self, Self::Open { .. } | Self::OpenAwaitingSt { .. })
-    }
-
-    /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
-    /// drained bytes (typically the byte displacement of the purged accumulator).
-    ///
-    /// `initial_bytes` seeds the cumulative stream displacement vector with the offset
-    /// reached by the accumulator scanner when the runaway sequence was detected.
-    pub fn trip(&mut self, initial_bytes: ByteOffset) {
-        *self = Self::Open {
-            drained_bytes: initial_bytes,
-        };
-    }
-
-    /// Resets the circuit breaker to [`Self::Closed`], logs the transition at the
-    /// specified [`Level`], and returns the resulting [`OscDrainResult`].
-    fn reset_and_log(
-        &mut self,
-        level: Level,
-        reason: OscDrainReason,
-        bytes_consumed: ByteOffset,
-        chunk_len: ByteOffset,
-        total_drained_bytes: ByteOffset,
-    ) -> OscDrainResult {
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-            // % is Display, ? is Debug.
-            match level {
-                Level::WARN => {
-                    tracing::warn! {
-                        message = "OscCircuitBreaker::drain_chunk",
-                        status = %reason,
-                        ?total_drained_bytes,
-                    };
-                }
-                _ => {
-                    tracing::info! {
-                        message = "OscCircuitBreaker::drain_chunk",
-                        status = %reason,
-                        ?total_drained_bytes,
-                    };
-                }
-            }
-        });
-        *self = Self::Closed;
-        OscDrainResult::from_consumption(reason, bytes_consumed, chunk_len)
-    }
-
     /// Drains bytes from an incoming chunk while in [`Self::Open`].
     ///
     /// Scans for:
@@ -176,8 +125,8 @@ impl OscCircuitBreaker {
     /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
     ///
     /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or partially
-    /// consumed, along with the consumed [`ByteOffset`] (the displacement of the scanner
-    /// cursor across the chunk slice) and domain reason.
+    /// consumed, or not consumed at all, along with the consumed [`ByteOffset`] (the
+    /// displacement of the scanner cursor across the chunk slice) and domain reason.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
@@ -188,8 +137,7 @@ impl OscCircuitBreaker {
         let chunk_len = byte_offset(chunk.len());
 
         match *self {
-            Closed => OscDrainResult::Partial {
-                bytes_consumed: byte_offset(0),
+            Closed => OscDrainResult::None {
                 reason: OscDrainReason::CircuitClosed,
             },
 
@@ -252,11 +200,10 @@ impl OscCircuitBreaker {
                         [ANSI_ESC] => {
                             drained_bytes += byte_offset(1);
                             *self = Self::OpenAwaitingSt { drained_bytes };
-                            return OscDrainResult::from_consumption(
-                                OscDrainReason::LoneEscAtBoundary,
-                                chunk_len,
-                                chunk_len,
-                            );
+                            return OscDrainResult::Full {
+                                bytes_consumed: chunk_len,
+                                reason: OscDrainReason::LoneEscAtBoundary,
+                            };
                         }
 
                         // Raw newline/CR aborts OSC syntax. Leave newline for normal
@@ -281,13 +228,63 @@ impl OscCircuitBreaker {
 
                 // Entire chunk consumed without encountering terminator or abort.
                 *self = Self::Open { drained_bytes };
-                OscDrainResult::from_consumption(
-                    OscDrainReason::RunawayPayloadOngoing,
-                    chunk_len,
-                    chunk_len,
-                )
+                OscDrainResult::Full {
+                    bytes_consumed: chunk_len,
+                    reason: OscDrainReason::RunawayPayloadOngoing,
+                }
             }
         }
+    }
+
+    /// Returns `true` if the circuit breaker is currently open (actively draining runaway
+    /// bytes).
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        matches!(self, Self::Open { .. } | Self::OpenAwaitingSt { .. })
+    }
+
+    /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
+    /// drained bytes (typically the byte displacement of the purged accumulator).
+    ///
+    /// `initial_bytes` seeds the cumulative stream displacement vector with the offset
+    /// reached by the accumulator scanner when the runaway sequence was detected.
+    pub fn trip(&mut self, initial_bytes: ByteOffset) {
+        *self = Self::Open {
+            drained_bytes: initial_bytes,
+        };
+    }
+
+    /// Resets the circuit breaker to [`Self::Closed`], logs the transition at the
+    /// specified [`Level`], and returns the resulting [`OscDrainResult`].
+    fn reset_and_log(
+        &mut self,
+        level: Level,
+        reason: OscDrainReason,
+        bytes_consumed: ByteOffset,
+        chunk_len: ByteOffset,
+        total_drained_bytes: ByteOffset,
+    ) -> OscDrainResult {
+        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+            // % is Display, ? is Debug.
+            match level {
+                Level::WARN => {
+                    tracing::warn! {
+                        message = "OscCircuitBreaker::drain_chunk",
+                        status = %reason,
+                        ?total_drained_bytes,
+                    };
+                }
+                _ => {
+                    tracing::info! {
+                        message = "OscCircuitBreaker::drain_chunk",
+                        status = %reason,
+                        ?total_drained_bytes,
+                    };
+                }
+            }
+        });
+        *self = Self::Closed;
+        OscDrainResult::classify_drain(reason, bytes_consumed, chunk_len)
     }
 
     /// Resolves a lone [`ANSI_ESC`] that occurred at the end of the previous chunk.
@@ -300,11 +297,10 @@ impl OscCircuitBreaker {
     ) -> OscDrainResult {
         let chunk_len = byte_offset(chunk.len());
         match chunk.first() {
-            None => OscDrainResult::from_consumption(
-                OscDrainReason::LoneEscAtBoundary,
-                byte_offset(0),
-                chunk_len,
-            ),
+            None => OscDrainResult::Full {
+                bytes_consumed: byte_offset(0),
+                reason: OscDrainReason::LoneEscAtBoundary,
+            },
             Some(&ANSI_ST_FINAL) => self.reset_and_log(
                 Level::INFO,
                 OscDrainReason::TerminatedAcrossBoundary,
@@ -324,12 +320,14 @@ impl OscCircuitBreaker {
 }
 
 /// Result of an [`OSC`] drain operation, categorizing whether the chunk was
-/// fully or partially consumed.
+/// fully or partially consumed, or not consumed at all.
 ///
 /// # Coordinate Semantics
 ///
 /// `bytes_consumed` is typed as [`ByteOffset`] because it designates **scanner
 /// cursor displacement** into the current chunk slice:
+/// - In [`OscDrainResult::None`], zero bytes were consumed (e.g. circuit breaker was
+///   closed).
 /// - In [`OscDrainResult::Full`], the displacement equals the chunk slice boundary
 ///   (`bytes_consumed == chunk_len`).
 /// - In [`OscDrainResult::Partial`], the displacement serves as the slicing offset where
@@ -340,6 +338,10 @@ impl OscCircuitBreaker {
 /// [`OSC`]: crate::osc_codes::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OscDrainResult {
+    /// Zero bytes were consumed by the circuit breaker (e.g., circuit breaker was
+    /// closed). The entire chunk must be processed as normal input.
+    None { reason: OscDrainReason },
+
     /// The entire chunk was consumed by the circuit breaker. There are zero remaining
     /// bytes for normal input parsing.
     Full {
@@ -356,10 +358,11 @@ pub enum OscDrainResult {
 }
 
 impl OscDrainResult {
-    /// Creates an [`OscDrainResult`] classifying consumption as [`OscDrainResult::Full`]
-    /// if `bytes_consumed == chunk_len`, or [`OscDrainResult::Partial`] otherwise.
+    /// Creates an [`OscDrainResult`] classifying a drain operation as
+    /// [`OscDrainResult::Full`] if `bytes_consumed == chunk_len`, or
+    /// [`OscDrainResult::Partial`] otherwise.
     #[must_use]
-    pub fn from_consumption(
+    pub fn classify_drain(
         reason: OscDrainReason,
         bytes_consumed: ByteOffset,
         chunk_len: ByteOffset,
@@ -381,6 +384,7 @@ impl OscDrainResult {
     #[must_use]
     pub fn bytes_consumed(&self) -> ByteOffset {
         match *self {
+            Self::None { .. } => byte_offset(0),
             Self::Full { bytes_consumed, .. } | Self::Partial { bytes_consumed, .. } => {
                 bytes_consumed
             }
@@ -391,7 +395,9 @@ impl OscDrainResult {
     #[must_use]
     pub fn reason(&self) -> OscDrainReason {
         match *self {
-            Self::Full { reason, .. } | Self::Partial { reason, .. } => reason,
+            Self::None { reason }
+            | Self::Full { reason, .. }
+            | Self::Partial { reason, .. } => reason,
         }
     }
 }
@@ -528,8 +534,8 @@ mod tests {
     }
 
     #[test]
-    fn test_osc_drain_result_from_consumption() {
-        let full = OscDrainResult::from_consumption(
+    fn test_osc_drain_result_classify_drain() {
+        let full = OscDrainResult::classify_drain(
             OscDrainReason::RunawayPayloadOngoing,
             byte_offset(5),
             byte_offset(5),
@@ -544,7 +550,7 @@ mod tests {
         assert_eq!(full.bytes_consumed(), byte_offset(5));
         assert_eq!(full.reason(), OscDrainReason::RunawayPayloadOngoing);
 
-        let partial = OscDrainResult::from_consumption(
+        let partial = OscDrainResult::classify_drain(
             OscDrainReason::TerminatedByBel,
             byte_offset(3),
             byte_offset(5),
@@ -558,6 +564,12 @@ mod tests {
         );
         assert_eq!(partial.bytes_consumed(), byte_offset(3));
         assert_eq!(partial.reason(), OscDrainReason::TerminatedByBel);
+
+        let none = OscDrainResult::None {
+            reason: OscDrainReason::CircuitClosed,
+        };
+        assert_eq!(none.bytes_consumed(), byte_offset(0));
+        assert_eq!(none.reason(), OscDrainReason::CircuitClosed);
     }
 
     #[test]
@@ -745,23 +757,25 @@ mod tests {
         let result = breaker.drain_chunk(chunk);
         assert_eq!(
             result,
-            OscDrainResult::Partial {
-                bytes_consumed: byte_offset(0),
+            OscDrainResult::None {
                 reason: OscDrainReason::CircuitClosed,
             }
         );
+        assert_eq!(result.bytes_consumed(), byte_offset(0));
+        assert_eq!(result.reason(), OscDrainReason::CircuitClosed);
         assert_eq!(breaker, OscCircuitBreaker::Closed);
 
-        // Empty chunk also returns Partial with zero bytes consumed.
+        // Empty chunk also returns None with zero bytes consumed.
         let empty_chunk = b"";
         let result_empty = breaker.drain_chunk(empty_chunk);
         assert_eq!(
             result_empty,
-            OscDrainResult::Partial {
-                bytes_consumed: byte_offset(0),
+            OscDrainResult::None {
                 reason: OscDrainReason::CircuitClosed,
             }
         );
+        assert_eq!(result_empty.bytes_consumed(), byte_offset(0));
+        assert_eq!(result_empty.reason(), OscDrainReason::CircuitClosed);
         assert_eq!(breaker, OscCircuitBreaker::Closed);
     }
 }

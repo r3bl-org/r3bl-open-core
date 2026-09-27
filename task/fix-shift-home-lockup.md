@@ -1370,7 +1370,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 ### [ ] Step 12: Byte Coordinate Type-Safety (`ByteOffset`) Across Circuit Breaker & Parser Subsystems
 
 - **Problem Analysis & Architectural Motivation**:
-    - **Asymmetric Types & Forced Dereferencing**: Currently, `from_consumption` accepts
+    - **Asymmetric Types & Forced Dereferencing**: Currently, `classify_drain` accepts
       `bytes_consumed: ByteOffset` alongside `chunk_len: usize`, forcing a dereference
       `if *bytes_consumed == chunk_len` back to primitive `usize`. Similarly,
       `OscCircuitBreaker::Open` tracks `drained_bytes` as raw `usize`.
@@ -1387,7 +1387,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 - [x] **Phase 12.1: Full `ByteOffset` Integration in `OscCircuitBreaker`**:
     - In
       `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`:
-        - Refactor `OscDrainResult::from_consumption`:
+        - Refactor `OscDrainResult::classify_drain`:
             - Change `chunk_len: usize` to `chunk_len: ByteOffset`.
             - Perform strongly-typed equality check `if bytes_consumed == chunk_len`
               without dereferencing `*bytes_consumed`.
