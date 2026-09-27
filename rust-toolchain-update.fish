@@ -24,6 +24,11 @@ source (dirname (status --current-filename))/script_lib.fish
 # - Once stable toolchain found, rust-toolchain.toml is already configured correctly
 # - Send desktop notifications (notify-send): success when found, critical alert if all fail
 #
+# Git Worktree Synchronization:
+# - Automatically discovers all git worktrees via `git worktree list --porcelain`
+# - Synchronizes rust-toolchain.toml across all worktrees to the validated nightly
+# - Prevents worktrees from being stranded on uninstalled/deleted toolchains
+#
 # Cleanup Strategy:
 # - Keep only: stable-* + the validated nightly-YYYY-MM-DD
 # - Remove: all other nightly toolchains, including generic "nightly"
@@ -58,7 +63,7 @@ source (dirname (status --current-filename))/script_lib.fish
 # ============================================================================
 
 set -g LOG_FILE $HOME/Downloads/rust-toolchain-update.log
-set -g PROJECT_DIR (pwd)
+set -g PROJECT_DIR (dirname (status --current-filename))
 set -g WORKSPACE_NAME (prompt_pwd)
 set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 set -g target_toolchain ""
@@ -351,6 +356,44 @@ function update_toolchain_config
     return 0
 end
 
+function sync_toolchain_to_all_worktrees
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log "Synchronizing toolchain across all git worktrees"
+    toolchain_log "═══════════════════════════════════════════════════════"
+    toolchain_log ""
+    toolchain_log "Synchronizing toolchain ($target_toolchain) across all git worktrees..."
+
+    # Query all linked worktrees from git
+    set -l worktrees (git -C $PROJECT_DIR worktree list --porcelain 2>/dev/null | string match -r '^worktree .+' | string replace 'worktree ' '')
+    if test (count $worktrees) -eq 0
+        toolchain_log "⚠️  No worktrees detected (or git command failed); continuing"
+        return 0
+    end
+
+    toolchain_log "Found "(count $worktrees)" worktree(s):"
+    set -l synced_count 0
+
+    for wt in $worktrees
+        set -l wt_toml "$wt/rust-toolchain.toml"
+        if test -f "$wt_toml"
+            toolchain_log "  Updating $wt_toml -> $target_toolchain..."
+            if set_toolchain_in_toml $target_toolchain "$wt_toml"
+                set synced_count (math $synced_count + 1)
+                toolchain_log "  ✅ Successfully updated $wt"
+            else
+                toolchain_log "  ❌ Failed to update $wt"
+            end
+        else
+            toolchain_log "  ⚠️  No rust-toolchain.toml found in $wt (skipping)"
+        end
+    end
+
+    toolchain_log ""
+    toolchain_log "Synchronized $synced_count out of "(count $worktrees)" worktree(s)"
+    toolchain_log ""
+    return 0
+end
+
 function cleanup_old_toolchains
     # Get disk usage before cleanup
     toolchain_log "Checking disk usage before cleanup..."
@@ -472,29 +515,32 @@ function main
     # Install Windows cross-compilation target for verifying platform-specific code
     install_windows_target
 
+    # Synchronize rust-toolchain.toml across all git worktrees before cleanup
+    sync_toolchain_to_all_worktrees
+
     toolchain_log "═══════════════════════════════════════════════════════"
-    toolchain_log "Phase 3: Cleanup Old Toolchains"
+    toolchain_log "Phase 4: Cleanup Old Toolchains"
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
     cleanup_old_toolchains
 
     toolchain_log "═══════════════════════════════════════════════════════"
-    toolchain_log "Phase 4: Verify Final State"
+    toolchain_log "Phase 5: Verify Final State"
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
     toolchain_verify_final_state
 
     toolchain_log "═══════════════════════════════════════════════════════"
-    toolchain_log "Phase 5: Clean Caches and Full Verification Build"
+    toolchain_log "Phase 6: Clean Caches and Full Verification Build"
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
     clean_and_verify_build
 
     toolchain_log "═══════════════════════════════════════════════════════"
-    toolchain_log "Phase 6: Update Stable Toolchain and Cargo Development Tools"
+    toolchain_log "Phase 7: Update Stable Toolchain and Cargo Development Tools"
     toolchain_log "═══════════════════════════════════════════════════════"
     toolchain_log ""
 
