@@ -143,7 +143,8 @@ impl OscCircuitBreaker {
     /// - `bytes_consumed`: Scanner cursor displacement ([`ByteOffset`]) into `chunk`
     ///   consumed by this termination or abort sequence.
     /// - `already_drained_byte_count`: Cumulative count of bytes ([`ByteOffset`]) drained
-    ///   across chunks so far, recorded in structured diagnostic logs.
+    ///   across chunks prior to scanning this chunk, added to `bytes_consumed` for
+    ///   structured diagnostic logs.
     ///
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`Level`]: tracing::Level
@@ -157,6 +158,8 @@ impl OscCircuitBreaker {
         bytes_consumed: ByteOffset,
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
+        let already_drained_byte_count = already_drained_byte_count + bytes_consumed;
+
         DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
             // % is Display, ? is Debug.
             match level {
@@ -289,7 +292,7 @@ impl OscCircuitBreaker {
                 Level::INFO,
                 OscDrainReason::TerminatedAcrossBoundary,
                 byte_offset(1),
-                already_drained_byte_count + byte_offset(1),
+                already_drained_byte_count,
             ),
 
             // Aborted by new escape sequence: preserve chunk intact and close (see case 2
@@ -351,33 +354,30 @@ impl OscCircuitBreaker {
                     Level::WARN,
                     OscDrainReason::ExceededSafetyCeiling,
                     bytes_consumed,
-                    current_drained,
+                    already_drained_byte_count,
                 );
             }
 
             match remaining {
                 // Terminated by BEL (0x07).
                 [ANSI_BEL, ..] => {
-                    let total_consumed = bytes_consumed + byte_offset(1);
                     return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedByBel,
-                        total_consumed,
-                        already_drained_byte_count + total_consumed,
+                        bytes_consumed + byte_offset(1),
+                        already_drained_byte_count,
                     );
                 }
 
                 // Terminated by 7-bit ST (ESC \).
                 [ANSI_ESC, ANSI_ST_FINAL, ..] => {
-                    let total_consumed =
-                        bytes_consumed + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN);
                     return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedBySt,
-                        total_consumed,
-                        already_drained_byte_count + total_consumed,
+                        bytes_consumed + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN),
+                        already_drained_byte_count,
                     );
                 }
 
@@ -389,7 +389,7 @@ impl OscCircuitBreaker {
                         Level::INFO,
                         OscDrainReason::AbortedByNewEsc,
                         bytes_consumed,
-                        current_drained,
+                        already_drained_byte_count,
                     );
                 }
 
@@ -415,7 +415,7 @@ impl OscCircuitBreaker {
                         Level::INFO,
                         OscDrainReason::AbortedByNewline,
                         bytes_consumed,
-                        current_drained,
+                        already_drained_byte_count,
                     );
                 }
 
