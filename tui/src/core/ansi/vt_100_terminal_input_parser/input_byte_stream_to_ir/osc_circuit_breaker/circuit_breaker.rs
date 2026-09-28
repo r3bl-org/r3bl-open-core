@@ -118,6 +118,11 @@ impl OscCircuitBreaker {
     /// Logs a warning at [`Level::WARN`] when [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is
     /// enabled.
     ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
+    ///
     /// # Arguments
     ///
     /// - `already_drained_byte_count`: Seeds the cumulative stream displacement vector
@@ -127,7 +132,10 @@ impl OscCircuitBreaker {
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
     /// [`Level::WARN`]: tracing::Level::WARN
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn trip(&mut self, already_drained_byte_count: ByteOffset) {
+        let breaker = &mut *self; // Mutable reborrow.
+
         DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
             tracing::warn! {
                 message = "OscCircuitBreaker::trip",
@@ -136,13 +144,18 @@ impl OscCircuitBreaker {
             };
         });
 
-        *self = Self::Open {
+        *breaker = Self::Open {
             already_drained_byte_count,
         };
     }
 
     /// Resets the circuit breaker to [`Self::Closed`], logs the transition at the
     /// specified [`Level`], and returns the resulting [`OscDrainResult`].
+    ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
     ///
     /// # Arguments
     ///
@@ -159,6 +172,7 @@ impl OscCircuitBreaker {
     /// [`Level`]: tracing::Level
     /// [`OscDrainReason`]: OscDrainReason
     /// [`OscDrainResult`]: OscDrainResult
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     fn reset<'a>(
         &mut self,
         chunk: &'a [u8],
@@ -167,6 +181,8 @@ impl OscCircuitBreaker {
         bytes_consumed: ByteOffset,
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
+        let breaker = &mut *self; // Mutable reborrow.
+
         DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
             // % is Display, ? is Debug.
             match level {
@@ -187,7 +203,7 @@ impl OscCircuitBreaker {
             }
         });
 
-        *self = Self::Closed;
+        *breaker = Self::Closed;
 
         OscDrainResult::classify_drain(chunk, reason, bytes_consumed)
     }
@@ -230,6 +246,7 @@ impl OscCircuitBreaker {
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn try_drain<'a>(&mut self, chunk: &'a [u8]) -> OscDrainResult<'a> {
         let breaker = &mut *self; // Mutable reborrow.
+
         match *breaker {
             // The circuit breaker is closed, don't drain any bytes, and pass the chunk
             // through intact as valid input bytes in the next stage.
@@ -299,6 +316,7 @@ impl OscCircuitBreaker {
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
         let breaker = &mut *self; // Mutable reborrow.
+
         match chunk.first() {
             // Completes split 7-bit ST (ESC \): consume '\' and close (see case 1 above).
             Some(&ANSI_ST_FINAL) => breaker.reset(
