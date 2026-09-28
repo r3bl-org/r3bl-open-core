@@ -268,13 +268,6 @@ impl InputByteStreamToIrParser {
                             break;
                         }
                         UnparsedBufferClassification::RunawayOsc => {
-                            DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
-                                tracing::warn! {
-                                    message = "InputByteStreamToIrParser::process_incoming_bytes",
-                                    status = "tripping circuit breaker for runaway OSC sequence",
-                                    buffer_len = self.accumulator.len(),
-                                };
-                            });
                             self.osc_circuit_breaker
                                 .trip(byte_offset(self.accumulator.len()));
                             self.accumulator.clear();

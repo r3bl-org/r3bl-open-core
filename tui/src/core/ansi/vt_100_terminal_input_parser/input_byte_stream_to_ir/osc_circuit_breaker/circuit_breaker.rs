@@ -115,6 +115,9 @@ impl OscCircuitBreaker {
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
+    /// Logs a warning at [`Level::WARN`] when [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is
+    /// enabled.
+    ///
     /// # Arguments
     ///
     /// - `already_drained_byte_count`: Seeds the cumulative stream displacement vector
@@ -122,7 +125,17 @@ impl OscCircuitBreaker {
     ///   sequence was detected and purged.
     ///
     /// [`ByteOffset`]: crate::ByteOffset
+    /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+    /// [`Level::WARN`]: tracing::Level::WARN
     pub fn trip(&mut self, already_drained_byte_count: ByteOffset) {
+        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+            tracing::warn! {
+                message = "OscCircuitBreaker::trip",
+                status = "tripping circuit breaker for runaway OSC sequence",
+                ?already_drained_byte_count,
+            };
+        });
+
         *self = Self::Open {
             already_drained_byte_count,
         };
@@ -359,7 +372,11 @@ impl OscCircuitBreaker {
             let bytes_consumed = byte_offset(chunk.len() - remaining.len());
             let current_drained = already_drained_byte_count + bytes_consumed;
 
-            // Check safety ceiling.
+            // Safety ceiling guardrail: prevent an infinite drain loop if an OSC
+            // sequence is never terminated (e.g., malformed payload or corrupted stream).
+            // Once cumulative drained bytes reach `MAX_OSC_DRAIN_BYTES` (16 MiB), trip
+            // the ceiling, reset to `Closed`, log a warning, and leave remaining bytes
+            // for normal input parsing.
             if current_drained >= byte_offset(MAX_OSC_DRAIN_BYTES) {
                 return breaker.reset(
                     chunk,
