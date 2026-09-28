@@ -31,9 +31,9 @@ use tracing::Level;
 ///
 /// # Architecture: Retained State vs. Transient Transition Output
 ///
-/// It is a good idea to separate transitive state transition outputs from retained memory
-/// (states). This is why this module intentionally separates three related concepts into
-/// dedicated types:
+/// It is a good idea to separate ephemeral state transition outputs from retained memory
+/// (states). This is why this module intentionally separates retained state machine
+/// memory from transient transition outputs across three dedicated types:
 ///
 /// 1. **Retained State ([`OscCircuitBreaker`])**: The persistent state machine stored
 ///    inside [`InputByteStreamToIrParser`]. It tracks memory across time and I/O reads.
@@ -47,16 +47,9 @@ use tracing::Level;
 ///    specifying *why* the drain stopped or transitioned. It implements [`Display`] for
 ///    structured tracing logs and metrics without coupling to byte slices.
 ///
-/// **Why mixing output with state is avoided:**
-/// - **Rust Lifetime Contamination**: If the persistent state machine held the transient
-///   output or borrowed slices, [`InputByteStreamToIrParser`] would be forced to carry
-///   the temporary read buffer's lifetime `'a`, making it impossible to reuse read
-///   buffers across event loop iterations.
-/// - **Making Illegal States Unrepresentable**: Retained state represents what the
-///   machine *is* between reads ([`Closed`], [`Open`], [`OpenAwaitingSt`]). Once a
-///   sequence terminates or aborts, the termination event is over; storing ephemeral
-///   terminal events (like [`TerminatedByBel`]) into persistent state would create
-///   invalid temporal states on subsequent keystrokes.
+/// Decoupling transient output from retained state avoids lifetime contamination on the
+/// parser struct and ensures ephemeral termination events cannot pollute persistent
+/// memory.
 ///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
 /// [`Closed`]: Self::Closed
@@ -72,7 +65,6 @@ use tracing::Level;
 /// [`OscDrainReason`]: OscDrainReason
 /// [`OscDrainResult::undrained_bytes()`]: OscDrainResult::undrained_bytes
 /// [`OscDrainResult`]: OscDrainResult
-/// [`TerminatedByBel`]: OscDrainReason::TerminatedByBel
 /// [`trip()`]: Self::trip
 /// [`try_drain()`]: Self::try_drain
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
