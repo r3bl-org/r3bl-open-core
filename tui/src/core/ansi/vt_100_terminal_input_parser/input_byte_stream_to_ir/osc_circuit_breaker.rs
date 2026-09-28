@@ -115,69 +115,41 @@ pub enum OscCircuitBreaker {
 }
 
 impl OscCircuitBreaker {
-    /// Drains bytes from an incoming chunk of bytes while in [`Self::Open`] state.
-    ///
-    /// Scans for the two valid [`OSC`] terminators in modern terminals:
-    /// 1. `BEL` (`\x07`) -> cleanly terminates [`OSC`].
-    /// 2. 7-bit `ST` (`ESC \`, `0x1B 0x5C`) -> cleanly terminates [`OSC`] (including
-    ///    across chunk boundary if previous chunk ended in lone [`ANSI_ESC`]).
-    /// 3. Abort conditions:
-    ///    - Raw `\r` or `\n` (ECMA-48 / [`OSC`] payloads never contain raw CR/LF).
-    ///    - [`ANSI_ESC`] followed by any byte other than backslash (`\`) (starts a new
-    ///      escape sequence, aborting [`OSC`]).
-    /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
-    ///
-    /// Note that 8-bit ST (`0x9C`) is intentionally ignored for [`UTF-8`] safety; see
-    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] for details.
-    ///
-    /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or partially
-    /// consumed, or not consumed at all, along with the consumed [`ByteOffset`] (the
-    /// displacement of the scanner cursor across the chunk slice) and domain reason.
-    ///
-    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
-    /// > into:
-    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
-    /// > - `&mut`: Fresh and temporary reborrow of the enum.
-    ///
-    /// [`ANSI_ESC`]: crate::ANSI_ESC
-    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
-    /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
-    pub fn try_drain<'a>(&mut self, chunk: &'a [u8]) -> OscDrainResult<'a> {
-        let current_state = &mut *self; // Mutable reborrow.
-        match *current_state {
-            // The circuit breaker is closed, don't drain any bytes, and pass the chunk
-            // through intact as valid input bytes in the next stage.
-            Self::Closed => OscDrainResult::NotDrained(chunk),
-
-            // Resolve partial ESC from previous chunk boundary.
-            Self::OpenAwaitingSt {
-                already_drained_byte_count,
-            } => current_state.handle_awaiting_st(chunk, already_drained_byte_count),
-
-            // Drain bytes from an incoming chunk while the circuit breaker is open.
-            Self::Open {
-                already_drained_byte_count,
-            } => current_state.handle_open(chunk, already_drained_byte_count),
-        }
-    }
-
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
-    /// `initial_bytes` seeds the cumulative stream displacement vector with the offset
-    /// reached by the accumulator scanner when the runaway sequence was detected.
-    pub fn trip(&mut self, initial_bytes: ByteOffset) {
+    /// # Arguments
+    ///
+    /// - `already_drained_byte_count`: Seeds the cumulative stream displacement vector
+    ///   with the [`ByteOffset`] reached by the accumulator scanner when the runaway
+    ///   sequence was detected and purged.
+    ///
+    /// [`ByteOffset`]: crate::ByteOffset
+    pub fn trip(&mut self, already_drained_byte_count: ByteOffset) {
         *self = Self::Open {
-            already_drained_byte_count: initial_bytes,
+            already_drained_byte_count,
         };
     }
 
     /// Resets the circuit breaker to [`Self::Closed`], logs the transition at the
     /// specified [`Level`], and returns the resulting [`OscDrainResult`].
-    fn reset_and_log<'a>(
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk`: Current chunk byte slice being evaluated and classified upon resetting
+    ///   the circuit breaker.
+    /// - `level`: Tracing [`Level`] used for logging the circuit breaker reset.
+    /// - `reason`: Specific [`OscDrainReason`] for closing the circuit breaker.
+    /// - `bytes_consumed`: Scanner cursor displacement ([`ByteOffset`]) into `chunk`
+    ///   consumed by this termination or abort sequence.
+    /// - `already_drained_byte_count`: Cumulative count of bytes ([`ByteOffset`]) drained
+    ///   across chunks so far, recorded in structured diagnostic logs.
+    ///
+    /// [`ByteOffset`]: crate::ByteOffset
+    /// [`Level`]: tracing::Level
+    /// [`OscDrainReason`]: OscDrainReason
+    /// [`OscDrainResult`]: OscDrainResult
+    fn reset<'a>(
         &mut self,
         chunk: &'a [u8],
         level: Level,
@@ -210,6 +182,134 @@ impl OscCircuitBreaker {
         OscDrainResult::classify_drain(chunk, reason, bytes_consumed)
     }
 
+    /// Drains bytes from an incoming chunk of bytes while in [`Self::Open`] state.
+    ///
+    /// Scans for the two valid [`OSC`] terminators in modern terminals:
+    /// 1. `BEL` (`\x07`) -> cleanly terminates [`OSC`].
+    /// 2. 7-bit `ST` (`ESC \`, `0x1B 0x5C`) -> cleanly terminates [`OSC`] (including
+    ///    across chunk boundary if previous chunk ended in lone [`ANSI_ESC`]).
+    /// 3. Abort conditions:
+    ///    - Raw `\r` or `\n` (ECMA-48 / [`OSC`] payloads never contain raw CR/LF).
+    ///    - [`ANSI_ESC`] followed by any byte other than backslash (`\`) (starts a new
+    ///      escape sequence, aborting [`OSC`]).
+    /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
+    ///
+    /// Note that 8-bit ST (`0x9C`) is intentionally ignored for [`UTF-8`] safety; see
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] for details.
+    ///
+    /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or partially
+    /// consumed, or not consumed at all, along with the consumed [`ByteOffset`] (the
+    /// displacement of the scanner cursor across the chunk slice) and domain reason.
+    ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk`: Incoming raw byte slice read from [`stdin`] to evaluate and drain.
+    ///
+    /// [`ANSI_ESC`]: crate::ANSI_ESC
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
+    /// [`ByteOffset`]: crate::ByteOffset
+    /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`stdin`]: std::io::stdin
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
+    pub fn try_drain<'a>(&mut self, chunk: &'a [u8]) -> OscDrainResult<'a> {
+        let current_state = &mut *self; // Mutable reborrow.
+        match *current_state {
+            // The circuit breaker is closed, don't drain any bytes, and pass the chunk
+            // through intact as valid input bytes in the next stage.
+            Self::Closed => OscDrainResult::NotDrained(chunk),
+
+            // Resolve partial ESC from previous chunk boundary.
+            Self::OpenAwaitingSt {
+                already_drained_byte_count,
+            } => current_state.handle_awaiting_st(chunk, already_drained_byte_count),
+
+            // Drain bytes from an incoming chunk while the circuit breaker is open.
+            Self::Open {
+                already_drained_byte_count,
+            } => current_state.handle_open(chunk, already_drained_byte_count),
+        }
+    }
+
+    /// Handles an incoming chunk while the circuit breaker is in
+    /// [`Self::OpenAwaitingSt`].
+    ///
+    /// # Precondition: How did we get here?
+    ///
+    /// While draining a runaway [`OSC`] sequence in [`Self::Open`], the immediately
+    /// preceding chunk ended in a lone [`ANSI_ESC`] (`0x1B`). Because the chunk boundary
+    /// split the stream right after [`ESC`], the circuit breaker transitioned into
+    /// [`Self::OpenAwaitingSt`] and consumed the chunk, pausing until the first byte of
+    /// the next chunk could be inspected.
+    ///
+    /// # Resolution: What do we do now?
+    ///
+    /// Inspects the first byte of `chunk` to resolve the boundary across 3 cases:
+    /// 1. `Some(&ANSI_ST_FINAL)` (`\`): Completes the split 7-bit ST (`ESC \`) sequence
+    ///    across chunk boundaries. Consumes 1 byte (`\`), logs
+    ///    [`OscDrainReason::TerminatedAcrossBoundary`], and resets the circuit breaker to
+    ///    [`Self::Closed`].
+    /// 2. `Some(_)` (any other byte): The previous [`ESC`] was not an ST terminator, but
+    ///    started a new escape sequence or abort condition. Consumes 0 bytes from this
+    ///    chunk (`byte_offset(0)`), logs [`OscDrainReason::AbortedByNewEsc`], and resets
+    ///    to [`Self::Closed`] so normal input parsing resumes immediately with this
+    ///    chunk.
+    /// 3. `None` (empty chunk): No bytes are available yet to resolve the boundary.
+    ///    Retains [`Self::OpenAwaitingSt`] and returns [`OscDrainResult::FullyDrained`]
+    ///    to await subsequent chunk reads.
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk`: Incoming byte slice whose first byte is inspected to resolve the chunk
+    ///   boundary while in [`Self::OpenAwaitingSt`].
+    /// - `already_drained_byte_count`: Cumulative scanner cursor displacement
+    ///   ([`ByteOffset`]) drained prior to this chunk, including the trailing
+    ///   [`ANSI_ESC`] byte from the previous chunk.
+    ///
+    /// [`ANSI_ESC`]: crate::ANSI_ESC
+    /// [`ANSI_ST_FINAL`]: crate::ANSI_ST_FINAL
+    /// [`ByteOffset`]: crate::ByteOffset
+    /// [`ESC`]: crate::EscSequence
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    fn handle_awaiting_st<'a>(
+        &mut self,
+        chunk: &'a [u8],
+        already_drained_byte_count: ByteOffset,
+    ) -> OscDrainResult<'a> {
+        match chunk.first() {
+            // Completes split 7-bit ST (ESC \): consume '\' and close (see case 1 above).
+            Some(&ANSI_ST_FINAL) => self.reset(
+                chunk,
+                Level::INFO,
+                OscDrainReason::TerminatedAcrossBoundary,
+                byte_offset(1),
+                already_drained_byte_count + byte_offset(1),
+            ),
+
+            // Aborted by new escape sequence: preserve chunk intact and close (see case 2
+            // above).
+            Some(_) => self.reset(
+                chunk,
+                Level::INFO,
+                OscDrainReason::AbortedByNewEsc,
+                byte_offset(0),
+                already_drained_byte_count,
+            ),
+
+            // No bytes available yet: retain OpenAwaitingSt for next read (see case 3
+            // above).
+            None => OscDrainResult::FullyDrained {
+                reason: OscDrainReason::LoneEscAtBoundary,
+            },
+        }
+    }
+
     /// Handles an incoming chunk while the circuit breaker is in [`Self::Open`].
     ///
     /// Scans bytes linearly, checking for the safety upper bound
@@ -218,9 +318,18 @@ impl OscCircuitBreaker {
     /// [`LINE_FEED`], or unexpected escape sequences), or chunk boundaries ending in a
     /// lone [`ANSI_ESC`].
     ///
+    /// # Arguments
+    ///
+    /// - `chunk`: Incoming byte slice to scan and drain while the circuit breaker is in
+    ///   [`Self::Open`].
+    /// - `already_drained_byte_count`: Cumulative scanner cursor displacement
+    ///   ([`ByteOffset`]) already drained prior to scanning this chunk, checked against
+    ///   the safety ceiling [`MAX_OSC_DRAIN_BYTES`].
+    ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
+    /// [`ByteOffset`]: crate::ByteOffset
     /// [`CARRIAGE_RETURN`]: crate::CARRIAGE_RETURN
     /// [`LINE_FEED`]: crate::LINE_FEED
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
@@ -234,7 +343,7 @@ impl OscCircuitBreaker {
         while byte_index_in_chunk < chunk.len() {
             // Check safety ceiling.
             if already_drained_byte_count >= byte_offset(MAX_OSC_DRAIN_BYTES) {
-                return self.reset_and_log(
+                return self.reset(
                     chunk,
                     Level::WARN,
                     OscDrainReason::ExceededSafetyCeiling,
@@ -246,7 +355,7 @@ impl OscCircuitBreaker {
             match chunk[byte_index_in_chunk..] {
                 // Terminated by BEL (0x07).
                 [ANSI_BEL, ..] => {
-                    return self.reset_and_log(
+                    return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedByBel,
@@ -257,7 +366,7 @@ impl OscCircuitBreaker {
 
                 // Terminated by 7-bit ST (ESC \).
                 [ANSI_ESC, ANSI_ST_FINAL, ..] => {
-                    return self.reset_and_log(
+                    return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedBySt,
@@ -272,7 +381,7 @@ impl OscCircuitBreaker {
                 // ESC followed by non-backslash: aborts OSC string! Leave ESC for
                 // normal parsing.
                 [ANSI_ESC, _, ..] => {
-                    return self.reset_and_log(
+                    return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewEsc,
@@ -298,7 +407,7 @@ impl OscCircuitBreaker {
                 // Raw newline/CR aborts OSC syntax. Leave newline for normal
                 // parsing.
                 [CARRIAGE_RETURN | LINE_FEED, ..] => {
-                    return self.reset_and_log(
+                    return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewline,
@@ -322,42 +431,6 @@ impl OscCircuitBreaker {
 
         OscDrainResult::FullyDrained {
             reason: OscDrainReason::RunawayPayloadOngoing,
-        }
-    }
-
-    /// Handles an incoming chunk while the circuit breaker is in
-    /// [`Self::OpenAwaitingSt`].
-    ///
-    /// Resolves a lone [`ANSI_ESC`] that may have occurred at the end of the previous
-    /// chunk:
-    /// 1. It had a trailing single [`ANSI_ESC`] byte at the very end of it,
-    /// 2. The previous state was [`Self::Open`], and it transitioned into
-    ///    [`Self::OpenAwaitingSt`], i.e., this state.
-    ///
-    /// [`ANSI_ESC`]: crate::ANSI_ESC
-    fn handle_awaiting_st<'a>(
-        &mut self,
-        chunk: &'a [u8],
-        already_drained_byte_count: ByteOffset,
-    ) -> OscDrainResult<'a> {
-        match chunk.first() {
-            Some(&ANSI_ST_FINAL) => self.reset_and_log(
-                chunk,
-                Level::INFO,
-                OscDrainReason::TerminatedAcrossBoundary,
-                byte_offset(1),
-                already_drained_byte_count + byte_offset(1),
-            ),
-            Some(_) => self.reset_and_log(
-                chunk,
-                Level::INFO,
-                OscDrainReason::AbortedByNewEsc,
-                byte_offset(0),
-                already_drained_byte_count,
-            ),
-            None => OscDrainResult::FullyDrained {
-                reason: OscDrainReason::LoneEscAtBoundary,
-            },
         }
     }
 }
@@ -402,6 +475,20 @@ impl<'a> OscDrainResult<'a> {
     /// Creates an [`OscDrainResult`] classifying a drain operation as
     /// [`OscDrainResult::FullyDrained`] if `bytes_consumed == chunk.len()`, or
     /// [`OscDrainResult::PartiallyDrained`] otherwise.
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk`: Incoming byte slice to classify as fully or partially drained.
+    /// - `reason`: Specific [`OscDrainReason`] identifying the drain, termination, or
+    ///   abort outcome.
+    /// - `bytes_consumed`: Scanner cursor displacement ([`ByteOffset`]) into `chunk`
+    ///   consumed by the circuit breaker.
+    ///
+    /// [`ByteOffset`]: crate::ByteOffset
+    /// [`OscDrainReason`]: OscDrainReason
+    /// [`OscDrainResult::FullyDrained`]: OscDrainResult::FullyDrained
+    /// [`OscDrainResult::PartiallyDrained`]: OscDrainResult::PartiallyDrained
+    /// [`OscDrainResult`]: OscDrainResult
     #[must_use]
     pub fn classify_drain(
         chunk: &'a [u8],
