@@ -281,9 +281,10 @@ impl OscCircuitBreaker {
                     );
                 }
 
-                // Lone ESC at end of chunk: the 2-byte 7-bit ST (`ESC \`) sequence may
-                // be split across read chunk boundaries. Transition to OpenAwaitingSt
-                // to inspect the first byte of the next chunk.
+                // Lone ESC is the final byte of the chunk: the 2-byte 7-bit ST (`ESC \`)
+                // sequence may be split across read chunk boundaries - we don't know.
+                // Transition to OpenAwaitingSt to inspect the first byte of the next
+                // chunk.
                 [ANSI_ESC] => {
                     already_drained_byte_count += byte_offset(1);
                     *self = Self::OpenAwaitingSt {
@@ -327,7 +328,11 @@ impl OscCircuitBreaker {
     /// Handles an incoming chunk while the circuit breaker is in
     /// [`Self::OpenAwaitingSt`].
     ///
-    /// Resolves a lone [`ANSI_ESC`] that occurred at the end of the previous chunk.
+    /// Resolves a lone [`ANSI_ESC`] that may have occurred at the end of the previous
+    /// chunk:
+    /// 1. It had a trailing single [`ANSI_ESC`] byte at the very end of it,
+    /// 2. The previous state was [`Self::Open`], and it transitioned into
+    ///    [`Self::OpenAwaitingSt`], i.e., this state.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     fn handle_awaiting_st<'a>(
@@ -336,9 +341,6 @@ impl OscCircuitBreaker {
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
         match chunk.first() {
-            None => OscDrainResult::FullyDrained {
-                reason: OscDrainReason::LoneEscAtBoundary,
-            },
             Some(&ANSI_ST_FINAL) => self.reset_and_log(
                 chunk,
                 Level::INFO,
@@ -353,6 +355,9 @@ impl OscCircuitBreaker {
                 byte_offset(0),
                 already_drained_byte_count,
             ),
+            None => OscDrainResult::FullyDrained {
+                reason: OscDrainReason::LoneEscAtBoundary,
+            },
         }
     }
 }
