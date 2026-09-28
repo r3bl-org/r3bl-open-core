@@ -1,24 +1,24 @@
 {
-	"files": [
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
-			"bookmarks": [
-				{
-					"line": 220,
-					"column": 0,
-					"label": "main entry point for stdin byte processing"
-				}
-			]
-		},
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
-			"bookmarks": [
-				{
-					"line": 432,
-					"column": 12,
-					"label": "circuit braker - handle_open"
-				}
-			]
-		}
-	]
+    "files": [
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
+            "bookmarks": [
+                {
+                    "line": 220,
+                    "column": 0,
+                    "label": "[ ] main entry point for stdin byte processing"
+                }
+            ]
+        },
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
+            "bookmarks": [
+                {
+                    "line": 432,
+                    "column": 12,
+                    "label": "[x] circuit breaker - handle_open"
+                }
+            ]
+        }
+    ]
 }
