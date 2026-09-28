@@ -312,19 +312,19 @@ impl OscCircuitBreaker {
 
     /// Handles an incoming chunk while the circuit breaker is in [`Self::Open`].
     ///
-    /// Scans bytes linearly, checking for the safety upper bound
-    /// ([`MAX_OSC_DRAIN_BYTES`]), terminators ([`ANSI_BEL`] or 7-bit
-    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]), syntax aborts ([`CARRIAGE_RETURN`],
-    /// [`LINE_FEED`], or unexpected escape sequences), or chunk boundaries ending in a
-    /// lone [`ANSI_ESC`].
+    /// Scans bytes linearly, checking for the following:
+    /// - safety upper bound [`MAX_OSC_DRAIN_BYTES`],
+    /// - terminators: [`ANSI_BEL`] or 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`],
+    /// - syntax aborts: [`CARRIAGE_RETURN`], [`LINE_FEED`],
+    /// - unexpected escape sequences,
+    /// - chunk boundaries ending in a lone [`ANSI_ESC`].
     ///
     /// # Arguments
     ///
     /// - `chunk`: Incoming byte slice to scan and drain while the circuit breaker is in
     ///   [`Self::Open`].
     /// - `already_drained_byte_count`: Cumulative scanner cursor displacement
-    ///   ([`ByteOffset`]) already drained prior to scanning this chunk, checked against
-    ///   the safety ceiling [`MAX_OSC_DRAIN_BYTES`].
+    ///   ([`ByteOffset`]) already drained prior to scanning this chunk.
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ESC`]: crate::ANSI_ESC
@@ -336,45 +336,48 @@ impl OscCircuitBreaker {
     fn handle_open<'a>(
         &mut self,
         chunk: &'a [u8],
-        mut already_drained_byte_count: ByteOffset,
+        already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
-        let mut byte_index_in_chunk = 0;
+        let mut remaining = chunk;
 
-        while byte_index_in_chunk < chunk.len() {
+        while !remaining.is_empty() {
+            let bytes_consumed = byte_offset(chunk.len() - remaining.len());
+            let current_drained = already_drained_byte_count + bytes_consumed;
+
             // Check safety ceiling.
-            if already_drained_byte_count >= byte_offset(MAX_OSC_DRAIN_BYTES) {
+            if current_drained >= byte_offset(MAX_OSC_DRAIN_BYTES) {
                 return self.reset(
                     chunk,
                     Level::WARN,
                     OscDrainReason::ExceededSafetyCeiling,
-                    byte_offset(byte_index_in_chunk),
-                    already_drained_byte_count,
+                    bytes_consumed,
+                    current_drained,
                 );
             }
 
-            match chunk[byte_index_in_chunk..] {
+            match remaining {
                 // Terminated by BEL (0x07).
                 [ANSI_BEL, ..] => {
+                    let total_consumed = bytes_consumed + byte_offset(1);
                     return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedByBel,
-                        byte_offset(byte_index_in_chunk + 1),
-                        already_drained_byte_count + byte_offset(1),
+                        total_consumed,
+                        already_drained_byte_count + total_consumed,
                     );
                 }
 
                 // Terminated by 7-bit ST (ESC \).
                 [ANSI_ESC, ANSI_ST_FINAL, ..] => {
+                    let total_consumed =
+                        bytes_consumed + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN);
                     return self.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedBySt,
-                        byte_offset(
-                            byte_index_in_chunk + ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN,
-                        ),
-                        already_drained_byte_count
-                            + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN),
+                        total_consumed,
+                        already_drained_byte_count + total_consumed,
                     );
                 }
 
@@ -385,8 +388,8 @@ impl OscCircuitBreaker {
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewEsc,
-                        byte_offset(byte_index_in_chunk),
-                        already_drained_byte_count,
+                        bytes_consumed,
+                        current_drained,
                     );
                 }
 
@@ -395,9 +398,9 @@ impl OscCircuitBreaker {
                 // Transition to OpenAwaitingSt to inspect the first byte of the next
                 // chunk.
                 [ANSI_ESC] => {
-                    already_drained_byte_count += byte_offset(1);
                     *self = Self::OpenAwaitingSt {
-                        already_drained_byte_count,
+                        already_drained_byte_count: already_drained_byte_count
+                            + byte_offset(chunk.len()),
                     };
                     return OscDrainResult::FullyDrained {
                         reason: OscDrainReason::LoneEscAtBoundary,
@@ -411,22 +414,24 @@ impl OscCircuitBreaker {
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewline,
-                        byte_offset(byte_index_in_chunk),
-                        already_drained_byte_count,
+                        bytes_consumed,
+                        current_drained,
                     );
                 }
 
                 // Regular payload byte: consume and continue draining.
-                _ => {
-                    already_drained_byte_count += byte_offset(1);
-                    byte_index_in_chunk += 1;
+                [_, rest @ ..] => {
+                    remaining = rest;
                 }
+
+                [] => break,
             }
         }
 
         // Entire chunk consumed without encountering terminator or abort.
         *self = Self::Open {
-            already_drained_byte_count,
+            already_drained_byte_count: already_drained_byte_count
+                + byte_offset(chunk.len()),
         };
 
         OscDrainResult::FullyDrained {

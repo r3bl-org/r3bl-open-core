@@ -1,24 +1,24 @@
 {
-    "files": [
-        {
-            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs",
-            "bookmarks": [
-                {
-                    "line": 336,
-                    "column": 0,
-                    "label": "explore circuit breaker state machine methods"
-                }
-            ]
-        },
-        {
-            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
-            "bookmarks": [
-                {
-                    "line": 220,
-                    "column": 0,
-                    "label": "main entry point for stdin byte processing"
-                }
-            ]
-        }
-    ]
+	"files": [
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs",
+			"bookmarks": [
+				{
+					"line": 337,
+					"column": 0,
+					"label": "explore circuit breaker state machine methods"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
+			"bookmarks": [
+				{
+					"line": 220,
+					"column": 0,
+					"label": "main entry point for stdin byte processing"
+				}
+			]
+		}
+	]
 }
