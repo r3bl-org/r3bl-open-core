@@ -216,8 +216,8 @@ impl OscCircuitBreaker {
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn try_drain<'a>(&mut self, chunk: &'a [u8]) -> OscDrainResult<'a> {
-        let current_state = &mut *self; // Mutable reborrow.
-        match *current_state {
+        let breaker = &mut *self; // Mutable reborrow.
+        match *breaker {
             // The circuit breaker is closed, don't drain any bytes, and pass the chunk
             // through intact as valid input bytes in the next stage.
             Self::Closed => OscDrainResult::NotDrained(chunk),
@@ -225,12 +225,12 @@ impl OscCircuitBreaker {
             // Resolve partial ESC from previous chunk boundary.
             Self::OpenAwaitingSt {
                 already_drained_byte_count,
-            } => current_state.handle_awaiting_st(chunk, already_drained_byte_count),
+            } => breaker.handle_awaiting_st(chunk, already_drained_byte_count),
 
             // Drain bytes from an incoming chunk while the circuit breaker is open.
             Self::Open {
                 already_drained_byte_count,
-            } => current_state.handle_open(chunk, already_drained_byte_count),
+            } => breaker.handle_open(chunk, already_drained_byte_count),
         }
     }
 
@@ -261,6 +261,11 @@ impl OscCircuitBreaker {
     ///    Retains [`Self::OpenAwaitingSt`] and returns [`OscDrainResult::FullyDrained`]
     ///    to await subsequent chunk reads.
     ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
+    ///
     /// # Arguments
     ///
     /// - `chunk`: Incoming byte slice whose first byte is inspected to resolve the chunk
@@ -274,14 +279,16 @@ impl OscCircuitBreaker {
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`ESC`]: crate::EscSequence
     /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     fn handle_awaiting_st<'a>(
         &mut self,
         chunk: &'a [u8],
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
+        let breaker = &mut *self; // Mutable reborrow.
         match chunk.first() {
             // Completes split 7-bit ST (ESC \): consume '\' and close (see case 1 above).
-            Some(&ANSI_ST_FINAL) => self.reset(
+            Some(&ANSI_ST_FINAL) => breaker.reset(
                 chunk,
                 Level::INFO,
                 OscDrainReason::TerminatedAcrossBoundary,
@@ -291,7 +298,7 @@ impl OscCircuitBreaker {
 
             // Aborted by new escape sequence: preserve chunk intact and close (see case 2
             // above).
-            Some(_) => self.reset(
+            Some(_) => breaker.reset(
                 chunk,
                 Level::INFO,
                 OscDrainReason::AbortedByNewEsc,
@@ -316,6 +323,11 @@ impl OscCircuitBreaker {
     /// - unexpected escape sequences,
     /// - chunk boundaries ending in a lone [`ANSI_ESC`].
     ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
+    ///
     /// # Arguments
     ///
     /// - `chunk`: Incoming byte slice to scan and drain while the circuit breaker is in
@@ -330,11 +342,14 @@ impl OscCircuitBreaker {
     /// [`CARRIAGE_RETURN`]: crate::CARRIAGE_RETURN
     /// [`LINE_FEED`]: crate::LINE_FEED
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     fn handle_open<'a>(
         &mut self,
         chunk: &'a [u8],
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
+        let breaker = &mut *self; // Mutable reborrow.
+
         // Slice-as-cursor tracking unconsumed bytes in the incoming chunk.
         let mut remaining = chunk;
 
@@ -346,7 +361,7 @@ impl OscCircuitBreaker {
 
             // Check safety ceiling.
             if current_drained >= byte_offset(MAX_OSC_DRAIN_BYTES) {
-                return self.reset(
+                return breaker.reset(
                     chunk,
                     Level::WARN,
                     OscDrainReason::ExceededSafetyCeiling,
@@ -359,7 +374,7 @@ impl OscCircuitBreaker {
                 // Terminated by BEL (0x07).
                 [ANSI_BEL, ..] => {
                     let total_consumed = bytes_consumed + byte_offset(1);
-                    return self.reset(
+                    return breaker.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedByBel,
@@ -372,7 +387,7 @@ impl OscCircuitBreaker {
                 [ANSI_ESC, ANSI_ST_FINAL, ..] => {
                     let total_consumed =
                         bytes_consumed + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN);
-                    return self.reset(
+                    return breaker.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedBySt,
@@ -384,7 +399,7 @@ impl OscCircuitBreaker {
                 // ESC followed by non-backslash: aborts OSC string! Leave ESC for
                 // normal parsing.
                 [ANSI_ESC, _, ..] => {
-                    return self.reset(
+                    return breaker.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewEsc,
@@ -398,7 +413,7 @@ impl OscCircuitBreaker {
                 // Transition to OpenAwaitingSt to inspect the first byte of the next
                 // chunk.
                 [ANSI_ESC] => {
-                    *self = Self::OpenAwaitingSt {
+                    *breaker = Self::OpenAwaitingSt {
                         already_drained_byte_count: already_drained_byte_count
                             + byte_offset(chunk.len()),
                     };
@@ -410,7 +425,7 @@ impl OscCircuitBreaker {
                 // Raw newline/CR aborts OSC syntax. Leave newline for normal
                 // parsing.
                 [CARRIAGE_RETURN | LINE_FEED, ..] => {
-                    return self.reset(
+                    return breaker.reset(
                         chunk,
                         Level::INFO,
                         OscDrainReason::AbortedByNewline,
@@ -419,7 +434,8 @@ impl OscCircuitBreaker {
                     );
                 }
 
-                // This must be the last match arm.
+                // Fallback for non-empty slices: must come after all specific patterns
+                // above to avoid shadowing them.
                 // Regular payload byte: consume the first byte and advance the slice:
                 // - `_` matches and discards the first byte (head).
                 // - `rest @ ..` binds the rest of the slice (tail with the first byte
@@ -429,6 +445,8 @@ impl OscCircuitBreaker {
                     remaining = rest;
                 }
 
+                // Satisfies compiler exhaustiveness check for empty slices (unreachable
+                // at runtime due to the while loop condition).
                 [] => break,
             }
         }
@@ -436,7 +454,7 @@ impl OscCircuitBreaker {
         // Entire chunk swallowed as ongoing runaway payload without encountering a
         // terminator or abort. Retain Open state with the accumulated displacement to
         // continue draining subsequent chunks.
-        *self = Self::Open {
+        *breaker = Self::Open {
             already_drained_byte_count: already_drained_byte_count
                 + byte_offset(chunk.len()),
         };
