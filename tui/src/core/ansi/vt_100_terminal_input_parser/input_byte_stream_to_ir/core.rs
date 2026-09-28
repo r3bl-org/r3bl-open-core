@@ -202,8 +202,8 @@ impl InputByteStreamToIrParser {
     ///    sequences across chunk boundaries (before the enter the accumulator).
     /// 2. Parses incoming bytes into input event IR (intermediate representation)
     ///    [`VT100InputEventIR`] and stores them in the internal events queue field.
-    /// 3. Accumulates bytes (incomplete escape sequence, multi-byte UTF-8 sequences) in
-    ///    the internal accumulator field to be processed in subsequent calls.
+    /// 3. Accumulates bytes (incomplete escape sequence, multi-byte [`UTF-8`] sequences)
+    ///    in the internal accumulator field to be processed in subsequent calls.
     ///
     /// # Arguments
     ///
@@ -218,6 +218,7 @@ impl InputByteStreamToIrParser {
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     /// [`try_drain()`]: OscCircuitBreaker::try_drain
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
         // Drain runaway OSC bytes directly, buffering only any undrained bytes.
         self.accumulator.extend_from_slice(
@@ -409,11 +410,11 @@ pub const MAX_ESCAPE_SEQUENCE_LENGTH: usize = 64;
 mod test_fixtures {
     pub use super::{super::osc_circuit_breaker::OscCircuitBreaker,
                     InputByteStreamToIrParser, UnparsedBufferClassification};
-    pub use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT, ANSI_ST_FINAL, ASCII_DEL,
-                    CONTROL_ENTER, CONTROL_TAB, CSI_PREFIX, KeyState, LINE_FEED,
-                    MODIFIER_CTRL, MODIFIER_SHIFT, OSC_PREFIX, SPECIAL_DELETE_CODE,
-                    SPECIAL_END_FINAL, SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
-                    SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
+    pub use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT_TRANSPORT_ENCODING, ANSI_ST_FINAL,
+                    ASCII_DEL, CONTROL_ENTER, CONTROL_TAB, CSI_PREFIX, KeyState,
+                    LINE_FEED, MODIFIER_CTRL, MODIFIER_SHIFT, OSC_PREFIX,
+                    SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
+                    SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
                     core::ansi::{generator::{SEQ_ARROW_DOWN, SEQ_ARROW_LEFT,
                                              SEQ_ARROW_RIGHT, SEQ_ARROW_UP, SEQ_END,
                                              SEQ_HOME, csi_modified, csi_tilde, ss3},
@@ -1063,7 +1064,12 @@ mod tests_osc_and_alt_bracket {
         parser.process_incoming_bytes(&bel_seq, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
 
-        let st_seq = [OSC_PREFIX, b"11;rgb:ffff/ffff/ffff", ANSI_ST_7BIT].concat();
+        let st_seq = [
+            OSC_PREFIX,
+            b"11;rgb:ffff/ffff/ffff",
+            ANSI_ST_7BIT_TRANSPORT_ENCODING,
+        ]
+        .concat();
         parser.process_incoming_bytes(&st_seq, MaybeMore::KernelDrained);
         assert_eq!((&mut parser).collect::<Vec<_>>().len(), 0);
     }

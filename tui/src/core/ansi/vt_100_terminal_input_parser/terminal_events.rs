@@ -82,7 +82,8 @@ use super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR, VT100InputEv
 use crate::{ByteOffset, KeyState, byte_offset,
             core::ansi::constants::{ANSI_BEL, ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                    ANSI_ST_7BIT, ANSI_ST_7BIT_LEN, ASCII_DIGIT_0,
+                                    ANSI_ST_7BIT_TRANSPORT_ENCODING,
+                                    ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN, ASCII_DIGIT_0,
                                     ASCII_DIGIT_9, ASCII_QUESTION_MARK,
                                     CARRIAGE_RETURN, FOCUS_GAINED_FINAL,
                                     FOCUS_LOST_FINAL, LINE_FEED,
@@ -234,12 +235,13 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<ParsedInputEventIR> {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum OscScanResult {
     /// A complete [`OSC`] sequence was recognized and terminated by either [`ANSI_BEL`]
-    /// (`0x07`) or 7-bit [`ANSI_ST_7BIT`] (`0x1B 0x5C`). The wrapped [`ByteOffset`]
-    /// indicates the scanner cursor displacement (total bytes consumed) from the start
-    /// of the buffer through the terminator (prefix + payload + terminator).
+    /// (`0x07`) or 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`0x1B 0x5C`). The wrapped
+    /// [`ByteOffset`] indicates the scanner cursor displacement (total bytes consumed)
+    /// from the start of the buffer through the terminator (prefix + payload +
+    /// terminator).
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
-    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`OSC`]: crate::osc_codes::OscSequence
     Complete(ByteOffset),
@@ -283,7 +285,8 @@ pub enum OscScanResult {
 ///
 /// Terminal query responses (e.g., background color [`OSC`] 11, clipboard [`OSC`] 52)
 /// start with `ESC ]` (`0x1B 0x5D`), have a numeric command identifier, parameters, and
-/// terminate with either [`ANSI_BEL`] (`0x07`) or 7-bit [`ANSI_ST_7BIT`] (`0x1B 0x5C`).
+/// terminate with either [`ANSI_BEL`] (`0x07`) or 7-bit
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`0x1B 0x5C`).
 ///
 /// # Grammar & Validation Rules
 ///
@@ -297,12 +300,14 @@ pub enum OscScanResult {
 /// 2. **[`UTF-8`] Safety Note**: ECMA-48 specifies `0x9C` as an 8-bit String Terminator
 ///    (`ST`). However, in [`UTF-8`], `0x9C` is a common continuation byte (`0b1001_1100`,
 ///    used in characters like `£`, `œ`, and `✓`). Modern terminal emulators in [`UTF-8`]
-///    mode exclusively send 7-bit [`ANSI_ST_7BIT`] (`0x1B 0x5C`) or [`ANSI_BEL`]
-///    (`0x07`). This scanner intentionally does not match `0x9C` to prevent truncating
-///    [`OSC`] payloads containing valid [`UTF-8`] text.
+///    mode exclusively send 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`0x1B 0x5C`) or
+///    [`ANSI_BEL`] (`0x07`). This scanner intentionally does not match `0x9C` to prevent
+///    truncating [`OSC`] payloads containing valid [`UTF-8`] text. See
+///    [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] for full historical and transport encoding
+///    details.
 ///
 /// [`ANSI_BEL`]: crate::ANSI_BEL
-/// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
@@ -366,24 +371,27 @@ pub fn scan_osc_sequence(buffer: &[u8]) -> OscScanResult {
     }
 }
 
-/// Helper to scan for 7-bit String Terminator ([`ANSI_ST_7BIT`]) following an
-/// [`ANSI_ESC`] byte.
+/// Helper to scan for 7-bit String Terminator ([`ANSI_ST_7BIT_TRANSPORT_ENCODING`])
+/// following an [`ANSI_ESC`] byte.
 ///
 /// Returns:
-/// - [`OscScanResult::Complete`] if the sequence matches [`ANSI_ST_7BIT`].
+/// - [`OscScanResult::Complete`] if the sequence matches
+///   [`ANSI_ST_7BIT_TRANSPORT_ENCODING`].
 /// - [`OscScanResult::InvalidSyntax`] if unexpected bytes follow [`ANSI_ESC`].
 /// - `incomplete_result` if [`ANSI_ESC`] is the trailing byte in the buffer.
 ///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
-/// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
 #[inline]
 fn check_st_terminator(
     buffer: &[u8],
     byte_offset_esc: ByteOffset,
     incomplete_result: OscScanResult,
 ) -> OscScanResult {
-    if buffer[*byte_offset_esc..].starts_with(ANSI_ST_7BIT) {
-        OscScanResult::Complete(byte_offset_esc + byte_offset(ANSI_ST_7BIT_LEN))
+    if buffer[*byte_offset_esc..].starts_with(ANSI_ST_7BIT_TRANSPORT_ENCODING) {
+        OscScanResult::Complete(
+            byte_offset_esc + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN),
+        )
     } else if *byte_offset_esc + 1 < buffer.len() {
         OscScanResult::InvalidSyntax
     } else {

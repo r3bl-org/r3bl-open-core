@@ -58,8 +58,8 @@
 //!   2. The circuit breaker transitions into [`OscCircuitBreaker::Open`].
 //!   3. Subsequent incoming chunks are swallowed on-the-fly with **zero heap
 //!      allocations** and **zero emitted events** until a terminator ([`ANSI_BEL`] or
-//!      [`ANSI_ST_7BIT`]), syntax abort, or the 16 MiB [`MAX_OSC_DRAIN_BYTES`] safety
-//!      ceiling is encountered.
+//!      [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]), syntax abort, or the 16 MiB
+//!      [`MAX_OSC_DRAIN_BYTES`] safety ceiling is encountered.
 //!
 //! ```text
 //! ┌──────────────────────────────────────────────────────────────────────────────────┐
@@ -123,7 +123,7 @@
 //!   runaway [`OSC`] payloads.
 //!
 //! [`ANSI_BEL`]: crate::ANSI_BEL
-//! [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+//! [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
 //! [`ClipboardService`]: crate::ClipboardService
 //! [`copy_to_clipboard()`]: crate::copy_to_clipboard
 //! [`InputByteStreamToIrParser`]: core::InputByteStreamToIrParser

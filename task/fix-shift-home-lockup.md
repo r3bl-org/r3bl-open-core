@@ -271,7 +271,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - Define `ANSI_OSC_CLOSE_BRACKET: u8 = b']'`.
     - Define `OSC_PREFIX: &[u8] = b"\x1b]"` and `OSC_PREFIX_LEN: usize = 2`.
     - Define `ANSI_BEL: u8 = 7; // 0x07 hex` (decimal for non-printable constant).
-    - Define `ANSI_ST_7BIT: &[u8] = b"\x1b\\"`.
+    - Define `ANSI_ST_7BIT_TRANSPORT_ENCODING: &[u8] = b"\x1b\\"`.
     - Define
       `MAX_OSC_SEQUENCE_LENGTH: usize = 1_048_576; // 1 MiB (safely accommodates large payloads like OSC 52 clipboard transfers)`.
     - **Note on 8-bit ST**: Do NOT define `0x9C` as an ST terminator. In UTF-8
@@ -1406,7 +1406,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         - Refactor `OscCircuitBreaker::try_drain`:
             - Pass `byte_offset(chunk.len())` for chunk boundary / capacity.
             - Accumulate drained bytes via `ByteOffset` addition (`+ byte_offset(1)`,
-              `+ byte_offset(ANSI_ST_7BIT_LEN)`).
+              `+ byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN)`).
             - Evaluate safety ceiling via
               `drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES)`.
         - Update unit tests in `osc_circuit_breaker.rs` to pass `ByteOffset` values.

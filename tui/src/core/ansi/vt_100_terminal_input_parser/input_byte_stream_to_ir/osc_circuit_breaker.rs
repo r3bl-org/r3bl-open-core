@@ -5,8 +5,8 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT_LEN, ANSI_ST_FINAL, ByteOffset,
-            CARRIAGE_RETURN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, LINE_FEED,
+use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN, ANSI_ST_FINAL,
+            ByteOffset, CARRIAGE_RETURN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, LINE_FEED,
             MAX_OSC_DRAIN_BYTES, byte_offset};
 use std::fmt::Display;
 use tracing::Level;
@@ -59,15 +59,16 @@ pub enum OscCircuitBreaker {
     Closed,
 
     /// Circuit breaker tripped (open). Discarding bytes of an in-flight runaway [`OSC`]
-    /// sequence until a terminator ([`ANSI_BEL`] `0x07` or 7-bit [`ANSI_ST_7BIT`] `ESC
-    /// \`, `0x1B 0x5C`) or abort condition is encountered.
+    /// sequence until a terminator ([`ANSI_BEL`] `0x07` or 7-bit
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] `ESC \`, `0x1B 0x5C`) or abort condition is
+    /// encountered.
     ///
     /// Tripped from [`Self::Closed`] via [`Self::trip()`] (called by
     /// [`InputByteStreamToIrParser::process_incoming_bytes()`]). See [State Machine
     /// Lifecycle] for transitions.
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
-    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
     ///     super::InputByteStreamToIrParser::process_incoming_bytes
     /// [`OSC`]: crate::osc_codes::OscSequence
@@ -94,14 +95,14 @@ pub enum OscCircuitBreaker {
     ///
     /// The immediately preceding chunk ended in an isolated [`ANSI_ESC`] (`0x1B`). The
     /// very next incoming byte must be inspected to determine if it completes a 7-bit
-    /// string terminator [`ANSI_ST_7BIT`] (`ESC \`, bytes `0x1B 0x5C`) or aborts the
-    /// [`OSC`] sequence.
+    /// string terminator [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`ESC \`, bytes `0x1B 0x5C`)
+    /// or aborts the [`OSC`] sequence.
     ///
     /// Split across chunk boundaries by [`Self::try_drain()`]. See [State Machine
     /// Lifecycle] for transitions.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
-    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`OSC`]: crate::osc_codes::OscSequence
     /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     OpenAwaitingSt {
@@ -116,15 +117,18 @@ pub enum OscCircuitBreaker {
 impl OscCircuitBreaker {
     /// Drains bytes from an incoming chunk of bytes while in [`Self::Open`] state.
     ///
-    /// Scans for:
+    /// Scans for the two valid [`OSC`] terminators in modern terminals:
     /// 1. `BEL` (`\x07`) -> cleanly terminates [`OSC`].
-    /// 2. `ST` (`ESC \`, `0x1B 0x5C`) -> cleanly terminates [`OSC`] (including across
-    ///    chunk boundary if previous chunk ended in lone [`ANSI_ESC`]).
+    /// 2. 7-bit `ST` (`ESC \`, `0x1B 0x5C`) -> cleanly terminates [`OSC`] (including
+    ///    across chunk boundary if previous chunk ended in lone [`ANSI_ESC`]).
     /// 3. Abort conditions:
     ///    - Raw `\r` or `\n` (ECMA-48 / [`OSC`] payloads never contain raw CR/LF).
     ///    - [`ANSI_ESC`] followed by any byte other than backslash (`\`) (starts a new
     ///      escape sequence, aborting [`OSC`]).
     /// 4. Safety upper bound: cumulative drained bytes reaching [`MAX_OSC_DRAIN_BYTES`].
+    ///
+    /// Note that 8-bit ST (`0x9C`) is intentionally ignored for [`UTF-8`] safety; see
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] for details.
     ///
     /// Returns an [`OscDrainResult`] classifying whether the chunk was fully or partially
     /// consumed, or not consumed at all, along with the consumed [`ByteOffset`] (the
@@ -136,8 +140,10 @@ impl OscCircuitBreaker {
     /// > - `&mut`: Fresh and temporary reborrow of the enum.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
     /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn try_drain<'a>(&mut self, chunk: &'a [u8]) -> OscDrainResult<'a> {
         let current_state = &mut *self; // Mutable reborrow.
@@ -207,14 +213,14 @@ impl OscCircuitBreaker {
     /// Handles an incoming chunk while the circuit breaker is in [`Self::Open`].
     ///
     /// Scans bytes linearly, checking for the safety upper bound
-    /// ([`MAX_OSC_DRAIN_BYTES`]), termination sequences ([`ANSI_BEL`],
-    /// [`ANSI_ST_FINAL`]), syntax aborts ([`CARRIAGE_RETURN`], [`LINE_FEED`], or
-    /// unexpected escape sequences), or chunk boundaries ending in a lone
-    /// [`ANSI_ESC`].
+    /// ([`MAX_OSC_DRAIN_BYTES`]), terminators ([`ANSI_BEL`] or 7-bit
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]), syntax aborts ([`CARRIAGE_RETURN`],
+    /// [`LINE_FEED`], or unexpected escape sequences), or chunk boundaries ending in a
+    /// lone [`ANSI_ESC`].
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ESC`]: crate::ANSI_ESC
-    /// [`ANSI_ST_FINAL`]: crate::ANSI_ST_FINAL
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`CARRIAGE_RETURN`]: crate::CARRIAGE_RETURN
     /// [`LINE_FEED`]: crate::LINE_FEED
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
@@ -255,8 +261,11 @@ impl OscCircuitBreaker {
                         chunk,
                         Level::INFO,
                         OscDrainReason::TerminatedBySt,
-                        byte_offset(byte_index_in_chunk + ANSI_ST_7BIT_LEN),
-                        already_drained_byte_count + byte_offset(ANSI_ST_7BIT_LEN),
+                        byte_offset(
+                            byte_index_in_chunk + ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN,
+                        ),
+                        already_drained_byte_count
+                            + byte_offset(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN),
                     );
                 }
 
@@ -272,7 +281,9 @@ impl OscCircuitBreaker {
                     );
                 }
 
-                // Lone ESC at end of chunk: remember across chunk boundaries.
+                // Lone ESC at end of chunk: the 2-byte 7-bit ST (`ESC \`) sequence may
+                // be split across read chunk boundaries. Transition to OpenAwaitingSt
+                // to inspect the first byte of the next chunk.
                 [ANSI_ESC] => {
                     already_drained_byte_count += byte_offset(1);
                     *self = Self::OpenAwaitingSt {
@@ -436,16 +447,18 @@ pub enum OscDrainReason {
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     TerminatedByBel,
 
-    /// Terminated cleanly by 7-bit [`ANSI_ST_7BIT`] (`ESC \`, `0x1B 0x5C`).
+    /// Terminated cleanly by 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`ESC \`,
+    /// `0x1B 0x5C`).
     ///
-    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     TerminatedBySt,
 
-    /// Terminated cleanly by final byte of 7-bit [`ANSI_ST_7BIT`] ([`ASCII`] `\`, `0x5C`)
-    /// across a chunk boundary.
+    /// Terminated cleanly by the final byte (`\`) of a 7-bit
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] sequence (`ESC \`) whose initial
+    /// [`ANSI_ESC`] arrived at the end of the previous chunk.
     ///
-    /// [`ANSI_ST_7BIT`]: crate::ANSI_ST_7BIT
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`ANSI_ESC`]: crate::ANSI_ESC
+    /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     TerminatedAcrossBoundary,
 
     /// Aborted by an [`ANSI_ESC`] followed by a non-backslash character (starting a

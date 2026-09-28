@@ -1045,30 +1045,89 @@ pub const OSC_PREFIX_LEN: usize = OSC_PREFIX.len();
 /// [`OSC`]: crate::osc_codes::OscSequence
 pub const ANSI_BEL: u8 = 7;
 
-/// 7-bit String Terminator (ST) ([`ANSI`]): Two-byte escape sequence `ESC \` terminating
-/// [`OSC`] sequences.
-///
-/// Sequence: `ESC \` (`1B 5C` hex).
-///
-/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OSC`]: crate::osc_codes::OscSequence
-pub const ANSI_ST_7BIT: &[u8] = &[ANSI_ESC, ANSI_ST_FINAL];
-
-/// Final byte of the 7-bit String Terminator ([`ANSI_ST_7BIT`]).
+/// Final byte of the 7-bit String Terminator transport encoding
+/// ([`ANSI_ST_7BIT_TRANSPORT_ENCODING`]).
 ///
 /// Value: `92` dec, `5C` hex.
 ///
-/// Sequence: `ESC \` second byte.
+/// Sequence: `ESC \` second byte ([`ASCII`] backslash `\`).
 ///
-/// [`ANSI_ST_7BIT`]: ANSI_ST_7BIT
+/// Note that this byte is **not** a terminator on its own; it only completes a String
+/// Terminator sequence when immediately preceded by [`ANSI_ESC`] (`0x1B`).
+///
+/// [`ANSI_ESC`]: ANSI_ESC
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: ANSI_ST_7BIT_TRANSPORT_ENCODING
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 pub const ANSI_ST_FINAL: u8 = b'\\';
 
-/// Length of the 7-bit String Terminator ([`ANSI_ST_7BIT`]).
+/// 7-bit transport encoding of the String Terminator (ST) ([`ANSI`]): Two-byte escape
+/// sequence `ESC \` (`0x1B 0x5C`) used to terminate [`OSC`] sequences.
+///
+/// Value: `ESC \` (`1B 5C` hex).
+///
+/// Sequence: `ESC \` (two 7-bit [`ASCII`] bytes).
+///
+/// # Why is it called "7-bit" when it is 2 bytes long?
+///
+/// In terminal standards ([ECMA-48] / [ISO 6429]), the term **"7-bit"** does not refer to
+/// the sequence length or size in bits; it refers to the **communication channel /
+/// transport encoding**:
+///
+/// 1. **Historical Origin (7-Bit Serial Hardware Constraints)**: In early computing
+///    (1960s-1980s), serial lines (RS-232) and teletypes frequently used 7 data bits with
+///    parity (such as `7E1`). The 8th bit was overwritten by [`UART`] hardware for parity
+///    checks or stripped to `0`. [ECMA-48] defined the primary C1 control code for String
+///    Terminator (`ST`) as the single byte `0x9C` (`1001 1100` in binary). Because its
+///    8th bit is set, `0x9C` could not travel across 7-bit links without corruption. To
+///    solve this, [ECMA-48] defined an escape mapping: any C1 code `0x80 + X` maps to
+///    [`ANSI_ESC`] (`0x1B`) followed by `0x40 + X`. For `ST` (`0x9C` = `0x80 + 0x1C`),
+///    this yielded [`ANSI_ESC`] followed by `0x5C` (`\`): `0x1B 0x5C` (`ESC \`). Both
+///    bytes are `<= 0x7F` and 7-bit clean.
+///
+/// 2. **The Modern Reality (8-Bit Clean Channels)**: Today, hardware serial lines are
+///    largely obsolete. Modern operating systems, Linux PTYs, Unix domain sockets, and
+///    TCP streams are fully 8-bit clean (they never strip bit 7).
+///
+/// 3. **Why Modern Terminals Never Reverted to Single-Byte `0x9C` ([`UTF-8`] Safety)**:
+///    Why didn't modern terminal emulators ditch the 2-byte `ESC \` sequence and return
+///    to the single-byte `0x9C`? Because of [`UTF-8`]:
+///    - In [`UTF-8`], every byte in the range `0x80`..=`0xBF` is a continuation byte
+///      (`0b10xx_xxxx`).
+///    - `0x9C` (`0b1001_1100`) falls directly in the middle of this continuation range.
+///    - Common Unicode characters like `✓` (`0xE2 0x9C 0x93`) and `£` (`0xC2 0x9C`)
+///      contain `0x9C` as their continuation byte.
+///    - If modern terminal emulators treated `0x9C` as a control character, any [`OSC`]
+///      payload (such as clipboard text in [`OSC`] 52 or window titles in [`OSC`] 0/2)
+///      containing `✓` or `£` would be prematurely truncated or cause parser corruption.
+///    - By contrast, 7-bit [`ASCII`] characters (`0x00`..=`0x7F`) have the unique
+///      property in [`UTF-8`] that they **never** appear inside multi-byte sequences.
+///      They are unconditionally unambiguous.
+///
+/// # The Only Two Valid Terminators in Modern Terminals
+///
+/// Standard [`OSC`] sequences terminate in only one of two ways:
+/// - [`ANSI_BEL`] (`0x07`, 1 byte).
+/// - 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`ESC \`, 2 bytes).
+///
+/// [`UART`]: https://en.wikipedia.org/wiki/UART
+/// [`ANSI_BEL`]: ANSI_BEL
+/// [`ANSI_ESC`]: ANSI_ESC
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [ECMA-48]: https://en.wikipedia.org/wiki/ECMA-48
+/// [ISO 6429]: https://en.wikipedia.org/wiki/ISO/IEC_6429
+pub const ANSI_ST_7BIT_TRANSPORT_ENCODING: &[u8] = &[ANSI_ESC, ANSI_ST_FINAL];
+
+/// Length of the 7-bit String Terminator transport encoding
+/// ([`ANSI_ST_7BIT_TRANSPORT_ENCODING`]).
 ///
 /// Value: `2` bytes (`ESC \`).
 ///
-/// [`ANSI_ST_7BIT`]: ANSI_ST_7BIT
-pub const ANSI_ST_7BIT_LEN: usize = ANSI_ST_7BIT.len();
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: ANSI_ST_7BIT_TRANSPORT_ENCODING
+pub const ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN: usize =
+    ANSI_ST_7BIT_TRANSPORT_ENCODING.len();
 
 /// Maximum allowed length in bytes for an in-flight [`OSC`] sequence.
 ///
@@ -1084,12 +1143,12 @@ pub const MAX_OSC_SEQUENCE_LENGTH: usize = 1_048_576;
 ///
 /// Prevents an infinite draining loop if corrupted or hostile input streams emit an
 /// unterminated payload that never encounters [`ANSI_BEL`] (`0x07`) or 7-bit
-/// [`ANSI_ST_7BIT`] (`0x1B 0x5C`).
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`0x1B 0x5C`).
 ///
 /// Value: `16_777_216` bytes (16 MiB).
 ///
 /// [`ANSI_BEL`]: ANSI_BEL
-/// [`ANSI_ST_7BIT`]: ANSI_ST_7BIT
+/// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: ANSI_ST_7BIT_TRANSPORT_ENCODING
 /// [`OSC`]: crate::osc_codes::OscSequence
 pub const MAX_OSC_DRAIN_BYTES: usize = 16_777_216;
 
@@ -1349,8 +1408,8 @@ mod tests {
         assert_eq!(OSC_PREFIX, b"\x1b]");
         assert_eq!(OSC_PREFIX_LEN, 2);
         assert_eq!(ANSI_BEL, 7);
-        assert_eq!(ANSI_ST_7BIT, b"\x1b\\");
-        assert_eq!(ANSI_ST_7BIT_LEN, 2);
+        assert_eq!(ANSI_ST_7BIT_TRANSPORT_ENCODING, b"\x1b\\");
+        assert_eq!(ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN, 2);
         assert_eq!(ANSI_ST_FINAL, b'\\');
         assert_eq!(ASCII_QUESTION_MARK, b'?');
         assert_eq!(MAX_OSC_SEQUENCE_LENGTH, 1_048_576);
