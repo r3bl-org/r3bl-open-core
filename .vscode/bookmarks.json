@@ -14,7 +14,7 @@
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
 			"bookmarks": [
 				{
-					"line": 407,
+					"line": 441,
 					"column": 12,
 					"label": "circuit braker - handle_open"
 				}

@@ -29,8 +29,38 @@ use tracing::Level;
 /// | [`Open`]           | Terminator or syntax abort          | [`try_drain()`]   | [`Closed`]         |
 /// | [`OpenAwaitingSt`] | Resolving byte completes or aborts  | [`try_drain()`]   | [`Closed`]         |
 ///
+/// # Architecture: Retained State vs. Transient Transition Output
+///
+/// It is a good idea to separate transitive state transition outputs from retained memory
+/// (states). This is why this module intentionally separates three related concepts into
+/// dedicated types:
+///
+/// 1. **Retained State ([`OscCircuitBreaker`])**: The persistent state machine stored
+///    inside [`InputByteStreamToIrParser`]. It tracks memory across time and I/O reads.
+///    It is strictly `'static` and lifetime-free so it does not borrow from temporary
+///    input buffers.
+/// 2. **Transient Transition Output ([`OscDrainResult`])**: The ephemeral result emitted
+///    by [`try_drain()`]. It borrows slice lifetime `'a` from the current read chunk to
+///    partition unconsumed bytes ([`OscDrainResult::undrained_bytes()`]) back into the
+///    parser accumulator. It is consumed and dropped within a single statement.
+/// 3. **Protocol Diagnostics ([`OscDrainReason`])**: A lifetime-free domain enum
+///    specifying *why* the drain stopped or transitioned. It implements [`Display`] for
+///    structured tracing logs and metrics without coupling to byte slices.
+///
+/// **Why mixing output with state is avoided:**
+/// - **Rust Lifetime Contamination**: If the persistent state machine held the transient
+///   output or borrowed slices, [`InputByteStreamToIrParser`] would be forced to carry
+///   the temporary read buffer's lifetime `'a`, making it impossible to reuse read
+///   buffers across event loop iterations.
+/// - **Making Illegal States Unrepresentable**: Retained state represents what the
+///   machine *is* between reads ([`Closed`], [`Open`], [`OpenAwaitingSt`]). Once a
+///   sequence terminates or aborts, the termination event is over; storing ephemeral
+///   terminal events (like [`TerminatedByBel`]) into persistent state would create
+///   invalid temporal states on subsequent keystrokes.
+///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
 /// [`Closed`]: Self::Closed
+/// [`Display`]: std::fmt::Display
 /// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
 ///     crate::core::ansi::vt_100_terminal_input_parser::input_byte_stream_to_ir::InputByteStreamToIrParser::process_incoming_bytes
 /// [`InputByteStreamToIrParser`]:
@@ -39,6 +69,10 @@ use tracing::Level;
 /// [`Open`]: Self::Open
 /// [`OpenAwaitingSt`]: Self::OpenAwaitingSt
 /// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OscDrainReason`]: OscDrainReason
+/// [`OscDrainResult::undrained_bytes()`]: OscDrainResult::undrained_bytes
+/// [`OscDrainResult`]: OscDrainResult
+/// [`TerminatedByBel`]: OscDrainReason::TerminatedByBel
 /// [`trip()`]: Self::trip
 /// [`try_drain()`]: Self::try_drain
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
