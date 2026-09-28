@@ -126,7 +126,7 @@
 //! [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
 //! [`ClipboardService`]: crate::ClipboardService
 //! [`copy_to_clipboard()`]: crate::copy_to_clipboard
-//! [`InputByteStreamToIrParser`]: core::InputByteStreamToIrParser
+//! [`InputByteStreamToIrParser`]: parser::InputByteStreamToIrParser
 //! [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
 //! [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
 //! [`Osc52Clipboard`]: crate::Osc52Clipboard
@@ -139,16 +139,16 @@
 //! [`SystemClipboard`]: crate::SystemClipboard
 //! [`try_parse_input_event()`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-//! [`UnparsedBufferClassification`]: core::UnparsedBufferClassification
+//! [`UnparsedBufferClassification`]: parser::UnparsedBufferClassification
 //! [`VT100InputEventIR::Ignored`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Ignored
 //! [`VT100InputEventIR`]: super::VT100InputEventIR
 
 // Private in production, public for docs/tests (enables rustdoc links to submodules).
 #[cfg(any(test, doc))]
-pub mod core;
+pub mod parser;
 #[cfg(not(any(test, doc)))]
-mod core;
+mod parser;
 
 #[cfg(any(test, doc))]
 pub mod osc_circuit_breaker;
@@ -156,5 +156,5 @@ pub mod osc_circuit_breaker;
 mod osc_circuit_breaker;
 
 // Public re-exports (barrel export pattern).
-pub use core::*;
 pub use osc_circuit_breaker::*;
+pub use parser::*;

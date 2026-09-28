@@ -1317,7 +1317,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
               `DEBUG_TUI_SHOW_DIRECT_TO_ANSI`.
 
 - [x] **Phase 11.3: Structured Tracing & Rustdoc Updates**:
-    - Update rustdoc comments in `core.rs` detailing the two-stage defense:
+    - Update rustdoc comments in `parser.rs` detailing the two-stage defense:
         1. Bounded accumulation (1 MiB `MAX_OSC_SEQUENCE_LENGTH`).
         2. Zero-allocation streaming drain (`OscCircuitBreaker::Open`).
     - Add structured tracing logs for drain entry and drain completion under
@@ -1345,7 +1345,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       to
       `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`.
     - Move `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs` to
-      `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`,
+      `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`,
       renaming `StatefulInputParser` to `InputByteStreamToIrParser` and providing a
       compatibility type alias
       `pub type StatefulInputParser = InputByteStreamToIrParser;`.
@@ -1410,7 +1410,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Evaluate safety ceiling via
               `drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES)`.
         - Update unit tests in `osc_circuit_breaker.rs` to pass `ByteOffset` values.
-    - In `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`:
         - Update call site in `InputByteStreamToIrParser::advance` to pass
           `byte_offset(self.accumulator.len())` to `trip()`.
 
@@ -1454,7 +1454,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/mod.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`

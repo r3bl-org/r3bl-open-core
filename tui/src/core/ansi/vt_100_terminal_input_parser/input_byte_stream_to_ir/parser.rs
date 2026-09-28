@@ -211,6 +211,11 @@ impl InputByteStreamToIrParser {
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
     ///   [`MaybeMore`] for details.
     ///
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the struct in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the struct.
+    ///
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`MioPollWorker`]:
     ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
@@ -219,16 +224,20 @@ impl InputByteStreamToIrParser {
     /// [`stdin`]: std::io::stdin
     /// [`try_drain()`]: OscCircuitBreaker::try_drain
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+    /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
+        let parser = &mut *self; // Mutable reborrow.
+
         // Drain runaway OSC bytes directly, buffering only any undrained bytes.
-        self.accumulator.extend_from_slice(
-            self.osc_circuit_breaker
+        parser.accumulator.extend_from_slice(
+            parser
+                .osc_circuit_breaker
                 .try_drain(read_buffer)
                 .undrained_bytes(),
         );
 
-        while !self.accumulator.is_empty() {
-            match try_parse_input_event(&self.accumulator, maybe_more) {
+        while !parser.accumulator.is_empty() {
+            match try_parse_input_event(&parser.accumulator, maybe_more) {
                 Some(ParsedInputEventIR {
                     event,
                     bytes_consumed,
@@ -242,12 +251,12 @@ impl InputByteStreamToIrParser {
                         break;
                     }
                     if event != VT100InputEventIR::Ignored {
-                        self.internal_events.push_back(event);
+                        parser.internal_events.push_back(event);
                     }
-                    self.accumulator.drain(..consumed);
+                    parser.accumulator.drain(..consumed);
                 }
                 None => {
-                    match self.classify_unparsed_buffer() {
+                    match parser.classify_unparsed_buffer() {
                         UnparsedBufferClassification::Incomplete => {
                             // Incomplete sequence: await more bytes from subsequent
                             // reads.
@@ -259,18 +268,19 @@ impl InputByteStreamToIrParser {
                                 tracing::warn! {
                                     message = "InputByteStreamToIrParser::process_incoming_bytes",
                                     status = "discarding unrecognized/malformed escape sequence",
-                                    discarded_hex = %format!("{:02X?}", self.accumulator),
-                                    discarded_str = %String::from_utf8_lossy(&self.accumulator),
-                                    buffer_len = self.accumulator.len(),
+                                    discarded_hex = %format!("{:02X?}", parser.accumulator),
+                                    discarded_str = %String::from_utf8_lossy(&parser.accumulator),
+                                    buffer_len = parser.accumulator.len(),
                                 };
                             });
-                            self.accumulator.clear();
+                            parser.accumulator.clear();
                             break;
                         }
                         UnparsedBufferClassification::RunawayOsc => {
-                            self.osc_circuit_breaker
-                                .trip(byte_offset(self.accumulator.len()));
-                            self.accumulator.clear();
+                            parser
+                                .osc_circuit_breaker
+                                .trip(byte_offset(parser.accumulator.len()));
+                            parser.accumulator.clear();
                             break;
                         }
                     }
@@ -302,9 +312,11 @@ impl InputByteStreamToIrParser {
     /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
     #[must_use]
     pub fn classify_unparsed_buffer(&self) -> UnparsedBufferClassification {
+        let parser = self; // Alias for readability.
+
         // 1. OSC sequence check (1 MiB threshold).
-        if self.accumulator.starts_with(OSC_PREFIX) {
-            return match scan_osc_sequence(&self.accumulator) {
+        if parser.accumulator.starts_with(OSC_PREFIX) {
+            return match scan_osc_sequence(&parser.accumulator) {
                 OscScanResult::Runaway => UnparsedBufferClassification::RunawayOsc,
                 OscScanResult::IncompleteDigits | OscScanResult::IncompletePayload => {
                     UnparsedBufferClassification::Incomplete
@@ -316,9 +328,9 @@ impl InputByteStreamToIrParser {
         }
 
         // 2. Completed CSI sequence that could not be parsed.
-        if self.accumulator.starts_with(CSI_PREFIX)
-            && self.accumulator.len() >= CSI_MIN_LEN
-            && self.accumulator[CSI_PREFIX_LEN..]
+        if parser.accumulator.starts_with(CSI_PREFIX)
+            && parser.accumulator.len() >= CSI_MIN_LEN
+            && parser.accumulator[CSI_PREFIX_LEN..]
                 .iter()
                 .any(|b| (CSI_FINAL_BYTE_MIN..=CSI_FINAL_BYTE_MAX).contains(b))
         {
@@ -326,14 +338,14 @@ impl InputByteStreamToIrParser {
         }
 
         // 3. Completed SS3 sequence that could not be parsed.
-        if self.accumulator.starts_with(SS3_PREFIX)
-            && self.accumulator.len() >= SS3_SEQ_LEN
+        if parser.accumulator.starts_with(SS3_PREFIX)
+            && parser.accumulator.len() >= SS3_SEQ_LEN
         {
             return UnparsedBufferClassification::MalformedSequence;
         }
 
         // 4. Safety fallback for non-OSC sequences exceeding 64 bytes.
-        if self.accumulator.len() >= MAX_ESCAPE_SEQUENCE_LENGTH {
+        if parser.accumulator.len() >= MAX_ESCAPE_SEQUENCE_LENGTH {
             return UnparsedBufferClassification::MalformedSequence;
         }
 

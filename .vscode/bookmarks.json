@@ -1,10 +1,10 @@
 {
     "files": [
         {
-            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs",
             "bookmarks": [
                 {
-                    "line": 220,
+                    "line": 227,
                     "column": 0,
                     "label": "[ ] main entry point for stdin byte processing"
                 }
