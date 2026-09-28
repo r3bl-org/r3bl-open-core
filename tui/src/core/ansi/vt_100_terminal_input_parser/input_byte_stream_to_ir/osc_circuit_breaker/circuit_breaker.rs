@@ -31,9 +31,12 @@ use tracing::Level;
 ///
 /// # Architecture: Retained State vs. Transient Transition Output
 ///
-/// It is a good idea to separate ephemeral state transition outputs from retained memory
-/// (states). This is why this module intentionally separates retained state machine
-/// memory from transient transition outputs across three dedicated types:
+/// It is a good idea to separate outputs (ephemeral state transition) from retained
+/// memory (states). Decoupling transient output from retained state avoids lifetime
+/// contamination on the parser struct and ensures ephemeral termination events cannot
+/// pollute persistent memory.
+///
+/// We accomplish this using three dedicated types:
 ///
 /// 1. **Retained State ([`OscCircuitBreaker`])**: The persistent state machine stored
 ///    inside [`InputByteStreamToIrParser`]. It tracks memory across time and I/O reads.
@@ -46,10 +49,6 @@ use tracing::Level;
 /// 3. **Protocol Diagnostics ([`OscDrainReason`])**: A lifetime-free domain enum
 ///    specifying *why* the drain stopped or transitioned. It implements [`Display`] for
 ///    structured tracing logs and metrics without coupling to byte slices.
-///
-/// Decoupling transient output from retained state avoids lifetime contamination on the
-/// parser struct and ensures ephemeral termination events cannot pollute persistent
-/// memory.
 ///
 /// [`ANSI_ESC`]: crate::ANSI_ESC
 /// [`Closed`]: Self::Closed
