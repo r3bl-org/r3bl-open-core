@@ -114,7 +114,7 @@ pub enum OscCircuitBreaker {
 }
 
 impl OscCircuitBreaker {
-    /// Drains bytes from an incoming chunk while in [`Self::Open`].
+    /// Drains bytes from an incoming chunk of bytes while in [`Self::Open`] state.
     ///
     /// Scans for:
     /// 1. `BEL` (`\x07`) -> cleanly terminates [`OSC`].
@@ -130,7 +130,10 @@ impl OscCircuitBreaker {
     /// consumed, or not consumed at all, along with the consumed [`ByteOffset`] (the
     /// displacement of the scanner cursor across the chunk slice) and domain reason.
     ///
-    /// > For more info on mutable reborrows, read this [article].
+    /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
+    /// > into:
+    /// > - `*self`: Dereference the reference to access the enum in place (in memory).
+    /// > - `&mut`: Fresh and temporary reborrow of the enum.
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
@@ -141,17 +144,17 @@ impl OscCircuitBreaker {
         match *current_state {
             // The circuit breaker is closed, don't drain any bytes, and pass the chunk
             // through intact as valid input bytes in the next stage.
-            Self::Closed => OscDrainResult::NoDrain(chunk),
-
-            // Drain bytes from an incoming chunk while the circuit breaker is open.
-            Self::Open {
-                already_drained_byte_count,
-            } => current_state.handle_open(chunk, already_drained_byte_count),
+            Self::Closed => OscDrainResult::NotDrained(chunk),
 
             // Resolve partial ESC from previous chunk boundary.
             Self::OpenAwaitingSt {
                 already_drained_byte_count,
             } => current_state.handle_awaiting_st(chunk, already_drained_byte_count),
+
+            // Drain bytes from an incoming chunk while the circuit breaker is open.
+            Self::Open {
+                already_drained_byte_count,
+            } => current_state.handle_open(chunk, already_drained_byte_count),
         }
     }
 
@@ -275,7 +278,7 @@ impl OscCircuitBreaker {
                     *self = Self::OpenAwaitingSt {
                         already_drained_byte_count,
                     };
-                    return OscDrainResult::FullDrain {
+                    return OscDrainResult::FullyDrained {
                         reason: OscDrainReason::LoneEscAtBoundary,
                     };
                 }
@@ -305,7 +308,7 @@ impl OscCircuitBreaker {
             already_drained_byte_count,
         };
 
-        OscDrainResult::FullDrain {
+        OscDrainResult::FullyDrained {
             reason: OscDrainReason::RunawayPayloadOngoing,
         }
     }
@@ -322,7 +325,7 @@ impl OscCircuitBreaker {
         already_drained_byte_count: ByteOffset,
     ) -> OscDrainResult<'a> {
         match chunk.first() {
-            None => OscDrainResult::FullDrain {
+            None => OscDrainResult::FullyDrained {
                 reason: OscDrainReason::LoneEscAtBoundary,
             },
             Some(&ANSI_ST_FINAL) => self.reset_and_log(
@@ -348,15 +351,15 @@ impl OscCircuitBreaker {
 ///
 /// # Coordinate Semantics
 ///
-/// In [`OscDrainResult::PartialDrain`], `bytes_consumed` is typed as [`ByteOffset`]
+/// In [`OscDrainResult::PartiallyDrained`], `bytes_consumed` is typed as [`ByteOffset`]
 /// because it designates **scanner cursor displacement** into the current chunk slice:
-/// - In [`OscDrainResult::NoDrain`], zero bytes were consumed because the circuit breaker
-///   was closed.
-/// - In [`OscDrainResult::FullDrain`], the entire chunk slice was consumed by the circuit
-///   breaker, leaving zero remaining bytes for normal input parsing.
-/// - In [`OscDrainResult::PartialDrain`], the displacement serves as the slicing offset
-///   where the stream cursor stopped draining and where normal input parsing must resume
-///   (`&chunk[*bytes_consumed..]`).
+/// - In [`OscDrainResult::NotDrained`], zero bytes were consumed because the circuit
+///   breaker was closed.
+/// - In [`OscDrainResult::FullyDrained`], the entire chunk slice was consumed by the
+///   circuit breaker, leaving zero remaining bytes for normal input parsing.
+/// - In [`OscDrainResult::PartiallyDrained`], the displacement serves as the slicing
+///   offset where the stream cursor stopped draining and where normal input parsing must
+///   resume (`&chunk[*bytes_consumed..]`).
 ///
 /// [`ByteOffset`]: crate::ByteOffset
 /// [`OSC`]: crate::osc_codes::OscSequence
@@ -364,15 +367,15 @@ impl OscCircuitBreaker {
 pub enum OscDrainResult<'a> {
     /// Zero bytes were consumed by the circuit breaker (circuit breaker was closed). The
     /// entire chunk must be processed as normal input.
-    NoDrain(&'a [u8]),
+    NotDrained(&'a [u8]),
 
     /// The entire chunk was consumed by the circuit breaker. There are zero remaining
     /// bytes for normal input parsing.
-    FullDrain { reason: OscDrainReason },
+    FullyDrained { reason: OscDrainReason },
 
     /// The chunk was partially consumed. Remaining bytes starting at `bytes_consumed`
     /// must be processed as normal input.
-    PartialDrain {
+    PartiallyDrained {
         undrained_bytes: &'a [u8],
         bytes_consumed: ByteOffset,
         reason: OscDrainReason,
@@ -381,8 +384,8 @@ pub enum OscDrainResult<'a> {
 
 impl<'a> OscDrainResult<'a> {
     /// Creates an [`OscDrainResult`] classifying a drain operation as
-    /// [`OscDrainResult::FullDrain`] if `bytes_consumed == chunk.len()`, or
-    /// [`OscDrainResult::PartialDrain`] otherwise.
+    /// [`OscDrainResult::FullyDrained`] if `bytes_consumed == chunk.len()`, or
+    /// [`OscDrainResult::PartiallyDrained`] otherwise.
     #[must_use]
     pub fn classify_drain(
         chunk: &'a [u8],
@@ -391,9 +394,9 @@ impl<'a> OscDrainResult<'a> {
     ) -> Self {
         let chunk_len = byte_offset(chunk.len());
         if bytes_consumed == chunk_len {
-            Self::FullDrain { reason }
+            Self::FullyDrained { reason }
         } else {
-            Self::PartialDrain {
+            Self::PartiallyDrained {
                 undrained_bytes: &chunk[bytes_consumed.as_usize()..],
                 bytes_consumed,
                 reason,
@@ -403,15 +406,15 @@ impl<'a> OscDrainResult<'a> {
 
     /// Returns the sub-slice of `chunk` that was not consumed by the circuit breaker.
     ///
-    /// - [`Self::NoDrain`]: Returns `chunk` intact.
-    /// - [`Self::FullDrain`]: Returns an empty slice `&[]`.
-    /// - [`Self::PartialDrain`]: Returns `undrained_bytes`.
+    /// - [`Self::NotDrained`]: Returns `chunk` intact.
+    /// - [`Self::FullyDrained`]: Returns an empty slice `&[]`.
+    /// - [`Self::PartiallyDrained`]: Returns `undrained_bytes`.
     #[must_use]
     pub fn undrained_bytes(&self) -> &'a [u8] {
         match *self {
-            Self::NoDrain(chunk) => chunk,
-            Self::FullDrain { .. } => &[],
-            Self::PartialDrain {
+            Self::NotDrained(chunk) => chunk,
+            Self::FullyDrained { .. } => &[],
+            Self::PartiallyDrained {
                 undrained_bytes, ..
             } => undrained_bytes,
         }
@@ -548,7 +551,7 @@ mod tests {
         );
         assert_eq!(
             full,
-            OscDrainResult::FullDrain {
+            OscDrainResult::FullyDrained {
                 reason: OscDrainReason::RunawayPayloadOngoing,
             }
         );
@@ -561,7 +564,7 @@ mod tests {
         );
         assert_eq!(
             partial,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"45",
                 bytes_consumed: byte_offset(3),
                 reason: OscDrainReason::TerminatedByBel,
@@ -574,17 +577,20 @@ mod tests {
     fn test_osc_drain_result_undrained_bytes() {
         let chunk = b"abcdef";
 
-        // NoDrain: returns entire chunk.
-        assert_eq!(OscDrainResult::NoDrain(chunk).undrained_bytes(), b"abcdef");
+        // NotDrained: returns entire chunk.
+        assert_eq!(
+            OscDrainResult::NotDrained(chunk).undrained_bytes(),
+            b"abcdef"
+        );
 
-        // FullDrain: returns empty slice.
-        let full = OscDrainResult::FullDrain {
+        // FullyDrained: returns empty slice.
+        let full = OscDrainResult::FullyDrained {
             reason: OscDrainReason::RunawayPayloadOngoing,
         };
         assert_eq!(full.undrained_bytes(), b"");
 
-        // PartialDrain: returns slice starting at bytes_consumed.
-        let partial = OscDrainResult::PartialDrain {
+        // PartiallyDrained: returns slice starting at bytes_consumed.
+        let partial = OscDrainResult::PartiallyDrained {
             undrained_bytes: b"cdef",
             bytes_consumed: byte_offset(2),
             reason: OscDrainReason::TerminatedByBel,
@@ -603,7 +609,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"trailing",
                 bytes_consumed: byte_offset(8),
                 reason: OscDrainReason::TerminatedByBel,
@@ -622,7 +628,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"trailing",
                 bytes_consumed: byte_offset(9),
                 reason: OscDrainReason::TerminatedBySt,
@@ -642,7 +648,7 @@ mod tests {
         let result1 = breaker.try_drain(chunk1);
         assert_eq!(
             result1,
-            OscDrainResult::FullDrain {
+            OscDrainResult::FullyDrained {
                 reason: OscDrainReason::LoneEscAtBoundary,
             }
         );
@@ -659,7 +665,7 @@ mod tests {
         let result2 = breaker.try_drain(chunk2);
         assert_eq!(
             result2,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"trailing",
                 bytes_consumed: byte_offset(1),
                 reason: OscDrainReason::TerminatedAcrossBoundary,
@@ -679,7 +685,7 @@ mod tests {
         let result1 = breaker.try_drain(chunk1);
         assert_eq!(
             result1,
-            OscDrainResult::FullDrain {
+            OscDrainResult::FullyDrained {
                 reason: OscDrainReason::LoneEscAtBoundary,
             }
         );
@@ -690,7 +696,7 @@ mod tests {
         let result2 = breaker.try_drain(chunk2);
         assert_eq!(
             result2,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"[A",
                 bytes_consumed: byte_offset(0),
                 reason: OscDrainReason::AbortedByNewEsc,
@@ -709,7 +715,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"\nrest",
                 bytes_consumed: byte_offset(7),
                 reason: OscDrainReason::AbortedByNewline,
@@ -728,7 +734,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::PartialDrain {
+            OscDrainResult::PartiallyDrained {
                 undrained_bytes: b"more_data",
                 bytes_consumed: byte_offset(0),
                 reason: OscDrainReason::ExceededSafetyCeiling,
@@ -747,7 +753,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::FullDrain {
+            OscDrainResult::FullyDrained {
                 reason: OscDrainReason::RunawayPayloadOngoing,
             }
         );
@@ -769,7 +775,7 @@ mod tests {
         let result = breaker.try_drain(chunk);
         assert_eq!(
             result,
-            OscDrainResult::FullDrain {
+            OscDrainResult::FullyDrained {
                 reason: OscDrainReason::TerminatedByBel,
             }
         );
@@ -784,14 +790,14 @@ mod tests {
         // Non-empty chunk preserves all bytes for normal parsing.
         let chunk = b"regular_input_bytes";
         let result = breaker.try_drain(chunk);
-        assert_eq!(result, OscDrainResult::NoDrain(chunk));
+        assert_eq!(result, OscDrainResult::NotDrained(chunk));
         assert_eq!(result.undrained_bytes(), b"regular_input_bytes");
         assert_eq!(breaker, OscCircuitBreaker::Closed);
 
-        // Empty chunk also returns NoDrain with zero bytes consumed.
+        // Empty chunk also returns NotDrained with zero bytes consumed.
         let empty_chunk = b"";
         let result_empty = breaker.try_drain(empty_chunk);
-        assert_eq!(result_empty, OscDrainResult::NoDrain(empty_chunk));
+        assert_eq!(result_empty, OscDrainResult::NotDrained(empty_chunk));
         assert_eq!(result_empty.undrained_bytes(), b"");
         assert_eq!(breaker, OscCircuitBreaker::Closed);
     }

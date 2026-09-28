@@ -1,22 +1,17 @@
 {
 	"files": [
 		{
-			"path": "tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs",
-			"bookmarks": [
-				{
-					"line": 70,
-					"column": 0,
-					"label": "come back to this after MaybeMore is done"
-				}
-			]
-		},
-		{
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs",
 			"bookmarks": [
 				{
-					"line": 113,
+					"line": 141,
 					"column": 0,
 					"label": "explore circuit breaker state machine methods"
+				},
+				{
+					"line": 275,
+					"column": 0,
+					"label": "lone esc (ST, 7bit, 8bit handling)"
 				}
 			]
 		},
@@ -24,8 +19,8 @@
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/core.rs",
 			"bookmarks": [
 				{
-					"line": 208,
-					"column": 4,
+					"line": 220,
+					"column": 0,
 					"label": "main entry point for stdin byte processing"
 				}
 			]

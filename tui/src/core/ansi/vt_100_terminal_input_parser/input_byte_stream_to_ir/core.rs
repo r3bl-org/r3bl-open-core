@@ -189,12 +189,23 @@ impl Default for InputByteStreamToIrParser {
 }
 
 impl InputByteStreamToIrParser {
-    /// Processes incoming byte chunks and parses them into discrete events.
+    /// Processes incoming byte chunks from [`stdin`].
     ///
-    /// This method is called repeatedly in succession as streaming chunks arrive from
-    /// [`stdin`] (such as in the edge-triggered draining loop of [`MioPollWorker`] on the
-    /// dedicated I/O thread). Any incomplete escape sequences remain in the internal
-    /// accumulator to be reassembled and completed by subsequent calls.
+    /// This method is called repeatedly as streaming chunks arrive from [`stdin`] (such
+    /// as in the edge-triggered draining loop of [`MioPollWorker`] on the dedicated I/O
+    /// thread).
+    ///
+    /// This is a stateful parser that processes these incoming bytes and uses the three
+    /// fields in this struct to do the following:
+    /// 1. Uses the state machine in the [`OscCircuitBreaker`] field of this struct (via
+    ///    its [`try_drain()`] method) to actually detect and handle runaway [`OSC`]
+    ///    sequences across chunk boundaries (before the enter the accumulator).
+    /// 2. Parses incoming bytes into input event IR (intermediate representation)
+    ///    [`VT100InputEventIR`] and stores them in the internal events queue field.
+    /// 3. Accumulates bytes (incomplete escape sequence, multi-byte UTF-8 sequences) in
+    ///    the internal accumulator field to be processed in subsequent calls.
+    ///
+    /// # Arguments
     ///
     /// - `read_buffer`: Raw bytes read from [`stdin`].
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
@@ -203,8 +214,10 @@ impl InputByteStreamToIrParser {
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`MioPollWorker`]:
     ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
+    /// [`OSC`]: crate::osc_codes::OscSequence
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
+    /// [`try_drain()`]: OscCircuitBreaker::try_drain
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
         // Drain runaway OSC bytes directly, buffering only any undrained bytes.
         self.accumulator.extend_from_slice(

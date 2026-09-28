@@ -1045,15 +1045,6 @@ pub const OSC_PREFIX_LEN: usize = OSC_PREFIX.len();
 /// [`OSC`]: crate::osc_codes::OscSequence
 pub const ANSI_BEL: u8 = 7;
 
-/// Final byte of the 7-bit String Terminator ([`ANSI_ST_7BIT`]).
-///
-/// Value: `92` dec, `5C` hex.
-///
-/// Sequence: `ESC \` second byte.
-///
-/// [`ANSI_ST_7BIT`]: ANSI_ST_7BIT
-pub const ANSI_ST_FINAL: u8 = b'\\';
-
 /// 7-bit String Terminator (ST) ([`ANSI`]): Two-byte escape sequence `ESC \` terminating
 /// [`OSC`] sequences.
 ///
@@ -1062,6 +1053,15 @@ pub const ANSI_ST_FINAL: u8 = b'\\';
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`OSC`]: crate::osc_codes::OscSequence
 pub const ANSI_ST_7BIT: &[u8] = &[ANSI_ESC, ANSI_ST_FINAL];
+
+/// Final byte of the 7-bit String Terminator ([`ANSI_ST_7BIT`]).
+///
+/// Value: `92` dec, `5C` hex.
+///
+/// Sequence: `ESC \` second byte.
+///
+/// [`ANSI_ST_7BIT`]: ANSI_ST_7BIT
+pub const ANSI_ST_FINAL: u8 = b'\\';
 
 /// Length of the 7-bit String Terminator ([`ANSI_ST_7BIT`]).
 ///
