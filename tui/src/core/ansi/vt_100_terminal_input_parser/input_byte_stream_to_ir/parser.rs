@@ -3,9 +3,9 @@
 //! Stateful parser for terminal input bytes. See [`InputByteStreamToIrParser`] docs.
 
 use super::osc_circuit_breaker::OscCircuitBreaker;
-use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
-            CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, NumericValue, OSC_PREFIX,
-            SS3_PREFIX, SS3_SEQ_LEN,
+use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ANSI_SS3_O,
+            CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI,
+            NumericValue,
             core::ansi::vt_100_terminal_input_parser::{MaybeMore, OscScanResult,
                                                        ParsedInputEventIR,
                                                        VT100InputEventIR,
@@ -76,8 +76,8 @@ use std::collections::VecDeque;
 /// keypress would be appended to the poisoned accumulator, causing accumulator poisoning
 /// and permanently locking up the terminal input event loop.
 ///
-/// To prevent this, [`classify_unparsed_buffer()`] evaluates the accumulator with a
-/// single classification pass returning [`UnparsedBufferClassification`]:
+/// To prevent this, [`UnparsedBufferClassification::classify()`] evaluates the
+/// accumulator with a single classification pass returning
 ///
 /// 1. **[`OSC`] Runaway Sequence ([`UnparsedBufferClassification::RunawayOsc`])**: If the
 ///    buffer begins with `ESC ]` ([`OSC_PREFIX`]) and exceeds [`MAX_OSC_SEQUENCE_LENGTH`]
@@ -114,7 +114,6 @@ use std::collections::VecDeque;
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-/// [`classify_unparsed_buffer()`]: InputByteStreamToIrParser::classify_unparsed_buffer
 /// [`consume_stdin_input_with_sender()`]:
 ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::consume_stdin_input_with_sender
 /// [`CSI`]: crate::CsiSequence
@@ -221,9 +220,9 @@ impl InputByteStreamToIrParser {
     /// frozen terminal interface even though the I/O thread is fully operational and idle
     /// at 0% CPU (neither an infinite loop nor a blocking read deadlock).
     ///
-    /// Without the active inspection in [`classify_unparsed_buffer()`], the parser would
-    /// be susceptible to accumulator poisoning on any unhandled sequence. By detecting
-    /// structurally completed but unhandled sequences
+    /// Without the active inspection in [`UnparsedBufferClassification::classify()`], the
+    /// parser would be susceptible to accumulator poisoning on any unhandled
+    /// sequence. By detecting structurally completed but unhandled sequences
     /// ([`UnparsedBufferClassification::MalformedSequence`]) and immediately purging the
     /// accumulator via [`Vec::clear()`], subsequent keystrokes start fresh and
     /// accumulator poisoning is prevented.
@@ -233,7 +232,6 @@ impl InputByteStreamToIrParser {
     /// > - `*self`: Dereference the reference to access the struct in place (in memory).
     /// > - `&mut`: Fresh and temporary reborrow of the struct.
     ///
-    /// [`classify_unparsed_buffer()`]: Self::classify_unparsed_buffer
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`MioPollWorker`]:
     ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
@@ -243,6 +241,7 @@ impl InputByteStreamToIrParser {
     /// [`try_drain()`]: OscCircuitBreaker::try_drain
     /// [`try_parse_input_event()`]:
     ///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+    /// [`UnparsedBufferClassification::classify()`]: UnparsedBufferClassification::classify
     /// [`UnparsedBufferClassification::MalformedSequence`]:
     ///     UnparsedBufferClassification::MalformedSequence
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
@@ -299,7 +298,7 @@ impl InputByteStreamToIrParser {
                 // is prevented by distinguishing stream fragmentation (happy path), from
                 // malformed sequences that would cause such poisoning (unhappy path).
                 None => {
-                    let class = parser.classify_unparsed_buffer();
+                    let class = UnparsedBufferClassification::classify(acc.as_slice());
 
                     let acc_mut = &mut parser.accumulator;
                     let breaker_mut = &mut parser.osc_circuit_breaker;
@@ -348,69 +347,6 @@ impl InputByteStreamToIrParser {
             }
         }
     }
-
-    /// Inspects and classifies the unparsed bytes currently in the `accumulator` field.
-    ///
-    /// Performs a single-pass classification across 4 criteria:
-    /// 1. **[`OSC`] sequence**: Scans for runaway (> 1 MiB) or incomplete state via
-    ///    [`scan_osc_sequence()`].
-    /// 2. **Completed [`CSI`]**: Reached a final byte in `0x40..=0x7E`
-    ///    ([`CSI_FINAL_BYTE_MIN`] through [`CSI_FINAL_BYTE_MAX`]) but could not be
-    ///    parsed.
-    /// 3. **Completed [`SS3`]**: Reached [`SS3_SEQ_LEN`] (3 bytes) but could not be
-    ///    parsed.
-    /// 4. **Safety overflow**: Non-[`OSC`] sequence reached or exceeded
-    ///    [`MAX_ESCAPE_SEQUENCE_LENGTH`] (64 bytes).
-    ///
-    /// [`CSI_FINAL_BYTE_MAX`]: crate::CSI_FINAL_BYTE_MAX
-    /// [`CSI_FINAL_BYTE_MIN`]: crate::CSI_FINAL_BYTE_MIN
-    /// [`CSI`]: crate::CsiSequence
-    /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: MAX_ESCAPE_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    /// [`scan_osc_sequence()`]: crate::core::ansi::vt_100_terminal_input_parser::scan_osc_sequence
-    /// [`SS3_SEQ_LEN`]: crate::SS3_SEQ_LEN
-    /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
-    #[must_use]
-    pub fn classify_unparsed_buffer(&self) -> UnparsedBufferClassification {
-        let parser = self; // Alias for readability.
-
-        // 1. OSC sequence check (1 MiB threshold).
-        if parser.accumulator.starts_with(OSC_PREFIX) {
-            return match scan_osc_sequence(&parser.accumulator) {
-                OscScanResult::Runaway => UnparsedBufferClassification::RunawayOsc,
-                OscScanResult::IncompleteDigits | OscScanResult::IncompletePayload => {
-                    UnparsedBufferClassification::Incomplete
-                }
-                OscScanResult::Complete(_) | OscScanResult::InvalidSyntax => {
-                    UnparsedBufferClassification::MalformedSequence
-                }
-            };
-        }
-
-        // 2. Completed CSI sequence that could not be parsed.
-        if parser.accumulator.starts_with(CSI_PREFIX)
-            && parser.accumulator.len() >= CSI_MIN_LEN
-            && parser.accumulator[CSI_PREFIX_LEN..]
-                .iter()
-                .any(|b| (CSI_FINAL_BYTE_MIN..=CSI_FINAL_BYTE_MAX).contains(b))
-        {
-            return UnparsedBufferClassification::MalformedSequence;
-        }
-
-        // 3. Completed SS3 sequence that could not be parsed.
-        if parser.accumulator.starts_with(SS3_PREFIX)
-            && parser.accumulator.len() >= SS3_SEQ_LEN
-        {
-            return UnparsedBufferClassification::MalformedSequence;
-        }
-
-        // 4. Safety fallback for non-OSC sequences exceeding 64 bytes.
-        if parser.accumulator.len() >= MAX_ESCAPE_SEQUENCE_LENGTH {
-            return UnparsedBufferClassification::MalformedSequence;
-        }
-
-        UnparsedBufferClassification::Incomplete
-    }
 }
 
 impl Iterator for InputByteStreamToIrParser {
@@ -456,6 +392,80 @@ pub enum UnparsedBufferClassification {
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
     /// [`OSC`]: crate::osc_codes::OscSequence
     RunawayOsc,
+}
+
+impl UnparsedBufferClassification {
+    /// Inspects and classifies an unparsed byte slice into [`Self::Incomplete`],
+    /// [`Self::MalformedSequence`], or [`Self::RunawayOsc`].
+    ///
+    /// Performs a single-pass classification across 4 criteria:
+    /// 1. **[`OSC`] sequence**: Scans for runaway (> 1 MiB) or incomplete state via
+    ///    [`scan_osc_sequence()`].
+    /// 2. **Completed [`CSI`]**: Reached a final byte in `0x40..=0x7E`
+    ///    ([`CSI_FINAL_BYTE_MIN`] through [`CSI_FINAL_BYTE_MAX`]) but could not be
+    ///    parsed.
+    /// 3. **Completed [`SS3`]**: Reached [`SS3_SEQ_LEN`] (3 bytes) but could not be
+    ///    parsed.
+    /// 4. **Safety overflow**: Non-[`OSC`] sequence reached or exceeded
+    ///    [`MAX_ESCAPE_SEQUENCE_LENGTH`] (64 bytes).
+    ///
+    /// [`CSI_FINAL_BYTE_MAX`]: crate::CSI_FINAL_BYTE_MAX
+    /// [`CSI_FINAL_BYTE_MIN`]: crate::CSI_FINAL_BYTE_MIN
+    /// [`CSI`]: crate::CsiSequence
+    /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: MAX_ESCAPE_SEQUENCE_LENGTH
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`scan_osc_sequence()`]: crate::core::ansi::vt_100_terminal_input_parser::scan_osc_sequence
+    /// [`SS3_SEQ_LEN`]: crate::SS3_SEQ_LEN
+    /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
+    #[must_use]
+    pub fn classify(chunk: &[u8]) -> Self {
+        match chunk {
+            // 1. OSC sequence check (1 MiB threshold).
+            [ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ..] => match scan_osc_sequence(chunk) {
+                OscScanResult::Runaway => Self::RunawayOsc,
+                OscScanResult::IncompleteDigits | OscScanResult::IncompletePayload => {
+                    Self::Incomplete
+                }
+                OscScanResult::Complete(_) | OscScanResult::InvalidSyntax => {
+                    Self::MalformedSequence
+                }
+            },
+
+            // 2. Completed CSI sequence that could not be parsed (ESC [ ... followed
+            // by a final byte in 0x40..=0x7E).
+            [ANSI_ESC, ANSI_CSI_BRACKET, rest @ ..]
+                if Self::contains_csi_final_byte(rest) =>
+            {
+                Self::MalformedSequence
+            }
+
+            // 3. Completed SS3 sequence that could not be parsed (ESC O <key> reaching
+            // SS3_SEQ_LEN = 3 bytes).
+            [ANSI_ESC, ANSI_SS3_O, _, ..] => Self::MalformedSequence,
+
+            // 4. Safety fallback for non-OSC sequences exceeding 64 bytes.
+            _ if chunk.len() >= MAX_ESCAPE_SEQUENCE_LENGTH => Self::MalformedSequence,
+
+            // 5. Incomplete sequence waiting for subsequent bytes.
+            _ => Self::Incomplete,
+        }
+    }
+
+    /// Returns `true` if `bytes` contains an ECMA-48 / [`CSI`] sequence terminating
+    /// final byte in the range `0x40..=0x7E` ([`CSI_FINAL_BYTE_MIN`] through
+    /// [`CSI_FINAL_BYTE_MAX`]).
+    ///
+    /// [`CSI_FINAL_BYTE_MAX`]: crate::CSI_FINAL_BYTE_MAX
+    /// [`CSI_FINAL_BYTE_MIN`]: crate::CSI_FINAL_BYTE_MIN
+    /// [`CSI`]: crate::CsiSequence
+    #[must_use]
+    fn contains_csi_final_byte(bytes: &[u8]) -> bool {
+        const fn is_csi_final_byte(byte: u8) -> bool {
+            (byte >= CSI_FINAL_BYTE_MIN) && (byte <= CSI_FINAL_BYTE_MAX)
+        }
+
+        bytes.iter().copied().any(is_csi_final_byte)
+    }
 }
 
 /// Initial pre-allocated byte capacity for [`InputByteStreamToIrParser`]'s accumulator
@@ -1383,81 +1393,64 @@ mod tests_classify_unparsed_buffer {
 
     #[test]
     fn incomplete_sequences() {
-        let mut parser = InputByteStreamToIrParser::default();
-
-        // Empty accumulator.
+        // Empty buffer.
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(b""),
             UnparsedBufferClassification::Incomplete
         );
 
         // Incomplete CSI sequence.
-        parser.accumulator.extend_from_slice(CSI_PREFIX);
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(CSI_PREFIX),
             UnparsedBufferClassification::Incomplete
         );
 
         // Incomplete OSC sequence (< 1 MiB).
-        parser.accumulator.clear();
-        parser.accumulator.extend_from_slice(b"\x1b]11;rgb");
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(b"\x1b]11;rgb"),
             UnparsedBufferClassification::Incomplete
         );
     }
 
     #[test]
     fn malformed_csi_sequence() {
-        let mut parser = InputByteStreamToIrParser::default();
-
         // Completed CSI sequence with an unknown final byte (e.g. 'z').
-        parser.accumulator.extend_from_slice(b"\x1b[999z");
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(b"\x1b[999z"),
             UnparsedBufferClassification::MalformedSequence
         );
     }
 
     #[test]
     fn malformed_ss3_sequence() {
-        let mut parser = InputByteStreamToIrParser::default();
-
         // Completed SS3 sequence with an unrecognized key byte.
-        parser.accumulator.extend_from_slice(b"\x1bO?");
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(b"\x1bO?"),
             UnparsedBufferClassification::MalformedSequence
         );
     }
 
     #[test]
     fn safety_buffer_overflow() {
-        let mut parser = InputByteStreamToIrParser::default();
-
         // Non-OSC sequence exceeding 64 bytes without completing.
         let mut overflow = Vec::with_capacity(65);
         overflow.extend_from_slice(b"\x1b?");
         overflow.resize(65, b'x');
-        parser.accumulator.extend_from_slice(&overflow);
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(&overflow),
             UnparsedBufferClassification::MalformedSequence
         );
     }
 
     #[test]
     fn runaway_osc_sequence() {
-        let mut parser = InputByteStreamToIrParser::default();
-
         // Runaway unterminated OSC exceeding MAX_OSC_SEQUENCE_LENGTH.
         let mut runaway = Vec::with_capacity(MAX_OSC_SEQUENCE_LENGTH + 10);
         runaway.extend_from_slice(OSC_PREFIX);
         runaway.extend_from_slice(b"52;");
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'x');
-        parser.accumulator.extend_from_slice(&runaway);
         assert_eq!(
-            parser.classify_unparsed_buffer(),
+            UnparsedBufferClassification::classify(&runaway),
             UnparsedBufferClassification::RunawayOsc
         );
     }

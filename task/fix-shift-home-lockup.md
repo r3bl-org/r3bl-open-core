@@ -1367,7 +1367,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - Run `./check.fish --fmt`.
     - Run `./check.fish --quick-doc`.
 
-### [ ] Step 12: Byte Coordinate Type-Safety (`ByteOffset`) Across Circuit Breaker & Parser Subsystems
+### [x] Step 12: Byte Coordinate Type-Safety (`ByteOffset`) Across Circuit Breaker & Parser Subsystems
 
 - **Problem Analysis & Architectural Motivation**:
     - **Asymmetric Types & Forced Dereferencing**: Currently, `classify_drain` accepts
@@ -1375,9 +1375,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       `if *bytes_consumed == chunk_len` back to primitive `usize`. Similarly,
       `OscCircuitBreaker::Open` tracks `drained_bytes` as raw `usize`.
     - **End-to-End Type Safety**: Replacing raw `usize` with `ByteOffset` across
-      `OscCircuitBreaker`, `trip()`, `reset_and_log()`, and `handle_awaiting_st()`
-      ensures direct strongly-typed comparison (`if bytes_consumed == chunk_len`) and
-      prevents coordinate confusion.
+      `OscCircuitBreaker`, `trip()`, `reset_and_log()`, and `handle_awaiting_st()` ensures
+      direct strongly-typed comparison (`if bytes_consumed == chunk_len`) and prevents
+      coordinate confusion.
     - **Harmonizing Sibling Parsers**: Extending this pattern to scanner helpers in
       `keyboard.rs` (`extract_csi_params`), `terminal_events.rs`
       (`parse_csi_terminal_parameters`, `check_st_terminator`), and `utf8.rs`
@@ -1410,7 +1410,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Evaluate safety ceiling via
               `drained_bytes >= byte_offset(MAX_OSC_DRAIN_BYTES)`.
         - Update unit tests in `osc_circuit_breaker.rs` to pass `ByteOffset` values.
-    - In `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`:
         - Update call site in `InputByteStreamToIrParser::advance` to pass
           `byte_offset(self.accumulator.len())` to `trip()`.
 
@@ -1443,7 +1444,127 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] Run `./check.fish --fmt`.
     - [x] Run `./check.fish --quick-doc`.
 
-- [ ] **Phase 12.4: Mandatory Manual Review**:
+### [ ] Step 13: Refactor If-Else Soup with Clean Slice Matching
+
+- **Problem Analysis & Architectural Motivation**:
+    - **Scattered Prefix & Length Heuristics (The "If-Else Soup")**: Multiple parser
+      components across `vt_100_terminal_input_parser` (`mouse.rs`, `terminal_events.rs`,
+      `utf8.rs`, `keyboard/alt_keys.rs`, `keyboard/control_characters.rs`,
+      `keyboard/csi_u.rs`) currently use ad-hoc length checks (`buffer.len() >= N`), raw
+      index lookups (`buffer[0] != ANSI_ESC`, `sequence[3]..sequence[5]`), and manual
+      negative prefix checks (`buffer.starts_with(...) && !buffer.starts_with(...)`). This
+      imperative style is error-prone, noisy to read, and carries implicit panic surface
+      area.
+    - **Declarative & Panic-Free Slice Pattern Matching**: Rust's slice pattern matching
+      (`[ANSI_ESC, ANSI_CSI_BRACKET, ..]`, `rest @ ..`, and
+      `second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX`) provides structural guarantees
+      that are validated at compile time, eliminates manual boundary arithmetic, and makes
+      impossible states unrepresentable.
+    - **Architectural Consistency Across the Parser Ecosystem**: `router.rs`,
+      `csi_decoder.rs`, `osc_circuit_breaker/circuit_breaker.rs`, and
+      `classify_unparsed_buffer()` in `parser.rs` already successfully utilize slice
+      pattern matching. Harmonizing the sibling parsers (`mouse.rs`, `terminal_events.rs`,
+      `utf8.rs`, and keyboard submodules) ensures uniform, high-signal, idiomatic patterns
+      throughout the entire terminal input pipeline.
+
+- [ ] **Phase 13.1: Mouse Protocol Matching (`mouse.rs`)**:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`:
+        - Refactor `parse_mouse_sequence`:
+            - Replace `starts_with` and `!starts_with` negative guard checks with ordered
+              slice pattern matching:
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, b'<', ..] if buffer.len() >= MOUSE_SGR_MIN_LEN => parse_sgr_mouse(buffer)`
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER, ..] if buffer.len() >= MOUSE_X10_MIN_LEN => parse_x10_mouse(buffer)`
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, ..] if buffer.len() >= MOUSE_RXVT_MIN_LEN => parse_rxvt_mouse(buffer)`
+                - `_ => None`
+        - Refactor `parse_x10_mouse`:
+            - Replace `sequence.len() < MOUSE_X10_MIN_LEN`,
+              `!sequence.starts_with(MOUSE_X10_PREFIX)`, and manual index accesses
+              (`sequence[3]`, `sequence[4]`, `sequence[5]`) with slice destructuring:
+                - `let [ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER, button_byte, part_cx, part_cy, ..] = sequence else { return None; };`
+        - Refactor `parse_rxvt_mouse`:
+            - Replace manual prefix and length checks with slice pattern matching on
+              `[ANSI_ESC, ANSI_CSI_BRACKET, rest @ ..]`.
+    - Mandatory manual review for Phase 13.1:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
+
+- [ ] **Phase 13.2: Terminal Event Parsing (`terminal_events.rs`)**:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
+        - Refactor `parse_terminal_event`:
+            - Replace manual length checks and
+              `buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET` with slice pattern
+              matching:
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, FOCUS_GAINED_FINAL] => Some(ParsedInputEventIR::new(VT100InputEventIR::Focus(VT100FocusStateIR::Gained), byte_offset(3)))`
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, FOCUS_LOST_FINAL] => Some(ParsedInputEventIR::new(VT100InputEventIR::Focus(VT100FocusStateIR::Lost), byte_offset(3)))`
+                - `[ANSI_ESC, ANSI_CSI_BRACKET, _, ..] => parse_csi_terminal_parameters(buffer)`
+                - `_ => None`
+        - Refactor `parse_csi_terminal_parameters`:
+            - Replace nested `if/else` checks on `params.len()` and `final_byte` with
+              slice pattern matching on `(params.as_slice(), final_byte)`:
+                - `([RESIZE_EVENT_PARSE_PARAM, rows, columns], RESIZE_TERMINATOR)`
+                - `([PASTE_START_PARSE_PARAM], ANSI_FUNCTION_KEY_TERMINATOR)`
+                - `([PASTE_END_PARSE_PARAM], ANSI_FUNCTION_KEY_TERMINATOR)`
+                - `_ => None`
+        - Refactor `check_st_terminator`:
+            - Replace `starts_with` and manual length comparison with slice pattern
+              matching:
+                - `[ANSI_ESC, ANSI_ST_FINAL, ..] => OscScanResult::Complete(...)`
+                - `[ANSI_ESC] => incomplete_result`
+                - `_ => OscScanResult::InvalidSyntax`
+    - Mandatory manual review for Phase 13.2:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
+
+- [ ] **Phase 13.3: UTF-8 Decoder (`utf8.rs`)**:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`:
+        - Refactor `decode_utf8`:
+            - Replace outer match on `first_byte` and inner `if buffer.len() < N` checks +
+              manual indexing (`buffer[1]`, `buffer[2]`, `buffer[3]`) with direct slice
+              pattern matching on `buffer`:
+                - `[b1 @ UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX, ..] => u32::from(*b1)`
+                - `[b1 @ UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX, b2, ..] => ...`
+                - `[b1 @ UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX, b2, b3, ..] => ...`
+                - `[b1 @ UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX, b2, b3, b4, ..] => ...`
+                - `_ => return None`
+    - Mandatory manual review for Phase 13.3:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
+
+- [ ] **Phase 13.4: Keyboard Alt Keys & Control Characters (`keyboard/`)**:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`:
+        - Refactor `parse_alt_key`:
+            - Replace manual length check, `buffer[0] != ANSI_ESC`, and range check with
+              slice pattern matching:
+                - `[ANSI_ESC, ASCII_DEL, ..] => ...`
+                - `[ANSI_ESC, second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX, ..] => ...`
+                - `_ => None`
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`:
+        - Refactor `parse_control_character`:
+            - Replace manual `buffer.is_empty()` and `buffer[0]` indexing with slice
+              pattern matching:
+                - `[ASCII_DEL, ..] => ...`
+                - `[byte @ ..=CTRL_CHAR_RANGE_MAX, ..] => ...`
+                - `_ => None`
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`:
+        - Refactor `parse_csi_u_sequence`:
+            - Replace manual
+              `buffer.len() < 4 || buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET`
+              with slice destructuring:
+                - `let [ANSI_ESC, ANSI_CSI_BRACKET, _, _, ..] = buffer else { return None; };`
+    - Mandatory manual review for Phase 13.4:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
+
+- [ ] **Phase 13.5: Verification**:
+    - [ ] Run `./check.fish --check`.
+    - [ ] Run `./check.fish --clippy`.
+    - [ ] Run `./check.fish --test`.
+    - [ ] Run `./check.fish --fmt`.
+    - [ ] Run `./check.fish --quick-doc`.
+
+- [ ] **Phase 13.6: Mandatory Manual Review**:
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`
     - [x] `tui/src/core/ansi/constants/input_sequences.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/maybe_more.rs`
