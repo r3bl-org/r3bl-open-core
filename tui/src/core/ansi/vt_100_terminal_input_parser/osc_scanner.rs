@@ -92,10 +92,10 @@ impl OscScanResult {
     /// and terminate with either [`ANSI_BEL`] (`0x07`) or 7-bit
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`0x1B 0x5C`).
     ///
-    /// # Grammar & Validation Rules
+    /// # Syntax & Validation Rules
     ///
     /// 1. **Strict [`OSC`] Syntax Validation**: All standard [`OSC`] sequences follow the
-    ///    strict grammar: `ESC ] <command_digits> ; <payload> (BEL | ST)`. If non-digit
+    ///    strict syntax: `ESC ] <command_digits> ; <payload> (BEL | ST)`. If non-digit
     ///    characters appear before the parameter delimiter `;`, or if raw carriage
     ///    returns (`\r`) or newlines (`\n`) are encountered, the scanner immediately
     ///    halts and returns [`OscScanResult::InvalidSyntax`]. This prevents human

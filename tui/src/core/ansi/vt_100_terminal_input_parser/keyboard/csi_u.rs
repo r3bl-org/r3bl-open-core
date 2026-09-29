@@ -16,7 +16,7 @@ use crate::{NarrowingCastToU8, WideningCastToU16, WideningCastToU32, byte_offset
 
 /// Parses a [Kitty Keyboard Protocol] sequence (`CSI u`) into a [`VT100InputEventIR`].
 ///
-/// Grammar: `ESC [ <codepoint> [; <modifiers> [: <event_type>]] u`
+/// Syntax: `ESC [ <codepoint> [; <modifiers> [: <event_type>]] u`
 ///
 /// # Examples
 ///

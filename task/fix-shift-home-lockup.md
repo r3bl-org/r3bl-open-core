@@ -297,7 +297,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       them from `Alt+]` requires a formal, type-safe state machine. The state machine
       operates in two layers:
         1. **Lexical Scanner State Machine (`OscScanState` & `scan_osc_sequence`)**:
-           Enforces **Rule 2: Strict OSC Syntax Validation** by validating grammar
+           Enforces **Rule 2: Strict OSC Syntax Validation** by validating syntax
            transitions:
            `Prefix (ESC ]) -> CommandDigits -> (';' | '?') -> Payload -> (BEL | 7-bit ST)`.
         2. **Disambiguation Decision Helper (`try_disambiguate_osc_or_alt_bracket`)**:
@@ -335,7 +335,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             /// Sequence is scanning payload parameters (delimiter was parsed; definitely an in-flight OSC sequence).
             /// Parser must wait across read boundaries for remaining payload bytes without falling back to `Alt+]`.
             IncompletePayload,
-            /// Sequence violates OSC grammar (e.g. non-digit before delimiter `;`, embedded `\r` or `\n`, or unexpected `ESC`).
+            /// Sequence violates OSC syntax (e.g. non-digit before delimiter `;`, embedded `\r` or `\n`, or unexpected `ESC`).
             /// Proves this is human input, not an OSC sequence.
             InvalidSyntax,
             /// Sequence exceeded [`MAX_OSC_SEQUENCE_LENGTH`] without a terminator.
@@ -563,10 +563,10 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 /// `ESC ]` (`0x1B 0x5D`), have a numeric command identifier, parameters, and terminate with
                 /// either `BEL` (`\x07`) or 7-bit `ST` (`ESC \`, `0x1B 0x5C`).
                 ///
-                /// # State Machine Grammar & Validation Rules
+                /// # State Machine Syntax & Validation Rules
                 ///
                 /// 1. **Rule 2: Strict OSC Syntax Validation**:
-                ///    All standard OSC sequences follow the strict grammar:
+                ///    All standard OSC sequences follow the strict syntax:
                 ///    `ESC ] <command_digits> ; <payload> (BEL | ST)`.
                 ///    If non-digit characters appear before the parameter delimiter `;`, or if raw
                 ///    carriage returns (`\r`) or newlines (`\n`) are encountered, the state machine
@@ -902,7 +902,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
     - Implement
       `parse_csi_u_sequence(buffer: &[u8]) -> Option<(VT100InputEventIR, ByteOffset)>`.
-    - Grammar: `ESC [ <codepoint> [; <modifiers> [: <event_type>]] u`.
+    - Syntax: `ESC [ <codepoint> [; <modifiers> [: <event_type>]] u`.
     - Decode standard modifier masks:
         - `1`: No modifier
         - `2`: Shift
