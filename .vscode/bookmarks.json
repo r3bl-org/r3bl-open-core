@@ -1,24 +1,34 @@
 {
-    "files": [
-        {
-            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs",
-            "bookmarks": [
-                {
-                    "line": 227,
-                    "column": 0,
-                    "label": "[ ] main entry point for stdin byte processing"
-                }
-            ]
-        },
-        {
-            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
-            "bookmarks": [
-                {
-                    "line": 432,
-                    "column": 12,
-                    "label": "[x] circuit breaker - handle_open"
-                }
-            ]
-        }
-    ]
+	"files": [
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs",
+			"bookmarks": [
+				{
+					"line": 226,
+					"column": 0,
+					"label": "[ ] main entry point for stdin byte processing"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
+			"bookmarks": [
+				{
+					"line": 432,
+					"column": 12,
+					"label": "[x] circuit breaker - handle_open"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/router.rs",
+			"bookmarks": [
+				{
+					"line": 246,
+					"column": 0,
+					"label": "review the ir parser"
+				}
+			]
+		}
+	]
 }

@@ -163,13 +163,12 @@ use std::collections::VecDeque;
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 #[derive(Debug)]
 pub struct InputByteStreamToIrParser {
-    /// Accumulator for current [`ANSI`] escape sequence being parsed (capacity: 256
-    /// bytes).
+    /// Accumulator for current [`ANSI`] escape sequence being parsed.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     accumulator: Vec<u8>,
 
-    /// Queue of parsed events ready to be consumed (capacity: 128).
+    /// Queue of parsed events ready to be consumed.
     internal_events: VecDeque<VT100InputEventIR>,
 
     /// Circuit breaker for swallowing runaway [`OSC`] sequences without allocating.
@@ -181,8 +180,8 @@ pub struct InputByteStreamToIrParser {
 impl Default for InputByteStreamToIrParser {
     fn default() -> Self {
         InputByteStreamToIrParser {
-            accumulator: Vec::with_capacity(256),
-            internal_events: VecDeque::with_capacity(128),
+            accumulator: Vec::with_capacity(ACCUMULATOR_INITIAL_CAPACITY),
+            internal_events: VecDeque::with_capacity(INTERNAL_EVENTS_INITIAL_CAPACITY),
             osc_circuit_breaker: OscCircuitBreaker::default(),
         }
     }
@@ -228,7 +227,10 @@ impl InputByteStreamToIrParser {
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
         let parser = &mut *self; // Mutable reborrow.
 
-        // Drain runaway OSC bytes directly, buffering only any undrained bytes.
+        // Filter incoming bytes through the OSC circuit breaker before buffering:
+        // - Closed (normal): all bytes pass through directly to the accumulator.
+        // - Open (runaway OSC): payload bytes are swallowed without allocating; only
+        //   valid trailing bytes following the terminator (BEL or ST) are buffered.
         parser.accumulator.extend_from_slice(
             parser
                 .osc_circuit_breaker
@@ -237,24 +239,32 @@ impl InputByteStreamToIrParser {
         );
 
         while !parser.accumulator.is_empty() {
-            match try_parse_input_event(&parser.accumulator, maybe_more) {
+            let maybe_input_event_ir =
+                try_parse_input_event(&parser.accumulator, maybe_more);
+
+            match maybe_input_event_ir {
                 Some(ParsedInputEventIR {
                     event,
                     bytes_consumed,
                 }) => {
                     let consumed = bytes_consumed.as_usize();
+
                     debug_assert!(
                         consumed > 0,
                         "Parser must consume at least 1 byte to prevent infinite loops"
                     );
+
                     if consumed == 0 {
                         break;
                     }
+
                     if event != VT100InputEventIR::Ignored {
                         parser.internal_events.push_back(event);
                     }
+
                     parser.accumulator.drain(..consumed);
                 }
+                
                 None => {
                     match parser.classify_unparsed_buffer() {
                         UnparsedBufferClassification::Incomplete => {
@@ -397,6 +407,18 @@ pub enum UnparsedBufferClassification {
     /// [`OSC`]: crate::osc_codes::OscSequence
     RunawayOsc,
 }
+
+/// Initial pre-allocated byte capacity for [`InputByteStreamToIrParser`]'s accumulator
+/// buffer.
+///
+/// [`InputByteStreamToIrParser`]: InputByteStreamToIrParser
+pub const ACCUMULATOR_INITIAL_CAPACITY: usize = 256;
+
+/// Initial pre-allocated capacity for [`InputByteStreamToIrParser`]'s internal event
+/// queue.
+///
+/// [`InputByteStreamToIrParser`]: InputByteStreamToIrParser
+pub const INTERNAL_EVENTS_INITIAL_CAPACITY: usize = 128;
 
 /// Safety maximum byte length for an accumulated unparsed escape sequence.
 ///
