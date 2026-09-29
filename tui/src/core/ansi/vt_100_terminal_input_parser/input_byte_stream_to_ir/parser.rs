@@ -1454,4 +1454,42 @@ mod tests_classify_unparsed_buffer {
             UnparsedBufferClassification::RunawayOsc
         );
     }
+
+    #[test]
+    fn csi_final_byte_boundaries() {
+        // Lower boundary: 0x40 ('@') is a valid final byte -> MalformedSequence.
+        assert_eq!(
+            UnparsedBufferClassification::classify(b"\x1b[@"),
+            UnparsedBufferClassification::MalformedSequence
+        );
+
+        // Upper boundary: 0x7E ('~') is a valid final byte -> MalformedSequence.
+        assert_eq!(
+            UnparsedBufferClassification::classify(b"\x1b[~"),
+            UnparsedBufferClassification::MalformedSequence
+        );
+
+        // Below boundary: 0x3F ('?') is an intermediate parameter byte, not a final byte
+        // -> Incomplete.
+        assert_eq!(
+            UnparsedBufferClassification::classify(b"\x1b[?"),
+            UnparsedBufferClassification::Incomplete
+        );
+
+        // Above boundary: 0x7F (DEL) is outside 0x40..=0x7E -> Incomplete.
+        assert_eq!(
+            UnparsedBufferClassification::classify(b"\x1b[\x7f"),
+            UnparsedBufferClassification::Incomplete
+        );
+    }
+
+    #[test]
+    fn invalid_osc_syntax() {
+        // Non-digit immediately following OSC prefix produces
+        // OscScanResult::InvalidSyntax -> MalformedSequence.
+        assert_eq!(
+            UnparsedBufferClassification::classify(b"\x1b]invalid"),
+            UnparsedBufferClassification::MalformedSequence
+        );
+    }
 }
