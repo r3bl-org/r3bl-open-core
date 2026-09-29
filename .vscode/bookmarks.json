@@ -9,12 +9,12 @@
 					"label": "[ ] main entry point for stdin byte processing"
 				},
 				{
-					"line": 267,
+					"line": 273,
 					"column": 16,
 					"label": "trace all the calls for UNPARSED input event IRs"
 				},
 				{
-					"line": 327,
+					"line": 337,
 					"column": 0,
 					"label": "[ ] review classify_unparsed_buffer(&self)"
 				}

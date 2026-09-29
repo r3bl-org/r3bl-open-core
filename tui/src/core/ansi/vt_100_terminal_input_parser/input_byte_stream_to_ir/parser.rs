@@ -5,7 +5,7 @@
 use super::osc_circuit_breaker::OscCircuitBreaker;
 use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
             CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, NumericValue, OSC_PREFIX,
-            SS3_PREFIX, SS3_SEQ_LEN, byte_offset,
+            SS3_PREFIX, SS3_SEQ_LEN,
             core::ansi::vt_100_terminal_input_parser::{MaybeMore, OscScanResult,
                                                        ParsedInputEventIR,
                                                        VT100InputEventIR,
@@ -238,15 +238,21 @@ impl InputByteStreamToIrParser {
                 .undrained_bytes(),
         );
 
-        while !parser.accumulator.is_empty() {
-            let maybe_input_event_ir =
-                try_parse_input_event(&parser.accumulator, maybe_more);
+        loop {
+            let acc = &parser.accumulator;
+            if acc.is_empty() {
+                break;
+            }
+            let maybe_input_event_ir = try_parse_input_event(&acc, maybe_more);
 
             match maybe_input_event_ir {
                 Some(ParsedInputEventIR {
                     event,
                     bytes_consumed,
                 }) => {
+                    let acc_mut = &mut parser.accumulator;
+                    let events_mut = &mut parser.internal_events;
+
                     // Bytes consumed should never be zero.
                     if bytes_consumed.is_zero() {
                         debug_assert!(
@@ -258,20 +264,22 @@ impl InputByteStreamToIrParser {
 
                     // Don't push Ignored events into the internal events queue.
                     if event != VT100InputEventIR::Ignored {
-                        parser.internal_events.push_back(event);
+                        events_mut.push_back(event);
                     }
 
                     // Consume the parsed bytes from the accumulator.
-                    parser.accumulator.drain(..bytes_consumed.as_usize());
+                    acc_mut.drain(..bytes_consumed.as_usize());
                 }
 
                 None => {
-                    let classification = parser.classify_unparsed_buffer();
+                    let class = parser.classify_unparsed_buffer();
+                    let acc_mut = &mut parser.accumulator;
+                    let breaker_mut = &mut parser.osc_circuit_breaker;
 
-                    match classification {
+                    match class {
+                        // Incomplete sequence: await more bytes from subsequent
+                        // reads.
                         UnparsedBufferClassification::Incomplete => {
-                            // Incomplete sequence: await more bytes from subsequent
-                            // reads.
                             break;
                         }
 
@@ -281,20 +289,22 @@ impl InputByteStreamToIrParser {
                                 tracing::warn! {
                                     message = "InputByteStreamToIrParser::process_incoming_bytes",
                                     status = "discarding unrecognized/malformed escape sequence",
-                                    discarded_hex = %format!("{:02X?}", parser.accumulator),
-                                    discarded_str = %String::from_utf8_lossy(&parser.accumulator),
-                                    buffer_len = parser.accumulator.len(),
+                                    discarded_hex = %format!("{:02X?}", acc_mut),
+                                    discarded_str = %String::from_utf8_lossy(&acc_mut),
+                                    buffer_len = acc_mut.len(),
                                 };
                             });
-                            parser.accumulator.clear();
+                            acc_mut.clear();
                             break;
                         }
 
                         UnparsedBufferClassification::RunawayOsc => {
-                            parser
-                                .osc_circuit_breaker
-                                .trip(byte_offset(parser.accumulator.len()));
-                            parser.accumulator.clear();
+                            let already_drained_byte_count = {
+                                let acc_len = acc_mut.len().into();
+                                acc_mut.clear();
+                                acc_len
+                            };
+                            breaker_mut.trip(already_drained_byte_count);
                             break;
                         }
                     }
