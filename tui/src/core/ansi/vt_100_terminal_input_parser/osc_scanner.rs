@@ -292,4 +292,69 @@ mod tests {
         runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
         assert_eq!(OscScanResult::scan(&runaway), OscScanResult::Runaway);
     }
+
+    #[test]
+    fn test_scan_osc_sequence_invalid_prefix() {
+        assert_eq!(OscScanResult::scan(b""), OscScanResult::InvalidSyntax);
+        assert_eq!(OscScanResult::scan(b"\x1b"), OscScanResult::InvalidSyntax);
+        assert_eq!(OscScanResult::scan(b"\x1b["), OscScanResult::InvalidSyntax);
+        assert_eq!(
+            OscScanResult::scan(b"plain_text"),
+            OscScanResult::InvalidSyntax
+        );
+    }
+
+    #[test]
+    fn test_scan_osc_sequence_question_mark_delimiter() {
+        let complete_seq = format!("{OSC_START}11?rgb:00/00/00{OSC_TERMINATOR_BEL}");
+        let complete_bytes = complete_seq.as_bytes();
+        assert_eq!(
+            OscScanResult::scan(complete_bytes),
+            OscScanResult::Complete(byte_offset(complete_bytes.len()))
+        );
+
+        let incomplete_seq = format!("{OSC_START}11?");
+        assert_eq!(
+            OscScanResult::scan(incomplete_seq.as_bytes()),
+            OscScanResult::IncompletePayload
+        );
+    }
+
+    #[test]
+    fn test_scan_osc_sequence_direct_terminator_without_payload() {
+        // Direct BEL termination after digits (e.g., OSC 104 reset color palette).
+        let direct_bel = format!("{OSC_START}104{OSC_TERMINATOR_BEL}");
+        let direct_bel_bytes = direct_bel.as_bytes();
+        assert_eq!(
+            OscScanResult::scan(direct_bel_bytes),
+            OscScanResult::Complete(byte_offset(direct_bel_bytes.len()))
+        );
+
+        // Direct ST termination after digits.
+        let direct_st = [OSC_PREFIX, b"104", &[ANSI_ESC, ANSI_ST_FINAL]].concat();
+        assert_eq!(
+            OscScanResult::scan(&direct_st),
+            OscScanResult::Complete(byte_offset(direct_st.len()))
+        );
+    }
+
+    #[test]
+    fn test_scan_osc_sequence_runaway_without_delimiter() {
+        let mut runaway = Vec::with_capacity(MAX_OSC_SEQUENCE_LENGTH + 10);
+        runaway.extend_from_slice(OSC_PREFIX);
+        runaway.resize(MAX_OSC_SEQUENCE_LENGTH, b'1');
+        assert_eq!(OscScanResult::scan(&runaway), OscScanResult::Runaway);
+    }
+
+    #[test]
+    fn test_scan_osc_sequence_consumed_offset_with_trailing_bytes() {
+        let buffer =
+            format!("{OSC_START}11;rgb:00/00/00{OSC_TERMINATOR_BEL}trailing_keystrokes");
+        let buffer_bytes = buffer.as_bytes();
+        let expected_consumed = buffer.len() - "trailing_keystrokes".len();
+        assert_eq!(
+            OscScanResult::scan(buffer_bytes),
+            OscScanResult::Complete(byte_offset(expected_consumed))
+        );
+    }
 }
