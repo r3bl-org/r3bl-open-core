@@ -307,7 +307,7 @@ mod tests {
                 osc::{alt_bracket_event,
                       try_disambiguate_or_alt_bracket as try_disambiguate_osc_or_alt_bracket},
                 *};
-    use crate::{ClipboardTarget, OscSequence,
+    use crate::{ClipboardTarget, MAX_OSC_SEQUENCE_LENGTH, OscSequence,
                 core::{ansi::{constants::{CLIPBOARD_TARGET_CLIPBOARD,
                                           OSC_CODE_CLIPBOARD},
                               generator::generate_keyboard_sequence},
@@ -393,14 +393,26 @@ mod tests {
 
     #[test]
     fn test_invalid_sequences() {
-        // Test: incomplete sequence (too short)
+        // Test: incomplete sequence (too short).
         assert_eq!(parse_terminal_event(&[ANSI_ESC]), None);
 
-        // Test: sequence without CSI start
+        // Test: sequence without CSI start.
         assert_eq!(parse_terminal_event(b"abc"), None);
 
-        // Test: empty buffer
+        // Test: empty buffer.
         assert_eq!(parse_terminal_event(b""), None);
+
+        // Test: incomplete CSI prefix (only ESC [).
+        assert_eq!(parse_terminal_event(b"\x1b["), None);
+
+        // Test: CSI sequence with unrecognized function parameter (not 200/201).
+        assert_eq!(parse_terminal_event(b"\x1b[999~"), None);
+
+        // Test: malformed resize parameter count (missing column parameter).
+        assert_eq!(parse_terminal_event(b"\x1b[8;24t"), None);
+
+        // Test: valid CSI sequence handled by keyboard parser, not terminal_events.
+        assert_eq!(parse_terminal_event(b"\x1b[A"), None);
     }
 
     #[test]
@@ -508,5 +520,33 @@ mod tests {
         .expect("Should parse complete OSC 52 with UTF-8 continuation byte");
         assert_eq!(parsed.event, VT100InputEventIR::Ignored);
         assert_eq!(parsed.consumed_usize(), osc52_checkmark_bytes.len());
+    }
+
+    #[test]
+    fn test_try_disambiguate_non_osc_and_runaway() {
+        // Non-OSC buffer: returns None immediately.
+        assert_eq!(
+            try_disambiguate_osc_or_alt_bracket(b"", MaybeMore::KernelDrained),
+            None
+        );
+        assert_eq!(
+            try_disambiguate_osc_or_alt_bracket(b"abc", MaybeMore::KernelDrained),
+            None
+        );
+        assert_eq!(
+            try_disambiguate_osc_or_alt_bracket(b"\x1b[", MaybeMore::KernelDrained),
+            None
+        );
+
+        // Runaway OSC sequence exceeding MAX_OSC_SEQUENCE_LENGTH: returns None
+        // (defers to unparsed buffer classification circuit breaker).
+        let mut runaway = Vec::with_capacity(MAX_OSC_SEQUENCE_LENGTH + 10);
+        let prefix = format!("{OSC_START}{OSC_CODE_CLIPBOARD}{OSC_DELIMITER}");
+        runaway.extend_from_slice(prefix.as_bytes());
+        runaway.resize(MAX_OSC_SEQUENCE_LENGTH + 1, b'a');
+        assert_eq!(
+            try_disambiguate_osc_or_alt_bracket(&runaway, MaybeMore::KernelDrained),
+            None
+        );
     }
 }
