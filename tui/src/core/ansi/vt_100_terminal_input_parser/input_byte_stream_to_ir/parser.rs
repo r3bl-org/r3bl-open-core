@@ -4,8 +4,8 @@
 
 use super::osc_circuit_breaker::OscCircuitBreaker;
 use crate::{CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN, CSI_MIN_LEN, CSI_PREFIX,
-            CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OSC_PREFIX, SS3_PREFIX,
-            SS3_SEQ_LEN, byte_offset,
+            CSI_PREFIX_LEN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, NumericValue, OSC_PREFIX,
+            SS3_PREFIX, SS3_SEQ_LEN, byte_offset,
             core::ansi::vt_100_terminal_input_parser::{MaybeMore, OscScanResult,
                                                        ParsedInputEventIR,
                                                        VT100InputEventIR,
@@ -247,24 +247,24 @@ impl InputByteStreamToIrParser {
                     event,
                     bytes_consumed,
                 }) => {
-                    let consumed = bytes_consumed.as_usize();
-
-                    debug_assert!(
-                        consumed > 0,
-                        "Parser must consume at least 1 byte to prevent infinite loops"
-                    );
-
-                    if consumed == 0 {
+                    // Bytes consumed should never be zero.
+                    if bytes_consumed.is_zero() {
+                        debug_assert!(
+                            false,
+                            "Parser must consume at least 1 byte to prevent infinite loops"
+                        );
                         break;
                     }
 
+                    // Don't push Ignored events into the internal events queue.
                     if event != VT100InputEventIR::Ignored {
                         parser.internal_events.push_back(event);
                     }
 
-                    parser.accumulator.drain(..consumed);
+                    // Consume the parsed bytes from the accumulator.
+                    parser.accumulator.drain(..bytes_consumed.as_usize());
                 }
-                
+
                 None => {
                     match parser.classify_unparsed_buffer() {
                         UnparsedBufferClassification::Incomplete => {
@@ -272,6 +272,7 @@ impl InputByteStreamToIrParser {
                             // reads.
                             break;
                         }
+
                         UnparsedBufferClassification::MalformedSequence => {
                             DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                                 // % is Display, ? is Debug.
@@ -286,6 +287,7 @@ impl InputByteStreamToIrParser {
                             parser.accumulator.clear();
                             break;
                         }
+
                         UnparsedBufferClassification::RunawayOsc => {
                             parser
                                 .osc_circuit_breaker
