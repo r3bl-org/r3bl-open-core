@@ -67,14 +67,14 @@ use std::collections::VecDeque;
 /// network latency trade-offs, see [`MaybeMore`]. For escape sequence parsing and event
 /// dispatch rules, see [`try_parse_input_event()`].
 ///
-/// # Unrecognized Sequence Discard Heuristics (Freeze Prevention)
+/// # Unrecognized Sequence Discard Heuristics (Accumulator Poisoning Prevention)
 ///
 /// When an [`ANSI`] escape sequence is not yet fully parsed, [`try_parse_input_event`]
 /// returns `None`. If the sequence is unsupported or unrecognized (such as an obscure
-/// terminal response, or a previously unhandled modified key like `Shift+Home`),
-/// returning `None` must not leave the unparseable bytes in the accumulator indefinitely.
-/// Otherwise, every subsequent keypress would be appended to the poisoned buffer,
-/// permanently locking up the terminal input event loop.
+/// terminal response or unmapped control sequence), returning `None` must not leave the
+/// unparseable bytes in the accumulator indefinitely. Otherwise, every subsequent
+/// keypress would be appended to the poisoned accumulator, causing accumulator poisoning
+/// and permanently locking up the terminal input event loop.
 ///
 /// To prevent this, [`classify_unparsed_buffer()`] evaluates the accumulator with a
 /// single classification pass returning [`UnparsedBufferClassification`]:
@@ -92,8 +92,8 @@ use std::collections::VecDeque;
 ///    (`CSI_FINAL_BYTE_MIN` through `CSI_FINAL_BYTE_MAX`), the [`CSI`] sequence has
 ///    reached its structural conclusion according to the ECMA-48 standard. Because
 ///    [`try_parse_input_event`] returned `None`, this [`CSI`] sequence is unsupported or
-///    malformed. Purging it immediately prevents the terminal from locking up on
-///    unhandled keys like `Shift+Home`.
+///    malformed. Purging it immediately prevents accumulator poisoning from unhandled
+///    sequences.
 ///
 /// 3. **Completed [`SS3`] Sequence
 ///    ([`UnparsedBufferClassification::MalformedSequence`])**: If the buffer begins with
@@ -198,7 +198,7 @@ impl InputByteStreamToIrParser {
     /// fields in this struct to do the following:
     /// 1. Uses the state machine in the [`OscCircuitBreaker`] field of this struct (via
     ///    its [`try_drain()`] method) to actually detect and handle runaway [`OSC`]
-    ///    sequences across chunk boundaries (before the enter the accumulator).
+    ///    sequences across chunk boundaries (before they enter the accumulator).
     /// 2. Parses incoming bytes into input event IR (intermediate representation)
     ///    [`VT100InputEventIR`] and stores them in the internal events queue field.
     /// 3. Accumulates bytes (incomplete escape sequence, multi-byte [`UTF-8`] sequences)
@@ -210,11 +210,30 @@ impl InputByteStreamToIrParser {
     /// - `maybe_more`: Stream availability heuristic from the OS [`read()`] syscall. See
     ///   [`MaybeMore`] for details.
     ///
+    /// # Accumulator Poisoning Prevention
+    ///
+    /// **Accumulator poisoning** occurs when an unsupported or malformed sequence remains
+    /// stuck at index 0 of `self.accumulator`. Because [`try_parse_input_event()`] always
+    /// evaluates from the start of the accumulator, it repeatedly fails on this unparsed
+    /// prefix and returns `None`. Every subsequent keystroke typed by the user (such as
+    /// `'a'`, `Enter`, or `Ctrl+C`) is appended behind this stuck sequence, starving the
+    /// application event loop of all input. The user experiences this as a completely
+    /// frozen terminal interface even though the I/O thread is fully operational and idle
+    /// at 0% CPU (neither an infinite loop nor a blocking read deadlock).
+    ///
+    /// Without the active inspection in [`classify_unparsed_buffer()`], the parser would
+    /// be susceptible to accumulator poisoning on any unhandled sequence. By detecting
+    /// structurally completed but unhandled sequences
+    /// ([`UnparsedBufferClassification::MalformedSequence`]) and immediately purging the
+    /// accumulator via [`Vec::clear()`], subsequent keystrokes start fresh and
+    /// accumulator poisoning is prevented.
+    ///
     /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
     /// > into:
     /// > - `*self`: Dereference the reference to access the struct in place (in memory).
     /// > - `&mut`: Fresh and temporary reborrow of the struct.
     ///
+    /// [`classify_unparsed_buffer()`]: Self::classify_unparsed_buffer
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`MioPollWorker`]:
     ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
@@ -222,6 +241,10 @@ impl InputByteStreamToIrParser {
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     /// [`try_drain()`]: OscCircuitBreaker::try_drain
+    /// [`try_parse_input_event()`]:
+    ///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+    /// [`UnparsedBufferClassification::MalformedSequence`]:
+    ///     UnparsedBufferClassification::MalformedSequence
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {
@@ -272,9 +295,9 @@ impl InputByteStreamToIrParser {
                     acc_mut.drain(..bytes_consumed.as_usize());
                 }
 
-                // Happy, Unhappy path - Make sure that infinite loops are prevented by
-                // distinguishing stream fragmentation (happy path), from malformed
-                // sequences that would cause infinite loops (unhappy path).
+                // Happy, Unhappy path - Make sure that accumulator poisoning (see above)
+                // is prevented by distinguishing stream fragmentation (happy path), from
+                // malformed sequences that would cause such poisoning (unhappy path).
                 None => {
                     let class = parser.classify_unparsed_buffer();
 
@@ -283,15 +306,16 @@ impl InputByteStreamToIrParser {
 
                     match class {
                         // Incomplete sequence: normal stream fragmentation, don't touch
-                        // accumulator, and await more bytes (on next read).
+                        // accumulator, and await more bytes on next read.
                         UnparsedBufferClassification::Incomplete => {
                             break;
                         }
 
                         // Malformed / unsupported sequence: structurally complete (e.g.
-                        // CSI terminating in 0x40..=0x7E or length >= 64) but unhandled.
-                        // Clear the accumulator to prevent unhandled keys (like
-                        // Shift+Home) from freezing. And await more bytes (on next read).
+                        // CSI terminating in 0x40..=0x7E or
+                        // length >= 64) but unhandled. Clear the
+                        // accumulator to prevent accumulator poisoning from unhandled
+                        // sequences, and await more bytes on next read.
                         UnparsedBufferClassification::MalformedSequence => {
                             DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                                 // % is Display, ? is Debug.
@@ -308,9 +332,8 @@ impl InputByteStreamToIrParser {
                         }
 
                         // Runaway OSC sequence (> 1 MiB): trip the circuit breaker into
-                        // Open state and clear the accumulator. And await more bytes (on
-                        // next read). Remaining in-flight payload chunks will be
-                        // discarded on-the-fly without allocating.
+                        // Open state and clear the accumulator to prevent unbounded
+                        // memory growth. And await more bytes on next read.
                         UnparsedBufferClassification::RunawayOsc => {
                             let already_drained_byte_count = {
                                 let acc_len = acc_mut.len().into();

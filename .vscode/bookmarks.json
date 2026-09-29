@@ -4,17 +4,12 @@
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs",
 			"bookmarks": [
 				{
-					"line": 226,
+					"line": 254,
 					"column": 0,
 					"label": "[ ] main entry point for stdin byte processing"
 				},
 				{
-					"line": 279,
-					"column": 16,
-					"label": "trace all the calls for UNPARSED input event IRs"
-				},
-				{
-					"line": 350,
+					"line": 373,
 					"column": 0,
 					"label": "[ ] review classify_unparsed_buffer(&self)"
 				}
