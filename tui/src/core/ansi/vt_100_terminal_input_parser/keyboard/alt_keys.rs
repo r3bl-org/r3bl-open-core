@@ -36,53 +36,44 @@ use crate::{KeyState, byte_offset,
 /// [`Why Alt Uses ESC Prefix`]: mod@super#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    // Need at least 2 bytes: ESC + key
-    if buffer.len() < 2 {
-        return None;
-    }
-
-    // First byte must be ESC
-    if buffer[0] != ANSI_ESC {
-        return None;
-    }
-
-    let second = buffer[1];
-
-    // Handle Alt+Backspace (ESC + DEL)
-    if second == ASCII_DEL {
-        return Some(ParsedInputEventIR::new(
-            VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Backspace,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
+    match buffer {
+        [ANSI_ESC, ASCII_DEL, ..] => {
+            // Handle Alt+Backspace (ESC + DEL).
+            Some(ParsedInputEventIR::new(
+                VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Backspace,
+                    modifiers: VT100KeyModifiersIR {
+                        shift: KeyState::NotPressed,
+                        ctrl: KeyState::NotPressed,
+                        alt: KeyState::Pressed,
+                    },
                 },
-            },
-            byte_offset(2), // Consume both ESC and DEL
-        ));
+                byte_offset(2), // Consume both ESC and DEL.
+            ))
+        }
+        [
+            ANSI_ESC,
+            second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX,
+            ..,
+        ] => {
+            // Second byte is printable ASCII (space through ~).
+            // Range: 0x20 (space) to 0x7E (~).
+            let ch = char::from(*second);
+
+            Some(ParsedInputEventIR::new(
+                VT100InputEventIR::Keyboard {
+                    code: VT100KeyCodeIR::Char(ch),
+                    modifiers: VT100KeyModifiersIR {
+                        shift: KeyState::NotPressed,
+                        ctrl: KeyState::NotPressed,
+                        alt: KeyState::Pressed,
+                    },
+                },
+                byte_offset(2), // Consume both ESC and letter.
+            ))
+        }
+        _ => None,
     }
-
-    // Second byte must be printable ASCII (space through ~)
-    // Range: 0x20 (space) to 0x7E (~)
-    if !(PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX).contains(&second) {
-        return None;
-    }
-
-    // Convert to character
-    let ch = char::from(second);
-
-    Some(ParsedInputEventIR::new(
-        VT100InputEventIR::Keyboard {
-            code: VT100KeyCodeIR::Char(ch),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
-        },
-        byte_offset(2), // Consume both ESC and letter
-    ))
 }
 
 #[cfg(test)]

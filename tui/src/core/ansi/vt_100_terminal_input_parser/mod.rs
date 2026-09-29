@@ -171,26 +171,26 @@
 //!
 //! ## Terminal Input Capability Matrix: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
 //!
-//! | Keystroke / Protocol Event                            | Legacy [`VT-100`] / [`xterm`] (Default)       | [`Kitty`] Keyboard Protocol (`CSI u`)      | Technical Reason & Ambiguity                                      |
-//! | :---------------------------------------------------- | :-------------------------------------------- | :----------------------------------------- | :---------------------------------------------------------------- |
-//! | **Standard Characters (`a-z`, `0-9`, [`UTF-8`])**     | ✅ Supported ([`UTF-8`] bytes)                | ✅ Supported ([`UTF-8`] bytes)             | Unambiguous in both modes.                                        |
-//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**         | ✅ Supported (`0x01` .. `0x1A`)               | ✅ Supported                               | Standard [`ASCII`] control characters.                            |
-//! | **Enter / Return**                                    | ✅ Supported (`\r`, `0x0D`)                   | ✅ Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                         |
-//! | **`Shift + Enter`**                                   | ❌ **Collides with Enter** (`\r`)             | ✅ **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.                  |
-//! | **Tab**                                               | ✅ Supported (`\t`, `0x09`)                   | ✅ Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                          |
-//! | **`Shift + Tab` (`BackTab`)**                         | ✅ Supported (`ESC [ Z`)                      | ✅ Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                           |
-//! | **`Ctrl + Tab`**                                      | ❌ **Collides with Tab** (`\t`)               | ✅ **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.                  |
-//! | **Distinct `Ctrl+I` vs. `Tab`**                       | ❌ **Indistinguishable** (`0x09`)             | ✅ **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+I` is literally `0x09` (`Tab`).                   |
-//! | **Distinct `Ctrl+M` vs. `Enter`**                     | ❌ **Indistinguishable** (`0x0D`)             | ✅ **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+M` is literally `0x0D` (`Enter`).                 |
-//! | **Standalone `Escape` Key**                           | ✅ Supported (0ms latency)                    | ✅ Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; [`Kitty`] is unambiguous. |
-//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)**    | ✅ Supported ([`CSI`] / `SS3`)                | ✅ Supported ([`CSI`] / `CSI u`)           | Standard [`xterm`] / VT220 sequences.                             |
-//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**     | ✅ Supported (`ESC [ 1 ; <m> <final>`)        | ✅ Supported                               | Standard [`xterm`] parameter encoding.                            |
-//! | **Function Keys (`F1` .. `F12`)**                     | ✅ Supported (VT220 `~` / `SS3`)              | ✅ Supported                               | Standard escape encodings.                                        |
-//! | **`Alt + Key` (Letters & Digits)**                    | ✅ Supported (`ESC <char>`)                   | ✅ Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                      |
-//! | **`Alt + ]` ([`OSC`] Prefix Collision)**              | ✅ **Solved in Step 8** (`scan_osc_sequence`) | ✅ **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.      |
-//! | **`Alt + [` ([`CSI`] Prefix Collision)**              | ❌ **Unresolvable in Legacy**                 | ✅ **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to [`CSI`] (`\x1b[`).   |
-//! | **Terminal [`OSC`] Query Replies (Theme, Clipboard)** | ✅ **Solved in Step 8** (Framed & Absorbed)   | ✅ Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage.    |
-//! | **Key Release & Repeat Events**                       | ❌ Unsupported by [`VT-100`]                  | ✅ Supported (via [`Kitty`] Flag 2)        | Legacy terminals only report key press down events.               |
+//! | Keystroke / Protocol Event                            | Legacy [`VT-100`] / [`xterm`] (Default)             | [`Kitty`] Keyboard Protocol (`CSI u`)      | Technical Reason & Ambiguity                                      |
+//! | :---------------------------------------------------- | :-------------------------------------------------- | :----------------------------------------- | :---------------------------------------------------------------- |
+//! | **Standard Characters (`a-z`, `0-9`, [`UTF-8`])**     | ✅ Supported ([`UTF-8`] bytes)                      | ✅ Supported ([`UTF-8`] bytes)             | Unambiguous in both modes.                                        |
+//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**         | ✅ Supported (`0x01` .. `0x1A`)                     | ✅ Supported                               | Standard [`ASCII`] control characters.                            |
+//! | **Enter / Return**                                    | ✅ Supported (`\r`, `0x0D`)                         | ✅ Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                         |
+//! | **`Shift + Enter`**                                   | ❌ **Collides with Enter** (`\r`)                   | ✅ **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.                  |
+//! | **Tab**                                               | ✅ Supported (`\t`, `0x09`)                         | ✅ Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                          |
+//! | **`Shift + Tab` (`BackTab`)**                         | ✅ Supported (`ESC [ Z`)                            | ✅ Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                           |
+//! | **`Ctrl + Tab`**                                      | ❌ **Collides with Tab** (`\t`)                     | ✅ **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.                  |
+//! | **Distinct `Ctrl+I` vs. `Tab`**                       | ❌ **Indistinguishable** (`0x09`)                   | ✅ **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+I` is literally `0x09` (`Tab`).                   |
+//! | **Distinct `Ctrl+M` vs. `Enter`**                     | ❌ **Indistinguishable** (`0x0D`)                   | ✅ **Supported** (distinct codepoints)     | [`ASCII`] `Ctrl+M` is literally `0x0D` (`Enter`).                 |
+//! | **Standalone `Escape` Key**                           | ✅ Supported (0ms latency)                          | ✅ Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; [`Kitty`] is unambiguous. |
+//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)**    | ✅ Supported ([`CSI`] / `SS3`)                      | ✅ Supported ([`CSI`] / `CSI u`)           | Standard [`xterm`] / VT220 sequences.                             |
+//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**     | ✅ Supported (`ESC [ 1 ; <m> <final>`)              | ✅ Supported                               | Standard [`xterm`] parameter encoding.                            |
+//! | **Function Keys (`F1` .. `F12`)**                     | ✅ Supported (VT220 `~` / `SS3`)                    | ✅ Supported                               | Standard escape encodings.                                        |
+//! | **`Alt + Key` (Letters & Digits)**                    | ✅ Supported (`ESC <char>`)                         | ✅ Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                      |
+//! | **`Alt + ]` ([`OSC`] Prefix Collision)**              | ✅ **Solved in Step 8** ([`OscScanResult::scan()`]) | ✅ **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.      |
+//! | **`Alt + [` ([`CSI`] Prefix Collision)**              | ❌ **Unresolvable in Legacy**                       | ✅ **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to [`CSI`] (`\x1b[`).   |
+//! | **Terminal [`OSC`] Query Replies (Theme, Clipboard)** | ✅ **Solved in Step 8** (Framed & Absorbed)         | ✅ Supported (Framed & Absorbed)           | Step 8 frames with [`OscScanResult::scan()`], prevents leakage.   |
+//! | **Key Release & Repeat Events**                       | ❌ Unsupported by [`VT-100`]                        | ✅ Supported (via [`Kitty`] Flag 2)        | Legacy terminals only report key press down events.               |
 //!
 //! ## Module Responsibilities
 //!
@@ -220,10 +220,13 @@
 //! - Parse window resize events: `CSI 8 ; rows ; cols t`
 //! - Parse focus gained/lost: `CSI I` / `CSI O`
 //! - Parse bracketed paste markers: `ESC [ 200 ~` / `ESC [ 201 ~`
-//! - Detect, frame, and discard unhandled [`OSC`] responses: `ESC ] ... (BEL | ST)`
-//! - Disambiguate lone `Alt+]` from terminal-generated [`OSC`] responses
-//! - Provide [`scan_osc_sequence()`], [`try_disambiguate_osc_or_alt_bracket()`], and
-//!   [`OscScanResult`]
+//! - Disambiguate lone `Alt+]` from terminal-generated [`OSC`] responses via
+//!   [`try_disambiguate_osc_or_alt_bracket()`]
+//!
+//! ### [`osc_scanner`]
+//! - Fast single-pass lexical scanning of inbound [`OSC`] sequences
+//! - Categorize sequences via [`OscScanResult`]
+//! - Provide [`OscScanResult::scan()`]
 //!
 //! ### [`utf8`]
 //! - Parse [`UTF-8`] text between [`ANSI`] sequences
@@ -323,17 +326,18 @@
 //! [`mio`]: mio
 //! [`observe_terminal`]:
 //!     crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`osc_scanner`]: mod@osc_scanner
 //! [`OSC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#OSC
 //! [`OSC`]: crate::osc_codes::OscSequence
-//! [`OscScanResult`]: crate::vt_100_terminal_input_parser::terminal_events::OscScanResult
+//! [`OscScanResult::scan()`]:
+//!     crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult::scan
+//! [`OscScanResult`]: crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult
 //! [`output`]: mod@crate::direct_to_ansi::output
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`router`]: mod@router
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 //! [`Sans-IO`]: https://sans-io.readthedocs.io/
-//! [`scan_osc_sequence()`]:
-//!     crate::vt_100_terminal_input_parser::terminal_events::scan_osc_sequence
 //! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::SgrCode
 //! [`stdin`]: std::io::stdin
@@ -341,7 +345,7 @@
 //! [`terminal_events`]: mod@terminal_events
 //! [`TermRow`]: crate::vt_100_ansi_coords::TermRow
 //! [`try_disambiguate_osc_or_alt_bracket()`]:
-//!     crate::vt_100_terminal_input_parser::terminal_events::try_disambiguate_osc_or_alt_bracket
+//!     crate::vt_100_terminal_input_parser::terminal_events::osc::try_disambiguate_or_alt_bracket
 //! [`try_parse_input_event()`]:
 //!     crate::vt_100_terminal_input_parser::router::try_parse_input_event
 //! [`ttimeoutlen`]:
@@ -387,6 +391,16 @@ pub mod utf8;
 mod utf8;
 
 #[cfg(any(test, doc))]
+pub mod csi_scanner;
+#[cfg(not(any(test, doc)))]
+mod csi_scanner;
+
+#[cfg(any(test, doc))]
+pub mod osc_scanner;
+#[cfg(not(any(test, doc)))]
+mod osc_scanner;
+
+#[cfg(any(test, doc))]
 pub mod ir_event_types;
 #[cfg(not(any(test, doc)))]
 mod ir_event_types;
@@ -409,8 +423,10 @@ pub use keyboard::*;
 pub use mouse::*;
 pub use terminal_events::*;
 pub use utf8::*;
-// Shared types.
+// Shared types and utilities.
+pub use csi_scanner::*;
 pub use ir_event_types::*;
+pub use osc_scanner::*;
 // Input stream availability heuristic enum.
 pub use maybe_more::*;
 // Stateful stream accumulator parser.

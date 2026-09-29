@@ -36,97 +36,90 @@ use crate::{KeyState, byte_offset,
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    // Check minimum length
-    if buffer.is_empty() {
-        return None;
-    }
-
-    let byte = buffer[0];
-
-    // Handle ASCII DEL (0x7F) - common Backspace encoding
-    if byte == ASCII_DEL {
-        return Some(ParsedInputEventIR::new(
+    match buffer {
+        // Handle ASCII DEL (0x7F) - common Backspace encoding.
+        [ASCII_DEL, ..] => Some(ParsedInputEventIR::new(
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Backspace,
                 modifiers: VT100KeyModifiersIR::default(),
             },
             byte_offset(1),
-        ));
+        )),
+
+        // Handle control character range (0x00-0x1F).
+        [byte @ ..=CTRL_CHAR_RANGE_MAX, ..] => {
+            // Handle special control characters as dedicated keys (not Ctrl+letter).
+            match *byte {
+                CONTROL_NUL => {
+                    // Ctrl+Space (or Ctrl+@) generates NUL.
+                    // Treat as Ctrl+Space for better usability.
+                    Some(ParsedInputEventIR::new(
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Char(' '),
+                            modifiers: VT100KeyModifiersIR {
+                                shift: KeyState::NotPressed,
+                                ctrl: KeyState::Pressed,
+                                alt: KeyState::NotPressed,
+                            },
+                        },
+                        byte_offset(1),
+                    ))
+                }
+                CONTROL_TAB => {
+                    // Tab key (0x09) - treated as Tab, not Ctrl+I.
+                    Some(ParsedInputEventIR::new(
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Tab,
+                            modifiers: VT100KeyModifiersIR::default(),
+                        },
+                        byte_offset(1),
+                    ))
+                }
+                CONTROL_LF | CONTROL_ENTER => {
+                    // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal.
+                    Some(ParsedInputEventIR::new(
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Enter,
+                            modifiers: VT100KeyModifiersIR::default(),
+                        },
+                        byte_offset(1),
+                    ))
+                }
+                CONTROL_BACKSPACE => {
+                    // Backspace can send BS (0x08) or DEL (0x7F).
+                    Some(ParsedInputEventIR::new(
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Backspace,
+                            modifiers: VT100KeyModifiersIR::default(),
+                        },
+                        byte_offset(1),
+                    ))
+                }
+                CONTROL_ESC => None, // Escape - handled in try_parse() routing.
+                _ => {
+                    // Convert control character to Ctrl+letter.
+                    // Control characters are generated as: letter & 0x1F.
+                    // Reverse: (byte | 0x40) gives uppercase letter, (byte | 0x60) gives
+                    // lowercase. Example: 0x01 | 0x60 = 0x61 = 'a'.
+                    let letter = char::from(*byte | CTRL_TO_LOWERCASE_MASK);
+
+                    Some(ParsedInputEventIR::new(
+                        VT100InputEventIR::Keyboard {
+                            code: VT100KeyCodeIR::Char(letter),
+                            modifiers: VT100KeyModifiersIR {
+                                shift: KeyState::NotPressed,
+                                ctrl: KeyState::Pressed,
+                                alt: KeyState::NotPressed,
+                            },
+                        },
+                        byte_offset(1),
+                    ))
+                }
+            }
+        }
+
+        _ => None,
     }
-
-    // Only handle control character range (0x00-0x1F)
-    if byte > CTRL_CHAR_RANGE_MAX {
-        return None;
-    }
-
-    // Handle special control characters as dedicated keys (not Ctrl+letter)
-    match byte {
-        CONTROL_NUL => {
-            // Ctrl+Space (or Ctrl+@) generates NUL
-            // Treat as Ctrl+Space for better usability
-            return Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Char(' '),
-                    modifiers: VT100KeyModifiersIR {
-                        shift: KeyState::NotPressed,
-                        ctrl: KeyState::Pressed,
-                        alt: KeyState::NotPressed,
-                    },
-                },
-                byte_offset(1),
-            ));
-        }
-        CONTROL_TAB => {
-            // Tab key (0x09) - treated as Tab, not Ctrl+I
-            return Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Tab,
-                    modifiers: VT100KeyModifiersIR::default(),
-                },
-                byte_offset(1),
-            ));
-        }
-        CONTROL_LF | CONTROL_ENTER => {
-            // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal
-            return Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Enter,
-                    modifiers: VT100KeyModifiersIR::default(),
-                },
-                byte_offset(1),
-            ));
-        }
-        CONTROL_BACKSPACE => {
-            // Backspace can send BS (0x08) or DEL (0x7F)
-            return Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Backspace,
-                    modifiers: VT100KeyModifiersIR::default(),
-                },
-                byte_offset(1),
-            ));
-        }
-        CONTROL_ESC => return None, // Escape - handled in try_parse() routing
-        _ => {}
-    }
-
-    // Convert control character to Ctrl+letter
-    // Control characters are generated as: letter & 0x1F
-    // Reverse: (byte | 0x40) gives uppercase letter, (byte | 0x60) gives lowercase
-    // Example: 0x01 | 0x60 = 0x61 = 'a'
-    let letter = char::from(byte | CTRL_TO_LOWERCASE_MASK);
-
-    Some(ParsedInputEventIR::new(
-        VT100InputEventIR::Keyboard {
-            code: VT100KeyCodeIR::Char(letter),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-            },
-        },
-        byte_offset(1),
-    ))
 }
 
 #[cfg(test)]

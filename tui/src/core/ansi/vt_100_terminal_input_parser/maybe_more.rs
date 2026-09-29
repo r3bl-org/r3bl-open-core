@@ -151,6 +151,11 @@
 /// └──────────────────────────────────────────────────────────────────┘
 /// ```
 ///
+/// [`PTY`]: <https://en.wikipedia.org/wiki/Pseudoterminal>
+/// [`SSH`]: <https://en.wikipedia.org/wiki/Secure_Shell>
+/// [`TCP`]: <https://en.wikipedia.org/wiki/Transmission_Control_Protocol>
+/// [Kitty Keyboard Protocol]: <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>
+///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`CSI` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
 /// [`CSI`]: crate::CsiSequence
@@ -164,10 +169,11 @@
 /// [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 /// [`OSC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#OSC
 /// [`OSC`]: crate::osc_codes::OscSequence
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 /// [`stdin`]: std::io::stdin
 /// [`try_disambiguate_osc_or_alt_bracket()`]:
-///     super::terminal_events::try_disambiguate_osc_or_alt_bracket
+///     super::terminal_events::osc::try_disambiguate_or_alt_bracket
 /// [`try_parse_input_event()`]: super::try_parse_input_event
 /// [`ttimeoutlen`]:
 ///     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
@@ -175,10 +181,6 @@
 /// [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 /// [Escape Sequence Disambiguation]: mod@super#escape-sequence-disambiguation
-/// [`PTY`]: <https://en.wikipedia.org/wiki/Pseudoterminal>
-/// [`SSH`]: <https://en.wikipedia.org/wiki/Secure_Shell>
-/// [`TCP`]: <https://en.wikipedia.org/wiki/Transmission_Control_Protocol>
-/// [Kitty Keyboard Protocol]: <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum MaybeMore {
     /// The userspace read buffer was filled to capacity (`bytes_read == buffer_size`).

@@ -39,7 +39,7 @@
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
 			"bookmarks": [
 				{
-					"line": 313,
+					"line": 287,
 					"column": 0,
 					"label": "[ ] review scan_osc_sequence(buffer: &[u8])"
 				}

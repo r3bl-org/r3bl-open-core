@@ -466,11 +466,6 @@ pub mod csi_decoder;
 mod csi_decoder;
 
 #[cfg(any(test, doc))]
-pub mod csi_scanner;
-#[cfg(not(any(test, doc)))]
-mod csi_scanner;
-
-#[cfg(any(test, doc))]
 pub mod csi_u;
 #[cfg(not(any(test, doc)))]
 mod csi_u;
@@ -489,7 +484,6 @@ mod ss3;
 pub use alt_keys::*;
 pub use control_characters::*;
 pub use csi_decoder::*;
-pub use csi_scanner::*;
 pub use csi_u::*;
 pub use modifiers::*;
 pub use ss3::*;

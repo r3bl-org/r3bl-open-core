@@ -1467,7 +1467,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       `utf8.rs`, and keyboard submodules) ensures uniform, high-signal, idiomatic patterns
       throughout the entire terminal input pipeline.
 
-- [ ] **Phase 13.1: Mouse Protocol Matching (`mouse.rs`)**:
+- [x] **Phase 13.1: Mouse Protocol Matching (`mouse.rs`)**:
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`:
         - Refactor `parse_mouse_sequence`:
             - Replace `starts_with` and `!starts_with` negative guard checks with ordered
@@ -1485,7 +1485,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
             - Replace manual prefix and length checks with slice pattern matching on
               `[ANSI_ESC, ANSI_CSI_BRACKET, rest @ ..]`.
     - Mandatory manual review for Phase 13.1:
-        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
+        - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
 
 - [ ] **Phase 13.2: Terminal Event Parsing (`terminal_events.rs`)**:
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
@@ -1553,15 +1553,15 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
         - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
 
-- [ ] **Phase 13.5: Verification**:
-    - [ ] Run `./check.fish --check`.
-    - [ ] Run `./check.fish --clippy`.
-    - [ ] Run `./check.fish --test`.
-    - [ ] Run `./check.fish --fmt`.
-    - [ ] Run `./check.fish --quick-doc`.
+- [x] **Phase 13.5: Verification**:
+    - [x] Run `./check.fish --check`.
+    - [x] Run `./check.fish --clippy`.
+    - [x] Run `./check.fish --test`.
+    - [x] Run `./check.fish --fmt`.
+    - [x] Run `./check.fish --quick-doc`.
 
 - [ ] **Phase 13.6: Mandatory Manual Review**:
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
+    - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`

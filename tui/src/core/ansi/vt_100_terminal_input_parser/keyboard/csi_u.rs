@@ -30,9 +30,9 @@ use crate::{NarrowingCastToU8, WideningCastToU16, WideningCastToU32, byte_offset
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 #[must_use]
 pub fn parse_csi_u_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    if buffer.len() < 4 || buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET {
+    let [ANSI_ESC, ANSI_CSI_BRACKET, _, _, ..] = buffer else {
         return None;
-    }
+    };
 
     // Find the terminal 'u'.
     let mut u_pos: Option<usize> = None;

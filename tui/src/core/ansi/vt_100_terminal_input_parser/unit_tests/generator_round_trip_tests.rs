@@ -16,7 +16,7 @@ use crate::{KeyState, VPHeight, VPWidth,
                                                         VT100KeyModifiersIR,
                                                         VT100PasteModeIR,
                                                         parse_keyboard_sequence,
-                                                        parse_terminal_event}}};
+                                                        terminal_events::csi::parse as parse_terminal_event}}};
 
 // ==================== Terminal Events ====================
 

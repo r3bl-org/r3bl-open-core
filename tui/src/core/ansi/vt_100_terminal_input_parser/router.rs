@@ -33,7 +33,7 @@
 //! [`OSC`] responses begin with `ESC ]` (`\x1b]`).
 //!
 //! Routing for `ESC ]` delegates directly to
-//! [`terminal_events::try_disambiguate_osc_or_alt_bracket()`], which uses a dedicated
+//! [`terminal_events::osc::try_disambiguate_or_alt_bracket()`], which uses a dedicated
 //! state machine implementing Rule 1 (the [`MaybeMore`] stream availability heuristic)
 //! and Rule 2 (strict [`OSC`] syntax validation) to safely distinguish between user
 //! keystrokes and terminal query responses.
@@ -63,7 +63,8 @@
 //! [`mouse`]: mod@super::mouse
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`SGR`]: crate::SgrCode
-//! [`terminal_events::try_disambiguate_osc_or_alt_bracket()`]: terminal_events::try_disambiguate_osc_or_alt_bracket
+//! [`terminal_events::osc::try_disambiguate_or_alt_bracket()`]:
+//!     terminal_events::osc::try_disambiguate_or_alt_bracket
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`utf8`]: mod@super::utf8
@@ -265,9 +266,13 @@ pub fn try_parse_input_event(
 
         // CSI sequence (ESC [) - keyboard/mouse/terminal events.
         [ANSI_ESC, ANSI_CSI_BRACKET, ..] => {
-            keyboard::parse_keyboard_sequence(accumulated_bytes)
-                .or_else(|| mouse::parse_mouse_sequence(accumulated_bytes))
-                .or_else(|| terminal_events::parse_terminal_event(accumulated_bytes))
+            if let Some(event) = keyboard::parse_keyboard_sequence(accumulated_bytes) {
+                return Some(event);
+            }
+            if let Some(event) = mouse::parse_mouse_sequence(accumulated_bytes) {
+                return Some(event);
+            }
+            terminal_events::csi::parse(accumulated_bytes)
         }
 
         // SS3 sequence (ESC O) - application mode keys (F1-F4, Home, End, arrows).
@@ -275,7 +280,7 @@ pub fn try_parse_input_event(
 
         // OSC sequence or Alt+] keypress disambiguation.
         [ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ..] => {
-            terminal_events::try_disambiguate_osc_or_alt_bracket(
+            terminal_events::osc::try_disambiguate_or_alt_bracket(
                 accumulated_bytes,
                 maybe_more,
             )
@@ -283,14 +288,22 @@ pub fn try_parse_input_event(
 
         // ESC + other byte - try Alt+letter (e.g., Alt+B, Alt+F), else emit standalone
         // ESC.
-        [ANSI_ESC, _, ..] => keyboard::parse_alt_letter(accumulated_bytes)
-            .or_else(|| Some(ParsedInputEventIR::new(esc_key_event(), byte_offset(1)))),
+        [ANSI_ESC, _, ..] => {
+            if let Some(event) = keyboard::parse_alt_letter(accumulated_bytes) {
+                return Some(event);
+            }
+            Some(ParsedInputEventIR::new(esc_key_event(), byte_offset(1)))
+        }
 
         // Not ESC - raw byte input (control characters or UTF-8 text).
         // Control characters (0x00-0x1F) must be tried before UTF-8 because they are
         // technically valid UTF-8 but should be parsed as Ctrl+letter instead.
-        _ => keyboard::parse_control_character(accumulated_bytes)
-            .or_else(|| utf8::parse_utf8_text(accumulated_bytes)),
+        _ => {
+            if let Some(event) = keyboard::parse_control_character(accumulated_bytes) {
+                return Some(event);
+            }
+            utf8::parse_utf8_text(accumulated_bytes)
+        }
     }
 }
 

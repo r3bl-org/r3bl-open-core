@@ -278,54 +278,39 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<ByteOffset> {
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn decode_utf8(buffer: &[u8]) -> Option<char> {
-    if buffer.is_empty() {
-        return None;
-    }
+    let codepoint = match buffer {
+        // 1-byte sequence: 0xxxxxxx.
+        [b1 @ UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX, ..] => u32::from(*b1),
 
-    let first_byte = buffer[0];
-
-    let codepoint = match first_byte {
-        // 1-byte sequence: 0xxxxxxx
-        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => u32::from(first_byte),
-
-        // 2-byte sequence: 110xxxxx 10xxxxxx
-        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => {
-            if buffer.len() < 2 {
-                return None;
-            }
-            let b1 = u32::from(first_byte & UTF8_2BYTE_FIRST_MASK);
-            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
+        // 2-byte sequence: 110xxxxx 10xxxxxx.
+        [b1 @ UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX, b2, ..] => {
+            let b1 = u32::from(*b1 & UTF8_2BYTE_FIRST_MASK);
+            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 6) | b2
         }
 
-        // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
-        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => {
-            if buffer.len() < 3 {
-                return None;
-            }
-            let b1 = u32::from(first_byte & UTF8_3BYTE_FIRST_MASK);
-            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
-            let b3 = u32::from(buffer[2] & UTF8_CONTINUATION_DATA_MASK);
+        // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx.
+        [b1 @ UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX, b2, b3, ..] => {
+            let b1 = u32::from(*b1 & UTF8_3BYTE_FIRST_MASK);
+            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
+            let b3 = u32::from(*b3 & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 12) | (b2 << 6) | b3
         }
 
-        // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => {
-            if buffer.len() < 4 {
-                return None;
-            }
-            let b1 = u32::from(first_byte & UTF8_4BYTE_FIRST_MASK);
-            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
-            let b3 = u32::from(buffer[2] & UTF8_CONTINUATION_DATA_MASK);
-            let b4 = u32::from(buffer[3] & UTF8_CONTINUATION_DATA_MASK);
+        // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx.
+        [b1 @ UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX, b2, b3, b4, ..] => {
+            let b1 = u32::from(*b1 & UTF8_4BYTE_FIRST_MASK);
+            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
+            let b3 = u32::from(*b3 & UTF8_CONTINUATION_DATA_MASK);
+            let b4 = u32::from(*b4 & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 18) | (b2 << 12) | (b3 << 6) | b4
         }
 
-        // Invalid start byte
+        // Invalid start byte or incomplete sequence.
         _ => return None,
     };
 
-    // Validate codepoint and convert to char
+    // Validate codepoint and convert to char.
     char::from_u32(codepoint)
 }
 

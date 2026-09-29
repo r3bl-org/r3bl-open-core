@@ -4,9 +4,10 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 
-use super::{super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
-                                    VT100KeyCodeIR, VT100KeyModifiersIR},
-            csi_scanner, csi_u, modifiers};
+use super::{super::{csi_scanner,
+                    ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                     VT100KeyCodeIR, VT100KeyModifiersIR}},
+            csi_u, modifiers};
 use crate::{byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ARROW_DOWN_FINAL,

@@ -7,7 +7,7 @@
 use super::constants::MAX_ESCAPE_SEQUENCE_LENGTH;
 use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ANSI_SS3_O,
             CSI_FINAL_BYTE_MAX, CSI_FINAL_BYTE_MIN,
-            core::ansi::vt_100_terminal_input_parser::{OscScanResult, scan_osc_sequence}};
+            core::ansi::vt_100_terminal_input_parser::osc_scanner::OscScanResult};
 
 /// Classification of unparsed bytes accumulated in [`InputByteStreamToIrParser`].
 ///
@@ -55,7 +55,7 @@ impl UnparsedBufferClassification {
     ///
     /// Performs a single-pass classification across 4 criteria:
     /// 1. **[`OSC`] sequence**: Scans for runaway (> 1 MiB) or incomplete state via
-    ///    [`scan_osc_sequence()`].
+    ///    [`OscScanResult::scan()`].
     /// 2. **Completed [`CSI`]**: Reached a final byte in `0x40..=0x7E`
     ///    ([`CSI_FINAL_BYTE_MIN`] through [`CSI_FINAL_BYTE_MAX`]) but could not be
     ///    parsed.
@@ -69,14 +69,15 @@ impl UnparsedBufferClassification {
     /// [`CSI`]: crate::CsiSequence
     /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: MAX_ESCAPE_SEQUENCE_LENGTH
     /// [`OSC`]: crate::osc_codes::OscSequence
-    /// [`scan_osc_sequence()`]: crate::core::ansi::vt_100_terminal_input_parser::scan_osc_sequence
+    /// [`OscScanResult::scan()`]:
+    ///     crate::core::ansi::vt_100_terminal_input_parser::osc_scanner::OscScanResult::scan
     /// [`SS3_SEQ_LEN`]: crate::SS3_SEQ_LEN
     /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
     #[must_use]
     pub fn classify(chunk: &[u8]) -> Self {
         match chunk {
             // 1. OSC sequence check (1 MiB threshold).
-            [ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ..] => match scan_osc_sequence(chunk) {
+            [ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ..] => match OscScanResult::scan(chunk) {
                 OscScanResult::Runaway => Self::RunawayOsc,
                 OscScanResult::IncompleteDigits | OscScanResult::IncompletePayload => {
                     Self::Incomplete
