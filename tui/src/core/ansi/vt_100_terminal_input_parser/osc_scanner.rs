@@ -72,17 +72,6 @@ pub enum OscScanResult {
     Runaway,
 }
 
-/// Internal outcome of scanning the command identifier (Phase 1).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CommandScanOutcome<'input> {
-    /// Delimiter (`;` or `?`) reached; contains remaining slice for payload parsing.
-    Payload(&'input [u8]),
-
-    /// Scanning concluded in Phase 1 (early terminator, incomplete digits, syntax error,
-    /// or runaway).
-    Concluded(OscScanResult),
-}
-
 impl OscScanResult {
     /// Lexical scanner that parses a byte buffer for an Operating System Command
     /// ([`OSC`]) sequence.
@@ -185,6 +174,17 @@ impl OscScanResult {
             Self::IncompletePayload
         }
     }
+}
+
+/// Internal outcome of scanning the command identifier (Phase 1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommandScanOutcome<'input> {
+    /// Delimiter (`;` or `?`) reached; contains remaining slice for payload parsing.
+    Payload(&'input [u8]),
+
+    /// Scanning concluded in Phase 1 (early terminator, incomplete digits, syntax error,
+    /// or runaway).
+    Concluded(OscScanResult),
 }
 
 /// Helper to calculate bytes consumed from the start of the chunk up to `unconsumed`.
