@@ -72,6 +72,17 @@ pub enum OscScanResult {
     Runaway,
 }
 
+/// Internal outcome of scanning the command identifier (Phase 1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommandScanOutcome<'input> {
+    /// Delimiter (`;` or `?`) reached; contains remaining slice for payload parsing.
+    Payload(&'input [u8]),
+
+    /// Scanning concluded in Phase 1 (early terminator, incomplete digits, syntax error,
+    /// or runaway).
+    Concluded(OscScanResult),
+}
+
 impl OscScanResult {
     /// Lexical scanner that parses a byte buffer for an Operating System Command
     /// ([`OSC`]) sequence.
@@ -110,10 +121,17 @@ impl OscScanResult {
             return Self::InvalidSyntax;
         }
 
-        let mut remaining = &chunk[OSC_PREFIX_LEN..];
+        let chunk_len = chunk.len();
+        match Self::scan_command(chunk_len, &chunk[OSC_PREFIX_LEN..]) {
+            CommandScanOutcome::Concluded(result) => result,
+            CommandScanOutcome::Payload(payload) => {
+                Self::scan_payload(chunk_len, payload)
+            }
+        }
+    }
 
-        // Phase 1: Scan decimal command digits until delimiter or terminator.
-        let mut delimiter_found = false;
+    /// Phase 1: Scan decimal command digits until delimiter, terminator, or error.
+    fn scan_command(chunk_len: usize, mut remaining: &[u8]) -> CommandScanOutcome<'_> {
         while !remaining.is_empty() {
             match remaining {
                 [ASCII_DIGIT_0..=ASCII_DIGIT_9, rest @ ..] => {
@@ -121,32 +139,33 @@ impl OscScanResult {
                     remaining = rest;
                 }
                 [ANSI_PARAM_SEPARATOR | ASCII_QUESTION_MARK, rest @ ..] => {
-                    remaining = rest;
-                    delimiter_found = true;
-                    break;
+                    return CommandScanOutcome::Payload(rest);
                 }
                 [ANSI_BEL, rest @ ..] | [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
-                    return Self::Complete(consumed_offset(chunk, rest));
+                    return CommandScanOutcome::Concluded(Self::Complete(
+                        consumed_offset(chunk_len, rest),
+                    ));
                 }
-                [ANSI_ESC] => return Self::IncompleteDigits,
-                _ => return Self::InvalidSyntax,
+                [ANSI_ESC] => {
+                    return CommandScanOutcome::Concluded(Self::IncompleteDigits);
+                }
+                _ => return CommandScanOutcome::Concluded(Self::InvalidSyntax),
             }
         }
 
-        // Buffer ended before delimiter arrived (e.g. lone `ESC ]` or `ESC ] 1 1`).
-        if !delimiter_found {
-            return if chunk.len() >= MAX_OSC_SEQUENCE_LENGTH {
-                Self::Runaway
-            } else {
-                Self::IncompleteDigits
-            };
+        if chunk_len >= MAX_OSC_SEQUENCE_LENGTH {
+            CommandScanOutcome::Concluded(Self::Runaway)
+        } else {
+            CommandScanOutcome::Concluded(Self::IncompleteDigits)
         }
+    }
 
-        // Phase 2: Scan payload content until terminator.
+    /// Phase 2: Scan payload content until terminator.
+    fn scan_payload(chunk_len: usize, mut remaining: &[u8]) -> Self {
         while !remaining.is_empty() {
             match remaining {
                 [ANSI_BEL, rest @ ..] | [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
-                    return Self::Complete(consumed_offset(chunk, rest));
+                    return Self::Complete(consumed_offset(chunk_len, rest));
                 }
                 [ANSI_ESC] => return Self::IncompletePayload,
                 [CARRIAGE_RETURN | LINE_FEED, ..] | [ANSI_ESC, _, ..] => {
@@ -160,7 +179,7 @@ impl OscScanResult {
             }
         }
 
-        if chunk.len() >= MAX_OSC_SEQUENCE_LENGTH {
+        if chunk_len >= MAX_OSC_SEQUENCE_LENGTH {
             Self::Runaway
         } else {
             Self::IncompletePayload
@@ -168,10 +187,10 @@ impl OscScanResult {
     }
 }
 
-/// Helper to calculate bytes consumed from the start of `chunk` up to `unconsumed`.
+/// Helper to calculate bytes consumed from the start of the chunk up to `unconsumed`.
 #[inline]
-fn consumed_offset(chunk: &[u8], unconsumed: &[u8]) -> ByteOffset {
-    byte_offset(chunk.len() - unconsumed.len())
+fn consumed_offset(chunk_len: usize, unconsumed: &[u8]) -> ByteOffset {
+    byte_offset(chunk_len - unconsumed.len())
 }
 
 #[cfg(test)]
