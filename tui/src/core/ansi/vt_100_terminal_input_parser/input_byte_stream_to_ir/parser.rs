@@ -243,9 +243,10 @@ impl InputByteStreamToIrParser {
             if acc.is_empty() {
                 break;
             }
-            let maybe_input_event_ir = try_parse_input_event(&acc, maybe_more);
+            let maybe_input_event_ir = try_parse_input_event(acc, maybe_more);
 
             match maybe_input_event_ir {
+                // Happy path - parser found an event.
                 Some(ParsedInputEventIR {
                     event,
                     bytes_consumed,
@@ -253,7 +254,7 @@ impl InputByteStreamToIrParser {
                     let acc_mut = &mut parser.accumulator;
                     let events_mut = &mut parser.internal_events;
 
-                    // Bytes consumed should never be zero.
+                    // bytes_consumed must be > 0 to advance the stream.
                     if bytes_consumed.is_zero() {
                         debug_assert!(
                             false,
@@ -271,18 +272,26 @@ impl InputByteStreamToIrParser {
                     acc_mut.drain(..bytes_consumed.as_usize());
                 }
 
+                // Happy, Unhappy path - Make sure that infinite loops are prevented by
+                // distinguishing stream fragmentation (happy path), from malformed
+                // sequences that would cause infinite loops (unhappy path).
                 None => {
                     let class = parser.classify_unparsed_buffer();
+
                     let acc_mut = &mut parser.accumulator;
                     let breaker_mut = &mut parser.osc_circuit_breaker;
 
                     match class {
-                        // Incomplete sequence: await more bytes from subsequent
-                        // reads.
+                        // Incomplete sequence: normal stream fragmentation, don't touch
+                        // accumulator, and await more bytes (on next read).
                         UnparsedBufferClassification::Incomplete => {
                             break;
                         }
 
+                        // Malformed / unsupported sequence: structurally complete (e.g.
+                        // CSI terminating in 0x40..=0x7E or length >= 64) but unhandled.
+                        // Clear the accumulator to prevent unhandled keys (like
+                        // Shift+Home) from freezing. And await more bytes (on next read).
                         UnparsedBufferClassification::MalformedSequence => {
                             DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                                 // % is Display, ? is Debug.
@@ -290,7 +299,7 @@ impl InputByteStreamToIrParser {
                                     message = "InputByteStreamToIrParser::process_incoming_bytes",
                                     status = "discarding unrecognized/malformed escape sequence",
                                     discarded_hex = %format!("{:02X?}", acc_mut),
-                                    discarded_str = %String::from_utf8_lossy(&acc_mut),
+                                    discarded_str = %String::from_utf8_lossy(acc_mut),
                                     buffer_len = acc_mut.len(),
                                 };
                             });
@@ -298,6 +307,10 @@ impl InputByteStreamToIrParser {
                             break;
                         }
 
+                        // Runaway OSC sequence (> 1 MiB): trip the circuit breaker into
+                        // Open state and clear the accumulator. And await more bytes (on
+                        // next read). Remaining in-flight payload chunks will be
+                        // discarded on-the-fly without allocating.
                         UnparsedBufferClassification::RunawayOsc => {
                             let already_drained_byte_count = {
                                 let acc_len = acc_mut.len().into();
