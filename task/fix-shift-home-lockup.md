@@ -1462,7 +1462,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       impossible states unrepresentable.
     - **Architectural Consistency Across the Parser Ecosystem**: `router.rs`,
       `csi_decoder.rs`, `osc_circuit_breaker/circuit_breaker.rs`, and
-      `classify_unparsed_buffer()` in `parser.rs` already successfully utilize slice
+      `classify_unparsed_buffer()` in `parser/classification.rs` already successfully utilize slice
       pattern matching. Harmonizing the sibling parsers (`mouse.rs`, `terminal_events.rs`,
       `utf8.rs`, and keyboard submodules) ensures uniform, high-signal, idiomatic patterns
       throughout the entire terminal input pipeline.
@@ -1575,7 +1575,16 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/mod.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/mod.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/parser_struct.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/classification.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/constants.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/mod.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/test_fixtures.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/basic_and_special_keys_tests.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/esc_and_chunked_tests.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/osc_and_unrecognized_tests.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/unit_tests/utf8_tests.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`
