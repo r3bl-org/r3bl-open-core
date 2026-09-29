@@ -7,6 +7,16 @@
 					"line": 226,
 					"column": 0,
 					"label": "[ ] main entry point for stdin byte processing"
+				},
+				{
+					"line": 267,
+					"column": 16,
+					"label": "trace all the calls for UNPARSED input event IRs"
+				},
+				{
+					"line": 327,
+					"column": 0,
+					"label": "[ ] review classify_unparsed_buffer(&self)"
 				}
 			]
 		},
@@ -26,7 +36,17 @@
 				{
 					"line": 246,
 					"column": 0,
-					"label": "review the ir parser"
+					"label": "[ ] review the ir parser"
+				}
+			]
+		},
+		{
+			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
+			"bookmarks": [
+				{
+					"line": 313,
+					"column": 0,
+					"label": "[ ] review scan_osc_sequence(buffer: &[u8])"
 				}
 			]
 		}

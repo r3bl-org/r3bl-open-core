@@ -266,7 +266,9 @@ impl InputByteStreamToIrParser {
                 }
 
                 None => {
-                    match parser.classify_unparsed_buffer() {
+                    let classification = parser.classify_unparsed_buffer();
+
+                    match classification {
                         UnparsedBufferClassification::Incomplete => {
                             // Incomplete sequence: await more bytes from subsequent
                             // reads.
@@ -301,7 +303,7 @@ impl InputByteStreamToIrParser {
         }
     }
 
-    /// Inspects and classifies the unparsed bytes currently in `self.accumulator`.
+    /// Inspects and classifies the unparsed bytes currently in the `accumulator` field.
     ///
     /// Performs a single-pass classification across 4 criteria:
     /// 1. **[`OSC`] sequence**: Scans for runaway (> 1 MiB) or incomplete state via
