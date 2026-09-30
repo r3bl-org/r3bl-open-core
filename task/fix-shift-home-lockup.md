@@ -1381,8 +1381,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - **Harmonizing Sibling Parsers**: Extending this pattern to scanner helpers in
       `keyboard.rs` (`extract_csi_params`), `terminal_events.rs`
       (`parse_csi_terminal_parameters`, `check_st_terminator`), and `utf8.rs`
-      (`is_utf8_complete`) ensures that parsed sequence lengths are strongly typed at the
-      point of recognition.
+      (`try_get_complete_utf8_len`) ensures that parsed sequence lengths are strongly
+      typed at the point of recognition.
 
 - [x] **Phase 12.1: Full `ByteOffset` Integration in `OscCircuitBreaker`**:
     - In
@@ -1433,7 +1433,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         - Refactor `check_st_terminator`:
             - Change `byte_index: usize` to `byte_index: ByteIndex` or `ByteOffset`.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`:
-        - Refactor `is_utf8_complete` and `get_utf8_length`:
+        - Refactor `try_get_complete_utf8_len` and `get_utf8_length`:
             - Change return types from `Option<usize>` to `Option<ByteOffset>`.
             - Eliminate raw `usize` conversions at the `parse_utf8_text` boundary.
 
@@ -1487,7 +1487,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - Mandatory manual review for Phase 13.1:
         - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
 
-- [ ] **Phase 13.2: Terminal Event Parsing (`terminal_events.rs`)**:
+- [x] **Phase 13.2: Terminal Event Parsing (`terminal_events.rs`)**:
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
         - Refactor `parse_terminal_event`:
             - Replace manual length checks and
@@ -1511,9 +1511,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 - `[ANSI_ESC] => incomplete_result`
                 - `_ => OscScanResult::InvalidSyntax`
     - Mandatory manual review for Phase 13.2:
-        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
+        - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
 
-- [ ] **Phase 13.3: UTF-8 Decoder (`utf8.rs`)**:
+- [x] **Phase 13.3: UTF-8 Decoder (`utf8.rs`)**:
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`:
         - Refactor `decode_utf8`:
             - Replace outer match on `first_byte` and inner `if buffer.len() < N` checks +
@@ -1525,7 +1525,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 - `[b1 @ UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX, b2, b3, b4, ..] => ...`
                 - `_ => return None`
     - Mandatory manual review for Phase 13.3:
-        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
+        - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
 
 - [ ] **Phase 13.4: Keyboard Alt Keys & Control Characters (`keyboard/`)**:
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`:
@@ -1573,7 +1573,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/tui/editor/editor_buffer/clipboard/mod.rs`
     - [x] `tui/src/core/coordinates/byte/byte_offset.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
+    - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/mod.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/parser_struct.rs`

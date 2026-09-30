@@ -31,10 +31,9 @@
 //!
 //! ## Decoding Process
 //!
-//! 1. Read first byte to determine sequence length (1-4 bytes)
-//! 2. Validate all continuation bytes match `10xxxxxx` pattern
-//! 3. Extract data bits using the appropriate mask
-//! 4. Combine bits to form the Unicode codepoint
+//! 1. Read first byte to determine sequence length (1-4 bytes).
+//! 2. Validate all continuation bytes match `10xxxxxx` pattern.
+//! 3. Decode and validate the complete sequence slice via [`core::str::from_utf8`].
 //!
 //! ## Usage Example
 //!
@@ -202,46 +201,6 @@ pub const UTF8_RESERVED_MIN: u8 = 0b1111_1000;
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub const UTF8_RESERVED_MAX: u8 = 0b1111_1111;
 
-// ============================================================================
-// UTF-8 Decoding Bit Masks (Extract data bits from each byte)
-// ============================================================================
-
-/// [`UTF-8`] 2-Byte First Mask ([`UTF-8`]): Extracts lower 5 data bits at `1F` hex.
-///
-/// Value: `31` dec, `1F` hex.
-///
-/// Bit pattern: `0b0001_1111` - from `110xxxxx`, extract `xxxxx`.
-///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_2BYTE_FIRST_MASK: u8 = 0b0001_1111;
-
-/// [`UTF-8`] Continuation Data Mask ([`UTF-8`]): Extracts lower 6 data bits at `3F` hex.
-///
-/// Value: `63` dec, `3F` hex.
-///
-/// Bit pattern: `0b0011_1111` - from `10xxxxxx`, extract `xxxxxx`.
-///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_CONTINUATION_DATA_MASK: u8 = 0b0011_1111;
-
-/// [`UTF-8`] 3-Byte First Mask ([`UTF-8`]): Extracts lower 4 data bits at `0F` hex.
-///
-/// Value: `15` dec, `0F` hex.
-///
-/// Bit pattern: `0b0000_1111` - from `1110xxxx`, extract `xxxx`.
-///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_3BYTE_FIRST_MASK: u8 = 0b0000_1111;
-
-/// [`UTF-8`] 4-Byte First Mask ([`UTF-8`]): Extracts lower 3 data bits at `07` hex.
-///
-/// Value: `7` dec, `07` hex.
-///
-/// Bit pattern: `0b0000_0111` - from `11110xxx`, extract `xxx`.
-///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_4BYTE_FIRST_MASK: u8 = 0b0000_0111;
-
 /// [`UTF-8`] Maximum Bytes per Character ([`UTF-8`]): Max buffer size for single char.
 ///
 /// Value: `4` dec.
@@ -311,37 +270,5 @@ mod tests {
     fn test_reserved_ranges() {
         assert_eq!(UTF8_RESERVED_MIN, 0xF8);
         assert_eq!(UTF8_RESERVED_MAX, 0xFF);
-    }
-
-    #[test]
-    fn test_decoding_masks() {
-        assert_eq!(UTF8_2BYTE_FIRST_MASK, 0x1F);
-        assert_eq!(UTF8_CONTINUATION_DATA_MASK, 0x3F);
-        assert_eq!(UTF8_3BYTE_FIRST_MASK, 0x0F);
-        assert_eq!(UTF8_4BYTE_FIRST_MASK, 0x07);
-    }
-
-    #[test]
-    fn test_2byte_first_mask_extraction() {
-        // 0xC2 = 11000010 → extract lower 5 bits = 00010 = 0x02
-        assert_eq!(0xC2 & UTF8_2BYTE_FIRST_MASK, 0x02);
-    }
-
-    #[test]
-    fn test_continuation_data_mask_extraction() {
-        // 0xA9 = 10101001 → extract lower 6 bits = 101001 = 0x29
-        assert_eq!(0xA9 & UTF8_CONTINUATION_DATA_MASK, 0x29);
-    }
-
-    #[test]
-    fn test_3byte_first_mask_extraction() {
-        // 0xE2 = 11100010 → extract lower 4 bits = 0010 = 0x02
-        assert_eq!(0xE2 & UTF8_3BYTE_FIRST_MASK, 0x02);
-    }
-
-    #[test]
-    fn test_4byte_first_mask_extraction() {
-        // 0xF0 = 11110000 → extract lower 3 bits = 000 = 0x00
-        assert_eq!(0xF0 & UTF8_4BYTE_FIRST_MASK, 0x00);
     }
 }

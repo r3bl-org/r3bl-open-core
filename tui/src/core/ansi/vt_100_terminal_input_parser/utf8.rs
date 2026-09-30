@@ -125,8 +125,8 @@
 //!
 //! # Important: [`UTF-8`] Byte Length vs Display Width
 //!
-//! This module handles **[`UTF-8`] byte-level parsing only** - converting raw bytes from
-//! terminal input into `Unicode` characters. It does NOT handle display width.
+//! This module handles **[`UTF-8`] byte-level parsing only**, converting raw bytes from
+//! terminal input into Unicode characters. It does NOT handle display width.
 //!
 //! ## Two Separate Concerns
 //!
@@ -180,11 +180,10 @@
 
 use super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR, VT100KeyCodeIR,
                             VT100KeyModifiersIR};
-use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
-            UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX,
-            UTF8_3BYTE_MIN, UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
-            UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
-            UTF8_CONTINUATION_PATTERN, byte_offset};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteOffset, UTF8_1BYTE_MAX,
+            UTF8_1BYTE_MIN, UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_MAX,
+            UTF8_3BYTE_MIN, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN, UTF8_CONTINUATION_MASK,
+            UTF8_CONTINUATION_PATTERN, byte_index, byte_len, byte_offset};
 
 /// Parses [`UTF-8`] text and returns a single [`VT100InputEventIR`] for the first
 /// complete character.
@@ -215,23 +214,24 @@ use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_utf8_text(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    // Check if we have a complete UTF-8 sequence
-    let bytes_consumed = is_utf8_complete(buffer)?;
+    // Check if we have a complete UTF-8 sequence.
+    let utf8_sequence_len = try_get_complete_utf8_len(buffer)?;
 
-    // Decode the complete UTF-8 sequence
-    let ch = decode_utf8(buffer)?;
+    // Decode the complete UTF-8 sequence slice.
+    let complete_utf8_slice = &buffer[..utf8_sequence_len.as_usize()];
+    let utf8_char = decode_utf8(complete_utf8_slice)?;
 
-    // Return keyboard event with the decoded character
+    // Return keyboard event with the decoded character.
     Some(ParsedInputEventIR::new(
         VT100InputEventIR::Keyboard {
-            code: VT100KeyCodeIR::Char(ch),
+            code: VT100KeyCodeIR::Char(utf8_char),
             modifiers: VT100KeyModifiersIR::default(),
         },
-        bytes_consumed,
+        utf8_sequence_len,
     ))
 }
 
-/// Checks if a [`UTF-8`] byte sequence is complete.
+/// Checks if a [`UTF-8`] byte sequence is complete and returns its byte length.
 ///
 /// # Returns
 ///
@@ -241,77 +241,33 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<ParsedInputEventIR> {
 ///
 /// [`ByteOffset`]: crate::ByteOffset
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-fn is_utf8_complete(buffer: &[u8]) -> Option<ByteOffset> {
+fn try_get_complete_utf8_len(buffer: &[u8]) -> Option<ByteOffset> {
+    // If the buffer is empty, there is no UTF-8 sequence to parse.
     if buffer.is_empty() {
         return None;
     }
 
+    // Check the first byte to determine the expected length of the sequence.
     let first_byte = buffer[0];
     let required_len = get_utf8_length(first_byte)?;
 
-    // Check if we have enough bytes in the buffer
-    if buffer.len() < *required_len {
-        return None; // Incomplete sequence
+    // Check if we have enough bytes in the buffer.
+    let last_byte_index = byte_index(required_len.as_last_byte_index());
+    let byte_len = byte_len(buffer.len());
+    if last_byte_index.overflows(byte_len) == ArrayOverflowResult::Overflowed {
+        return None; // Incomplete sequence.
     }
 
-    // Verify all continuation bytes are correctly formatted
-    for byte in buffer.iter().skip(1).take(*required_len - 1) {
-        // Continuation bytes must be 10xxxxxx (0x80-0xBF)
+    // Verify all continuation bytes are correctly formatted.
+    let continuation_bytes = &buffer[1..required_len.as_usize()];
+    for byte in continuation_bytes {
+        // Continuation bytes must be 10xxxxxx (0x80-0xBF).
         if (byte & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PATTERN {
-            return None; // Invalid continuation byte
+            return None; // Invalid continuation byte.
         }
     }
 
     Some(required_len)
-}
-
-/// Validates and decodes a complete [`UTF-8`] sequence.
-///
-/// Returns the decoded character if valid, or [`None`] if the sequence is invalid.
-///
-/// Decodes [`UTF-8`] by extracting the data bits from each byte:
-///
-/// - 1-byte: `0xxxxxxx`
-/// - 2-byte: `110xxxxx 10xxxxxx`
-/// - 3-byte: `1110xxxx 10xxxxxx 10xxxxxx`
-/// - 4-byte: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`
-///
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-fn decode_utf8(buffer: &[u8]) -> Option<char> {
-    let codepoint = match buffer {
-        // 1-byte sequence: 0xxxxxxx.
-        [b1 @ UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX, ..] => u32::from(*b1),
-
-        // 2-byte sequence: 110xxxxx 10xxxxxx.
-        [b1 @ UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX, b2, ..] => {
-            let b1 = u32::from(*b1 & UTF8_2BYTE_FIRST_MASK);
-            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
-            (b1 << 6) | b2
-        }
-
-        // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx.
-        [b1 @ UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX, b2, b3, ..] => {
-            let b1 = u32::from(*b1 & UTF8_3BYTE_FIRST_MASK);
-            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
-            let b3 = u32::from(*b3 & UTF8_CONTINUATION_DATA_MASK);
-            (b1 << 12) | (b2 << 6) | b3
-        }
-
-        // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx.
-        [b1 @ UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX, b2, b3, b4, ..] => {
-            let b1 = u32::from(*b1 & UTF8_4BYTE_FIRST_MASK);
-            let b2 = u32::from(*b2 & UTF8_CONTINUATION_DATA_MASK);
-            let b3 = u32::from(*b3 & UTF8_CONTINUATION_DATA_MASK);
-            let b4 = u32::from(*b4 & UTF8_CONTINUATION_DATA_MASK);
-            (b1 << 18) | (b2 << 12) | (b3 << 6) | b4
-        }
-
-        // Invalid start byte or incomplete sequence.
-        _ => return None,
-    };
-
-    // Validate codepoint and convert to char.
-    char::from_u32(codepoint)
 }
 
 /// Gets the expected length of a [`UTF-8`] sequence from its first byte.
@@ -352,18 +308,34 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 /// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
 fn get_utf8_length(first_byte: u8) -> Option<ByteOffset> {
     match first_byte {
-        // ASCII: single byte (0xxxxxxx)
+        // ASCII: single byte (0xxxxxxx).
         UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(byte_offset(1)),
-        // Start byte for 2-byte sequence (110xxxxx)
+        // Start byte for 2-byte sequence (110xxxxx).
         UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(byte_offset(2)),
-        // Start byte for 3-byte sequence (1110xxxx)
+        // Start byte for 3-byte sequence (1110xxxx).
         UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(byte_offset(3)),
-        // Start byte for 4-byte sequence (11110xxx)
+        // Start byte for 4-byte sequence (11110xxx).
         UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(byte_offset(4)),
-        // Continuation byte (10xxxxxx) - invalid as start byte
-        // Reserved/invalid bytes (11111xxx)
+        // Continuation byte (10xxxxxx): invalid as start byte.
+        // Reserved or invalid bytes (11111xxx).
         _ => None,
     }
+}
+
+/// Validates and decodes a complete [`UTF-8`] byte sequence into a [`char`].
+///
+/// Uses [`core::str::from_utf8`] to decode and validate the character slice. This
+/// ensures full compliance with [RFC 3629] (rejecting invalid sequences, overlong
+/// encodings, surrogate halves, and codepoints exceeding `0x10_FFFF`).
+///
+/// # Returns
+///
+/// Returns the decoded [`char`], or [`None`] if the sequence is invalid.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [RFC 3629]: https://datatracker.ietf.org/doc/html/rfc3629
+fn decode_utf8(char_bytes: &[u8]) -> Option<char> {
+    core::str::from_utf8(char_bytes).ok()?.chars().next()
 }
 
 /// Unit tests for [`UTF-8`] text parsing.
@@ -380,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_ascii_character() {
-        // Single ASCII character: 'a' (0x61)
+        // Single ASCII character: 'a' (0x61).
         let buffer = b"a";
         let ParsedInputEventIR {
             event,
@@ -398,10 +370,10 @@ mod tests {
 
     #[test]
     fn test_ascii_multiple_chars() {
-        // Test parsing multiple ASCII characters sequentially
+        // Test parsing multiple ASCII characters sequentially.
         let buffer = b"hello";
 
-        // Parse 'h'
+        // Parse 'h'.
         let ParsedInputEventIR {
             event,
             bytes_consumed: consumed,
@@ -414,7 +386,7 @@ mod tests {
             _ => panic!("Expected Keyboard event"),
         }
 
-        // Parse 'e' from remainder
+        // Parse 'e' from remainder.
         let ParsedInputEventIR {
             event,
             bytes_consumed: consumed,
@@ -430,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_two_byte_utf8() {
-        // Two-byte character: '©' (0xC2 0xA9)
+        // Two-byte character: '©' (0xC2 0xA9).
         let buffer = b"\xC2\xA9";
         let ParsedInputEventIR {
             event,
@@ -448,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_three_byte_utf8() {
-        // Three-byte character: '€' (0xE2 0x82 0xAC)
+        // Three-byte character: '€' (0xE2 0x82 0xAC).
         let buffer = b"\xE2\x82\xAC";
         let ParsedInputEventIR {
             event,
@@ -466,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_four_byte_utf8() {
-        // Four-byte character: '😀' (0xF0 0x9F 0x98 0x80)
+        // Four-byte character: '😀' (0xF0 0x9F 0x98 0x80).
         let buffer = b"\xF0\x9F\x98\x80";
         let ParsedInputEventIR {
             event,
@@ -484,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_incomplete_two_byte_sequence() {
-        // Incomplete 2-byte sequence: only first byte
+        // Incomplete 2-byte sequence: only first byte.
         let buffer = b"\xC2";
         let result = parse_utf8_text(buffer);
         assert!(
@@ -495,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_incomplete_three_byte_sequence() {
-        // Incomplete 3-byte sequence: only first two bytes
+        // Incomplete 3-byte sequence: only first two bytes.
         let buffer = b"\xE2\x82";
         let result = parse_utf8_text(buffer);
         assert!(
@@ -506,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_incomplete_four_byte_sequence() {
-        // Incomplete 4-byte sequence: only first three bytes
+        // Incomplete 4-byte sequence: only first three bytes.
         let buffer = b"\xF0\x9F\x98";
         let result = parse_utf8_text(buffer);
         assert!(
@@ -517,8 +489,8 @@ mod tests {
 
     #[test]
     fn test_invalid_continuation_byte() {
-        // Invalid: 2-byte sequence with wrong continuation byte
-        // Expected: 0xC2 0xA9, but provide: 0xC2 0x00 (0x00 is not a valid continuation)
+        // Invalid: 2-byte sequence with wrong continuation byte.
+        // Expected: 0xC2 0xA9, but provide: 0xC2 0x00 (0x00 is not a valid continuation).
         let buffer = b"\xC2\x00";
         let result = parse_utf8_text(buffer);
         assert!(result.is_none(), "Should reject invalid continuation byte");
@@ -526,7 +498,7 @@ mod tests {
 
     #[test]
     fn test_invalid_start_byte_continuation() {
-        // Invalid: continuation byte (0x80) at start of buffer
+        // Invalid: continuation byte (0x80) at start of buffer.
         let buffer = b"\x80hello";
         let result = parse_utf8_text(buffer);
         assert!(result.is_none(), "Should reject continuation byte as start");
@@ -534,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_reserved_byte_value() {
-        // Invalid: reserved byte value (0xFF)
+        // Invalid: reserved byte value (0xFF).
         let buffer = b"\xFF";
         let result = parse_utf8_text(buffer);
         assert!(result.is_none(), "Should reject reserved byte");
@@ -542,7 +514,7 @@ mod tests {
 
     #[test]
     fn test_empty_buffer() {
-        // Empty buffer
+        // Empty buffer.
         let buffer = b"";
         let result = parse_utf8_text(buffer);
         assert!(result.is_none(), "Should not parse empty buffer");
@@ -550,10 +522,10 @@ mod tests {
 
     #[test]
     fn test_mixed_ascii_and_multibyte() {
-        // Buffer with ASCII followed by multi-byte
+        // Buffer with ASCII followed by multi-byte.
         let buffer = b"a\xC2\xA9b";
 
-        // Parse ASCII 'a'
+        // Parse ASCII 'a'.
         let ParsedInputEventIR {
             event,
             bytes_consumed: consumed,
@@ -566,7 +538,7 @@ mod tests {
             _ => panic!("Expected Keyboard event"),
         }
 
-        // Parse 2-byte '©'
+        // Parse 2-byte '©'.
         let ParsedInputEventIR {
             event,
             bytes_consumed: consumed,
@@ -579,7 +551,7 @@ mod tests {
             _ => panic!("Expected Keyboard event"),
         }
 
-        // Parse ASCII 'b'
+        // Parse ASCII 'b'.
         let ParsedInputEventIR {
             event,
             bytes_consumed: consumed,
@@ -591,5 +563,102 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
+    }
+
+    #[test]
+    fn test_surrogate_codepoint_rejection() {
+        // U+D800 is a surrogate code point (illegal in UTF-8: 0xED 0xA0 0x80).
+        // try_get_complete_utf8_len passes structural check, but decode_utf8 rejects via
+        // core::str::from_utf8.
+        let buffer = &[0xED, 0xA0, 0x80];
+        let result = parse_utf8_text(buffer);
+        assert!(result.is_none(), "Should reject surrogate codepoints");
+    }
+
+    #[test]
+    fn test_out_of_range_codepoint_rejection() {
+        // Codepoints > U+10FFFF are invalid Unicode scalars.
+        // U+110000: 0xF4 0x90 0x80 0x80.
+        let buffer_over_max = &[0xF4, 0x90, 0x80, 0x80];
+        assert!(
+            parse_utf8_text(buffer_over_max).is_none(),
+            "Should reject codepoints > U+10FFFF"
+        );
+
+        // Maximum 4-byte bit pattern (0xF7 0xBF 0xBF 0xBF -> U+1FFFFF).
+        let buffer_pattern_max = &[0xF7, 0xBF, 0xBF, 0xBF];
+        assert!(
+            parse_utf8_text(buffer_pattern_max).is_none(),
+            "Should reject 4-byte out-of-range bit patterns"
+        );
+    }
+
+    #[test]
+    fn test_invalid_subsequent_continuation_bytes() {
+        // 3-byte sequence: valid 1st continuation (0x82), invalid 2nd continuation
+        // (0x20).
+        let buffer_3byte = &[0xE2, 0x82, 0x20];
+        assert!(
+            parse_utf8_text(buffer_3byte).is_none(),
+            "Should reject 3-byte sequence with invalid 2nd continuation byte"
+        );
+
+        // 4-byte sequence: valid 1st (0x9F) and 2nd (0x98), invalid 3rd continuation
+        // (0x00).
+        let buffer_4byte = &[0xF0, 0x9F, 0x98, 0x00];
+        assert!(
+            parse_utf8_text(buffer_4byte).is_none(),
+            "Should reject 4-byte sequence with invalid 3rd continuation byte"
+        );
+    }
+
+    #[test]
+    fn test_ascii_boundary_values() {
+        // Lower boundary: NUL byte (0x00).
+        let buffer_nul = b"\x00";
+        let ParsedInputEventIR {
+            event: event_nul,
+            bytes_consumed: consumed_nul,
+        } = parse_utf8_text(buffer_nul).expect("Should parse NUL byte");
+        assert_eq!(consumed_nul, byte_offset(1));
+        match event_nul {
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('\0'));
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+
+        // Upper boundary: DEL byte (0x7F).
+        let buffer_del = b"\x7F";
+        let ParsedInputEventIR {
+            event: event_del,
+            bytes_consumed: consumed_del,
+        } = parse_utf8_text(buffer_del).expect("Should parse DEL byte");
+        assert_eq!(consumed_del, byte_offset(1));
+        match event_del {
+            VT100InputEventIR::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCodeIR::Char('\x7F'));
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_overlong_sequence_rejection() {
+        // Overlong 2-byte NUL (0xC0 0x80) is illegal in UTF-8 (RFC 3629).
+        // try_get_complete_utf8_len passes structural check, but decode_utf8 rejects via
+        // core::str::from_utf8.
+        let buffer_overlong_nul = &[0xC0, 0x80];
+        assert!(
+            parse_utf8_text(buffer_overlong_nul).is_none(),
+            "Should reject overlong 2-byte NUL sequence"
+        );
+
+        // Overlong 2-byte '/' (0xC0 0xAF) is illegal in UTF-8.
+        let buffer_overlong_slash = &[0xC0, 0xAF];
+        assert!(
+            parse_utf8_text(buffer_overlong_slash).is_none(),
+            "Should reject overlong 2-byte slash sequence"
+        );
     }
 }
