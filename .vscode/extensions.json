@@ -17,8 +17,9 @@
         "R3BL.r3bl-extension-pack",
         // Others.
         "ryuta46.multi-command", // Multi Command.
-        "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
         "usernamehw.errorlens", // Error Lens.
+        "tekumara.typos-vscode", // Typos Spell Checker (Rust LSP).
+        "elijah-potter.harper", // Harper Grammar & Spell Checker (Rust LSP).
         "rust-lang.rust-analyzer", // Rust Analyzer.
         "dnut.rewrap-revived", // Rewrap Revived.
         "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
@@ -31,12 +32,14 @@
         "perkovec.emoji", // Emoji.
         "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
         "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
-        "hoovercj.vscode-settings-cycler", // Settings Cycler.
         "alefragnani.bookmarks", // Bookmarks.
         "esbenp.prettier-vscode" // Prettier.
     ],
     // List of extensions that should not be recommended for users of this workspace.
     "unwantedRecommendations": [
+        "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker.
+        "hoovercj.vscode-settings-cycler", // Settings Cycler.
+        "naumovs.color-highlight", // Color Highlight.
         "nicholashsiang.vscode-opened-editors", // Opened Editors.
         "ms-vscode.cpptools", // C/C++. Debugger.
         "vadimcn.vscode-lldb", // LLDB. Debugger.
