@@ -195,5 +195,3 @@ The article addresses and refutes the assumption that raw primitives are faster:
     file:///home/nazmul/github/roc/tui/src/core/coordinates/bounds_check/result_enums.rs#L112
 [`CursorPositionBoundsStatus`]:
     file:///home/nazmul/github/roc/tui/src/core/coordinates/bounds_check/result_enums.rs
-
-<!-- cspell:words FUNARCH Heuer Woldmann Haase Crichton -->

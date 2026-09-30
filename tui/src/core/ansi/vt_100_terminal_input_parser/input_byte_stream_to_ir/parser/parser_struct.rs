@@ -70,7 +70,7 @@ use std::collections::VecDeque;
 /// When an [`ANSI`] escape sequence is not yet fully parsed, [`try_parse_input_event`]
 /// returns `None`. If the sequence is unsupported or unrecognized (such as an obscure
 /// terminal response or unmapped control sequence), returning `None` must not leave the
-/// unparseable bytes in the accumulator indefinitely. Otherwise, every subsequent
+/// unparsable bytes in the accumulator indefinitely. Otherwise, every subsequent
 /// keypress would be appended to the poisoned accumulator, causing accumulator poisoning
 /// and permanently locking up the terminal input event loop.
 ///

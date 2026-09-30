@@ -58,12 +58,12 @@
 //! is applicable for other mouse events as well.
 //!
 //! 1. **Full TUI Setup & Terminal Awareness:** The user opens a terminal emulator app
-//!    (eg: [`WezTerm`]), and runs a full-TUI app. The app boots via
+//!    (e.g., [`WezTerm`]), and runs a full-TUI app. The app boots via
 //!    [`crate::tui::TerminalWindow::main_event_loop()`]. The `r3bl_tui` framework
 //!    automatically puts the terminal in [Raw Mode], spins up the [Resilient Reactor
 //!    Thread] (RRT) for [`mio`], and emits [`ANSI`] sequences like `ESC[ ? 1003h` (Enable
 //!    Any-Event Mouse Tracking) to [`stdout`], which tells the terminal emulator app that
-//!    we want hover coordinates sent back via [`stdin`].
+//!    we want to hover coordinates sent back via [`stdin`].
 //! 2. **Physical Action:** A user moves their mouse or touchpad or trackball or
 //!    trackpoint, specifically "hover-moving" over the terminal emulator window running
 //!    our full TUI app.
@@ -207,15 +207,15 @@ use crate::{ByteOffset, KeyState, TermPos, WideningCastToU16, byte_offset,
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
     match buffer {
         // 1. Check for SGR mouse protocol (most reliable).
-        // SGR sequence: ESC [ < Cb ; Cx ; Cy M/m.
+        // SGR sequence: `ESC [ < Cb ; Cx ; Cy M/m`.
         [ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_SGR_MARKER, ..] => sgr::parse(buffer),
 
         // 2. Check for X10/Legacy protocol (legacy).
-        // X10 sequence: ESC [ M Cb Cx Cy.
+        // X10 sequence: `ESC [ M Cb Cx Cy`.
         [ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER, ..] => legacy::parse_x10(buffer),
 
         // 3. Check for RXVT protocol (legacy alternative).
-        // RXVT format: ESC [ Cb ; Cx ; Cy M.
+        // RXVT format: `ESC [ Cb ; Cx ; Cy M`.
         [ANSI_ESC, ANSI_CSI_BRACKET, ..] => legacy::parse_rxvt(buffer),
 
         _ => None,
@@ -256,7 +256,7 @@ mod sgr {
             .find(|&(_idx, byte)| byte == MOUSE_SGR_PRESS || byte == MOUSE_SGR_RELEASE)?;
         let bytes_consumed = byte_offset(terminator_idx + 1);
 
-        // Parse the payload between ESC[< and M/m: "Cb;Cx;Cy".
+        // Parse the payload between `ESC[<` and `M/m`: `Cb;Cx;Cy`.
         let content =
             std::str::from_utf8(&chunk[MOUSE_SGR_PREFIX_LEN..terminator_idx]).ok()?;
         let (part_button_byte, part_cx, part_cy) =
@@ -342,7 +342,7 @@ mod legacy {
     ///
     /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
     pub fn parse_x10(sequence: &[u8]) -> Option<ParsedInputEventIR> {
-        // X10 format: ESC [ M Cb Cx Cy (6 bytes minimum).
+        // X10 format: `ESC [ M Cb Cx Cy` (6 bytes minimum).
         let [
             ANSI_ESC,
             ANSI_CSI_BRACKET,
@@ -1877,7 +1877,8 @@ mod tests {
     #[test]
     fn test_x10_invalid_zero_coordinates() {
         // X10 encoding requires byte > 32 (ASCII space).
-        // Byte 32 (space) minus 32 = 0, which is invalid (terminal coords are 1-based).
+        // Byte 32 (space) minus 32 = 0, which is invalid (terminal coordinates are
+        // 1-based).
         let seq = &[
             ANSI_ESC,
             ANSI_CSI_BRACKET,
@@ -1899,5 +1900,3 @@ mod tests {
         assert!(parse_mouse_sequence(b"\x1b").is_none());
     }
 }
-
-// cspell:words trackpoint

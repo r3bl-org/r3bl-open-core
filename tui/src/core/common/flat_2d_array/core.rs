@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words LINESIZE getconf DCACHE VPCMPEQB
-
 use crate::{CHeight, CSize, CWidth, GetMemSize};
 use std::mem::size_of;
 

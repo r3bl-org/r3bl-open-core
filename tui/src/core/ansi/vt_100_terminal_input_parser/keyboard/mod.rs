@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words Bemer finalchar ctrlletter
-
 //! Keyboard input event parsing from [`ANSI`]/[`CSI`] sequences.
 //!
 //! This module handles conversion of raw [`ANSI`] escape sequences into keyboard events.
@@ -68,8 +66,8 @@
 //!
 //! ### [`ANSI`] escape codes] (1979)
 //!
-//! Built on [`ASCII`]'s [`ESC`] character. Standardized as [`ANSI`] X3.64 based on
-//! [`DEC`]'s [`VT-100`] terminal, these are the `ESC [ ...` sequences we still use today
+//! Built on the [`ASCII`] [`ESC`] character. Standardized as [`ANSI`] X3.64 based on
+//! the [`DEC`] [`VT-100`] terminal, these are the `ESC [ ...` sequences we still use today
 //! (e.g., `ESC [ 1 5 ~` for F5, `ESC [ < 0 ; 10 ; 20 M` for mouse click). Regular keys
 //! use single [`ASCII`] bytes, Alt adds one [`ESC`] byte, and only complex modifier
 //! combinations require multi-byte [`CSI`] sequences.
@@ -176,7 +174,7 @@
 //!
 //! | Bytes   | Encoding                    | Modifier       | Reason                                |
 //! | :------ | :-------------------------- | :------------- | :------------------------------------ |
-//! | 0       | Implicit in case            | **Shift**      | 'a' vs 'A' already encodes it         |
+//! | 0       | Implicit in case            | **Shift**      | `'a'` vs `'A'` already encodes it     |
 //! | 1       | Single byte (`0x00-0x1F`)   | **Ctrl**       | Fits in [`ASCII`] control codes       |
 //! | 2       | [`ESC`] prefix              | **Alt**        | No room in [`ASCII`], prepend [`ESC`] |
 //! | 4-8     | [`CSI`] parameters          | **Combos**     | Need bitmask encoding                 |
@@ -380,23 +378,23 @@
 //!
 //! | Numpad Key     | Normal Mode     | Application Mode     | SS3 Char     |
 //! | :------------- | :-------------- | :------------------- | :----------- |
-//! | **0**          | `'0'`           | `ESC O p`            | p            |
-//! | **1**          | `'1'`           | `ESC O q`            | q            |
-//! | **2**          | `'2'`           | `ESC O r`            | r            |
-//! | **3**          | `'3'`           | `ESC O s`            | s            |
-//! | **4**          | `'4'`           | `ESC O t`            | t            |
-//! | **5**          | `'5'`           | `ESC O u`            | u            |
-//! | **6**          | `'6'`           | `ESC O v`            | v            |
-//! | **7**          | `'7'`           | `ESC O w`            | w            |
-//! | **8**          | `'8'`           | `ESC O x`            | x            |
-//! | **9**          | `'9'`           | `ESC O y`            | y            |
-//! | **Enter**      | `CR`            | `ESC O M`            | M            |
-//! | **+**          | `'+'`           | `ESC O k`            | k            |
-//! | **-**          | `'-'`           | `ESC O m`            | m            |
-//! | **\***         | `'*'`           | `ESC O j`            | j            |
-//! | **/**          | `'/'`           | `ESC O o`            | o            |
-//! | **.**          | `'.'`           | `ESC O n`            | n            |
-//! | **,**          | `','`           | `ESC O l`            | l            |
+//! | **0**          | `'0'`           | `ESC O p`            | `p`          |
+//! | **1**          | `'1'`           | `ESC O q`            | `q`          |
+//! | **2**          | `'2'`           | `ESC O r`            | `r`          |
+//! | **3**          | `'3'`           | `ESC O s`            | `s`          |
+//! | **4**          | `'4'`           | `ESC O t`            | `t`          |
+//! | **5**          | `'5'`           | `ESC O u`            | `u`          |
+//! | **6**          | `'6'`           | `ESC O v`            | `v`          |
+//! | **7**          | `'7'`           | `ESC O w`            | `w`          |
+//! | **8**          | `'8'`           | `ESC O x`            | `x`          |
+//! | **9**          | `'9'`           | `ESC O y`            | `y`          |
+//! | **Enter**      | `CR`            | `ESC O M`            | `M`          |
+//! | **+**          | `'+'`           | `ESC O k`            | `k`          |
+//! | **-**          | `'-'`           | `ESC O m`            | `m`          |
+//! | **\***         | `'*'`           | `ESC O j`            | `j`          |
+//! | **/**          | `'/'`           | `ESC O o`            | `o`          |
+//! | **.**          | `'.'`           | `ESC O n`            | `n`          |
+//! | **,**          | `','`           | `ESC O l`            | `l`          |
 //!
 //! **Use cases**: Calculator apps (distinguish numpad), games (numpad for movement), vim
 //! (numpad for navigation).
@@ -429,8 +427,7 @@
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`try_parse_input_event`]: super::try_parse_input_event
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-//! [`utf8` encoding]:
-//!     mod@crate::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
+//! [`utf8` encoding]: mod@crate::vt_100_terminal_input_parser::utf8#utf-8-encoding-explained
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-220`]: https://en.wikipedia.org/wiki/VT220

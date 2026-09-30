@@ -369,6 +369,3 @@ mod tests {
         assert_eq!(text, "");
     }
 }
-
-// cspell:words tcgetwinsize winsize EINTR SIGWINCH kqueue epoll wakeup eventfd bcast
-// cspell:words reinit EPOLLET NONBLOCK devptmx devptsn

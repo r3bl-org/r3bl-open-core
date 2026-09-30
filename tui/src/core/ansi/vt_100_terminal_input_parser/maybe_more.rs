@@ -100,7 +100,7 @@
 ///                            Parsed as: Up Arrow ✓
 /// ```
 ///
-/// ## Scenario 2: Multi-KB Paste Across Buffer Boundaries (Successful Reassembly)
+/// ## Scenario 2: Multi-KiB Paste Across Buffer Boundaries (Successful Reassembly)
 ///
 /// During high-volume paste operations that saturate the 1024-byte read buffer, an escape
 /// sequence split across chunk boundaries is preserved by [`Self::KernelMayHaveMore`]:
@@ -247,5 +247,3 @@ mod tests {
         assert_eq!(MaybeMore::default(), MaybeMore::KernelDrained);
     }
 }
-
-// cspell:words ttimeoutlen

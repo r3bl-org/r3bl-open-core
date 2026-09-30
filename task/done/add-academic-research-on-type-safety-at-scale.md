@@ -110,6 +110,3 @@ while separating two fundamental concepts:
 - [x] `tui/src/core/coordinates/mod.rs`
 - [x] `tui/src/lib.rs`
 - [x] `tui/README.md`
-
-<!-- cspell:words FUNARCH Heuer Woldmann Haase Crichton -->
-

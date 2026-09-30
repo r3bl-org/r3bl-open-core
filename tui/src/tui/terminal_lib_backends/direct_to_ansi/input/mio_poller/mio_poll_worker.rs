@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR epoll sigaction signalfd fcntl getfl setfl NONBLOCK
-
 //! mio-specific worker implementation for the Resilient Reactor Thread pattern.
 //!
 //! This module provides [`MioPollWorker`], which implements [`RRTWorker`] for terminal

@@ -523,5 +523,3 @@ pub use pty_session::*;
 
 #[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
 pub use pty_session::threads;
-
-// cspell:words terminfo IOCP kqueue

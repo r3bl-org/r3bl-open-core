@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words fullwidth multibyte
-
 //! [`UTF-8`] text parsing between [`ANSI`] sequences.
 //!
 //! This module handles conversion of raw [`UTF-8`] bytes (received as regular text input
@@ -83,14 +81,14 @@
 //! 4-byte     5 (11110)      3 bits      3 + 6 + 6 + 6 = 21 bits
 //! ```
 //!
-//! ### Continuation Bytes: 10xxxxxx
+//! ### Continuation Bytes: `10xxxxxx`
 //!
 //! Each continuation byte:
 //! - Prefix `10` marks it as "not a start byte" (enables self-synchronization)
 //! - Remaining 6 bits carry data
 //! - Extract with: `byte & 0x3F`
 //!
-//! ### Worked Example: 'é' (U+00E9 = 233)
+//! ### Worked Example: `'é'` (`U+00E9` = 233)
 //!
 //! ```text
 //! Step 1: 233 in binary = 11101001 (needs 8 bits, won't fit in 7-bit ASCII)
@@ -261,7 +259,7 @@ fn try_get_complete_utf8_len(buffer: &[u8]) -> Option<ByteOffset> {
     // Verify all continuation bytes are correctly formatted.
     let continuation_bytes = &buffer[1..required_len.as_usize()];
     for byte in continuation_bytes {
-        // Continuation bytes must be 10xxxxxx (0x80-0xBF).
+        // Continuation bytes must be `10xxxxxx` (0x80-0xBF).
         if (byte & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PATTERN {
             return None; // Invalid continuation byte.
         }
@@ -308,16 +306,16 @@ fn try_get_complete_utf8_len(buffer: &[u8]) -> Option<ByteOffset> {
 /// [module-level documentation]: self#important-utf-8-byte-length-vs-display-width
 fn get_utf8_length(first_byte: u8) -> Option<ByteOffset> {
     match first_byte {
-        // ASCII: single byte (0xxxxxxx).
+        // ASCII: single byte (`0xxxxxxx`).
         UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(byte_offset(1)),
-        // Start byte for 2-byte sequence (110xxxxx).
+        // Start byte for 2-byte sequence (`110xxxxx`).
         UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(byte_offset(2)),
-        // Start byte for 3-byte sequence (1110xxxx).
+        // Start byte for 3-byte sequence (`1110xxxx`).
         UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(byte_offset(3)),
-        // Start byte for 4-byte sequence (11110xxx).
+        // Start byte for 4-byte sequence (`11110xxx`).
         UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(byte_offset(4)),
-        // Continuation byte (10xxxxxx): invalid as start byte.
-        // Reserved or invalid bytes (11111xxx).
+        // Continuation byte (`10xxxxxx`): invalid as start byte.
+        // Reserved or invalid bytes (`11111xxx`).
         _ => None,
     }
 }
@@ -567,7 +565,7 @@ mod tests {
 
     #[test]
     fn test_surrogate_codepoint_rejection() {
-        // U+D800 is a surrogate code point (illegal in UTF-8: 0xED 0xA0 0x80).
+        // `U+D800` is a surrogate code point (illegal in UTF-8: 0xED 0xA0 0x80).
         // try_get_complete_utf8_len passes structural check, but decode_utf8 rejects via
         // core::str::from_utf8.
         let buffer = &[0xED, 0xA0, 0x80];
@@ -577,7 +575,7 @@ mod tests {
 
     #[test]
     fn test_out_of_range_codepoint_rejection() {
-        // Codepoints > U+10FFFF are invalid Unicode scalars.
+        // Codepoints > `U+10FFFF` are invalid Unicode scalars.
         // U+110000: 0xF4 0x90 0x80 0x80.
         let buffer_over_max = &[0xF4, 0x90, 0x80, 0x80];
         assert!(
@@ -585,7 +583,7 @@ mod tests {
             "Should reject codepoints > U+10FFFF"
         );
 
-        // Maximum 4-byte bit pattern (0xF7 0xBF 0xBF 0xBF -> U+1FFFFF).
+        // Maximum 4-byte bit pattern (0xF7 0xBF 0xBF 0xBF -> `U+1FFFFF`).
         let buffer_pattern_max = &[0xF7, 0xBF, 0xBF, 0xBF];
         assert!(
             parse_utf8_text(buffer_pattern_max).is_none(),

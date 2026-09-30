@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno
-
 use super::buf_read_ext::BufReadExt;
 use crate::{ControlledChild, ControlledChildTerminationHandle, ControllerWriter, EIO,
             GLYPH_CONTROLLED, GLYPH_SUCCESS, GLYPH_WARNING, PtyPair, ReadLinesResult, ok};
@@ -614,5 +612,3 @@ impl PtyTestChild {
         }
     }
 }
-
-// cspell:words PSEUDOCONSOLE nonsignaled conhost

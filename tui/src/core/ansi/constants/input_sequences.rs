@@ -699,7 +699,7 @@ pub const CONTROL_ENTER: u8 = b'\r';
 ///
 /// Value: `27` dec, `1B` hex.
 ///
-/// Key combo: `Ctrl+[` or Esc key.
+/// Key combo: `Ctrl+[` or `Esc` key.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ESC`]: crate::EscSequence

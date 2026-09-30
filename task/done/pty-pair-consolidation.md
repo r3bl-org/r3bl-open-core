@@ -1,5 +1,3 @@
-<!-- cspell:words openpty -->
-
 # Consolidate all PTY creation and spawning through PtyPair
 
 ## Status: DONE

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words CLOEXEC
-
 //! Core type aliases and constants for [`PTY`] operations. See individual type
 //! definitions for details:
 //! - [`PtyPair`] - Inclusive-language wrapper around [`portable_pty::PtyPair`]
@@ -9,12 +7,12 @@
 //! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
 //! - [`ControllerReader`], [`ControllerWriter`] - [`PTY`] I/O streams
 //! - [`PtyCommand`], [`PtyCompletionHandle`] - Command execution
-//! - [`InputEventSenderHalf`], [`OutputEventReceiverHalf`],
-//!   [`OutputEventReceiverHalf`] - Channel halves
+//! - [`InputEventSenderHalf`], [`OutputEventReceiverHalf`], [`OutputEventReceiverHalf`] -
+//!   Channel halves
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use super::{PtyInputEvent, PtyOutputEvent, PtyOutputEvent};
+use super::{PtyInputEvent, PtyOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
 use std::pin::Pin;
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},

@@ -245,5 +245,3 @@ mod tests_diff {
         assert!(json_out.contains("\"action\": \"remove\""));
     }
 }
-
-// cspell:words SHLVL

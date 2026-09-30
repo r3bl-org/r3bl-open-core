@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words backticking minibuffer
-
 // Allow doc_markdown in this test module - the documentation explains internal
 // architecture and patterns, where backticking every function/type name would reduce
 // readability.

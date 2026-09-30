@@ -438,5 +438,3 @@ mod tests {
         assert_eq!(ClipboardTarget::Primary.as_char(), 'p');
     }
 }
-
-// cspell:words Fdvcmxk

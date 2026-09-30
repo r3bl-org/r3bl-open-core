@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
-
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
 # - language fundamentals: https://fishshell.com/docs/current/language.html

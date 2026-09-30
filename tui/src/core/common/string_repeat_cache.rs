@@ -1,8 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words LIST_SPACE_DISPLAY HEADING SPACE_CHAR SPACE_CACHE LIST_SPACE_DISPLAY_CHAR
-// cspell:words HORIZ_LINE_CACHE
-
 //! String Repeat Cache Module
 //!
 //! This module provides a mechanism to cache strings of repeated characters (like spaces,

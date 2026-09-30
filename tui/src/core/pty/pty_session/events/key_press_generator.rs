@@ -820,5 +820,3 @@ mod tests {
         }
     }
 }
-
-// cspell:words Fixterms

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words URXVT
-
 //! General-purpose [`ANSI`] constants for terminal modes and features.
 //!
 //! This module contains application-level constants that apply across both [`CSI`] and

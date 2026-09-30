@@ -1,0 +1,5 @@
+[files]
+extend-exclude = [".harper-dictionary.txt"]
+
+[default.extend-words]
+ba = "ba"

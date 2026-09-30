@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words hybridpartial clitextinline pixelcharrenderer outputdevice directtoansi insta
-
 // XMARK: Prevent rustfmt from reformatting entire file.
 // The `custom_inner_attributes` nightly feature enables `#![rustfmt::skip]`.
 #![feature(custom_inner_attributes)]
@@ -306,7 +304,7 @@
 //! ground up in pure Rust:
 //!
 //! 1. 📟 **CLI & REPLs ([`readline_async`])**: Unlike GNU [`readline`] which is
-//!    single-threaded and blocking, our implementation is fully async, interruptable, and
+//!    single-threaded and blocking, our implementation is fully async, interruptible, and
 //!    non-blocking, allowing background tasks and spinners to print concurrently without
 //!    pausing line editing or blocking your main thread.
 //!

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words desynchronization
-
 //! [`VT-100`] Terminal Input Parsing Layer
 //!
 //! This module provides pure, reusable [`ANSI`] sequence parsing for terminal input. It
@@ -57,13 +55,13 @@
 //! [`DirectToAnsiInputDevice`] is the only backend that uses this parser.
 //!
 //! - [`DirectToAnsiInputDevice`] manages a dedicated [`mio`] poller thread reading from
-//!   non-blocking [`stdin`], accumulating bytes in [`InputByteStreamToIrParser`]
-//!   (in [`input_byte_stream_to_ir`]), and calling the main entry point function
+//!   non-blocking [`stdin`], accumulating bytes in [`InputByteStreamToIrParser`] (in
+//!   [`input_byte_stream_to_ir`]), and calling the main entry point function
 //!   [`try_parse_input_event()`] in this module.
 //! - This function inspects the accumulated sequence bytes and dispatches to the
 //!   appropriate parser: keyboard, mouse, terminal events, or [`UTF-8`] text.
-//! - The resulting events are converted to structured [`InputEvent`]s for the application
-//!   by [`convert_input_event()`].
+//! - The resulting events are converted to structured [`InputEvent`] instances for the
+//!   application by [`convert_input_event()`].
 //!
 //! Here's the data flow from the consumer's perspective:
 //!
@@ -95,7 +93,7 @@
 //! ## Architecture
 //!
 //! The [`VT-100`] terminal input parser uses a [`Sans-IO`] design - it parses [`ANSI`]
-//! sequences independently of platform-specific I/O. This I/O-agnostic approach mirrors
+//! sequences independently of platform-specific `I/O`. This `I/O`-agnostic approach mirrors
 //! the output architecture ([`generator`] + [`ansi_output`]) and enables:
 //!
 //! - **Testability**: Unit test parsers without I/O or async complexity
@@ -144,21 +142,21 @@
 //!      multi-byte escape sequence (such as Up Arrow `ESC [ A`) also begins with `1B` in
 //!      hex.
 //!    - *Resolution*: Handled by stream availability heuristics via [`MaybeMore`] in
-//!      [`maybe_more`]. When the userspace buffer is not full ([`MaybeMore::KernelDrained`]),
-//!      the kernel queue was drained, allowing a lone [`ESC`] to be emitted immediately
-//!      with 0ms latency. If full ([`MaybeMore::KernelMayHaveMore`]), the parser waits
-//!      for pending bytes.
+//!      [`maybe_more`]. When the userspace buffer is not full
+//!      ([`MaybeMore::KernelDrained`]), the kernel queue was drained, allowing a lone
+//!      [`ESC`] to be emitted immediately with 0ms latency. If full
+//!      ([`MaybeMore::KernelMayHaveMore`]), the parser waits for pending bytes.
 //!
 //! 2. **Standalone `Alt+]` Key (`ESC ]`, `1B 5D` in hex) vs. [`OSC`] Responses**:
 //!    - *Collision*: The keystroke `Alt+]` emits `ESC ]`. Operating System Command
-//!      ([`OSC`]) responses written by the terminal (such as color queries `ESC ] 11 ;
-//!      rgb:... BEL`) also begin with `ESC ]`.
+//!      ([`OSC`]) responses written by the terminal (such as color queries
+//!      `ESC ] 11 ; rgb:... BEL`) also begin with `ESC ]`.
 //!    - *Resolution*: Handled in [`terminal_events`] via
 //!      [`try_disambiguate_osc_or_alt_bracket()`]. Terminal [`OSC`] responses strictly
 //!      conform to [`OSC` spec] (command digits followed by `;` or `?`). Non-digits
 //!      immediately identify human input (`Alt+]`). If command digits arrive but the
-//!      stream is [`MaybeMore::KernelDrained`] before the delimiter, `Alt+]` is emitted. Valid
-//!      [`OSC`] payloads wait across reads for the terminator.
+//!      stream is [`MaybeMore::KernelDrained`] before the delimiter, `Alt+]` is emitted.
+//!      Valid [`OSC`] payloads wait across reads for the terminator.
 //!
 //! 3. **Standalone `Alt+[` Key (`ESC [`, `1B 5B` in hex) vs. [`CSI`] Sequences**:
 //!    - *Collision*: In legacy [`VT-100`] / [`xterm`], `Alt+[` emits `ESC [`. This is the
@@ -439,5 +437,3 @@ pub mod validation_tests;
 pub mod unit_tests;
 #[cfg(any(test, doc))]
 pub mod vt_100_parser_integration_tests;
-
-// cspell:words ttimeoutlen Ghostty

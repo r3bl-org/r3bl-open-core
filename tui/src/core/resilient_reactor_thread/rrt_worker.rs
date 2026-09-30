@@ -1,8 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR SIGWINCH epoll kqueue threadwaker rrtwaker rrtsoftwareinterrupt
-// cspell:words IORING
-
 //! Core traits for adding your business logic, using [dependency injection], into the
 //! reusable Resilient Reactor Thread ([`RRT`]) [framework]. See the following for more
 //! details: [`RRTWorker`], [`RRTSoftwareInterrupt`].

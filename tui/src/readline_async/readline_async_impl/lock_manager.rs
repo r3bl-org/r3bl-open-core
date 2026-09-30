@@ -266,5 +266,3 @@ impl ReadlineLockManager {
         &self.line_state_level_1
     }
 }
-
-// cspell:words Coffman typestates

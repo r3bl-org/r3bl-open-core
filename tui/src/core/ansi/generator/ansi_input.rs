@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words rowm
-
 //! [`ANSI`] escape sequence generator for terminal INPUT (test fixtures).
 //!
 //! Provides input sequence generation for testing. Creates symmetry with [`ansi_output`]

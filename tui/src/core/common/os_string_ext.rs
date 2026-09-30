@@ -101,5 +101,3 @@ mod tests_os_string_ext {
         assert_eq!(path.into_string_lossy(), "/path/to/file.txt");
     }
 }
-
-// cspell:words FFFD

@@ -55,7 +55,7 @@ use crate::{ByteOffset, TermPos, VPHeight, VPWidth, terminal_io::KeyState};
 ///   types:
 ///   - [`VT-100`] uses 1-based coordinates, canonical types use 0-based.
 ///   - Multiple mouse protocols ([`SGR`], [`X10`], [`RXVT`]) with different encodings.
-///   - Tab/Enter/Backspace send same bytes as Ctrl+I/Ctrl+M/Ctrl+H.
+///   - Tab/Enter/Backspace send same bytes as `Ctrl+I`/`Ctrl+M`/`Ctrl+H`.
 ///   - [`ESC`] key and escape sequences (like arrow keys) both start with `0x1B`.
 ///
 /// - Type Safety - Protocol types use [`VT-100`] nomenclature ([`VT100KeyCodeIR`],

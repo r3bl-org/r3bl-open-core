@@ -1,5 +1,3 @@
-<!-- cspell:words CRDT epoll zeroconf myapp lamport syncthing mdns zeroconf zstd socat -->
-
 # Resilient Reactor Thread (RRT) Applications
 
 ## Overview

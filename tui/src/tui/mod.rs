@@ -2,8 +2,6 @@
 
 #![rustfmt::skip]
 
-// cspell:words undisplayable
-
 /// Enable or disable generating log output for telemetry data. This has higher precedence
 /// than [`DEBUG_TUI_MOD`]. The telemetry logs are not debug level, but info level.
 pub const DISPLAY_LOG_TELEMETRY: bool = true;

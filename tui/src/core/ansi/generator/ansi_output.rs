@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words URXVT
-
 //! Generates [`ANSI`] escape sequence strings for terminal operations.
 //!
 //! This module generates raw [`ANSI`] escape sequence bytes for terminal operations using

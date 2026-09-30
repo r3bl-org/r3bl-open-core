@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words iflag cflag lflag
-
 //! Terminal raw mode implementation for [`ANSI`] terminals.
 //!
 //! This module provides functionality to enable and disable raw mode on terminals,

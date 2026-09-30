@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words VMIN, VTIME
-
 //! Centralized [`ANSI`]/[`VT-100`] escape sequence constants.
 //!
 //! This module consolidates all [`ANSI`] terminal constants into a single, discoverable

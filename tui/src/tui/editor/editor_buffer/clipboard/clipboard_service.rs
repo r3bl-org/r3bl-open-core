@@ -1,7 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words npqr
-
 use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
 use std::error::Error;
 

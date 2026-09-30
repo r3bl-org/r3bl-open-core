@@ -750,5 +750,3 @@ and ready to merge._
 - [ ] **Mandatory manual review:** Verify all release tracking tasks are marked complete.
     - [ ] `task/prepare-v0.8.0-meta-task.md`
     - [ ] `task/make-0.8.0-release.md`
-
-<!-- cspell:words Falk Heuer Woldmann Haase developerlifecom DCACHE LINESIZE Workstreams SSOT -->

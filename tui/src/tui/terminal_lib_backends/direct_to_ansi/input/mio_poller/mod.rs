@@ -7,24 +7,24 @@
 //!
 //! ## Resources Managed
 //!
-//! | Resource                                | Responsibility                                                                                                              |
-//! | :-------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
-//! | [**Poll**][`mio::Poll`]                 | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                |
-//! | [**Stdin**][`stdin`]                    | Read bytes into buffer -> handle using [`VT-100` input parser] and [paste state machine] to generate [`PollerEvent::Stdin`] |
-//! | [**Signals**][`signal_hook_mio`]        | Drain signal ([`SIGWINCH`]) and generate [`PollerEvent::Signal`]                                                            |
-//! | [**Channel**][`tokio::sync::broadcast`] | Publish [`PollerEvent`] variants to async consumers                                                                         |
+//! | Resource                                  | Responsibility                                                                                                              |
+//! | :---------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+//! | [**`Poll`**][`mio::Poll`]                 | Wait efficiently for [`stdin`] data and [`SIGWINCH`] signals                                                                |
+//! | [**`Stdin`**][`stdin`]                    | Read bytes into buffer -> handle using [`VT-100` input parser] and [paste state machine] to generate [`PollerEvent::Stdin`] |
+//! | [**`Signals`**][`signal_hook_mio`]        | Drain signal ([`SIGWINCH`]) and generate [`PollerEvent::Signal`]                                                            |
+//! | [**`Channel`**][`tokio::sync::broadcast`] | Publish [`PollerEvent`] variants to async consumers                                                                         |
 //!
 //! ## Quick Reference
 //!
 //! | Item                                                    | Description                                                           |
 //! | :------------------------------------------------------ | :-------------------------------------------------------------------- |
-//! | [`MioPollWorker`]                                       | Core struct: holds poll handle, buffers, parser (implements RRT)      |
+//! | [`MioPollWorker`]                                       | Core struct: holds poll handle, buffers, parser (implements `RRT`)    |
 //! | [`SourceRegistry`]                                      | Holds [`stdin`] and [`SIGWINCH`] signal handles                       |
 //! | [`SourceKindReady`]                                     | Enum mapping [`mio::Token`] ↔ source kind for dispatch                |
 //! | [`dispatch_with_sender()`]                              | Routes ready events to appropriate handlers                           |
-//! | [`consume_stdin_input_with_sender()`]                   | Reads and parses [`stdin`] bytes into [`InputEvent`]s                 |
+//! | [`consume_stdin_input_with_sender()`]                   | Reads and parses [`stdin`] bytes into [`InputEvent`]                  |
 //! | [`consume_pending_signals_with_sender()`]               | Drains [`SIGWINCH`] signals, sends [`SignalEvent::Resize`]            |
-//! | [`handle_software_interrupt_with_sender()`]             | Handles lifecycle interrupts (eg: [`SubscriberGuard`] drop)           |
+//! | [`handle_software_interrupt_with_sender()`]             | Handles lifecycle interrupts (e.g.: [`SubscriberGuard`] drop)         |
 //! | [`VT-100` input parser] ([`InputByteStreamToIrParser`]) | Accumulates bytes, parses [`VT100InputEventIR`] with [`ESC`] handling |
 //! | [paste state machine] ([`PasteCollectionState`])        | Collects text between bracketed paste markers                         |
 //!
@@ -112,7 +112,7 @@
 //!    ([`EPOLLOUT`]) would trigger an immediate return on every iteration, causing a 100%
 //!    CPU busy-spin [loop]. Instead, [`BackpressureStdout`] performs a one-shot
 //!    [`rustix::event::poll()`] call watching for [`POLLOUT`] *only* when an OS write
-//!    buffer is full and returns [`ErrorKind::WouldBlock`]. See [`BackpressureStdout`]'s
+//!    buffer is full and returns [`ErrorKind::WouldBlock`]. See [`BackpressureStdout`]
 //!    [Why Stdout Needs Backpressure Handling] for output backpressure handling.
 //!
 //! #### Control Plane vs. Data Plane
@@ -194,14 +194,14 @@
 //!    | Scenario                         | What Happens                                                          |
 //!    | :------------------------------- | :-------------------------------------------------------------------- |
 //!    | Close terminal window            | Terminal emulator closes [`PTY`] controller → controlled gets [`EOF`] |
-//!    | [`SSH`] connection drops         | sshd closes [`PTY`] controller → controlled gets [`EOF`]              |
+//!    | [`SSH`] connection drops         | `sshd` closes [`PTY`] controller → controlled gets [`EOF`]            |
 //!    | `screen`/`tmux` session killed   | Multiplexer closes [`PTY`] controller → controlled gets [`EOF`]       |
 //!    | Kill terminal emulator process   | Same as closing window                                                |
-//!    | Network timeout ([`SSH`])        | sshd eventually closes connection → [`EOF`]                           |
+//!    | Network timeout ([`SSH`])        | `sshd` eventually closes connection → [`EOF`]                         |
 //!    | Pipe closed                      | Writer closes pipe → reader gets [`EOF`]                              |
 //!
-//!    **Note on software interrupt (thread restart)**: When all [`broadcast::Receiver`]s
-//!    are dropped, the thread exits. This typically happens when:
+//!    **Note on software interrupt (thread restart)**: When all [`broadcast::Receiver`]
+//!    instances are dropped, the thread exits. This typically happens when:
 //!    - [`DirectToAnsiInputDevice`] is dropped (it holds a receiver internally)
 //!    - A TUI app exits and drops its input device
 //!    - All async consumers finish and drop their receivers
@@ -249,8 +249,8 @@
 //!
 //! <div class="warning">
 //!
-//! **Why not [`tokio`] for stdin?** Because [`tokio::io::stdin()`] uses a blocking
-//! threadpool internally, and cancelling a [`tokio::select!`] branch doesn't stop the
+//! **Why not [`tokio`] for `stdin`?** Because [`tokio::io::stdin()`] uses a blocking
+//! threadpool internally, and canceling a [`tokio::select!`] branch doesn't stop the
 //! underlying read - it keeps running as a "zombie", causing the problems described in
 //! [The Problems section in `DirectToAnsiInputDevice`].
 //!
@@ -262,11 +262,11 @@
 //! ## The Two File Descriptors
 //!
 //! A [`file descriptor`] ([`fd`]) is a Unix integer handle to an I/O resource (file,
-//! [`socket`], pipe, etc.). Two [`fd`]s are registered with [`mio`]'s registry so a
+//! [`socket`], pipe, etc.). Two [`fd`] are registered with the [`mio`] registry so a
 //! single [`poll()`] call can wait on either becoming ready:
 //!
 //! **1. `stdin` [`fd`]** - The raw [`file descriptor`] ([`fd 0`]) for standard input,
-//! obtained via [`std::io::stdin().as_raw_fd()`][AsRawFd::as_raw_fd]. We wrap it in
+//! obtained via [`std::io::stdin().as_raw_fd()`][as-raw-fd]. We wrap it in
 //! [`SourceFd`] so [`mio`] can poll it:
 //!
 //! <!-- It is ok to use ignore here -->
@@ -304,7 +304,7 @@
 //! The channel sends [`PollerEvent`] variants to the async side:
 //! - [`Stdin(Input(InputEvent))`] - parsed keyboard/mouse input
 //! - [`Signal(Resize)`] - terminal window changed size
-//! - [`Stdin(Eof)`] - stdin closed
+//! - [`Stdin(Eof)`] - `stdin` closed
 //! - [`Stdin(Error)`] - I/O error
 //!
 //! # Why [`mio`] Instead of Raw [`poll()`]?
@@ -479,7 +479,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT100InputEventIR`]:
 //!     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-//! [AsRawFd::as_raw_fd]: std::os::unix::io::AsRawFd::as_raw_fd
+//! [as-raw-fd]: std::os::unix::io::AsRawFd::as_raw_fd
 //! [canonical mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Device Lifecycle]: super::DirectToAnsiInputDevice#device-lifecycle
 //! [line discipline]: https://en.wikipedia.org/wiki/Line_discipline
@@ -490,10 +490,9 @@
 //! [The Problems section in `DirectToAnsiInputDevice`]:
 //!     super::DirectToAnsiInputDevice#the-problems
 //! [Why Linux-Only?]: super#why-linux-only
-//! [Why Stdout Needs Backpressure Handling]:
-//!     crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
+//! [Why Stdout Needs Backpressure Handling]: crate::core::terminal_io::BackpressureStdout#why-stdout-needs-backpressure-handling-on-linux-with-directtoansi
 
-// XMARK: impl trait rustdoc link definition heading-anchor (eg: #method.drop) see above
+// XMARK: impl trait rustdoc link definition heading-anchor (e.g.: #method.drop) see above
 
 #![rustfmt::skip]
 
@@ -538,6 +537,3 @@ pub use handler_stdin::*;
 pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;
 pub use sources::*;
-
-// cspell:words EINTR wakeup kqueue epoll ttimeoutlen eventfd userspace kevent POLLIN
-// cspell:words POLLOUT EVFILT EVFILT_READ EVFILT_WRITE EPOLLIN EPOLLOUT EINVAL

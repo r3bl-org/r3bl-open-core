@@ -998,7 +998,3 @@ mod tests {
         assert!(pty_pair.maybe_controlled.is_none());
     }
 }
-
-// cspell:words CLOEXEC errno ptmx isatty TIOCGWINSZ Xenix DUPFD SETFD fcntl ONLCR grantpt
-// cspell:words unlockpt ptsname devpts RDWR openpt devtty setvbuf SIGTSTP SIGPIPE mkfifo
-// cspell:words ENOTTY setsid pipefd NONBLOCK EBADF POLLOUT

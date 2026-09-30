@@ -5,7 +5,6 @@
     clippy::cast_sign_loss,
     clippy::as_conversions
 )]
-// cspell:words drwxr
 
 //! Real-world scenario tests using conformance data sequences.
 //!

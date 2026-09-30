@@ -68,8 +68,8 @@ use tracing::Level;
 /// [`try_drain()`]: Self::try_drain
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OscCircuitBreaker {
-    /// Normal parsing state (circuit closed). Bytes are accumulated into
-    /// [`InputByteStreamToIrParser`]'s internal buffer.
+    /// Normal parsing state (circuit closed). Bytes are accumulated into the internal
+    /// buffer of [`InputByteStreamToIrParser`] .
     ///
     /// Initial state, or reset by [`Self::try_drain()`]. See [State Machine Lifecycle]
     /// for transitions.
@@ -732,5 +732,3 @@ mod tests {
         assert_eq!(breaker, OscCircuitBreaker::Closed);
     }
 }
-
-// cspell:words byteoffset bytelength

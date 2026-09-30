@@ -1,5 +1,3 @@
-<!-- cspell:words ofsbuf -->
-
 # Task: Redesign Canvas and Viewport Concept Type Safety (Canvas vs. Viewport Coordinates)
 
 ## Overview

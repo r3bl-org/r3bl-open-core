@@ -1,7 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words desync
-
 //! This module implements [`PixelCharRenderer`], which converts [`PixelChar`] arrays to
 //! byte arrays containing [`ANSI`] escape sequences using intelligent style diffing to
 //! minimize redundant codes.

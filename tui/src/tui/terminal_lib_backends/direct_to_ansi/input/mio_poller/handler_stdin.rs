@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kevent EPOLLET fcntl setfl NONBLOCK EINTR
-
 //! Event handlers for stdin input processing.
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
@@ -99,8 +97,7 @@ use tokio::sync::broadcast::Sender;
 /// [`kevent`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Poll`]: mio::Poll
-/// [`MioPollWorker::create_and_register_os_sources()`]:
-///     super::MioPollWorker#method.create_and_register_os_sources
+/// [`MioPollWorker::create_and_register_os_sources()`]: super::MioPollWorker#method.create_and_register_os_sources
 /// [`MioPollWorker`]: super::MioPollWorker
 /// [`new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
 /// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
@@ -111,15 +108,11 @@ use tokio::sync::broadcast::Sender;
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`test_production_factory_restart_cycle`]:
-///     crate::core::resilient_reactor_thread::rrt_integration_tests::pty_test_production_factory_restart::test_production_factory_restart_cycle
-/// [`test_pty_mio_poller_subscribe`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_subscribe_test::test_pty_mio_poller_subscribe
-/// [`test_pty_mio_poller_thread_lifecycle`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test::test_pty_mio_poller_thread_lifecycle
+/// [`test_production_factory_restart_cycle`]: crate::core::resilient_reactor_thread::rrt_integration_tests::pty_test_production_factory_restart::test_production_factory_restart_cycle
+/// [`test_pty_mio_poller_subscribe`]: crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_subscribe_test::test_pty_mio_poller_subscribe
+/// [`test_pty_mio_poller_thread_lifecycle`]: crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test::test_pty_mio_poller_thread_lifecycle
 /// [`tokio`]: tokio
-/// [`VT100InputEventIR`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
@@ -133,8 +126,8 @@ pub fn consume_stdin_input_with_sender(
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 // Handle non-blocking stdin read().
                 //
-                // No more data available right now (meaning that the stdin fd is fully
-                // drained).
+                // No more data available right now (meaning that the `stdin` `fd` is
+                // fully drained).
                 return Continuation::Continue;
             }
 

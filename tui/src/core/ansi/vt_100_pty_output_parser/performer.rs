@@ -1,7 +1,5 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words suckless
-
 //! Internal implementation for [`ANSI`]/[`VT-100`] sequence processing.
 //!
 //! This parser is based on the [`vte`] crate's [`Perform`] trait, and is [`VT-100` spec]

@@ -1,5 +1,3 @@
-<!-- cspell:words reimagines Kerrisk sektion mankier coreutils groff mandoc ollama errno -->
-
 # rtfm - TUI Man Page Reader (PRD)
 
 **Status:** WIP / Research Phase

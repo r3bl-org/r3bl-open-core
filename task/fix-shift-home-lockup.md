@@ -219,7 +219,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
       OSC terminator whenever `ESC ] <digit>` is seen, a human typing `Alt+] 5` would
       never send an OSC terminator (`BEL` or `ST`). If the router returns `None` without
       checking `maybe_more == MaybeMore::KernelMayHaveMore`, all future user keystrokes
-      would be trapped in the accumulator until reaching the 1MB limit, permanently
+      would be trapped in the accumulator until reaching the 1MiB limit, permanently
       locking up the input event loop and wiping out user input.
     - **The UTF-8 Corruption Risk**: In ECMA-48, 8-bit `ST` is `0x9C`. However, in UTF-8,
       `0x9C` is a valid continuation byte found in common characters like `£`
@@ -243,7 +243,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
           line 9 (before `## Primary Consumer`), explaining the shared `stdin` pipe,
           queries via `stdout`, and why terminal responses (OSC 10/11 color queries, OSC
           52 clipboard, shell/multiplexer queries) arrive on `stdin`.
-        - Update the `## Primary Consumer` ASCII dataflow diagram to show the dedicated
+        - Update the `## Primary Consumer` ASCII data flow diagram to show the dedicated
           `mio` poller thread reading non-blocking `stdin` into `StatefulInputParser`
           (removing the outdated `tokio::io::stdin()`).
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
@@ -357,7 +357,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                     - If `b` is the last byte in `buffer`: return
                       `OscScanResult::IncompleteDigits` (partial 7-bit `ST`).
                     - Otherwise: return `OscScanResult::InvalidSyntax`.
-                - Otherwise (non-digit before delimiter, whitespace, newline, control
+                - Otherwise, (non-digit before delimiter, whitespace, newline, control
                   char): return `OscScanResult::InvalidSyntax`.
             - In `Payload`:
                 - If `b == ANSI_BEL` (`7`): return `OscScanResult::Complete(consumed)`.
@@ -365,7 +365,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                     - If next byte is `b'\\'`: return `OscScanResult::Complete(consumed)`.
                     - If `b` is the last byte in `buffer`: return
                       `OscScanResult::IncompletePayload` (partial 7-bit `ST`).
-                    - Otherwise (unescaped `ESC` inside payload aborts control string):
+                    - Otherwise, (unescaped `ESC` inside payload aborts control string):
                       return `OscScanResult::InvalidSyntax`.
                 - If `b == b'\r'` or `b == b'\n'`: return `OscScanResult::InvalidSyntax`
                   (OSC payloads never contain unescaped raw newlines).

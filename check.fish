@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words osascript nextest mktemp ionice gdbus
-
 # Comprehensive Build and Test Verification Script
 #
 # Purpose: Runs a comprehensive suite of checks to ensure code quality, correctness, and builds properly.

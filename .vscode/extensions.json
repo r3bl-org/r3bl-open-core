@@ -16,7 +16,6 @@
         // R3BL Extensions.
         "R3BL.r3bl-extension-pack",
         // Others.
-        "ryuta46.multi-command", // Multi Command.
         "usernamehw.errorlens", // Error Lens.
         "tekumara.typos-vscode", // Typos Spell Checker (Rust LSP).
         "elijah-potter.harper", // Harper Grammar & Spell Checker (Rust LSP).
@@ -28,7 +27,6 @@
         "chrisjdavies.multi-highlight", // Multi Highlight.
         "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
         "bmalehorn.vscode-fish", // Fish.
-        "qwtel.sqlite-viewer", // SQLite Viewer.
         "perkovec.emoji", // Emoji.
         "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
         "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
@@ -37,6 +35,8 @@
     ],
     // List of extensions that should not be recommended for users of this workspace.
     "unwantedRecommendations": [
+        "ryuta46.multi-command", // Multi Command.
+        "qwtel.sqlite-viewer", // SQLite Viewer.
         "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker.
         "hoovercj.vscode-settings-cycler", // Settings Cycler.
         "naumovs.color-highlight", // Color Highlight.

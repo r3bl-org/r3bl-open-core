@@ -146,7 +146,7 @@ pub mod csi {
     fn parse_params(param_slice: &[u16], final_byte: u8) -> Option<VT100InputEventIR> {
         match (param_slice, final_byte) {
             ([RESIZE_EVENT_PARSE_PARAM, rows, columns], RESIZE_TERMINATOR) => {
-                // Window resize: CSI 8 ; rows ; cols t.
+                // Window resize: `CSI 8 ; rows ; cols t`.
                 Some(VT100InputEventIR::Resize {
                     col_width: vp_width(*columns),
                     row_height: vp_height(*rows),

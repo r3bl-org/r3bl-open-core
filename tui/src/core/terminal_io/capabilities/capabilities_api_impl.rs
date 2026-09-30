@@ -1,7 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words isatty
-
 //! Low-level, platform-specific [`TTY`] detection helpers.
 //!
 //! These functions encapsulate platform differences for [`TTY`] detection. On Unix,

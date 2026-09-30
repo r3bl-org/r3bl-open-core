@@ -225,10 +225,10 @@ impl OscScanResult {
                 // Lone ESC at end of buffer: wait for possible 2-byte ST across boundary.
                 [ANSI_ESC] => return Self::IncompletePayload,
 
-                // Raw carriage return ('\r') aborts OSC syntax.
+                // Raw carriage return (`\r`) aborts OSC syntax.
                 [CARRIAGE_RETURN, ..] => return Self::InvalidSyntax,
 
-                // Raw line feed ('\n') aborts OSC syntax.
+                // Raw line feed (`\n`) aborts OSC syntax.
                 [LINE_FEED, ..] => return Self::InvalidSyntax,
 
                 // ESC followed by non-backslash: unexpected escape aborts OSC syntax.

@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_alt_letter_f() {
-        let input = &[ANSI_ESC, b'f']; // ESC f → Alt+f
+        let input = &[ANSI_ESC, b'f']; // `ESC f → Alt+f`
         let ParsedInputEventIR {
             event,
             bytes_consumed,

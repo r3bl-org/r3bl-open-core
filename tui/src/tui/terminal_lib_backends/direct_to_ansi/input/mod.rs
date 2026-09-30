@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words epoll EINVAL filedescriptor pollfd kqueue
-
 //! Linux input handling for [`DirectToAnsi`] backend.
 //!
 //! # Entry Point
@@ -19,8 +17,8 @@
 //!
 //! This module uses [`mio`] for async I/O multiplexing. [`mio`] provides a clean
 //! platform abstraction over OS-specific polling mechanisms:
-//! - **Linux**: [`epoll(7)`] - works correctly with [`PTY`]/tty file descriptors
-//! - **macOS**: [`kqueue(2)`] - **broken for [`PTY`]/tty polling**
+//! - **Linux**: [`epoll(7)`] - works correctly with [`PTY`]/[`tty`] file descriptors
+//! - **macOS**: [`kqueue(2)`] - **broken for [`PTY`]/[`tty`] polling**
 //!
 //! macOS's [`kqueue(2)`] returns [`EINVAL`] when attempting to monitor `/dev/tty` or
 //! [`PTY`] file descriptors. This is a [known Darwin limitation] with no planned fix.
@@ -31,7 +29,7 @@
 //!
 //! Crossterm uses the [`filedescriptor`] crate which provides a [`poll()`] wrapper:
 //! - On Linux: uses [`poll(2)`] directly
-//! - On macOS: uses [`select(2)`] instead (which works with [`PTY`]/tty)
+//! - On macOS: uses [`select(2)`] instead (which works with [`PTY`]/[`tty`])
 //!
 //! <!-- It is ok to use ignore here - shows internal filedescriptor crate implementation,
 //! not runnable example -->
@@ -55,9 +53,9 @@
 //!
 //! ## References
 //!
-//! - [mio issue] - "Polling from /dev/tty on macOS"
-//! - [crossterm issue] - "/dev/tty does not work on macOS with kqueue"
-//! - [macOS /dev/tty polling blog post] - Detailed technical explanation
+//! - [mio issue] - "Polling from `/dev/tty` on macOS"
+//! - [crossterm issue] - "`/dev/tty` does not work on macOS with kqueue"
+//! - [macOS `/dev/tty` polling blog post] - Detailed technical explanation
 //!
 //! [`DirectToAnsi`]: super
 //! [`DirectToAnsiInputDevice::next`]: DirectToAnsiInputDevice::next
@@ -75,10 +73,11 @@
 //! [`signal-hook`]: https://docs.rs/signal-hook
 //! [`SIGWINCH`]: https://man7.org/linux/man-pages/man7/signal.7.html
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+//! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
-//! [macOS /dev/tty polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
+//! [macOS `/dev/tty` polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [mio issue]: https://github.com/tokio-rs/mio/issues/1377
 
 // Private submodules - organized by functional concern.

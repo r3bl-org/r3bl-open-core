@@ -1,5 +1,3 @@
-<!-- cspell:words ratatui Substeps Inclusivity inclusivity binstall intradoc warloc -->
-
 # r3bl-open-core
 
 <!--
