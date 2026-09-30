@@ -1,49 +1,59 @@
 {
-	"files": [
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser.rs",
-			"bookmarks": [
-				{
-					"line": 253,
-					"column": 0,
-					"label": "[ ] main entry point for stdin byte processing"
-				},
-				{
-					"line": 362,
-					"column": 0,
-					"label": "[ ] review classify_unparsed_buffer(&self)"
-				}
-			]
-		},
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
-			"bookmarks": [
-				{
-					"line": 432,
-					"column": 12,
-					"label": "[x] circuit breaker - handle_open"
-				}
-			]
-		},
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/router.rs",
-			"bookmarks": [
-				{
-					"line": 246,
-					"column": 0,
-					"label": "[ ] review the ir parser"
-				}
-			]
-		},
-		{
-			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
-			"bookmarks": [
-				{
-					"line": 287,
-					"column": 0,
-					"label": "[ ] review scan_osc_sequence(buffer: &[u8])"
-				}
-			]
-		}
-	]
+    "files": [
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/parser_struct.rs",
+            "bookmarks": [
+                {
+                    "line": 250,
+                    "column": 0,
+                    "label": "[ ] main entry point for stdin byte processing"
+                },
+                {
+                    "line": 302,
+                    "column": 0,
+                    "label": "[ ] review classify_unparsed_buffer call site"
+                }
+            ]
+        },
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/classification.rs",
+            "bookmarks": [
+                {
+                    "line": 77,
+                    "column": 0,
+                    "label": "[ ] review UnparsedBufferClassification::classify"
+                }
+            ]
+        },
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/osc_circuit_breaker/circuit_breaker.rs",
+            "bookmarks": [
+                {
+                    "line": 432,
+                    "column": 12,
+                    "label": "[x] circuit breaker - handle_open"
+                }
+            ]
+        },
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/router.rs",
+            "bookmarks": [
+                {
+                    "line": 246,
+                    "column": 0,
+                    "label": "[ ] review the ir parser"
+                }
+            ]
+        },
+        {
+            "path": "tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs",
+            "bookmarks": [
+                {
+                    "line": 287,
+                    "column": 0,
+                    "label": "[x] review scan_osc_sequence(buffer: &[u8])"
+                }
+            ]
+        }
+    ]
 }
