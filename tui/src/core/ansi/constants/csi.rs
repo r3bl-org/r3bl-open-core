@@ -924,3 +924,56 @@ pub const DECREQTPARM_REQUEST_TERMINAL_PARAMETERS: char = 'x';
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 pub const DECERA_RECTANGULAR_ERASE: char = 'z';
+
+// Kitty Keyboard Protocol (CSI u).
+
+/// [`Kitty`] Keyboard Protocol Push Flags: Character `>` indicating push flags to stack.
+///
+/// Sequence: `CSI > <flags> u`.
+///
+/// Value: `'>'`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUSH_KEYBOARD_FLAGS: char = '>';
+
+/// [`Kitty`] Keyboard Protocol Pop Flags: Character `<` indicating pop flags from stack.
+///
+/// Sequence: `CSI < <count> u`.
+///
+/// Value: `'<'`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_POP_KEYBOARD_FLAGS: char = '<';
+
+/// [`Kitty`] Keyboard Protocol Disambiguate Escape Codes Flag: Flag value `1`.
+///
+/// When set via `CSI > 1 u`, the terminal emulator sends all ambiguous key combinations
+/// (such as `Alt+[` or modified functional keys) using unambiguous `CSI u` encoding.
+///
+/// Value: `1`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_DISAMBIGUATE_ESCAPE_CODES: u8 = 1;
+
+/// [`Kitty`] Keyboard Protocol Terminator (`CSI u`): Character `'u'` terminating enhanced
+/// keyboard encoding sequences.
+///
+/// Sequence: `CSI <codepoint> [; <modifiers> [: <event_type>]] u`.
+///
+/// Value: `'u'`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const ANSI_CSI_U_CHAR: char = 'u';
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_kitty_keyboard_constants() {
+        assert_eq!(KITTY_PUSH_KEYBOARD_FLAGS, '>');
+        assert_eq!(KITTY_POP_KEYBOARD_FLAGS, '<');
+        assert_eq!(KITTY_DISAMBIGUATE_ESCAPE_CODES, 1);
+        assert_eq!(ANSI_CSI_U_CHAR, 'u');
+    }
+}

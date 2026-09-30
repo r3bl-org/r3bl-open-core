@@ -84,7 +84,8 @@ use super::{csi_scanner::extract_csi_params,
             osc_scanner::OscScanResult};
 use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, KeyState, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                    ANSI_FUNCTION_KEY_TERMINATOR, FOCUS_GAINED_FINAL,
+                                    ANSI_FUNCTION_KEY_TERMINATOR,
+                                    ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
                                     FOCUS_LOST_FINAL, OSC_PREFIX, OSC_PREFIX_LEN,
                                     PASTE_END_PARSE_PARAM, PASTE_START_PARSE_PARAM,
                                     RESIZE_EVENT_PARSE_PARAM, RESIZE_TERMINATOR},
@@ -110,8 +111,8 @@ pub mod csi {
     /// - `ESC [ 2 0 0 ~` - Bracketed paste start
     /// - `ESC [ 2 0 1 ~` - Bracketed paste end
     #[must_use]
-    pub fn parse(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-        match buffer {
+    pub fn parse(chunk: &[u8]) -> Option<ParsedInputEventIR> {
+        match chunk {
             [ANSI_ESC, ANSI_CSI_BRACKET, FOCUS_GAINED_FINAL] => {
                 Some(ParsedInputEventIR::new(
                     VT100InputEventIR::Focus(VT100FocusStateIR::Gained),
@@ -124,7 +125,7 @@ pub mod csi {
                     byte_offset(3),
                 ))
             }
-            [ANSI_ESC, ANSI_CSI_BRACKET, _, ..] => parse_csi_terminal_parameters(buffer),
+            [ANSI_ESC, ANSI_CSI_BRACKET, _, ..] => parse_csi_terminal_parameters(chunk),
             _ => None,
         }
     }
@@ -132,8 +133,8 @@ pub mod csi {
     /// Parse [`CSI`] sequences with parameters for terminal events.
     ///
     /// [`CSI`]: crate::CsiSequence
-    fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-        let extracted = extract_csi_params(buffer)?;
+    fn parse_csi_terminal_parameters(chunk: &[u8]) -> Option<ParsedInputEventIR> {
+        let extracted = extract_csi_params(chunk)?;
         let event = parse_params(&extracted.params, extracted.final_byte)?;
         Some(ParsedInputEventIR::new(event, extracted.total_consumed()))
     }
@@ -142,8 +143,8 @@ pub mod csi {
     ///
     /// [`CSI`]: crate::CsiSequence
     /// [`VT100InputEventIR`]: super::VT100InputEventIR
-    fn parse_params(params: &[u16], final_byte: u8) -> Option<VT100InputEventIR> {
-        match (params, final_byte) {
+    fn parse_params(param_slice: &[u16], final_byte: u8) -> Option<VT100InputEventIR> {
+        match (param_slice, final_byte) {
             ([RESIZE_EVENT_PARSE_PARAM, rows, columns], RESIZE_TERMINATOR) => {
                 // Window resize: CSI 8 ; rows ; cols t.
                 Some(VT100InputEventIR::Resize {
@@ -222,26 +223,25 @@ pub mod osc {
     /// [`OscScanResult::scan()`]: super::super::osc_scanner::OscScanResult::scan
     #[must_use]
     pub fn try_disambiguate_or_alt_bracket(
-        buffer: &[u8],
+        chunk: &[u8],
         maybe_more: MaybeMore,
     ) -> Option<ParsedInputEventIR> {
-        if !buffer.starts_with(OSC_PREFIX) {
+        if !chunk.starts_with(OSC_PREFIX) {
             return None;
         }
 
         // Route based on lexical scanner outcome.
-        // Note: When buffer is lone `ESC ]` (len == 2), `scan` performs 0
-        // iterations and returns `IncompleteDigits`, seamlessly evaluating the
-        // `maybe_more` check below.
-        match OscScanResult::scan(buffer) {
+        // Note: When buffer is lone `ESC ]` (len == 2), `scan` performs 0 iterations and
+        // returns `IncompleteDigits`, seamlessly evaluating the `maybe_more` check below.
+        match OscScanResult::scan(chunk) {
             OscScanResult::Complete(consumed) => {
                 DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
                     let len = consumed.as_usize();
                     // % is Display, ? is Debug.
                     tracing::warn! {
                         message = "try_disambiguate_or_alt_bracket - absorbed OSC sequence from stdin",
-                        raw_osc_hex = %format!("{:02X?}", &buffer[..len]),
-                        raw_osc_str = %String::from_utf8_lossy(&buffer[..len]),
+                        raw_osc_hex = %format!("{:02X?}", &chunk[..len]),
+                        raw_osc_str = %String::from_utf8_lossy(&chunk[..len]),
                         consumed_bytes = len,
                     };
                 });
@@ -251,23 +251,17 @@ pub mod osc {
                 ))
             }
             OscScanResult::InvalidSyntax => {
-                // Violated OSC syntax; cannot be OSC. Emit Alt+] (2 bytes)
-                // and leave trailing bytes in buffer for next cycle.
-                Some(ParsedInputEventIR::new(
-                    alt_bracket_event(),
-                    byte_offset(OSC_PREFIX_LEN),
-                ))
+                // Violated OSC syntax; cannot be OSC. Emit Alt+] (2 bytes) and leave
+                // trailing bytes in buffer for next cycle.
+                Some(alt_bracket_parsed_event())
             }
             OscScanResult::IncompleteDigits => match maybe_more {
                 // In-flight burst; wait for possible delimiter/payload.
                 MaybeMore::KernelMayHaveMore => None,
-                // Stream drained before delimiter arrived. Human typed Alt+] (alone
-                // or with digits). Emit Alt+] (2 bytes) and leave
-                // any trailing digits in buffer.
-                MaybeMore::KernelDrained => Some(ParsedInputEventIR::new(
-                    alt_bracket_event(),
-                    byte_offset(OSC_PREFIX_LEN),
-                )),
+                // Stream drained before delimiter arrived. Human typed Alt+] (alone or
+                // with digits). Emit Alt+] (2 bytes) and leave any trailing digits in
+                // buffer.
+                MaybeMore::KernelDrained => Some(alt_bracket_parsed_event()),
             },
             OscScanResult::IncompletePayload => {
                 // Delimiter was already parsed. This is guaranteed to be an in-flight OSC
@@ -283,11 +277,20 @@ pub mod osc {
         }
     }
 
+    /// Helper to construct a parsed `Alt+]` input event consuming [`OSC_PREFIX_LEN`] (2
+    /// bytes).
+    ///
+    /// [`OSC_PREFIX_LEN`]: crate::core::ansi::constants::OSC_PREFIX_LEN
+    #[must_use]
+    pub fn alt_bracket_parsed_event() -> ParsedInputEventIR {
+        ParsedInputEventIR::new(alt_bracket_event(), byte_offset(OSC_PREFIX_LEN))
+    }
+
     /// Helper to construct an `Alt+]` key event.
     #[must_use]
     pub fn alt_bracket_event() -> VT100InputEventIR {
         VT100InputEventIR::Keyboard {
-            code: VT100KeyCodeIR::Char(']'),
+            code: VT100KeyCodeIR::Char(char::from(ANSI_OSC_CLOSE_BRACKET)),
             modifiers: VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::NotPressed,
@@ -304,7 +307,7 @@ pub mod osc {
 #[cfg(test)]
 mod tests {
     use super::{csi::parse as parse_terminal_event,
-                osc::{alt_bracket_event,
+                osc::{alt_bracket_parsed_event,
                       try_disambiguate_or_alt_bracket as try_disambiguate_osc_or_alt_bracket},
                 *};
     use crate::{ClipboardTarget, MAX_OSC_SEQUENCE_LENGTH, OscSequence,
@@ -417,38 +420,35 @@ mod tests {
 
     #[test]
     fn test_try_disambiguate_osc_or_alt_bracket() {
-        // Lone Alt+] with KernelDrained: emits Alt+]
+        // Lone Alt+] with KernelDrained: emits Alt+] (2 bytes).
         let parsed =
             try_disambiguate_osc_or_alt_bracket(OSC_PREFIX, MaybeMore::KernelDrained)
                 .expect("Should emit Alt+]");
-        assert_eq!(parsed.event, alt_bracket_event());
-        assert_eq!(parsed.consumed_usize(), 2);
+        assert_eq!(parsed, alt_bracket_parsed_event());
 
-        // Lone Alt+] with KernelMayHaveMore: waits
+        // Lone Alt+] with KernelMayHaveMore: waits.
         assert_eq!(
             try_disambiguate_osc_or_alt_bracket(OSC_PREFIX, MaybeMore::KernelMayHaveMore),
             None
         );
 
-        // Alt+] followed by invalid syntax: emits Alt+] (2 bytes)
+        // Alt+] followed by invalid syntax: emits Alt+] (2 bytes).
         let invalid_syntax_seq = [OSC_PREFIX, b"a"].concat();
         let parsed = try_disambiguate_osc_or_alt_bracket(
             &invalid_syntax_seq,
             MaybeMore::KernelMayHaveMore,
         )
         .expect("Should emit Alt+] on invalid syntax");
-        assert_eq!(parsed.event, alt_bracket_event());
-        assert_eq!(parsed.consumed_usize(), 2);
+        assert_eq!(parsed, alt_bracket_parsed_event());
 
-        // Alt+] followed by digits with KernelDrained: emits Alt+] (2 bytes)
+        // Alt+] followed by digits with KernelDrained: emits Alt+] (2 bytes).
         let digits_seq = [OSC_PREFIX, b"5"].concat();
         let parsed =
             try_disambiguate_osc_or_alt_bracket(&digits_seq, MaybeMore::KernelDrained)
                 .expect("Should emit Alt+] when drained");
-        assert_eq!(parsed.event, alt_bracket_event());
-        assert_eq!(parsed.consumed_usize(), 2);
+        assert_eq!(parsed, alt_bracket_parsed_event());
 
-        // Alt+] followed by digits with KernelMayHaveMore: waits
+        // Alt+] followed by digits with KernelMayHaveMore: waits.
         assert_eq!(
             try_disambiguate_osc_or_alt_bracket(
                 &digits_seq,
@@ -457,7 +457,7 @@ mod tests {
             None
         );
 
-        // Candidate OSC complete with BEL: emits Ignored
+        // Candidate OSC complete with BEL: emits Ignored.
         let complete_bel = format!("{OSC_START}11;rgb:00/00/00{OSC_TERMINATOR_BEL}");
         let complete_bel_bytes = complete_bel.as_bytes();
         let parsed = try_disambiguate_osc_or_alt_bracket(

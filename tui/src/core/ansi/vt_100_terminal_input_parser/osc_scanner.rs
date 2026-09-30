@@ -100,6 +100,11 @@ impl OscScanResult {
     ///    [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] for full historical and transport encoding
     ///    details.
     ///
+    /// # Arguments
+    ///
+    /// - `chunk`: The raw input byte slice containing candidate [`OSC`] sequence bytes to
+    ///   scan.
+    ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`OSC`]: crate::osc_codes::OscSequence
@@ -110,60 +115,131 @@ impl OscScanResult {
             return Self::InvalidSyntax;
         }
 
+        // Phase 1 - get the scan command.
+        let remaining = &chunk[OSC_PREFIX_LEN..];
         let chunk_len = chunk.len();
-        match Self::scan_command(chunk_len, &chunk[OSC_PREFIX_LEN..]) {
-            CommandScanOutcome::Concluded(result) => result,
-            CommandScanOutcome::Payload(payload) => {
-                Self::scan_payload(chunk_len, payload)
-            }
+        let scan_command = Self::scan_command(chunk_len, remaining);
+
+        // Phase 2 - execute the scan command.
+        match scan_command {
+            CommandScanResult::Concluded(result) => result,
+            CommandScanResult::Payload(payload) => Self::scan_payload(chunk_len, payload),
         }
     }
 
     /// Phase 1: Scan decimal command digits until delimiter, terminator, or error.
-    fn scan_command(chunk_len: usize, mut remaining: &[u8]) -> CommandScanOutcome<'_> {
-        while !remaining.is_empty() {
+    ///
+    /// Iterates through characters following [`OSC_PREFIX`] (`ESC ]`) to parse the
+    /// decimal command identifier. If a delimiter (`;` or `?`) is reached, returns
+    /// [`CommandScanResult::Payload`] with the remaining slice for Phase 2. If an early
+    /// terminator ([`ANSI_BEL`] or `ST`) is reached, returns
+    /// [`CommandScanResult::Concluded`] with [`OscScanResult::Complete`].
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk_len`: Total byte length of the initial chunk passed to [`Self::scan()`],
+    ///   used to calculate consumed byte offsets and evaluate runaway bounds against
+    ///   [`MAX_OSC_SEQUENCE_LENGTH`].
+    /// - `remaining`: Byte slice positioned immediately after [`OSC_PREFIX`].
+    ///
+    /// [`ANSI_BEL`]: crate::ANSI_BEL
+    /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
+    /// [`OSC_PREFIX`]: crate::core::ansi::constants::OSC_PREFIX
+    #[allow(clippy::match_same_arms)]
+    fn scan_command(chunk_len: usize, mut remaining: &[u8]) -> CommandScanResult<'_> {
+        loop {
             match remaining {
+                // Advance slice cursor and continue loop.
                 [ASCII_DIGIT_0..=ASCII_DIGIT_9, rest @ ..] => {
-                    // Advance slice cursor and continue while loop.
                     remaining = rest;
                 }
-                [ANSI_PARAM_SEPARATOR | ASCII_QUESTION_MARK, rest @ ..] => {
-                    return CommandScanOutcome::Payload(rest);
+
+                // Standard parameter delimiter (';'): transition to payload scan.
+                [ANSI_PARAM_SEPARATOR, rest @ ..] => {
+                    return CommandScanResult::Payload(rest);
                 }
-                [ANSI_BEL, rest @ ..] | [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
-                    return CommandScanOutcome::Concluded(Self::Complete(
-                        consumed_offset(chunk_len, rest),
-                    ));
+
+                // Query parameter delimiter ('?'): transition to payload scan.
+                [ASCII_QUESTION_MARK, rest @ ..] => {
+                    return CommandScanResult::Payload(rest);
                 }
+
+                // Terminated early by BEL (0x07) without payload.
+                [ANSI_BEL, rest @ ..] => {
+                    return CommandScanResult::Concluded(Self::complete(chunk_len, rest));
+                }
+
+                // Terminated early by 7-bit ST (ESC \) without payload.
+                [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
+                    return CommandScanResult::Concluded(Self::complete(chunk_len, rest));
+                }
+
+                // Lone ESC at end of buffer: wait for possible 2-byte ST (ESC \).
                 [ANSI_ESC] => {
-                    return CommandScanOutcome::Concluded(Self::IncompleteDigits);
+                    return CommandScanResult::Concluded(Self::IncompleteDigits);
                 }
-                _ => return CommandScanOutcome::Concluded(Self::InvalidSyntax),
+
+                // Buffer exhausted: break to evaluate runaway vs incomplete digits.
+                [] => break,
+
+                // Any non-digit character before delimiter: invalid syntax.
+                _ => return CommandScanResult::Concluded(Self::InvalidSyntax),
             }
         }
 
         if chunk_len >= MAX_OSC_SEQUENCE_LENGTH {
-            CommandScanOutcome::Concluded(Self::Runaway)
+            CommandScanResult::Concluded(Self::Runaway)
         } else {
-            CommandScanOutcome::Concluded(Self::IncompleteDigits)
+            CommandScanResult::Concluded(Self::IncompleteDigits)
         }
     }
 
     /// Phase 2: Scan payload content until terminator.
+    ///
+    /// Iterates through bytes following the parameter delimiter (`;` or `?`) until
+    /// finding [`ANSI_BEL`] or 7-bit String Terminator (`ST`, `ESC \`). Rejects embedded
+    /// newlines or carriage returns as [`OscScanResult::InvalidSyntax`].
+    ///
+    /// # Arguments
+    ///
+    /// - `chunk_len`: Total byte length of the initial chunk passed to [`Self::scan()`],
+    ///   used to calculate consumed byte offsets and evaluate runaway bounds against
+    ///   [`MAX_OSC_SEQUENCE_LENGTH`].
+    /// - `remaining`: Byte slice positioned immediately after the parameter delimiter
+    ///   (the payload bytes).
+    ///
+    /// [`ANSI_BEL`]: crate::ANSI_BEL
+    /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
+    #[allow(clippy::match_same_arms)]
     fn scan_payload(chunk_len: usize, mut remaining: &[u8]) -> Self {
-        while !remaining.is_empty() {
+        loop {
             match remaining {
-                [ANSI_BEL, rest @ ..] | [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
-                    return Self::Complete(consumed_offset(chunk_len, rest));
+                // Terminated by BEL (0x07).
+                [ANSI_BEL, rest @ ..] => return Self::complete(chunk_len, rest),
+
+                // Terminated by 7-bit ST (ESC \).
+                [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
+                    return Self::complete(chunk_len, rest);
                 }
+
+                // Lone ESC at end of buffer: wait for possible 2-byte ST across boundary.
                 [ANSI_ESC] => return Self::IncompletePayload,
-                [CARRIAGE_RETURN | LINE_FEED, ..] | [ANSI_ESC, _, ..] => {
-                    return Self::InvalidSyntax;
-                }
+
+                // Raw carriage return ('\r') aborts OSC syntax.
+                [CARRIAGE_RETURN, ..] => return Self::InvalidSyntax,
+
+                // Raw line feed ('\n') aborts OSC syntax.
+                [LINE_FEED, ..] => return Self::InvalidSyntax,
+
+                // ESC followed by non-backslash: unexpected escape aborts OSC syntax.
+                [ANSI_ESC, _, ..] => return Self::InvalidSyntax,
+
+                // Regular payload byte: advance slice cursor and continue loop.
                 [_, rest @ ..] => {
-                    // Advance slice cursor and continue while loop.
                     remaining = rest;
                 }
+
+                // Buffer exhausted: break to evaluate runaway vs incomplete payload.
                 [] => break,
             }
         }
@@ -174,13 +250,20 @@ impl OscScanResult {
             Self::IncompletePayload
         }
     }
+
+    /// Helper to construct [`Self::Complete`] from the total chunk length and unconsumed
+    /// bytes.
+    #[inline]
+    fn complete(chunk_len: usize, unconsumed_slice: &[u8]) -> Self {
+        Self::Complete(consumed_offset(chunk_len, unconsumed_slice))
+    }
 }
 
-/// Internal outcome of scanning the command identifier (Phase 1).
+/// Internal result of scanning the command identifier (Phase 1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CommandScanOutcome<'input> {
+enum CommandScanResult<'a> {
     /// Delimiter (`;` or `?`) reached; contains remaining slice for payload parsing.
-    Payload(&'input [u8]),
+    Payload(&'a [u8]),
 
     /// Scanning concluded in Phase 1 (early terminator, incomplete digits, syntax error,
     /// or runaway).
@@ -189,8 +272,8 @@ enum CommandScanOutcome<'input> {
 
 /// Helper to calculate bytes consumed from the start of the chunk up to `unconsumed`.
 #[inline]
-fn consumed_offset(chunk_len: usize, unconsumed: &[u8]) -> ByteOffset {
-    byte_offset(chunk_len - unconsumed.len())
+fn consumed_offset(chunk_len: usize, unconsumed_slice: &[u8]) -> ByteOffset {
+    byte_offset(chunk_len - unconsumed_slice.len())
 }
 
 #[cfg(test)]

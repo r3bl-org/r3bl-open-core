@@ -89,44 +89,6 @@ pub const ANSI_FUNCTION_KEY_TERMINATOR: u8 = b'~';
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 pub const ANSI_CSI_U: u8 = b'u';
 
-/// [`Kitty`] Keyboard Protocol Push Flags: Character `>` indicating push flags to stack.
-///
-/// Sequence: `CSI > <flags> u`.
-///
-/// Value: `'>'`.
-///
-/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-pub const KITTY_PUSH_KEYBOARD_FLAGS: char = '>';
-
-/// [`Kitty`] Keyboard Protocol Pop Flags: Character `<` indicating pop flags from stack.
-///
-/// Sequence: `CSI < <count> u`.
-///
-/// Value: `'<'`.
-///
-/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-pub const KITTY_POP_KEYBOARD_FLAGS: char = '<';
-
-/// [`Kitty`] Keyboard Protocol Disambiguate Escape Codes Flag: Flag value `1`.
-///
-/// When set via `CSI > 1 u`, the terminal emulator sends all ambiguous key combinations
-/// (such as `Alt+[` or modified functional keys) using unambiguous `CSI u` encoding.
-///
-/// Value: `1`.
-///
-/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-pub const KITTY_DISAMBIGUATE_ESCAPE_CODES: u8 = 1;
-
-/// [`Kitty`] Keyboard Protocol Terminator (`CSI u`): Character `'u'` terminating enhanced
-/// keyboard encoding sequences.
-///
-/// Sequence: `CSI <codepoint> [; <modifiers> [: <event_type>]] u`.
-///
-/// Value: `'u'`.
-///
-/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-pub const ANSI_CSI_U_CHAR: char = 'u';
-
 // ==================== Arrow Keys (CSI A/B/C/D) ====================
 
 /// Cursor Up (CUU): Up arrow final byte.
@@ -1109,12 +1071,12 @@ pub const ANSI_ST_FINAL: u8 = b'\\';
 /// - [`ANSI_BEL`] (`0x07`, 1 byte).
 /// - 7-bit [`ANSI_ST_7BIT_TRANSPORT_ENCODING`] (`ESC \`, 2 bytes).
 ///
-/// [`UART`]: https://en.wikipedia.org/wiki/UART
 /// [`ANSI_BEL`]: ANSI_BEL
 /// [`ANSI_ESC`]: ANSI_ESC
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`OSC`]: crate::osc_codes::OscSequence
+/// [`UART`]: https://en.wikipedia.org/wiki/UART
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [ECMA-48]: https://en.wikipedia.org/wiki/ECMA-48
 /// [ISO 6429]: https://en.wikipedia.org/wiki/ISO/IEC_6429
@@ -1418,9 +1380,5 @@ mod tests {
         assert_eq!(CLIPBOARD_TARGET_CLIPBOARD, b'c');
         assert_eq!(CLIPBOARD_TARGET_PRIMARY, b'p');
         assert_eq!(ANSI_CSI_U, b'u');
-        assert_eq!(KITTY_PUSH_KEYBOARD_FLAGS, '>');
-        assert_eq!(KITTY_POP_KEYBOARD_FLAGS, '<');
-        assert_eq!(KITTY_DISAMBIGUATE_ESCAPE_CODES, 1);
-        assert_eq!(ANSI_CSI_U_CHAR, 'u');
     }
 }

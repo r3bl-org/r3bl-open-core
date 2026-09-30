@@ -625,11 +625,11 @@ mod tests_invalid_input {
 #[cfg(test)]
 mod tests_osc_routing {
     use super::*;
-    use crate::{KeyState, MAX_OSC_SEQUENCE_LENGTH};
+    use crate::{ANSI_OSC_CLOSE_BRACKET, KeyState, MAX_OSC_SEQUENCE_LENGTH};
 
     fn alt_bracket_expected() -> VT100InputEventIR {
         VT100InputEventIR::Keyboard {
-            code: VT100KeyCodeIR::Char(']'),
+            code: VT100KeyCodeIR::Char(char::from(ANSI_OSC_CLOSE_BRACKET)),
             modifiers: VT100KeyModifiersIR {
                 shift: KeyState::NotPressed,
                 ctrl: KeyState::NotPressed,

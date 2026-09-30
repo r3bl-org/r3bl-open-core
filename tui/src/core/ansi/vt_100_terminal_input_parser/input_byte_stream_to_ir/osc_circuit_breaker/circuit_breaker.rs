@@ -410,7 +410,7 @@ impl OscCircuitBreaker {
         let mut remaining = chunk;
 
         // Loop until a terminator or abort condition is met, or the chunk is exhausted.
-        while !remaining.is_empty() {
+        loop {
             // Relative displacement into chunk and total cumulative bytes drained so far.
             let bytes_consumed = byte_offset(chunk.len() - remaining.len());
             let current_drained = already_drained_byte_count + bytes_consumed;
@@ -505,8 +505,7 @@ impl OscCircuitBreaker {
                     remaining = rest;
                 }
 
-                // Satisfies compiler exhaustiveness check for empty slices (unreachable
-                // at runtime due to the while loop condition).
+                // Chunk exhausted without finding a terminator or abort.
                 [] => break,
             }
         }
