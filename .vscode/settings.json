@@ -12,6 +12,8 @@
     // Harper grammar & spell checker settings.
     "harper.workspaceDictPath": "./.harper-dictionary.txt",
     "harper.linters.RightClick": false,
+    "harper.linters.ExpandParameter": false,
+    "harper.linters.MissingPreposition": false,
     "harper.linters.WereWhere": false,
     "harper.linters.DisjointPrefixes": false,
     "harper.linters.SimplePastToPastParticiple": false,

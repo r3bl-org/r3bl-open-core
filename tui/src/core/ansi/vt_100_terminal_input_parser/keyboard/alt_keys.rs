@@ -35,18 +35,22 @@ use crate::{byte_offset,
 /// [`Why Alt Uses ESC Prefix`]: mod@super#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    let &[ANSI_ESC, second, ..] = buffer else {
+    // Get the second byte from the buffer.
+    let [ANSI_ESC, second, ..] = *buffer else {
         return None;
     };
 
+    // Convert the second byte to the corresponding key code.
     let code = match second {
         // Handle Alt+Backspace (ESC + DEL).
         ASCII_DEL => VT100KeyCodeIR::Backspace,
+
         // Second byte is printable ASCII (space through ~).
         // Range: 0x20 (space) to 0x7E (~).
         PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX => {
             VT100KeyCodeIR::Char(char::from(second))
         }
+
         _ => return None,
     };
 

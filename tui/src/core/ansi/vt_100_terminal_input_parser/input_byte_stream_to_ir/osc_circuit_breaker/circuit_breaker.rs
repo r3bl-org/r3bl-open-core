@@ -504,10 +504,8 @@ impl OscCircuitBreaker {
                 // - `rest @ ..` binds the rest of the slice (tail with the first byte
                 //   removed).
                 // - `remaining = rest` assigns the tail back to advance the slice cursor.
-                //   #[allow(clippy::needless_continue)]
                 [_, rest @ ..] => {
                     remaining = rest;
-                    continue;
                 }
 
                 // Chunk exhausted without finding a terminator or abort.

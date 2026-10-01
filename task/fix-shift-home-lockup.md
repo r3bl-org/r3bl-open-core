@@ -1563,7 +1563,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 
 - [ ] **Phase 13.6: Mandatory Manual Review**:
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
+    - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`

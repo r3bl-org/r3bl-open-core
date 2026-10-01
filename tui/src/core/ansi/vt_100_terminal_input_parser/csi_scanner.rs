@@ -99,7 +99,7 @@ pub fn extract_csi_params(buffer: &[u8]) -> Option<ExtractedCsiParams> {
     let mut final_byte: Option<u8> = None;
     let mut bytes_scanned = byte_offset(0);
 
-    for &byte in &buffer[CSI_PREFIX_LEN..] {
+    for byte in buffer[CSI_PREFIX_LEN..].iter().copied() {
         bytes_scanned += byte_offset(1);
 
         match classify_csi_byte(byte) {

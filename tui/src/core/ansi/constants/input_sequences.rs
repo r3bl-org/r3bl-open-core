@@ -71,6 +71,16 @@ pub const ANSI_SS3_O: u8 = b'O';
 /// [`CSI`]: crate::CsiSequence
 pub const ANSI_PARAM_SEPARATOR: u8 = b';';
 
+/// Sub-Parameter Separator: Colon `:` delimiter between [`CSI`] sub-parameters.
+///
+/// Sequence: `CSI param1 : subparam1 ...` (separates sub-parameters, e.g. in `CSI u`).
+///
+/// Value: `58` dec, `3A` hex.
+///
+/// [`CSI`]: crate::CsiSequence
+pub const ANSI_SUBPARAM_SEPARATOR: u8 = b':';
+pub const ANSI_SUB_PARAM_SEPARATOR: u8 = ANSI_SUBPARAM_SEPARATOR;
+
 /// Function Key Terminator: Tilde `~` that ends function key and special key sequences.
 ///
 /// Sequence: `CSI n ~` (terminates function key codes like `CSI 11~` for F1).
@@ -88,6 +98,113 @@ pub const ANSI_FUNCTION_KEY_TERMINATOR: u8 = b'~';
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 pub const ANSI_CSI_U: u8 = b'u';
+
+// ==================== Kitty Keyboard Protocol Constants ====================
+
+/// [`Kitty`] Keyboard Protocol event type for key press (default).
+///
+/// Value: `1`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_PRESS: u8 = 1;
+
+/// [`Kitty`] Keyboard Protocol event type for key repeat.
+///
+/// Value: `2`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_REPEAT: u8 = 2;
+
+/// [`Kitty`] Keyboard Protocol event type for key release.
+///
+/// Value: `3`.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_EVENT_RELEASE: u8 = 3;
+
+/// [`Kitty`] PUA codepoint for Insert key.
+///
+/// Value: `57358` dec, `E00E` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_INSERT: u32 = 57358;
+
+/// [`Kitty`] PUA codepoint for Delete key.
+///
+/// Value: `57359` dec, `E00F` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_DELETE: u32 = 57359;
+
+/// [`Kitty`] PUA codepoint for Left arrow key.
+///
+/// Value: `57360` dec, `E010` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_LEFT: u32 = 57360;
+
+/// [`Kitty`] PUA codepoint for Right arrow key.
+///
+/// Value: `57361` dec, `E011` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_RIGHT: u32 = 57361;
+
+/// [`Kitty`] PUA codepoint for Up arrow key.
+///
+/// Value: `57362` dec, `E012` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_UP: u32 = 57362;
+
+/// [`Kitty`] PUA codepoint for Down arrow key.
+///
+/// Value: `57363` dec, `E013` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_DOWN: u32 = 57363;
+
+/// [`Kitty`] PUA codepoint for Page Up key.
+///
+/// Value: `57364` dec, `E014` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_PAGE_UP: u32 = 57364;
+
+/// [`Kitty`] PUA codepoint for Page Down key.
+///
+/// Value: `57365` dec, `E015` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_PAGE_DOWN: u32 = 57365;
+
+/// [`Kitty`] PUA codepoint for Home key.
+///
+/// Value: `57366` dec, `E016` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_HOME: u32 = 57366;
+
+/// [`Kitty`] PUA codepoint for End key.
+///
+/// Value: `57367` dec, `E017` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_END: u32 = 57367;
+
+/// [`Kitty`] PUA starting codepoint for Function keys (F1 = `57376`, F12 = `57387`).
+///
+/// Value: `57376` dec, `E020` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_F1: u32 = 57376;
+
+/// [`Kitty`] PUA ending codepoint for Function keys (F12 = `57387`).
+///
+/// Value: `57387` dec, `E02B` (PUA) hex.
+///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+pub const KITTY_PUA_F12: u32 = 57387;
 
 // ==================== Arrow Keys (CSI A/B/C/D) ====================
 
@@ -1299,7 +1416,15 @@ mod tests {
         assert_eq!(ANSI_ESC, 0x1B);
         assert_eq!(ANSI_CSI_BRACKET, 0x5B);
         assert_eq!(ANSI_PARAM_SEPARATOR, b';');
+        assert_eq!(ANSI_SUBPARAM_SEPARATOR, b':');
         assert_eq!(ANSI_FUNCTION_KEY_TERMINATOR, b'~');
+        assert_eq!(ANSI_CSI_U, b'u');
+        assert_eq!(KITTY_EVENT_PRESS, 1);
+        assert_eq!(KITTY_EVENT_REPEAT, 2);
+        assert_eq!(KITTY_EVENT_RELEASE, 3);
+        assert_eq!(KITTY_PUA_INSERT, 57358);
+        assert_eq!(KITTY_PUA_F1, 57376);
+        assert_eq!(KITTY_PUA_F12, 57387);
     }
 
     #[test]
