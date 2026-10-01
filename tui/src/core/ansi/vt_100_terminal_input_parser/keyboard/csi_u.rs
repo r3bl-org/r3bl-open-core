@@ -23,7 +23,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 
 /// Parses a [Kitty Keyboard Protocol] sequence (`CSI u`) into a [`VT100InputEventIR`].
 ///
-/// ## Where These Sequences Come From
+/// # Where These Sequences Come From
 ///
 /// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`],
 /// [`Ghostty`], [`WezTerm`], etc.) after [`OutputDevice::setup_full_screen_tui()`]
@@ -33,7 +33,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// See the [Progressive Keyboard Enhancement][no-ack] in the parent parser module
 /// for details on why no `ACK` is needed and how legacy terminals silently fall back.
 ///
-/// **Syntax**:
+/// # Syntax
 ///
 /// | Variant                 | Syntax                                            | Description                                     |
 /// | :---------------------- | :------------------------------------------------ | :---------------------------------------------- |
@@ -52,6 +52,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// | `ESC [ 91 ; 3 : 1 u` | `Alt+[`                        | Press event (`:1`)           |
 /// | `ESC [ 91 ; 3 : 3 u` | [`VT100InputEventIR::Ignored`] | Release event (`:3`)         |
 ///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`Ghostty`]: https://ghostty.org/
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
