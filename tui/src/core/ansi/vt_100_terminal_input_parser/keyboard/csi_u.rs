@@ -167,7 +167,6 @@ fn decode_csi_u_codepoint(codepoint: u32) -> Option<VT100KeyCodeIR> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::KeyState;
 
     #[test]
     fn test_parse_csi_u_alt_bracket() {
@@ -180,11 +179,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Char('['),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::ALT,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
@@ -201,11 +196,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Enter,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
@@ -222,11 +213,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Tab,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
@@ -243,11 +230,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Escape,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::ALT,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
@@ -265,11 +248,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Char('['),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::ALT,
             }
         );
         assert_eq!(consumed.as_usize(), input_press.len());
@@ -284,11 +263,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Char('['),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::ALT,
             }
         );
         assert_eq!(consumed.as_usize(), input_repeat.len());
@@ -314,7 +289,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Char('['),
-                modifiers: VT100KeyModifiersIR::default(),
+                modifiers: VT100KeyModifiersIR::NONE,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());
@@ -331,11 +306,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Home,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(consumed.as_usize(), input.len());

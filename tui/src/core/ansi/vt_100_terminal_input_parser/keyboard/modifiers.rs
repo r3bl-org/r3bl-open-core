@@ -73,46 +73,14 @@ mod tests {
 
     #[test]
     fn test_decode_modifiers() {
-        assert_eq!(decode_modifiers(1), VT100KeyModifiersIR::default());
-        assert_eq!(
-            decode_modifiers(2),
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-            }
-        );
-        assert_eq!(
-            decode_modifiers(3),
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::NotPressed,
-            }
-        );
-        assert_eq!(
-            decode_modifiers(5),
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            }
-        );
-        assert_eq!(
-            decode_modifiers(6),
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            }
-        );
+        assert_eq!(decode_modifiers(1), VT100KeyModifiersIR::NONE);
+        assert_eq!(decode_modifiers(2), VT100KeyModifiersIR::SHIFT);
+        assert_eq!(decode_modifiers(3), VT100KeyModifiersIR::ALT);
+        assert_eq!(decode_modifiers(5), VT100KeyModifiersIR::CTRL);
+        assert_eq!(decode_modifiers(6), VT100KeyModifiersIR::CTRL.with_shift());
         assert_eq!(
             decode_modifiers(8),
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::Pressed,
-            }
+            VT100KeyModifiersIR::CTRL.with_shift().with_alt()
         );
     }
 }

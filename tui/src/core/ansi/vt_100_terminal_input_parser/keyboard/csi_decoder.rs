@@ -294,7 +294,6 @@ fn parse_function_or_special_key(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::KeyState;
 
     // ==================== Test Helpers ====================
     // These helpers use the input event generator to build test sequences,
@@ -411,14 +410,7 @@ mod tests {
     #[test]
     fn test_shift_up() {
         // Build sequence with Shift modifier using generator
-        let input = arrow_key_sequence(
-            VT100KeyCodeIR::Up,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-            },
-        );
+        let input = arrow_key_sequence(VT100KeyCodeIR::Up, VT100KeyModifiersIR::SHIFT);
         let ParsedInputEventIR {
             event,
             bytes_consumed,
@@ -427,11 +419,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Up,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                }
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(bytes_consumed.as_usize(), input.len());
@@ -439,14 +427,7 @@ mod tests {
 
     #[test]
     fn test_alt_right() {
-        let input = arrow_key_sequence(
-            VT100KeyCodeIR::Right,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::NotPressed,
-            },
-        );
+        let input = arrow_key_sequence(VT100KeyCodeIR::Right, VT100KeyModifiersIR::ALT);
         let ParsedInputEventIR {
             event,
             bytes_consumed,
@@ -456,9 +437,7 @@ mod tests {
                 code: VT100KeyCodeIR::Right,
                 modifiers,
             } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Alt+Right"),
         }
@@ -468,14 +447,7 @@ mod tests {
     #[test]
     fn test_ctrl_up() {
         // ESC [1;5A = Ctrl+Up (verified with real terminal output)
-        let input = arrow_key_sequence(
-            VT100KeyCodeIR::Up,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            },
-        );
+        let input = arrow_key_sequence(VT100KeyCodeIR::Up, VT100KeyModifiersIR::CTRL);
         let ParsedInputEventIR {
             event,
             bytes_consumed,
@@ -485,13 +457,7 @@ mod tests {
                 code: VT100KeyCodeIR::Up,
                 modifiers,
             } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
-                assert_eq!(
-                    modifiers.ctrl,
-                    KeyState::Pressed,
-                    "Ctrl+Up should have ctrl modifier set"
-                );
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL);
             }
             _ => panic!("Expected Ctrl+Up"),
         }
@@ -500,14 +466,7 @@ mod tests {
 
     #[test]
     fn test_ctrl_down() {
-        let input = arrow_key_sequence(
-            VT100KeyCodeIR::Down,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            },
-        );
+        let input = arrow_key_sequence(VT100KeyCodeIR::Down, VT100KeyModifiersIR::CTRL);
         let ParsedInputEventIR {
             event,
             bytes_consumed,
@@ -517,9 +476,7 @@ mod tests {
                 code: VT100KeyCodeIR::Down,
                 modifiers,
             } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL);
             }
             _ => panic!("Expected Ctrl+Down"),
         }
@@ -530,11 +487,7 @@ mod tests {
     fn test_alt_ctrl_left() {
         let input = arrow_key_sequence(
             VT100KeyCodeIR::Left,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::Pressed,
-            },
+            VT100KeyModifiersIR::CTRL.with_alt(),
         );
         let ParsedInputEventIR {
             event,
@@ -545,9 +498,7 @@ mod tests {
                 code: VT100KeyCodeIR::Left,
                 modifiers,
             } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL.with_alt());
             }
             _ => panic!("Expected Alt+Ctrl+Left"),
         }
@@ -558,11 +509,7 @@ mod tests {
     fn test_shift_alt_ctrl_left() {
         let input = arrow_key_sequence(
             VT100KeyCodeIR::Left,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::Pressed,
-            },
+            VT100KeyModifiersIR::CTRL.with_alt().with_shift(),
         );
         let ParsedInputEventIR {
             event,
@@ -573,9 +520,7 @@ mod tests {
                 code: VT100KeyCodeIR::Left,
                 modifiers,
             } => {
-                assert_eq!(modifiers.shift, KeyState::Pressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL.with_alt().with_shift());
             }
             _ => panic!("Expected Shift+Alt+Ctrl+Left"),
         }
@@ -631,11 +576,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Home,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                }
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(bytes_consumed, byte_offset(6));
@@ -652,11 +593,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Home,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                }
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
         assert_eq!(bytes_consumed, byte_offset(6));
@@ -673,11 +610,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::End,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                }
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(bytes_consumed, byte_offset(6));
@@ -694,11 +627,7 @@ mod tests {
             event,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::End,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                }
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
         assert_eq!(bytes_consumed, byte_offset(6));
@@ -714,11 +643,7 @@ mod tests {
             event_f1,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(1),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                }
+                modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
         assert_eq!(consumed_f1, byte_offset(6));
@@ -731,11 +656,7 @@ mod tests {
             event_f4,
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(4),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                }
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
         assert_eq!(consumed_f4, byte_offset(6));
@@ -919,14 +840,7 @@ mod tests {
 
     #[test]
     fn test_shift_f5() {
-        let input = function_key_sequence(
-            5,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-            },
-        );
+        let input = function_key_sequence(5, VT100KeyModifiersIR::SHIFT);
         let ParsedInputEventIR {
             event,
             bytes_consumed,
@@ -937,9 +851,7 @@ mod tests {
                 modifiers,
             } => {
                 assert_eq!(n, 5);
-                assert_eq!(modifiers.shift, KeyState::Pressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::SHIFT);
             }
             _ => panic!("Expected Shift+F5"),
         }
@@ -950,11 +862,7 @@ mod tests {
     fn test_ctrl_alt_f10() {
         let input = function_key_sequence(
             10,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-                ctrl: KeyState::Pressed,
-            },
+            VT100KeyModifiersIR::CTRL.with_alt(),
         );
         let ParsedInputEventIR {
             event,
@@ -966,9 +874,7 @@ mod tests {
                 modifiers,
             } => {
                 assert_eq!(n, 10);
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL.with_alt());
             }
             _ => panic!("Expected Ctrl+Alt+F10"),
         }
