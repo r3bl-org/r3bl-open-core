@@ -7,7 +7,7 @@
 
 use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                    VT100KeyCodeIR, VT100KeyModifiersIR};
-use crate::{KeyState, byte_offset,
+use crate::{byte_offset,
             core::ansi::constants::{ANSI_ESC, ASCII_DEL, PRINTABLE_ASCII_MAX,
                                     PRINTABLE_ASCII_MIN}};
 
@@ -41,11 +41,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
             Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Backspace,
-                    modifiers: VT100KeyModifiersIR {
-                        shift: KeyState::NotPressed,
-                        ctrl: KeyState::NotPressed,
-                        alt: KeyState::Pressed,
-                    },
+                    modifiers: VT100KeyModifiersIR::ALT,
                 },
                 byte_offset(2), // Consume both ESC and DEL.
             ))
@@ -62,11 +58,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
             Some(ParsedInputEventIR::new(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Char(ch),
-                    modifiers: VT100KeyModifiersIR {
-                        shift: KeyState::NotPressed,
-                        ctrl: KeyState::NotPressed,
-                        alt: KeyState::Pressed,
-                    },
+                    modifiers: VT100KeyModifiersIR::ALT,
                 },
                 byte_offset(2), // Consume both ESC and letter.
             ))
@@ -89,9 +81,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('b'));
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -108,9 +98,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('f'));
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -127,9 +115,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('B'));
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -146,9 +132,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char('3'));
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -165,9 +149,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Char(' '));
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -184,9 +166,7 @@ mod tests {
         match event {
             VT100InputEventIR::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCodeIR::Backspace);
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Keyboard event"),
         }

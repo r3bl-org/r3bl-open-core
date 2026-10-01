@@ -6,7 +6,7 @@
 
 use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                    VT100KeyCodeIR, VT100KeyModifiersIR};
-use crate::{KeyState, byte_offset,
+use crate::{SPACE_CHAR, byte_offset,
             core::ansi::constants::{ASCII_DEL, CONTROL_BACKSPACE, CONTROL_ENTER,
                                     CONTROL_ESC, CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
                                     CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK}};
@@ -55,18 +55,14 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                     // Treat as Ctrl+Space for better usability.
                     Some(ParsedInputEventIR::new(
                         VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Char(' '),
-                            modifiers: VT100KeyModifiersIR {
-                                shift: KeyState::NotPressed,
-                                ctrl: KeyState::Pressed,
-                                alt: KeyState::NotPressed,
-                            },
+                            code: VT100KeyCodeIR::Char(SPACE_CHAR),
+                            modifiers: VT100KeyModifiersIR::CTRL,
                         },
                         byte_offset(1),
                     ))
                 }
                 CONTROL_TAB => {
-                    // Tab key (0x09) - treated as Tab, not Ctrl+I.
+                    // Tab key (0x09) - treated as Tab, not `Ctrl+I`.
                     Some(ParsedInputEventIR::new(
                         VT100InputEventIR::Keyboard {
                             code: VT100KeyCodeIR::Tab,
@@ -106,11 +102,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                     Some(ParsedInputEventIR::new(
                         VT100InputEventIR::Keyboard {
                             code: VT100KeyCodeIR::Char(letter),
-                            modifiers: VT100KeyModifiersIR {
-                                shift: KeyState::NotPressed,
-                                ctrl: KeyState::Pressed,
-                                alt: KeyState::NotPressed,
-                            },
+                            modifiers: VT100KeyModifiersIR::CTRL,
                         },
                         byte_offset(1),
                     ))
@@ -125,6 +117,8 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ansi::constants::{ASCII_LOWER_A, ASCII_LOWER_Z, ASCII_UPPER_A,
+                                       PRINTABLE_ASCII_MIN};
 
     #[test]
     fn test_del_is_backspace() {
@@ -151,12 +145,8 @@ mod tests {
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Char(' '),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                },
+                code: VT100KeyCodeIR::Char(SPACE_CHAR),
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
         assert_eq!(len, byte_offset(1));
@@ -228,12 +218,8 @@ mod tests {
         assert_eq!(
             event_a,
             VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Char('a'),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                },
+                code: VT100KeyCodeIR::Char(char::from(ASCII_LOWER_A)),
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
 
@@ -242,12 +228,8 @@ mod tests {
         assert_eq!(
             event_z,
             VT100InputEventIR::Keyboard {
-                code: VT100KeyCodeIR::Char('z'),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                },
+                code: VT100KeyCodeIR::Char(char::from(ASCII_LOWER_Z)),
+                modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
     }
@@ -255,7 +237,7 @@ mod tests {
     #[test]
     fn test_empty_and_non_control_returns_none() {
         assert!(parse_control_character(&[]).is_none());
-        assert!(parse_control_character(b" ").is_none());
-        assert!(parse_control_character(b"A").is_none());
+        assert!(parse_control_character(&[PRINTABLE_ASCII_MIN]).is_none());
+        assert!(parse_control_character(&[ASCII_UPPER_A]).is_none());
     }
 }

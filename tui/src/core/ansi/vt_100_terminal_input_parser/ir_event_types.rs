@@ -163,18 +163,62 @@ pub struct VT100KeyModifiersIR {
 }
 
 impl VT100KeyModifiersIR {
+    /// No modifier keys pressed.
+    pub const NONE: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Only Shift pressed.
+    pub const SHIFT: Self = Self {
+        shift: KeyState::Pressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Only Alt pressed.
+    pub const ALT: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::Pressed,
+    };
+
+    /// Only Ctrl pressed.
+    pub const CTRL: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::Pressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Create with no modifiers pressed (same as [`Self::NONE`]).
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        }
+    pub const fn new() -> Self { Self::NONE }
+
+    /// Returns a copy with Shift marked as pressed.
+    #[must_use]
+    pub const fn with_shift(mut self) -> Self {
+        self.shift = KeyState::Pressed;
+        self
+    }
+
+    /// Returns a copy with Ctrl marked as pressed.
+    #[must_use]
+    pub const fn with_ctrl(mut self) -> Self {
+        self.ctrl = KeyState::Pressed;
+        self
+    }
+
+    /// Returns a copy with Alt marked as pressed.
+    #[must_use]
+    pub const fn with_alt(mut self) -> Self {
+        self.alt = KeyState::Pressed;
+        self
     }
 }
 
 impl Default for VT100KeyModifiersIR {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::NONE }
 }
 
 /// Mouse buttons.
@@ -253,4 +297,60 @@ pub enum VT100MouseActionIR {
     Motion,
     /// Scroll wheel rotated.
     Scroll(VT100ScrollDirectionIR),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_key_modifiers_constants_and_builders() {
+        assert_eq!(VT100KeyModifiersIR::default(), VT100KeyModifiersIR::NONE);
+        assert_eq!(VT100KeyModifiersIR::new(), VT100KeyModifiersIR::NONE);
+
+        assert_eq!(
+            VT100KeyModifiersIR::SHIFT,
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::ALT,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::CTRL,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::NONE.with_ctrl().with_shift().with_alt(),
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::Pressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::CTRL.with_shift(),
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+    }
 }

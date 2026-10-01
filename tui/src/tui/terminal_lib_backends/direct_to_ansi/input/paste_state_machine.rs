@@ -4,7 +4,7 @@
 //! docs.
 
 use super::protocol_conversion::convert_input_event;
-use crate::{InputEvent,
+use crate::{InputEvent, NEW_LINE_CHAR, TAB_CHAR,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                        VT100KeyCodeIR, VT100PasteModeIR}};
 
@@ -103,11 +103,11 @@ pub fn apply_paste_state_machine(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Enter,
                     ..
-                } => buffer.push('\n'),
+                } => buffer.push(NEW_LINE_CHAR),
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Tab,
                     ..
-                } => buffer.push('\t'),
+                } => buffer.push(TAB_CHAR),
                 // Other events (mouse, resize, focus, arrow keys, etc.) are
                 // ignored during paste - they're unlikely to be intentional.
                 _ => {}
