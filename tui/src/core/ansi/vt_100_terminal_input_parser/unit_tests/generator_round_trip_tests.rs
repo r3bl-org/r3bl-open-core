@@ -7,7 +7,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{KeyState, VPHeight, VPWidth,
+use crate::{VPHeight, VPWidth,
             core::ansi::{generator::*,
                          vt_100_terminal_input_parser::{ParsedInputEventIR,
                                                         VT100FocusStateIR,
@@ -171,11 +171,7 @@ fn test_generate_arrow_left() {
 fn test_generate_shift_up() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Up,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift modifier: parameter = 1 + 1 = 2
@@ -186,11 +182,7 @@ fn test_generate_shift_up() {
 fn test_generate_alt_right() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Right,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::ALT,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Alt modifier: parameter = 1 + 2 = 3
@@ -201,11 +193,7 @@ fn test_generate_alt_right() {
 fn test_generate_ctrl_down() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Down,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Ctrl modifier: parameter = 1 + 4 = 5
@@ -216,11 +204,7 @@ fn test_generate_ctrl_down() {
 fn test_generate_ctrl_alt_shift_left() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Left,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL.with_alt().with_shift(),
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift+Alt+Ctrl modifiers: parameter = 1 + 7 = 8
@@ -253,11 +237,7 @@ fn test_generate_end_key() {
 fn test_generate_shift_home() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Home,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[1;2H");
@@ -267,11 +247,7 @@ fn test_generate_shift_home() {
 fn test_generate_ctrl_home() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Home,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[1;5H");
@@ -281,11 +257,7 @@ fn test_generate_ctrl_home() {
 fn test_generate_shift_end() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::End,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[1;2F");
@@ -295,11 +267,7 @@ fn test_generate_shift_end() {
 fn test_generate_ctrl_end() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::End,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     assert_eq!(bytes, b"\x1b[1;5F");
@@ -383,11 +351,7 @@ fn test_generate_f12_key() {
 fn test_generate_shift_f5() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Function(5),
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Shift modifier: parameter = 1 + 1 = 2
@@ -398,11 +362,7 @@ fn test_generate_shift_f5() {
 fn test_generate_ctrl_alt_f10() {
     let event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Function(10),
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL.with_alt(),
     };
     let bytes = generate_keyboard_sequence(&event).expect("conversion error");
     // Ctrl+Alt modifiers: parameter = 1 + 6 = 7
@@ -485,11 +445,7 @@ fn test_roundtrip_arrow_up() {
 fn test_roundtrip_ctrl_alt_f10() {
     let original_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Function(10),
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL.with_alt(),
     };
 
     let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
@@ -506,11 +462,7 @@ fn test_roundtrip_ctrl_alt_f10() {
 fn test_roundtrip_insert_key_with_shift() {
     let original_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Insert,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
 
     let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
@@ -527,11 +479,7 @@ fn test_roundtrip_insert_key_with_shift() {
 fn test_roundtrip_shift_home() {
     let original_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Home,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::SHIFT,
     };
 
     let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
@@ -548,11 +496,7 @@ fn test_roundtrip_shift_home() {
 fn test_roundtrip_ctrl_end() {
     let original_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::End,
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     };
 
     let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");
@@ -569,11 +513,7 @@ fn test_roundtrip_ctrl_end() {
 fn test_roundtrip_alt_bracket() {
     let original_event = VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Char('['),
-        modifiers: VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::ALT,
     };
 
     let bytes = generate_keyboard_sequence(&original_event).expect("conversion error");

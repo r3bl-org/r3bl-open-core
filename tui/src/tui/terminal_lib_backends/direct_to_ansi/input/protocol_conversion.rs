@@ -459,11 +459,7 @@ mod tests {
     #[test]
     fn test_convert_with_shift_modifier() {
         // Test key with Shift modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::SHIFT;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('a'), modifiers);
 
@@ -481,11 +477,7 @@ mod tests {
     #[test]
     fn test_convert_with_ctrl_modifier() {
         // Test key with Ctrl modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::CTRL;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('c'), modifiers);
 
@@ -503,11 +495,7 @@ mod tests {
     #[test]
     fn test_convert_with_alt_modifier() {
         // Test key with Alt modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-        };
+        let modifiers = VT100KeyModifiersIR::ALT;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Left, modifiers);
 
@@ -525,11 +513,7 @@ mod tests {
     #[test]
     fn test_convert_with_multiple_modifiers() {
         // Test key with Ctrl+Shift+Alt
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::Pressed,
-            alt: KeyState::Pressed,
-        };
+        let modifiers = VT100KeyModifiersIR::CTRL.with_shift().with_alt();
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Function(5), modifiers);
 
@@ -722,11 +706,7 @@ mod tests {
     #[test]
     fn test_convert_mouse_with_modifiers() {
         // Test mouse event with Shift modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::SHIFT;
 
         let vt100_event = VT100InputEventIR::Mouse {
             button: VT100MouseButtonIR::Left,
@@ -832,11 +812,7 @@ mod tests {
         // Test full keyboard event conversion path
         let vt100_event = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char('x'),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-            },
+            modifiers: VT100KeyModifiersIR::CTRL,
         };
 
         match convert_input_event(vt100_event) {
@@ -860,11 +836,7 @@ mod tests {
     fn test_convert_alt_left_bracket() {
         let vt100_event = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char('['),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
+            modifiers: VT100KeyModifiersIR::ALT,
         };
 
         match convert_input_event(vt100_event) {

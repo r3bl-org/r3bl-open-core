@@ -23,14 +23,7 @@ fn shift_home_parsing() {
     assert_eq!(events.len(), 1);
     assert_eq!(
         events[0],
-        keyboard_event_with_modifiers(
-            VT100KeyCodeIR::Home,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-            }
-        )
+        keyboard_event_with_modifiers(VT100KeyCodeIR::Home, VT100KeyModifiersIR::SHIFT,)
     );
 }
 
@@ -46,14 +39,7 @@ fn ctrl_home_parsing() {
     assert_eq!(events.len(), 1);
     assert_eq!(
         events[0],
-        keyboard_event_with_modifiers(
-            VT100KeyCodeIR::Home,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            }
-        )
+        keyboard_event_with_modifiers(VT100KeyCodeIR::Home, VT100KeyModifiersIR::CTRL,)
     );
 }
 
@@ -69,14 +55,7 @@ fn shift_end_parsing() {
     assert_eq!(events.len(), 1);
     assert_eq!(
         events[0],
-        keyboard_event_with_modifiers(
-            VT100KeyCodeIR::End,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-            }
-        )
+        keyboard_event_with_modifiers(VT100KeyCodeIR::End, VT100KeyModifiersIR::SHIFT,)
     );
 }
 
@@ -92,14 +71,7 @@ fn ctrl_end_parsing() {
     assert_eq!(events.len(), 1);
     assert_eq!(
         events[0],
-        keyboard_event_with_modifiers(
-            VT100KeyCodeIR::End,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-            }
-        )
+        keyboard_event_with_modifiers(VT100KeyCodeIR::End, VT100KeyModifiersIR::CTRL,)
     );
 }
 
@@ -163,14 +135,7 @@ fn safety_buffer_overflow_clears_buffer() {
 // ======================================================================================
 
 fn alt_bracket() -> VT100InputEventIR {
-    keyboard_event_with_modifiers(
-        VT100KeyCodeIR::Char(']'),
-        VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-        },
-    )
+    keyboard_event_with_modifiers(VT100KeyCodeIR::Char(']'), VT100KeyModifiersIR::ALT)
 }
 
 #[test]
