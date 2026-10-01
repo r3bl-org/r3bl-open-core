@@ -241,8 +241,10 @@ mod tests {
 
     #[test]
     fn test_control_backspace() {
-        let ParsedInputEventIR { event, .. } =
-            parse_control_character(&[CONTROL_BACKSPACE]).unwrap();
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&[CONTROL_BACKSPACE]).unwrap();
         assert_eq!(
             event,
             VT100InputEventIR::Keyboard {
@@ -250,6 +252,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
+        assert_eq!(len, byte_offset(1));
     }
 
     #[test]
@@ -285,5 +288,44 @@ mod tests {
         assert!(parse_control_character(&[]).is_none());
         assert!(parse_control_character(&[PRINTABLE_ASCII_MIN]).is_none());
         assert!(parse_control_character(&[ASCII_UPPER_A]).is_none());
+        assert!(parse_control_character(&[0x80]).is_none());
+        assert!(parse_control_character(&[0xFF]).is_none());
+    }
+
+    #[test]
+    fn test_multi_byte_buffer_consumes_single_byte() {
+        let buffer = [0x01, b'b', b'c']; // Ctrl+A followed by trailing bytes.
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&buffer).expect("Should parse first byte");
+
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char('a'),
+                modifiers: VT100KeyModifiersIR::CTRL,
+            }
+        );
+        assert_eq!(len, byte_offset(1));
+    }
+
+    #[test]
+    fn test_control_range_max() {
+        // 0x1F (CTRL_CHAR_RANGE_MAX) should be parsed via parse_ctrl_key.
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: len,
+        } = parse_control_character(&[CTRL_CHAR_RANGE_MAX]).expect("Should parse 0x1F");
+        assert_eq!(
+            event,
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char(char::from(
+                    CTRL_CHAR_RANGE_MAX | CTRL_TO_LOWERCASE_MASK
+                )),
+                modifiers: VT100KeyModifiersIR::CTRL,
+            }
+        );
+        assert_eq!(len, byte_offset(1));
     }
 }
