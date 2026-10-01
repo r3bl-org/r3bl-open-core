@@ -488,7 +488,6 @@
 //! [Reader]: crate::pty_session::threads::reader::spawn_pty_reader_thread
 //! [resource-leaking deadlocks]: crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
 //! [Session Layer]: crate::pty_session
-//! [Session layer]: crate::pty_session
 //! [To Async or Not to Async: Building a Rust MCP Server for rust-analyzer]: https://developerlife.com/2026/08/22/to-async-or-not-to-async-rust-mcp-server/
 //! [What is a `TTY`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
 //! [Writer Thread]: crate::pty_session::threads::writer::spawn_pty_writer_thread

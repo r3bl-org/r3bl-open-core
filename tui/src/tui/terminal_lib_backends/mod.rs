@@ -165,7 +165,6 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`crossterm_paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [`direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
-//! [hub]: mod@direct_to_ansi#terminal-protocols--capabilities-hub
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OfsBuf`]: struct@ofs_buf::OfsBuf
 //! [`OSC`]: crate::osc_codes::OscSequence
@@ -184,6 +183,7 @@
 //! [`RenderPipeline`]: struct@render_pipeline::RenderPipeline
 //! [`ZOrder`]: enum@z_order::ZOrder
 //! [dual rendering paths]: mod@crate#dual-rendering-paths
+//! [hub]: mod@direct_to_ansi#terminal-protocols--capabilities-hub
 
 #![rustfmt::skip]
 
