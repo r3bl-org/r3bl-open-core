@@ -1449,7 +1449,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 - **Problem Analysis & Architectural Motivation**:
     - **Scattered Prefix & Length Heuristics (The "If-Else Soup")**: Multiple parser
       components across `vt_100_terminal_input_parser` (`mouse.rs`, `terminal_events.rs`,
-      `utf8.rs`, `keyboard/alt_keys.rs`, `keyboard/control_characters.rs`,
+      `utf8.rs`, `keyboard/alt_keys.rs`, `keyboard/ctrl_and_dedicated_keys.rs`,
       `keyboard/csi_u.rs`) currently use ad-hoc length checks (`buffer.len() >= N`), raw
       index lookups (`buffer[0] != ANSI_ESC`, `sequence[3]..sequence[5]`), and manual
       negative prefix checks (`buffer.starts_with(...) && !buffer.starts_with(...)`). This
@@ -1535,12 +1535,13 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 - `[ANSI_ESC, ASCII_DEL, ..] => ...`
                 - `[ANSI_ESC, second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX, ..] => ...`
                 - `_ => None`
-    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`:
+    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`:
         - Refactor `parse_control_character`:
-            - Replace manual `buffer.is_empty()` and `buffer[0]` indexing with slice
-              pattern matching:
-                - `[ASCII_DEL, ..] => ...`
-                - `[byte @ ..=CTRL_CHAR_RANGE_MAX, ..] => ...`
+            - Replace manual `buffer.is_empty()` and `buffer[0]` indexing with
+              `buffer.first()?` and flattened pattern matching:
+                - `ASCII_DEL => ...`
+                - Dedicated keys (`CONTROL_NUL`, `CONTROL_TAB`, etc.)
+                - `byte if byte <= CTRL_CHAR_RANGE_MAX => ...`
                 - `_ => None`
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`:
         - Refactor `parse_csi_u_sequence`:
@@ -1550,7 +1551,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 - `let [ANSI_ESC, ANSI_CSI_BRACKET, _, _, ..] = buffer else { return None; };`
     - Mandatory manual review for Phase 13.4:
         - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
-        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`
         - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
 
 - [x] **Phase 13.5: Verification**:
@@ -1563,7 +1564,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
 - [ ] **Phase 13.6: Mandatory Manual Review**:
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
-    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/control_characters.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`
     - [x] `tui/src/core/ansi/constants/input_sequences.rs`

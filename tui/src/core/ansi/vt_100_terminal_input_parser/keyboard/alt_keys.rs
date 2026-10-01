@@ -35,36 +35,28 @@ use crate::{byte_offset,
 /// [`Why Alt Uses ESC Prefix`]: mod@super#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    match buffer {
-        [ANSI_ESC, ASCII_DEL, ..] => {
-            // Handle Alt+Backspace (ESC + DEL).
-            Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Backspace,
-                    modifiers: VT100KeyModifiersIR::ALT,
-                },
-                byte_offset(2), // Consume both ESC and DEL.
-            ))
-        }
-        [
-            ANSI_ESC,
-            second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX,
-            ..,
-        ] => {
-            // Second byte is printable ASCII (space through ~).
-            // Range: 0x20 (space) to 0x7E (~).
-            let ch = char::from(*second);
+    let &[ANSI_ESC, second, ..] = buffer else {
+        return None;
+    };
 
-            Some(ParsedInputEventIR::new(
-                VT100InputEventIR::Keyboard {
-                    code: VT100KeyCodeIR::Char(ch),
-                    modifiers: VT100KeyModifiersIR::ALT,
-                },
-                byte_offset(2), // Consume both ESC and letter.
-            ))
+    let code = match second {
+        // Handle Alt+Backspace (ESC + DEL).
+        ASCII_DEL => VT100KeyCodeIR::Backspace,
+        // Second byte is printable ASCII (space through ~).
+        // Range: 0x20 (space) to 0x7E (~).
+        PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX => {
+            VT100KeyCodeIR::Char(char::from(second))
         }
-        _ => None,
-    }
+        _ => return None,
+    };
+
+    Some(ParsedInputEventIR::new(
+        VT100InputEventIR::Keyboard {
+            code,
+            modifiers: VT100KeyModifiersIR::ALT,
+        },
+        byte_offset(2), // Consume both ESC and second byte.
+    ))
 }
 
 #[cfg(test)]

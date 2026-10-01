@@ -453,9 +453,9 @@ pub mod alt_keys;
 mod alt_keys;
 
 #[cfg(any(test, doc))]
-pub mod control_characters;
+pub mod ctrl_and_dedicated_keys;
 #[cfg(not(any(test, doc)))]
-mod control_characters;
+mod ctrl_and_dedicated_keys;
 
 #[cfg(any(test, doc))]
 pub mod csi_decoder;
@@ -479,8 +479,8 @@ mod ss3;
 
 // Public re-exports (barrel export pattern).
 pub use alt_keys::*;
-pub use control_characters::*;
 pub use csi_decoder::*;
 pub use csi_u::*;
+pub use ctrl_and_dedicated_keys::*;
 pub use modifiers::*;
 pub use ss3::*;

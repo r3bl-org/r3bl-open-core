@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Control character parsing ([`ASCII`] `0x00`-`0x1F` and DEL `0x7F`).
+//! Control character and dedicated key parsing ([`ASCII`] `0x00`-`0x1F` and DEL `0x7F`).
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 
@@ -27,8 +27,7 @@ use crate::{SPACE_CHAR, byte_offset,
 /// - The parsed control key event and byte count (always 1) on success.
 /// - Nothing if the byte is not a control character.
 ///
-/// [`Ambiguous Control Character Handling`]:
-///     mod@super#ambiguous-control-character-handling
+/// [`Ambiguous Control Character Handling`]: mod@super#ambiguous-control-character-handling
 /// [`Control Key Combinations`]: mod@super#control-key-combinations-ctrlletter
 /// [`ESC`]: crate::EscSequence
 /// [`Parser Dispatch Priority Pipeline`]: mod@super::super::router#parser-dispatch-priority-pipeline
@@ -36,82 +35,129 @@ use crate::{SPACE_CHAR, byte_offset,
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    match buffer {
-        // Handle ASCII DEL (0x7F) - common Backspace encoding.
-        [ASCII_DEL, ..] => Some(ParsedInputEventIR::new(
+    let first_byte = *buffer.first()?;
+
+    // Check dedicated keys (Backspace, Tab, Enter, Ctrl+Space) first. Any other byte in
+    // the 0..=31 range is handled as a Ctrl+letter combination at the bottom.
+    match first_byte {
+        //
+        // Handle special control characters as dedicated keys (not Ctrl+letter).
+        //
+
+        // Backspace can send DEL (0x7F) or BS (0x08).
+        ASCII_DEL | CONTROL_BACKSPACE => Some(ParsedInputEventIR::new(
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Backspace,
                 modifiers: VT100KeyModifiersIR::default(),
             },
             byte_offset(1),
         )),
+        // Ctrl+Space (or Ctrl+@) generates NUL.
+        // Treat as Ctrl+Space for better usability.
+        CONTROL_NUL => Some(ParsedInputEventIR::new(
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Char(SPACE_CHAR),
+                modifiers: VT100KeyModifiersIR::CTRL,
+            },
+            byte_offset(1),
+        )),
+        // Tab key (0x09) - treated as Tab, not `Ctrl+I`.
+        CONTROL_TAB => Some(ParsedInputEventIR::new(
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Tab,
+                modifiers: VT100KeyModifiersIR::default(),
+            },
+            byte_offset(1),
+        )),
+        // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal.
+        CONTROL_LF | CONTROL_ENTER => Some(ParsedInputEventIR::new(
+            VT100InputEventIR::Keyboard {
+                code: VT100KeyCodeIR::Enter,
+                modifiers: VT100KeyModifiersIR::default(),
+            },
+            byte_offset(1),
+        )),
+        // Escape - handled in try_parse() routing.
+        CONTROL_ESC => None,
 
-        // Handle control character range (0x00-0x1F).
-        [byte @ ..=CTRL_CHAR_RANGE_MAX, ..] => {
-            // Handle special control characters as dedicated keys (not Ctrl+letter).
-            match *byte {
-                CONTROL_NUL => {
-                    // Ctrl+Space (or Ctrl+@) generates NUL.
-                    // Treat as Ctrl+Space for better usability.
-                    Some(ParsedInputEventIR::new(
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Char(SPACE_CHAR),
-                            modifiers: VT100KeyModifiersIR::CTRL,
-                        },
-                        byte_offset(1),
-                    ))
-                }
-                CONTROL_TAB => {
-                    // Tab key (0x09) - treated as Tab, not `Ctrl+I`.
-                    Some(ParsedInputEventIR::new(
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Tab,
-                            modifiers: VT100KeyModifiersIR::default(),
-                        },
-                        byte_offset(1),
-                    ))
-                }
-                CONTROL_LF | CONTROL_ENTER => {
-                    // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal.
-                    Some(ParsedInputEventIR::new(
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Enter,
-                            modifiers: VT100KeyModifiersIR::default(),
-                        },
-                        byte_offset(1),
-                    ))
-                }
-                CONTROL_BACKSPACE => {
-                    // Backspace can send BS (0x08) or DEL (0x7F).
-                    Some(ParsedInputEventIR::new(
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Backspace,
-                            modifiers: VT100KeyModifiersIR::default(),
-                        },
-                        byte_offset(1),
-                    ))
-                }
-                CONTROL_ESC => None, // Escape - handled in try_parse() routing.
-                _ => {
-                    // Convert control character to Ctrl+letter.
-                    // Control characters are generated as: letter & 0x1F.
-                    // Reverse: (byte | 0x40) gives uppercase letter, (byte | 0x60) gives
-                    // lowercase. Example: 0x01 | 0x60 = 0x61 = 'a'.
-                    let letter = char::from(*byte | CTRL_TO_LOWERCASE_MASK);
+        // Remaining unhandled control characters in the 0x00-0x1F range:
+        // primarily Ctrl+letter combinations (Ctrl+A through Ctrl+Z).
+        byte @ 0..=CTRL_CHAR_RANGE_MAX => Some(parse_ctrl_key(byte)),
 
-                    Some(ParsedInputEventIR::new(
-                        VT100InputEventIR::Keyboard {
-                            code: VT100KeyCodeIR::Char(letter),
-                            modifiers: VT100KeyModifiersIR::CTRL,
-                        },
-                        byte_offset(1),
-                    ))
-                }
-            }
-        }
-
+        // Fallback arm for any other byte.
         _ => None,
     }
+}
+
+/// Convert a control byte (`0x00`-`0x1F`) into a Ctrl+letter keyboard event.
+///
+/// # Terminal Transmission & Case Destruction
+///
+/// When a user presses a Ctrl+letter combination, standard terminal emulators transmit a
+/// single control byte where bits 5 and 6 have been zeroed out (`& 0x1F`).
+///
+/// Because bits 5 and 6 are stripped, case information is permanently destroyed by the
+/// terminal:
+/// - `'A'` (`0b100_0001`) `& 0x1F` = `0x01`
+/// - `'a'` (`0b110_0001`) `& 0x1F` = `0x01`
+///
+/// A standard terminal emulator sends the exact same byte (`0x01`) whether the user types
+/// `Ctrl+a` or `Ctrl+Shift+A`. The parser has no way to know whether Shift was pressed or
+/// which case the user intended.
+///
+/// Control bytes are transmitted as:
+/// - `Ctrl+A`: sends byte value `1` (`0x01`).
+/// - `Ctrl+B`: sends byte value `2` (`0x02`).
+/// - `Ctrl+C`: sends byte value `3` (`0x03`).
+/// - ...
+/// - `Ctrl+Z`: sends byte value `26` (`0x1A`).
+///
+/// # Reconstruction & Why We Choose Lowercase (i.e., `| 0x60`)
+///
+/// When reconstructing the key from that single byte, we have to choose which case to
+/// represent:
+/// - Setting bit 6 (`| 0x40`) yields uppercase `'A'`.
+/// - Setting bits 5 and 6 (`| 0x60`, [`CTRL_TO_LOWERCASE_MASK`]) yields lowercase
+///   [`ASCII`] `'a'`.
+///
+/// We normalize to lowercase by bitwise OR-ing the control byte with
+/// [`CTRL_TO_LOWERCASE_MASK`] (`0x60`):
+/// - Byte value `1` (`0x01`) | `0x60` = `0x61` -> `'a'`.
+/// - Byte value `2` (`0x02`) | `0x60` = `0x62` -> `'b'`.
+///
+/// # Routing: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
+///
+/// This function only handles legacy [`VT-100`] single-byte control inputs
+/// (`0x00`-`0x1F`). The top-level [`router`] automatically separates these paths based on
+/// byte prefix:
+///
+/// - **Legacy inputs** arrive as single non-[`ESC`] bytes (e.g., `0x01` for `Ctrl+A`) and
+///   are routed directly to [`parse_control_character`] and this helper.
+/// - **Modern inputs** (terminals supporting the [Kitty Keyboard Protocol]) arrive as
+///   multi-byte [`CSI`] sequences starting with `ESC [` and are routed to
+///   [`parse_csi_u_sequence`], preserving both letter case and Shift modifiers without
+///   ambiguity. Here are examples:
+///   - `\x1b[97;5u` for `Ctrl+A`.
+///   - `\x1b[97;6u` for `Ctrl+Shift+A`.
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`CSI`]: crate::CsiSequence
+/// [`CTRL_TO_LOWERCASE_MASK`]: crate::core::ansi::constants::CTRL_TO_LOWERCASE_MASK
+/// [`ESC`]: crate::EscSequence
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+/// [`parse_csi_u_sequence`]: super::parse_csi_u_sequence
+/// [`router`]: mod@super::super::router
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [Kitty Keyboard Protocol]: super::csi_u
+fn parse_ctrl_key(byte: u8) -> ParsedInputEventIR {
+    let letter = char::from(byte | CTRL_TO_LOWERCASE_MASK);
+    ParsedInputEventIR::new(
+        VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char(letter),
+            modifiers: VT100KeyModifiersIR::CTRL,
+        },
+        byte_offset(1),
+    )
 }
 
 #[cfg(test)]
