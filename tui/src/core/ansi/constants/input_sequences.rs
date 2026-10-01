@@ -758,6 +758,13 @@ pub const MODIFIER_PARAMETER_OFFSET: u8 = 1;
 //
 // Ctrl+letter → letter & 0x1F. Reverse: byte | 0x60 → lowercase letter.
 
+/// Control Character Range Minimum ([`ANSI`]): Lowest control character byte (NUL).
+///
+/// Value: `0` dec, `00` hex.
+///
+/// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+pub const CTRL_CHAR_RANGE_MIN: u8 = 0;
+
 /// Control Character Range Maximum ([`ANSI`]): Highest control character byte.
 ///
 /// Value: `31` dec, `1F` hex.
@@ -1098,6 +1105,18 @@ pub const SS3_PREFIX_LEN: usize = SS3_PREFIX.len();
 ///
 /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
 pub const SS3_SEQ_LEN: usize = SS3_PREFIX_LEN + 1;
+
+/// Length in bytes of an Alt+key escape sequence ([`ESC`] + key byte).
+///
+/// Value: `2`.
+///
+/// [`ESC`]: crate::EscSequence
+pub const ALT_KEY_SEQ_LEN: usize = 2;
+
+/// Length in bytes of a single-byte C0 control character sequence.
+///
+/// Value: `1`.
+pub const CONTROL_CHAR_SEQ_LEN: usize = 1;
 
 // ==================== OSC Prefix & Protocol Constants ====================
 
@@ -1469,6 +1488,8 @@ mod tests {
 
     #[test]
     fn test_control_characters() {
+        assert_eq!(CTRL_CHAR_RANGE_MIN, 0);
+        assert_eq!(CTRL_CHAR_RANGE_MAX, 31);
         assert_eq!(CONTROL_TAB, b'\t');
         assert_eq!(CONTROL_ENTER, b'\r');
         assert_eq!(CONTROL_ESC, 0x1B);
@@ -1487,6 +1508,8 @@ mod tests {
         assert_eq!(SS3_PREFIX, b"\x1bO");
         assert_eq!(SS3_PREFIX_LEN, 2);
         assert_eq!(SS3_SEQ_LEN, 3);
+        assert_eq!(ALT_KEY_SEQ_LEN, 2);
+        assert_eq!(CONTROL_CHAR_SEQ_LEN, 1);
     }
 
     #[test]

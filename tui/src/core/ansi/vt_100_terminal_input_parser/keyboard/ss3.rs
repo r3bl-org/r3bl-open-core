@@ -150,7 +150,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -167,7 +167,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -184,7 +184,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -218,7 +218,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -235,7 +235,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -269,7 +269,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -286,7 +286,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]
@@ -303,7 +303,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default()
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(3));
+        assert_eq!(bytes_consumed, byte_offset(SS3_SEQ_LEN));
     }
 
     #[test]

@@ -579,7 +579,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(6));
+        assert_eq!(bytes_consumed, byte_offset(6)); // ESC [ 1 ; 2 H is 6 bytes.
     }
 
     #[test]
@@ -596,7 +596,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(6));
+        assert_eq!(bytes_consumed, byte_offset(6)); // ESC [ 1 ; 5 H is 6 bytes.
     }
 
     #[test]
@@ -613,7 +613,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(6));
+        assert_eq!(bytes_consumed, byte_offset(6)); // ESC [ 1 ; 2 F is 6 bytes.
     }
 
     #[test]
@@ -630,7 +630,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(bytes_consumed, byte_offset(6));
+        assert_eq!(bytes_consumed, byte_offset(6)); // ESC [ 1 ; 5 F is 6 bytes.
     }
 
     #[test]
@@ -646,7 +646,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::SHIFT,
             }
         );
-        assert_eq!(consumed_f1, byte_offset(6));
+        assert_eq!(consumed_f1, byte_offset(6)); // ESC [ 1 ; 2 P is 6 bytes.
 
         let ParsedInputEventIR {
             event: event_f4,
@@ -659,7 +659,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(consumed_f4, byte_offset(6));
+        assert_eq!(consumed_f4, byte_offset(6)); // ESC [ 1 ; 5 S is 6 bytes.
     }
 
     #[test]
@@ -675,7 +675,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(consumed_home, byte_offset(4));
+        assert_eq!(consumed_home, byte_offset(4)); // ESC [ 1 H is 4 bytes.
 
         let ParsedInputEventIR {
             event: event_end,
@@ -688,7 +688,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(consumed_end, byte_offset(4));
+        assert_eq!(consumed_end, byte_offset(4)); // ESC [ 1 F is 4 bytes.
 
         let ParsedInputEventIR {
             event: event_backtab,
@@ -701,7 +701,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(consumed_backtab, byte_offset(4));
+        assert_eq!(consumed_backtab, byte_offset(4)); // ESC [ 1 Z is 4 bytes.
     }
 
     #[test]
@@ -860,10 +860,7 @@ mod tests {
 
     #[test]
     fn test_ctrl_alt_f10() {
-        let input = function_key_sequence(
-            10,
-            VT100KeyModifiersIR::CTRL.with_alt(),
-        );
+        let input = function_key_sequence(10, VT100KeyModifiersIR::CTRL.with_alt());
         let ParsedInputEventIR {
             event,
             bytes_consumed,

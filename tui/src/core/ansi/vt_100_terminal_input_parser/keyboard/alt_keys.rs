@@ -8,8 +8,8 @@
 use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                    VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{byte_offset,
-            core::ansi::constants::{ANSI_ESC, ASCII_DEL, PRINTABLE_ASCII_MAX,
-                                    PRINTABLE_ASCII_MIN}};
+            core::ansi::constants::{ALT_KEY_SEQ_LEN, ANSI_ESC, ASCII_DEL,
+                                    PRINTABLE_ASCII_MAX, PRINTABLE_ASCII_MIN}};
 
 /// Parse Alt+key combination ([`ESC`] followed by printable [`ASCII`] or DEL).
 ///
@@ -59,7 +59,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<ParsedInputEventIR> {
             code,
             modifiers: VT100KeyModifiersIR::ALT,
         },
-        byte_offset(2), // Consume both ESC and second byte.
+        byte_offset(ALT_KEY_SEQ_LEN), // Consume both ESC and second byte.
     ))
 }
 
@@ -81,7 +81,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]
@@ -98,7 +98,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]
@@ -115,7 +115,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, byte_offset(2));
+        assert_eq!(bytes_consumed, byte_offset(ALT_KEY_SEQ_LEN));
     }
 
     #[test]

@@ -7,9 +7,10 @@
 use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                    VT100KeyCodeIR, VT100KeyModifiersIR};
 use crate::{SPACE_CHAR, byte_offset,
-            core::ansi::constants::{ASCII_DEL, CONTROL_BACKSPACE, CONTROL_ENTER,
-                                    CONTROL_ESC, CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
-                                    CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK}};
+            core::ansi::constants::{ASCII_DEL, CONTROL_BACKSPACE, CONTROL_CHAR_SEQ_LEN,
+                                    CONTROL_ENTER, CONTROL_ESC, CONTROL_LF,
+                                    CONTROL_NUL, CONTROL_TAB, CTRL_CHAR_RANGE_MAX,
+                                    CTRL_CHAR_RANGE_MIN, CTRL_TO_LOWERCASE_MASK}};
 
 /// Parse a control character (bytes `0x00`-`0x1F`) and convert to a Ctrl+key event.
 ///
@@ -50,7 +51,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                 code: VT100KeyCodeIR::Backspace,
                 modifiers: VT100KeyModifiersIR::default(),
             },
-            byte_offset(1),
+            byte_offset(CONTROL_CHAR_SEQ_LEN),
         )),
         // Ctrl+Space (or Ctrl+@) generates NUL.
         // Treat as Ctrl+Space for better usability.
@@ -59,7 +60,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                 code: VT100KeyCodeIR::Char(SPACE_CHAR),
                 modifiers: VT100KeyModifiersIR::CTRL,
             },
-            byte_offset(1),
+            byte_offset(CONTROL_CHAR_SEQ_LEN),
         )),
         // Tab key (0x09) - treated as Tab, not `Ctrl+I`.
         CONTROL_TAB => Some(ParsedInputEventIR::new(
@@ -67,7 +68,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                 code: VT100KeyCodeIR::Tab,
                 modifiers: VT100KeyModifiersIR::default(),
             },
-            byte_offset(1),
+            byte_offset(CONTROL_CHAR_SEQ_LEN),
         )),
         // Enter key sends CR (0x0D) or LF (0x0A) depending on terminal.
         CONTROL_LF | CONTROL_ENTER => Some(ParsedInputEventIR::new(
@@ -75,14 +76,14 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<ParsedInputEventIR> {
                 code: VT100KeyCodeIR::Enter,
                 modifiers: VT100KeyModifiersIR::default(),
             },
-            byte_offset(1),
+            byte_offset(CONTROL_CHAR_SEQ_LEN),
         )),
         // Escape - handled in try_parse() routing.
         CONTROL_ESC => None,
 
         // Remaining unhandled control characters in the 0x00-0x1F range:
         // primarily Ctrl+letter combinations (Ctrl+A through Ctrl+Z).
-        byte @ 0..=CTRL_CHAR_RANGE_MAX => Some(parse_ctrl_key(byte)),
+        byte @ CTRL_CHAR_RANGE_MIN..=CTRL_CHAR_RANGE_MAX => Some(parse_ctrl_key(byte)),
 
         // Fallback arm for any other byte.
         _ => None,
@@ -156,7 +157,7 @@ fn parse_ctrl_key(byte: u8) -> ParsedInputEventIR {
             code: VT100KeyCodeIR::Char(letter),
             modifiers: VT100KeyModifiersIR::CTRL,
         },
-        byte_offset(1),
+        byte_offset(CONTROL_CHAR_SEQ_LEN),
     )
 }
 
@@ -179,7 +180,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 
     #[test]
@@ -195,7 +196,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 
     #[test]
@@ -211,7 +212,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 
     #[test]
@@ -252,7 +253,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::default(),
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 
     #[test]
@@ -307,7 +308,7 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 
     #[test]
@@ -326,6 +327,6 @@ mod tests {
                 modifiers: VT100KeyModifiersIR::CTRL,
             }
         );
-        assert_eq!(len, byte_offset(1));
+        assert_eq!(len, byte_offset(CONTROL_CHAR_SEQ_LEN));
     }
 }
