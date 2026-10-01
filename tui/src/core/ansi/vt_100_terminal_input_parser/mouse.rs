@@ -168,11 +168,13 @@
 //! [Raw Mode]: crate::core::ansi::terminal_raw_mode
 //! [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
 
-use super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR, VT100KeyModifiersIR,
-                            VT100MouseActionIR, VT100MouseButtonIR,
-                            VT100ScrollDirectionIR};
-use crate::{ByteOffset, KeyState, TermPos, WideningCastToU16, byte_offset,
-            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, CSI_PARAM_SEPARATOR,
+use super::{csi_scanner::{parse_decimal_digits, strip_csi_numeric_prefix},
+            ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                             VT100KeyModifiersIR, VT100MouseActionIR,
+                             VT100MouseButtonIR, VT100ScrollDirectionIR}};
+use crate::{ByteOffset, KeyState, NarrowingCastToU16, TermPos, WideningCastToU16,
+            byte_offset,
+            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_PARAM_SEPARATOR,
                                     CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_LEFT_BUTTON_CODE,
                                     MOUSE_MIDDLE_BUTTON_CODE, MOUSE_MODIFIER_ALT,
@@ -257,10 +259,9 @@ mod sgr {
         let bytes_consumed = byte_offset(terminator_idx + 1);
 
         // Parse the payload between `ESC[<` and `M/m`: `Cb;Cx;Cy`.
-        let content =
-            std::str::from_utf8(&chunk[MOUSE_SGR_PREFIX_LEN..terminator_idx]).ok()?;
+        let payload = chunk.get(MOUSE_SGR_PREFIX_LEN..terminator_idx)?;
         let (part_button_byte, part_cx, part_cy) =
-            helpers::parse_semicolon_triplet(content)?;
+            helpers::parse_semicolon_triplet(payload)?;
 
         let modifiers = helpers::extract_modifiers(part_button_byte);
 
@@ -417,19 +418,16 @@ mod legacy {
             return None;
         }
 
+        let payload = strip_csi_numeric_prefix(chunk)?;
+
         // Find the terminator 'M'.
-        let (terminator_idx, _) = chunk
-            .iter()
-            .copied()
-            .enumerate()
-            .skip(CSI_PREFIX_LEN)
-            .find(|&(_idx, byte)| byte == MOUSE_X10_MARKER)?;
-        let bytes_consumed = byte_offset(terminator_idx + 1);
+        let m_pos = payload.iter().position(|&byte| byte == MOUSE_X10_MARKER)?;
+        let bytes_consumed = byte_offset(CSI_PREFIX_LEN + m_pos + 1);
 
         // Parse the payload between ESC[ and M: "Cb;Cx;Cy".
-        let content = std::str::from_utf8(&chunk[CSI_PREFIX_LEN..terminator_idx]).ok()?;
+        let payload_bytes = payload.get(..m_pos)?;
         let (part_button_byte, part_cx, part_cy) =
-            helpers::parse_semicolon_triplet(content)?;
+            helpers::parse_semicolon_triplet(payload_bytes)?;
 
         Some(parse_legacy_mouse_event(
             part_button_byte,
@@ -510,11 +508,11 @@ mod helpers {
     ///
     /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     /// [`SGR`]: crate::SgrCode
-    pub fn parse_semicolon_triplet(payload: &str) -> Option<(u16, u16, u16)> {
-        let mut parts = payload.split(CSI_PARAM_SEPARATOR);
-        let cb = parts.next()?.parse::<u16>().ok()?;
-        let cx = parts.next()?.parse::<u16>().ok()?;
-        let cy = parts.next()?.parse::<u16>().ok()?;
+    pub fn parse_semicolon_triplet(payload: &[u8]) -> Option<(u16, u16, u16)> {
+        let mut parts = payload.split(|&byte| byte == ANSI_PARAM_SEPARATOR);
+        let cb = parse_decimal_digits(parts.next()?)?.as_u16_narrowing();
+        let cx = parse_decimal_digits(parts.next()?)?.as_u16_narrowing();
+        let cy = parse_decimal_digits(parts.next()?)?.as_u16_narrowing();
         Some((cb, cx, cy))
     }
 

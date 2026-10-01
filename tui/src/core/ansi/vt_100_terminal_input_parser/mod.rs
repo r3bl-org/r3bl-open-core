@@ -165,7 +165,18 @@
 //!    - *Resolution*: Protocol negotiation in [`keyboard`]. In legacy [`VT-100`], bare
 //!      `Alt+[` is indistinguishable from [`CSI`] and cannot be resolved without a timer.
 //!      It is resolved by negotiating the [Kitty Keyboard Protocol], which encodes
-//!      keystrokes unambiguously (`ESC [ 91 ; 3 u`).
+//!
+//! ### Progressive Keyboard Enhancement
+//!
+//! Terminal bootstrap uses a **fire-and-forget** negotiation strategy:
+//! - **Zero Startup Latency (0ms)**: Rather than sending a capability query (`CSI ? u`)
+//!   and blocking on [`stdin`] for an ACK (which would require a 50-100ms timeout delay),
+//!   [`OutputDevice::setup_full_screen_tui()`] unilaterally emits `CSI > 1 u` to [`stdout`].
+//! - **Standard ECMA-48 Discarding**: Compliant legacy terminals silently ignore
+//!   unrecognized escape sequences and continue emitting standard [`VT-100`] bytes.
+//! - **Dual-Mode Sans-IO Decoding**: Modern terminals ([`Kitty`], Ghostty, WezTerm) emit
+//!   `CSI u` sequences, while legacy terminals emit legacy sequences. The input parser
+//!   pipeline seamlessly decodes both streams without requiring prior capability detection.
 //!
 //! ## Terminal Input Capability Matrix: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
 //!
@@ -331,6 +342,8 @@
 //!     crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult::scan
 //! [`OscScanResult`]: crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult
 //! [`output`]: mod@crate::direct_to_ansi::output
+//! [`OutputDevice::setup_full_screen_tui()`]:
+//!     crate::OutputDevice::setup_full_screen_tui
 //! [`OutputDevice`]: crate::OutputDevice
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`router`]: mod@router
@@ -339,6 +352,7 @@
 //! [`SGR`]: crate::SgrCode
 //! [`SgrCode`]: crate::SgrCode
 //! [`stdin`]: std::io::stdin
+//! [`stdout`]: std::io::stdout
 //! [`TermCol`]: crate::vt_100_ansi_coords::TermCol
 //! [`terminal_events`]: mod@terminal_events
 //! [`TermRow`]: crate::vt_100_ansi_coords::TermRow

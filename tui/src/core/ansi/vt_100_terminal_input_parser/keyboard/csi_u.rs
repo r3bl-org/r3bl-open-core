@@ -4,23 +4,33 @@
 //!
 //! [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 
-use super::{super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
-                                    VT100KeyCodeIR},
+use super::{super::{csi_scanner::{parse_decimal_digits, strip_csi_numeric_prefix},
+                    ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
+                                     VT100KeyCodeIR}},
             modifiers};
-use crate::{NarrowingCastToU8, NarrowingCastToU16, WideningCastToU32, byte_offset,
-            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_CSI_U, ANSI_ESC,
-                                    ANSI_PARAM_SEPARATOR, ANSI_SUBPARAM_SEPARATOR,
-                                    ASCII_DEL, ASCII_DIGIT_0, ASCII_DIGIT_9,
-                                    CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
-                                    CONTROL_TAB, CSI_PREFIX_LEN, KITTY_EVENT_PRESS,
-                                    KITTY_EVENT_RELEASE, KITTY_PUA_DELETE,
-                                    KITTY_PUA_DOWN, KITTY_PUA_END, KITTY_PUA_F1,
-                                    KITTY_PUA_F12, KITTY_PUA_HOME, KITTY_PUA_INSERT,
-                                    KITTY_PUA_LEFT, KITTY_PUA_PAGE_DOWN,
-                                    KITTY_PUA_PAGE_UP, KITTY_PUA_RIGHT, KITTY_PUA_UP,
+use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
+            core::ansi::constants::{ANSI_CSI_U, ANSI_PARAM_SEPARATOR,
+                                    ANSI_SUBPARAM_SEPARATOR, ASCII_DEL, ASCII_DIGIT_0,
+                                    ASCII_DIGIT_9, CONTROL_BACKSPACE, CONTROL_ENTER,
+                                    CONTROL_ESC, CONTROL_TAB, CSI_PREFIX_LEN,
+                                    KITTY_EVENT_PRESS, KITTY_EVENT_RELEASE,
+                                    KITTY_PUA_DELETE, KITTY_PUA_DOWN, KITTY_PUA_END,
+                                    KITTY_PUA_F1, KITTY_PUA_F12, KITTY_PUA_HOME,
+                                    KITTY_PUA_INSERT, KITTY_PUA_LEFT,
+                                    KITTY_PUA_PAGE_DOWN, KITTY_PUA_PAGE_UP,
+                                    KITTY_PUA_RIGHT, KITTY_PUA_UP,
                                     MODIFIER_PARAMETER_OFFSET}};
 
 /// Parses a [Kitty Keyboard Protocol] sequence (`CSI u`) into a [`VT100InputEventIR`].
+///
+/// ## Where These Sequences Come From
+///
+/// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`], Ghostty,
+/// WezTerm, etc.) after [`OutputDevice::setup_full_screen_tui()`] activates progressive
+/// keyboard enhancement via [`enable_keyboard_enhancement()`][enh] (`CSI > 1 u`).
+///
+/// See the [Progressive Keyboard Enhancement][no-ack] in the parent parser module
+/// for details on why no `ACK` is needed and how legacy terminals silently fall back.
 ///
 /// **Syntax**:
 ///
@@ -41,238 +51,195 @@ use crate::{NarrowingCastToU8, NarrowingCastToU16, WideningCastToU32, byte_offse
 /// | `ESC [ 91 ; 3 : 1 u` | `Alt+[`                        | Press event (`:1`)           |
 /// | `ESC [ 91 ; 3 : 3 u` | [`VT100InputEventIR::Ignored`] | Release event (`:3`)         |
 ///
+/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+/// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
+/// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+/// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
 #[must_use]
 pub fn parse_csi_u_sequence(chunk: &[u8]) -> Option<ParsedInputEventIR> {
-    // 1. Early return: Must start with "ESC [ <digit>".
-    let [ANSI_ESC, ANSI_CSI_BRACKET, first_byte, ..] = *chunk else {
-        return None;
-    };
-    if !(ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&first_byte) {
-        return None;
-    }
+    let framing = CsiUFraming::extract(chunk)?;
+    let params = CsiUParams::parse(framing.parameter_bytes)?;
+    let event = params.decode()?;
 
-    // 2. Early return: Must contain the terminating `u`.
-    let payload = chunk.get(CSI_PREFIX_LEN..)?;
-    let u_pos = payload.iter().position(|&byte| byte == ANSI_CSI_U)?;
-    let parameter_bytes = payload.get(..u_pos)?;
-
-    // 3. Early return: All parameter bytes must be digits, ';', or ':'.
-    if !parameter_bytes.iter().all(is_valid_csi_u_param_byte) {
-        return None;
-    }
-
-    // Parse parameters: "<codepoint>" or "<codepoint>;<modifiers>".
-    let mut parameter_parts = parameter_bytes.split(|&byte| byte == ANSI_PARAM_SEPARATOR);
-    let codepoint = parse_codepoint_parameter(parameter_parts.next()?)?;
-    let CsiUModifierInfo {
-        modifier_param,
-        event_type,
-    } = parse_modifier_parameter(parameter_parts.next())?;
-
-    // Bytes consumed = prefix ("ESC [") + parameter bytes + terminator (`u`).
-    let bytes_consumed = byte_offset(CSI_PREFIX_LEN + parameter_bytes.len() + 1);
-
-    // Event type: 1 = press, 2 = repeat, 3 = release (consumed and ignored).
-    if event_type == KITTY_EVENT_RELEASE {
-        return Some(ParsedInputEventIR::new(
-            VT100InputEventIR::Ignored,
-            bytes_consumed,
-        ));
-    }
-
-    let key_modifiers = modifiers::decode_modifiers(modifier_param);
-    let key_code = decode_csi_u_codepoint(codepoint)?;
-
-    Some(ParsedInputEventIR::new(
-        VT100InputEventIR::Keyboard {
-            code: key_code,
-            modifiers: key_modifiers,
-        },
-        bytes_consumed,
-    ))
+    Some(ParsedInputEventIR::new(event, framing.bytes_consumed))
 }
 
-/// Parsed modifier parameter and event type from the modifier portion of `CSI u`.
+/// Framing information containing the extracted parameter slice and total bytes consumed
+/// by a `CSI u` sequence.
+#[derive(Debug, PartialEq, Eq)]
+struct CsiUFraming<'a> {
+    parameter_bytes: &'a [u8],
+    bytes_consumed: ByteOffset,
+}
+
+impl<'a> CsiUFraming<'a> {
+    /// Validates sequence framing and extracts the raw parameter byte slice.
+    ///
+    /// Ensures the sequence begins with `ESC [ <digit>`, contains a terminating `u`
+    /// ([`ANSI_CSI_U`]), and that all parameter bytes are valid decimal digits or
+    /// separators.
+    fn extract(chunk: &'a [u8]) -> Option<Self> {
+        let payload = strip_csi_numeric_prefix(chunk)?;
+        let term_idx = payload.iter().position(|byte| *byte == ANSI_CSI_U)?;
+        let parameter_bytes = payload.get(..term_idx)?;
+
+        if !parameter_bytes
+            .iter()
+            .copied()
+            .all(Self::is_valid_param_byte)
+        {
+            return None;
+        }
+
+        let full_seq = chunk.get(..CSI_PREFIX_LEN + term_idx + 1)?;
+
+        Some(Self {
+            parameter_bytes,
+            bytes_consumed: byte_offset(full_seq.len()),
+        })
+    }
+
+    /// Returns `true` if the byte is an [`ASCII`] digit (`'0'`..=`'9'`), semicolon (`;`),
+    /// or colon (`:`).
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    fn is_valid_param_byte(byte: u8) -> bool {
+        (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte)
+            || byte == ANSI_PARAM_SEPARATOR
+            || byte == ANSI_SUBPARAM_SEPARATOR
+    }
+}
+
+/// Parsed parameters of a `CSI u` sequence (`ESC [ <codepoint> ; <modifier> :
+/// <event_type> u`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CsiUModifierInfo {
+struct CsiUParams {
+    codepoint: u32,
     modifier_param: u8,
     event_type: u8,
 }
 
-/// Returns `true` if the byte is an [`ASCII`] digit (`'0'`..=`'9'`), semicolon (`;`),
-/// or colon (`:`).
-///
-/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-fn is_valid_csi_u_param_byte(byte: &u8) -> bool {
-    (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(byte)
-        || *byte == ANSI_PARAM_SEPARATOR
-        || *byte == ANSI_SUBPARAM_SEPARATOR
-}
+impl CsiUParams {
+    /// Parses the raw parameter slice into codepoint and modifier information.
+    ///
+    /// The parameter slice is separated by `;` into:
+    /// 1. Codepoint parameter (mandatory, e.g. `"91"` or `"91:93"`).
+    /// 2. Modifier parameter (optional, e.g. `"3"`, `"3:1"`, `""`, or omitted as in
+    ///    `"91"`).
+    fn parse(parameter_bytes: &[u8]) -> Option<Self> {
+        let mut parameter_parts =
+            parameter_bytes.split(|byte| *byte == ANSI_PARAM_SEPARATOR);
+        let codepoint_param_slice = parameter_parts.next()?;
+        let maybe_modifier_param_slice = parameter_parts.next();
 
-/// Parses the codepoint parameter, ignoring any colon-separated alternate keys (e.g.
-/// `"91:93"` -> `91`).
-fn parse_codepoint_parameter(codepoint_param_slice: &[u8]) -> Option<u32> {
-    let codepoint_digit_bytes = codepoint_param_slice
-        .split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR)
-        .next()?;
-    parse_decimal_digits(codepoint_digit_bytes)
-}
+        let codepoint = Self::parse_codepoint(codepoint_param_slice)?;
+        let mut params = Self {
+            codepoint,
+            modifier_param: MODIFIER_PARAMETER_OFFSET,
+            event_type: KITTY_EVENT_PRESS,
+        };
 
-/// Parses the optional modifier parameter slice (e.g. `"3"`, `"3:1"`, or `""`).
-fn parse_modifier_parameter(
-    modifier_param_slice: Option<&[u8]>,
-) -> Option<CsiUModifierInfo> {
-    let mut modifier_param: u8 = MODIFIER_PARAMETER_OFFSET;
-    let mut event_type: u8 = KITTY_EVENT_PRESS;
-
-    let Some(modifier_slice) = modifier_param_slice else {
-        return Some(CsiUModifierInfo {
-            modifier_param,
-            event_type,
-        });
-    };
-
-    if modifier_slice.is_empty() {
-        return Some(CsiUModifierInfo {
-            modifier_param,
-            event_type,
-        });
-    }
-
-    let mut modifier_sub_parts =
-        modifier_slice.split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR);
-
-    if let Some(modifier_digit_bytes) = modifier_sub_parts.next()
-        && !modifier_digit_bytes.is_empty()
-    {
-        let raw_modifier_value =
-            parse_decimal_digits(modifier_digit_bytes)?.as_u16_narrowing();
-        modifier_param = modifiers::extract_modifier_parameter(raw_modifier_value);
-    }
-
-    if let Some(event_type_digit_bytes) = modifier_sub_parts.next()
-        && !event_type_digit_bytes.is_empty()
-    {
-        event_type = parse_decimal_digits(event_type_digit_bytes)?.as_u8_narrowing();
-    }
-
-    Some(CsiUModifierInfo {
-        modifier_param,
-        event_type,
-    })
-}
-
-fn decode_csi_u_codepoint(codepoint: u32) -> Option<VT100KeyCodeIR> {
-    // Standard ASCII control characters.
-    if let Ok(ascii_byte) = u8::try_from(codepoint) {
-        match ascii_byte {
-            CONTROL_ENTER => return Some(VT100KeyCodeIR::Enter),
-            CONTROL_TAB => return Some(VT100KeyCodeIR::Tab),
-            CONTROL_ESC => return Some(VT100KeyCodeIR::Escape),
-            ASCII_DEL | CONTROL_BACKSPACE => return Some(VT100KeyCodeIR::Backspace),
-            _ => {}
-        }
-    }
-
-    match codepoint {
-        // Kitty functional key codepoints in Private Use Area (PUA).
-        KITTY_PUA_INSERT => Some(VT100KeyCodeIR::Insert),
-        KITTY_PUA_DELETE => Some(VT100KeyCodeIR::Delete),
-        KITTY_PUA_LEFT => Some(VT100KeyCodeIR::Left),
-        KITTY_PUA_RIGHT => Some(VT100KeyCodeIR::Right),
-        KITTY_PUA_UP => Some(VT100KeyCodeIR::Up),
-        KITTY_PUA_DOWN => Some(VT100KeyCodeIR::Down),
-        KITTY_PUA_PAGE_UP => Some(VT100KeyCodeIR::PageUp),
-        KITTY_PUA_PAGE_DOWN => Some(VT100KeyCodeIR::PageDown),
-        KITTY_PUA_HOME => Some(VT100KeyCodeIR::Home),
-        KITTY_PUA_END => Some(VT100KeyCodeIR::End),
-        KITTY_PUA_F1..=KITTY_PUA_F12 => {
-            let function_key_number = (codepoint - KITTY_PUA_F1 + 1).as_u8_narrowing();
-            Some(VT100KeyCodeIR::Function(function_key_number))
+        if let Some(modifier_slice) = maybe_modifier_param_slice
+            && !modifier_slice.is_empty()
+        {
+            params.apply_modifier_slice(modifier_slice)?;
         }
 
-        // Any printable character or Unicode codepoint.
-        _ => char::from_u32(codepoint).map(VT100KeyCodeIR::Char),
+        Some(params)
     }
-}
 
-/// Parses a text-formatted number in a byte slice into an integer ([`u32`]).
-///
-/// This is a zero-allocation, byte-level equivalent of [`str::parse::<u32>()`] (or C's
-/// [`atoi`]).
-///
-/// # Context: Numbers as Text in Terminal Streams
-///
-/// The terminal transmits escape sequences as human-readable [`ASCII`] text over the
-/// wire. For example, in the [`Kitty`] sequence `ESC [ 9 1 ; 3 u`, the number `91` is
-/// sent as the text characters `'9'` and `'1'`.
-///
-/// Rather than allocating or converting the slice into a `&str` (which requires a
-/// [`UTF-8`] validation pass), this function parses the text representation of the number
-/// directly from the raw byte stream:
-///
-/// ```text
-/// Text string in stream:     "91"
-///                             │└───┐
-///                             ▼    ▼
-/// ASCII character bytes:    ['9', '1']  (decimal byte values: [57, 49])
-///
-/// Resulting u32 integer:      91
-/// ```
-///
-/// `b"91"` is simply string-syntax shorthand for the byte slice `&[b'9', b'1']`.
-///
-/// # Arguments
-///
-/// - `digit_bytes`: Slice containing the text-formatted number, e.g. `&[b'9', b'1']`
-///
-/// # Returns
-///
-/// - `Some(u32)`: If the text contains only valid [`ASCII`] digits (`'0'`..=`'9'`).
-/// - `None`: If `digit_bytes` is empty or contains non-digit text (e.g. `;`, `:`, or
-///   letters).
-///
-/// # Examples
-///
-/// ```rust
-/// use r3bl_tui::vt_100_terminal_input_parser::parse_decimal_digits;
-/// // Text "91" parses to integer 91:
-/// assert_eq!(parse_decimal_digits(b"91"), Some(91));
-///
-/// // Text "57366" (Home key) parses to integer 57366:
-/// assert_eq!(parse_decimal_digits(b"57366"), Some(57366));
-///
-/// // Empty text slice returns None:
-/// assert_eq!(parse_decimal_digits(b""), None);
-///
-/// // Non-digit characters (e.g. ';' in "12;3") return None:
-/// assert_eq!(parse_decimal_digits(b"12;3"), None);
-/// ```
-///
-/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-/// [`atoi`]: https://man7.org/linux/man-pages/man3/atoi.3.html
-/// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-/// [`str::parse::<u32>()`]: str::parse
-/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-#[must_use]
-pub fn parse_decimal_digits(digit_bytes: &[u8]) -> Option<u32> {
-    const DECIMAL_RADIX: u32 = 10;
-
-    if digit_bytes.is_empty() {
-        return None;
-    }
-    let mut accumulated_value: u32 = 0;
-    for byte in digit_bytes.iter().copied() {
-        if !(ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
-            return None;
+    /// Decodes the parsed [`CsiUParams`] into a [`VT100InputEventIR`].
+    fn decode(self) -> Option<VT100InputEventIR> {
+        if self.event_type == KITTY_EVENT_RELEASE {
+            return Some(VT100InputEventIR::Ignored);
         }
-        let digit = (byte - ASCII_DIGIT_0).as_u32_widening();
-        accumulated_value = accumulated_value
-            .saturating_mul(DECIMAL_RADIX)
-            .saturating_add(digit);
+
+        let key_modifiers = modifiers::decode_modifiers(self.modifier_param);
+        let key_code = Self::decode_codepoint(self.codepoint)?;
+
+        Some(VT100InputEventIR::Keyboard {
+            code: key_code,
+            modifiers: key_modifiers,
+        })
     }
-    Some(accumulated_value)
+
+    /// Parses the mandatory codepoint parameter, ignoring any colon-separated alternate
+    /// keys (e.g. `"91:93"` -> `91`).
+    fn parse_codepoint(codepoint_param_slice: &[u8]) -> Option<u32> {
+        let codepoint_digit_bytes = codepoint_param_slice
+            .split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR)
+            .next()?;
+        parse_decimal_digits(codepoint_digit_bytes)
+    }
+
+    /// Parses the optional modifier parameter slice (e.g. `"3"`, `"3:1"`, or `""`).
+    ///
+    /// Under the [Kitty Keyboard Protocol], when the modifier section is omitted or empty
+    /// (e.g. `ESC [ 91 u` or `ESC [ 91 ; u`):
+    /// - `modifier_param` defaults to [`MODIFIER_PARAMETER_OFFSET`] (`1`), which encodes
+    ///   zero modifier bits (no Shift, Alt, or Ctrl).
+    /// - `event_type` defaults to [`KITTY_EVENT_PRESS`] (`1`), indicating a key press
+    ///   event.
+    ///
+    /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
+    fn apply_modifier_slice(&mut self, modifier_param_slice: &[u8]) -> Option<()> {
+        let mut modifier_sub_parts =
+            modifier_param_slice.split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR);
+
+        if let Some(modifier_digit_bytes) = modifier_sub_parts.next()
+            && !modifier_digit_bytes.is_empty()
+        {
+            let raw_modifier_value =
+                parse_decimal_digits(modifier_digit_bytes)?.as_u16_narrowing();
+            self.modifier_param =
+                modifiers::extract_modifier_parameter(raw_modifier_value);
+        }
+
+        if let Some(event_type_digit_bytes) = modifier_sub_parts.next()
+            && !event_type_digit_bytes.is_empty()
+        {
+            self.event_type =
+                parse_decimal_digits(event_type_digit_bytes)?.as_u8_narrowing();
+        }
+
+        Some(())
+    }
+
+    fn decode_codepoint(codepoint: u32) -> Option<VT100KeyCodeIR> {
+        // Standard ASCII control characters.
+        if let Ok(ascii_byte) = u8::try_from(codepoint) {
+            match ascii_byte {
+                CONTROL_ENTER => return Some(VT100KeyCodeIR::Enter),
+                CONTROL_TAB => return Some(VT100KeyCodeIR::Tab),
+                CONTROL_ESC => return Some(VT100KeyCodeIR::Escape),
+                ASCII_DEL | CONTROL_BACKSPACE => return Some(VT100KeyCodeIR::Backspace),
+                _ => {}
+            }
+        }
+
+        match codepoint {
+            // Kitty functional key codepoints in Private Use Area (PUA).
+            KITTY_PUA_INSERT => Some(VT100KeyCodeIR::Insert),
+            KITTY_PUA_DELETE => Some(VT100KeyCodeIR::Delete),
+            KITTY_PUA_LEFT => Some(VT100KeyCodeIR::Left),
+            KITTY_PUA_RIGHT => Some(VT100KeyCodeIR::Right),
+            KITTY_PUA_UP => Some(VT100KeyCodeIR::Up),
+            KITTY_PUA_DOWN => Some(VT100KeyCodeIR::Down),
+            KITTY_PUA_PAGE_UP => Some(VT100KeyCodeIR::PageUp),
+            KITTY_PUA_PAGE_DOWN => Some(VT100KeyCodeIR::PageDown),
+            KITTY_PUA_HOME => Some(VT100KeyCodeIR::Home),
+            KITTY_PUA_END => Some(VT100KeyCodeIR::End),
+            KITTY_PUA_F1..=KITTY_PUA_F12 => {
+                let function_key_number =
+                    (codepoint - KITTY_PUA_F1 + 1).as_u8_narrowing();
+                Some(VT100KeyCodeIR::Function(function_key_number))
+            }
+
+            // Any printable character or Unicode codepoint.
+            _ => char::from_u32(codepoint).map(VT100KeyCodeIR::Char),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -555,6 +522,15 @@ mod tests {
             }
         );
         assert_eq!(bytes_consumed.as_usize(), input_empty_modifier.len());
+    }
+
+    #[test]
+    fn test_extract_csi_u_framing() {
+        let input = b"\x1b[91;3u_trailing";
+        let framing =
+            CsiUFraming::extract(input).expect("Should extract valid CSI u framing");
+        assert_eq!(framing.parameter_bytes, b"91;3");
+        assert_eq!(framing.bytes_consumed, byte_offset(7));
     }
 
     #[test]

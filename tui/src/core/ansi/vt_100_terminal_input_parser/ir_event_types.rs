@@ -336,7 +336,10 @@ mod tests {
         );
 
         assert_eq!(
-            VT100KeyModifiersIR::NONE.with_ctrl().with_shift().with_alt(),
+            VT100KeyModifiersIR::NONE
+                .with_ctrl()
+                .with_shift()
+                .with_alt(),
             VT100KeyModifiersIR {
                 shift: KeyState::Pressed,
                 ctrl: KeyState::Pressed,

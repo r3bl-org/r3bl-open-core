@@ -1535,7 +1535,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
                 - `[ANSI_ESC, ASCII_DEL, ..] => ...`
                 - `[ANSI_ESC, second @ PRINTABLE_ASCII_MIN..=PRINTABLE_ASCII_MAX, ..] => ...`
                 - `_ => None`
-    - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`:
         - Refactor `parse_control_character`:
             - Replace manual `buffer.is_empty()` and `buffer[0]` indexing with
               `buffer.first()?` and flattened pattern matching:
@@ -1562,10 +1563,11 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] Run `./check.fish --quick-doc`.
 
 - [ ] **Phase 13.6: Mandatory Manual Review**:
-    - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/alt_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/ctrl_and_dedicated_keys.rs`
     - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_u.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard/csi_decoder.rs`
+    - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`
     - [x] `tui/src/core/ansi/generator/ansi_output.rs`
     - [x] `tui/src/core/ansi/constants/input_sequences.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/maybe_more.rs`

@@ -181,8 +181,22 @@ pub trait TerminalModeController {
     /// Enables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
     ///
     /// When enabled, the terminal uses `CSI u` escape sequences to encode keys
-    /// unambiguously, allowing modifiers such as `Alt+[`, `Shift+Enter`, `Ctrl+Tab`,
-    /// and `Alt+Escape` to be distinguished without ambiguity or collision.
+    /// unambiguously, allowing modifiers such as `Alt+[`, `Shift+Enter`, `Ctrl+Tab`, and
+    /// `Alt+Escape` to be distinguished without ambiguity or collision.
+    ///
+    /// # Progressive Keyboard Enhancement
+    ///
+    /// Rather than querying the terminal for keyboard protocol support (which would
+    /// require a 50-100ms startup timeout delay to await an `ACK`), this method
+    /// unilaterally writes `CSI > 1 u` (via
+    /// [`ansi_output::terminal_modes::enable_keyboard_enhancement()`][enable]) to
+    /// [`stdout`]. Compliant legacy terminals silently discard this unknown sequence and
+    /// continue emitting standard [`VT-100`] bytes, while modern terminals activate
+    /// enhanced mode. The Sans-IO input parser seamlessly decodes both without needing
+    /// prior capability knowledge.
+    ///
+    /// See [Progressive Keyboard Enhancement][no-ack] in [`vt_100_terminal_input_parser`]
+    /// for full details on the dual-mode architecture and capability matrix.
     ///
     /// Remember to call [`TerminalModeController::disable_keyboard_enhancement`] when
     /// keyboard enhancement is no longer needed.
@@ -191,11 +205,17 @@ pub trait TerminalModeController {
     /// `DISAMBIGUATE_ESCAPE_CODES`).
     ///
     /// # Errors
+    ///
     /// Returns an error if the underlying I/O fails.
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+    /// [`stdout`]: std::io::stdout
+    /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+    /// [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
+    /// [enable]: crate::ansi_output::terminal_modes::enable_keyboard_enhancement
+    /// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
     fn enable_keyboard_enhancement(&self) -> miette::Result<()>;
 
     /// Disables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
