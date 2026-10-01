@@ -127,6 +127,9 @@ impl OscScanResult {
         }
     }
 
+    // XMARK: Replace while !slice.is_empty() with slice-as-cursor pattern (head/tail
+    // pattern matching)
+
     /// Phase 1: Scan decimal command digits until delimiter, terminator, or error.
     ///
     /// Iterates through characters following [`OSC_PREFIX`] (`ESC ]`) to parse the
@@ -150,8 +153,10 @@ impl OscScanResult {
         loop {
             match remaining {
                 // Advance slice cursor and continue loop.
+                #[allow(clippy::needless_continue)]
                 [ASCII_DIGIT_0..=ASCII_DIGIT_9, rest @ ..] => {
                     remaining = rest;
+                    continue;
                 }
 
                 // Standard parameter delimiter (';'): transition to payload scan.
@@ -183,7 +188,9 @@ impl OscScanResult {
                 [] => break,
 
                 // Any non-digit character before delimiter: invalid syntax.
-                _ => return CommandScanResult::Concluded(Self::InvalidSyntax),
+                _ => {
+                    return CommandScanResult::Concluded(Self::InvalidSyntax);
+                }
             }
         }
 
@@ -215,7 +222,9 @@ impl OscScanResult {
         loop {
             match remaining {
                 // Terminated by BEL (0x07).
-                [ANSI_BEL, rest @ ..] => return Self::complete(chunk_len, rest),
+                [ANSI_BEL, rest @ ..] => {
+                    return Self::complete(chunk_len, rest);
+                }
 
                 // Terminated by 7-bit ST (ESC \).
                 [ANSI_ESC, ANSI_ST_FINAL, rest @ ..] => {
@@ -235,8 +244,10 @@ impl OscScanResult {
                 [ANSI_ESC, _, ..] => return Self::InvalidSyntax,
 
                 // Regular payload byte: advance slice cursor and continue loop.
+                #[allow(clippy::needless_continue)]
                 [_, rest @ ..] => {
                     remaining = rest;
+                    continue;
                 }
 
                 // Buffer exhausted: break to evaluate runaway vs incomplete payload.

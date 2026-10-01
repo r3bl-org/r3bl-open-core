@@ -362,13 +362,16 @@ impl OscCircuitBreaker {
                 already_drained_byte_count,
             ),
 
-            // No bytes available yet: retain OpenAwaitingSt for next read (see case 3
+            // No bytes available yet: retain `OpenAwaitingSt` for next read (see case 3
             // above).
             None => OscDrainResult::FullyDrained {
                 reason: OscDrainReason::LoneEscAtBoundary,
             },
         }
     }
+
+    // XMARK: Replace while !slice.is_empty() with slice-as-cursor pattern (head/tail
+    // pattern matching)
 
     /// Handles an incoming chunk while the circuit breaker is in [`Self::Open`].
     ///
@@ -501,8 +504,10 @@ impl OscCircuitBreaker {
                 // - `rest @ ..` binds the rest of the slice (tail with the first byte
                 //   removed).
                 // - `remaining = rest` assigns the tail back to advance the slice cursor.
+                #[allow(clippy::needless_continue)]
                 [_, rest @ ..] => {
                     remaining = rest;
+                    continue;
                 }
 
                 // Chunk exhausted without finding a terminator or abort.
