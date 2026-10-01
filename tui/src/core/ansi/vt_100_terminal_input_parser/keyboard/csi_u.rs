@@ -25,9 +25,10 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 ///
 /// ## Where These Sequences Come From
 ///
-/// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`], Ghostty,
-/// WezTerm, etc.) after [`OutputDevice::setup_full_screen_tui()`] activates progressive
-/// keyboard enhancement via [`enable_keyboard_enhancement()`][enh] (`CSI > 1 u`).
+/// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`],
+/// [`Ghostty`], [`WezTerm`], etc.) after [`OutputDevice::setup_full_screen_tui()`]
+/// activates progressive keyboard enhancement via [`enable_keyboard_enhancement()`][enh]
+/// (`CSI > 1 u`).
 ///
 /// See the [Progressive Keyboard Enhancement][no-ack] in the parent parser module
 /// for details on why no `ACK` is needed and how legacy terminals silently fall back.
@@ -51,8 +52,10 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// | `ESC [ 91 ; 3 : 1 u` | `Alt+[`                        | Press event (`:1`)           |
 /// | `ESC [ 91 ; 3 : 3 u` | [`VT100InputEventIR::Ignored`] | Release event (`:3`)         |
 ///
+/// [`Ghostty`]: https://ghostty.org/
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
+/// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 /// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement

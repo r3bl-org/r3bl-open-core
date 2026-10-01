@@ -174,9 +174,10 @@
 //!   [`OutputDevice::setup_full_screen_tui()`] unilaterally emits `CSI > 1 u` to [`stdout`].
 //! - **Standard ECMA-48 Discarding**: Compliant legacy terminals silently ignore
 //!   unrecognized escape sequences and continue emitting standard [`VT-100`] bytes.
-//! - **Dual-Mode Sans-IO Decoding**: Modern terminals ([`Kitty`], Ghostty, WezTerm) emit
-//!   `CSI u` sequences, while legacy terminals emit legacy sequences. The input parser
-//!   pipeline seamlessly decodes both streams without requiring prior capability detection.
+//! - **Dual-Mode Sans-IO Decoding**: Modern terminals ([`Kitty`], [`Ghostty`],
+//!   [`WezTerm`]) emit `CSI u` sequences, while legacy terminals emit legacy
+//!   sequences. The input parser pipeline seamlessly decodes both streams without
+//!   requiring prior capability detection.
 //!
 //! ## Terminal Input Capability Matrix: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
 //!
