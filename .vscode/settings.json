@@ -36,5 +36,9 @@
     "harper.linters.Dashes": false,
     "harper.linters.UseTitleCase": false,
     "harper.linters.ExpandMemoryShorthands": false,
-    "harper.excludePatterns": ["**/.harper-dictionary.txt"]
+    "harper.excludePatterns": [
+        "**/.harper-dictionary.txt",
+        "**/task/**",
+        "**/task/done/**"
+    ]
 }

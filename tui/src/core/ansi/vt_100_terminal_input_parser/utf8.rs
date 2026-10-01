@@ -178,10 +178,11 @@
 
 use super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR, VT100KeyCodeIR,
                             VT100KeyModifiersIR};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteOffset, UTF8_1BYTE_MAX,
-            UTF8_1BYTE_MIN, UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_MAX,
-            UTF8_3BYTE_MIN, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN, UTF8_CONTINUATION_MASK,
-            UTF8_CONTINUATION_PATTERN, byte_index, byte_len, byte_offset};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteOffset, UTF8_1BYTE_START_MAX,
+            UTF8_1BYTE_START_MIN, UTF8_2BYTE_START_MAX, UTF8_2BYTE_START_MIN,
+            UTF8_3BYTE_START_MAX, UTF8_3BYTE_START_MIN, UTF8_4BYTE_START_MAX,
+            UTF8_4BYTE_START_MIN, UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN,
+            byte_index, byte_len, byte_offset};
 
 /// Parses [`UTF-8`] text and returns a single [`VT100InputEventIR`] for the first
 /// complete character.
@@ -307,14 +308,16 @@ fn try_get_complete_utf8_len(buffer: &[u8]) -> Option<ByteOffset> {
 fn get_utf8_length(first_byte: u8) -> Option<ByteOffset> {
     match first_byte {
         // ASCII: single byte (`0xxxxxxx`).
-        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(byte_offset(1)),
-        // Start byte for 2-byte sequence (`110xxxxx`).
-        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(byte_offset(2)),
+        UTF8_1BYTE_START_MIN..=UTF8_1BYTE_START_MAX => Some(byte_offset(1)),
+        // Start byte for 2-byte sequence (`110xxxxx`, RFC 3629: 0xC2..=0xDF).
+        UTF8_2BYTE_START_MIN..=UTF8_2BYTE_START_MAX => Some(byte_offset(2)),
         // Start byte for 3-byte sequence (`1110xxxx`).
-        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(byte_offset(3)),
-        // Start byte for 4-byte sequence (`11110xxx`).
-        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(byte_offset(4)),
+        UTF8_3BYTE_START_MIN..=UTF8_3BYTE_START_MAX => Some(byte_offset(3)),
+        // Start byte for 4-byte sequence (`11110xxx`, RFC 3629: 0xF0..=0xF4).
+        UTF8_4BYTE_START_MIN..=UTF8_4BYTE_START_MAX => Some(byte_offset(4)),
         // Continuation byte (`10xxxxxx`): invalid as start byte.
+        // Overlong 2-byte start bytes (`0xC0`, `0xC1`).
+        // Out-of-range 4-byte start bytes (`0xF5..=0xF7`).
         // Reserved or invalid bytes (`11111xxx`).
         _ => None,
     }
@@ -576,7 +579,7 @@ mod tests {
     #[test]
     fn test_out_of_range_codepoint_rejection() {
         // Codepoints > `U+10FFFF` are invalid Unicode scalars.
-        // U+110000: 0xF4 0x90 0x80 0x80.
+        // U+110000: 0xF4 0x90 0x80 0x80 (valid start byte 0xF4, rejected by decode_utf8).
         let buffer_over_max = &[0xF4, 0x90, 0x80, 0x80];
         assert!(
             parse_utf8_text(buffer_over_max).is_none(),
@@ -584,6 +587,7 @@ mod tests {
         );
 
         // Maximum 4-byte bit pattern (0xF7 0xBF 0xBF 0xBF -> `U+1FFFFF`).
+        // 0xF7 is rejected early by get_utf8_length (UTF8_4BYTE_START_MAX is 0xF4).
         let buffer_pattern_max = &[0xF7, 0xBF, 0xBF, 0xBF];
         assert!(
             parse_utf8_text(buffer_pattern_max).is_none(),
@@ -642,10 +646,24 @@ mod tests {
     }
 
     #[test]
+    fn test_early_rejection_start_bytes() {
+        // Overlong 2-byte start bytes (0xC0, 0xC1) rejected early at get_utf8_length.
+        assert_eq!(get_utf8_length(0xC0), None);
+        assert_eq!(get_utf8_length(0xC1), None);
+        // Valid 2-byte start boundary.
+        assert_eq!(get_utf8_length(0xC2), Some(byte_offset(2)));
+
+        // Out-of-range 4-byte start bytes (0xF5..=0xF7) rejected early.
+        assert_eq!(get_utf8_length(0xF4), Some(byte_offset(4)));
+        assert_eq!(get_utf8_length(0xF5), None);
+        assert_eq!(get_utf8_length(0xF6), None);
+        assert_eq!(get_utf8_length(0xF7), None);
+    }
+
+    #[test]
     fn test_overlong_sequence_rejection() {
         // Overlong 2-byte NUL (0xC0 0x80) is illegal in UTF-8 (RFC 3629).
-        // try_get_complete_utf8_len passes structural check, but decode_utf8 rejects via
-        // core::str::from_utf8.
+        // 0xC0 is rejected early by try_get_complete_utf8_len / get_utf8_length.
         let buffer_overlong_nul = &[0xC0, 0x80];
         assert!(
             parse_utf8_text(buffer_overlong_nul).is_none(),

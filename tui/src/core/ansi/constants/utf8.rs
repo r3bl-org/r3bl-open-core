@@ -38,11 +38,11 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! # use r3bl_tui::{UTF8_1BYTE_MAX, UTF8_2BYTE_MIN, UTF8_2BYTE_MAX};
+//! # use r3bl_tui::{UTF8_1BYTE_START_MAX, UTF8_2BYTE_START_MIN, UTF8_2BYTE_START_MAX};
 //! let first_byte = 0xC2; // Start of 2-byte sequence
 //!
 //! // Determine sequence length
-//! let is_2byte = (UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX).contains(&first_byte);
+//! let is_2byte = (UTF8_2BYTE_START_MIN..=UTF8_2BYTE_START_MAX).contains(&first_byte);
 //! assert!(is_2byte);
 //! ```
 //!
@@ -53,7 +53,7 @@
 // UTF-8 Start Byte Ranges (First byte of sequence)
 // ============================================================================
 
-/// [`UTF-8`] 1-Byte Minimum ([`UTF-8`]): [`ASCII`] range minimum single-byte start.
+/// [`UTF-8`] 1-Byte Start Minimum ([`UTF-8`]): [`ASCII`] range minimum single-byte start.
 ///
 /// Value: `0` dec, `00` hex.
 ///
@@ -61,9 +61,9 @@
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_1BYTE_MIN: u8 = 0b0000_0000;
+pub const UTF8_1BYTE_START_MIN: u8 = 0b0000_0000;
 
-/// [`UTF-8`] 1-Byte Maximum ([`UTF-8`]): [`ASCII`] range maximum single-byte end.
+/// [`UTF-8`] 1-Byte Start Maximum ([`UTF-8`]): [`ASCII`] range maximum single-byte end.
 ///
 /// Value: `127` dec, `7F` hex.
 ///
@@ -71,61 +71,83 @@ pub const UTF8_1BYTE_MIN: u8 = 0b0000_0000;
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_1BYTE_MAX: u8 = 0b0111_1111;
+pub const UTF8_1BYTE_START_MAX: u8 = 0b0111_1111;
 
-/// [`UTF-8`] 2-Byte Minimum ([`UTF-8`]): 2-byte sequence start at `C0` hex.
+/// [`UTF-8`] 2-Byte Start Minimum ([`UTF-8`]): First valid 2-byte sequence start byte at
+/// `C2` hex.
 ///
-/// Value: `192` dec, `C0` hex.
+/// Value: `194` dec, `C2` hex.
 ///
 /// Bit pattern: `110xxxxx 10xxxxxx`.
 ///
+/// # [RFC 3629] Note
+///
+/// Under [RFC 3629], `0xC0` and `0xC1` are illegal overlong encodings that could only
+/// encode 7-bit [`ASCII`] characters (`U+0000..=U+007F`). Valid 2-byte sequences start
+/// at `0xC2` (`U+0080`).
+///
+/// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_2BYTE_MIN: u8 = 0b1100_0000;
+/// [RFC 3629]: https://datatracker.ietf.org/doc/html/rfc3629
+pub const UTF8_2BYTE_START_MIN: u8 = 0b1100_0010;
 
-/// [`UTF-8`] 2-Byte Maximum ([`UTF-8`]): 2-byte sequence end at `DF` hex.
+/// [`UTF-8`] 2-Byte Start Maximum ([`UTF-8`]): Last 2-byte sequence start byte at `DF`
+/// hex.
 ///
 /// Value: `223` dec, `DF` hex.
 ///
 /// Bit pattern: `110xxxxx 10xxxxxx`.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_2BYTE_MAX: u8 = 0b1101_1111;
+pub const UTF8_2BYTE_START_MAX: u8 = 0b1101_1111;
 
-/// [`UTF-8`] 3-Byte Minimum ([`UTF-8`]): 3-byte sequence start at `E0` hex.
+/// [`UTF-8`] 3-Byte Start Minimum ([`UTF-8`]): First 3-byte sequence start byte at `E0`
+/// hex.
 ///
 /// Value: `224` dec, `E0` hex.
 ///
 /// Bit pattern: `1110xxxx 10xxxxxx 10xxxxxx`.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_3BYTE_MIN: u8 = 0b1110_0000;
+pub const UTF8_3BYTE_START_MIN: u8 = 0b1110_0000;
 
-/// [`UTF-8`] 3-Byte Maximum ([`UTF-8`]): 3-byte sequence end at `EF` hex.
+/// [`UTF-8`] 3-Byte Start Maximum ([`UTF-8`]): Last 3-byte sequence start byte at `EF`
+/// hex.
 ///
 /// Value: `239` dec, `EF` hex.
 ///
 /// Bit pattern: `1110xxxx 10xxxxxx 10xxxxxx`.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_3BYTE_MAX: u8 = 0b1110_1111;
+pub const UTF8_3BYTE_START_MAX: u8 = 0b1110_1111;
 
-/// [`UTF-8`] 4-Byte Minimum ([`UTF-8`]): 4-byte sequence start at `F0` hex.
+/// [`UTF-8`] 4-Byte Start Minimum ([`UTF-8`]): First 4-byte sequence start byte at `F0`
+/// hex.
 ///
 /// Value: `240` dec, `F0` hex.
 ///
 /// Bit pattern: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_4BYTE_MIN: u8 = 0b1111_0000;
+pub const UTF8_4BYTE_START_MIN: u8 = 0b1111_0000;
 
-/// [`UTF-8`] 4-Byte Maximum ([`UTF-8`]): 4-byte sequence end at `F7` hex.
+/// [`UTF-8`] 4-Byte Start Maximum ([`UTF-8`]): Last valid 4-byte sequence start byte at
+/// `F4` hex.
 ///
-/// Value: `247` dec, `F7` hex.
+/// Value: `244` dec, `F4` hex.
 ///
 /// Bit pattern: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx`.
 ///
+/// # [RFC 3629] Note
+///
+/// Under [RFC 3629], `Unicode` codepoints are restricted to `U+10FFFF`. The maximum
+/// valid 4-byte sequence starts with `0xF4` (`0xF4 0x8F 0xBF 0xBF` = `U+10FFFF`).
+/// Start bytes `0xF5..=0xF7` would encode codepoints `U+110000..=U+1FFFFF`, which are
+/// strictly illegal.
+///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub const UTF8_4BYTE_MAX: u8 = 0b1111_0111;
+/// [RFC 3629]: https://datatracker.ietf.org/doc/html/rfc3629
+pub const UTF8_4BYTE_START_MAX: u8 = 0b1111_0100;
 
 // ============================================================================
 // UTF-8 Continuation Bytes (Second, third, fourth bytes)
@@ -218,26 +240,26 @@ mod tests {
 
     #[test]
     fn test_1byte_ranges() {
-        assert_eq!(UTF8_1BYTE_MIN, 0x00);
-        assert_eq!(UTF8_1BYTE_MAX, 0x7F);
+        assert_eq!(UTF8_1BYTE_START_MIN, 0x00);
+        assert_eq!(UTF8_1BYTE_START_MAX, 0x7F);
     }
 
     #[test]
     fn test_2byte_ranges() {
-        assert_eq!(UTF8_2BYTE_MIN, 0xC0);
-        assert_eq!(UTF8_2BYTE_MAX, 0xDF);
+        assert_eq!(UTF8_2BYTE_START_MIN, 0xC2);
+        assert_eq!(UTF8_2BYTE_START_MAX, 0xDF);
     }
 
     #[test]
     fn test_3byte_ranges() {
-        assert_eq!(UTF8_3BYTE_MIN, 0xE0);
-        assert_eq!(UTF8_3BYTE_MAX, 0xEF);
+        assert_eq!(UTF8_3BYTE_START_MIN, 0xE0);
+        assert_eq!(UTF8_3BYTE_START_MAX, 0xEF);
     }
 
     #[test]
     fn test_4byte_ranges() {
-        assert_eq!(UTF8_4BYTE_MIN, 0xF0);
-        assert_eq!(UTF8_4BYTE_MAX, 0xF7);
+        assert_eq!(UTF8_4BYTE_START_MIN, 0xF0);
+        assert_eq!(UTF8_4BYTE_START_MAX, 0xF4);
     }
 
     #[test]

@@ -96,6 +96,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [make-pty-session-sync.md](done/make-pty-session-sync.md)
 - [x] [support-worktree-in-check-script.md](support-worktree-in-check-script.md)
 - [ ] [fix-shift-home-lockup.md](fix-shift-home-lockup.md)
+- [x] [migrate-cspell-to-harper.md](done/migrate-cspell-to-harper.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [build-infra-spawny.md](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
