@@ -4,12 +4,12 @@
 			"path": "tui/src/core/ansi/vt_100_terminal_input_parser/input_byte_stream_to_ir/parser/parser_struct.rs",
 			"bookmarks": [
 				{
-					"line": 250,
+					"line": 231,
 					"column": 0,
 					"label": "[ ] main entry point for stdin byte processing"
 				},
 				{
-					"line": 302,
+					"line": 283,
 					"column": 0,
 					"label": "[ ] review classify_unparsed_buffer call site"
 				}

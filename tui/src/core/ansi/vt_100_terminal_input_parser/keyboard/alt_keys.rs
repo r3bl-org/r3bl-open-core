@@ -30,8 +30,7 @@ use crate::{KeyState, byte_offset,
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`CSI`]: crate::CsiSequence
 /// [`ESC`]: crate::EscSequence
-/// [`Parser Dispatch Priority Pipeline`]:
-///     mod@super::super::router#parser-dispatch-priority-pipeline
+/// [`Parser Dispatch Priority Pipeline`]: mod@super::super::router#parser-dispatch-priority-pipeline
 /// [`router`]: mod@super::super::router
 /// [`Why Alt Uses ESC Prefix`]: mod@super#why-alt-uses-esc-prefix-not-csi
 #[must_use]

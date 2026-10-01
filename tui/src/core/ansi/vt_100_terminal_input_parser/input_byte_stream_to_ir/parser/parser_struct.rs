@@ -112,50 +112,35 @@ use std::collections::VecDeque;
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-/// [`consume_stdin_input_with_sender()`]:
-///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::consume_stdin_input_with_sender
+/// [`consume_stdin_input_with_sender()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::consume_stdin_input_with_sender
 /// [`CSI`]: crate::CsiSequence
 /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
 /// [`ESC`]: crate::EscSequence
-/// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
-///     InputByteStreamToIrParser::process_incoming_bytes
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`]: InputByteStreamToIrParser::process_incoming_bytes
 /// [`InputByteStreamToIrParser`]: InputByteStreamToIrParser
 /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: super::constants::MAX_ESCAPE_SEQUENCE_LENGTH
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-/// [`MaybeMore::from_read_count()`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::from_read_count
-/// [`MaybeMore::KernelDrained`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
-/// [`MaybeMore::KernelMayHaveMore`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+/// [`MaybeMore::from_read_count()`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::from_read_count
+/// [`MaybeMore::KernelDrained`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
+/// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
 /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
-/// [`MioPollWorker`]:
-///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
+/// [`MioPollWorker`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
 /// [`OSC_PREFIX`]: crate::OSC_PREFIX
 /// [`OSC`]: crate::osc_codes::OscSequence
-/// [`OscCircuitBreaker::Open`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::input_byte_stream_to_ir::OscCircuitBreaker::Open
-/// [`parse_stdin_bytes_with_sender()`]:
-///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::parse_stdin_bytes_with_sender
+/// [`OscCircuitBreaker::Open`]: crate::core::ansi::vt_100_terminal_input_parser::input_byte_stream_to_ir::OscCircuitBreaker::Open
+/// [`parse_stdin_bytes_with_sender()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::parse_stdin_bytes_with_sender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
 /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
-/// [`STDIN_READ_BUFFER_SIZE`]:
-///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::STDIN_READ_BUFFER_SIZE
+/// [`STDIN_READ_BUFFER_SIZE`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::STDIN_READ_BUFFER_SIZE
 /// [`stdin`]: std::io::stdin
-/// [`try_parse_input_event()`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-/// [`try_parse_input_event`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-/// [`UnparsedBufferClassification::Incomplete`]:
-///     super::classification::UnparsedBufferClassification::Incomplete
-/// [`UnparsedBufferClassification::MalformedSequence`]:
-///     super::classification::UnparsedBufferClassification::MalformedSequence
-/// [`UnparsedBufferClassification::RunawayOsc`]:
-///     super::classification::UnparsedBufferClassification::RunawayOsc
-/// [`UnparsedBufferClassification`]:
-///     super::classification::UnparsedBufferClassification
+/// [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+/// [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+/// [`UnparsedBufferClassification::Incomplete`]: super::classification::UnparsedBufferClassification::Incomplete
+/// [`UnparsedBufferClassification::MalformedSequence`]: super::classification::UnparsedBufferClassification::MalformedSequence
+/// [`UnparsedBufferClassification::RunawayOsc`]: super::classification::UnparsedBufferClassification::RunawayOsc
+/// [`UnparsedBufferClassification`]: super::classification::UnparsedBufferClassification
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
@@ -232,19 +217,15 @@ impl InputByteStreamToIrParser {
     /// > - `&mut`: Fresh and temporary reborrow of the struct.
     ///
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
-    /// [`MioPollWorker`]:
-    ///     crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
+    /// [`MioPollWorker`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
     /// [`OSC`]: crate::osc_codes::OscSequence
     /// [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::input_byte_stream_to_ir::OscCircuitBreaker
     /// [`read()`]: https://man7.org/linux/man-pages/man2/read.2.html
     /// [`stdin`]: std::io::stdin
     /// [`try_drain()`]: crate::core::ansi::vt_100_terminal_input_parser::input_byte_stream_to_ir::OscCircuitBreaker::try_drain
-    /// [`try_parse_input_event()`]:
-    ///     crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
-    /// [`UnparsedBufferClassification::classify()`]:
-    ///     super::classification::UnparsedBufferClassification::classify
-    /// [`UnparsedBufferClassification::MalformedSequence`]:
-    ///     super::classification::UnparsedBufferClassification::MalformedSequence
+    /// [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+    /// [`UnparsedBufferClassification::classify()`]: super::classification::UnparsedBufferClassification::classify
+    /// [`UnparsedBufferClassification::MalformedSequence`]: super::classification::UnparsedBufferClassification::MalformedSequence
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn process_incoming_bytes(&mut self, read_buffer: &[u8], maybe_more: MaybeMore) {

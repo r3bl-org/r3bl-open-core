@@ -5,20 +5,20 @@
 //! This module provides bit masks, byte ranges, and validation constants used when
 //! parsing [`UTF-8`] encoded text from terminal input streams.
 //!
-//! ## [`UTF-8`] Encoding Structure
+//! # [`UTF-8`] Encoding Structure
 //!
 //! [`UTF-8`] uses variable-length encoding (1-4 bytes per character):
 //!
-//! | Bytes | First byte | Continuation bytes | Bit pattern                                 |
-//! | :---- | :--------- | :----------------- | :------------------------------------------ |
-//! | 1     | `00`-`7F`  | -                  | `0xxxxxxx`                                  |
-//! | 2     | `C0`-`DF`  | `80`-`BF`          | `110xxxxx` `10xxxxxx`                       |
-//! | 3     | `E0`-`EF`  | `80`-`BF` (x2)     | `1110xxxx` `10xxxxxx` `10xxxxxx`            |
-//! | 4     | `F0`-`F7`  | `80`-`BF` (x3)     | `11110xxx` `10xxxxxx` `10xxxxxx` `10xxxxxx` |
+//! | Length  | Byte 1    | Byte 2    | Byte 3    | Byte 4    | Bit pattern                                 |
+//! | :------ | :-------- | :-------- | :-------- | :-------- | :------------------------------------------ |
+//! | 1 byte  | `00`-`7F` | -         | -         | -         | `0xxxxxxx`                                  |
+//! | 2 bytes | `C0`-`DF` | `80`-`BF` | -         | -         | `110xxxxx` `10xxxxxx`                       |
+//! | 3 bytes | `E0`-`EF` | `80`-`BF` | `80`-`BF` | -         | `1110xxxx` `10xxxxxx` `10xxxxxx`            |
+//! | 4 bytes | `F0`-`F7` | `80`-`BF` | `80`-`BF` | `80`-`BF` | `11110xxx` `10xxxxxx` `10xxxxxx` `10xxxxxx` |
 //!
 //! See [constants module design] for the three-tier architecture.
 //!
-//! ## Continuation Byte Validation
+//! # Continuation Byte Validation
 //!
 //! All bytes after the first must match the pattern `10xxxxxx` (`80`-`BF` hex). This is
 //! validated using [`UTF8_CONTINUATION_MASK`] and [`UTF8_CONTINUATION_PATTERN`]:
@@ -29,16 +29,16 @@
 //! assert_eq!(byte & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
 //! ```
 //!
-//! ## Decoding Process
+//! # Decoding Process
 //!
 //! 1. Read first byte to determine sequence length (1-4 bytes).
 //! 2. Validate all continuation bytes match `10xxxxxx` pattern.
 //! 3. Decode and validate the complete sequence slice via [`core::str::from_utf8`].
 //!
-//! ## Usage Example
+//! # Usage Example
 //!
 //! ```rust
-//! # use r3bl_tui::{UTF8_1BYTE_START_MAX, UTF8_2BYTE_START_MIN, UTF8_2BYTE_START_MAX};
+//! use r3bl_tui::{UTF8_1BYTE_START_MAX, UTF8_2BYTE_START_MIN, UTF8_2BYTE_START_MAX};
 //! let first_byte = 0xC2; // Start of 2-byte sequence
 //!
 //! // Determine sequence length
@@ -190,12 +190,22 @@ pub const UTF8_CONTINUATION_MAX: u8 = 0b1011_1111;
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub const UTF8_CONTINUATION_MASK: u8 = 0b1100_0000;
 
-/// [`UTF-8`] Continuation Pattern ([`UTF-8`]): Expected result `80` hex after masking.
+/// [`UTF-8`] Continuation Pattern ([`UTF-8`]): The expected result after masking a valid
+/// continuation byte with [`UTF8_CONTINUATION_MASK`].
 ///
 /// Value: `128` dec, `80` hex.
 ///
-/// Bit pattern: `0b1000_0000` - after masking with [`UTF8_CONTINUATION_MASK`], valid
-/// continuation bytes should equal this value.
+/// Bit pattern: `0b1000_0000`.
+///
+/// # Continuation Byte Validation
+///
+/// In [`UTF-8`], every continuation byte must start with the bits `10` (the pattern
+/// `10xxxxxx`, range `80` to `BF` hex).
+///
+/// To check whether an arbitrary byte is a valid continuation byte, you must perform a
+/// bitwise AND with [`UTF8_CONTINUATION_MASK`] (`0b1100_0000` / `C0` hex) to clear the
+/// bottom 6 bits and isolate the top 2 bits. For any valid continuation byte, the result
+/// of that operation is always this constant value.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 pub const UTF8_CONTINUATION_PATTERN: u8 = 0b1000_0000;
