@@ -7,6 +7,8 @@
         "task/done/**": true
     },
     "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu",
+    // Typos Spell Checker settings.
+    "typos.diagnosticSeverity": "Warning",
     // Harper grammar & spell checker settings.
     "harper.workspaceDictPath": "./.harper-dictionary.txt",
     "harper.linters.RightClick": false,

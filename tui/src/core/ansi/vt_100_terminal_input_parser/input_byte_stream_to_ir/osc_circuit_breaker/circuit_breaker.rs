@@ -497,14 +497,14 @@ impl OscCircuitBreaker {
                     );
                 }
 
-                // Fallback for non-empty slices: must come after all specific patterns
-                // above to avoid shadowing them.
-                // Regular payload byte: consume the first byte and advance the slice:
+                // Fallback for non-empty slices (must follow all specific patterns above
+                // to avoid shadowing them). Consumes a regular payload byte and advances
+                // the slice cursor to the tail (`rest`) to continue the loop:
                 // - `_` matches and discards the first byte (head).
                 // - `rest @ ..` binds the rest of the slice (tail with the first byte
                 //   removed).
                 // - `remaining = rest` assigns the tail back to advance the slice cursor.
-                #[allow(clippy::needless_continue)]
+                //   #[allow(clippy::needless_continue)]
                 [_, rest @ ..] => {
                     remaining = rest;
                     continue;
