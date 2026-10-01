@@ -16,6 +16,9 @@
 //! - **Constants & Color**: Shared [`ANSI`] specifications - color types (`RGB` ↔
 //!   ANSI256), escape sequence definitions, used by all subsystems
 //!
+//! For how these subsystems are orchestrated and executed in the Stage 5 backend, see the
+//! [`direct_to_ansi` mod docs: Terminal Protocols & Capabilities Hub][hub].
+//!
 //! ## Architecture Overview
 //!
 //! ```text
@@ -232,6 +235,7 @@
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte
+//! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 
 #![rustfmt::skip]
 

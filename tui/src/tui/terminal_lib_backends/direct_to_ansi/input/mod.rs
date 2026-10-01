@@ -2,6 +2,10 @@
 
 //! Linux input handling for [`DirectToAnsi`] backend.
 //!
+//! For the overarching protocol capability matrix (including [`Kitty`] Keyboard Protocol,
+//! Bracketed Paste, and OSC disambiguation), see the [`Terminal Protocols & Capabilities
+//! Hub`][hub].
+//!
 //! # Entry Point
 //!
 //! [`DirectToAnsiInputDevice::next`] is the main async method for reading
@@ -64,6 +68,7 @@
 //! [`ESC` key detection]: DirectToAnsiInputDevice#esc-key-disambiguation-crossterm-more-flag-pattern
 //! [`filedescriptor::poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`filedescriptor`]: https://docs.rs/filedescriptor
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`kqueue(2)`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 //! [`poll()`]: https://docs.rs/filedescriptor/latest/filedescriptor/fn.poll.html
 //! [`poll(2)`]: https://man7.org/linux/man-pages/man2/poll.2.html
@@ -76,6 +81,7 @@
 //! [`tty`]: https://man7.org/linux/man-pages/man4/tty.4.html
 //! [crossterm issue]: https://github.com/crossterm-rs/crossterm/issues/500
 //! [declined to work around this]: https://github.com/tokio-rs/mio/issues/1377
+//! [hub]: super#terminal-protocols--capabilities-hub
 //! [known Darwin limitation]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [macOS `/dev/tty` polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [mio issue]: https://github.com/tokio-rs/mio/issues/1377

@@ -17,7 +17,11 @@
 //! The [`OscBuffer`] handles partial sequences split across buffer reads and
 //! gracefully ignores malformed input.
 //!
+//! For end-to-end execution, SSH clipboard behavior, and `Alt+]` input disambiguation,
+//! see the [`direct_to_ansi` mod docs: Terminal Protocols & Capabilities Hub][hub].
+//!
 //! [`OSC`]: crate::osc_codes::OscSequence
+//! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 
 pub mod osc_buffer;
 pub mod osc_codes;

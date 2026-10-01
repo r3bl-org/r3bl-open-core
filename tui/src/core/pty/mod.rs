@@ -394,7 +394,9 @@
 //!
 //! > **Note on TUI Rendering**: While child processes use [`terminfo`] masquerading, our
 //! > own rendering engine entirely bypasses [`terminfo`]. See the [`direct_to_ansi` mod
-//! > docs: Bypassing `terminfo`] section for why this provides robustness over SSH.
+//! > docs: Bypassing `terminfo`] section for why this provides robustness over SSH. For the
+//! > complete matrix of terminal protocols and capabilities, see the [`direct_to_ansi` mod
+//! > docs: Terminal Protocols & Capabilities Hub][hub].
 //!
 //! ## Main Types
 //!
@@ -416,8 +418,7 @@
 //!     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
 //! [`DefaultSize::PtyChannelBufferSize`]: crate::DefaultSize::PtyChannelBufferSize
-//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]:
-//!     mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
+//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
@@ -432,12 +433,10 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`OutputEventReceiverHalf`]: crate::OutputEventReceiverHalf
 //! [`println!`]: std::println
-//! [`ProcessManager::handle_terminal_resize()`]:
-//!     crate::ProcessManager::handle_terminal_resize
+//! [`ProcessManager::handle_terminal_resize()`]: crate::ProcessManager::handle_terminal_resize
 //! [`ProcessManager::poll_all_processes()`]: crate::ProcessManager::poll_all_processes
 //! [`ProcessManager::send_input()`]: crate::ProcessManager::send_input
-//! [`pty-orchestrator`]:
-//!     crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
+//! [`pty-orchestrator`]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
 //! [`pty-reader`]: crate::pty_session::threads::reader::spawn_pty_reader_thread
 //! [`pty-writer`]: crate::pty_session::threads::writer::spawn_pty_writer_thread
 //! [`pty_mux`]: mod@crate::core::pty::pty_mux
@@ -450,8 +449,7 @@
 //! [`PtyOutputEvent`]: crate::PtyOutputEvent
 //! [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
 //! [`PtyPair`]: crate::PtyPair
-//! [`PtySession::child_process_termination_handle`]:
-//!     field@crate::PtySession::child_process_termination_handle
+//! [`PtySession::child_process_termination_handle`]: field@crate::PtySession::child_process_termination_handle
 //! [`PtySession`]: crate::PtySession
 //! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
 //! [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
@@ -459,20 +457,16 @@
 //! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`select!`]: tokio::select
-//! [`spawn_pty_orchestrator_thread()`]:
-//!     crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
-//! [`spawn_pty_reader_thread()`]:
-//!     crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [`spawn_pty_writer_thread()`]:
-//!     crate::pty_session::threads::writer::spawn_pty_writer_thread
+//! [`spawn_pty_orchestrator_thread()`]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
+//! [`spawn_pty_reader_thread()`]: crate::pty_session::threads::reader::spawn_pty_reader_thread
+//! [`spawn_pty_writer_thread()`]: crate::pty_session::threads::writer::spawn_pty_writer_thread
 //! [`start()`]: [`PtySessionBuilder::start()`]
 //! [`start_async()`]: crate::PtySessionBuilder::start_async
 //! [`stderr`]: std::io::stderr
 //! [`stdin`]: std::io::Stdin
 //! [`stdout`]: std::io::stdout
 //! [`SyncSender::send()`]: std::sync::mpsc::SyncSender::send
-//! [`TASK_INTERRUPTIBLE`]:
-//!     https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
+//! [`TASK_INTERRUPTIBLE`]: https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
 //! [`TERM=xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
 //! [`TERM`]: https://man7.org/linux/man-pages/man7/term.7.html
 //! [`terminfo`]: https://en.wikipedia.org/wiki/Terminfo
@@ -482,24 +476,20 @@
 //! [`write()`]: https://man7.org/linux/man-pages/man2/write.2.html
 //! [`xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
 //! [accidental complexity]: https://www.youtube.com/watch?v=Cum5uN2634o
-//! [Child process perspective]:
-//!     crate::pty_engine::pty_pair::PtyPair#child-process-perspective
+//! [Child process perspective]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
 //! [Engine Layer]: crate::pty_engine
+//! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 //! [MPSC channels]: std::sync::mpsc
-//! [Orchestrator Thread]:
-//!     crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
-//! [Orchestrator]:
-//!     crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
+//! [Orchestrator Thread]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
+//! [Orchestrator]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [PTY Core Concept]: #the-pty-core-concept
 //! [Reader Thread]: crate::pty_session::threads::reader::spawn_pty_reader_thread
 //! [Reader]: crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [resource-leaking deadlocks]:
-//!     crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
+//! [resource-leaking deadlocks]: crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
 //! [Session Layer]: crate::pty_session
 //! [Session layer]: crate::pty_session
-//! [To Async or Not to Async: Building a Rust MCP Server for rust-analyzer]:
-//!     https://developerlife.com/2026/08/22/to-async-or-not-to-async-rust-mcp-server/
+//! [To Async or Not to Async: Building a Rust MCP Server for rust-analyzer]: https://developerlife.com/2026/08/22/to-async-or-not-to-async-rust-mcp-server/
 //! [What is a `TTY`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
 //! [Writer Thread]: crate::pty_session::threads::writer::spawn_pty_writer_thread
 //! [Writer]: crate::pty_session::threads::writer::spawn_pty_writer_thread
