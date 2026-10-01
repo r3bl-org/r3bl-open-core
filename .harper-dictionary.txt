@@ -331,6 +331,7 @@ TIOCSCTTY
 TOCTOU
 TODONE
 TTY
+Teardown
 TerminalWindow
 Tifinagh
 Tilix
@@ -979,6 +980,7 @@ undos
 undrained
 unergonomic
 unescaped
+unicode
 uninteractive
 unlockpt
 unmapped

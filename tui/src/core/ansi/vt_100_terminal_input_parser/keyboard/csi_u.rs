@@ -28,10 +28,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`],
 /// [`Ghostty`], [`WezTerm`], etc.) after [`OutputDevice::setup_full_screen_tui()`]
 /// activates progressive keyboard enhancement via [`enable_keyboard_enhancement()`][enh]
-/// (`CSI > 1 u`).
-///
-/// See the [Progressive Keyboard Enhancement][no-ack] in the parent parser module
-/// for details on why no `ACK` is needed and how legacy terminals silently fall back.
+/// (by writing `CSI > 1 u` to [`stdout`]).
 ///
 /// # Syntax
 ///
@@ -56,6 +53,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// [`Ghostty`]: https://ghostty.org/
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
+/// [`stdout`]: std::io::stdout
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
@@ -115,8 +113,8 @@ impl<'a> CsiUFraming<'a> {
     }
 }
 
-/// Parsed parameters of a `CSI u` sequence (`ESC [ <codepoint> ; <modifier> :
-/// <event_type> u`).
+/// Parsed parameters of a `CSI u` sequence:
+/// `ESC [ <codepoint> ; <modifier> : <event_type> u`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CsiUParams {
     codepoint: u32,
