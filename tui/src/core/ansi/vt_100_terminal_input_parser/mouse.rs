@@ -847,11 +847,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-            },
+            VT100KeyModifiersIR::SHIFT,
         );
         let ParsedInputEventIR {
             event,
@@ -861,9 +857,7 @@ mod tests {
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::SHIFT);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -877,11 +871,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-            },
+            VT100KeyModifiersIR::CTRL,
         );
         let ParsedInputEventIR {
             event,
@@ -891,9 +881,7 @@ mod tests {
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -907,11 +895,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
+            VT100KeyModifiersIR::ALT,
         );
         let ParsedInputEventIR {
             event,
@@ -921,9 +905,7 @@ mod tests {
         assert_eq!(bytes_consumed, byte_offset(6));
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1041,11 +1023,7 @@ mod tests {
 
     #[test]
     fn test_x10_scroll_with_modifiers() {
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::ALT.with_shift();
 
         let seq = x10_mouse_sequence(
             VT100MouseButtonIR::Unknown,
@@ -1243,11 +1221,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::Pressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-            },
+            VT100KeyModifiersIR::SHIFT,
         );
         let ParsedInputEventIR {
             event,
@@ -1257,9 +1231,7 @@ mod tests {
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::Pressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::SHIFT);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1273,11 +1245,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-            },
+            VT100KeyModifiersIR::CTRL,
         );
         let ParsedInputEventIR {
             event,
@@ -1287,9 +1255,7 @@ mod tests {
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1303,11 +1269,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
+            VT100KeyModifiersIR::ALT,
         );
         let ParsedInputEventIR {
             event,
@@ -1317,9 +1279,7 @@ mod tests {
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::ALT);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1440,11 +1400,7 @@ mod tests {
 
     #[test]
     fn test_rxvt_scroll_with_modifiers() {
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::ALT.with_shift();
 
         let seq = rxvt_mouse_sequence(
             VT100MouseButtonIR::Unknown,
@@ -1635,11 +1591,7 @@ mod tests {
 
     #[test]
     fn test_sgr_scroll_with_modifiers() {
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            alt: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::ALT.with_shift();
 
         let seq = sgr_mouse_sequence(
             VT100MouseButtonIR::Unknown,
@@ -1702,11 +1654,7 @@ mod tests {
             1,
             1,
             VT100MouseActionIR::Press,
-            VT100KeyModifiersIR {
-                ctrl: KeyState::Pressed,
-                shift: KeyState::NotPressed,
-                alt: KeyState::NotPressed,
-            },
+            VT100KeyModifiersIR::CTRL,
         );
         let ParsedInputEventIR {
             event,
@@ -1716,9 +1664,7 @@ mod tests {
         assert_eq!(bytes_consumed.as_usize(), seq.len());
         match event {
             VT100InputEventIR::Mouse { modifiers, .. } => {
-                assert_eq!(modifiers.ctrl, KeyState::Pressed);
-                assert_eq!(modifiers.shift, KeyState::NotPressed);
-                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers, VT100KeyModifiersIR::CTRL);
             }
             _ => panic!("Expected Mouse event"),
         }

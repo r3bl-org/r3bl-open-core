@@ -82,7 +82,7 @@ use super::{csi_scanner::extract_csi_params,
                              VT100KeyCodeIR, VT100KeyModifiersIR, VT100PasteModeIR},
             maybe_more::MaybeMore,
             osc_scanner::OscScanResult};
-use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, KeyState, byte_offset,
+use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR,
                                     ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
@@ -291,11 +291,7 @@ pub mod osc {
     pub fn alt_bracket_event() -> VT100InputEventIR {
         VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char(char::from(ANSI_OSC_CLOSE_BRACKET)),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
+            modifiers: VT100KeyModifiersIR::ALT,
         }
     }
 }

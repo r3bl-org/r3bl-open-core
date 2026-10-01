@@ -468,7 +468,7 @@ mod tests_csi_routing {
 #[cfg(test)]
 mod tests_non_csi_input {
     use super::*;
-    use crate::{KeyState, core::ansi::generator::generate_keyboard_sequence};
+    use crate::core::ansi::generator::generate_keyboard_sequence;
 
     #[test]
     fn esc_key_immediate_when_no_more_input() {
@@ -503,10 +503,7 @@ mod tests_non_csi_input {
         // ESC + printable ASCII = Alt+letter.
         let expected = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char('b'),
-            modifiers: VT100KeyModifiersIR {
-                alt: KeyState::Pressed,
-                ..Default::default()
-            },
+            modifiers: VT100KeyModifiersIR::ALT,
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let ParsedInputEventIR {
@@ -524,10 +521,7 @@ mod tests_non_csi_input {
         // Control character (Ctrl+A = 0x01).
         let expected = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char('a'),
-            modifiers: VT100KeyModifiersIR {
-                ctrl: KeyState::Pressed,
-                ..Default::default()
-            },
+            modifiers: VT100KeyModifiersIR::CTRL,
         };
         let buffer = generate_keyboard_sequence(&expected).expect("conversion error");
         let ParsedInputEventIR {
@@ -625,16 +619,12 @@ mod tests_invalid_input {
 #[cfg(test)]
 mod tests_osc_routing {
     use super::*;
-    use crate::{ANSI_OSC_CLOSE_BRACKET, KeyState, MAX_OSC_SEQUENCE_LENGTH};
+    use crate::{ANSI_OSC_CLOSE_BRACKET, MAX_OSC_SEQUENCE_LENGTH};
 
     fn alt_bracket_expected() -> VT100InputEventIR {
         VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char(char::from(ANSI_OSC_CLOSE_BRACKET)),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::NotPressed,
-                alt: KeyState::Pressed,
-            },
+            modifiers: VT100KeyModifiersIR::ALT,
         }
     }
 
