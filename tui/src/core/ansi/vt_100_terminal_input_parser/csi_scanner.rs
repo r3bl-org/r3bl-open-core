@@ -5,31 +5,27 @@
 //! [`CSI`]: crate::CsiSequence
 
 use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
-            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                    ASCII_DIGIT_0, ASCII_DIGIT_9, ASCII_LOWER_A,
-                                    ASCII_LOWER_Z, ASCII_UPPER_A, ASCII_UPPER_Z,
+            core::ansi::constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                    ASCII_DIGIT_0, ASCII_LOWER_A, ASCII_LOWER_Z,
+                                    ASCII_UPPER_A, ASCII_UPPER_Z, CSI_PREFIX,
                                     CSI_PREFIX_LEN}};
 
-/// If `chunk` starts with `ESC [` ([`ANSI_ESC`], [`ANSI_CSI_BRACKET`]) followed by an
-/// [`ASCII`] digit (`'0'`..=`'9'`), strips the `ESC [` prefix and returns the payload
-/// slice starting at the first digit.
+/// If `chunk` starts with [`CSI_PREFIX`] (`ESC [`) followed by an [`ASCII`] digit
+/// (`'0'`..=`'9'`), strips the [`CSI_PREFIX`] and returns the payload slice starting at
+/// the first digit.
 ///
-/// Returns `None` if `chunk` is too short, does not begin with `ESC [`, or the byte
-/// following `ESC [` is not an [`ASCII`] digit.
+/// Returns `None` if `chunk` is too short, does not begin with [`CSI_PREFIX`], or the
+/// byte following [`CSI_PREFIX`] is not an [`ASCII`] digit.
 ///
-/// [`ANSI_CSI_BRACKET`]: crate::ANSI_CSI_BRACKET
-/// [`ANSI_ESC`]: crate::ANSI_ESC
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+/// [`CSI_PREFIX`]: crate::CSI_PREFIX
 #[must_use]
 pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
-    match *chunk {
-        [ANSI_ESC, ANSI_CSI_BRACKET, first_byte, ..]
-            if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&first_byte) =>
-        {
-            chunk.get(CSI_PREFIX_LEN..)
-        }
-        _ => None,
+    let payload = chunk.strip_prefix(CSI_PREFIX)?;
+    if payload.first()?.is_ascii_digit() {
+        Some(payload)
+    } else {
+        None
     }
 }
 
@@ -93,20 +89,25 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_decimal_digits(digit_bytes: &[u8]) -> Option<u32> {
-    const DECIMAL_RADIX: u32 = 10;
-
     if digit_bytes.is_empty() {
         return None;
     }
+
+    const DECIMAL_RADIX: u32 = 10;
     let mut accumulated_value: u32 = 0;
+
     for byte in digit_bytes.iter().copied() {
-        if !(ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+        if !byte.is_ascii_digit() {
             return None;
         }
-        let digit = (byte - ASCII_DIGIT_0).as_u32_widening();
+
+        // Convert ASCII character byte to its numeric digit value.
+        // E.g., `b'5'` (53 dec) - `b'0'` (48 dec) = 5.
+        let digit_value = (byte - ASCII_DIGIT_0).as_u32_widening();
+
         accumulated_value = accumulated_value
             .saturating_mul(DECIMAL_RADIX)
-            .saturating_add(digit);
+            .saturating_add(digit_value);
     }
     Some(accumulated_value)
 }
@@ -144,7 +145,7 @@ pub fn classify_csi_byte(byte: u8) -> CsiByteToken {
     // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
     // matching against the constant values. The if/else chain correctly compares
     // against the constant values.
-    if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+    if byte.is_ascii_digit() {
         CsiByteToken::Digit(byte - ASCII_DIGIT_0)
     } else if byte == ANSI_PARAM_SEPARATOR {
         CsiByteToken::Separator
@@ -195,10 +196,7 @@ impl ExtractedCsiParams {
 pub fn extract_csi_params(buffer: &[u8]) -> Option<ExtractedCsiParams> {
     const DECIMAL_RADIX: u16 = 10;
 
-    let [ANSI_ESC, ANSI_CSI_BRACKET, ..] = *buffer else {
-        return None;
-    };
-    let payload = buffer.get(CSI_PREFIX_LEN..)?;
+    let payload = buffer.strip_prefix(CSI_PREFIX)?;
 
     let mut params = Vec::new();
     let mut acc_numeric_param: u16 = 0;

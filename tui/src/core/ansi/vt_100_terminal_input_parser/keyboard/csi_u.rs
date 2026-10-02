@@ -10,15 +10,14 @@ use super::{super::{csi_scanner::{parse_decimal_digits, strip_csi_numeric_prefix
             modifiers};
 use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
             core::ansi::constants::{ANSI_CSI_U, ANSI_PARAM_SEPARATOR,
-                                    ANSI_SUBPARAM_SEPARATOR, ASCII_DEL, ASCII_DIGIT_0,
-                                    ASCII_DIGIT_9, CONTROL_BACKSPACE, CONTROL_ENTER,
-                                    CONTROL_ESC, CONTROL_TAB, CSI_PREFIX_LEN,
-                                    KITTY_EVENT_PRESS, KITTY_EVENT_RELEASE,
-                                    KITTY_PUA_DELETE, KITTY_PUA_DOWN, KITTY_PUA_END,
-                                    KITTY_PUA_F1, KITTY_PUA_F12, KITTY_PUA_HOME,
-                                    KITTY_PUA_INSERT, KITTY_PUA_LEFT,
-                                    KITTY_PUA_PAGE_DOWN, KITTY_PUA_PAGE_UP,
-                                    KITTY_PUA_RIGHT, KITTY_PUA_UP,
+                                    ANSI_SUBPARAM_SEPARATOR, ASCII_DEL,
+                                    CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
+                                    CONTROL_TAB, CSI_PREFIX_LEN, KITTY_EVENT_PRESS,
+                                    KITTY_EVENT_RELEASE, KITTY_PUA_DELETE,
+                                    KITTY_PUA_DOWN, KITTY_PUA_END, KITTY_PUA_F1,
+                                    KITTY_PUA_F12, KITTY_PUA_HOME, KITTY_PUA_INSERT,
+                                    KITTY_PUA_LEFT, KITTY_PUA_PAGE_DOWN,
+                                    KITTY_PUA_PAGE_UP, KITTY_PUA_RIGHT, KITTY_PUA_UP,
                                     MODIFIER_PARAMETER_OFFSET}};
 
 /// Parses a [Kitty Keyboard Protocol] sequence (`CSI u`) into a [`VT100InputEventIR`].
@@ -107,7 +106,7 @@ impl<'a> Frame<'a> {
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     fn is_valid_param_byte(byte: u8) -> bool {
-        (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte)
+        byte.is_ascii_digit()
             || byte == ANSI_PARAM_SEPARATOR
             || byte == ANSI_SUBPARAM_SEPARATOR
     }

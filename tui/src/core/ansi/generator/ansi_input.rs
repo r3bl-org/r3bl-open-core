@@ -139,7 +139,7 @@ pub const fn ss3(final_byte: u8) -> [u8; 3] { [ANSI_ESC, ANSI_SS3_O, final_byte]
 /// [`PageUp`]: VT100KeyCodeIR::PageUp
 #[must_use]
 pub fn csi_tilde(code: u16) -> Vec<u8> {
-    let mut seq = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    let mut seq = CSI_PREFIX.to_vec();
     seq.extend(code.to_string().as_bytes());
     seq.push(ANSI_FUNCTION_KEY_TERMINATOR);
     seq
