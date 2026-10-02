@@ -266,7 +266,13 @@ impl OscScanResult {
     /// bytes.
     #[inline]
     fn complete(chunk_len: usize, unconsumed_slice: &[u8]) -> Self {
-        Self::Complete(consumed_offset(chunk_len, unconsumed_slice))
+        Self::Complete(Self::consumed_offset(chunk_len, unconsumed_slice))
+    }
+
+    /// Helper to calculate bytes consumed from the start of the chunk up to `unconsumed`.
+    #[inline]
+    fn consumed_offset(chunk_len: usize, unconsumed_slice: &[u8]) -> ByteOffset {
+        byte_offset(chunk_len - unconsumed_slice.len())
     }
 }
 
@@ -279,12 +285,6 @@ enum CommandScanResult<'a> {
     /// Scanning concluded in Phase 1 (early terminator, incomplete digits, syntax error,
     /// or runaway).
     Concluded(OscScanResult),
-}
-
-/// Helper to calculate bytes consumed from the start of the chunk up to `unconsumed`.
-#[inline]
-fn consumed_offset(chunk_len: usize, unconsumed_slice: &[u8]) -> ByteOffset {
-    byte_offset(chunk_len - unconsumed_slice.len())
 }
 
 #[cfg(test)]

@@ -6,9 +6,7 @@
 
 use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
             core::ansi::constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                    ASCII_DIGIT_0, ASCII_LOWER_A, ASCII_LOWER_Z,
-                                    ASCII_UPPER_A, ASCII_UPPER_Z, CSI_PREFIX,
-                                    CSI_PREFIX_LEN}};
+                                    ASCII_DIGIT_0, CSI_PREFIX, CSI_PREFIX_LEN}};
 
 /// If `chunk` starts with [`CSI_PREFIX`] (`ESC [`) followed by an [`ASCII`] digit
 /// (`'0'`..=`'9'`), strips the [`CSI_PREFIX`] and returns the payload slice starting at
@@ -89,11 +87,12 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_decimal_digits(digit_bytes: &[u8]) -> Option<u32> {
+    const DECIMAL_RADIX: u32 = 10;
+
     if digit_bytes.is_empty() {
         return None;
     }
 
-    const DECIMAL_RADIX: u32 = 10;
     let mut accumulated_value: u32 = 0;
 
     for byte in digit_bytes.iter().copied() {
@@ -131,31 +130,26 @@ pub enum CsiByteToken {
     Invalid,
 }
 
-/// Classifies a raw byte in a [`CSI`] parameter sequence into a [`CsiByteToken`].
-///
-/// [`CSI`]: crate::CsiSequence
-#[must_use]
-pub fn classify_csi_byte(byte: u8) -> CsiByteToken {
-    // IMPORTANT: We use if/else chains instead of match arms because Rust treats
-    // constants in match patterns as variable bindings, not value comparisons.
-    // This is a Rust language limitation documented in RFC 1445.
-    //
-    // Using named constants in match arms like:
-    //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
-    // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
-    // matching against the constant values. The if/else chain correctly compares
-    // against the constant values.
-    if byte.is_ascii_digit() {
-        CsiByteToken::Digit(byte - ASCII_DIGIT_0)
-    } else if byte == ANSI_PARAM_SEPARATOR {
-        CsiByteToken::Separator
-    } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
-        || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
-        || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
-    {
-        CsiByteToken::Terminator(byte)
-    } else {
-        CsiByteToken::Invalid
+impl CsiByteToken {
+    /// Classifies a raw byte in a [`CSI`] parameter sequence into a [`CsiByteToken`].
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[must_use]
+    pub fn classify(byte: u8) -> Self {
+        // IMPORTANT: We use guard clauses instead of match arms because Rust treats
+        // range constants in match patterns as variable bindings, not value comparisons
+        // (RFC 1445). The if checks correctly compare against constants and ASCII
+        // predicates.
+        if byte.is_ascii_digit() {
+            return Self::Digit(byte - ASCII_DIGIT_0);
+        }
+        if byte == ANSI_PARAM_SEPARATOR {
+            return Self::Separator;
+        }
+        if byte == ANSI_FUNCTION_KEY_TERMINATOR || byte.is_ascii_alphabetic() {
+            return Self::Terminator(byte);
+        }
+        Self::Invalid
     }
 }
 
@@ -174,6 +168,56 @@ pub struct ExtractedCsiParams {
 }
 
 impl ExtractedCsiParams {
+    /// Extracts numeric parameters, final byte, and scanned byte count from a [`CSI`]
+    /// buffer.
+    ///
+    /// The returned [`ExtractedCsiParams`] contains the parsed parameters, terminator
+    /// byte, and scanner cursor displacement across the parameter body (from after
+    /// `ESC [` through the final byte).
+    ///
+    /// [`CSI`]: crate::CsiSequence
+    #[must_use]
+    pub fn extract(buffer: &[u8]) -> Option<Self> {
+        const DECIMAL_RADIX: u16 = 10;
+
+        let payload = buffer.strip_prefix(CSI_PREFIX)?;
+
+        let mut params = Vec::new();
+        let mut acc_numeric_param: u16 = 0;
+        let mut final_byte: Option<u8> = None;
+        let mut bytes_scanned = byte_offset(0);
+
+        for byte in payload.iter().copied() {
+            bytes_scanned += byte_offset(1);
+
+            match CsiByteToken::classify(byte) {
+                CsiByteToken::Digit(digit) => {
+                    acc_numeric_param = acc_numeric_param
+                        .saturating_mul(DECIMAL_RADIX)
+                        .saturating_add(digit.as_u16_widening());
+                }
+                CsiByteToken::Separator => {
+                    params.push(acc_numeric_param);
+                    acc_numeric_param = 0;
+                }
+                CsiByteToken::Terminator(terminator) => {
+                    params.push(acc_numeric_param);
+                    final_byte = Some(terminator);
+                    break;
+                }
+                CsiByteToken::Invalid => return None,
+            }
+        }
+
+        let final_byte = final_byte?;
+
+        Some(Self {
+            params,
+            final_byte,
+            bytes_scanned,
+        })
+    }
+
     /// Total bytes consumed from the buffer including the `ESC [` prefix
     /// ([`CSI_PREFIX_LEN`]).
     ///
@@ -184,56 +228,6 @@ impl ExtractedCsiParams {
     }
 }
 
-/// Extracts numeric parameters, final byte, and scanned byte count from a [`CSI`]
-/// buffer.
-///
-/// The returned [`ExtractedCsiParams`] contains the parsed parameters, terminator
-/// byte, and scanner cursor displacement across the parameter body (from after
-/// `ESC [` through the final byte).
-///
-/// [`CSI`]: crate::CsiSequence
-#[must_use]
-pub fn extract_csi_params(buffer: &[u8]) -> Option<ExtractedCsiParams> {
-    const DECIMAL_RADIX: u16 = 10;
-
-    let payload = buffer.strip_prefix(CSI_PREFIX)?;
-
-    let mut params = Vec::new();
-    let mut acc_numeric_param: u16 = 0;
-    let mut final_byte: Option<u8> = None;
-    let mut bytes_scanned = byte_offset(0);
-
-    for byte in payload.iter().copied() {
-        bytes_scanned += byte_offset(1);
-
-        match classify_csi_byte(byte) {
-            CsiByteToken::Digit(digit) => {
-                acc_numeric_param = acc_numeric_param
-                    .saturating_mul(DECIMAL_RADIX)
-                    .saturating_add(digit.as_u16_widening());
-            }
-            CsiByteToken::Separator => {
-                params.push(acc_numeric_param);
-                acc_numeric_param = 0;
-            }
-            CsiByteToken::Terminator(terminator) => {
-                params.push(acc_numeric_param);
-                final_byte = Some(terminator);
-                break;
-            }
-            CsiByteToken::Invalid => return None,
-        }
-    }
-
-    let final_byte = final_byte?;
-
-    Some(ExtractedCsiParams {
-        params,
-        final_byte,
-        bytes_scanned,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,34 +235,35 @@ mod tests {
     #[test]
     fn test_classify_csi_byte() {
         // Digits.
-        assert_eq!(classify_csi_byte(b'0'), CsiByteToken::Digit(0));
-        assert_eq!(classify_csi_byte(b'9'), CsiByteToken::Digit(9));
+        assert_eq!(CsiByteToken::classify(b'0'), CsiByteToken::Digit(0));
+        assert_eq!(CsiByteToken::classify(b'9'), CsiByteToken::Digit(9));
 
         // Separator.
-        assert_eq!(classify_csi_byte(b';'), CsiByteToken::Separator);
+        assert_eq!(CsiByteToken::classify(b';'), CsiByteToken::Separator);
 
         // Terminators.
-        assert_eq!(classify_csi_byte(b'~'), CsiByteToken::Terminator(b'~'));
-        assert_eq!(classify_csi_byte(b'A'), CsiByteToken::Terminator(b'A'));
-        assert_eq!(classify_csi_byte(b'Z'), CsiByteToken::Terminator(b'Z'));
-        assert_eq!(classify_csi_byte(b'a'), CsiByteToken::Terminator(b'a'));
-        assert_eq!(classify_csi_byte(b'u'), CsiByteToken::Terminator(b'u'));
-        assert_eq!(classify_csi_byte(b'z'), CsiByteToken::Terminator(b'z'));
+        assert_eq!(CsiByteToken::classify(b'~'), CsiByteToken::Terminator(b'~'));
+        assert_eq!(CsiByteToken::classify(b'A'), CsiByteToken::Terminator(b'A'));
+        assert_eq!(CsiByteToken::classify(b'Z'), CsiByteToken::Terminator(b'Z'));
+        assert_eq!(CsiByteToken::classify(b'a'), CsiByteToken::Terminator(b'a'));
+        assert_eq!(CsiByteToken::classify(b'u'), CsiByteToken::Terminator(b'u'));
+        assert_eq!(CsiByteToken::classify(b'z'), CsiByteToken::Terminator(b'z'));
 
         // Invalid ASCII boundaries and control characters.
-        assert_eq!(classify_csi_byte(b'@'), CsiByteToken::Invalid); // Before 'A'.
-        assert_eq!(classify_csi_byte(b'['), CsiByteToken::Invalid); // After 'Z'.
-        assert_eq!(classify_csi_byte(b'`'), CsiByteToken::Invalid); // Before 'a'.
-        assert_eq!(classify_csi_byte(b'{'), CsiByteToken::Invalid); // After 'z'.
-        assert_eq!(classify_csi_byte(b'?'), CsiByteToken::Invalid);
-        assert_eq!(classify_csi_byte(b' '), CsiByteToken::Invalid);
+        assert_eq!(CsiByteToken::classify(b'@'), CsiByteToken::Invalid); // Before 'A'.
+        assert_eq!(CsiByteToken::classify(b'['), CsiByteToken::Invalid); // After 'Z'.
+        assert_eq!(CsiByteToken::classify(b'`'), CsiByteToken::Invalid); // Before 'a'.
+        assert_eq!(CsiByteToken::classify(b'{'), CsiByteToken::Invalid); // After 'z'.
+        assert_eq!(CsiByteToken::classify(b'?'), CsiByteToken::Invalid);
+        assert_eq!(CsiByteToken::classify(b' '), CsiByteToken::Invalid);
     }
 
     #[test]
     fn test_extract_csi_params() {
         // Multi-parameter sequence: ESC [ 1 ; 2 H.
         let buffer = b"\x1b[1;2H";
-        let extracted = extract_csi_params(buffer).expect("Should extract CSI params");
+        let extracted =
+            ExtractedCsiParams::extract(buffer).expect("Should extract CSI params");
         assert_eq!(extracted.params, vec![1, 2]);
         assert_eq!(extracted.final_byte, b'H');
         assert_eq!(extracted.bytes_scanned, byte_offset(4));
@@ -277,7 +272,7 @@ mod tests {
         // Single parameter sequence: ESC [ 5 ~.
         let buffer_tilde = b"\x1b[5~";
         let extracted_tilde =
-            extract_csi_params(buffer_tilde).expect("Should extract CSI params");
+            ExtractedCsiParams::extract(buffer_tilde).expect("Should extract CSI params");
         assert_eq!(extracted_tilde.params, vec![5]);
         assert_eq!(extracted_tilde.final_byte, b'~');
         assert_eq!(extracted_tilde.bytes_scanned, byte_offset(2));
@@ -285,8 +280,8 @@ mod tests {
 
         // Lowercase terminator (e.g. Kitty CSI u: ESC [ 91 ; 3 u).
         let buffer_kitty = b"\x1b[91;3u";
-        let extracted_kitty =
-            extract_csi_params(buffer_kitty).expect("Should extract CSI u params");
+        let extracted_kitty = ExtractedCsiParams::extract(buffer_kitty)
+            .expect("Should extract CSI u params");
         assert_eq!(extracted_kitty.params, vec![91, 3]);
         assert_eq!(extracted_kitty.final_byte, b'u');
         assert_eq!(extracted_kitty.bytes_scanned, byte_offset(5));
@@ -294,16 +289,16 @@ mod tests {
 
         // Invalid byte in parameter body.
         let buffer_invalid = b"\x1b[1;?H";
-        assert!(extract_csi_params(buffer_invalid).is_none());
+        assert!(ExtractedCsiParams::extract(buffer_invalid).is_none());
 
         // Missing ESC [ prefix.
-        assert!(extract_csi_params(b"1;2H").is_none());
-        assert!(extract_csi_params(b"\x1b").is_none());
-        assert!(extract_csi_params(b"").is_none());
+        assert!(ExtractedCsiParams::extract(b"1;2H").is_none());
+        assert!(ExtractedCsiParams::extract(b"\x1b").is_none());
+        assert!(ExtractedCsiParams::extract(b"").is_none());
 
         // Truncated buffer / missing terminator.
-        assert!(extract_csi_params(b"\x1b[1;2").is_none());
-        assert!(extract_csi_params(b"\x1b[").is_none());
+        assert!(ExtractedCsiParams::extract(b"\x1b[1;2").is_none());
+        assert!(ExtractedCsiParams::extract(b"\x1b[").is_none());
     }
 
     #[test]

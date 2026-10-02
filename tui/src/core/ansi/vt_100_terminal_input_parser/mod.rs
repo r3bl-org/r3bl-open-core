@@ -243,7 +243,7 @@
 //! ### [`csi_scanner`]
 //! - Zero-allocation prefix validation via [`strip_csi_numeric_prefix()`]
 //! - In-place integer parsing via [`parse_decimal_digits()`]
-//! - Extraction of parameters and separators via [`extract_csi_params()`]
+//! - Extraction of parameters and separators via [`ExtractedCsiParams::extract()`]
 //!
 //! ### [`osc_scanner`]
 //! - Fast single-pass lexical scanning of inbound [`OSC`] sequences
@@ -342,7 +342,8 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
-//! [`extract_csi_params()`]: crate::vt_100_terminal_input_parser::csi_scanner::extract_csi_params
+//! [`ExtractedCsiParams::extract()`]:
+//!     crate::vt_100_terminal_input_parser::csi_scanner::ExtractedCsiParams::extract
 //! [`generator`]: mod@crate::generator
 //! [`Ghostty`]: https://ghostty.org/
 //! [`input_byte_stream_to_ir`]: mod@input_byte_stream_to_ir

@@ -77,7 +77,7 @@
 //!     mod@super#bidirectional-communication-user-input-vs-terminal-responses
 //! [parent module documentation]: mod@super#primary-consumer
 
-use super::{csi_scanner::extract_csi_params,
+use super::{csi_scanner::ExtractedCsiParams,
             ir_event_types::{ParsedInputEventIR, VT100FocusStateIR, VT100InputEventIR,
                              VT100KeyCodeIR, VT100KeyModifiersIR, VT100PasteModeIR},
             maybe_more::MaybeMore,
@@ -134,7 +134,7 @@ pub mod csi {
     ///
     /// [`CSI`]: crate::CsiSequence
     fn parse_csi_terminal_parameters(chunk: &[u8]) -> Option<ParsedInputEventIR> {
-        let extracted = extract_csi_params(chunk)?;
+        let extracted = ExtractedCsiParams::extract(chunk)?;
         let event = parse_params(&extracted.params, extracted.final_byte)?;
         Some(ParsedInputEventIR::new(event, extracted.total_consumed()))
     }

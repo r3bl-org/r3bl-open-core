@@ -4,7 +4,7 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 
-use super::{super::{csi_scanner,
+use super::{super::{csi_scanner::ExtractedCsiParams,
                     ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                      VT100KeyCodeIR, VT100KeyModifiersIR}},
             csi_u, modifiers};
@@ -146,7 +146,7 @@ pub fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEventIR> {
 /// [`CSI`]: crate::CsiSequence
 #[must_use]
 pub fn parse_csi_parameters(buffer: &[u8]) -> Option<ParsedInputEventIR> {
-    let extracted = csi_scanner::extract_csi_params(buffer)?;
+    let extracted = ExtractedCsiParams::extract(buffer)?;
 
     // Parse based on parameters and final byte.
     let event = decode_csi_event(&extracted.params, extracted.final_byte)?;
