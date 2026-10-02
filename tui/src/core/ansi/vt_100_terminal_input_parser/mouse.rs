@@ -499,7 +499,7 @@ mod helpers {
     use super::*;
 
     /// Helper to parse decimal coordinate triplet `"Cb;Cx;Cy"` from [`SGR`] or [`RXVT`]
-    /// payloads into `(button_code, col, row)`.
+    /// payloads into `(button_code, col, row)` using [`parse_decimal_digits()`][digits].
     ///
     /// # Returns
     ///
@@ -508,6 +508,7 @@ mod helpers {
     ///
     /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     /// [`SGR`]: crate::SgrCode
+    /// [digits]: crate::vt_100_terminal_input_parser::csi_scanner::parse_decimal_digits
     pub fn parse_semicolon_triplet(payload: &[u8]) -> Option<(u16, u16, u16)> {
         let mut parts = payload.split(|&byte| byte == ANSI_PARAM_SEPARATOR);
         let cb = parse_decimal_digits(parts.next()?)?.as_u16_narrowing();

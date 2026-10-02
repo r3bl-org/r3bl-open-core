@@ -19,11 +19,11 @@ use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
 /// [`CSI_PREFIX`]: crate::CSI_PREFIX
 #[must_use]
 pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
-    let payload = chunk.strip_prefix(CSI_PREFIX)?;
-    if payload.first()?.is_ascii_digit() {
-        Some(payload)
-    } else {
-        None
+    let payload_slice = chunk.strip_prefix(CSI_PREFIX)?;
+    let first_byte = payload_slice.first()?;
+    match first_byte.is_ascii_digit() {
+        true => Some(payload_slice),
+        false => None,
     }
 }
 
@@ -40,19 +40,23 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 ///
 /// Rather than allocating or converting the slice into a `&str` (which requires a
 /// [`UTF-8`] validation pass), this function parses the text representation of the number
-/// directly from the raw byte stream:
+/// directly from the raw byte stream into an integer ([`u32`]).
+///
+/// See [`Rust Character And Byte Types`] in [`utf8`] for a detailed breakdown of how Rust
+/// differentiates between 1-byte [`ASCII`] byte literals (`b'9'`), 4-byte Unicode
+/// characters (`'9'`), and [`UTF-8`] strings (`"9"`).
 ///
 /// ```text
 /// The byte slice b"91" contains ASCII bytes, where each byte is a text-formatted digit:
 ///
-/// Index:    0   1
-///         ┌───┬───┐
-/// Slice:  │ 9 │ 1 │ <- b"91" is string syntax shorthand for the byte slice (&[u8])
-///         └───┴───┘    &[b'9', b'1']
-///           │   │
-///           ▼   ▼
-///          '9' '1'  <- char
-///          57  49   <- decimal value
+/// Index:      0      1
+///         ┌──────┬──────┐
+/// Slice:  │ b'9' │ b'1' │ <- &[u8] byte slice, i.e. &[b'9', b'1']
+///         └──────┴──────┘
+///             │      │
+///             ▼      ▼
+///            57     49    <- actual u8 decimal values in memory
+///            9      1     <- ASCII character digit
 ///
 /// Resulting u32 integer: 91 (we need u32 to be spec compliant).
 /// ```
@@ -86,17 +90,19 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`atoi`]: https://man7.org/linux/man-pages/man3/atoi.3.html
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
+/// [`Rust Character And Byte Types`]: mod@super::utf8#rust-character-and-byte-types
 /// [`str::parse::<u32>()`]: str::parse
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+/// [`utf8`]: mod@super::utf8
 #[must_use]
 pub fn parse_decimal_digits(slice: &[u8]) -> Option<u32> {
     const DECIMAL_RADIX: u32 = 10;
 
     // Early return if the slice is empty or is not a text formatted number.
     let chunk_is_empty = slice.is_empty();
-    let chunk_contains_text_formatted_number =
+    let chunk_contains_only_text_formatted_numbers =
         slice.iter().all(|byte| (*byte).is_ascii_digit());
-    if chunk_is_empty || !chunk_contains_text_formatted_number {
+    if chunk_is_empty || !chunk_contains_only_text_formatted_numbers {
         return None;
     }
 
@@ -107,11 +113,12 @@ pub fn parse_decimal_digits(slice: &[u8]) -> Option<u32> {
     for byte in text_formatted_number_slice.iter().copied() {
         // Convert ASCII character byte to its numeric digit value.
         // E.g., `b'5'` (53 dec) - `b'0'` (48 dec) = 5.
-        let digit = byte - ASCII_DIGIT_0;
+        let numeric_value = byte - ASCII_DIGIT_0;
         accumulated_value = accumulated_value
             .saturating_mul(DECIMAL_RADIX)
-            .saturating_add(digit.as_u32_widening());
+            .saturating_add(numeric_value.as_u32_widening());
     }
+
     Some(accumulated_value)
 }
 

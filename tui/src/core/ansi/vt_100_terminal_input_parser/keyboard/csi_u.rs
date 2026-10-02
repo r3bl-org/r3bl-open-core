@@ -48,10 +48,15 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// | `ESC [ 91 ; 3 : 1 u` | `Alt+[`                        | Press event (`:1`)           |
 /// | `ESC [ 91 ; 3 : 3 u` | [`VT100InputEventIR::Ignored`] | Release event (`:3`)         |
 ///
+/// All decimal parameters (codepoints, modifiers, and event types) are text-formatted
+/// [`ASCII`] digit slices parsed directly from the byte stream via
+/// [`parse_decimal_digits()`].
+///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`Ghostty`]: https://ghostty.org/
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 /// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
+/// [`parse_decimal_digits()`]: super::super::csi_scanner::parse_decimal_digits
 /// [`stdout`]: std::io::stdout
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
