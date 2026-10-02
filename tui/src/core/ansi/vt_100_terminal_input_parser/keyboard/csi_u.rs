@@ -60,31 +60,31 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
 #[must_use]
 pub fn parse_csi_u_sequence(chunk: &[u8]) -> Option<ParsedInputEventIR> {
-    let framing = CsiUFraming::extract(chunk)?;
-    let params = CsiUParams::parse(framing.parameter_bytes)?;
-    let event = params.decode()?;
+    let frame = Frame::try_extract(chunk)?;
+    let params = Params::try_parse(frame.parameter_bytes)?;
+    let event = params.try_decode()?;
 
-    Some(ParsedInputEventIR::new(event, framing.bytes_consumed))
+    Some(ParsedInputEventIR::new(event, frame.bytes_consumed))
 }
 
-/// Framing information containing the extracted parameter slice and total bytes consumed
+/// Frame information containing the extracted parameter slice and total bytes consumed
 /// by a `CSI u` sequence.
 #[derive(Debug, PartialEq, Eq)]
-struct CsiUFraming<'a> {
+struct Frame<'a> {
     parameter_bytes: &'a [u8],
     bytes_consumed: ByteOffset,
 }
 
-impl<'a> CsiUFraming<'a> {
+impl<'a> Frame<'a> {
     /// Validates sequence framing and extracts the raw parameter byte slice.
     ///
     /// Ensures the sequence begins with `ESC [ <digit>`, contains a terminating `u`
     /// ([`ANSI_CSI_U`]), and that all parameter bytes are valid decimal digits or
     /// separators.
-    fn extract(chunk: &'a [u8]) -> Option<Self> {
+    fn try_extract(chunk: &'a [u8]) -> Option<Self> {
         let payload = strip_csi_numeric_prefix(chunk)?;
-        let term_idx = payload.iter().position(|byte| *byte == ANSI_CSI_U)?;
-        let parameter_bytes = payload.get(..term_idx)?;
+        let final_byte_index = payload.iter().position(|byte| *byte == ANSI_CSI_U)?;
+        let parameter_bytes = payload.get(..final_byte_index)?;
 
         if !parameter_bytes
             .iter()
@@ -94,7 +94,7 @@ impl<'a> CsiUFraming<'a> {
             return None;
         }
 
-        let full_seq = chunk.get(..CSI_PREFIX_LEN + term_idx + 1)?;
+        let full_seq = chunk.get(..CSI_PREFIX_LEN + final_byte_index + 1)?;
 
         Some(Self {
             parameter_bytes,
@@ -116,26 +116,26 @@ impl<'a> CsiUFraming<'a> {
 /// Parsed parameters of a `CSI u` sequence:
 /// `ESC [ <codepoint> ; <modifier> : <event_type> u`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CsiUParams {
+struct Params {
     codepoint: u32,
     modifier_param: u8,
     event_type: u8,
 }
 
-impl CsiUParams {
+impl Params {
     /// Parses the raw parameter slice into codepoint and modifier information.
     ///
     /// The parameter slice is separated by `;` into:
     /// 1. Codepoint parameter (mandatory, e.g. `"91"` or `"91:93"`).
     /// 2. Modifier parameter (optional, e.g. `"3"`, `"3:1"`, `""`, or omitted as in
     ///    `"91"`).
-    fn parse(parameter_bytes: &[u8]) -> Option<Self> {
+    fn try_parse(parameter_bytes: &[u8]) -> Option<Self> {
         let mut parameter_parts =
             parameter_bytes.split(|byte| *byte == ANSI_PARAM_SEPARATOR);
         let codepoint_param_slice = parameter_parts.next()?;
         let maybe_modifier_param_slice = parameter_parts.next();
 
-        let codepoint = Self::parse_codepoint(codepoint_param_slice)?;
+        let codepoint = Self::try_parse_codepoint(codepoint_param_slice)?;
         let mut params = Self {
             codepoint,
             modifier_param: MODIFIER_PARAMETER_OFFSET,
@@ -145,20 +145,20 @@ impl CsiUParams {
         if let Some(modifier_slice) = maybe_modifier_param_slice
             && !modifier_slice.is_empty()
         {
-            params.apply_modifier_slice(modifier_slice)?;
+            params.try_apply_modifier_slice(modifier_slice)?;
         }
 
         Some(params)
     }
 
-    /// Decodes the parsed [`CsiUParams`] into a [`VT100InputEventIR`].
-    fn decode(self) -> Option<VT100InputEventIR> {
+    /// Decodes the parsed [`Params`] into a [`VT100InputEventIR`].
+    fn try_decode(self) -> Option<VT100InputEventIR> {
         if self.event_type == KITTY_EVENT_RELEASE {
             return Some(VT100InputEventIR::Ignored);
         }
 
         let key_modifiers = modifiers::decode_modifiers(self.modifier_param);
-        let key_code = Self::decode_codepoint(self.codepoint)?;
+        let key_code = Self::try_decode_codepoint(self.codepoint)?;
 
         Some(VT100InputEventIR::Keyboard {
             code: key_code,
@@ -168,7 +168,7 @@ impl CsiUParams {
 
     /// Parses the mandatory codepoint parameter, ignoring any colon-separated alternate
     /// keys (e.g. `"91:93"` -> `91`).
-    fn parse_codepoint(codepoint_param_slice: &[u8]) -> Option<u32> {
+    fn try_parse_codepoint(codepoint_param_slice: &[u8]) -> Option<u32> {
         let codepoint_digit_bytes = codepoint_param_slice
             .split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR)
             .next()?;
@@ -185,7 +185,7 @@ impl CsiUParams {
     ///   event.
     ///
     /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
-    fn apply_modifier_slice(&mut self, modifier_param_slice: &[u8]) -> Option<()> {
+    fn try_apply_modifier_slice(&mut self, modifier_param_slice: &[u8]) -> Option<()> {
         let mut modifier_sub_parts =
             modifier_param_slice.split(|&byte| byte == ANSI_SUBPARAM_SEPARATOR);
 
@@ -208,7 +208,7 @@ impl CsiUParams {
         Some(())
     }
 
-    fn decode_codepoint(codepoint: u32) -> Option<VT100KeyCodeIR> {
+    fn try_decode_codepoint(codepoint: u32) -> Option<VT100KeyCodeIR> {
         // Standard ASCII control characters.
         if let Ok(ascii_byte) = u8::try_from(codepoint) {
             match ascii_byte {
@@ -527,12 +527,11 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_csi_u_framing() {
+    fn test_try_extract_csi_u_frame() {
         let input = b"\x1b[91;3u_trailing";
-        let framing =
-            CsiUFraming::extract(input).expect("Should extract valid CSI u framing");
-        assert_eq!(framing.parameter_bytes, b"91;3");
-        assert_eq!(framing.bytes_consumed, byte_offset(7));
+        let frame = Frame::try_extract(input).expect("Should extract valid CSI u frame");
+        assert_eq!(frame.parameter_bytes, b"91;3");
+        assert_eq!(frame.bytes_consumed, byte_offset(7));
     }
 
     #[test]
