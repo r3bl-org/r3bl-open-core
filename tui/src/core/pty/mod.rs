@@ -3,7 +3,7 @@
 //! # [`PTY`] Module
 //!
 //! This module provides a high-level, synchronous interface (with an opt-in async
-//! adapter) for spawning and controlling processes in [pseudoterminals] ([`PTY`]s). It is
+//! adapter) for spawning and controlling processes in [pseudoterminals] ([`PTY`]). It is
 //! designed to be the foundational engine for terminal multiplexers (like [`tmux`]),
 //! interactive shells, and TUI applications.
 //!
@@ -131,11 +131,11 @@
 //! flow begins.
 //!
 //! - **App Layer**: Sends to the session and receives events from it:
-//!   - Sends [`PtyInputEvent`]s, e.g., keyboard input, and resize requests. See
+//!   - Sends [`PtyInputEvent`] instances, e.g., keyboard input, and resize requests. See
 //!     [`ProcessManager::send_input()`] and [`ProcessManager::handle_terminal_resize()`])
 //!     for examples.
-//!   - Receives [`PtyOutputEvent`]s, e.g., process output, [`OSC`] sequences, and exit
-//!     status. See [`ProcessManager::poll_all_processes()`]) for examples.
+//!   - Receives [`PtyOutputEvent`] instances, e.g., process output, [`OSC`] sequences,
+//!     and exit status. See [`ProcessManager::poll_all_processes()`]) for examples.
 //! - **Session Layer**: The thread trio works to connect the app layer to the engine.
 //!   - The [Writer Thread] pumps input events to the engine.
 //!   - The [Reader Thread] drains output from the engine.
@@ -309,7 +309,7 @@
 //!      on Linux PTYs, and up to [`64 KB`] on Windows [`ConPTY`] pipes).
 //!    - When full, the OS kernel blocks the child's [`write()`] system call: the child is
 //!      "Put to Sleep" / "Blocked" ([`TASK_INTERRUPTIBLE`], State `S`), consuming zero
-//!      CPU while remaining fully responsive to kill signals and Ctrl+C.
+//!      CPU while remaining fully responsive to kill signals and `Ctrl+C`.
 //! 2. **Gate 2: The Synchronous Channel Buffer (User Space)**:
 //!    - The dedicated reader thread ([`pty-reader`]) drains the controller and forwards
 //!      events via [`SyncSender::send()`].
@@ -394,9 +394,9 @@
 //!
 //! > **Note on TUI Rendering**: While child processes use [`terminfo`] masquerading, our
 //! > own rendering engine entirely bypasses [`terminfo`]. See the [`direct_to_ansi` mod
-//! > docs: Bypassing `terminfo`] section for why this provides robustness over SSH. For the
-//! > complete matrix of terminal protocols and capabilities, see the [`direct_to_ansi` mod
-//! > docs: Terminal Protocols & Capabilities Hub][hub].
+//! > docs: Bypassing `terminfo`] section for why this provides robustness over SSH. For
+//! > the complete matrix of terminal protocols and capabilities, see the
+//! > [`direct_to_ansi` mod docs: Terminal Protocols & Capabilities Hub][hub].
 //!
 //! ## Main Types
 //!
@@ -418,7 +418,8 @@
 //!     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 //! [`ControlledChild::wait()`]: portable_pty::Child::wait
 //! [`DefaultSize::PtyChannelBufferSize`]: crate::DefaultSize::PtyChannelBufferSize
-//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
+//! [`direct_to_ansi` mod docs: Bypassing `terminfo`]:
+//!     mod@crate::tui::terminal_lib_backends::direct_to_ansi#architecture-note-bypassing-terminfo
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`EIO`]: https://man7.org/linux/man-pages/man3/errno.3.html
 //! [`EOF`]: https://en.wikipedia.org/wiki/End-of-file

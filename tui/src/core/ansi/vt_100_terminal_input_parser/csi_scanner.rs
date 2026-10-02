@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_extract_csi_params() {
-        // Multi-parameter sequence: ESC [ 1 ; 2 H.
+        // Multi-parameter sequence: `ESC [ 1 ; 2 H`.
         let buffer = b"\x1b[1;2H";
         let extracted =
             ExtractedCsiParams::extract(buffer).expect("Should extract CSI params");
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(extracted_tilde.bytes_scanned, byte_offset(2));
         assert_eq!(extracted_tilde.total_consumed(), byte_offset(4));
 
-        // Lowercase terminator (e.g. Kitty CSI u: ESC [ 91 ; 3 u).
+        // Lowercase terminator (e.g. Kitty `CSI u`: `ESC [ 91 ; 3 u)`.
         let buffer_kitty = b"\x1b[91;3u";
         let extracted_kitty = ExtractedCsiParams::extract(buffer_kitty)
             .expect("Should extract CSI u params");

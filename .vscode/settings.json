@@ -43,6 +43,9 @@
     "harper.excludePatterns": [
         "**/.harper-dictionary.txt",
         "**/task/**",
-        "**/task/done/**"
+        "**/task/done/**",
+        "**/.rustup/**",
+        "**/.cargo/**",
+        "**/target/**"
     ]
 }

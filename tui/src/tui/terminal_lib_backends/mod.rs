@@ -147,7 +147,7 @@
 //! - [`render_pipeline`] - **(Stage 2)** Collects & organizes [`RenderOpIR`] by Z-order
 //! - [`compositor_render_ops_to_ofs_buf`] - **(Stage 3)** Renders [`RenderOpsIR`] to
 //!   [`OfsBuf`]
-//! - [`ofs_buf`] - Virtual terminal buffer (2D grid of styled [`PixelChar`]s)
+//! - [`ofs_buf`] - Virtual terminal buffer (2D grid of styled [`PixelChar`])
 //!   - [`ofs_buf::paint_impl`] - **(Stage 4: Shared)** Converts buffer → optimized
 //!     operations (used by both Crossterm and `DirectToAnsi`)
 //! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm

@@ -330,15 +330,15 @@ TIOCGWINSZ
 TIOCSCTTY
 TOCTOU
 TODONE
-TTY
-Teardown
 TerminalWindow
 Tifinagh
 Tilix
 Timeshift
+Tokio
 Tonglet
 Typestate
 UART
+UNIX
 USERPROFILE
 UTF
 Underflowed
@@ -795,6 +795,7 @@ println
 probiotics
 processenv
 pseudoconsole
+pseudoterminal
 pseudoterminals
 ptmx
 ptsname
@@ -922,6 +923,7 @@ tauri
 tcgetattr
 tcgetwinsize
 tcsetattr
+teardown
 tempdir
 tempfile
 termcap
@@ -957,6 +959,7 @@ trnql
 truecolor
 trunc
 ttimeoutlen
+tty
 tui
 tuicolor
 tuicore

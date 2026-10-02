@@ -94,10 +94,11 @@
 //! ```
 //!
 //! **Why raw mode?** The program needs to:
-//! - Capture every keystroke immediately (no line buffering)
-//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants
-//! - Detect special keys (arrows, function keys) sent as **escape sequences**
-//! - Control the cursor, colors, and screen layout
+//! - Capture every keystroke immediately (no line buffering).
+//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants to
+//!   copy something.
+//! - Detect special keys (arrows, function keys) sent as **escape sequences**.
+//! - Control the cursor, colors, and screen layout.
 //!
 //! ### Escape Sequences in Raw Mode
 //!

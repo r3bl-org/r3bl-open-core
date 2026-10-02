@@ -342,8 +342,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
-//! [`ExtractedCsiParams::extract()`]:
-//!     crate::vt_100_terminal_input_parser::csi_scanner::ExtractedCsiParams::extract
+//! [`ExtractedCsiParams::extract()`]: crate::vt_100_terminal_input_parser::csi_scanner::ExtractedCsiParams::extract
 //! [`generator`]: mod@crate::generator
 //! [`Ghostty`]: https://ghostty.org/
 //! [`input_byte_stream_to_ir`]: mod@input_byte_stream_to_ir
