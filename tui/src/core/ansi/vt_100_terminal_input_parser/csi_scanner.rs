@@ -21,9 +21,10 @@ use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
 pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
     let payload_slice = chunk.strip_prefix(CSI_PREFIX)?;
     let first_byte = payload_slice.first()?;
-    match first_byte.is_ascii_digit() {
-        true => Some(payload_slice),
-        false => None,
+    if first_byte.is_ascii_digit() {
+        Some(payload_slice)
+    } else {
+        None
     }
 }
 
@@ -122,35 +123,37 @@ pub fn parse_decimal_digits(slice: &[u8]) -> Option<u32> {
     Some(accumulated_value)
 }
 
-/// Lexical token of a byte scanned inside a [`CSI`] parameter sequence.
+/// Represents the role of a byte inside a [`CSI`] sequence.
 ///
 /// [`CSI`]: crate::CsiSequence
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum CsiByteToken {
+pub enum CsiByteKind {
     /// Decimal digit with its numeric value `0..=9`.
     Digit(u8),
+
     /// Parameter separator `;` ([`ANSI_PARAM_SEPARATOR`]).
     Separator,
+
     /// Terminating character (`~` or [`ASCII`] letter).
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     Terminator(u8),
+
     /// Any byte that is invalid in a numeric [`CSI`] sequence.
     ///
     /// [`CSI`]: crate::CsiSequence
     Invalid,
 }
 
-impl CsiByteToken {
-    /// Classifies a raw byte in a [`CSI`] parameter sequence into a [`CsiByteToken`].
+impl CsiByteKind {
+    /// Classifies a raw byte in a [`CSI`] parameter sequence into a [`CsiByteKind`].
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
     pub fn classify(byte: u8) -> Self {
-        // IMPORTANT: We use guard clauses instead of match arms because Rust treats
-        // range constants in match patterns as variable bindings, not value comparisons
-        // (RFC 1445). The if checks correctly compare against constants and ASCII
-        // predicates.
+        // IMPORTANT: We don't use match arms here because Rust treats range constants in
+        // match patterns as variable bindings, not value comparisons (RFC 1445). The if
+        // checks correctly compare against constants and ASCII predicates.
         if byte.is_ascii_digit() {
             return Self::Digit(byte - ASCII_DIGIT_0);
         }
@@ -201,22 +204,22 @@ impl ExtractedCsiParams {
         for byte in payload.iter().copied() {
             bytes_scanned += byte_offset(1);
 
-            match CsiByteToken::classify(byte) {
-                CsiByteToken::Digit(digit) => {
+            match CsiByteKind::classify(byte) {
+                CsiByteKind::Digit(digit) => {
                     acc_numeric_param = acc_numeric_param
                         .saturating_mul(DECIMAL_RADIX)
                         .saturating_add(digit.as_u16_widening());
                 }
-                CsiByteToken::Separator => {
+                CsiByteKind::Separator => {
                     params.push(acc_numeric_param);
                     acc_numeric_param = 0;
                 }
-                CsiByteToken::Terminator(terminator) => {
+                CsiByteKind::Terminator(terminator) => {
                     params.push(acc_numeric_param);
                     final_byte = Some(terminator);
                     break;
                 }
-                CsiByteToken::Invalid => return None,
+                CsiByteKind::Invalid => return None,
             }
         }
 
@@ -246,27 +249,27 @@ mod tests {
     #[test]
     fn test_classify_csi_byte() {
         // Digits.
-        assert_eq!(CsiByteToken::classify(b'0'), CsiByteToken::Digit(0));
-        assert_eq!(CsiByteToken::classify(b'9'), CsiByteToken::Digit(9));
+        assert_eq!(CsiByteKind::classify(b'0'), CsiByteKind::Digit(0));
+        assert_eq!(CsiByteKind::classify(b'9'), CsiByteKind::Digit(9));
 
         // Separator.
-        assert_eq!(CsiByteToken::classify(b';'), CsiByteToken::Separator);
+        assert_eq!(CsiByteKind::classify(b';'), CsiByteKind::Separator);
 
         // Terminators.
-        assert_eq!(CsiByteToken::classify(b'~'), CsiByteToken::Terminator(b'~'));
-        assert_eq!(CsiByteToken::classify(b'A'), CsiByteToken::Terminator(b'A'));
-        assert_eq!(CsiByteToken::classify(b'Z'), CsiByteToken::Terminator(b'Z'));
-        assert_eq!(CsiByteToken::classify(b'a'), CsiByteToken::Terminator(b'a'));
-        assert_eq!(CsiByteToken::classify(b'u'), CsiByteToken::Terminator(b'u'));
-        assert_eq!(CsiByteToken::classify(b'z'), CsiByteToken::Terminator(b'z'));
+        assert_eq!(CsiByteKind::classify(b'~'), CsiByteKind::Terminator(b'~'));
+        assert_eq!(CsiByteKind::classify(b'A'), CsiByteKind::Terminator(b'A'));
+        assert_eq!(CsiByteKind::classify(b'Z'), CsiByteKind::Terminator(b'Z'));
+        assert_eq!(CsiByteKind::classify(b'a'), CsiByteKind::Terminator(b'a'));
+        assert_eq!(CsiByteKind::classify(b'u'), CsiByteKind::Terminator(b'u'));
+        assert_eq!(CsiByteKind::classify(b'z'), CsiByteKind::Terminator(b'z'));
 
         // Invalid ASCII boundaries and control characters.
-        assert_eq!(CsiByteToken::classify(b'@'), CsiByteToken::Invalid); // Before 'A'.
-        assert_eq!(CsiByteToken::classify(b'['), CsiByteToken::Invalid); // After 'Z'.
-        assert_eq!(CsiByteToken::classify(b'`'), CsiByteToken::Invalid); // Before 'a'.
-        assert_eq!(CsiByteToken::classify(b'{'), CsiByteToken::Invalid); // After 'z'.
-        assert_eq!(CsiByteToken::classify(b'?'), CsiByteToken::Invalid);
-        assert_eq!(CsiByteToken::classify(b' '), CsiByteToken::Invalid);
+        assert_eq!(CsiByteKind::classify(b'@'), CsiByteKind::Invalid); // Before 'A'.
+        assert_eq!(CsiByteKind::classify(b'['), CsiByteKind::Invalid); // After 'Z'.
+        assert_eq!(CsiByteKind::classify(b'`'), CsiByteKind::Invalid); // Before 'a'.
+        assert_eq!(CsiByteKind::classify(b'{'), CsiByteKind::Invalid); // After 'z'.
+        assert_eq!(CsiByteKind::classify(b'?'), CsiByteKind::Invalid);
+        assert_eq!(CsiByteKind::classify(b' '), CsiByteKind::Invalid);
     }
 
     #[test]
