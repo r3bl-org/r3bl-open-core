@@ -1421,12 +1421,11 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
           accumulation.
         - Enhance documentation for scanner and stream parsing displacement semantics.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs`:
-        - Refactor `csi_scanner::extract_csi_params`:
-            - Introduce `ExtractedCsiParams` struct (`params`, `final_byte`,
+        - Refactor `csi_scanner`:
+            - Introduce `CsiParams` struct (`params`, `final_byte`,
               `bytes_scanned`, `total_consumed()`).
-            - Change return type from `Option<(Vec<u16>, u8, usize)>` to
-              `Option<ExtractedCsiParams>`.
-            - Update `parse_csi_parameters` to consume `extracted.total_consumed()`.
+            - Change return type of `try_extract` to `Option<CsiParams>`.
+            - Update `parse_csi_parameters` to consume `csi_params.total_consumed()`.
     - In `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`:
         - Refactor `parse_csi_terminal_parameters`:
             - Type `bytes_scanned` and `total_consumed` using `ByteOffset`.

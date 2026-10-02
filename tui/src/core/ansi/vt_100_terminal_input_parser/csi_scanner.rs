@@ -171,7 +171,7 @@ impl CsiByteKind {
 ///
 /// [`CSI`]: crate::CsiSequence
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExtractedCsiParams {
+pub struct CsiParams {
     /// Parsed numeric arguments (e.g. `[1, 2]` from `ESC [ 1 ; 2 H`).
     pub params: Vec<u16>,
     /// Command terminator character (e.g. `b'H'`, `b'~'`).
@@ -181,17 +181,17 @@ pub struct ExtractedCsiParams {
     pub bytes_scanned: ByteOffset,
 }
 
-impl ExtractedCsiParams {
+impl CsiParams {
     /// Extracts numeric parameters, final byte, and scanned byte count from a [`CSI`]
     /// buffer.
     ///
-    /// The returned [`ExtractedCsiParams`] contains the parsed parameters, terminator
-    /// byte, and scanner cursor displacement across the parameter body (from after
-    /// `ESC [` through the final byte).
+    /// The returned [`CsiParams`] contains the parsed parameters, terminator byte, and
+    /// scanner cursor displacement across the parameter body (from after `ESC [`
+    /// through the final byte).
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub fn extract(buffer: &[u8]) -> Option<Self> {
+    pub fn try_extract(buffer: &[u8]) -> Option<Self> {
         const DECIMAL_RADIX: u16 = 10;
 
         let payload = buffer.strip_prefix(CSI_PREFIX)?;
@@ -273,46 +273,46 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_csi_params() {
+    fn test_try_extract_csi_params() {
         // Multi-parameter sequence: `ESC [ 1 ; 2 H`.
         let buffer = b"\x1b[1;2H";
-        let extracted =
-            ExtractedCsiParams::extract(buffer).expect("Should extract CSI params");
-        assert_eq!(extracted.params, vec![1, 2]);
-        assert_eq!(extracted.final_byte, b'H');
-        assert_eq!(extracted.bytes_scanned, byte_offset(4));
-        assert_eq!(extracted.total_consumed(), byte_offset(6));
+        let csi_params =
+            CsiParams::try_extract(buffer).expect("Should extract CSI params");
+        assert_eq!(csi_params.params, vec![1, 2]);
+        assert_eq!(csi_params.final_byte, b'H');
+        assert_eq!(csi_params.bytes_scanned, byte_offset(4));
+        assert_eq!(csi_params.total_consumed(), byte_offset(6));
 
         // Single parameter sequence: ESC [ 5 ~.
         let buffer_tilde = b"\x1b[5~";
-        let extracted_tilde =
-            ExtractedCsiParams::extract(buffer_tilde).expect("Should extract CSI params");
-        assert_eq!(extracted_tilde.params, vec![5]);
-        assert_eq!(extracted_tilde.final_byte, b'~');
-        assert_eq!(extracted_tilde.bytes_scanned, byte_offset(2));
-        assert_eq!(extracted_tilde.total_consumed(), byte_offset(4));
+        let csi_params_tilde =
+            CsiParams::try_extract(buffer_tilde).expect("Should extract CSI params");
+        assert_eq!(csi_params_tilde.params, vec![5]);
+        assert_eq!(csi_params_tilde.final_byte, b'~');
+        assert_eq!(csi_params_tilde.bytes_scanned, byte_offset(2));
+        assert_eq!(csi_params_tilde.total_consumed(), byte_offset(4));
 
         // Lowercase terminator (e.g. Kitty `CSI u`: `ESC [ 91 ; 3 u)`.
         let buffer_kitty = b"\x1b[91;3u";
-        let extracted_kitty = ExtractedCsiParams::extract(buffer_kitty)
-            .expect("Should extract CSI u params");
-        assert_eq!(extracted_kitty.params, vec![91, 3]);
-        assert_eq!(extracted_kitty.final_byte, b'u');
-        assert_eq!(extracted_kitty.bytes_scanned, byte_offset(5));
-        assert_eq!(extracted_kitty.total_consumed(), byte_offset(7));
+        let csi_params_kitty =
+            CsiParams::try_extract(buffer_kitty).expect("Should extract CSI u params");
+        assert_eq!(csi_params_kitty.params, vec![91, 3]);
+        assert_eq!(csi_params_kitty.final_byte, b'u');
+        assert_eq!(csi_params_kitty.bytes_scanned, byte_offset(5));
+        assert_eq!(csi_params_kitty.total_consumed(), byte_offset(7));
 
         // Invalid byte in parameter body.
         let buffer_invalid = b"\x1b[1;?H";
-        assert!(ExtractedCsiParams::extract(buffer_invalid).is_none());
+        assert!(CsiParams::try_extract(buffer_invalid).is_none());
 
         // Missing ESC [ prefix.
-        assert!(ExtractedCsiParams::extract(b"1;2H").is_none());
-        assert!(ExtractedCsiParams::extract(b"\x1b").is_none());
-        assert!(ExtractedCsiParams::extract(b"").is_none());
+        assert!(CsiParams::try_extract(b"1;2H").is_none());
+        assert!(CsiParams::try_extract(b"\x1b").is_none());
+        assert!(CsiParams::try_extract(b"").is_none());
 
         // Truncated buffer / missing terminator.
-        assert!(ExtractedCsiParams::extract(b"\x1b[1;2").is_none());
-        assert!(ExtractedCsiParams::extract(b"\x1b[").is_none());
+        assert!(CsiParams::try_extract(b"\x1b[1;2").is_none());
+        assert!(CsiParams::try_extract(b"\x1b[").is_none());
     }
 
     #[test]
