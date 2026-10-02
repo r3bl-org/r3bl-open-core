@@ -509,6 +509,7 @@ dexwritescode
 dialup
 dimens
 directtoansi
+discriminants
 disp
 distro
 distros
@@ -592,6 +593,7 @@ horiz
 hotspot
 hotspots
 hybridpartial
+i64
 icanon
 icflag
 iconify

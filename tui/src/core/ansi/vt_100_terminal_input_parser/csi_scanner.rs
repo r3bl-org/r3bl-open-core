@@ -43,25 +43,28 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// directly from the raw byte stream:
 ///
 /// ```text
-/// Text string in stream:     "91"
-///                             │└───┐
-///                             ▼    ▼
-/// ASCII character bytes:    ['9', '1']  (decimal byte values: [57, 49])
+/// The byte slice b"91" contains ASCII bytes, where each byte is a text-formatted digit:
 ///
-/// Resulting u32 integer:      91
+/// Index:    0   1
+///         ┌───┬───┐
+/// Slice:  │ 9 │ 1 │ <- b"91" is string syntax shorthand for the byte slice (&[u8])
+///         └───┴───┘    &[b'9', b'1']
+///           │   │
+///           ▼   ▼
+///          '9' '1'  <- char
+///          57  49   <- decimal value
+///
+/// Resulting u32 integer: 91 (we need u32 to be spec compliant).
 /// ```
-///
-/// `b"91"` is simply string-syntax shorthand for the byte slice `&[b'9', b'1']`.
 ///
 /// # Arguments
 ///
-/// - `digit_bytes`: Slice containing the text-formatted number, e.g. `&[b'9', b'1']`
+/// - `slice`: Slice containing the text-formatted number, e.g. `&[b'9', b'1']`
 ///
 /// # Returns
 ///
 /// - `Some(u32)`: If the text contains only valid [`ASCII`] digits (`'0'`..=`'9'`).
-/// - `None`: If `digit_bytes` is empty or contains non-digit text (e.g. `;`, `:`, or
-///   letters).
+/// - `None`: If `slice` is empty or contains non-digit text (e.g. `;`, `:`, or letters).
 ///
 /// # Examples
 ///
@@ -87,16 +90,17 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 #[must_use]
 pub fn parse_decimal_digits(slice: &[u8]) -> Option<u32> {
+    const DECIMAL_RADIX: u32 = 10;
+
     // Early return if the slice is empty or is not a text formatted number.
     let chunk_is_empty = slice.is_empty();
     let chunk_contains_text_formatted_number =
         slice.iter().all(|byte| (*byte).is_ascii_digit());
     if chunk_is_empty || !chunk_contains_text_formatted_number {
         return None;
-    };
+    }
 
     // Invariant established: All bytes are guaranteed to be text formatted numbers.
-    const DECIMAL_RADIX: u32 = 10;
     let mut accumulated_value: u32 = 0;
     let text_formatted_number_slice = slice;
 
