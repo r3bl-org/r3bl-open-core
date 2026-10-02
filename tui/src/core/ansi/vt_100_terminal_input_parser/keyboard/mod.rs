@@ -19,7 +19,8 @@
 //!    │ (routes CSI/SS3 keyboard sequences here)
 //! ┌──▼───────────────────────────────────────┐  ┌──────────────────┐
 //! │  keyboard.rs                             ◄──┤ **YOU ARE HERE** │
-//! │  • Parse CSI sequences (ESC [)           │  └──────────────────┘
+//! │  • Parse CSI u (Kitty protocol)          │  └──────────────────┘
+//! │  • Parse CSI sequences (ESC [)           │
 //! │  • Parse SS3 sequences (ESC O)           │
 //! │  • Handle modifiers (Shift/Ctrl/Alt)     │
 //! │  • Control characters (Ctrl+A, etc)      │
@@ -37,8 +38,8 @@
 //! - ⬆️ **Up**: [`router`] - Main routing entry point
 //! - ➡️ **Peer**: [`mouse`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100InputEventIR`], [`VT100KeyCodeIR`], [`VT100KeyModifiersIR`]
-//! - 🔧 **Functions**: [`parse_keyboard_sequence`], [`parse_ss3_sequence`],
-//!   [`parse_control_character`], [`parse_alt_letter`]
+//! - 🔧 **Functions**: [`parse_csi_u_sequence`], [`parse_keyboard_sequence`],
+//!   [`parse_ss3_sequence`], [`parse_control_character`], [`parse_alt_letter`]
 //! - 📤 **Converted by**: [`convert_input_event()`] in `protocol_conversion.rs` (not this
 //!   module)
 //!

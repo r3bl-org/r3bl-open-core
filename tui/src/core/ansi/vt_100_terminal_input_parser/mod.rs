@@ -149,10 +149,10 @@
 //!
 //! 2. **Standalone `Alt+]` Key (`ESC ]`, `1B 5D` in hex) vs. [`OSC`] Responses**:
 //!    - *Collision*: The keystroke `Alt+]` emits `ESC ]`. Operating System Command
-//!      ([`OSC`]) responses written by the terminal (such as color queries
-//!      `ESC ] 11 ; rgb:... BEL`) also begin with `ESC ]`.
+//!      ([`OSC`]) responses written by the terminal (such as color queries `ESC ] 11 ;
+//!      rgb:... BEL`) also begin with `ESC ]`.
 //!    - *Resolution*: Handled in [`terminal_events`] via
-//!      [`try_disambiguate_osc_or_alt_bracket()`]. Terminal [`OSC`] responses strictly
+//!      [`try_disambiguate_or_alt_bracket()`]. Terminal [`OSC`] responses strictly
 //!      conform to [`OSC` spec] (command digits followed by `;` or `?`). Non-digits
 //!      immediately identify human input (`Alt+]`). If command digits arrive but the
 //!      stream is [`MaybeMore::KernelDrained`] before the delimiter, `Alt+]` is emitted.
@@ -165,19 +165,21 @@
 //!    - *Resolution*: Protocol negotiation in [`keyboard`]. In legacy [`VT-100`], bare
 //!      `Alt+[` is indistinguishable from [`CSI`] and cannot be resolved without a timer.
 //!      It is resolved by negotiating the [Kitty Keyboard Protocol], which encodes
+//!      `Alt+[` unambiguously as `ESC [ 91 ; 3 u` (parsed by [`parse_csi_u_sequence()`]).
 //!
 //! ### Progressive Keyboard Enhancement
 //!
 //! Terminal bootstrap uses a **fire-and-forget** negotiation strategy:
 //! - **Zero Startup Latency (0ms)**: Rather than sending a capability query (`CSI ? u`)
 //!   and blocking on [`stdin`] for an ACK (which would require a 50-100ms timeout delay),
-//!   [`OutputDevice::setup_full_screen_tui()`] unilaterally emits `CSI > 1 u` to [`stdout`].
+//!   [`OutputDevice::setup_full_screen_tui()`] unilaterally emits `CSI > 1 u` to
+//!   [`stdout`].
 //! - **Standard ECMA-48 Discarding**: Compliant legacy terminals silently ignore
 //!   unrecognized escape sequences and continue emitting standard [`VT-100`] bytes.
 //! - **Dual-Mode Sans-IO Decoding**: Modern terminals ([`Kitty`], [`Ghostty`],
-//!   [`WezTerm`]) emit `CSI u` sequences, while legacy terminals emit legacy
-//!   sequences. The input parser pipeline seamlessly decodes both streams without
-//!   requiring prior capability detection.
+//!   [`WezTerm`]) emit `CSI u` sequences, while legacy terminals emit legacy sequences.
+//!   The input parser pipeline seamlessly decodes both streams without requiring prior
+//!   capability detection.
 //!
 //! ## Terminal Input Capability Matrix: Legacy [`VT-100`] vs. [`Kitty`] Keyboard Protocol
 //!
@@ -214,24 +216,34 @@
 //! - Coordinate between keyboard, mouse, terminal events, and [`UTF-8`] parsers
 //!
 //! ### [`keyboard`]
-//! - Parse [`CSI`] sequences (`ESC [`) for arrow keys, function keys, special keys
-//! - Parse `SS3` sequences (`ESC O`) for application mode keys (F1-F4, Home, End, arrows)
-//! - Handle modifier combinations (Shift, Ctrl, Alt)
-//! - Handle control characters and ambiguous key mappings
+//! - Parse [Kitty Keyboard Protocol] sequences (`CSI u`) via [`parse_csi_u_sequence()`]
+//!   in [`csi_u`]
+//! - Parse standard [`CSI`] sequences (`ESC [`) for arrow, function, and special keys via
+//!   [`parse_keyboard_sequence()`]
+//! - Parse `SS3` sequences (`ESC O`) for application mode keys via
+//!   [`parse_ss3_sequence()`]
+//! - Parse `Alt+letter` combinations (`ESC <char>`) via [`parse_alt_letter()`]
+//! - Parse control characters (`0x00`-`0x1F`) and handle ambiguous mappings via
+//!   [`parse_control_character()`]
 //!
 //! ### [`mouse`]
+//! - Main entry point: [`parse_mouse_sequence()`]
 //! - Parse [`SGR`] mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
 //! - Parse [`X10`]/Legacy protocol (legacy): `CSI M Cb Cx Cy`
 //! - Parse [`RXVT`] protocol (legacy): `CSI Cb ; Cx ; Cy M`
-//! - Detect buttons, clicks, drags, motion, scrolling
-//! - Extract modifier keys from mouse sequences
+//! - Detect buttons, clicks, drags, motion, scrolling, and extract modifier keys
 //!
 //! ### [`terminal_events`]
 //! - Parse window resize events: `CSI 8 ; rows ; cols t`
 //! - Parse focus gained/lost: `CSI I` / `CSI O`
 //! - Parse bracketed paste markers: `ESC [ 200 ~` / `ESC [ 201 ~`
 //! - Disambiguate lone `Alt+]` from terminal-generated [`OSC`] responses via
-//!   [`try_disambiguate_osc_or_alt_bracket()`]
+//!   [`try_disambiguate_or_alt_bracket()`]
+//!
+//! ### [`csi_scanner`]
+//! - Zero-allocation prefix validation via [`strip_csi_numeric_prefix()`]
+//! - In-place integer parsing via [`parse_decimal_digits()`]
+//! - Extraction of parameters and separators via [`extract_csi_params()`]
 //!
 //! ### [`osc_scanner`]
 //! - Fast single-pass lexical scanning of inbound [`OSC`] sequences
@@ -239,9 +251,9 @@
 //! - Provide [`OscScanResult::scan()`]
 //!
 //! ### [`utf8`]
+//! - Main entry point: [`parse_utf8_text()`]
 //! - Parse [`UTF-8`] text between [`ANSI`] sequences
-//! - Generate character input events for typed text
-//! - Handle multi-byte [`UTF-8`] sequences
+//! - Generate character input events for typed text (1-4 bytes)
 //! - Buffer incomplete sequences for later completion
 //!
 //! ### [`maybe_more`]
@@ -249,6 +261,14 @@
 //! - Disambiguates standalone `1B` in hex ([`ESC`] vs. multi-byte escape sequences)
 //! - Supplies availability hints for [`terminal_events`] during `Alt+]` disambiguation
 //! - See [`MaybeMore`] for packet fragmentation and buffer boundary scenarios
+//!
+//! ### [`ir_event_types`]
+//! - Intermediate representation (IR) AST definitions ([`VT100InputEventIR`])
+//! - Key code, modifier, mouse, focus, and paste IR types
+//!
+//! ### [`input_byte_stream_to_ir`]
+//! - Stateful byte stream accumulator ([`InputByteStreamToIrParser`])
+//! - Inbound [`OSC`] runaway quarantine and circuit breaker ([`OscCircuitBreaker`])
 //!
 //! ## Establishing Ground Truth Through Validation Testing
 //!
@@ -314,13 +334,15 @@
 //! [`ansi_output`]: crate::ansi_output
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-//! [`convert_input_event()`]:
-//!     crate::direct_to_ansi::input::protocol_conversion::convert_input_event
+//! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
 //! [`core::ansi`]: crate::core::ansi
+//! [`csi_scanner`]: mod@csi_scanner
+//! [`csi_u`]: mod@keyboard::csi_u
 //! [`CSI` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
 //! [`CSI`]: crate::CsiSequence
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`ESC`]: crate::EscSequence
+//! [`extract_csi_params()`]: crate::vt_100_terminal_input_parser::csi_scanner::extract_csi_params
 //! [`generator`]: mod@crate::generator
 //! [`Ghostty`]: https://ghostty.org/
 //! [`input_byte_stream_to_ir`]: mod@input_byte_stream_to_ir
@@ -328,24 +350,32 @@
 //! [`InputByteStreamToIrParser`]: InputByteStreamToIrParser
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`ir_event_types`]: mod@ir_event_types
 //! [`iTerm2`]: https://iterm2.com/
 //! [`keyboard`]: mod@keyboard
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`maybe_more`]: mod@maybe_more
 //! [`MaybeMore`]: MaybeMore
 //! [`mio`]: mio
-//! [`observe_terminal`]:
-//!     crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`mouse`]: mod@mouse
+//! [`observe_terminal`]: crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
 //! [`osc_scanner`]: mod@osc_scanner
 //! [`OSC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#OSC
 //! [`OSC`]: crate::osc_codes::OscSequence
-//! [`OscScanResult::scan()`]:
-//!     crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult::scan
+//! [`OscCircuitBreaker`]: crate::vt_100_terminal_input_parser::input_byte_stream_to_ir::OscCircuitBreaker
+//! [`OscScanResult::scan()`]: crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult::scan
 //! [`OscScanResult`]: crate::vt_100_terminal_input_parser::osc_scanner::OscScanResult
 //! [`output`]: mod@crate::direct_to_ansi::output
-//! [`OutputDevice::setup_full_screen_tui()`]:
-//!     crate::OutputDevice::setup_full_screen_tui
+//! [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
 //! [`OutputDevice`]: crate::OutputDevice
+//! [`parse_alt_letter()`]: crate::vt_100_terminal_input_parser::keyboard::parse_alt_letter
+//! [`parse_control_character()`]: crate::vt_100_terminal_input_parser::keyboard::parse_control_character
+//! [`parse_csi_u_sequence()`]: crate::vt_100_terminal_input_parser::keyboard::parse_csi_u_sequence
+//! [`parse_decimal_digits()`]: crate::vt_100_terminal_input_parser::csi_scanner::parse_decimal_digits
+//! [`parse_keyboard_sequence()`]: crate::vt_100_terminal_input_parser::keyboard::parse_keyboard_sequence
+//! [`parse_mouse_sequence()`]: crate::vt_100_terminal_input_parser::mouse::parse_mouse_sequence
+//! [`parse_ss3_sequence()`]: crate::vt_100_terminal_input_parser::keyboard::parse_ss3_sequence
+//! [`parse_utf8_text()`]: crate::vt_100_terminal_input_parser::utf8::parse_utf8_text
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`router`]: mod@router
 //! [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
@@ -354,17 +384,17 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
+//! [`strip_csi_numeric_prefix()`]: crate::vt_100_terminal_input_parser::csi_scanner::strip_csi_numeric_prefix
 //! [`TermCol`]: crate::vt_100_ansi_coords::TermCol
 //! [`terminal_events`]: mod@terminal_events
 //! [`TermRow`]: crate::vt_100_ansi_coords::TermRow
-//! [`try_disambiguate_osc_or_alt_bracket()`]:
-//!     crate::vt_100_terminal_input_parser::terminal_events::osc::try_disambiguate_or_alt_bracket
-//! [`try_parse_input_event()`]:
-//!     crate::vt_100_terminal_input_parser::router::try_parse_input_event
-//! [`ttimeoutlen`]:
-//!     https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
+//! [`try_disambiguate_or_alt_bracket()`]: crate::vt_100_terminal_input_parser::terminal_events::osc::try_disambiguate_or_alt_bracket
+//! [`try_parse_input_event()`]: crate::vt_100_terminal_input_parser::router::try_parse_input_event
+//! [`ttimeoutlen`]: https://vi.stackexchange.com/questions/24925/usage-of-timeoutlen-and-ttimeoutlen
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`utf8`]: mod@utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::ir_event_types::VT100InputEventIR
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
