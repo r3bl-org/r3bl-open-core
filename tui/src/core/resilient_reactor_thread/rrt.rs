@@ -388,10 +388,10 @@ pub fn try_subscribe<W: RRTWorker>(
 ///
 /// // ── Use sites (behavior diverges) ──
 /// S.lock().expect("conversion error").replace(42);            // mutates the single instance
-/// assert_eq!(*S.lock().expect("conversion error"), Some(42)); // ✅ same Mutex
+/// assert_eq!(*S.lock().expect("conversion error"), Some(42)); // same Mutex
 ///
 /// C.lock().expect("conversion error").replace(42);            // mutates a fresh copy
-/// assert_eq!(*C.lock().expect("conversion error"), None);     // ❌ different Mutex!
+/// assert_eq!(*C.lock().expect("conversion error"), None);     // different Mutex!
 /// ```
 ///
 /// `const` inlines a fresh copy at every use site (like a macro expansion), so mutations
@@ -419,8 +419,8 @@ pub fn try_subscribe<W: RRTWorker>(
 /// ```no_run
 /// use std::thread::spawn;
 /// fn spawn_thread<T: Send + 'static>(it: T) { spawn(move || drop(it)); }
-/// spawn_thread(String::from("owned"));    // ✅ String: 'static
-/// spawn_thread("literal");                // ✅ &'static str: 'static
+/// spawn_thread(String::from("owned"));    // String: 'static
+/// spawn_thread("literal");                // &'static str: 'static
 /// ```
 ///
 /// This fails to compile - `&String` has a non-`'static` lifetime:
@@ -429,19 +429,19 @@ pub fn try_subscribe<W: RRTWorker>(
 /// use std::thread::spawn;
 /// fn spawn_thread<T: Send + 'static>(it: T) { spawn(move || drop(it)); }
 /// let local = String::from("local");
-/// spawn_thread(&local);                   // ❌ &String is not 'static
+/// spawn_thread(&local);                   // &String is not 'static
 /// ```
 ///
 /// Here's a quick reference for which types satisfy `T: 'static`:
 ///
 /// | Type                      | `T: 'static`? | Why?                                  |
 /// | :------------------------ | :------------ | :------------------------------------ |
-/// | [`String`]                | ✅ Yes        | Owned data, no references             |
-/// | [`Vec<u8>`]               | ✅ Yes        | Owned data, no references             |
-/// | `&'static str`            | ✅ Yes        | Reference with `'static` lifetime     |
-/// | `Foo { s: &'static str }` | ✅ Yes        | Struct with only `'static` references |
-/// | `&'a str`                 | ❌ No         | Reference with non-`'static` lifetime |
-/// | `Foo<'a> { s: &'a str }`  | ❌ No         | Struct with non-`'static` references  |
+/// | [`String`]                | Yes           | Owned data, no references             |
+/// | [`Vec<u8>`]               | Yes           | Owned data, no references             |
+/// | `&'static str`            | Yes           | Reference with `'static` lifetime     |
+/// | `Foo { s: &'static str }` | Yes           | Struct with only `'static` references |
+/// | `&'a str`                 | No            | Reference with non-`'static` lifetime |
+/// | `Foo<'a> { s: &'a str }`  | No            | Struct with non-`'static` references  |
 ///
 /// For thread spawning, `T: 'static` is required because the spawned thread could outlive
 /// the caller - any borrowed data with a shorter lifetime might become invalid. This is

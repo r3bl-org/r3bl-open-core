@@ -154,10 +154,10 @@
 //! incomplete parameters until the final sequence byte arrives.
 //!
 //! **Benefits**:
-//! - ✅ Robust state machine for split sequences and edge cases
-//! - ✅ Battle-tested in production ([`Alacritty`] uses it)
-//! - ✅ Proper [`ANSI`]/[`VT-100`] spec compliance
-//! - ✅ Low maintenance (bug fixes come from upstream)
+//! - Robust state machine for split sequences and edge cases
+//! - Battle-tested in production ([`Alacritty`] uses it)
+//! - Proper [`ANSI`]/[`VT-100`] spec compliance
+//! - Low maintenance (bug fixes come from upstream)
 //!
 //! ### Input Parser: Custom Implementation ([`vt_100_terminal_input_parser`])
 //!
@@ -186,10 +186,10 @@
 //!    overhead
 //!
 //! **Benefits**:
-//! - ✅ Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
-//! - ✅ Optimal for complete sequences (no buffering overhead)
-//! - ✅ Full control over parsing logic
-//! - ✅ Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
+//! - Zero-latency [`ESC`] key detection (instant emit when buffer = `[0x1B]`)
+//! - Optimal for complete sequences (no buffering overhead)
+//! - Full control over parsing logic
+//! - Can optimize for specific terminal features ([`SGR`] mouse, [`Kitty`] etc.)
 //!
 //! **Key insight**: The architectural split ([`VTE`] for output, custom for input) is
 //! **not a limitation** - it's the correct design because output and input are

@@ -1087,7 +1087,7 @@
 //!   semantics
 //!
 //! ```rust,should_panic
-//! // ❌ Unsafe: raw integers hide these distinctions
+//! // Unsafe: raw integers hide these distinctions
 //! let cursor_row: usize = 5;        // Is this 0-based or 1-based?
 //! let vp_width: usize = 80;   // Is this a size or position?
 //! let buffer_size: usize = 100;     // Can I use this as an index?
@@ -1123,7 +1123,7 @@
 //! let cursor_row = vp_row(5);          // VPRow (0-based index)
 //! let vp_height = vp_height(24); // VPHeight (1-based length)
 //!
-//! // ✅ Type-safe: Compiler prevents row/column confusion
+//! // Type-safe: Compiler prevents row/column confusion
 //! if cursor_row.overflows(vp_height) == ArrayOverflowResult::Within {
 //!     // Safe to access buffer[cursor_row]
 //! }
@@ -1564,7 +1564,7 @@
 //! Traditional string indexing fails with such text:
 //!
 //! ```rust,should_panic
-//! // ❌ Unsafe: byte indexing can split multi-byte characters
+//! // Unsafe: byte indexing can split multi-byte characters
 //! let text = "Hello 👋🏽";  // Wave emoji with skin tone modifier
 //! let byte_len = text.len();        // 14 bytes (not 7 characters!)
 //! let _substring = &text[0..7];     // PANICS! Splits 👋 emoji mid-character
@@ -2388,27 +2388,27 @@
 //! The following matrix establishes the ground truth for input handling capabilities
 //! across both modes in `r3bl_tui`:
 //!
-//! | Keystroke / Protocol Event                         | Legacy VT-100 / xterm (Default)               | Kitty Keyboard Protocol (`CSI u`)        | Technical Reason & Ambiguity                                   |
-//! | :------------------------------------------------- | :-------------------------------------------- | :--------------------------------------- | :------------------------------------------------------------- |
-//! | **Standard Characters (`a-z`, `0-9`, UTF-8)**      | ✅ Supported (`UTF-8` bytes)                  | ✅ Supported (`UTF-8` bytes)               | Unambiguous in both modes.                                     |
-//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**      | ✅ Supported (`0x01` .. `0x1A`)               | ✅ Supported                               | Standard ASCII control characters.                             |
-//! | **Enter / Return**                                 | ✅ Supported (`\r`, `0x0D`)                   | ✅ Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                      |
-//! | **`Shift + Enter`**                                | ❌ **Collides with Enter** (`\r`)             | ✅ **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.               |
-//! | **Tab**                                            | ✅ Supported (`\t`, `0x09`)                   | ✅ Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                       |
-//! | **`Shift + Tab` (`BackTab`)**                      | ✅ Supported (`ESC [ Z`)                      | ✅ Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                        |
-//! | **`Ctrl + Tab`**                                   | ❌ **Collides with Tab** (`\t`)               | ✅ **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.               |
-//! | **Distinct `Ctrl+I` vs. `Tab`**                    | ❌ **Indistinguishable** (`0x09`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+I` is literally `0x09` (`Tab`).                    |
-//! | **Distinct `Ctrl+M` vs. `Enter`**                  | ❌ **Indistinguishable** (`0x0D`)             | ✅ **Supported** (distinct codepoints)     | ASCII `Ctrl+M` is literally `0x0D` (`Enter`).                  |
-//! | **Standalone `Escape` Key**                        | ✅ Supported (0ms latency)                    | ✅ Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; Kitty is unambiguous.  |
-//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)** | ✅ Supported (`CSI` / `SS3`)                  | ✅ Supported (`CSI` / `CSI u`)             | Standard xterm / VT220 sequences.                              |
-//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**  | ✅ Supported (`ESC [ 1 ; <m> <final>`)        | ✅ Supported                               | Standard xterm parameter encoding.                             |
-//! | **Function Keys (`F1` .. `F12`)**                  | ✅ Supported (VT220 `~` / `SS3`)              | ✅ Supported                               | Standard escape encodings.                                     |
-//! | **`Alt + Key` (Letters & Digits)**                 | ✅ Supported (`ESC <char>`)                   | ✅ Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                   |
-//! | **`Alt + ]` (OSC Prefix Collision)**               | ✅ **Solved in Step 8** (`scan_osc_sequence`) | ✅ **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.   |
-//! | **`Alt + [` (CSI Prefix Collision)**               | ❌ **Unresolvable in Legacy**                 | ✅ **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to `CSI` (`\x1b[`).  |
-//! | **Terminal OSC Query Replies (Theme, Clipboard)**  | ✅ **Solved in Step 8** (Framed & Absorbed)   | ✅ Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage. |
-//! | **OSC 52 Clipboard Copy (SSH & Headless)**        | ✅ **Solved in Step 10** (`Osc52Clipboard`)   | ✅ Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable. |
-//! | **Key Release & Repeat Events**                    | ❌ Unsupported by VT-100                      | ✅ Supported (via Kitty Flag 2)            | Legacy terminals only report key press down events.            |
+//! | Keystroke / Protocol Event                         | Legacy VT-100 / xterm (Default)                  | Kitty Keyboard Protocol (`CSI u`)             | Technical Reason & Ambiguity                                   |
+//! | :------------------------------------------------- | :----------------------------------------------- | :-------------------------------------------- | :------------------------------------------------------------- |
+//! | **Standard Characters (`a-z`, `0-9`, UTF-8)**      | [Yes] Supported (`UTF-8` bytes)                  | [Yes] Supported (`UTF-8` bytes)               | Unambiguous in both modes.                                     |
+//! | **Basic Control Keys (`Ctrl+A` .. `Ctrl+Z`)**      | [Yes] Supported (`0x01` .. `0x1A`)               | [Yes] Supported                               | Standard ASCII control characters.                             |
+//! | **Enter / Return**                                 | [Yes] Supported (`\r`, `0x0D`)                   | [Yes] Supported (`\r` or `CSI 13 u`)          | Standard carriage return.                                      |
+//! | **`Shift + Enter`**                                | [No]  **Collides with Enter** (`\r`)             | [Yes] **Supported** (`ESC [ 13 ; 2 u`)        | Legacy terminals send identical `0x0D` for both.               |
+//! | **Tab**                                            | [Yes] Supported (`\t`, `0x09`)                   | [Yes] Supported (`\t` or `CSI 9 u`)           | Standard horizontal tab.                                       |
+//! | **`Shift + Tab` (`BackTab`)**                      | [Yes] Supported (`ESC [ Z`)                      | [Yes] Supported (`ESC [ 9 ; 2 u`)             | Legacy terminals have standard `CSI Z`.                        |
+//! | **`Ctrl + Tab`**                                   | [No]  **Collides with Tab** (`\t`)               | [Yes] **Supported** (`ESC [ 9 ; 5 u`)         | Legacy terminals send identical `0x09` for both.               |
+//! | **Distinct `Ctrl+I` vs. `Tab`**                    | [No]  **Indistinguishable** (`0x09`)             | [Yes] **Supported** (distinct codepoints)     | ASCII `Ctrl+I` is literally `0x09` (`Tab`).                    |
+//! | **Distinct `Ctrl+M` vs. `Enter`**                  | [No]  **Indistinguishable** (`0x0D`)             | [Yes] **Supported** (distinct codepoints)     | ASCII `Ctrl+M` is literally `0x0D` (`Enter`).                  |
+//! | **Standalone `Escape` Key**                        | [Yes] Supported (0ms latency)                    | [Yes] Supported (`ESC [ 27 u`)                | Legacy uses `MaybeMore::KernelDrained`; Kitty is unambiguous.  |
+//! | **Navigation Keys (Arrows, Home, End, PageUp/Dn)** | [Yes] Supported (`CSI` / `SS3`)                  | [Yes] Supported (`CSI` / `CSI u`)             | Standard xterm / VT220 sequences.                              |
+//! | **Modified Navigation (`Shift+Home`, `Ctrl+Up`)**  | [Yes] Supported (`ESC [ 1 ; <m> <final>`)        | [Yes] Supported                               | Standard xterm parameter encoding.                             |
+//! | **Function Keys (`F1` .. `F12`)**                  | [Yes] Supported (VT220 `~` / `SS3`)              | [Yes] Supported                               | Standard escape encodings.                                     |
+//! | **`Alt + Key` (Letters & Digits)**                 | [Yes] Supported (`ESC <char>`)                   | [Yes] Supported (`ESC [ <codepoint> ; 3 u`)   | Legacy prefixes with `0x1B`.                                   |
+//! | **`Alt + ]` (OSC Prefix Collision)**               | [Yes] **Solved in Step 8** (`scan_osc_sequence`) | [Yes] **Supported** (`ESC [ 93 ; 3 u`)        | Step 8 rejects non-digits / uses `MaybeMore::KernelDrained`.   |
+//! | **`Alt + [` (CSI Prefix Collision)**               | [No]  **Unresolvable in Legacy**                 | [Yes] **Solved in Step 9** (`ESC [ 91 ; 3 u`) | Legacy `Alt+[` is byte-for-byte identical to `CSI` (`\x1b[`).  |
+//! | **Terminal OSC Query Replies (Theme, Clipboard)**  | [Yes] **Solved in Step 8** (Framed & Absorbed)   | [Yes] Supported (Framed & Absorbed)           | Step 8 frames with `scan_osc_sequence`, prevents text leakage. |
+//! | **OSC 52 Clipboard Copy (SSH & Headless)**         | [Yes] **Solved in Step 10** (`Osc52Clipboard`)   | [Yes] Supported (`OscSequence::ClipboardSet`) | Cross-platform fallback when local display server unavailable. |
+//! | **Key Release & Repeat Events**                    | [No] Unsupported by VT-100                       | [Yes] Supported (via Kitty Flag 2)            | Legacy terminals only report key press down events.            |
 //!
 //! For deeper protocol architecture and parser implementation, see the
 //! [`vt_100_terminal_input_parser`] module.

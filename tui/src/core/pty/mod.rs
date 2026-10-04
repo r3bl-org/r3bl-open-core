@@ -233,21 +233,14 @@
 //!
 //! ### Thread Coordination & Lifecycle
 //!
-//! | Time | Orchestrator Thread                 | Reader Thread    | Writer Thread       |
-//! | :--- | :---------------------------------- | :--------------- | :------------------ |
-//! | 0    | 🛫 Spawn child                      |                  |                     |
-//! | 1    | 🛫 Spawn threads                    | 🛫 Start read    | 🛫 Start            |
-//! | 2    | 🛬 Wait [`ControlledChild::wait()`] | 📖 Read data     | 📥 Wait input       |
-//! | 3    | 🛬 Wait threads                     | 🛬 Exit (on EOF) | 🛬 Exit (on Close)  |
-//! | 4    | 📤 Send Exit event                  |                  |                     |
-//! | 5    | ✅ Return status                    |                  |                     |
-//!
-//! Legends:
-//! ```txt
-//! Thread lifecycle:  🛫 start  | 🛬 wait/exit | ✅ done
-//! IO operations:     📖 read   | ✍️ write
-//! Send/receive pair: 📤 send   | 📥 receive
-//! ```
+//! | Step | Orchestrator Thread                          | Reader Thread                    | Writer Thread                          |
+//! | :--- | :------------------------------------------- | :------------------------------- | :------------------------------------- |
+//! | 0    | Spawn child process                          |                                  |                                        |
+//! | 1    | Spawn background threads                     | Start read loop                  | Start write loop                       |
+//! | 2    | Wait for child ([`ControlledChild::wait()`]) | Read [`PTY`], send events to App | Receive events, write to [`PTY`] stdin |
+//! | 3    | Wait for background threads to join          | Exit (on EOF)                    | Exit (on Close)                        |
+//! | 4    | Send exit event to App                       |                                  |                                        |
+//! | 5    | Return exit status                           |                                  |                                        |
 //!
 //! ### Channel Architecture
 //!

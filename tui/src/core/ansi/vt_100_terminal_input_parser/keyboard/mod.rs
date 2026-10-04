@@ -228,20 +228,20 @@
 //! ```
 //!
 //! **Why this design survived 50 years:**
-//! - ✅ Works everywhere (bash, vim, emacs, tmux, etc.)
-//! - ✅ Simpler to parse than [`CSI`]
-//! - ✅ More efficient (fewer bytes)
-//! - ✅ Unambiguous ([`ESC`] always means "next char is modified")
+//! - Works everywhere (bash, vim, emacs, tmux, etc.)
+//! - Simpler to parse than [`CSI`]
+//! - More efficient (fewer bytes)
+//! - Unambiguous ([`ESC`] always means "next char is modified")
 //!
 //! ## [`CSI`] vs [`ESC`] Prefix: When to Use Each
 //!
 //! **[`ESC`] prefix** (this module's `parse_alt_letter()`):
-//! - ✅ Alt+printable-character (Alt+B, Alt+F, Alt+3, Alt+.)
+//! - Alt+printable-character (Alt+B, Alt+F, Alt+3, Alt+.)
 //! - Simple 2-byte sequences: `ESC char`
 //!
 //! **[`CSI`] sequences** (this module's `parse_keyboard_sequence()`):
-//! - ✅ Special keys with modifiers (Ctrl+Up, Shift+F5)
-//! - ✅ Complex modifier combinations (Ctrl+Alt+Up)
+//! - Special keys with modifiers (Ctrl+Up, Shift+F5)
+//! - Complex modifier combinations (Ctrl+Alt+Up)
 //! - Parametric sequences: `ESC [ params finalchar`
 //!
 //! This dual approach gives us the best of both worlds: efficiency for simple cases

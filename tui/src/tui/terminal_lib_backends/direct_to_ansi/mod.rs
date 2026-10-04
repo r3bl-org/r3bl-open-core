@@ -167,10 +167,10 @@
 //!
 //! # Platform Support
 //!
-//! | Component                    | Linux   | macOS   | Windows   |
-//! | ---------------------------- | ------- | ------- | --------- |
-//! | Output ([`ANSI`] generation) | ✅      | ✅      | ✅        |
-//! | Input (terminal reading)     | ✅      | ❌      | ❌        |
+//! | Component                    | Linux | macOS | Windows |
+//! | ---------------------------- | ----- | ----- | ------- |
+//! | Output ([`ANSI`] generation) | Y     | Y     | Y       |
+//! | Input (terminal reading)     | Y     | N     | N       |
 //!
 //! The **output** side works on all platforms (pure [`ANSI`] sequence generation).
 //!

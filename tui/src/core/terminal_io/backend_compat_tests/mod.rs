@@ -36,10 +36,10 @@
 //!
 //! | Test                                   | Linux | macOS | Windows |
 //! | :------------------------------------- | :---- | :---- | :------ |
-//! | [`test_pty_backend_direct_to_ansi`]    | ✅    | ❌    | ❌      |
-//! | [`test_pty_backend_crossterm`]         | ✅    | ❌    | ❌      |
-//! | [`test_backend_compat_input_compare`]  | ✅    | ❌    | ❌      |
-//! | [`test_backend_compat_output_compare`] | ✅    | ❌    | ❌      |
+//! | [`test_pty_backend_direct_to_ansi`]    | Y     | N     | N       |
+//! | [`test_pty_backend_crossterm`]         | Y     | N     | N       |
+//! | [`test_backend_compat_input_compare`]  | Y     | N     | N       |
+//! | [`test_backend_compat_output_compare`] | Y     | N     | N       |
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice

@@ -19,7 +19,7 @@
 //! 1. **Coordinate System**: [`VT-100`] uses 1-based coordinates (top-left = 1,1)
 //! 2. **Modifier Encoding**: [`CSI`] parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
 //! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC [ 1 ; 5 A`
-//! 4. **Scroll Events**: Button 66+ indicates scroll with possible modifiers
+//! 4. **Scroll Events**: Button 64+ indicates scroll (64=Up, 65=Down, 66=Left, 67=Right)
 //!
 //! # Test Design Philosophy
 //!
@@ -68,21 +68,26 @@
 //! If you want to test generator correctness, see the round-trip tests in
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
-//! ## Sample Test Run Output
+//! ## Ground Truth Observation Session (Sample Output)
+//!
+//! Below is a sample run from the interactive ground truth observation tool
+//! ([`observe_real_interactive_terminal_input_events`]), which captures empirical
+//! [`ANSI`] sequences directly from live terminal interactions (such as [`Alacritty`]):
+//!
 //! ```text
 //! ╔═══════════════════════════════════════════════════════╗
-//! ║   [`VT-100`] Terminal Input Observation Test          ║
+//! ║   VT-100 Terminal Input Observation Test              ║
 //! ║   Phase 1: Establish Ground Truth                     ║
 //! ╚═══════════════════════════════════════════════════════╝
 //!
-//! 🖥️  Terminal: [`Alacritty`]
+//! 🖥️  Terminal: Alacritty
 //!
 //! 🔧 Diagnostic Info:
-//!    Sending [`ANSI`] codes to enable mouse tracking...
-//! 📤 Sent: [`SGR`] mouse (1006) = [1b, 5b, 3f, 31, 30, 30, 36, 68]
+//!    Sending ANSI codes to enable mouse tracking...
+//! 📤 Sent: SGR mouse (1006) = [1b, 5b, 3f, 31, 30, 30, 36, 68]
 //! 📤 Sent: X11 mouse (1000) = [1b, 5b, 3f, 31, 30, 30, 30, 68]
 //! 📤 Sent: Bracketed paste (2004) = [1b, 5b, 3f, 32, 30, 30, 34, 68]
-//! ✅ All [`ANSI`] codes sent (check stderr for details)
+//! ✅ All ANSI codes sent (check stderr for details)
 //!
 //! ╭─────────────────────────────────────────╮
 //! │ TEST 1: Mouse - Top-Left Corner         │
@@ -93,6 +98,7 @@
 //!
 //! 📦 Raw bytes (hex): [1b, 5b, 3c, 30, 3b, 31, 3b, 31, 4d]
 //! 🔤 Escaped string: "\u{1b}[<0;1;1M"
+//! 🎯 Parsed: Left Click (press) (code=0) at col=1, row=1
 //!
 //! ╭─────────────────────────────────────────╮
 //! │ TEST 2: Mouse - Middle of Screen        │
@@ -103,6 +109,7 @@
 //!
 //! 📦 Raw bytes (hex): [1b, 5b, 3c, 30, 3b, 36, 31, 3b, 32, 30, 4d]
 //! 🔤 Escaped string: "\u{1b}[<0;61;20M"
+//! 🎯 Parsed: Left Click (press) (code=0) at col=61, row=20
 //!
 //! ╭─────────────────────────────────────────╮
 //! │ TEST 3: Keyboard - Arrow Up             │
@@ -132,13 +139,14 @@
 //!
 //! 📦 Raw bytes (hex): [1b, 5b, 3c, 36, 35, 3b, 35, 39, 3b, 32, 30, 4d]
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
-//! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
+//! 🎯 Parsed: Wheel Up (code=65) at col=59, row=20
 //! ```
 //!
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
 //! [`generator`]: crate::generator
+//! [`observe_real_interactive_terminal_input_events`]: mod@super::observe_real_interactive_terminal_input_events
 //! [`SGR`]: crate::SgrCode
 //! [`unit_tests::generator_round_trip_tests`]:
 //!     mod@crate::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
@@ -196,6 +204,37 @@ mod mouse_events {
     }
 
     #[test]
+    fn test_left_click_at_middle() {
+        // CONFIRMED: Observed ESC[<0;61;20M for left click in screen body
+        let seq = b"\x1b[<0;61;20M";
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse observed sequence");
+
+        match event {
+            VT100InputEventIR::Mouse {
+                button,
+                pos,
+                action,
+                modifiers,
+            } => {
+                assert_eq!(button, VT100MouseButtonIR::Left);
+                assert_eq!(pos.col.as_u16(), 61);
+                assert_eq!(pos.row.as_u16(), 20);
+                assert_eq!(action, VT100MouseActionIR::Press);
+                assert!(
+                    modifiers.shift == KeyState::NotPressed
+                        && modifiers.ctrl == KeyState::NotPressed
+                        && modifiers.alt == KeyState::NotPressed,
+                    "No modifiers held"
+                );
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
     fn test_left_click_release() {
         // CONFIRMED: lowercase 'm' indicates release in SGR protocol
         let seq = b"\x1b[<0;1;1m";
@@ -213,6 +252,51 @@ mod mouse_events {
     }
 
     #[test]
+    fn test_scroll_up() {
+        // CONFIRMED: Button 64 = scroll up at col 59, row 20
+        let seq = b"\x1b[<64;59;20M";
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse observed scroll up sequence");
+
+        match event {
+            VT100InputEventIR::Mouse { action, pos, .. } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Up)
+                );
+                assert_eq!(pos.col.as_u16(), 59);
+                assert_eq!(pos.row.as_u16(), 20);
+            }
+            _ => panic!("Expected Mouse scroll event"),
+        }
+    }
+
+    #[test]
+    fn test_scroll_down() {
+        // CONFIRMED: Button 65 = scroll down at col 59, row 20
+        let seq = b"\x1b[<65;59;20M";
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq)
+            .expect("Should parse observed scroll down sequence");
+
+        match event {
+            VT100InputEventIR::Mouse { action, pos, .. } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Down)
+                );
+                assert_eq!(pos.col.as_u16(), 59);
+                assert_eq!(pos.row.as_u16(), 20);
+            }
+            _ => panic!("Expected Mouse scroll event"),
+        }
+    }
+
+    #[test]
     fn test_scroll_left() {
         // CONFIRMED: Button 66 = scroll left at col 37, row 14
         let seq = b"\x1b[<66;37;14M";
@@ -226,6 +310,28 @@ mod mouse_events {
                 assert_eq!(
                     action,
                     VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Left)
+                );
+                assert_eq!(pos.col.as_u16(), 37);
+                assert_eq!(pos.row.as_u16(), 14);
+            }
+            _ => panic!("Expected Mouse scroll event"),
+        }
+    }
+
+    #[test]
+    fn test_scroll_right() {
+        // Button 67 = scroll right at col 37, row 14
+        let seq = b"\x1b[<67;37;14M";
+        let ParsedInputEventIR {
+            event,
+            bytes_consumed: _bytes_consumed,
+        } = parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
+
+        match event {
+            VT100InputEventIR::Mouse { action, pos, .. } => {
+                assert_eq!(
+                    action,
+                    VT100MouseActionIR::Scroll(VT100ScrollDirectionIR::Right)
                 );
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
