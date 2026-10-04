@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words indexops lengthops
-
 //! Zero-based position types and operations - see [`IndexOps`] trait.
 
 use super::{length_ops::LengthOps, numeric_value::NumericValue};

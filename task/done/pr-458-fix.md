@@ -1,7 +1,5 @@
 _Task: PR 458 Integration (Mouse Tracking Mode)_
 
-<!-- cspell:words DECSET -->
-
 # User Story & Context
 
 ## Problem

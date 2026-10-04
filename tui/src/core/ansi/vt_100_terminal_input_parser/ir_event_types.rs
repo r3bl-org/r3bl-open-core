@@ -6,7 +6,7 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{TermPos, VPWidth, VPHeight, terminal_io::KeyState};
+use crate::{ByteOffset, TermPos, VPHeight, VPWidth, terminal_io::KeyState};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///
@@ -55,7 +55,7 @@ use crate::{TermPos, VPWidth, VPHeight, terminal_io::KeyState};
 ///   types:
 ///   - [`VT-100`] uses 1-based coordinates, canonical types use 0-based.
 ///   - Multiple mouse protocols ([`SGR`], [`X10`], [`RXVT`]) with different encodings.
-///   - Tab/Enter/Backspace send same bytes as Ctrl+I/Ctrl+M/Ctrl+H.
+///   - Tab/Enter/Backspace send same bytes as `Ctrl+I`/`Ctrl+M`/`Ctrl+H`.
 ///   - [`ESC`] key and escape sequences (like arrow keys) both start with `0x1B`.
 ///
 /// - Type Safety - Protocol types use [`VT-100`] nomenclature ([`VT100KeyCodeIR`],
@@ -124,6 +124,34 @@ pub enum VT100InputEventIR {
     Focus(VT100FocusStateIR),
     /// Paste mode notification (start or end).
     Paste(VT100PasteModeIR),
+    /// Protocol control sequence that is recognized and consumed, but does not generate
+    /// an application-level input event (such as framed terminal query responses like
+    /// [`OSC`] 10/11/52).
+    ///
+    /// [`OSC`]: crate::osc_codes::OscSequence
+    Ignored,
+}
+
+/// Result of parsing an input byte sequence into an intermediate representation event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedInputEventIR {
+    /// The parsed intermediate representation event.
+    pub event: VT100InputEventIR,
+    /// Total bytes consumed from the buffer.
+    pub bytes_consumed: ByteOffset,
+}
+
+impl ParsedInputEventIR {
+    #[must_use]
+    pub const fn new(event: VT100InputEventIR, bytes_consumed: ByteOffset) -> Self {
+        Self {
+            event,
+            bytes_consumed,
+        }
+    }
+
+    #[must_use]
+    pub fn consumed_usize(&self) -> usize { self.bytes_consumed.as_usize() }
 }
 
 /// Keyboard modifiers for input events.
@@ -135,18 +163,62 @@ pub struct VT100KeyModifiersIR {
 }
 
 impl VT100KeyModifiersIR {
+    /// No modifier keys pressed.
+    pub const NONE: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Only Shift pressed.
+    pub const SHIFT: Self = Self {
+        shift: KeyState::Pressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Only Alt pressed.
+    pub const ALT: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::NotPressed,
+        alt: KeyState::Pressed,
+    };
+
+    /// Only Ctrl pressed.
+    pub const CTRL: Self = Self {
+        shift: KeyState::NotPressed,
+        ctrl: KeyState::Pressed,
+        alt: KeyState::NotPressed,
+    };
+
+    /// Create with no modifiers pressed (same as [`Self::NONE`]).
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        }
+    pub const fn new() -> Self { Self::NONE }
+
+    /// Returns a copy with Shift marked as pressed.
+    #[must_use]
+    pub const fn with_shift(mut self) -> Self {
+        self.shift = KeyState::Pressed;
+        self
+    }
+
+    /// Returns a copy with Ctrl marked as pressed.
+    #[must_use]
+    pub const fn with_ctrl(mut self) -> Self {
+        self.ctrl = KeyState::Pressed;
+        self
+    }
+
+    /// Returns a copy with Alt marked as pressed.
+    #[must_use]
+    pub const fn with_alt(mut self) -> Self {
+        self.alt = KeyState::Pressed;
+        self
     }
 }
 
 impl Default for VT100KeyModifiersIR {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::NONE }
 }
 
 /// Mouse buttons.
@@ -225,4 +297,63 @@ pub enum VT100MouseActionIR {
     Motion,
     /// Scroll wheel rotated.
     Scroll(VT100ScrollDirectionIR),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_key_modifiers_constants_and_builders() {
+        assert_eq!(VT100KeyModifiersIR::default(), VT100KeyModifiersIR::NONE);
+        assert_eq!(VT100KeyModifiersIR::new(), VT100KeyModifiersIR::NONE);
+
+        assert_eq!(
+            VT100KeyModifiersIR::SHIFT,
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::ALT,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::CTRL,
+            VT100KeyModifiersIR {
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::NONE
+                .with_ctrl()
+                .with_shift()
+                .with_alt(),
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::Pressed,
+            }
+        );
+
+        assert_eq!(
+            VT100KeyModifiersIR::CTRL.with_shift(),
+            VT100KeyModifiersIR {
+                shift: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+            }
+        );
+    }
 }

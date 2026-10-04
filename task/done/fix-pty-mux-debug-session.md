@@ -1,5 +1,3 @@
-<!-- cspell:words setsid TIOCSCTTY cmdbuilder -->
-
 # Task: Fix PTYMux UI Freeze (stdout Backpressure)
 
 ## Overview

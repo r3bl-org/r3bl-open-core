@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words tcgetwinsize winsize EINTR SIGWINCH kqueue epoll wakeup eventfd bcast
-
 //! Public API: [`DirectToAnsiInputDevice`].
 //!
 //! The main user-facing type for async terminal input. See
@@ -21,7 +19,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// One of two real [`InputDevice`] backends (the other being [`CrosstermInputDevice`]).
 /// Selected via [`TERMINAL_LIB_BACKEND`] on Linux; talks directly to the terminal using
-/// [`ANSI`]/VT100 protocols without relying on [`crossterm`] for terminal I/O.
+/// [`ANSI`]/[`VT-100`] protocols without relying on [`crossterm`] for terminal I/O.
 ///
 /// This **newtype** delegates to [`SINGLETON`] for [`std::io::Stdin`] reading and buffer
 /// management. This process global singleton supports restart cycles with thread reuse
@@ -66,8 +64,8 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// **This caused three problems that led us to the current design:**
 ///
-/// 1. **UI freeze on resize.** [Tokio's stdin] uses a blocking threadpool. In the past,
-///    in [`next()`], when [`tokio::select!`] cancelled a [`tokio::io::stdin()`] read to
+/// 1. **UI freeze on resize.** [`Tokio's stdin`] uses a blocking threadpool. In the past,
+///    in [`next()`], when [`tokio::select!`] canceled a [`tokio::io::stdin()`] read to
 ///    handle [`SIGWINCH`], the blocking read kept running in the background. The next
 ///    read conflicted with this "zombie" read leading to a UI freeze.
 ///
@@ -80,8 +78,8 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// 3. **Flawed [`ESC`] detection over [`SSH`].** Our original approach had flawed logic
 ///    for distinguishing the [`ESC`] key from escape sequences (like `ESC [ A` for Up
-///    Arrow). It worked locally but failed over [`SSH`]. We now use [`crossterm`]'s
-///    `more` flag heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
+///    Arrow). It worked locally but failed over [`SSH`]. We now use `more` flag heuristic
+///    from [`crossterm`] (see [ESC Detection Limitations] in [`MaybeMore`]).
 ///
 /// ### The Solution
 ///
@@ -94,7 +92,8 @@ use tokio::sync::broadcast::error::RecvError;
 /// **No exclusive access**: Any thread can call [`std::io::stdin()`] and read from it—
 /// there is no OS or Rust mechanism to prevent this. If another thread reads from
 /// [`stdin`], bytes will be stolen, causing interleaved reads that corrupt the input
-/// stream and break the VT100 parser. See [No exclusive access] in [`MioPollWorker`].
+/// stream and break the [`VT-100`] parser. See [No exclusive access] in
+/// [`MioPollWorker`].
 ///
 /// </div>
 ///
@@ -124,8 +123,8 @@ use tokio::sync::broadcast::error::RecvError;
 /// 2. **Data preserved**: Global state survives TUI app lifecycle transitions in the same
 ///    process.
 ///
-/// To solve the third problem for [`ESC`] detection, we use [`crossterm`]'s `more` flag
-/// heuristic (see [ESC Detection Limitations] in [`MioPollWorker`]).
+/// To solve the third problem for [`ESC`] detection, we use the `more` flag heuristic
+/// from [`crossterm`] (see [ESC Detection Limitations] in [`MaybeMore`]).
 ///
 /// ## Architecture Overview
 ///
@@ -133,7 +132,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// ┌─────────────────────────────────────────────────────────────────────────┐
 /// │ SINGLETON (process-global RRT<MioPollWorker>, crate-internal)           │
 /// │ internal:                                                               │
-/// │  • mio-poller thread: holds sender, reads stdin, runs vt100 parser      │
+/// │  • mio-poller thread: holds sender, reads stdin, runs VT-100 parser     │
 /// │ external:                                                               │
 /// │  • stdin_receiver: broadcast receiver (async consumers recv() from here)│
 /// └───────────────────────────────────────┬─────────────────────────────────┘
@@ -211,8 +210,8 @@ use tokio::sync::broadcast::error::RecvError;
 /// ```
 ///
 /// **Key insight**: The [`mio_poller`] thread is NOT persistent across the lifetime of
-/// the process. Each app lifecycle spawns a new thread generation. The RRT state
-/// machine enables this by allowing [`new()`] to subscribe and spawn after prior exits.
+/// the process. Each app lifecycle spawns a new thread generation. The RRT state machine
+/// enables this by allowing [`new()`] to subscribe and spawn after prior exits.
 ///
 /// ## Why Keystrokes Aren't Lost During Transitions
 ///
@@ -220,7 +219,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// natural question arises: **why don't keystrokes get lost during the transition?**
 ///
 /// The historical problem (see [The Problems]) was that the old "Tokio-heavy" approach
-/// created a new [`tokio::io::stdin()`] handle per app. When App A exited and App B
+/// created a new [`tokio::io::stdin()`] handle per app. When `App A` exited and `App B`
 /// started, keystrokes typed during the transition vanished because
 /// [`tokio::io::stdin()`] uses **application-level buffering**—when that handle is
 /// dropped, its internal buffer is lost forever.
@@ -258,10 +257,10 @@ use tokio::sync::broadcast::error::RecvError;
 /// ```
 ///
 /// The key insight: the **kernel's [`stdin`] buffer for [`fd`] `0` persists** regardless
-/// of which thread is reading. Unlike [`tokio::io::stdin()`]'s application-level buffer,
-/// the kernel buffer survives handle creation/destruction. When a new thread calls
-/// [`std::io::stdin()`], it gets a handle to the **same kernel buffer** containing any
-/// unread bytes.
+/// of which thread is reading. Unlike the application-level buffer in
+/// [`tokio::io::stdin()`], the kernel buffer survives handle creation/destruction. When a
+/// new thread calls [`std::io::stdin()`], it gets a handle to the **same kernel buffer**
+/// containing any unread bytes.
 ///
 /// ## Call Chain (fallible + handle-first)
 ///
@@ -353,22 +352,23 @@ use tokio::sync::broadcast::error::RecvError;
 /// │         └─► Eof/Error → return None                                       │
 /// └───────────────────────────────────▲───────────────────────────────────────┘
 ///                                     │ broadcast channel
-/// ┌───────────────────────────────────┴───────────────────────────────────────┐
-/// │ 2. mio-poller thread                                                      │
-/// │    std::thread::spawn("mio-poller")                                       │
-/// │                                                                           │
-/// │    Uses mio::Poll to wait on stdin data + SIGWINCH signals:               │
-/// │    ┌───────────────────────────────────────────────────────────────────┐  │
-/// │    │ loop {                                                            │  │
-/// │    │   poll.poll(&mut events, None)?;        // Wait for stdin/signal  │  │
-/// │    │   let n = stdin.read(&mut buffer)?;     // Read available bytes   │  │
-/// │    │   let more = n == TTY_BUFFER_SIZE;      // ESC disambiguation     │  │
-/// │    │   parser.advance(&buffer[..n], more);   // Parse with `more` flag │  │
-/// │    │   for event in parser { sender.send(Event(event))?; }             │  │
-/// │    │ }                                                                 │  │
-/// │    └───────────────────────────────────────────────────────────────────┘  │
-/// │    See module docs for thread lifecycle (exits when all receivers drop)   │
-/// └───────────────────────────────────────────────────────────────────────────┘
+/// ┌───────────────────────────────────┴─────────────────────────────────────────┐
+/// │ 2. mio-poller thread                                                        │
+/// │    std::thread::spawn("mio-poller")                                         │
+/// │                                                                             │
+/// │    Uses mio::Poll to wait on stdin data + SIGWINCH signals:                 │
+/// │    ┌─────────────────────────────────────────────────────────────────────┐  │
+/// │    │ loop {                                                              │  │
+/// │    │   poll.poll(&mut events, None)?;           // Wait for stdin/signal │  │
+/// │    │   let bytes_read = stdin.read(&mut buffer)?;    // Read avail bytes │  │
+/// │    │   let maybe_more =                                                  │  │
+/// │    │     MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE); │  │
+/// │    │   parser.process_incoming_bytes(&buffer[..bytes_read], maybe_more); │  │
+/// │    │   for event in parser { sender.send(Event(event))?; }               │  │
+/// │    │ }                                                                   │  │
+/// │    └─────────────────────────────────────────────────────────────────────┘  │
+/// │    See module docs for thread lifecycle (exits when all receivers drop)     │
+/// └─────────────────────────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// # Underlying Protocol Parser
@@ -383,12 +383,12 @@ use tokio::sync::broadcast::error::RecvError;
 /// Arrow = `ESC [ A`). When we see a lone `0x1B` byte, is it the [`ESC`] key or the start
 /// of an escape sequence?
 ///
-/// **The Solution**: We use crossterm's `more` flag pattern—a clever heuristic based on
+/// **The Solution**: We use crossterm's `more` flag pattern - a clever heuristic based on
 /// read buffer fullness:
 ///
 /// ```text
-/// let n = stdin.read(&mut buffer)?;  // Read available bytes
-/// let more = n == TTY_BUFFER_SIZE;   // true if buffer was filled completely
+/// let bytes_read = stdin.read(&mut buffer)?; // Read available bytes
+/// let more = bytes_read == STDIN_READ_BUFFER_SIZE; // true if buffer was filled completely
 ///
 /// // In parser:
 /// if buffer == [ESC] && more {
@@ -428,26 +428,24 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// ## SSH and High-Latency Connections
 ///
-/// Over SSH with network latency, bytes might arrive in separate packets. The `more` flag
-/// handles this correctly:
+/// Over high-latency or jittery SSH connections, TCP packet fragmentation can split
+/// multi-byte escape sequences across separate read operations:
+/// - **Split After Prefix**: If fragmentation occurs after `ESC [` or `ESC ]`, the parser
+///   recognizes an incomplete sequence and successfully reassembles it across `read()`
+///   calls.
+/// - **Split Immediately After [`ESC`]**: If a lone [`ESC`] byte arrives in a packet
+///   smaller than 1024 bytes, the stream appears drained and [`ESC`] is emitted
+///   immediately (the zero-latency trade-off).
 ///
-/// ```text
-/// First packet:  [ESC]       read() → 1 byte, more = false
-///                            BUT: next poll() wakes immediately when more data arrives
-/// Second packet: ['[', 'A']  read() → 2 bytes
-///                            Parser accumulates: [ESC, '[', 'A'] → Up Arrow ✓
-/// ```
-///
-/// The key insight: if bytes arrive separately, the next `mio::Poll` wake happens almost
-/// immediately when more data arrives. The parser accumulates bytes across reads, so
-/// escape sequences are correctly reassembled.
+/// See [ESC Detection Limitations] in [`MaybeMore`] for the complete architectural
+/// breakdown of all three packet fragmentation scenarios.
 ///
 /// ## Attribution
 ///
 /// This pattern is adapted from crossterm's `mio.rs` implementation. See the
 /// [Architecture] section above for details on our mio-based architecture.
 ///
-/// We looked at [`crossterm`]'s source code for design inspiration:
+/// We looked at [`crossterm`] source code for design inspiration:
 /// 1. **Global state pattern**: [`crossterm`] uses a global [`INTERNAL_EVENT_READER`]
 ///    that holds the `tty` file descriptor and event buffer, ensuring data in the kernel
 ///    buffer is not lost when [`EventStream`] instances are created and dropped. And we
@@ -456,7 +454,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///    [`signal-hook-mio`] for [`SIGWINCH`] and we do the same.
 /// 3. **[`ESC`] disambiguation**: The `more` flag heuristic for distinguishing [`ESC`]
 ///    key from escape sequences without timeouts. We inherit both its benefits (zero
-///    latency) and limitations (see [ESC Detection Limitations] in [`MioPollWorker`]).
+///    latency) and limitations (see [ESC Detection Limitations] in [`MaybeMore`]).
 /// 4. **Process-lifetime cleanup**: They rely on OS cleanup at process exit rather than
 ///    explicit thread termination, and so do we.
 ///
@@ -465,7 +463,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// When this device is dropped:
 /// 1. [`super::at_most_one_instance_assert::release()`] is called, allowing a new device
 ///    to be created.
-/// 2. Rust's drop glue drops [`Self::subscriber_guard`], triggering [`SubscriberGuard`'s
+/// 2. Rust's drop glue drops [`Self::subscriber_guard`], triggering [`SubscriberGuard`
 ///    drop behavior] (thread lifecycle protocol).
 ///
 /// For the complete lifecycle diagram including the [race condition] where a fast
@@ -474,8 +472,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`broadcast`]: tokio::sync::broadcast
 /// [`crossterm`]: crossterm
-/// [`CrosstermInputDevice`]:
-///     crate::crossterm_backend::CrosstermInputDevice
+/// [`CrosstermInputDevice`]: crate::crossterm_backend::CrosstermInputDevice
 /// [`DirectToAnsi`]: mod@crate::direct_to_ansi
 /// [`epoll`]: https://man7.org/linux/man-pages/man7/epoll.7.html
 /// [`ESC`]: crate::EscSequence
@@ -485,6 +482,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`INTERNAL_EVENT_READER`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event.rs#L149
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+/// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mio.rs`]:
 ///     https://github.com/crossterm-rs/crossterm/blob/0.29/src/event/source/unix/mio.rs
 /// [`mio::Poll`]: mio::Poll
@@ -502,26 +500,26 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`std::io::Stdin`]: std::io::Stdin
 /// [`stdin`]: std::io::stdin
-/// [`SubscriberGuard`'s drop behavior]:
-///     crate::SubscriberGuard#drop-behavior
+/// [`SubscriberGuard` drop behavior]: crate::SubscriberGuard#drop-behavior
 /// [`SubscriberGuard`]: crate::SubscriberGuard
 /// [`super::at_most_one_instance_assert::release()`]:
 ///     super::at_most_one_instance_assert::release
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
+/// [`Tokio's stdin`]: tokio::io::stdin
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
-/// [`try_parse_input_event`]:
-///     crate::vt_100_terminal_input_parser::try_parse_input_event
+/// [`try_parse_input_event`]: crate::vt_100_terminal_input_parser::try_parse_input_event
 /// [`try_subscribe()`]: crate::RRT::try_subscribe
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-/// [`VT100InputEventIR`]:
-///     crate::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
 /// [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
 /// [Architecture]: Self#architecture
 /// [Device Lifecycle]: Self#device-lifecycle
-/// [ESC Detection Limitations]: super::mio_poller#esc-detection-limitations
+/// [ESC Detection Limitations]:
+///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
 /// [How It Works]: super::mio_poller#how-it-works
 /// [inherent race condition]:
@@ -531,7 +529,6 @@ use tokio::sync::broadcast::error::RecvError;
 /// [No exclusive access]: super::mio_poller#no-exclusive-access
 /// [race condition]: crate::core::resilient_reactor_thread#race-conditions-handled
 /// [The Problems]: Self#the-problems
-/// [Tokio's stdin]: tokio::io::stdin
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
@@ -577,10 +574,10 @@ impl DirectToAnsiInputDevice {
     /// # Thread Lifecycle
     ///
     /// Creates the [`mio_poller`] thread **eagerly** if it doesn't exist. This is
-    /// critical for correct lifecycle: if device A is dropped and device B is created
-    /// immediately, device B's subscription must be visible to the thread when it
-    /// checks [`receiver_count()`] (before it decides to exit). See the [race condition
-    /// documentation] in [`SubscriberGuard`] for details.
+    /// critical for correct lifecycle: if `device A` is dropped and `device B` is created
+    /// immediately, then the `device B` subscription must be visible to the thread when
+    /// it checks [`receiver_count()`] (before it decides to exit). See the [race
+    /// condition documentation] in [`SubscriberGuard`] for details.
     ///
     /// [`InputSubscriberGuard::try_subscribe()`]:
     ///     super::input_device_impl::InputSubscriberGuard::try_subscribe
@@ -591,7 +588,8 @@ impl DirectToAnsiInputDevice {
     /// [`SubscribeError`]: crate::core::resilient_reactor_thread::SubscribeError
     /// [`SubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
     /// [`try_subscribe()`]: Self::try_subscribe
-    /// [race condition documentation]: super::input_device_impl::InputSubscriberGuard#race-condition-and-correctness
+    /// [race condition documentation]:
+    ///     super::input_device_impl::InputSubscriberGuard#race-condition-and-correctness
     pub fn new() -> Result<Self, SubscribeError> {
         super::at_most_one_instance_assert::claim_and_assert();
         match global_input_resource::SINGLETON.try_subscribe(()) {
@@ -737,13 +735,16 @@ impl DirectToAnsiInputDevice {
     /// 2. Wait for events from [`stdin`] reader channel (yields until data ready)
     /// 3. Apply paste state machine and return event
     ///
-    /// Events arrive fully parsed from the reader thread. See [ESC key disambiguation]
-    /// for zero-latency [`ESC`] detection.
+    /// # Event Parsing & Disambiguation
+    ///
+    /// Events arrive fully parsed from the reader thread via
+    /// [`InputByteStreamToIrParser`]. See [ESC key disambiguation] and [`MaybeMore`]
+    /// for details on zero-latency [`ESC`] detection.
     ///
     /// # Cancel Safety
     ///
     /// This method is cancel-safe. The internal broadcast channel receive
-    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if cancelled,
+    /// ([`tokio::sync::broadcast::Receiver::recv`]) is truly cancel-safe: if canceled,
     /// the data remains in the channel for the next receive.
     ///
     /// See the [Architecture] section for why we use a dedicated thread with
@@ -756,8 +757,11 @@ impl DirectToAnsiInputDevice {
     ///
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`ESC`]: crate::EscSequence
+    /// [`InputByteStreamToIrParser`]:
+    ///     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser
     /// [`InputDevice::next()`]: crate::InputDevice::next
     /// [`InputDevice`]: crate::InputDevice
+    /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`mio::Poll`]: mio::Poll
     /// [`RestartPolicy`]: crate::RestartPolicy
     /// [`Self::next()`]: Self::next
@@ -772,7 +776,7 @@ impl DirectToAnsiInputDevice {
         // Receiver was subscribed eagerly in new() - just use it.
         let subscriber_guard = &mut self.subscriber_guard;
 
-        // Wait for fully-formed InputEvents through the broadcast channel.
+        // Wait for fully-formed InputEvent instances through the broadcast channel.
         loop {
             let poller_rx_result = subscriber_guard.receiver.recv().await;
 

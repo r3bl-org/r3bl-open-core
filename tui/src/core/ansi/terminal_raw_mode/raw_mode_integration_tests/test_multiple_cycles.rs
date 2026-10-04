@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words PENDIN
-
 //! [`PTY`]-based integration test for multiple raw mode cycles.
 //!
 //! Verifies that enabling and disabling raw mode multiple times works correctly:

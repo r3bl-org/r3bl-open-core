@@ -1,24 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words EINTR wakeup kevent EPOLLET fcntl setfl NONBLOCK EINTR
-
 //! Event handlers for stdin input processing.
 
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::{PasteStateResult, apply_paste_state_machine}},
             MioPollWorker};
-use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
+use crate::{Continuation,
+            core::{ansi::vt_100_terminal_input_parser::MaybeMore,
+                   resilient_reactor_thread::RRTEvent},
             tui::DEBUG_TUI_SHOW_MIO_POLLER};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
-
-/// Read buffer size for stdin reads (`1_024` bytes).
-///
-/// When `read_count == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the
-/// kernel buffer—this is the `more` flag used for [`ESC`] disambiguation.
-///
-/// [`ESC`]: crate::EscSequence
-pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 
 /// Handles [`stdin`] becoming readable, using explicit `sender` parameter.
 ///
@@ -105,8 +97,7 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`kevent`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`kqueue`]: https://man.freebsd.org/cgi/man.cgi?query=kqueue
 /// [`mio::Poll`]: mio::Poll
-/// [`MioPollWorker::create_and_register_os_sources()`]:
-///     super::MioPollWorker#method.create_and_register_os_sources
+/// [`MioPollWorker::create_and_register_os_sources()`]: super::MioPollWorker#method.create_and_register_os_sources
 /// [`MioPollWorker`]: super::MioPollWorker
 /// [`new_stdout()`]: crate::core::terminal_io::OutputDevice::new_stdout
 /// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
@@ -117,15 +108,11 @@ pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
 /// [`syscall`]: https://man7.org/linux/man-pages/man2/syscalls.2.html
-/// [`test_production_factory_restart_cycle`]:
-///     crate::core::resilient_reactor_thread::rrt_integration_tests::pty_test_production_factory_restart::test_production_factory_restart_cycle
-/// [`test_pty_mio_poller_subscribe`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_subscribe_test::test_pty_mio_poller_subscribe
-/// [`test_pty_mio_poller_thread_lifecycle`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test::test_pty_mio_poller_thread_lifecycle
+/// [`test_production_factory_restart_cycle`]: crate::core::resilient_reactor_thread::rrt_integration_tests::pty_test_production_factory_restart::test_production_factory_restart_cycle
+/// [`test_pty_mio_poller_subscribe`]: crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_subscribe_test::test_pty_mio_poller_subscribe
+/// [`test_pty_mio_poller_thread_lifecycle`]: crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test::test_pty_mio_poller_thread_lifecycle
 /// [`tokio`]: tokio
-/// [`VT100InputEventIR`]:
-///     crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
@@ -139,8 +126,8 @@ pub fn consume_stdin_input_with_sender(
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 // Handle non-blocking stdin read().
                 //
-                // No more data available right now (meaning that the stdin fd is fully
-                // drained).
+                // No more data available right now (meaning that the `stdin` `fd` is
+                // fully drained).
                 return Continuation::Continue;
             }
 
@@ -153,9 +140,9 @@ pub fn consume_stdin_input_with_sender(
                 return Continuation::Stop;
             }
 
-            Ok(n) => {
+            Ok(bytes_read) => {
                 if let Continuation::Stop =
-                    parse_stdin_bytes_with_sender(worker, n, sender)
+                    parse_stdin_bytes_with_sender(worker, bytes_read, sender)
                 {
                     return Continuation::Stop;
                 }
@@ -184,23 +171,24 @@ pub fn consume_stdin_input_with_sender(
 
 /// Parses bytes read from stdin into input events, using explicit `sender` parameter.
 ///
-/// Parses bytes into VT100 events and sends them through the paste state machine.
+/// Parses bytes into [VT-100] events and sends them through the paste state machine.
 pub fn parse_stdin_bytes_with_sender(
     worker: &mut MioPollWorker,
-    n: usize,
+    bytes_read: usize,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
     DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
-        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read = n);
+        tracing::debug!(message = "mio_poller thread: read bytes", bytes_read);
     });
 
-    // `more` flag for ESC disambiguation.
-    let more = n == STDIN_READ_BUFFER_SIZE;
+    // Stream availability for ESC and OSC disambiguation.
+    let maybe_more = MaybeMore::from_read_count(bytes_read, STDIN_READ_BUFFER_SIZE);
 
     // Parse bytes into events.
-    worker
-        .vt_100_input_seq_parser
-        .advance(&worker.stdin_unparsed_byte_buffer[..n], more);
+    worker.vt_100_input_seq_parser.process_incoming_bytes(
+        &worker.stdin_unparsed_byte_buffer[..bytes_read],
+        maybe_more,
+    );
 
     // Process all parsed events through paste state machine.
     for vt100_event in worker.vt_100_input_seq_parser.by_ref() {
@@ -229,3 +217,15 @@ pub fn parse_stdin_bytes_with_sender(
 
     Continuation::Continue
 }
+
+/// Read buffer size for stdin reads (`1_024` bytes).
+///
+/// When `bytes_read == STDIN_READ_BUFFER_SIZE`, more data is likely waiting in the kernel
+/// buffer - this determines the [`MaybeMore::KernelMayHaveMore`] heuristic passed to
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`].
+///
+/// [`InputByteStreamToIrParser::process_incoming_bytes()`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::InputByteStreamToIrParser::process_incoming_bytes
+/// [`MaybeMore::KernelMayHaveMore`]:
+///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
+pub const STDIN_READ_BUFFER_SIZE: usize = 1_024;

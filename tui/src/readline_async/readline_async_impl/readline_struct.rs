@@ -10,10 +10,8 @@ use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             PrintLineOnControlC, PrintLineOnEnter,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
             ReadlineControlFlow, ReadlineError, ReadlineEvent, ReadlineLockManager,
-            SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex, VPSize,
-            execute_commands_no_lock, ok};
-use crossterm::{ExecutableCommand, QueueableCommand, cursor,
-                terminal::{self, Clear}};
+            SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex,
+            TerminalModeController, VPSize, ok};
 use std::sync::Arc;
 use tokio::{select, spawn,
             sync::{broadcast, mpsc},
@@ -324,11 +322,8 @@ impl Readline {
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
         // (try to eliminate jank). It makes it appear as if the cursor is animated into
         // place.
-        output_device.write(|writer| {
-            execute_commands_no_lock!(writer, cursor::Hide);
-            execute_commands_no_lock!(writer, terminal::EnableLineWrap);
-            Ok::<(), miette::Report>(())
-        })?;
+        output_device.hide_cursor()?;
+        output_device.enable_line_wrap()?;
 
         // Enable raw mode (unless using a mock output device for testing). Drop will
         // disable raw mode.
@@ -393,10 +388,8 @@ impl Readline {
                 // display the cursor (try to eliminate jank). This does not make
                 // caller wait.
                 sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
-                output_device_clone.write(|term| {
-                    // We don't care about the result of this operation.
-                    drop(term.execute(cursor::Show));
-                });
+                // We don't care about the result of this operation.
+                drop(output_device_clone.show_cursor());
             }
         });
 
@@ -447,8 +440,8 @@ impl Readline {
     /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
+        self.lock_manager.output_device().clear_screen()?;
         self.lock_manager.lock_both(|line_state, term| {
-            term.queue(Clear(terminal::ClearType::All))?;
             line_state.clear_and_render_and_flush(term)?;
             term.flush()?;
             Ok::<(), ReadlineError>(())

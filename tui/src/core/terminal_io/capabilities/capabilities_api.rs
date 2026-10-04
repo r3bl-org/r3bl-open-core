@@ -1,7 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words winsize tcgetwinsize devtty
-
 //! Terminal interactivity, size detection, and [`stderr`] redirection disclaimer.
 //! See [`TerminalInteractiveStatus`], [`TerminalNotInteractiveReason`], and
 //! [`emit_stderr_redirection_disclaimer()`].
@@ -92,7 +90,7 @@ impl<T> IntoErr for TuiAvailability<T> {
 /// | **Redirected Stderr** | Error stream redirected to a file   | TTY ([`/dev/pts/*`])   | TTY ([`/dev/pts/*`])    | File (`false`)          | [`Available`] (logs decoupled)         |
 ///
 /// Examples in bash:
-/// 
+///
 /// ```bash
 /// # Normal terminal:
 /// my_app

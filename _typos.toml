@@ -1,0 +1,22 @@
+[files]
+extend-exclude = [
+    ".harper-dictionary.txt",
+    "*.perf-folded",
+    "task/done/**",
+]
+
+[default.extend-words]
+ba = "ba"
+ratatui = "ratatui"
+clonable = "clonable"
+interruptable = "interruptable"
+flate = "flate"
+DECID = "DECID"
+INPT = "INPT"
+wht = "wht"
+nd = "nd"
+worl = "worl"
+helo = "helo"
+hel = "hel"
+Helo = "Helo"
+

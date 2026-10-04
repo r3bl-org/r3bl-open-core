@@ -377,7 +377,6 @@ struct SgrMouseEvent {
     button_code: u16,
     col: u16,
     row: u16,
-    action_char: char,
     description: String,
 }
 
@@ -415,7 +414,6 @@ fn extract_sgr_mouse_event(raw: &[u8]) -> Option<SgrMouseEvent> {
         button_code,
         col,
         row,
-        action_char,
         description,
     })
 }
@@ -467,13 +465,6 @@ fn describe_sgr_button_event(button_code: u16, action_char: char) -> String {
     } else {
         format!("{button_name} ({action_desc})")
     }
-}
-
-/// Legacy function for backward compatibility - returns basic tuple.
-/// Recommend using `extract_sgr_mouse_event()` instead for full details.
-#[allow(dead_code)]
-fn extract_sgr_coordinates(raw: &[u8]) -> Option<(u16, u16, char)> {
-    extract_sgr_mouse_event(raw).map(|evt| (evt.col, evt.row, evt.action_char))
 }
 
 /// Manually parse keyboard sequence without using the parser.

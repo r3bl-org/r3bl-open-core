@@ -1,8 +1,5 @@
 # Task: Fix yield_now Slowdown on Linux (Event-Driven POLLOUT Backpressure)
 
-<!-- cspell:words OFDs OFD termios openpty conpty ptmx rustix POLLOUT NONBLOCK EINTR -->
-<!-- cspell:words POLLIN EPOLLET EAGAINT ENXIO ENOENT futexes EAGAIN SIGCONT SIGPROF EBADF -->
-
 ## Final Outcome & Accomplishment: 175 FPS on Linux (+65% Improvement)
 
 Replacing timeslice yielding (`yield_now()`) with event-driven `POLLOUT` waiting via

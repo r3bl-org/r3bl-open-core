@@ -10,11 +10,18 @@
 //!   that can be clicked to open URLs or file paths.
 //! - Terminal control sequences (**`OSC 0`**, `ESC ] 0 ... ESC \ (ST)`) for setting
 //!   window titles and tab names.
+//! - **`OSC 52`** sequences (`ESC ] 52 ; target ; <base64> BEL`) for copying text to the
+//!   host system clipboard or primary selection buffer over `stdout` in remote or
+//!   headless terminal sessions.
 //!
 //! The [`OscBuffer`] handles partial sequences split across buffer reads and
 //! gracefully ignores malformed input.
 //!
+//! For end-to-end execution, SSH clipboard behavior, and `Alt+]` input disambiguation,
+//! see the [`direct_to_ansi` mod docs: Terminal Protocols & Capabilities Hub][hub].
+//!
 //! [`OSC`]: crate::osc_codes::OscSequence
+//! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 
 pub mod osc_buffer;
 pub mod osc_codes;
@@ -24,6 +31,7 @@ pub mod osc_hyperlink;
 
 // Re-export main types and functions for convenience.
 pub use osc_buffer::*;
+pub use osc_codes::*;
 pub use osc_controller::*;
 pub use osc_event::*;
 pub use osc_hyperlink::*;

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words isatty ECHONL VMIN VTIME iflag cflag oflag icflag lflag Errno
-
 //! Unix/Linux/macOS implementation of raw mode using [`rustix`]'s safe [`termios`] API.
 //!
 //! For background on raw mode vs cooked mode, [`TTY`] history, line disciplines, and

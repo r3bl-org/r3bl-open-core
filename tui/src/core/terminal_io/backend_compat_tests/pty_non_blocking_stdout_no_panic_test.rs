@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words fcntl getfl setfl EAGAIN NONBLOCK POLLOUT EINTR
-
 //! [`PTY`] integration test for [`BackpressureStdout`] /
 //! [`OutputDevice::new_stdout()`] ensuring that setting [`O_NONBLOCK`] on [`stdin`] does
 //! not cause [`stdout`] writes to panic the application under heavy load.

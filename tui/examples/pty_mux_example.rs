@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words adduser
-
 //! [`PTYMux`] terminal multiplexer example with universal process compatibility.
 //!
 //! This example demonstrates how to use the [`pty_mux`] module to create a terminal

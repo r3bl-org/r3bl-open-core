@@ -27,7 +27,7 @@
 //! [`readline_async_controlled_loop()`]:
 //!     super::readline_async_pty_test_fixtures::readline_async_controlled_loop
 
-use crate::{GLYPH_CONTROLLER, GLYPH_WAITING, KeyState, MSG_CONTROLLED_READY,
+use crate::{GLYPH_CONTROLLER, GLYPH_WAITING, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_LINE_PREFIX, PtyTestContext, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::{VT100InputEventIR,
@@ -156,11 +156,7 @@ fn controller(mut context: PtyTestContext) {
 fn ctrl_left() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Left,
-        modifiers: VT100KeyModifiersIR {
-            ctrl: KeyState::Pressed,
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     })
     .expect("Ctrl+Left should generate valid sequence")
 }
@@ -171,11 +167,7 @@ fn ctrl_left() -> Vec<u8> {
 fn ctrl_right() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEventIR::Keyboard {
         code: VT100KeyCodeIR::Right,
-        modifiers: VT100KeyModifiersIR {
-            ctrl: KeyState::Pressed,
-            shift: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        },
+        modifiers: VT100KeyModifiersIR::CTRL,
     })
     .expect("Ctrl+Right should generate valid sequence")
 }

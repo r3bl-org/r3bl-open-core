@@ -821,8 +821,6 @@ mod tests {
                 seg_index, vp_col, vp_height, vp_width};
     use std::sync::Arc;
 
-    // cspell:words ello testx
-
     #[test]
     #[allow(clippy::needless_return)]
     fn test_add_char() {

@@ -517,5 +517,3 @@ spawny (cargo-spawny)
 - [ ] `spawny --upgrade`: Binary self-upgrade execution.
 - [ ] Migrate `~/github/notes/files/scripts/tests/` to use `spawny` and purge obsolete
       fish test scripts.
-
-<!-- cspell:words postinst Rootfs machinectl nsenter debootstrap userland -->

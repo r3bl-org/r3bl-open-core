@@ -23,7 +23,7 @@ pub enum RateLimitStatus {
 /// 1. Create a [`Self::new`] instance of this struct with the desired minimum time
 ///    threshold.
 /// 2. Before running your expensive operation, call [`Self::get_status`] with the current
-///    time. You can use teh [`Self::get_status_and_update_last_run`] method to do the
+///    time. You can use the [`Self::get_status_and_update_last_run`] method to do the
 ///    following automatically:
 ///    - If the status is [`RateLimitStatus::NotStarted`] or [`RateLimitStatus::Expired`],
 ///      run the operation and update the last run time with [`Self::update_last_run`].

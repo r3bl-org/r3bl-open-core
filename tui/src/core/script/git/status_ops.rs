@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words GPGSIGN
-
 use crate::{RepoStatus, ResultAndCommand, Run, command,
             script::git::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
                                  git_command_names::{GIT_CMD_REV_PARSE,

@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words URXVT
-
 //! Unit tests for [`ansi_output`]
 //!
 //! Tests all static methods to verify correct [`ANSI`] escape sequence generation.
@@ -403,5 +401,17 @@ mod terminal_mode_tests {
             ])
         );
         assert_eq!(seq, expected);
+    }
+
+    #[test]
+    fn test_enable_keyboard_enhancement() {
+        let seq = ansi_output::terminal_modes::enable_keyboard_enhancement();
+        assert_eq!(seq, "\x1b[>1u");
+    }
+
+    #[test]
+    fn test_disable_keyboard_enhancement() {
+        let seq = ansi_output::terminal_modes::disable_keyboard_enhancement();
+        assert_eq!(seq, "\x1b[<1u");
     }
 }

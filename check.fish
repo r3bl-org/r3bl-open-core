@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words osascript nextest mktemp ionice gdbus
-
 # Comprehensive Build and Test Verification Script
 #
 # Purpose: Runs a comprehensive suite of checks to ensure code quality, correctness, and builds properly.
@@ -263,7 +261,7 @@ function main
             run_full_checks_with_recovery
             set -l full_status $status
 
-            # Sync docs from staging to serving directory (so docs are browseable)
+            # Sync docs from staging to serving directory (so docs are browsable)
             if test $full_status -eq 0
                 # Sync mode based on dep-doc cache (see DEP_DOCS_WERE_CACHED architecture note)
                 if test "$DEP_DOCS_WERE_CACHED" = true

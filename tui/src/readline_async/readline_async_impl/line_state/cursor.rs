@@ -279,7 +279,7 @@ mod tests {
             if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
                 // Read digits.
                 let mut has_digits = false;
-                while let Some(&next) = chars.peek() {
+                while let Some(next) = chars.peek().copied() {
                     if next.is_ascii_digit() {
                         has_digits = true;
                         chars.next();
@@ -304,7 +304,7 @@ mod tests {
         while let Some(c) = chars.next() {
             if c == ESC_START && chars.next() == Some(char::from(ANSI_CSI_BRACKET)) {
                 let mut has_digits = false;
-                while let Some(&next) = chars.peek() {
+                while let Some(next) = chars.peek().copied() {
                     if next.is_ascii_digit() {
                         has_digits = true;
                         chars.next();

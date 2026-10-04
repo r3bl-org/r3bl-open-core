@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words tuicolor colortarget
-
 //! Extended color sequence parsing for [`SGR`] parameters.
 //!
 //! This module provides type-safe parsing of extended color sequences used in

@@ -1,5 +1,3 @@
-<!-- cspell:words rmcp ciresnave zeenix dexwritescode rust-analyzer-mcp -->
-
 # Plan: Technical Article on Synchronous MCP Server Architecture
 
 ## Objective

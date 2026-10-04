@@ -349,5 +349,3 @@ Previously, `Readline` owned both ends of an unbounded MPSC channel (`history_se
     - [x] `tui/src/readline_async/readline_async_impl/readline_async_integration_tests/pty_concurrent_input_output_deadlock_test.rs`
     - [x] `tui/examples/choose_with_and_without_readline_async.rs`
 - [x] Manual testing via `tui/examples/demo/ex_app_with_spinner.rs` to verify visuals.
-
-<!-- cspell:words coffman stackexchange -->

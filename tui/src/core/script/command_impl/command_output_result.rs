@@ -192,5 +192,3 @@ mod tests {
         assert_eq!(custom.code(), Some(42));
     }
 }
-
-// cspell:word waitpid WEXITSTATUS

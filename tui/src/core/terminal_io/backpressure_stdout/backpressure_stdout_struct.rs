@@ -1,7 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words O_NONBLOCK POLLOUT EINTR SIGCONT SIGPROF EBADF devtty
-
 use std::io::Stdout;
 
 // Make the link to `consume_stdin_input_with_sender` shorter when used in rustdocs.

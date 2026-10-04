@@ -1,5 +1,3 @@
-<!-- cspell:words Stringly -->
-
 # Design Philosophy Patterns
 
 ## Cognitive Load Patterns

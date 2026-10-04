@@ -547,7 +547,7 @@
 //!
 //! ### Common Mistakes to Avoid
 //!
-//! **❌ Don't mix row and column types**
+//! ** Don't mix row and column types**
 //!
 //! ```rust,compile_fail
 //! use r3bl_tui::{IndexOps, vp_row, vp_width};  // IndexOps provides .overflows()
@@ -557,7 +557,7 @@
 //! row_pos.overflows(col_width); // Won't compile!
 //! ```
 //!
-//! **❌ Don't use raw usize for bounds checking**
+//! ** Don't use raw usize for bounds checking**
 //!
 //! ```rust
 //! let raw_index: usize = 5;
@@ -566,7 +566,7 @@
 //! if raw_index < raw_length { /* unsafe! */ }
 //! ```
 //!
-//! **✅ Do use type-safe constructors and methods**
+//! ** Do use type-safe constructors and methods**
 //!
 //! ```rust
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, vp_col, vp_width};

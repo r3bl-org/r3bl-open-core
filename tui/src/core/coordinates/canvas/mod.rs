@@ -241,5 +241,3 @@ pub use canvas_range_ext::*;
 pub use viewport::*;
 pub use canvas_camera_ext::*;
 pub use canvas_projection_ext::*;
-
-// cspell:words FUNARCH Falk Haase Heuer Woldmann

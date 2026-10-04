@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words tcgetwinsize
-
 //! [`PTY`] integration test for [`SIGWINCH`] signal handling.
 //!
 //! This test validates that [`DirectToAnsiInputDevice`] correctly receives and handles

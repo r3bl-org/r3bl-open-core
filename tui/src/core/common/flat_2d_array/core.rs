@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words LINESIZE getconf DCACHE VPCMPEQB
-
 use crate::{CHeight, CSize, CWidth, GetMemSize};
 use std::mem::size_of;
 
@@ -73,14 +71,14 @@ use std::mem::size_of;
 /// let height = 10;
 /// let width = 10;
 ///
-/// // ❌ Slow: cell-by-cell iteration (redundant bounds checks on every pixel)
+/// // Slow: cell-by-cell iteration (redundant bounds checks on every pixel)
 /// for row in 0..height {
 ///     for col in 0..width {
 ///         grid[row][col] = default_pixel;
 ///     }
 /// }
 ///
-/// // ✅ Blisteringly Fast: SIMD raw memory iteration (zero bounds checks)
+/// // Fast: SIMD raw memory iteration (zero bounds checks)
 /// grid.as_simd_mut().fill_all(default_pixel);
 /// ```
 ///
