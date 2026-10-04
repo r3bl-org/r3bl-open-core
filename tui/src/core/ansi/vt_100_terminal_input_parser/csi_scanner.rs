@@ -4,7 +4,7 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 
-use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
+use crate::{ByteOffset, CSI_MIN_LEN, WideningCastToU16, WideningCastToU32, byte_offset,
             core::ansi::constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ASCII_DIGIT_0, CSI_PREFIX, CSI_PREFIX_LEN}};
 
@@ -12,18 +12,28 @@ use crate::{ByteOffset, WideningCastToU16, WideningCastToU32, byte_offset,
 /// (`'0'`..=`'9'`), strips the [`CSI_PREFIX`] and returns the payload slice starting at
 /// the first digit.
 ///
-/// Returns `None` if `chunk` is too short, does not begin with [`CSI_PREFIX`], or the
-/// byte following [`CSI_PREFIX`] is not an [`ASCII`] digit.
+/// Returns `None` if any of this is true:
+/// - `chunk` is too short,
+/// - `chunk` does not begin with [`CSI_PREFIX`],
+/// - the byte following [`CSI_PREFIX`] in `chunk` is not an [`ASCII`] digit.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`CSI_PREFIX`]: crate::CSI_PREFIX
 #[must_use]
 pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
+    // Early return if `chunk` is too short.
+    if chunk.len() < CSI_MIN_LEN {
+        return None;
+    }
+
     let payload_slice = chunk.strip_prefix(CSI_PREFIX)?;
     let first_byte = payload_slice.first()?;
+
     if first_byte.is_ascii_digit() {
+        // Strip CSI_PREFIX from chunk and return the rest.
         Some(payload_slice)
     } else {
+        // The byte following CSI_PREFIX in chunk is not an ASCII digit.
         None
     }
 }
