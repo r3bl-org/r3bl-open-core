@@ -120,17 +120,22 @@ pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> {
 pub fn parse_decimal_digits(slice: &[u8]) -> Option<u32> {
     const DECIMAL_RADIX: u32 = 10;
 
-    // Early return if the slice is empty or is not a text formatted number.
+    // Early return if the slice is empty.
     let chunk_is_empty = slice.is_empty();
+    if chunk_is_empty {
+        return None;
+    };
+
+    // Early return if the slice contains anything other than ASCII digits.
     let chunk_contains_only_text_formatted_numbers =
         slice.iter().all(|byte| (*byte).is_ascii_digit());
-    if chunk_is_empty || !chunk_contains_only_text_formatted_numbers {
+    if !chunk_contains_only_text_formatted_numbers {
         return None;
     }
 
     // Invariant established: All bytes are guaranteed to be text formatted numbers.
-    let mut accumulated_value: u32 = 0;
     let text_formatted_number_slice = slice;
+    let mut accumulated_value: u32 = 0;
 
     for byte in text_formatted_number_slice.iter().copied() {
         // Convert ASCII character byte to its numeric digit value.
