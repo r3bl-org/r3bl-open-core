@@ -12,10 +12,21 @@ use crate::{ByteOffset, CSI_MIN_LEN, WideningCastToU16, WideningCastToU32, byte_
 /// (`'0'`..=`'9'`), strips the [`CSI_PREFIX`] and returns the payload slice starting at
 /// the first digit.
 ///
+/// ```text
+/// Input chunk: &[u8] (e.g. b"\x1b[91;3u")
+///
+/// Index:     0       1         2      3      4      5      6
+///        ┌───────┬───────┐ ┌──────┬──────┬──────┬──────┬──────┐
+/// Byte:  │  ESC  │  '['  │ │ '9'  │ '1'  │ ';'  │ '3'  │ 'u'  │
+///        └───────┴───────┘ └──────┴──────┴──────┴──────┴──────┘
+///        │◄ CSI_PREFIX  ►│ │◄   Returned payload subslice    ►│
+///           (stripped)        (must begin with ASCII digit)
+/// ```
+///
 /// Returns `None` if any of this is true:
 /// - `chunk` is too short,
 /// - `chunk` does not begin with [`CSI_PREFIX`],
-/// - the byte following [`CSI_PREFIX`] in `chunk` is not an [`ASCII`] digit.
+/// - byte after [`CSI_PREFIX`] in `chunk` isn't an [`ASCII`] digit, e.g. `ESC [ A`.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`CSI_PREFIX`]: crate::CSI_PREFIX
