@@ -6,6 +6,14 @@ use crate::core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                       try_parse_input_event};
 use std::collections::VecDeque;
 
+/// Upper bound on how many bytes a single escape sequence can accumulate to before
+/// [`StatefulInputParser::advance`] gives up on it and resyncs.
+///
+/// Comfortably larger than any sequence this parser recognizes (the longest is the
+/// `modifyOtherKeys` form `ESC[27;mod;codepoint~`, at ~15 bytes), so this only ever
+/// triggers on genuinely unrecognized/malformed input.
+const MAX_ESCAPE_SEQUENCE_LEN: usize = 64;
+
 /// Stateful parser for terminal input bytes.
 ///
 /// Accumulates bytes and parses them into [`VT100InputEventIR`] events using the
@@ -61,8 +69,20 @@ impl StatefulInputParser {
                     self.buffer.clear();
                 }
                 None => {
-                    // Incomplete sequence or waiting for more bytes.
-                    // Keep buffer and continue accumulating.
+                    // Incomplete sequence or waiting for more bytes. Keep buffer and
+                    // continue accumulating - UNLESS it has grown suspiciously long,
+                    // which means it's not actually incomplete but rather a complete
+                    // sequence this parser doesn't recognize. Without this check, such
+                    // a sequence would never clear the buffer, silently swallowing
+                    // every keystroke that follows it for the rest of the session.
+                    if self.buffer.len() > MAX_ESCAPE_SEQUENCE_LEN {
+                        tracing::warn!(
+                            bytes = ?self.buffer,
+                            "StatefulInputParser: discarding unrecognized escape \
+                             sequence that exceeded {MAX_ESCAPE_SEQUENCE_LEN} bytes"
+                        );
+                        self.buffer.clear();
+                    }
                 }
             }
         }
@@ -472,5 +492,50 @@ mod tests_utf8_input {
         let events: Vec<_> = (&mut parser).collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('é')));
+    }
+}
+
+/// Regression tests guarding against the whole bug class behind the Ctrl+End freeze:
+/// a complete-but-unrecognized escape sequence must never permanently wedge the parser,
+/// since `try_parse_input_event` returning `None` is otherwise indistinguishable from
+/// "incomplete, wait for more bytes".
+#[cfg(test)]
+mod tests_unrecognized_sequence_resilience {
+    use super::MAX_ESCAPE_SEQUENCE_LEN;
+    use super::test_fixtures::*;
+
+    #[test]
+    fn unrecognized_but_complete_sequence_does_not_block_subsequent_input() {
+        // A syntactically well-formed but unrecognized CSI sequence: ESC [ 1 ; 5 Q
+        // ('Q' is not a final byte this parser maps to anything). Before the fix, this
+        // would return None forever and every following byte would be silently
+        // swallowed into the same dead buffer.
+        let mut parser = StatefulInputParser::default();
+        parser.advance(&[ANSI_ESC, b'[', b'1', b';', b'5', b'Q'], false);
+        assert_eq!(
+            (&mut parser).collect::<Vec<_>>().len(),
+            0,
+            "unrecognized sequence should not itself produce an event"
+        );
+
+        // Padding to exceed MAX_ESCAPE_SEQUENCE_LEN so the safety valve kicks in and
+        // discards the stuck buffer. Once discarded, the padding bytes themselves get
+        // reparsed as plain characters (expected, not a bug) - drain and ignore those;
+        // what matters is that the parser is no longer wedged afterward.
+        let padding = vec![b'Q'; MAX_ESCAPE_SEQUENCE_LEN];
+        parser.advance(&padding, false);
+        (&mut parser).for_each(drop);
+
+        // A normal keystroke sent afterwards must still parse correctly - proving the
+        // parser resynced instead of staying wedged.
+        parser.advance(b"a", false);
+        let events: Vec<_> = parser.collect();
+        assert_eq!(
+            events.len(),
+            1,
+            "parser should recover and parse subsequent input after discarding \
+             an unrecognized sequence"
+        );
+        assert_eq!(events[0], keyboard_event(VT100KeyCodeIR::Char('a')));
     }
 }
