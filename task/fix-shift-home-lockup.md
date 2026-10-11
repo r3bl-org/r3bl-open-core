@@ -1620,29 +1620,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/core/terminal_io/mod.rs`
     - [x] `tui/src/core/mod.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/unit_tests/generator_round_trip_tests.rs`
-    - [ ] `tui/src/core/terminal_io/backend_compat_tests/backend_compat_input_test.rs`
-    - [ ] `tui/src/core/terminal_io/backend_compat_tests/pty_terminal_mode_test.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/output/tests.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_pty_is_interactive.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_disclaimer.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_piped_stdin.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_piped_stdout.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/mod.rs`
-    - [ ] `tui/src/core/ansi/osc/mod.rs`
     - [x] `tui/src/core/ansi/vt_100_pty_output_parser/modes.rs`
     - [x] `tui/src/core/ansi/generator/test_fixtures/ansi_input.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mod.rs`
     - [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/protocol_conversion.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/channel_types.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
-    - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs`
-    - [ ] `tui/src/lib.rs`
-    - [ ] `tui/README.md`
-    - [ ] `.harper-dictionary.txt`
 
 ### [x] Step 14: Support OSC Dynamic Color Reports (OSC 10, 11, 12, 13, 14, 17, 19) and Ground Documentation
 
@@ -1789,3 +1769,125 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_input_device_test.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_new_keyboard_features_test.rs`
     - [x] `task/fix-shift-home-lockup.md`
+
+### [ ] Step 15: Address OSC PTY Testing Gaps (Simulated Terminal Emulator over PTY)
+
+- **Problem Analysis & Architectural Motivation**:
+    - **One-Way Outbound Commands**: The TUI application emits one-way OSC sequences
+      (Window Title OSC 0/2, Hyperlinks OSC 8, Taskbar Progress OSC 9;4, System and
+      Primary Clipboard OSC 52) via `OscSender`. These commands have no inbound responses
+      from the terminal emulator. Currently, their wire formatting is only tested in unit
+      test string builders, without verifying that `OscSender` transmits the exact
+      expected byte sequences across an OS PTY stream to a master terminal process.
+    - **Inbound Query & Response Parity**: `pty_osc_color_test.rs` currently only tests 3
+      of the 7 supported color roles (Foreground, Background, Cursor), only tests one
+      terminator format, and only tests 4-digit hex notations (`rgb:rrrr/gggg/bbbb`). The
+      other 4 roles (MouseForeground, MouseBackground, Highlight, HighlightForeground),
+      `ST` vs `BEL` terminator handling, and 2-digit (`rgb:rr/gg/bb`), 1-digit
+      (`rgb:r/g/b`), and `#rrggbb` formats need end-to-end PTY validation through the
+      `mio` poller and `ChunkFramer`.
+    - **Live Stream Safety & Circuit Breaker**: The `OscCircuitBreaker` defends against
+      runaway (> 1 MiB) and malformed/unrecognized OSC streams. While covered in unit
+      tests, its behavior must be validated under live asynchronous streaming on an OS PTY
+      to ensure it drains multi-megabyte payloads in the background `mio` thread without
+      allocating or blocking delivery of trailing keystrokes.
+
+- [ ] **Phase 15.1: Outbound OSC Command Validation (`pty_osc_sender_test.rs`)**:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_sender_test.rs`:
+        - Implement a PTY integration test using `generate_pty_test!`:
+            - Controlled Child: Initializes `OutputDevice::new_stdout()`, instantiates
+              `OscSender`, and calls:
+                - `send_set_title_and_tab("Test Window & Tab")` (`OSC 0`)
+                - `send_set_title("Test Window Only")` (`OSC 2`)
+                - `send_set_hyperlink("https://r3bl.com", Some("link-1"))` (`OSC 8`)
+                - `send_clear_hyperlink()` (`OSC 8;;`)
+                - `send_set_progress(pc!(85))` (`OSC 9;4;1;85`)
+                - `send_clear_progress()` (`OSC 9;4;0;0`)
+                - `send_set_system_clipboard("System Clipboard Data")` (`OSC 52;c;...`)
+                - `send_set_primary_clipboard("Primary Selection Data")` (`OSC 52;p;...`)
+            - Controller Parent: Reads bytes emitted on master PTY and verifies exact wire
+              syntax for each sequence.
+    - Mandatory manual review for Phase 15.1:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_sender_test.rs`
+
+- [ ] **Phase 15.2: Complete 7-Role, Terminator & Multi-Format Inbound Coverage
+      (`pty_osc_color_test.rs`)**:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_color_test.rs`:
+        - Expand `test_cases()` to include all 7 roles:
+            - `Foreground` (OSC 10)
+            - `Background` (OSC 11)
+            - `Cursor` (OSC 12)
+            - `MouseForeground` (OSC 13)
+            - `MouseBackground` (OSC 14)
+            - `Highlight` (OSC 17)
+            - `HighlightForeground` (OSC 19)
+        - Alternate string terminators: Send responses using both `BEL` (`\x07`) and `ST`
+          (`\x1b\\`).
+        - Exercise multi-depth hex notations:
+            - 4-digit hex: `rgb:1111/2222/3333`
+            - 2-digit hex: `rgb:44/55/66`
+            - 1-digit hex: `rgb:7/8/9`
+            - Hash hex: `#aabbcc`
+        - Child process asserts that all 7 queries successfully parse into the expected
+          `InputEvent::TerminalColor` with matching `RgbValue`.
+    - Mandatory manual review for Phase 15.2:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_color_test.rs`
+
+- [ ] **Phase 15.3: Live PTY Stream Safety & Circuit Breaker (`pty_osc_safety_test.rs`)**:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_safety_test.rs`:
+        - Implement PTY integration test using `generate_pty_test!`:
+            - Test 1 (Runaway Payload Drain): Controller sends `\x1b]11;` followed by 1.2
+              MiB of ASCII payload, terminated with `BEL`, followed immediately by marker
+              key `'A'`. Child asserts that `OscCircuitBreaker` drains the payload and
+              only key `'A'` is received.
+            - Test 2 (Unrecognized OSC Sequence): Controller sends `\x1b]9999;unknown\x07`
+              followed by marker key `'B'`. Child asserts it is absorbed as `Ignored` and
+              only key `'B'` is received.
+            - Test 3 (Malformed Color Spec): Controller sends `\x1b]10;rgb:bad-spec\x07`
+              followed by marker key `'C'`. Child asserts fallback to `Ignored` and only
+              key `'C'` is received.
+    - Mandatory manual review for Phase 15.3:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/pty_osc_safety_test.rs`
+
+- [ ] **Phase 15.4: Module Wiring, Documentation & Verification**:
+    - In
+      `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/mod.rs`:
+        - Register `pub mod pty_osc_sender_test;` and `pub mod pty_osc_safety_test;` gated
+          under `#[cfg(all(target_os = "linux", any(test, doc)))]`.
+    - In `tui/src/core/terminal_io/backend_compat_tests/backend_compat_input_test.rs` and
+      `tui/src/lib.rs`:
+        - Update doc comments and intra-doc links to reference the complete set of OSC PTY
+          tests (`pty_osc_color_test`, `pty_osc_sender_test`, `pty_osc_safety_test`).
+    - Run full verification commands:
+        - [ ] Run `./check.fish --check`.
+        - [ ] Run `./check.fish --clippy`.
+        - [ ] Run `./check.fish --test`.
+        - [ ] Run `./check.fish --fmt`.
+        - [ ] Run `./check.fish --quick-doc`.
+    - Mandatory manual review for Phase 15.4:
+        - [ ] `tui/src/core/ansi/vt_100_terminal_input_parser/vt_100_parser_integration_tests/mod.rs`
+        - [ ] `tui/src/core/terminal_io/backend_compat_tests/backend_compat_input_test.rs`
+        - [ ] `tui/src/lib.rs`
+        - [ ] `task/fix-shift-home-lockup.md`
+        - [ ] `tui/src/core/terminal_io/backend_compat_tests/backend_compat_input_test.rs`
+        - [ ] `tui/src/core/terminal_io/backend_compat_tests/pty_terminal_mode_test.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/output/tests.rs`
+        - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_pty_is_interactive.rs`
+        - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_disclaimer.rs`
+        - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_piped_stdin.rs`
+        - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/test_piped_stdout.rs`
+        - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/mod.rs`
+        - [ ] `tui/src/core/ansi/osc/mod.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mod.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/paste_state_machine.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/channel_types.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
+        - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs`
+        - [ ] `tui/src/lib.rs`
+        - [ ] `tui/README.md`
