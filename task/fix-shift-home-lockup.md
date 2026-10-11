@@ -1630,7 +1630,7 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [ ] `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/mod.rs`
     - [ ] `tui/src/core/ansi/osc/mod.rs`
     - [x] `tui/src/core/ansi/vt_100_pty_output_parser/modes.rs`
-    - [x] `tui/src/core/ansi/generator/ansi_input.rs`
+    - [x] `tui/src/core/ansi/generator/test_fixtures/ansi_input.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_public_api.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/mio_poll_worker.rs`
     - [ ] `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mio_poller/handler_stdin.rs`
