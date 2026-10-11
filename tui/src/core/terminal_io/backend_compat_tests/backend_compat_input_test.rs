@@ -11,9 +11,10 @@
 //!
 //! # Platform
 //!
-//! **Linux only.** These tests are gated by `#[cfg(all(any(test, doc), target_os =
-//! "linux"))]` because [`DirectToAnsi`] is currently Linux-only. The raw mode
-//! implementations used are:
+//! [`DirectToAnsi`] is currently Linux-only. That is why they're gated by this:
+//! `#[cfg(all(any(test, doc), target_os = "linux"))]`
+//!
+//! The raw mode implementations used are:
 //!
 //! | Backend          | Raw Mode Implementation                                              |
 //! | ---------------- | -------------------------------------------------------------------- |
@@ -39,6 +40,26 @@
 //!   └── compares parsed InputEvents from both
 //! ```
 //!
+//! # Scope & Limitations ([`OSC`] Sequences Not Covered)
+//!
+//! This compatibility test deliberately excludes [`OSC`] query and response sequences
+//! (such as [`OSC`] 10/11 dynamic color queries and [`OSC`] 52 clipboard responses).
+//! [`CrosstermInputDevice`] does not support parsing inbound [`OSC`] responses and will
+//! either drop them or misinterpret them as unexpected keyboard events.
+//!
+//! For [`DirectToAnsiInputDevice`], bidirectional [`OSC`] query/report handling and
+//! security absorption are tested in dedicated test suites:
+//! - [`pty_osc_color_test`]: End-to-end [`PTY`] test for [`OSC`] color queries/reports
+//!   and [`OSC`] 52 clipboard payload absorption.
+//! - [`osc_and_unrecognized_tests`]: Unit tests for [`OSC`] stream framing with `ST` and
+//!   `BEL` terminators.
+//! - [`osc_scanner`]: Parser tests decoding dynamic color reports into IR events.
+//!
+//! For real terminal emulator probing and diagnostics, see the `osc_diagnostics` example:
+//! ```bash
+//! cargo run -p r3bl_tui --example osc_diagnostics
+//! ```
+//!
 //! # Module Structure
 //!
 //! - [`generate_test_sequences`] - [`ANSI`] sequence builders and test data.
@@ -53,11 +74,14 @@
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`osc_and_unrecognized_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::unit_tests::osc_and_unrecognized_tests
+//! [`osc_scanner`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
+//! [`pty_osc_color_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_color_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
-//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
 use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ARROW_DOWN_FINAL,
             ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DEL, CONTROL_C,

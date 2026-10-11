@@ -1617,8 +1617,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/core/terminal_io/capabilities/capabilities_impl.rs`
     - [x] `tui/src/core/terminal_io/capabilities/constants.rs`
     - [x] `tui/src/core/terminal_io/capabilities/mod.rs`
-    - [ ] `tui/src/core/terminal_io/mod.rs`
-    - [ ] `tui/src/core/mod.rs`
+    - [x] `tui/src/core/terminal_io/mod.rs`
+    - [x] `tui/src/core/mod.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/unit_tests/generator_round_trip_tests.rs`
     - [ ] `tui/src/core/terminal_io/backend_compat_tests/backend_compat_input_test.rs`
     - [ ] `tui/src/core/terminal_io/backend_compat_tests/pty_terminal_mode_test.rs`

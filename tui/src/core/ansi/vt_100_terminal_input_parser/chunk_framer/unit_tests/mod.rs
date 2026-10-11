@@ -6,9 +6,10 @@
 
 pub mod test_fixtures;
 
-mod basic_and_special_keys_tests;
-mod esc_and_chunked_tests;
-mod osc_and_unrecognized_tests;
-mod utf8_tests;
+pub mod basic_and_special_keys_tests;
+pub mod esc_and_chunked_tests;
+pub mod osc_and_unrecognized_tests;
+pub mod utf8_tests;
 
 pub use test_fixtures::*;
+
