@@ -78,7 +78,7 @@ macro_rules! define_ansi_const {
         #[doc = "[`OSC`]: crate::osc_codes::OscSequence"]
         pub const $const_name: &str = const_format::formatcp!(
             "{OSC_START}{val}",
-            OSC_START = $crate::core::osc::osc_codes::OSC_START,
+            OSC_START = $crate::core::ansi::constants::OSC_START,
             val = $val
         );
     };

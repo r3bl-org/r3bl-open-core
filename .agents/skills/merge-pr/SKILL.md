@@ -30,3 +30,4 @@ Use this skill when the user asks to "close the pr by rebasing and merging to ma
 - Pull the latest changes to sync up with origin: `git pull`.
 - Prune stale remote tracking branches: `git fetch --prune`.
 - Delete the local task branch you just merged: `git branch -D <branch-name>`.
+- If working in a linked worktree, clean it up from the main repository: `git worktree remove <worktree-path>`.

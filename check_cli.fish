@@ -58,6 +58,9 @@ function parse_arguments
         case --star-history
             echo "star-history"
             return 0
+        case --ensure-target
+            echo "ensure-target"
+            return 0
         case '*'
             echo "❌ Unknown argument: $argv[1]" >&2
             echo "Use --help for usage information" >&2
@@ -92,6 +95,7 @@ function show_help
     echo "  ./check.fish --quick-doc  Build docs (quick, --no-deps, staging + sync)"
     echo "  ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows + lychee)"
     echo "  ./check.fish --clean      Clean target build cache (empties tmpfs backing store)"
+    echo "  ./check.fish --ensure-target Ensure target symlink and backing store exist"
     echo "  ./check.fish --watch      Watch mode: run default checks on changes"
     echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
     echo "  ./check.fish --watch-doc  Watch mode: run doc build (full with deps)"

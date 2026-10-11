@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::modes::{AutoWrapMode, CursorVisibilityMode};
-use crate::{VPPos, PtyResponseEvent, TermRow, TuiStyle, osc::OscEvent};
+use crate::{PtyResponseEvent, TermRow, TuiStyle, VPPos, osc::OscPtyEvent};
 
 /// Encapsulated runtime state tracking active graphic renditions, terminal attributes,
 /// and protocol requests for [`ANSI`] sequence parsing.
@@ -158,8 +158,8 @@ pub struct ParserGlobalState {
 
     /// [`OSC`] events (hyperlinks, titles, etc.) accumulated during processing.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    pub pending_osc_events: Vec<OscEvent>,
+    /// [`OSC`]: crate::OscPtyEvent
+    pub pending_osc_events: Vec<OscPtyEvent>,
 
     /// [`DSR`] response events accumulated during processing - need to be sent back to
     /// [`PTY`].

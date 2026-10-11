@@ -20,8 +20,8 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
-            GLYPH_WAITING, InputEvent, KeyState, MSG_CONTROLLED_READY,
-            MSG_CONTROLLED_STARTING, PtyTestContext, PtyTestMode,
+            GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
+            PtyTestContext, PtyTestMode,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
@@ -67,66 +67,42 @@ fn controller(context: PtyTestContext) {
             "Shift+Up",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Up,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::SHIFT,
             },
         ),
         (
             "Ctrl+Up",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Up,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::CTRL,
             },
         ),
         (
             "Alt+Down",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Down,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::NotPressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::ALT,
             },
         ),
         (
             "Shift+Alt+Left",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Left,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::NotPressed,
-                },
+                modifiers: VT100KeyModifiersIR::SHIFT.with_alt(),
             },
         ),
         (
             "Ctrl+Shift+Right",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Right,
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::NotPressed,
-                    ctrl: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::CTRL.with_shift(),
             },
         ),
         (
             "Ctrl+Alt+Shift+F1",
             VT100InputEventIR::Keyboard {
                 code: VT100KeyCodeIR::Function(1),
-                modifiers: VT100KeyModifiersIR {
-                    shift: KeyState::Pressed,
-                    alt: KeyState::Pressed,
-                    ctrl: KeyState::Pressed,
-                },
+                modifiers: VT100KeyModifiersIR::CTRL.with_alt().with_shift(),
             },
         ),
     ];

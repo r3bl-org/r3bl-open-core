@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words 𝕳𝖊𝖑𝖑𝖔
-
 //! [`EditorBufferMut`] holds a few important mutable references to the editor buffer. It
 //! also contains some data copied from the editor engine. This is necessary when you need
 //! to mutate the buffer and then run validation checks on the buffer.

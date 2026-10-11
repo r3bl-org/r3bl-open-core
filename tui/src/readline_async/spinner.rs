@@ -647,5 +647,3 @@ mod tests {
         }
     }
 }
-
-// cspell:words Coffman

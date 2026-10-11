@@ -172,5 +172,3 @@ mod impl_writer {
         ok!()
     }
 }
-
-// cspell:words findstr

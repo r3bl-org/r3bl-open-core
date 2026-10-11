@@ -31,7 +31,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::core::osc::OscEvent;
+use crate::core::osc::OscPtyEvent;
 
 impl OfsBufVT100 {
     /// Handle:
@@ -45,7 +45,7 @@ impl OfsBufVT100 {
     pub fn handle_title_and_icon(&mut self, title: &str) {
         self.get_parser_global_state_mut()
             .pending_osc_events
-            .push(OscEvent::SetTitleAndTab(title.to_string()));
+            .push(OscPtyEvent::SetTitleAndTab(title.to_string()));
     }
 
     /// Handle `ESC ] 8` hyperlink sequences.
@@ -55,12 +55,12 @@ impl OfsBufVT100 {
     ///
     /// [`OSC`]: crate::osc_codes::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {
-        self.get_parser_global_state_mut()
-            .pending_osc_events
-            .push(OscEvent::Hyperlink {
+        self.get_parser_global_state_mut().pending_osc_events.push(
+            OscPtyEvent::Hyperlink {
                 uri: uri.to_string(),
                 text: String::new(), // Text is handled separately via print()
-            });
+            },
+        );
     }
 }
 
@@ -96,7 +96,7 @@ mod tests_osc_ops {
                 .len(),
             1
         );
-        if let OscEvent::SetTitleAndTab(title) =
+        if let OscPtyEvent::SetTitleAndTab(title) =
             &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(title, "My Window Title");
@@ -119,7 +119,7 @@ mod tests_osc_ops {
                 .len(),
             1
         );
-        if let OscEvent::Hyperlink { uri, text } =
+        if let OscPtyEvent::Hyperlink { uri, text } =
             &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(uri, "https://example.com");
@@ -149,15 +149,15 @@ mod tests_osc_ops {
         // Check order is preserved.
         assert!(matches!(
             buffer.get_parser_global_state_mut().pending_osc_events[0],
-            OscEvent::SetTitleAndTab(_)
+            OscPtyEvent::SetTitleAndTab(_)
         ));
         assert!(matches!(
             buffer.get_parser_global_state_mut().pending_osc_events[1],
-            OscEvent::Hyperlink { .. }
+            OscPtyEvent::Hyperlink { .. }
         ));
         assert!(matches!(
             buffer.get_parser_global_state_mut().pending_osc_events[2],
-            OscEvent::SetTitleAndTab(_)
+            OscPtyEvent::SetTitleAndTab(_)
         ));
     }
 
@@ -174,7 +174,7 @@ mod tests_osc_ops {
                 .len(),
             1
         );
-        if let OscEvent::SetTitleAndTab(title) =
+        if let OscPtyEvent::SetTitleAndTab(title) =
             &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(title, "");
@@ -196,7 +196,7 @@ mod tests_osc_ops {
                 .len(),
             1
         );
-        if let OscEvent::Hyperlink { uri, text } =
+        if let OscPtyEvent::Hyperlink { uri, text } =
             &buffer.get_parser_global_state_mut().pending_osc_events[0]
         {
             assert_eq!(uri, "");

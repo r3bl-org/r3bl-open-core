@@ -261,7 +261,7 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 - **code-review** - Interactive chunk-by-chunk in-chat code review with explicit approval
   steps. Use when the user requests an interactive code review or runs `/code-review`.
 
-- **test-cross-platform** - Synchronize repository to the fleet (macOS, Windows) and run the full test suite across all platforms concurrently. Use via `/test-cross-platform`.
+- **test-cross-platform** - Synchronize repository to the fleet (Linux on nazmul-mobile, macOS, Windows) and run the full test suite across all platforms concurrently. Use via `/test-cross-platform`.
 
 ### Documentation
 
@@ -276,7 +276,7 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 
 - **organize-modules** - Private modules with public re-exports (barrel export pattern),
   conditional visibility for docs/tests. Use when creating or organizing modules.
-    - Supporting file: `examples.md` (6 complete module organization examples)
+    - Supporting file: `examples.md` (8 complete module organization examples)
 
 - **organize-tests** - Test directory taxonomy (why a test is isolated), PTY conventions
   (Run with section, deadlock prevention), zero test-bloat directive (test our code, not
@@ -450,6 +450,18 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `write-documentation` skill. This keeps rendered docs clean, validates real types on
    Linux, and compiles safely on macOS and Windows.
 
+8. **No `flowchart TD` in Diagrams (Global Rule)**: NEVER use `flowchart TD` (top-down) for
+   Mermaid diagrams in markdown, task files, documentation, or chat responses. It does
+   not work or render properly in the terminal. Prefer `flowchart LR` (left-to-right),
+   Markdown tables, or plain indented text lists instead.
+
+9. **Physical Keycaps with `<kbd>`**: When documenting physical keyboard input in rustdoc
+   or markdown (such as key presses, keyboard shortcuts, or contrasting physical keys with
+   terminal escape sequences), use the HTML `<kbd>` tag (e.g., `<kbd>Esc</kbd>`,
+   `<kbd>Enter</kbd>`, `<kbd>Alt</kbd>+<kbd>]</kbd>`). Rustdoc has native CSS styling for
+   `<kbd>` that renders it as a 3D keycap button, clearly distinguishing physical keys
+   from terminal escape code bytes.
+
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
 ### Constructor Conventions: `Default` over No-Arg `new()`
@@ -581,6 +593,22 @@ use std::collections::HashMap;
 let mut map = HashMap::new();
 map.insert(key, value);
 ```
+
+### File and Module Naming Conventions
+
+When organizing modules into subfiles, apply the conventions from the `organize-modules` skill:
+
+1. **Inception Collision Avoidance (`<name>_struct.rs` / `<name>_enum.rs`)**:
+   - If a file inside a module folder would share the exact base name of its parent folder (e.g., `chunk_framer/chunk_framer.rs`), rename it to prevent collisions:
+     - Defines primary struct: `<name>_struct.rs` (e.g., `chunk_framer_struct.rs`, `accumulator_struct.rs`).
+     - Defines primary enum: `<name>_enum.rs` (e.g., `parser_enum.rs`).
+   - Non-colliding files keep their natural descriptive names without `_struct` or `_enum` suffixes (e.g., `unparsed_buffer_action.rs`).
+
+2. **Standalone Functions Entry Point (`<xyz>_entry_point.rs`)**:
+   - A module file containing only standalone functions (pure functions, pipeline decoders, dispatchers) without primary data structures is named `<xyz>_entry_point.rs` (e.g., `input_parser_entry_point.rs`, `chunk_decoder_entry_point.rs`).
+
+3. **Public API Surface (`<xyz>_public_api.rs`)**:
+   - A module file that encapsulates the public, user-facing API surface separate from internal implementation is named `<xyz>_public_api.rs` (e.g., `engine_public_api.rs`, `ansi_parser_public_api.rs`).
 
 ## Git Workflow
 

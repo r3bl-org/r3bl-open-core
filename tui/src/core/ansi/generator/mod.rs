@@ -10,11 +10,14 @@
 //! - [`SgrCode`] - [`SGR`] (Select Graphic Rendition) codes for text styling
 //! - [`EscSequence`] - [`ESC`] (Escape) sequence builder for cursor and terminal control
 //! - [`DsrSequence`] - [`DSR`] (Device Status Report) response builder
+//! - [`OscSequence`] - [`OSC`] (Operating System Command) sequence builder
 //! - [`CliTextInline`] - Styled text for CLI output
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
+//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OscSequence`]: crate::osc_codes::OscSequence
 //! [`SGR`]: crate::SgrCode
 
 #![rustfmt::skip]
@@ -41,7 +44,7 @@ pub use da::*;
 
 // Test/doc-only modules.
 #[cfg(any(test, doc))]
-mod ansi_input;
+mod test_fixtures;
 #[cfg(any(test, doc))]
-pub use ansi_input::*;
+pub use test_fixtures::*;
 

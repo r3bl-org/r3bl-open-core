@@ -40,6 +40,10 @@ Reveal complexity only when needed.
 - Advanced features should be discoverable but not in-your-face
 - Documentation follows inverted pyramid: high-level first, details later
 - Module structure should guide users from simple to advanced
+- **Type-Centric Co-location (Associated Functions over Floating Functions)**: Prefer associated functions and methods on domain types over free-floating helper functions.
+  - **Co-locate with Return Type**: When a function's primary job is constructing, parsing, or classifying a domain type `T` (e.g. `classify_csi_buffer -> CsiBufferKind`), make it an associated function on `T` (`CsiBufferKind::classify`).
+  - **Co-locate with Subject Type**: When a function interprets, translates, or queries `T` (e.g. `parse_ss3_command(byte) -> Option<VT100KeyCodeIR>`), make it an associated method or function on `T` (`Ss3BufferKind::decode(self)` / `Ss3BufferKind::parse_command(byte)`).
+  - **Keep Floating When Appropriate**: Reserve floating functions for high-level pipeline entry points / coordinators (e.g. `parse_keyboard_sequence` returning generic IR), multi-type algorithms, or functions returning external/standard library types (`u32`, `String`).
 
 ### 3. Make Illegal States Unrepresentable
 

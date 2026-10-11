@@ -2,7 +2,7 @@
 
 //! # Convert [`KeyPress`] Events to Child Process [`stdin`] input
 //!
-//! This module translates high-level [`KeyPress`] events into [`PtyInputEvent`]s
+//! This module translates high-level [`KeyPress`] events into [`PtyInputEvent`]
 //! containing the exact byte sequences and escape codes expected by a child process
 //! running inside a [`PTY`] (such as `bash`, `vim`, or `nano`).
 //!
@@ -14,10 +14,10 @@
 //!    keyboard into a host terminal (e.g., [`WezTerm`] or [`Alacritty`]). The host
 //!    terminal driver reads raw bytes from the host [`/dev/tty`] or [`stdin`] and parses
 //!    them into structured Rust [`KeyPress`] events:
-//!    * On **Linux**, [`TERMINAL_LIB_BACKEND`] selects [`direct_to_ansi`]'s input
-//!      pipeline ([`vt_100_terminal_input_parser`] and [`protocol_conversion`]). This
-//!      pipeline is pure [`VT-100`] and does not support [`Fixterms`]; incoming enhanced
-//!      keys (such as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by the parser.
+//!    * On **Linux**, [`TERMINAL_LIB_BACKEND`] selects [`direct_to_ansi`] input pipeline
+//!      ([`vt_100_terminal_input_parser`] and [`protocol_conversion`]). This pipeline is
+//!      pure [`VT-100`] and does not support [`Fixterms`]; incoming enhanced keys (such
+//!      as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by the parser.
 //!    * On **macOS and Windows**, [`TERMINAL_LIB_BACKEND`] selects [`Crossterm`], which
 //!      supports enhanced keyboard protocols.
 //!    * Enhanced keys can also be synthetically injected (e.g., in unit tests).
@@ -213,7 +213,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                     CursorKeyMode::default(),
                 )
             } else {
-                // For non-ASCII, use CSI u sequences.
+                // For non-ASCII, use CSI `u` sequences.
                 generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier())
             }
         }
@@ -225,7 +225,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             alt: false,
         } if ch == ' ' => {
             // Shift+Space typically sends regular space but some apps detect it via CSI
-            // u.
+            // `u`.
             generate_csi_u_sequence(' '.as_u32_widening(), modifiers.to_csi_modifier())
         }
 
@@ -268,7 +268,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                     CursorKeyMode::default(),
                 )
             } else {
-                // Fallback to CSI u for unsupported combinations.
+                // Fallback to CSI `u` for unsupported combinations.
                 generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier())
             }
         }
@@ -285,14 +285,14 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             } else {
                 ch
             };
-            // Use CSI u sequences for Ctrl+Shift combinations.
+            // Use CSI `u` sequences for Ctrl+Shift combinations.
             generate_csi_u_sequence(
                 target_char.as_u32_widening(),
                 modifiers.to_csi_modifier(),
             )
         }
 
-        // Other combinations default to CSI u sequences.
+        // Other combinations default to CSI `u` sequences.
         _ => generate_csi_u_sequence(ch.as_u32_widening(), modifiers.to_csi_modifier()),
     }
 }
@@ -415,7 +415,7 @@ fn convert_ctrl_number(ch: char) -> PtyInputEvent {
             ControlSequence::RawSequence(vec![0x7F]),
             CursorKeyMode::default(),
         ), // Ctrl+8 -> DEL
-        // For 0, 1, 9 use CSI u sequences as they don't have traditional control codes.
+        // For 0, 1, 9 use CSI `u` sequences as they don't have traditional control codes.
         _ => generate_csi_u_sequence(ch.as_u32_widening(), 5),
     }
 }
@@ -433,9 +433,9 @@ fn convert_ctrl_character(ch: char) -> PtyInputEvent {
 fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     match ch {
         // Lowercase letters.
-        c @ 'a'..='z' => Some(c.to_u8_lossy() - b'a' + 1),
+        'a'..='z' => Some(ch.to_u8_lossy() - b'a' + 1),
         // Uppercase letters (same control codes as lowercase).
-        c @ 'A'..='Z' => Some(c.to_u8_lossy() - b'A' + 1),
+        'A'..='Z' => Some(ch.to_u8_lossy() - b'A' + 1),
         _ => None,
     }
 }
@@ -645,7 +645,7 @@ fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputE
     }
 }
 
-/// Generate [`CSI`] u sequence: `ESC [ <unicode>;<modifier>u`
+/// Generate [`CSI`] `u` sequence: `ESC [ <unicode>;<modifier>u`
 ///
 /// [`CSI`]: crate::CsiSequence
 fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> PtyInputEvent {
@@ -745,7 +745,7 @@ mod tests {
         let event: Option<PtyInputEvent> = key.into();
         match event {
             Some(PtyInputEvent::SendControl(ctrl, mode)) => {
-                // Should be ESC + Ctrl+A -> \x1b\x01
+                // Should be ESC + Ctrl+A -> `\x1b\x01`
                 assert_eq!(ctrl.to_bytes(mode).as_ref(), &[0x1b, 0x01]);
             }
             _ => panic!("Expected SendControl event"),
@@ -786,7 +786,7 @@ mod tests {
 
     #[test]
     fn test_csi_u_combinations() {
-        // Ctrl+Shift+T -> CSI 84;6u
+        // Ctrl+Shift+T -> `CSI 84;6u`
         let key = KeyPress::WithModifiers {
             key: Key::Character('t'),
             mask: ModifierKeysMask {
@@ -803,7 +803,7 @@ mod tests {
             _ => panic!("Expected SendControl event for Ctrl+Shift+T"),
         }
 
-        // Ctrl+. -> CSI 46;5u
+        // Ctrl+. -> `CSI 46;5u`
         let key = KeyPress::WithModifiers {
             key: Key::Character('.'),
             mask: ModifierKeysMask {
@@ -820,5 +820,3 @@ mod tests {
         }
     }
 }
-
-// cspell:words Fixterms

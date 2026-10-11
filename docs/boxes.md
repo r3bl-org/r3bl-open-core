@@ -1,5 +1,3 @@
-<!-- cspell:words Undertie -->
-
 # Box-Drawing Character Reference
 
 Provide a quick reference for Unicode box-drawing characters commonly used in ASCII diagrams.

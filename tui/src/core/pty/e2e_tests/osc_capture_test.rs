@@ -1,12 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::cross_platform_commands;
-use crate::{DefaultPtySessionConfig, OscEvent, PtyOutputEvent, PtySessionConfigOption,
-            osc_codes::OscSequence};
+use crate::{DefaultPtySessionConfig, OscPtyEvent, PtyOutputEvent,
+            PtySessionConfigOption, osc_codes::OscSequence, pc};
 
 #[test]
 fn test_osc_capture_enabled() {
-    let osc_seq = OscSequence::ProgressUpdate(75).to_string();
+    let osc_seq = OscSequence::ProgressUpdate(pc!(75).unwrap()).to_string();
     let session = cross_platform_commands::printf(&osc_seq)
         .with_config(
             DefaultPtySessionConfig
@@ -28,7 +28,9 @@ fn test_osc_capture_enabled() {
     // joins the reader thread and sends Exit before returning.
     let mut osc_received = false;
     while let Ok(event) = session.rx_output_event.try_recv() {
-        if let PtyOutputEvent::Osc(OscEvent::ProgressUpdate(75)) = event {
+        if let PtyOutputEvent::Osc(OscPtyEvent::ProgressUpdate(pct)) = event
+            && *pct == 75
+        {
             osc_received = true;
         }
     }
@@ -38,7 +40,7 @@ fn test_osc_capture_enabled() {
 
 #[test]
 fn test_osc_capture_disabled() {
-    let osc_seq = OscSequence::ProgressUpdate(75).to_string();
+    let osc_seq = OscSequence::ProgressUpdate(pc!(75).unwrap()).to_string();
     let session = cross_platform_commands::printf(&osc_seq)
         .with_config(DefaultPtySessionConfig + PtySessionConfigOption::NoCaptureOutput)
         .start()

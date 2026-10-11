@@ -4,7 +4,7 @@
 //! docs.
 
 use super::protocol_conversion::convert_input_event;
-use crate::{InputEvent,
+use crate::{InputEvent, NEW_LINE_CHAR, TAB_CHAR,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
                                                        VT100KeyCodeIR, VT100PasteModeIR}};
 
@@ -14,7 +14,7 @@ use crate::{InputEvent,
 /// Each call returns this result to indicate:
 /// - An event is ready to emit
 /// - The event was absorbed (e.g., collecting paste data)
-#[allow(missing_debug_implementations)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PasteStateResult {
     /// Emit this event to the caller.
     Emit(InputEvent),
@@ -103,11 +103,11 @@ pub fn apply_paste_state_machine(
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Enter,
                     ..
-                } => buffer.push('\n'),
+                } => buffer.push(NEW_LINE_CHAR),
                 VT100InputEventIR::Keyboard {
                     code: VT100KeyCodeIR::Tab,
                     ..
-                } => buffer.push('\t'),
+                } => buffer.push(TAB_CHAR),
                 // Other events (mouse, resize, focus, arrow keys, etc.) are
                 // ignored during paste - they're unlikely to be intentional.
                 _ => {}
@@ -121,12 +121,43 @@ pub fn apply_paste_state_machine(
             VT100InputEventIR::Paste(VT100PasteModeIR::End),
         ) => PasteStateResult::Emit(InputEvent::BracketedPaste(String::new())),
 
+        // Ignored event (e.g. absorbed OSC sequence): always absorbed.
+        (_, VT100InputEventIR::Ignored) => PasteStateResult::Absorbed,
+
         // Normal event processing when not pasting.
         (PasteCollectionState::Inactive, _) => {
             match convert_input_event(vt100_event.clone()) {
                 Some(event) => PasteStateResult::Emit(event),
                 None => PasteStateResult::Absorbed,
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_apply_paste_state_machine_ignored() {
+        let mut inactive_state = PasteCollectionState::Inactive;
+        assert_eq!(
+            apply_paste_state_machine(&mut inactive_state, &VT100InputEventIR::Ignored),
+            PasteStateResult::Absorbed
+        );
+
+        let mut accumulating_state =
+            PasteCollectionState::Accumulating(String::from("data"));
+        assert_eq!(
+            apply_paste_state_machine(
+                &mut accumulating_state,
+                &VT100InputEventIR::Ignored
+            ),
+            PasteStateResult::Absorbed
+        );
+        match accumulating_state {
+            PasteCollectionState::Accumulating(buf) => assert_eq!(buf, "data"),
+            PasteCollectionState::Inactive => panic!("Expected Accumulating state"),
         }
     }
 }

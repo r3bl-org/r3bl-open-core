@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words osascript nextest mktemp ionice gdbus
-
 # Comprehensive Build and Test Verification Script
 #
 # Purpose: Runs a comprehensive suite of checks to ensure code quality, correctness, and builds properly.
@@ -36,6 +34,7 @@
 #   ./check.fish --quick-doc  Build docs via staging + sync (fast, no deps)
 #   ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows)
 #   ./check.fish --clean      Clean target build cache (empties tmpfs backing store)
+#   ./check.fish --ensure-target Ensure target symlink and backing store exist
 #   ./check.fish --watch      Watch mode: run default checks on file changes
 #   ./check.fish --watch-test Watch mode: run tests/doctests only
 #   ./check.fish --watch-doc  Watch mode: quick docs first, full docs forked to background
@@ -54,7 +53,7 @@
 #   check_watch.fish           Watch mode loop, sliding window debounce, check dispatch
 
 # Directory Independence: Always switch to repository root where this script lives
-set -g CHECK_REPO_ROOT (cd (dirname (status --current-filename)) && pwd)
+set -gx CHECK_REPO_ROOT (cd (dirname (status --current-filename)) && pwd)
 cd $CHECK_REPO_ROOT
 set -l __check_dir $CHECK_REPO_ROOT
 
@@ -83,6 +82,13 @@ function main
     set -l parse_status $status
     if test $parse_status -ne 0
         return 1
+    end
+
+    # Branch early for target provisioning without doing full cleanup
+    if test "$mode" = "ensure-target"
+        # Target symlink and backing store were already verified and provisioned
+        # by check_constants.fish when it was sourced above.
+        return 0
     end
 
     # Proactive cleanup: remove stale ICE dump files and project-related zombies
@@ -263,7 +269,7 @@ function main
             run_full_checks_with_recovery
             set -l full_status $status
 
-            # Sync docs from staging to serving directory (so docs are browseable)
+            # Sync docs from staging to serving directory (so docs are browsable)
             if test $full_status -eq 0
                 # Sync mode based on dep-doc cache (see DEP_DOCS_WERE_CACHED architecture note)
                 if test "$DEP_DOCS_WERE_CACHED" = true

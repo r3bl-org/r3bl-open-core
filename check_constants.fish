@@ -17,6 +17,11 @@
 # always uses the native ./target symlink without being hijacked by old exports.
 set -q CARGO_TARGET_DIR; and set -e CARGO_TARGET_DIR
 
+# Ensure CHECK_REPO_ROOT is set and exported (e.g. when sourced in subshells or standalone).
+if not set -q CHECK_REPO_ROOT; or test -z "$CHECK_REPO_ROOT"
+    set -gx CHECK_REPO_ROOT (cd (dirname (status --current-filename)) && pwd)
+end
+
 # Lock/PID file for single-instance enforcement.
 # Uses PID file with process liveness check - simpler and fish-compatible.
 # Scoped with user, project name, and repo path hash for complete worktree isolation.
@@ -68,19 +73,23 @@ mkdir -p "$CHECK_PROJECT_ROOT/staging-full"
 # - If target is a physical directory or file, safely migrate contents and replace with symlink.
 # - If target does not exist (e.g. user ran rm -rf target to clear cache), wipe backing store too and recreate symlink.
 function ensure_target_symlink
+    if test -z "$CHECK_REPO_ROOT"
+        echo "Error: CHECK_REPO_ROOT is not set in ensure_target_symlink" >&2
+        return 1
+    end
     mkdir -p "$CHECK_TARGET_DIR"
     set -l local_target "$CHECK_REPO_ROOT/target"
     if test -L "$local_target"
         set -l link_target (readlink "$local_target")
         if test "$link_target" != "$CHECK_TARGET_DIR"
-            rm -f "$local_target"
+            command rm -f "$local_target"
             ln -s "$CHECK_TARGET_DIR" "$local_target"
         end
     else
         if test -e "$local_target"
             echo "Moving existing physical target directory to tmpfs..."
             mv "$local_target"/* "$CHECK_TARGET_DIR"/ 2>/dev/null
-            rmdir "$local_target" 2>/dev/null; or rm -rf "$local_target"
+            rmdir "$local_target" 2>/dev/null; or command rm -rf "$local_target"
         else
             # User nuked target/ to reset cache; wipe backing store too.
             find "$CHECK_TARGET_DIR" -mindepth 1 -delete 2>/dev/null

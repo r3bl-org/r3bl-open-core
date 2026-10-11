@@ -1,5 +1,3 @@
-<!-- cspell:words unlockpt errno -->
-
 # Auto-close controlled side after spawn — eliminate deadlock footgun
 
 ## Problem

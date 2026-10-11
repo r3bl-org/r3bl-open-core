@@ -8,7 +8,8 @@
 
 use r3bl_rust_analyzer_mcp_server::RustAnalyzerClient;
 use serde_json::Value;
-use std::{path::PathBuf, process::Command};
+use std::{path::{Path, PathBuf},
+          process::Command};
 
 fn get_server_bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_rust-analyzer-mcp-server"))
@@ -27,21 +28,31 @@ fn get_npx_command() -> Command {
     }
 }
 
+/// Helper to construct the base `npx @modelcontextprotocol/inspector --cli <server_bin>`
+/// command with platform-appropriate timeouts. On Windows, process spawning and NTFS
+/// overhead require a larger connection timeout.
+fn create_inspector_cli_command(server_bin: &Path) -> Command {
+    let mut cmd = get_npx_command();
+    cmd.args([
+        "-y",
+        "@modelcontextprotocol/inspector",
+        "--cli",
+        server_bin.to_str().expect("Valid binary path string"),
+    ]);
+    if cfg!(windows) {
+        cmd.args(["--connect-timeout", "60000"]);
+    }
+    cmd
+}
+
 /// Verifies that:
 /// 1. The MCP handshake succeeds over stdio.
 /// 2. All 10 tools are registered and advertised with valid input schemas.
 #[test]
 fn test_inspector_cli_tools_list() {
     let server_bin = get_server_bin();
-    let output = get_npx_command()
-        .args([
-            "-y",
-            "@modelcontextprotocol/inspector",
-            "--cli",
-            server_bin.to_str().expect("Valid binary path string"),
-            "--method",
-            "tools/list",
-        ])
+    let output = create_inspector_cli_command(&server_bin)
+        .args(["--method", "tools/list"])
         .output()
         .expect("Failed to execute npx inspector CLI");
 
@@ -113,12 +124,8 @@ fn test_inspector_cli_tools_call_symbols() {
     let file_arg = format!("file_path={file_path}");
     let server_bin = get_server_bin();
 
-    let output = get_npx_command()
+    let output = create_inspector_cli_command(&server_bin)
         .args([
-            "-y",
-            "@modelcontextprotocol/inspector",
-            "--cli",
-            server_bin.to_str().expect("Valid binary path string"),
             "--method",
             "tools/call",
             "--tool-name",

@@ -1,5 +1,3 @@
-<!-- cspell:words Stringly -->
-
 # Design Philosophy Patterns
 
 ## Cognitive Load Patterns
@@ -43,6 +41,71 @@ impl Parser {
     // Advanced users can access more:
     pub fn with_options(options: ParserOptions) -> Self { ... }
 }
+```
+
+### Type-Centric Co-location (Associated Functions over Floating Functions)
+
+#### Bad: Free-Floating Helper Functions for Domain Types
+
+Floating functions clutter the module namespace, complicate barrel re-exports, and hide lifecycle operations from IDE autocomplete.
+
+```rust
+pub enum CsiBufferKind<'a> {
+    SingleChar(u8),
+    Parameterized(&'a [u8]),
+    Invalid,
+}
+
+// Floating classifier in the module namespace:
+pub fn classify_csi_buffer(buffer: &[u8]) -> CsiBufferKind<'_> { ... }
+
+// Floating decoder for an internal shape:
+fn decode_csi_event(params: &[u16], final_byte: u8) -> Option<VT100InputEventIR> { ... }
+```
+
+#### Good: Associated Functions & Methods on Domain Types
+
+Co-locating classification, construction, and decoding directly with the types encapsulates behavior, cleans up module exports, and enables IDE discoverability via `Type::` or `instance.`.
+
+```rust
+pub enum CsiBufferKind<'a> {
+    SingleChar(u8),
+    Parameterized(&'a [u8]),
+    Invalid,
+}
+
+impl<'a> CsiBufferKind<'a> {
+    // Associated constructor / classifier:
+    #[must_use]
+    pub fn classify(buffer: &'a [u8]) -> Self { ... }
+}
+
+impl CsiParamShape {
+    // Associated classifier:
+    #[must_use]
+    fn classify(params: &[u16], final_byte: u8) -> Self { ... }
+
+    // Associated decoder:
+    #[must_use]
+    fn decode(self, final_byte: u8) -> Option<VT100InputEventIR> { ... }
+}
+```
+
+#### When to Keep Floating
+
+Reserve floating functions for top-level pipeline coordinators (orchestrators) that return generic envelopes or cross-cutting intermediate representations, or functions returning standard library / primitive types:
+
+```rust
+// GOOD as floating: Top-level entry point coordinating multiple parsers into generic IR:
+pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<ParsedInputEventIR> {
+    if let Some(event) = csi_u::parse_csi_u_sequence(buffer) {
+        return Some(event);
+    }
+    match CsiBufferKind::classify(buffer) { ... }
+}
+
+// GOOD as floating: Primitive or standard library return type (orphan rule):
+pub fn strip_csi_numeric_prefix(chunk: &[u8]) -> Option<&[u8]> { ... }
 ```
 
 ---
@@ -327,10 +390,11 @@ impl<const M: Mode> Processor<M> {
 
 ## Quick Reference
 
-| Principle | Ask Yourself |
-|-----------|--------------|
-| Cognitive Load | "How many concepts must a reader hold to understand this?" |
-| Progressive Disclosure | "Can a beginner use the simple path without seeing complexity?" |
-| Illegal States | "Can the type system prevent this bug?" |
-| Abstraction Worth | "Does this abstraction make the code easier or harder to understand?" |
-| ADT Const Params | "Can I use a const enum to replace a trait or runtime field?" |
+| Principle              | Ask Yourself                                                                  |
+| :--------------------- | :---------------------------------------------------------------------------- |
+| Cognitive Load         | "How many concepts must a reader hold to understand this?"                    |
+| Progressive Disclosure | "Can a beginner use the simple path without seeing complexity?"               |
+| Illegal States         | "Can the type system prevent this bug?"                                       |
+| Abstraction Worth      | "Does this abstraction make the code easier or harder to understand?"         |
+| ADT Const Params       | "Can I use a const enum to replace a trait or runtime field?"                 |
+| Type Co-location       | "Is this floating function constructing or decoding a co-located domain type?" |

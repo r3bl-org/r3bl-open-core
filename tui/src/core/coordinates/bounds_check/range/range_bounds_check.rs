@@ -162,8 +162,8 @@ use std::ops::{Add, RangeInclusive};
 ///                               ↑                   ↑
 ///                             start=5            end=10 (exclusive - NOT included)
 ///
-/// ✅ Range 5..10 is VALID: end=10 equals length (cursor EOL semantics)
-/// ❌ Range 5..11 is INVALID: end=11 exceeds length
+/// Range 5..10 is VALID: end=10 equals length (cursor EOL semantics)
+/// Range 5..11 is INVALID: end=11 exceeds length
 /// ```
 ///
 /// **Validation rules for [`RangeExclusive<Index>`]**:
@@ -196,8 +196,8 @@ use std::ops::{Add, RangeInclusive};
 ///                               ↑               ↑
 ///                            start=5        end=9 (IS included)
 ///
-/// ✅ Range 5..=9 is VALID: end=9 < length (both endpoints accessible)
-/// ❌ Range 5..=10 is INVALID: end=10 would access out-of-bounds index
+/// Range 5..=9 is VALID: end=9 < length (both endpoints accessible)
+/// Range 5..=10 is INVALID: end=10 would access out-of-bounds index
 /// ```
 ///
 /// **Validation rules for [`RangeInclusive<Index>`]**:

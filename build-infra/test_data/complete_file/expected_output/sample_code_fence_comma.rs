@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words epoll EINVAL filedescriptor pollfd kqueue
-
 //! Linux input handling for [`DirectToAnsi`] backend.
 //!
 //! # Platform Support

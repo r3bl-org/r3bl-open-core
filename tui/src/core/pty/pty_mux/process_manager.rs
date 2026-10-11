@@ -17,7 +17,7 @@ use crate::core::pty::pty_mux;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER,
             DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyInputEvent,
             PtySessionConfigOption, ScrollbackAmount, VPSize, VPWidth,
-            core::{osc::OscEvent,
+            core::{osc::OscPtyEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
             ok, vp_height};
 use std::fmt::{Debug, Formatter};
@@ -218,7 +218,7 @@ impl Process {
             // Handle any OSC events that were detected.
             for event in osc_events {
                 match event {
-                    OscEvent::SetTitleAndTab(title) => {
+                    OscPtyEvent::SetTitleAndTab(title) => {
                         self.terminal_title = Some(title.clone());
                         DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.

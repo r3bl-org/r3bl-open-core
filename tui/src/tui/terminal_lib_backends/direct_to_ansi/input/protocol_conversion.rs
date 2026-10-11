@@ -47,10 +47,10 @@
 //! This module translates [`VT-100`] IR produced by
 //! [`vt_100_terminal_input_parser`].
 //!
-//! * **No Enhanced Keyboard Protocol Support**: The [`direct_to_ansi`] input pipeline
-//!   currently does not support [`Fixterms`] or the [`Kitty`] keyboard protocol. Incoming
-//!   escape sequences using [`CSI u`] (such as `Ctrl+Shift+T` or `Ctrl+.`) are dropped by
-//!   [`vt_100_terminal_input_parser`] before reaching this module.
+//! * **Enhanced Keyboard Protocol Support ([`Kitty`] / [`CSI u`])**: The
+//!   [`direct_to_ansi`] input pipeline parses incoming [`CSI u`] sequences via
+//!   progressive enhancement, resolving key collisions such as `Alt+[` (`ESC [ 91 ; 3
+//!   u`), `Shift+Enter`, and `Ctrl+Tab`.
 //! * **Platform Backend Selection**: On Linux, [`TERMINAL_LIB_BACKEND`] selects
 //!   [`direct_to_ansi`]. On macOS and Windows, [`TERMINAL_LIB_BACKEND`] selects
 //!   [`Crossterm`], which supports enhanced keyboard protocols.
@@ -90,6 +90,7 @@ use crate::{Button, FocusEvent, FunctionKey, InputEvent, Key, KeyPress, KeyState
 ///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`VPPos`]
 /// - **Resize**: [`VT100InputEventIR::Resize`] → [`InputEvent::Resize`]
 /// - **Focus**: [`VT100InputEventIR::Focus`] → [`InputEvent::Focus`]
+/// - **Color Report**: [`VT100InputEventIR::ColorReport`] → [`InputEvent::TerminalColor`]
 /// - **Paste**: Should never be called (handled by state machine in `next()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
@@ -187,6 +188,8 @@ pub fn convert_input_event(vt100_event: VT100InputEventIR) -> Option<InputEvent>
                  and should never reach convert_input_event()"
             )
         }
+        VT100InputEventIR::ColorReport(report) => Some(InputEvent::TerminalColor(report)),
+        VT100InputEventIR::Ignored => None,
     }
 }
 
@@ -265,7 +268,9 @@ fn convert_key_code_to_keypress(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FunctionKey, NarrowingCastToU16, TermPos, VPHeight, VPWidth};
+    use crate::{FunctionKey, NarrowingCastToU16, RgbValue, TermPos, VPHeight, VPWidth,
+                core::ansi::vt_100_terminal_input_parser::{TerminalColorReport,
+                                                           TerminalColorRole}};
 
     // MARK: Keyboard conversion tests
 
@@ -458,11 +463,7 @@ mod tests {
     #[test]
     fn test_convert_with_shift_modifier() {
         // Test key with Shift modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::SHIFT;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('a'), modifiers);
 
@@ -480,11 +481,7 @@ mod tests {
     #[test]
     fn test_convert_with_ctrl_modifier() {
         // Test key with Ctrl modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::Pressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::CTRL;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Char('c'), modifiers);
 
@@ -502,11 +499,7 @@ mod tests {
     #[test]
     fn test_convert_with_alt_modifier() {
         // Test key with Alt modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::NotPressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::Pressed,
-        };
+        let modifiers = VT100KeyModifiersIR::ALT;
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Left, modifiers);
 
@@ -524,11 +517,7 @@ mod tests {
     #[test]
     fn test_convert_with_multiple_modifiers() {
         // Test key with Ctrl+Shift+Alt
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::Pressed,
-            alt: KeyState::Pressed,
-        };
+        let modifiers = VT100KeyModifiersIR::CTRL.with_shift().with_alt();
 
         let result = convert_key_code_to_keypress(VT100KeyCodeIR::Function(5), modifiers);
 
@@ -579,16 +568,25 @@ mod tests {
 
     #[test]
     fn test_convert_mouse_unknown_button() {
-        // Test that Unknown button returns None
-        let vt100_event = VT100InputEventIR::Mouse {
-            button: VT100MouseButtonIR::Unknown,
-            pos: TermPos::from_one_based(1, 1),
-            action: VT100MouseActionIR::Press,
-            modifiers: VT100KeyModifiersIR::default(),
-        };
+        // Test that Unknown button returns None for Press, Release, and Drag
+        for action in [
+            VT100MouseActionIR::Press,
+            VT100MouseActionIR::Release,
+            VT100MouseActionIR::Drag,
+        ] {
+            let vt100_event = VT100InputEventIR::Mouse {
+                button: VT100MouseButtonIR::Unknown,
+                pos: TermPos::from_one_based(1, 1),
+                action,
+                modifiers: VT100KeyModifiersIR::default(),
+            };
 
-        let result = convert_input_event(vt100_event);
-        assert!(result.is_none(), "Unknown mouse button should return None");
+            let result = convert_input_event(vt100_event);
+            assert!(
+                result.is_none(),
+                "Unknown mouse button for action {action:?} should return None"
+            );
+        }
     }
 
     #[test]
@@ -719,13 +717,52 @@ mod tests {
     }
 
     #[test]
+    fn test_convert_mouse_buttons_across_actions() {
+        let test_cases = [
+            (VT100MouseButtonIR::Left, Button::Left),
+            (VT100MouseButtonIR::Right, Button::Right),
+            (VT100MouseButtonIR::Middle, Button::Middle),
+        ];
+
+        for (vt100_button, expected_button) in test_cases {
+            // Release -> MouseUp
+            let vt100_release = VT100InputEventIR::Mouse {
+                button: vt100_button,
+                pos: TermPos::from_one_based(1, 1),
+                action: VT100MouseActionIR::Release,
+                modifiers: VT100KeyModifiersIR::default(),
+            };
+            assert_eq!(
+                convert_input_event(vt100_release),
+                Some(InputEvent::Mouse(MouseInput {
+                    pos: crate::vp_pos(0, 0),
+                    kind: MouseInputKind::MouseUp(expected_button),
+                    maybe_modifier_keys: None,
+                }))
+            );
+
+            // Drag -> MouseDrag
+            let vt100_drag = VT100InputEventIR::Mouse {
+                button: vt100_button,
+                pos: TermPos::from_one_based(1, 1),
+                action: VT100MouseActionIR::Drag,
+                modifiers: VT100KeyModifiersIR::default(),
+            };
+            assert_eq!(
+                convert_input_event(vt100_drag),
+                Some(InputEvent::Mouse(MouseInput {
+                    pos: crate::vp_pos(0, 0),
+                    kind: MouseInputKind::MouseDrag(expected_button),
+                    maybe_modifier_keys: None,
+                }))
+            );
+        }
+    }
+
+    #[test]
     fn test_convert_mouse_with_modifiers() {
         // Test mouse event with Shift modifier
-        let modifiers = VT100KeyModifiersIR {
-            shift: KeyState::Pressed,
-            ctrl: KeyState::NotPressed,
-            alt: KeyState::NotPressed,
-        };
+        let modifiers = VT100KeyModifiersIR::SHIFT;
 
         let vt100_event = VT100InputEventIR::Mouse {
             button: VT100MouseButtonIR::Left,
@@ -743,6 +780,26 @@ mod tests {
                 assert_eq!(mask.alt_key_state, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event with modifiers"),
+        }
+
+        // Test mouse event with Ctrl+Alt modifiers
+        let ctrl_alt = VT100KeyModifiersIR::CTRL.with_alt();
+        let vt100_ctrl_alt = VT100InputEventIR::Mouse {
+            button: VT100MouseButtonIR::Right,
+            pos: TermPos::from_one_based(1, 1),
+            action: VT100MouseActionIR::Press,
+            modifiers: ctrl_alt,
+        };
+
+        match convert_input_event(vt100_ctrl_alt) {
+            Some(InputEvent::Mouse(mouse_input)) => {
+                assert!(mouse_input.maybe_modifier_keys.is_some());
+                let mask = mouse_input.maybe_modifier_keys.expect("conversion error");
+                assert_eq!(mask.shift_key_state, KeyState::NotPressed);
+                assert_eq!(mask.ctrl_key_state, KeyState::Pressed);
+                assert_eq!(mask.alt_key_state, KeyState::Pressed);
+            }
+            _ => panic!("Expected Mouse event with Ctrl+Alt modifiers"),
         }
     }
 
@@ -831,11 +888,7 @@ mod tests {
         // Test full keyboard event conversion path
         let vt100_event = VT100InputEventIR::Keyboard {
             code: VT100KeyCodeIR::Char('x'),
-            modifiers: VT100KeyModifiersIR {
-                shift: KeyState::NotPressed,
-                ctrl: KeyState::Pressed,
-                alt: KeyState::NotPressed,
-            },
+            modifiers: VT100KeyModifiersIR::CTRL,
         };
 
         match convert_input_event(vt100_event) {
@@ -843,6 +896,46 @@ mod tests {
                 KeyPress::WithModifiers { key, mask } => {
                     assert_eq!(key, Key::Character('x'));
                     assert_eq!(mask.ctrl_key_state, KeyState::Pressed);
+                }
+                KeyPress::Plain { .. } => panic!("Expected WithModifiers keypress"),
+            },
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_convert_ignored_event() {
+        assert_eq!(convert_input_event(VT100InputEventIR::Ignored), None);
+    }
+
+    #[test]
+    fn test_convert_color_report_event() {
+        let report = TerminalColorReport {
+            role: TerminalColorRole::Background,
+            color: RgbValue::from_u8(12, 34, 56),
+        };
+        let vt100_event = VT100InputEventIR::ColorReport(report);
+
+        assert_eq!(
+            convert_input_event(vt100_event),
+            Some(InputEvent::TerminalColor(report))
+        );
+    }
+
+    #[test]
+    fn test_convert_alt_left_bracket() {
+        let vt100_event = VT100InputEventIR::Keyboard {
+            code: VT100KeyCodeIR::Char('['),
+            modifiers: VT100KeyModifiersIR::ALT,
+        };
+
+        match convert_input_event(vt100_event) {
+            Some(InputEvent::Keyboard(keypress)) => match keypress {
+                KeyPress::WithModifiers { key, mask } => {
+                    assert_eq!(key, Key::Character('['));
+                    assert_eq!(mask.alt_key_state, KeyState::Pressed);
+                    assert_eq!(mask.ctrl_key_state, KeyState::NotPressed);
+                    assert_eq!(mask.shift_key_state, KeyState::NotPressed);
                 }
                 KeyPress::Plain { .. } => panic!("Expected WithModifiers keypress"),
             },

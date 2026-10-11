@@ -1,7 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words urxvt wezterm konsole
-
 use crate::{TtyStatus, is_tty_stderr, is_tty_stdout};
 use std::{env,
           sync::atomic::{AtomicI8, Ordering}};

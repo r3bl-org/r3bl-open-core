@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words VMIN, VTIME
-
 //! Centralized [`ANSI`]/[`VT-100`] escape sequence constants.
 //!
 //! This module consolidates all [`ANSI`] terminal constants into a single, discoverable
@@ -19,11 +17,11 @@
 //!
 //! Each definition should include:
 //!
-//! | Element              | Description                                      |
-//! | :------------------- | :----------------------------------------------- |
-//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`     |
-//! | **Technical detail** | `Value: 'X' dec, 'YY' hex` or `Sequence: ESC X`. |
-//! | **Context**          | Representation and protocol fit.                 |
+//! | Element              | Description                                         |
+//! | :------------------- | :-------------------------------------------------- |
+//! | **Summary line**     | `Name ([Protocol Link]): Brief description.`        |
+//! | **Technical detail** | `Value: <dec> dec, <hex> hex` or `Sequence: ESC X`. |
+//! | **Context**          | Representation and protocol fit.                    |
 //!
 //! Here's an example:
 //! ```no_run
@@ -148,6 +146,11 @@ pub mod da;
 #[cfg(not(any(test, doc)))]
 mod da;
 
+#[cfg(any(test, doc))]
+pub mod osc_constants;
+#[cfg(not(any(test, doc)))]
+mod osc_constants;
+
 // Macros for const expansion.
 mod macros;
 
@@ -161,5 +164,5 @@ pub use raw_mode_constants::*;
 pub use sgr::*;
 pub use utf8::*;
 pub use da::*;
-#[allow(unused_imports)]
+pub use osc_constants::*;
 pub use mouse::*;

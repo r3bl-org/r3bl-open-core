@@ -5,7 +5,7 @@
 //! [`OSC`]: crate::osc_codes::OscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
+use crate::{core::osc::{OscPtyEvent, osc_codes::OscSequence},
             ofs_buf::test_fixtures_ofs_buf::*};
 
 #[test]
@@ -21,7 +21,7 @@ fn test_osc_title_sequences() {
     assert_eq!(dsr_responses1.len(), 0);
 
     match &osc_events1[0] {
-        OscEvent::SetTitleAndTab(title) => {
+        OscPtyEvent::SetTitleAndTab(title) => {
             assert_eq!(title, "Test Title");
         }
         _ => panic!("Expected SetTitleAndTab event"),
@@ -36,7 +36,7 @@ fn test_osc_title_sequences() {
     assert_eq!(dsr_responses2.len(), 0);
 
     match &osc_events2[0] {
-        OscEvent::SetTitleAndTab(title) => {
+        OscPtyEvent::SetTitleAndTab(title) => {
             assert_eq!(title, "Window Title");
         }
         _ => panic!("Expected SetTitleAndTab event"),
@@ -50,7 +50,7 @@ fn test_osc_hyperlink() {
     // Test OSC 8 hyperlink.
     let hyperlink_start = OscSequence::HyperlinkStart {
         uri: "https://example.com".to_string(),
-        id: None,
+        maybe_link_correlation_id: None,
     };
     let hyperlink_end = OscSequence::HyperlinkEnd;
     let sequence = format!("{hyperlink_start}Link Text{hyperlink_end}");
@@ -61,7 +61,7 @@ fn test_osc_hyperlink() {
     assert_eq!(dsr_responses.len(), 0);
 
     match &osc_events[0] {
-        OscEvent::Hyperlink { uri, text: _ } => {
+        OscPtyEvent::Hyperlink { uri, text: _ } => {
             assert_eq!(uri, "https://example.com");
         }
         _ => panic!("Expected Hyperlink event"),

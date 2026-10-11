@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words errno
-
 //! Backend compatibility tests for [`DirectToAnsiInputDevice`] and
 //! [`CrosstermInputDevice`].
 //!
@@ -13,9 +11,10 @@
 //!
 //! # Platform
 //!
-//! **Linux only.** These tests are gated by `#[cfg(all(any(test, doc), target_os =
-//! "linux"))]` because [`DirectToAnsi`] is currently Linux-only. The raw mode
-//! implementations used are:
+//! [`DirectToAnsi`] is currently Linux-only. That is why they're gated by this:
+//! `#[cfg(all(any(test, doc), target_os = "linux"))]`
+//!
+//! The raw mode implementations used are:
 //!
 //! | Backend          | Raw Mode Implementation                                              |
 //! | ---------------- | -------------------------------------------------------------------- |
@@ -41,6 +40,26 @@
 //!   └── compares parsed InputEvents from both
 //! ```
 //!
+//! # Scope & Limitations ([`OSC`] Sequences Not Covered)
+//!
+//! This compatibility test deliberately excludes [`OSC`] query and response sequences
+//! (such as [`OSC`] 10/11 dynamic color queries and [`OSC`] 52 clipboard responses).
+//! [`CrosstermInputDevice`] does not support parsing inbound [`OSC`] responses and will
+//! either drop them or misinterpret them as unexpected keyboard events.
+//!
+//! For [`DirectToAnsiInputDevice`], bidirectional [`OSC`] query/report handling and
+//! security absorption are tested in dedicated test suites:
+//! - [`pty_osc_color_test`]: End-to-end [`PTY`] test for [`OSC`] color queries/reports
+//!   and [`OSC`] 52 clipboard payload absorption.
+//! - [`osc_and_unrecognized_tests`]: Unit tests for [`OSC`] stream framing with `ST` and
+//!   `BEL` terminators.
+//! - [`osc_scanner`]: Parser tests decoding dynamic color reports into IR events.
+//!
+//! For real terminal emulator probing and diagnostics, see the `osc_diagnostics` example:
+//! ```bash
+//! cargo run -p r3bl_tui --example osc_diagnostics
+//! ```
+//!
 //! # Module Structure
 //!
 //! - [`generate_test_sequences`] - [`ANSI`] sequence builders and test data.
@@ -55,20 +74,24 @@
 //! [`DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::InputEvent
+//! [`osc_and_unrecognized_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::unit_tests::osc_and_unrecognized_tests
+//! [`osc_scanner`]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner
+//! [`OSC`]: crate::core::ansi::osc::OscSequence
+//! [`pty_osc_color_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_color_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 //! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]:
-//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
 
-use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-            ASCII_DEL, CONTROL_C, CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice, EIO,
-            FUNCTION_F5_CODE, GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS,
-            GLYPH_WAITING, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
-            MODIFIER_SHIFT, MSG_CONTROLLED_READY, PtyPair, PtyTestChild,
-            SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
-            SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-            SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL,
+use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ARROW_DOWN_FINAL,
+            ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DEL, CONTROL_C,
+            CONTROL_ENTER, CONTROL_TAB, CrosstermInputDevice, EIO, FUNCTION_F5_CODE,
+            GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS, GLYPH_WAITING, MODIFIER_ALT,
+            MODIFIER_CTRL, MODIFIER_CTRL_SHIFT, MODIFIER_SHIFT, MSG_CONTROLLED_READY,
+            PtyPair, PtyTestChild, SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
+            SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+            SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL,
+            SS3_F4_FINAL,
             core::ansi::{generator::{csi, csi_modified, csi_tilde, ss3},
                          terminal_raw_mode},
             ok, retry_until_success_test, spawn_controlled_in_pty,
@@ -429,6 +452,12 @@ pub mod generate_test_sequences {
             ("Enter", vec![CONTROL_ENTER]),
             ("Tab", vec![CONTROL_TAB]),
             ("Backspace", vec![ASCII_DEL]),
+            // Alt key sequences.
+            ("Alt+]", vec![ANSI_ESC, ANSI_OSC_CLOSE_BRACKET]),
+            (
+                "Alt+[",
+                vec![ANSI_ESC, ANSI_CSI_BRACKET, b'9', b'1', b';', b'3', b'u'],
+            ),
             // Arrow keys with modifiers (xterm format): ESC [ 1 ; <mod+1> A.
             ("Shift+Up", csi_modified(MODIFIER_SHIFT, ARROW_UP_FINAL)),
             ("Ctrl+Up", csi_modified(MODIFIER_CTRL, ARROW_UP_FINAL)),
@@ -437,6 +466,14 @@ pub mod generate_test_sequences {
                 "Ctrl+Shift+Up",
                 csi_modified(MODIFIER_CTRL_SHIFT, ARROW_UP_FINAL),
             ),
+            // Navigation keys with modifiers: ESC [ 1 ; <mod+1> H/F.
+            (
+                "Shift+Home",
+                csi_modified(MODIFIER_SHIFT, SPECIAL_HOME_FINAL),
+            ),
+            ("Ctrl+Home", csi_modified(MODIFIER_CTRL, SPECIAL_HOME_FINAL)),
+            ("Shift+End", csi_modified(MODIFIER_SHIFT, SPECIAL_END_FINAL)),
+            ("Ctrl+End", csi_modified(MODIFIER_CTRL, SPECIAL_END_FINAL)),
         ]
     }
 }

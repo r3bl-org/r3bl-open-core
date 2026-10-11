@@ -1,7 +1,5 @@
 #!/usr/bin/env fish
 
-# cspell:words cloc warloc binstall pushd popd pangrams idiomaticity
-
 # fish docs
 # - getting started: https://developerlife.com/2021/01/19/fish-scripting-manual/
 # - language fundamentals: https://fishshell.com/docs/current/language.html
@@ -33,6 +31,10 @@ function main
     # Purge any project-related zombie processes from previous sessions
     # before running any commands.
     purge_zombie_processes
+
+    # Ensure target symlink and backing store exist before running any workspace commands.
+    set -l repo_root (cd (dirname (status --current-filename)) && pwd)
+    $repo_root/check.fish --ensure-target >/dev/null 2>&1
 
     set command $argv[1]
 
@@ -261,6 +263,9 @@ end
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
+# - typos-lsp: Language server protocol for typos source-code spell checker
+# - harper-ls: Language server for Harper grammar & spell checker
+# - typos-cli: Source code spell checker CLI (typos)
 # - cmdr: CLI apps (edi, giti, rc, env-source)
 # - rust-analyzer: Language server component
 # - rust-src: Rust standard library source component
@@ -288,7 +293,10 @@ function install-cargo-tools
         "cargo-warloc" \
         "flamegraph" \
         "inferno" \
-        "lychee"
+        "lychee" \
+        "typos-lsp" \
+        "harper-ls" \
+        "typos-cli"
 
     for tool in $cargo_tools
         install_cargo_tool $tool
@@ -805,6 +813,10 @@ end
 #   fish run.fish run-examples --no-log     # Debug mode without logging
 #   fish run.fish run-examples --release --no-log  # Release mode without logging
 function run-examples
+    # Ensure target symlink and backing store exist.
+    set -l repo_root (cd (dirname (status --current-filename)) && pwd)
+    $repo_root/check.fish --ensure-target >/dev/null 2>&1
+
     set original_dir $PWD
     cd tui
 

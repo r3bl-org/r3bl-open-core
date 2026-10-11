@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cSpell:words VMIN VTIME deciseconds Interbyte
-
 //! Raw mode terminal configuration constants.
 //!
 //! This module contains constants specific to raw mode terminal configuration,

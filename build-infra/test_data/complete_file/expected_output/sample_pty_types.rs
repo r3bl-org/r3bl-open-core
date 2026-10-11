@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words CLOEXEC
-
 //! Core type aliases and constants for [`PTY`] operations. See individual type
 //! definitions for details:
 //! - [`PtyPair`] - Inclusive-language wrapper around [`portable_pty::PtyPair`]
@@ -9,12 +7,12 @@
 //! - [`ControlledChild`], [`ControlledChildTerminationHandle`] - Child process management
 //! - [`ControllerReader`], [`ControllerWriter`] - [`PTY`] I/O streams
 //! - [`PtyCommand`], [`PtyCompletionHandle`] - Command execution
-//! - [`InputEventSenderHalf`], [`OutputEventReceiverHalf`],
-//!   [`OutputEventReceiverHalf`] - Channel halves
+//! - [`InputEventSenderHalf`], [`OutputEventReceiverHalf`], [`OutputEventReceiverHalf`] -
+//!   Channel halves
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use super::{PtyInputEvent, PtyOutputEvent, PtyOutputEvent};
+use super::{PtyInputEvent, PtyOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
 use std::pin::Pin;
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -58,7 +56,7 @@ pub const READ_BUFFER_SIZE: usize = 4_096;
 /// # What this struct does
 ///
 /// ## Inclusive terminology
-/// Replaces [`portable_pty::PtyPair`]'s master/slave naming with controller/controlled,
+/// Replaces [`portable_pty::PtyPair`] master/slave naming with controller/controlled,
 /// per [Inclusive Naming Initiative - Tier 1 Terms].
 ///
 /// ## Controlled side lifecycle
@@ -82,7 +80,7 @@ pub const READ_BUFFER_SIZE: usize = 4_096;
 ///
 /// Understanding which process holds which [`fd`] is essential for reasoning about
 /// [`EOF`] delivery and deadlocks. The actual kernel file descriptors live deep inside
-/// [`portable_pty`]'s trait objects:
+/// [`portable_pty`] trait objects:
 ///
 /// ```text
 /// PtyPair
@@ -100,9 +98,9 @@ pub const READ_BUFFER_SIZE: usize = 4_096;
 /// the kernel [`fd`]. This is why [`close_controlled`] works: it calls `Option::take()`
 /// to move the [`Controlled`] out, then drops it.
 ///
-/// Both [`fd`]s are marked [`FD_CLOEXEC`] by [`portable_pty`], so the child process does
+/// Both [`fd`] are marked [`FD_CLOEXEC`] by [`portable_pty`], so the child process does
 /// not inherit the parent's copies on `exec()`. The child only gets the **new**
-/// controlled [`fd`]s that [`spawn_command()`] explicitly creates for
+/// controlled [`fd`] that [`spawn_command()`] explicitly creates for
 /// stdin/stdout/stderr.
 ///
 /// # Controlled Side Lifecycle
@@ -322,7 +320,7 @@ pub type PtyCommand = CommandBuilder;
 
 /// Type alias for a pinned completion handle used in [`PTY`] sessions.
 ///
-/// The pinning satisfies Tokio's [`Unpin`] requirement for [`select!`] macro usage. The
+/// The pinning satisfies Tokio [`Unpin`] requirement for [`select!`] macro usage. The
 /// [`JoinHandle`] returned by [`tokio::spawn`] doesn't implement [`Unpin`] by default,
 /// but [`select!`] requires all futures to be [`Unpin`] for efficient polling without
 /// moving them.

@@ -147,7 +147,7 @@
 //! - [`render_pipeline`] - **(Stage 2)** Collects & organizes [`RenderOpIR`] by Z-order
 //! - [`compositor_render_ops_to_ofs_buf`] - **(Stage 3)** Renders [`RenderOpsIR`] to
 //!   [`OfsBuf`]
-//! - [`ofs_buf`] - Virtual terminal buffer (2D grid of styled [`PixelChar`]s)
+//! - [`ofs_buf`] - Virtual terminal buffer (2D grid of styled [`PixelChar`])
 //!   - [`ofs_buf::paint_impl`] - **(Stage 4: Shared)** Converts buffer → optimized
 //!     operations (used by both Crossterm and `DirectToAnsi`)
 //! - [`crossterm_backend::crossterm_paint_render_op_impl`] - **(Stage 5: Crossterm
@@ -158,17 +158,20 @@
 //! - [`z_order`] - Z-order layer management
 //! - [`mod@paint`] - Text painting utilities
 //! - [`direct_to_ansi`] - **(Stage 5 Alternative)** Direct [`ANSI`] escape sequence
-//!   generation (Linux only)
+//!   generation (Linux only). See the [`direct_to_ansi` mod docs: Terminal Protocols &
+//!   Capabilities Hub][hub] for details on [`Kitty`] Keyboard Protocol, [`OSC`] 52
+//!   clipboard, and [`PTY`] interception.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`crossterm_paint_render_op_impl`]:
-//!     mod@crossterm_backend::crossterm_paint_render_op_impl
-//! [`direct_to_ansi_paint_render_op_impl`]:
-//!     mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
+//! [`crossterm_paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
+//! [`direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
+//! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OfsBuf`]: struct@ofs_buf::OfsBuf
+//! [`OSC`]: crate::osc_codes::OscSequence
 //! [`paint_impl`]: mod@ofs_buf::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [`PixelChar`]: enum@ofs_buf::PixelChar
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RenderOpCommon`]: enum@render_op::RenderOpCommon
 //! [`RenderOpIR`]: enum@render_op::RenderOpIR
 //! [`RenderOpIRVec`]: struct@render_op::RenderOpIRVec
@@ -180,6 +183,7 @@
 //! [`RenderPipeline`]: struct@render_pipeline::RenderPipeline
 //! [`ZOrder`]: enum@z_order::ZOrder
 //! [dual rendering paths]: mod@crate#dual-rendering-paths
+//! [hub]: mod@direct_to_ansi#terminal-protocols--capabilities-hub
 
 #![rustfmt::skip]
 

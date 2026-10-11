@@ -7,7 +7,7 @@ use std::io::Write;
 /// This struct acts as a "Traffic Cop" to prevent lock-inversion deadlocks between the
 /// keystroke event loop task ([`Readline::readline`]) that handles user input and the
 /// line control task ([`process_line_control_signal`]) that handles concurrent output,
-/// pause/resume transitions, and flush signals from [`SharedWriter`]s.
+/// pause/resume transitions, and flush signals from [`SharedWriter`] instances.
 ///
 /// A task is a [`tokio`] green thread that is backed by a thread pool of OS worker
 /// threads (in a multi-threaded runtime) or a single OS thread (in a current-thread
@@ -62,16 +62,21 @@ use std::io::Write;
 /// This is why we need this [`ReadlineLockManager`] to enforce a strict locking order. So
 /// that it is impossible to acquire both locks in the wrong order.
 ///
-/// # The Solution: Level 1 and Level 2 Locks
+/// # The Solution: State-Before-I/O Lock Ordering
 ///
 /// To mathematically prevent this "Hold and Wait" deadlock, all locks must be acquired in
-/// a strict hierarchical order:
-/// - **Level 1:** [`SafeLineState`]
-/// - **Level 2:** [`OutputDevice`]
+/// a strict hierarchical order based on the architectural principle of **State before
+/// I/O**:
+/// 1. **First (State Model):** [`SafeLineState`] must be acquired first to compute and
+///    mutate in-memory prompt buffer, cursor coordinates, and pause state.
+/// 2. **Second (Presentation Sink):** [`OutputDevice`] must be acquired second to write
+///    [`ANSI`] escape sequences to the terminal.
 ///
-/// [`ReadlineLockManager`] enforces this by keeping the underlying [`Arc<Mutex>`] fields
-/// completely private. If a developer needs both locks, they *must* use [`lock_both()`],
-/// which natively guarantees the correct Level 1 -> Level 2 acquisition order.
+/// You should never hold the terminal output device while waiting to compute what state
+/// to render. [`ReadlineLockManager`] enforces this hierarchy by keeping the underlying
+/// [`Arc<Mutex>`] fields completely private. If a developer needs both locks, they *must*
+/// use [`lock_both()`], which natively guarantees the correct `acquire_first` ->
+/// `acquire_second` acquisition order.
 ///
 /// # WARNING: Single-Lock Closures
 ///
@@ -146,13 +151,14 @@ use std::io::Write;
 /// [channel processing task]: super::line_control_task::process_line_control_signal
 #[allow(missing_debug_implementations)]
 pub struct ReadlineLockManager {
-    /// Level 1 lock: prompt buffer, cursor coordinates, and line editor state.
-    line_state_level_1: SafeLineState,
+    /// State lock (acquired 1st): prompt buffer, cursor coordinates, and line editor
+    /// state.
+    line_state_acquire_first: SafeLineState,
 
-    /// Level 2 lock: shared raw terminal [`stdout`] write stream.
+    /// Device lock (acquired 2nd): shared raw terminal [`stdout`] write stream.
     ///
     /// [`stdout`]: std::io::stdout
-    output_device_level_2: OutputDevice,
+    output_device_acquire_second: OutputDevice,
 }
 
 impl ReadlineLockManager {
@@ -163,14 +169,14 @@ impl ReadlineLockManager {
     /// [`Arc`]: std::sync::Arc
     pub fn new(line_state: SafeLineState, output_device: OutputDevice) -> Self {
         Self {
-            line_state_level_1: line_state,
-            output_device_level_2: output_device,
+            line_state_acquire_first: line_state,
+            output_device_acquire_second: output_device,
         }
     }
 
     /// Safely acquires both locks in the strictly correct [Coffman hierarchy][1]:
-    /// [`SafeLineState`] (Level 1) first, then [`OutputDevice`] (Level 2). See [struct
-    /// docs] for more details.
+    /// [`SafeLineState`] (State lock, acquired 1st), then [`OutputDevice`] (Device lock,
+    /// acquired 2nd). See [struct docs] for more details.
     ///
     /// [1]: https://en.wikipedia.org/wiki/Coffman_conditions
     /// [`OutputDevice`]: crate::OutputDevice
@@ -180,8 +186,8 @@ impl ReadlineLockManager {
         &self,
         fn_once: impl FnOnce(&mut LineState, &mut dyn Write) -> R,
     ) -> R {
-        self.line_state_level_1.write(|line_state| {
-            self.output_device_level_2
+        self.line_state_acquire_first.write(|line_state| {
+            self.output_device_acquire_second
                 .write(|term| fn_once(line_state, term))
         })
     }
@@ -194,13 +200,19 @@ impl ReadlineLockManager {
     /// [`OutputDevice`]: crate::OutputDevice
     /// [`SafeLineState`]: crate::SafeLineState
     pub fn lock_line_state<R>(&self, fn_once: impl FnOnce(&mut LineState) -> R) -> R {
-        self.line_state_level_1.write(fn_once)
+        self.line_state_acquire_first.write(fn_once)
     }
+
+    /// Provides shared reference access to the internal [`OutputDevice`].
+    ///
+    /// [`OutputDevice`]: crate::OutputDevice
+    #[must_use]
+    pub fn output_device(&self) -> &OutputDevice { &self.output_device_acquire_second }
 
     /// Provides exclusive mutable access to the internal [`OutputDevice`].
     ///
-    /// Used **ONLY** by [`ModalTerminalGuard::as_mut_tuple`] to provide `(&mut
-    /// OutputDevice, &mut InputDevice)` to modal sub-applications (such as
+    /// Used **ONLY** by [`ModalTerminalGuard::as_mut_tuple`] to provide the following
+    /// `(&mut OutputDevice, &mut InputDevice)` to modal sub-applications (such as
     /// [`crate::choose()`]). The [`ModalGuardToken`] witness guarantees this method can't
     /// be called by anyone else.
     ///
@@ -222,31 +234,34 @@ impl ReadlineLockManager {
         &mut self,
         _token: ModalGuardToken,
     ) -> &mut OutputDevice {
-        &mut self.output_device_level_2
+        &mut self.output_device_acquire_second
     }
 
     /// Performs poison-safe emergency terminal restoration during [`Readline`] drop.
     ///
     /// Bypasses the lock ledger to avoid panicking on poisoned locks during stack
-    /// unwinding. Acquires [`SafeLineState`] (Level 1) first, then [`OutputDevice`]
-    /// (Level 2) second, strictly respecting the lock hierarchy.
+    /// unwinding. Acquires [`SafeLineState`] (acquired 1st), then [`OutputDevice`]
+    /// (acquired 2nd), strictly respecting the State-before-I/O lock hierarchy.
     ///
     /// [`OutputDevice`]: crate::OutputDevice
     /// [`Readline`]: crate::Readline
     /// [`SafeLineState`]: crate::SafeLineState
     pub(crate) fn poison_safe_terminal_restore_on_drop(&self) {
-        self.line_state_level_1.lock_raw_poison_safe(|line_state| {
-            self.output_device_level_2.lock_raw_poison_safe(|term| {
-                // We don't care about the result of this operation.
-                drop(line_state.exit(term));
+        self.line_state_acquire_first
+            .lock_raw_poison_safe(|line_state| {
+                self.output_device_acquire_second
+                    .lock_raw_poison_safe(|term| {
+                        // We don't care about the result of this operation.
+                        drop(line_state.exit(term));
 
-                // We don't care about the result of this operation.
-                // disable_raw_mode() is also poison-safe.
-                if self.output_device_level_2.paint_mode != PaintMode::Mock {
-                    drop(disable_raw_mode());
-                }
+                        // We don't care about the result of this operation.
+                        // disable_raw_mode() is also poison-safe.
+                        if self.output_device_acquire_second.paint_mode != PaintMode::Mock
+                        {
+                            drop(disable_raw_mode());
+                        }
+                    });
             });
-        });
     }
 
     /// Provides reference to the internal [`SafeLineState`].
@@ -257,8 +272,6 @@ impl ReadlineLockManager {
     /// [`SafeLineState`]: crate::SafeLineState
     #[cfg(test)]
     pub(crate) fn line_state_for_testing(&self) -> &SafeLineState {
-        &self.line_state_level_1
+        &self.line_state_acquire_first
     }
 }
-
-// cspell:words Coffman typestates

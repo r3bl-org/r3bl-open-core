@@ -1,7 +1,5 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// cspell:words ONLCR
-
 //! [`PTY`]-based integration tests for [`Readline`] editor state.
 //!
 //! This test verifies that the internal state of the [`Readline`] editor (buffer content,
