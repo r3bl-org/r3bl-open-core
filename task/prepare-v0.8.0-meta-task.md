@@ -100,6 +100,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] [fix-shift-home-lockup.md](fix-shift-home-lockup.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [ ] [replace-expect-with-rust-perf.md](replace-expect-with-rust-perf.md)
 - [ ] [telemetry-server.md](telemetry-server.md)
 - [ ] [r3bl-cmdr-prompty.md](r3bl-cmdr-prompty.md)
 - [ ] [build-infra-spawny.md](build-infra-spawny.md)
