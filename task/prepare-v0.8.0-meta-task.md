@@ -96,12 +96,13 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [make-pty-session-sync.md](done/make-pty-session-sync.md)
 - [x] [support-worktree-in-check-script.md](support-worktree-in-check-script.md)
 - [ ] [fix-shift-home-lockup.md](fix-shift-home-lockup.md)
+- [ ] [revamp-arch-with-cst.md](task/revamp-arch-with-cst.md)
+- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [build-infra-spawny.md](build-infra-spawny.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] TODO - dl article on eliminate off by one errors (for which we already have a video)
 - [ ] [dl-article-type-safety-at-scale.md](dl-article-type-safety-at-scale.md)
-- [ ] [build-infra-add-more-terms-to-seed-jsonc.md](build-infra-add-more-terms-to-seed-jsonc.md)
 - [ ] [migrate-copyright-headers-to-spdx-format.md](migrate-copyright-headers-to-spdx-format.md)
 
 # [TODO] Unify rendering

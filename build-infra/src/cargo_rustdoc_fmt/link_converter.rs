@@ -4,6 +4,9 @@
 
 //! Convert inline markdown links to reference-style links.
 
+use crate::cargo_rustdoc_fmt::types::{
+    CommentType, DocBlockCst, DocNode, LineRange, LinkReference,
+};
 use regex::Regex;
 use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
@@ -59,23 +62,16 @@ static INLINE_LINK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// # Panics
 ///
-/// Panics if the regex engine returns a `Captures` without a full match (group 0),
-/// which cannot happen per the regex contract.
+/// Converts inline markdown links to reference-style links in a snippet of text.
+/// Returns `(converted_text, extracted_links)` where `extracted_links` is `Vec<(link_text, url)>`.
 #[must_use]
-pub fn convert_links(text: &str) -> String {
+pub fn convert_inline_links(text: &str) -> (String, Vec<(String, String)>) {
     if text.is_empty() {
-        return String::new();
+        return (String::new(), Vec::new());
     }
 
-    // Extract existing reference definitions first (no backtick protection needed -
-    // reference definitions like [`Name`]: target have valid backtick-wrapped names).
-    let (text_without_refs, existing_refs) = extract_reference_definitions(text);
+    let (protected_text, backtick_spans) = protect_backtick_spans(text);
 
-    // Protect inline code spans from link regex matching. This prevents
-    // `[link](url)` inside backticks from being converted to reference-style.
-    let (protected_text, backtick_spans) = protect_backtick_spans(&text_without_refs);
-
-    // Collect inline links and their URLs
     let mut link_info: Vec<(String, String)> = Vec::new();
     let mut seen_urls: FxHashSet<String> = FxHashSet::default();
 
@@ -109,8 +105,11 @@ pub fn convert_links(text: &str) -> String {
         }
     }
 
+    if link_info.is_empty() {
+        return (text.to_string(), Vec::new());
+    }
+
     // Replace inline links with reference-style links in-place.
-    // Skip anchor links (#...) and image links (![alt](url)).
     let result = INLINE_LINK_REGEX.replace_all(&protected_text, |caps: &regex::Captures| {
         #[allow(clippy::unwrap_used, reason = "Regex capture group 0 is guaranteed to exist")]
         let full_match = caps.get(0).unwrap();
@@ -123,12 +122,10 @@ pub fn convert_links(text: &str) -> String {
             None => "",
         };
 
-        // Skip anchor links.
         if url.starts_with('#') {
             return full_match.as_str().to_string();
         }
 
-        // Skip image links.
         let start = full_match.start();
         if start > 0 && protected_text.as_bytes().get(start - 1) == Some(&b'!') {
             return full_match.as_str().to_string();
@@ -137,25 +134,48 @@ pub fn convert_links(text: &str) -> String {
         format!("[{link_text}]")
     });
 
-    let mut result = result.to_string();
+    let restored_link_info = link_info
+        .into_iter()
+        .map(|(text, url)| {
+            (
+                restore_backtick_spans(&text, &backtick_spans),
+                restore_backtick_spans(&url, &backtick_spans),
+            )
+        })
+        .collect();
+    let restored = restore_backtick_spans(&result, &backtick_spans);
+    (restored, restored_link_info)
+}
+
+/// Converts inline markdown links to reference-style links.
+///
+/// This function preserves all original formatting (numbered lists, indentation,
+/// etc.) by using regex replacement instead of parsing and rebuilding the markdown.
+#[must_use]
+pub fn convert_links(text: &str) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+
+    // Extract existing reference definitions first.
+    let (text_without_refs, existing_refs) = extract_reference_definitions(text);
+
+    let (converted_text, link_info) = convert_inline_links(&text_without_refs);
 
     // Collect all references: both newly converted and pre-existing
     let mut all_refs = Vec::new();
 
-    // Add newly converted inline links as references
     for (link_text, url) in &link_info {
         all_refs.push((link_text.clone(), format!("[{link_text}]: {url}")));
     }
 
-    // Add pre-existing references
     all_refs.extend(existing_refs);
 
-    // If we have any references, aggregate and append them
+    let mut result = converted_text;
+
     if !all_refs.is_empty() {
-        // Sort references alphabetically by link name
         all_refs.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
 
-        // Append references at bottom with blank line separator for visual clarity
         result = result.trim_end().to_string();
         result.push_str("\n\n");
         for (_, ref_line) in &all_refs {
@@ -165,8 +185,115 @@ pub fn convert_links(text: &str) -> String {
         result = result.trim_end().to_string();
     }
 
-    // Restore backtick spans that were protected from conversion.
-    restore_backtick_spans(&result, &backtick_spans)
+    result
+}
+
+/// Converts inline links in a `DocBlockCst` across all `DocNode::Paragraph` nodes.
+///
+/// Collects all newly converted links and existing reference definitions,
+/// deduplicates and sorts them alphabetically, and places them in a
+/// `DocNode::ReferenceDefinitions` at the bottom of the block.
+///
+/// Code fences and tables are structurally isolated in their own CST nodes and never modified.
+pub fn convert_links_in_doc_block(
+    block: &mut DocBlockCst,
+    line_range: Option<&LineRange>,
+) -> bool {
+    let mut modified = false;
+    let mut new_refs: Vec<(String, String)> = Vec::new();
+
+    for node in &mut block.nodes {
+        if let DocNode::Paragraph {
+            lines,
+            raw_lines: _,
+            modified: p_modified,
+            span,
+        } = node
+        {
+            if let Some(range) = line_range
+                && !span.overlaps(range)
+            {
+                continue;
+            }
+
+            let para_text = lines.join("\n");
+            let (converted, links) = convert_inline_links(&para_text);
+            if !links.is_empty() {
+                new_refs.extend(links);
+                *lines = converted.lines().map(String::from).collect();
+                *p_modified = true;
+                modified = true;
+            }
+        }
+    }
+
+    // Collect pre-existing reference definitions from the block
+    let mut existing_refs = Vec::new();
+    let mut has_ref_nodes = false;
+    for node in &block.nodes {
+        if let DocNode::ReferenceDefinitions { definitions, .. } = node {
+            has_ref_nodes = true;
+            for def in definitions {
+                existing_refs.push(def.clone());
+            }
+        }
+    }
+
+    if !new_refs.is_empty() || (has_ref_nodes && modified) {
+        let mut ref_map: std::collections::BTreeMap<String, (String, Option<String>)> =
+            std::collections::BTreeMap::new();
+
+        for def in existing_refs {
+            ref_map.insert(def.label, (def.target, def.title));
+        }
+
+        for (label, target) in new_refs {
+            ref_map.entry(label).or_insert((target, None));
+        }
+
+        let sorted_defs: Vec<LinkReference> = ref_map
+            .into_iter()
+            .map(|(label, (target, title))| LinkReference {
+                label,
+                target,
+                title,
+            })
+            .collect();
+
+        // Remove old ReferenceDefinitions
+        let mut new_nodes = Vec::new();
+        for node in block.nodes.drain(..) {
+            if !matches!(node, DocNode::ReferenceDefinitions { .. }) {
+                new_nodes.push(node);
+            }
+        }
+
+        while let Some(DocNode::BlankLine { .. }) = new_nodes.last() {
+            new_nodes.pop();
+        }
+
+        if !sorted_defs.is_empty() {
+            let marker = match block.comment_type {
+                CommentType::Inner => "//! ",
+                CommentType::Outer => "/// ",
+            };
+            new_nodes.push(DocNode::BlankLine {
+                span: block.span,
+                raw_line: format!("{}{}", block.indent, marker.trim_end()),
+            });
+            new_nodes.push(DocNode::ReferenceDefinitions {
+                span: block.span,
+                definitions: sorted_defs,
+                raw_lines: Vec::new(),
+                modified: true,
+            });
+        }
+
+        block.nodes = new_nodes;
+        modified = true;
+    }
+
+    modified
 }
 
 /// Extracts reference definitions from text and returns (`text_without_refs`, `references`).
@@ -565,51 +692,46 @@ More content here.
     }
 
     #[test]
-    fn test_aggregate_with_code_fence_and_protector() {
-        use crate::cargo_rustdoc_fmt::content_protector::ContentProtector;
+    fn test_aggregate_with_code_fence_and_cst() {
+        use crate::cargo_rustdoc_fmt::types::SourceFileCst;
 
-        // Simulates actual file with code fence (e.g., rust,ignore language tag).
-        let input = r#"Content before.
+        let input = r#"/// Content before.
+///
+/// ```rust,ignore
+/// // Code here: [code_not_link](https://example.com)
+/// fn example() {}
+/// ```
+///
+/// ## References
+///
+/// - [mio issue #1377] - "Polling"
+///
+/// [ref1]: target1
+/// [ref2]: target2
+///
+/// # Entry Point
+///
+/// More content: [regular_link](https://example.com/regular).
+///
+/// [ref3]: target3"#;
 
-```rust,ignore
-// Code here
-fn example() {}
-```
+        let mut cst = SourceFileCst::parse(input);
 
-## References
+        if let crate::cargo_rustdoc_fmt::types::FileChunk::DocBlock(ref mut block) = cst.chunks[0] {
+            let modified = convert_links_in_doc_block(block, None);
+            assert!(modified);
+        }
 
-- [mio issue #1377] - "Polling"
-
-[ref1]: target1
-[ref2]: target2
-
-# Entry Point
-
-More content.
-
-[ref3]: target3"#;
-        let original = input.to_string();
-
-        // Simulate processor flow.
-        let mut protector = ContentProtector::new();
-        let protected = protector.protect(input);
-        let converted = convert_links(&protected);
-        let aggregated = aggregate_existing_references(&converted);
-        let restored = protector.restore(&aggregated);
-
-        // Restored should be different from original (refs moved to bottom).
-        assert_ne!(
-            restored, original,
-            "Output should be different from input (refs should be aggregated)"
-        );
-
-        // Check that refs are at the bottom after the code fence is restored.
-        let lines: Vec<&str> = restored.lines().collect();
-        let last_three: Vec<&str> = lines.iter().rev().take(3).copied().collect();
-        assert!(
-            last_three.iter().all(|l| l.starts_with('[')),
-            "Last 3 lines should be references"
-        );
+        let reconstructed = cst.reconstruct();
+        // Code fence must NOT have its link converted!
+        assert!(reconstructed.contains("[code_not_link](https://example.com)"));
+        // Regular link must have been converted!
+        assert!(reconstructed.contains("[regular_link]"));
+        // All references must be at the bottom, sorted!
+        assert!(reconstructed.contains("[ref1]: target1"));
+        assert!(reconstructed.contains("[ref2]: target2"));
+        assert!(reconstructed.contains("[ref3]: target3"));
+        assert!(reconstructed.contains("[regular_link]: https://example.com/regular"));
     }
 
     #[test]

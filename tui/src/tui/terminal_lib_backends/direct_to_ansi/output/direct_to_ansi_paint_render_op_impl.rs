@@ -313,7 +313,7 @@ impl RenderOpPaintImplDirectToAnsi {
         // Use unified PixelCharRenderer for consistent ANSI generation
         let cli_text = CliTextInline {
             text: text.as_str().into(),
-            attribs: maybe_style.map(|s| s.attribs).unwrap_or_default(),
+            attribs: maybe_style.map_or_default(|s| s.attribs),
             color_fg: maybe_style.and_then(|s| s.color_fg),
             color_bg: maybe_style.and_then(|s| s.color_bg),
         };
