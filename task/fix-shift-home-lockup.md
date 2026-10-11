@@ -1068,9 +1068,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
         - `tui/src/core/term/constants.rs` ->
           `tui/src/core/terminal_io/capabilities/constants.rs`
         - `tui/src/core/term/term_api.rs` ->
-          `tui/src/core/terminal_io/capabilities/capabilities_api.rs`
+          `tui/src/core/terminal_io/capabilities/capabilities_public_api.rs`
         - `tui/src/core/term/term_api_impl.rs` ->
-          `tui/src/core/terminal_io/capabilities/capabilities_api_impl.rs`
+          `tui/src/core/terminal_io/capabilities/capabilities_impl.rs`
         - `tui/src/core/term/term_integration_tests/` ->
           `tui/src/core/terminal_io/capabilities/capabilities_integration_tests/`
         - Create `tui/src/core/terminal_io/capabilities/mod.rs` with re-exports
@@ -1613,8 +1613,8 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/readline_async/choose_impl/event_loop.rs`
     - [x] `tui/src/readline_async/choose_impl/function_component.rs`
     - [x] `tui/src/readline_async/choose_impl/select_component.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api_impl.rs`
+    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_public_api.rs`
+    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_impl.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/constants.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/mod.rs`
     - [ ] `tui/src/core/terminal_io/mod.rs`

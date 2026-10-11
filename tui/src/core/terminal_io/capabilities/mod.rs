@@ -8,13 +8,13 @@
 //! interactivity check matrix and shell pipeline redirection behavior.
 
 // Attach.
-pub mod capabilities_api;
-pub mod capabilities_api_impl;
+pub mod capabilities_impl;
+pub mod capabilities_public_api;
 mod constants;
 
 // Re-export.
-pub use capabilities_api::*;
-pub use capabilities_api_impl::*;
+pub use capabilities_impl::*;
+pub use capabilities_public_api::*;
 pub use constants::*;
 
 // Integration tests.
