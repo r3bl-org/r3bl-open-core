@@ -1613,10 +1613,10 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/readline_async/choose_impl/event_loop.rs`
     - [x] `tui/src/readline_async/choose_impl/function_component.rs`
     - [x] `tui/src/readline_async/choose_impl/select_component.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_public_api.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/capabilities_impl.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/constants.rs`
-    - [ ] `tui/src/core/terminal_io/capabilities/mod.rs`
+    - [x] `tui/src/core/terminal_io/capabilities/capabilities_public_api.rs`
+    - [x] `tui/src/core/terminal_io/capabilities/capabilities_impl.rs`
+    - [x] `tui/src/core/terminal_io/capabilities/constants.rs`
+    - [x] `tui/src/core/terminal_io/capabilities/mod.rs`
     - [ ] `tui/src/core/terminal_io/mod.rs`
     - [ ] `tui/src/core/mod.rs`
     - [x] `tui/src/core/ansi/vt_100_terminal_input_parser/unit_tests/generator_round_trip_tests.rs`

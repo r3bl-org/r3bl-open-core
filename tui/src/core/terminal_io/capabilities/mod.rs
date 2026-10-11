@@ -7,12 +7,20 @@
 //! See [`TerminalInteractiveStatus`] and [`check_is_terminal_interactive()`] for the
 //! interactivity check matrix and shell pipeline redirection behavior.
 
-// Attach.
+// Conditionally public for documentation and testing.
+#[cfg(any(test, doc))]
 pub mod capabilities_impl;
+#[cfg(not(any(test, doc)))]
+mod capabilities_impl;
+
+#[cfg(any(test, doc))]
 pub mod capabilities_public_api;
+#[cfg(not(any(test, doc)))]
+mod capabilities_public_api;
+
 mod constants;
 
-// Re-export.
+// Re-exports for flat public API.
 pub use capabilities_impl::*;
 pub use capabilities_public_api::*;
 pub use constants::*;
