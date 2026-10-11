@@ -30,6 +30,35 @@ FOLDER_NAME=$(basename "$REPO_ROOT")
 
 If you are in `~/github/roc`, `$FOLDER_NAME` is `roc`. If you are in a worktree such as `~/github/roc-fix-shift-home-lockup`, `$FOLDER_NAME` is `roc-fix-shift-home-lockup`. Remote fleet machines mirror this folder under their respective repository parent paths.
 
+### Worktree Portability & Relative Paths (`worktree.useRelativePaths`)
+
+Linked git worktrees store administrative pointer files:
+- Inside the worktree: `.git` (file containing `gitdir: <path_to_main_repo>/.git/worktrees/<name>`)
+- Inside the main repo: `.git/worktrees/<name>/gitdir` (file containing `<path_to_worktree>/.git`)
+
+By default, Git writes **absolute paths** (`/home/nazmul/...` on Linux vs `/Users/nazmul/...` on macOS). If worktrees or their `.git` files are mirrored across systems with different home directory roots, Git will fail on the remote host with:
+```
+fatal: not a git repository: (null)
+```
+which causes any tests or tools that invoke `git` (such as `cargo-rustdoc-fmt` validation tests in `build-infra`) to fail.
+
+To prevent this:
+1. **Always enable relative worktree paths globally**:
+   ```bash
+   git config --global worktree.useRelativePaths true
+   ```
+   Or explicitly pass `--relative` when creating a worktree:
+   ```bash
+   git worktree add --relative ../<worktree_folder> <branch>
+   ```
+2. **To repair existing worktrees with absolute path mismatches**:
+   ```bash
+   cd ~/github/roc
+   git config worktree.useRelativePaths true
+   git worktree repair
+   ```
+   Git will detect the absolute path mismatch and convert all linked worktrees to relative paths in place.
+
 ## Fleet Overview
 
 | Platform | Host Address | Shell | Repository Path | Test Runner |
