@@ -1609,9 +1609,9 @@ In `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/stateful_parser.rs`:
     - [x] `tui/src/tui/terminal_lib_backends/direct_to_ansi/output/direct_to_ansi_paint_render_op_impl.rs`
     - [x] `tui/src/readline_async/readline_async_impl/readline_struct.rs`
     - [x] `tui/src/readline_async/readline_async_impl/lock_manager.rs`
-    - [ ] `tui/src/readline_async/spinner_impl/spinner_print.rs`
-    - [ ] `tui/src/readline_async/choose_impl/event_loop.rs`
-    - [ ] `tui/src/readline_async/choose_impl/function_component.rs`
+    - [x] `tui/src/readline_async/spinner_impl/spinner_print.rs`
+    - [x] `tui/src/readline_async/choose_impl/event_loop.rs`
+    - [x] `tui/src/readline_async/choose_impl/function_component.rs`
     - [ ] `tui/src/readline_async/choose_impl/select_component.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api.rs`
     - [ ] `tui/src/core/terminal_io/capabilities/capabilities_api_impl.rs`

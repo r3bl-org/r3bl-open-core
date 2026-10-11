@@ -5,8 +5,8 @@ use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionCompo
             RangeExt, SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
             TermRowDelta, TerminalLibBackend, TuiStyle, VPHeight, ansi_output, c_col,
             ch, cli_text_inline, core::common::string_repeat_cache::get_spaces, fg_blue,
-            get_terminal_width, inline_string, ok, queue_commands, usize, vp_height,
-            vp_width};
+            get_terminal_width, inline_string, ok, queue_commands,
+            queue_commands_no_lock, usize, vp_height, vp_width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -184,49 +184,9 @@ mod render_helper {
 
         header_text = clip_string_to_width_with_ellipsis(header_text, vp_width);
 
-        // Create styled text using ASText with all styling from header_style.
-        // This embeds ANSI codes in the string, replacing the individual
-        // choose_apply_style! calls that were previously used.
         let styled_header = cli_text_inline(&header_text, *header_style).to_string();
 
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                queue_commands! {
-                    output_device,
-                    // Bring the caret back to the start of line.
-                    MoveToColumn(0),
-                    // Reset the colors that may have been set by the previous command.
-                    ResetColor,
-                    // Clear the current line.
-                    Clear(ClearType::CurrentLine),
-                    // Print the styled text (ANSI codes already embedded).
-                    Print(styled_header),
-                    // Move to next line.
-                    MoveToNextLine(1),
-                    // Reset the colors.
-                    ResetColor,
-                };
-            }
-            TerminalLibBackend::DirectToAnsi => {
-                output_device.write(|writer| -> miette::Result<()> {
-                    let mut buf = String::new();
-                    buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
-                        TermCol::ONE,
-                    ));
-                    buf.push_str(SGR_RESET_STR);
-                    buf.push_str(ansi_output::screen_clearing::clear_current_line());
-                    buf.push_str(&styled_header);
-                    buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
-                        TermRowDelta::ONE,
-                    ));
-                    buf.push_str(SGR_RESET_STR);
-                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
-                    ok!()
-                })?;
-            }
-        }
-
-        ok!()
+        print_line_and_advance(output_device, &[&styled_header])
     }
 
     fn render_multi_line_header(
@@ -323,44 +283,7 @@ mod render_helper {
             .collect::<Vec<String>>()
             .join("\r\n");
 
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                queue_commands! {
-                    output_device,
-                    // Bring the caret back to the start of line.
-                    MoveToColumn(0),
-                    // Reset the colors that may have been set by the previous command.
-                    ResetColor,
-                    // Clear the current line.
-                    Clear(ClearType::CurrentLine),
-                    // Print each AnsiStyledText.
-                    Print(multi_line_header_text),
-                    // Move to next line.
-                    MoveToNextLine(1),
-                    // Reset the colors.
-                    ResetColor,
-                };
-            }
-            TerminalLibBackend::DirectToAnsi => {
-                output_device.write(|writer| -> miette::Result<()> {
-                    let mut buf = String::new();
-                    buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
-                        TermCol::ONE,
-                    ));
-                    buf.push_str(SGR_RESET_STR);
-                    buf.push_str(ansi_output::screen_clearing::clear_current_line());
-                    buf.push_str(&multi_line_header_text);
-                    buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
-                        TermRowDelta::ONE,
-                    ));
-                    buf.push_str(SGR_RESET_STR);
-                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
-                    ok!()
-                })?;
-            }
-        }
-
-        ok!()
+        print_line_and_advance(output_device, &[&multi_line_header_text])
     }
 
     pub fn render_items(
@@ -538,36 +461,56 @@ mod render_helper {
         // Apply the same style to padding to ensure background color extends.
         let styled_padding = cli_text_inline(&padding_right, *data_style).to_string();
 
+        print_line_and_advance(output_device, &[&styled_item, &styled_padding])
+    }
+
+    /// Clears the current line, prints the provided text slices with styling resets,
+    /// and advances the cursor to the next line.
+    fn print_line_and_advance(
+        output_device: &mut OutputDevice,
+        slices: &[&str],
+    ) -> CommonResult {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
-                queue_commands! {
-                    output_device,
-                    // Bring the caret back to the start of line.
-                    MoveToColumn(0),
-                    // Reset the colors that may have been set by the previous command.
-                    ResetColor,
-                    // Clear the current line.
-                    Clear(ClearType::CurrentLine),
-                    // Print the styled text (ANSI codes already embedded).
-                    Print(styled_item),
-                    // Print the styled padding (ensures bg color extends).
-                    Print(styled_padding),
-                    // Move to next line.
-                    MoveToNextLine(1),
-                    // Reset the colors.
-                    ResetColor,
-                };
+                output_device.write(|writer| -> miette::Result<()> {
+                    queue_commands_no_lock! {
+                        writer,
+                        // Bring the caret back to the start of line.
+                        MoveToColumn(0),
+                        // Reset the colors that may have been set by the previous command.
+                        ResetColor,
+                        // Clear the current line.
+                        Clear(ClearType::CurrentLine),
+                    };
+                    for slice in slices {
+                        queue_commands_no_lock!(writer, Print(slice));
+                    }
+                    queue_commands_no_lock! {
+                        writer,
+                        // Move to next line.
+                        MoveToNextLine(1),
+                        // Reset the colors.
+                        ResetColor,
+                    };
+                    ok!()
+                })?;
             }
             TerminalLibBackend::DirectToAnsi => {
                 output_device.write(|writer| -> miette::Result<()> {
-                    let mut buf = String::new();
+                    let payload_len: usize = slices.iter().map(|s| s.len()).sum();
+                    let capacity =
+                        ansi_output::estimate_capacity::render_line_capacity_hint(
+                            payload_len,
+                        );
+                    let mut buf = String::with_capacity(capacity);
                     buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
                         TermCol::ONE,
                     ));
                     buf.push_str(SGR_RESET_STR);
                     buf.push_str(ansi_output::screen_clearing::clear_current_line());
-                    buf.push_str(&styled_item);
-                    buf.push_str(&styled_padding);
+                    for slice in slices {
+                        buf.push_str(slice);
+                    }
                     buf.push_str(&ansi_output::cursor_movement::cursor_next_line(
                         TermRowDelta::ONE,
                     ));

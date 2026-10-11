@@ -479,11 +479,71 @@ pub mod estimate_capacity {
         };
         (height.as_usize() * CLEAR_AND_NEXT_LINE_BYTES) + rewind_bytes
     }
+
+    /// Fixed escape sequence overhead for rendering a line with column reset, line clear,
+    /// [`SGR`] reset, and cursor advance:
+    /// - `cursor_to_column(1)`: `\x1b[1G` (4 bytes)
+    /// - `SGR_RESET_STR`: `\x1b[0m` (4 bytes)
+    /// - `clear_current_line()`: `\x1b[2K` (4 bytes)
+    /// - `cursor_next_line(1)`: `\x1b[1E` (4 bytes)
+    /// - `SGR_RESET_STR`: `\x1b[0m` (4 bytes)
+    ///
+    /// [`SGR`]: crate::SgrCode
+    pub const RENDER_LINE_OVERHEAD_BYTES: usize = 20;
+
+    /// Capacity hint for rendering a line with [`ANSI`] positioning, clearing, and
+    /// [`SGR`] resets.
+    ///
+    /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// [`SGR`]: crate::SgrCode
+    #[must_use]
+    pub fn render_line_capacity_hint(payload_bytes: usize) -> usize {
+        payload_bytes + RENDER_LINE_OVERHEAD_BYTES
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::estimate_capacity;
+
+    #[test]
+    fn test_render_line_capacity_hint() {
+        use crate::{SGR_RESET_STR, TermCol, TermRowDelta, ansi_output};
+
+        // Measure actual bytes produced by the 5 escape sequences used in
+        // print_line_and_advance:
+        // 1. cursor_to_column(`TermCol::ONE`)
+        // 2. SGR_RESET_STR
+        // 3. clear_current_line()
+        // 4. cursor_next_line(`TermRowDelta::ONE`)
+        // 5. SGR_RESET_STR
+        let mut actual_sequences = String::new();
+        actual_sequences.push_str(&ansi_output::cursor_movement::cursor_to_column(
+            TermCol::ONE,
+        ));
+        actual_sequences.push_str(SGR_RESET_STR);
+        actual_sequences.push_str(ansi_output::screen_clearing::clear_current_line());
+        actual_sequences.push_str(&ansi_output::cursor_movement::cursor_next_line(
+            TermRowDelta::ONE,
+        ));
+        actual_sequences.push_str(SGR_RESET_STR);
+
+        // Verify the overhead constant matches actual byte length.
+        assert_eq!(
+            actual_sequences.len(),
+            estimate_capacity::RENDER_LINE_OVERHEAD_BYTES
+        );
+
+        // Verify capacity hints for zero and non-zero payloads.
+        assert_eq!(
+            estimate_capacity::render_line_capacity_hint(0),
+            actual_sequences.len()
+        );
+        assert_eq!(
+            estimate_capacity::render_line_capacity_hint(50),
+            actual_sequences.len() + 50
+        );
+    }
 
     #[test]
     fn test_clear_and_rewind_lines_capacity_hint() {
