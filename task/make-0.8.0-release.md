@@ -471,23 +471,25 @@ Task: make-0.8.0-release.md" ```
     git push origin main
     ```
 
-## Track B: Release Execution (Post-Merge of `fix-shift-home-lockup`)
+## Track B: Release Execution (Post-Merge of `fix-shift-home-lockup` & `binaries`)
 
-_Execute this track once the worktree branch `fix-shift-home-lockup` is fully completed
-and ready to merge._
+_Execute this track once the worktree branch `binaries` (`../roc-binaries`) is fully
+completed and merged into `main`._
 
 ### Phase 4: Workspace Merge & Documentation SSOT Sync
 
-- [ ] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
+- [x] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
+      worktree.
+- [ ] Merge worktree branch `binaries` (`../roc-binaries`) into `main` and clean up
       worktree:
-    - Verify all checks pass on PR #490 and merge via rebase:
+    - Verify all checks pass on PR and merge via rebase:
         ```bash
-        gh pr merge 490 --rebase --delete-branch
+        gh pr merge --rebase --delete-branch
         ```
     - Clean up the local worktree and branch:
         ```bash
-        git worktree remove ../roc-fix-shift-home-lockup
-        git branch -d fix-shift-home-lockup
+        git worktree remove ../roc-binaries
+        git branch -d binaries
         git fetch --prune
         ```
     - On `main` branch, pull latest rebased commits:
