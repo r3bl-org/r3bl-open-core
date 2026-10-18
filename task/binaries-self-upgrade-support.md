@@ -105,8 +105,9 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 `r3bl_tui` parses `versions.jsonc` via `jsonc-parser` (`features = ["serde", "cst"]`):
 
 - **Deserialization (`VersionsManifest::from_jsonc_str`)**: Parses JSONC with `//` line
-  comments, `/* ... */` block comments, and trailing commas directly into
-  `VersionsManifest`.
+  comments, `/* ... */` block comments, and trailing commas, validates
+  `ManifestSchemaVersion` via an intermediate header, and dispatches to the
+  version-specific parser (`ManifestSchemaVersion::V1`).
 - **Comment-Preserving Mutation (`VersionsManifest::update_crate_in_jsonc_str`)**: Uses
   `jsonc_parser::cst::CstRootNode` (Concrete Syntax Tree) so release tooling can update a
   crate's version entry in `versions.jsonc` while preserving 100% of existing comments and
@@ -140,7 +141,10 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 ```
 
 - **Schema Fields (defined in [`VersionsManifest`] & [`CrateVersionMetadata`])**:
-    - `schema_version` (`ManifestSchemaVersion(pub u32)`): Schema version integer (`1`).
+    - `schema_version` (`ManifestSchemaVersion` witness enum with `V1 = 1` and
+      `#[serde(try_from = "u32", into = "u32")]`): Validated integer schema version (`1`),
+      rejecting unknown/future schema versions at deserialization time and routing to the
+      version-specific parser in `VersionsManifest::from_jsonc_str`.
     - `version` (`CrateVersion(pub String)`): Target semantic version string pinned for
       the crate.
     - `crate_distribution` (`CrateDistribution` with
@@ -277,9 +281,11 @@ control exit upgrade behavior (with zero magic environment variable inspection):
           `upgrade_reasons`.
 - [x] `versions_manifest.rs`:
     - [x] `VersionsManifest`: Schema for `https://r3bl.com/versions.jsonc`, providing
-          `from_jsonc_str()` and comment-preserving `update_crate_in_jsonc_str()` via
-          `jsonc-parser` CST.
-    - [x] Domain newtypes and enums: `ManifestSchemaVersion(pub u32)`, `CrateDistribution`
+          `from_jsonc_str()` (validating `ManifestSchemaVersion` via `ManifestHeader`
+          before dispatching to the version-specific parser) and comment-preserving
+          `update_crate_in_jsonc_str()` via `jsonc-parser` CST.
+    - [x] Domain newtypes and enums: `ManifestSchemaVersion` (`V1 = 1` witness enum with
+          `#[serde(try_from = "u32", into = "u32")]`), `CrateDistribution`
           (`OpenSource` / `ClosedSource`, `#[serde(rename_all = "kebab-case")]`),
           `CrateName(pub String)`, `CrateVersion(pub String)`.
     - [x] `CrateVersionMetadata`: Deserialized entry from `r3bl.com/versions.jsonc`

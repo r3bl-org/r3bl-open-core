@@ -1,7 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Core types, configuration, and state definitions for the unified binary self-upgrade
-//! engine.
+//! engine. See [`UpgradeConfig`], [`UpgradeSource`], [`UpgradePolicy`],
+//! [`UpgradeOutputTarget`], and [`CrateDistribution`] for details.
 
 use super::{CrateDistribution, CrateName, CrateVersion};
 
