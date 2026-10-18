@@ -31,6 +31,7 @@ C1
 C3
 CBOR
 CBT
+CD
 CDE
 CDEFG
 CHA
@@ -94,6 +95,7 @@ DECSTBM
 DECTCEM
 DEFGHI
 DEL
+DI
 DL
 DSLs
 DSR
@@ -137,6 +139,7 @@ EVFILT_READ
 EVFILT_WRITE
 End
 Errno
+EventStream
 F0
 F1
 F10
@@ -160,7 +163,6 @@ FFFFF
 FGHIJ
 FILENO
 FOSS
-FS
 FUNARCH
 Falk
 Fdvcmxk
@@ -571,6 +573,7 @@ footgun
 formatcp
 fract
 frontmatter
+fs
 fswatch
 fullwidth
 futexes

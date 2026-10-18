@@ -21,7 +21,7 @@ delivers mathematically validated coordinate type safety, CPU cache-optimized \
 contiguous 2D buffers with SIMD, zero-allocation ANSI formatting, and a resilient \
 sans-IO input engine with 0ms ESC handling and Kitty protocol support.\
 """
-# At most 5 keywords w/ no spaces, each has max length of 20 char.
+# At most 5 keywords with no spaces, each has max length of 20 char.
 keywords = ["tui", "async", "terminal", "markdown", "pty"]
 categories = ["command-line-interface", "command-line-utilities"]
 # Email address(es) has to be verified at https://crates.io/me/
@@ -53,7 +53,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Time
-chrono = "0.4.42"
+chrono = { version = "0.4.42", features = ["serde"] }
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.29.0", features = ["event-stream"] }
@@ -68,11 +68,11 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 
 # Syntax highlighting.
-# Note: syntect depends on bincode v1.3.3 for loading embedded syntax/theme dumps.
+# Note: syntect depends on `bincode v1.3.3` for loading embedded syntax/theme dumps.
 # This is unavoidable without replacing syntect entirely.
 syntect = "5.3.0"
 
-# nom parser combinator.
+# `nom` parser combinator.
 nom = "8.0.0"
 
 # For examples.
@@ -113,7 +113,7 @@ clap = { version = "4.5.51", features = ["derive", "wrap_help", "help"] }
 unicode-width = "0.2.0"
 unicode-segmentation = "1.12.0"
 
-# CustomEventFormatter.
+# For `CustomEventFormatter`.
 textwrap = { version = "0.16.2", features = ["unicode-linebreak"] }
 
 # Allow const strings to be formatted with format!.
@@ -148,16 +148,21 @@ uuid = { version = "1.18.1", features = ["v4"] }
 # For testing in CI CD environments where terminal is not interactive.
 is_ci = "1.2.0"
 
-# HTTP client library (for r3bl_script).
+# HTTP client library (for `r3bl_script`).
 # Reqwest (HTTP client). Use `rustls` instead of `openssl` for TLS support.
 reqwest = { version = "0.12.24", default-features = false, features = [
     "json",
     "rustls-tls",
+    "stream",
 ] }
 
+# Self-upgrade binary replacement and archive unpacking.
+self-replace = "1.5"
+tar = { version = "0.4", default-features = false }
 
-# Compression for the protocol.
-flate2 = "1.1.5"
+# Compression for the protocol and archive extraction (powered by `zlib-rs`).
+# https://github.com/trifectatechfoundation/zlib-rs
+flate2 = { version = "1.1.5", default-features = false, features = ["zlib-rs"] }
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.228", features = ["derive"] }
@@ -187,7 +192,7 @@ hdrhistogram = "7.6.0"
 # - termios: raw mode terminal state manipulation.
 # - std: std::io and standard library type conversions.
 # - event: event-driven POLLOUT backpressure via poll(2).
-# - fs: non-blocking stdin OFlags manipulation via fcntl.
+# - fs: non-blocking stdin `OFlags` manipulation via fcntl.
 rustix = { version = "1.1.2", features = ["termios", "std", "event", "fs"] }
 # Signal handling for DirectToAnsi backend (SIGWINCH for terminal resize).
 signal-hook = "0.3"
