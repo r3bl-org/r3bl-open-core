@@ -398,7 +398,7 @@
 //! [`constants`]: crate::constants
 //! [`DEBUG_LSP_CLIENT`]: crate::constants::debug_flags::DEBUG_LSP_CLIENT
 //! [`error`]: crate::error
-//! [`HashMap`]: std::collections::HashMap
+//! [`HashMap`]: r3bl_tui::HashMap
 //! [`lsp`]: crate::lsp
 //! [`mcp`]: crate::mcp
 //! [`McpServerError`]: crate::error::McpServerError

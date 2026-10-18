@@ -163,9 +163,6 @@ pub enum PtySessionConfigToken {
     Size(VPSize),
 }
 
-/// Backwards compatibility alias for [`PtySessionConfigToken`].
-pub type PtySessionConfigOption = PtySessionConfigToken;
-
 // XMARK: Elegant Constructor DSL.
 
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.

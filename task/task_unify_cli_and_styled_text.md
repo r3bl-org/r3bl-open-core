@@ -1,80 +1,92 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
 - [Task: Consolidate cli_text and tui_styled_text](#task-consolidate-cli_text-and-tui_styled_text)
-  - [Overview](#overview)
+- [Overview](#overview)
     - [Motivation](#motivation)
     - [Current State](#current-state)
     - [Target Architecture](#target-architecture)
-  - [Architectural Analysis](#architectural-analysis)
+- [Architectural Analysis](#architectural-analysis)
     - [CliTextInline (CLI Context)](#clitextinline-cli-context)
     - [TuiStyledText (TUI Context)](#tuistyledtext-tui-context)
     - [Why Consolidation Works](#why-consolidation-works)
     - [Convergence Points](#convergence-points)
-  - [Consolidation Benefits](#consolidation-benefits)
+- [Consolidation Benefits](#consolidation-benefits)
     - [Maintenance](#maintenance)
     - [Consistency](#consistency)
     - [Extensibility](#extensibility)
-  - [Trade-offs](#trade-offs)
+- [Trade-offs](#trade-offs)
 - [Implementation plan](#implementation-plan)
-  - [Step 1: Extend TuiStyledText with Builder API [PENDING] (3-4 hours)](#step-1-extend-tuistyledtext-with-builder-api-pending-3-4-hours)
+- [Step 1: Extend TuiStyledText with Builder API [PENDING] (3-4 hours)](#step-1-extend-tuistyledtext-with-builder-api-pending-3-4-hours)
     - [1.1 Add Builder Methods to TuiStyledText](#11-add-builder-methods-to-tuistyledtext)
     - [1.2 Create Constructor Functions Module](#12-create-constructor-functions-module)
     - [1.3 Add `styled_text()` Function (CLI-Compatible)](#13-add-styled_text-function-cli-compatible)
     - [1.4 Add to_pixel_chars() Method](#14-add-to_pixel_chars-method)
     - [1.5 Update Module Exports](#15-update-module-exports)
-  - [Step 2: Add Compatibility Layer [PENDING] (1 hour)](#step-2-add-compatibility-layer-pending-1-hour)
+- [Step 2: Add Compatibility Layer [PENDING] (1 hour)](#step-2-add-compatibility-layer-pending-1-hour)
     - [2.1 Create Type Alias](#21-create-type-alias)
     - [2.2 Create Compatibility Function](#22-create-compatibility-function)
     - [2.3 Re-export Constructor Functions](#23-re-export-constructor-functions)
-  - [Step 3: Migrate Call Sites [PENDING] (5-7 hours)](#step-3-migrate-call-sites-pending-5-7-hours)
+- [Step 3: Migrate Call Sites [PENDING] (5-7 hours)](#step-3-migrate-call-sites-pending-5-7-hours)
     - [3.1 Type Signature Updates](#31-type-signature-updates)
     - [3.2 Function Call Updates](#32-function-call-updates)
     - [3.3 Incremental Validation](#33-incremental-validation)
-  - [Step 4: Remove Old Code [PENDING] (2 hours)](#step-4-remove-old-code-pending-2-hours)
+- [Step 4: Remove Old Code [PENDING] (2 hours)](#step-4-remove-old-code-pending-2-hours)
     - [4.1 Verify No Remaining Uses](#41-verify-no-remaining-uses)
     - [4.2 Remove Implementation Code](#42-remove-implementation-code)
     - [4.3 Update Module Exports](#43-update-module-exports)
     - [4.4 Update Imports in Paint Implementations](#44-update-imports-in-paint-implementations)
-  - [Step 5: Testing & Validation [PENDING] (2-3 hours)](#step-5-testing--validation-pending-2-3-hours)
+- [Step 5: Testing & Validation [PENDING] (2-3 hours)](#step-5-testing--validation-pending-2-3-hours)
     - [5.1 Unit Tests](#51-unit-tests)
+- [Test CLI components (which now use TuiStyledText)](#test-cli-components-which-now-use-tuistyledtext)
+- [Full library tests](#full-library-tests)
+- [Tests with deprecated warnings should be minimal](#tests-with-deprecated-warnings-should-be-minimal)
     - [5.2 Integration Tests](#52-integration-tests)
+- [Test CLI utilities](#test-cli-utilities)
     - [5.3 Documentation Tests](#53-documentation-tests)
     - [5.4 Code Quality](#54-code-quality)
+- [Check formatting](#check-formatting)
     - [5.5 Performance Validation](#55-performance-validation)
-  - [Step 6: SmallString Optimization [PENDING] (1-2 hours)](#step-6-smallstring-optimization-pending-1-2-hours)
+- [Generate flamegraph for comparison with Phase 6 results](#generate-flamegraph-for-comparison-with-phase-6-results)
+- [Step 6: SmallString Optimization [PENDING] (1-2 hours)](#step-6-smallstring-optimization-pending-1-2-hours)
     - [Option A: Use SmallVec-Based String](#option-a-use-smallvec-based-string)
     - [Option B: Use InlineString (if better fit)](#option-b-use-inlinestring-if-better-fit)
     - [Phase 6 Implementation:](#phase-6-implementation)
-  - [Step 7: Zero-Cost Abstractions [DEFERRED] (2-3 hours)](#step-7-zero-cost-abstractions-deferred-2-3-hours)
+- [Step 7: Zero-Cost Abstractions [DEFERRED] (2-3 hours)](#step-7-zero-cost-abstractions-deferred-2-3-hours)
     - [Option A: Simple (No Changes)](#option-a-simple-no-changes)
     - [Option B: Feature-Gated Compilation](#option-b-feature-gated-compilation)
     - [Option C: Newtype Wrapper](#option-c-newtype-wrapper)
     - [Recommendation for Phase 7:](#recommendation-for-phase-7)
-  - [Step 8: Macro Unification [DEFERRED] & Builder DSL (1 hour)](#step-8-macro-unification-deferred--builder-dsl-1-hour)
+- [Step 8: Macro Unification [DEFERRED] & Builder DSL (1 hour)](#step-8-macro-unification-deferred--builder-dsl-1-hour)
     - [Option 1: Extend styled_text() Function](#option-1-extend-styled_text-function)
     - [Option 2: Create styled!() Macro for Builder Chains](#option-2-create-styled-macro-for-builder-chains)
-  - [Testing & Validation](#testing--validation)
+- [Testing & Validation](#testing--validation)
     - [Pre-Migration Checklist](#pre-migration-checklist)
     - [Per-File Validation During Phase 3](#per-file-validation-during-phase-3)
+- [2. Check compilation](#2-check-compilation)
+- [3. Run relevant tests](#3-run-relevant-tests)
+- [4. If example, run it manually](#4-if-example-run-it-manually)
+- [5. Check no new deprecation warnings from new code](#5-check-no-new-deprecation-warnings-from-new-code)
     - [Final Validation (Phase 5)](#final-validation-phase-5)
-  - [Risk Mitigation](#risk-mitigation)
+- [Check specific areas](#check-specific-areas)
+- [Code quality](#code-quality)
+- [Performance comparison (optional)](#performance-comparison-optional)
+- [Risk Mitigation](#risk-mitigation)
     - [Risk 1: Call Sites Missed During Migration](#risk-1-call-sites-missed-during-migration)
     - [Risk 2: Rendering Regressions](#risk-2-rendering-regressions)
     - [Risk 3: Performance Degradation](#risk-3-performance-degradation)
     - [Risk 4: Type System Confusion](#risk-4-type-system-confusion)
     - [Rollback Plan](#rollback-plan)
-  - [Effort Summary](#effort-summary)
+- [Effort Summary](#effort-summary)
     - [Time Breakdown](#time-breakdown)
     - [Parallelization Opportunities](#parallelization-opportunities)
-  - [Success Criteria](#success-criteria)
+- [Success Criteria](#success-criteria)
     - [Must Have (Exit Criteria for Phase 5)](#must-have-exit-criteria-for-phase-5)
     - [Should Have (Exit Criteria for Phase 8)](#should-have-exit-criteria-for-phase-8)
     - [Nice to Have (Post-Consolidation)](#nice-to-have-post-consolidation)
-  - [Future Work](#future-work)
+- [Future Work](#future-work)
     - [Post-Consolidation (Out of Scope)](#post-consolidation-out-of-scope)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Task: Consolidate cli_text and tui_styled_text
 
@@ -763,8 +775,8 @@ fn render_header(header_lines: &InlineVec<InlineVec<TuiStyledText>>) -> Result<(
 **Approach**:
 
 1. Use find-and-replace for simple cases:
-   - `CliTextInline` → `TuiStyledText`
-   - `use CliTextInline` → `use TuiStyledText` (or remove if using constructor functions)
+    - `CliTextInline` → `TuiStyledText`
+    - `use CliTextInline` → `use TuiStyledText` (or remove if using constructor functions)
 2. Manual review for complex patterns
 
 #### 3.2 Function Call Updates
@@ -1031,22 +1043,22 @@ chars, InlineString might be better. If mostly <10 chars, SmallString is fine.
 
 1. **Benchmark Current**: Measure allocation patterns
 
-   ```bash
-   cargo bench --package r3bl_tui tui_styled_text
-   ```
+    ```bash
+    cargo bench --package r3bl_tui tui_styled_text
+    ```
 
 2. **Profile with Flamegraph**: Check if allocation shows up
 
-   ```bash
-   ./run.fish run-examples-flamegraph-fold --benchmark
-   ```
+    ```bash
+    ./run.fish run-examples-flamegraph-fold --benchmark
+    ```
 
 3. **Try Alternative** (e.g., InlineString)
 
-   ```rust
-   pub type StringTuiStyledText = InlineString;
-   // Update all creation sites
-   ```
+    ```rust
+    pub type StringTuiStyledText = InlineString;
+    // Update all creation sites
+    ```
 
 4. **Benchmark Again**: Compare results
 
@@ -1393,19 +1405,19 @@ consolidation.
 If unrecoverable issues arise:
 
 1. **Phase 3 Rollback** (mid-migration):
-   - Revert migration commits
-   - Keep Phase 1 & 2 (non-breaking additions)
-   - Continue migration more slowly
+    - Revert migration commits
+    - Keep Phase 1 & 2 (non-breaking additions)
+    - Continue migration more slowly
 
 2. **Phase 4 Rollback** (after deletion):
-   - Restore `CliTextInline` implementation from git history
-   - Update code paths to use restored type
-   - Replan consolidation for future
+    - Restore `CliTextInline` implementation from git history
+    - Update code paths to use restored type
+    - Replan consolidation for future
 
 3. **Feature Flag Approach** (if needed):
-   - Add `legacy-cli-text` feature flag
-   - Compile both types, use feature to select
-   - Gradually deprecate flag over releases
+    - Add `legacy-cli-text` feature flag
+    - Compile both types, use feature to select
+    - Gradually deprecate flag over releases
 
 ## Effort Summary
 

@@ -7,10 +7,13 @@ description: Run comprehensive Rust code quality checks including compilation, l
 
 ## When to Use
 
-- After completing significant code changes
-- Before creating commits
-- Before creating pull requests
-- When user says "check code quality", "run quality checks", "make sure code is good", etc.
+- When user explicitly invokes `/check` or says "check code quality", "run quality checks", "make sure code is good", etc.
+- Before creating commits or opening pull requests (final milestone verification)
+- After completing an entire task or major feature phase (with user confirmation)
+
+> [!IMPORTANT]
+> **Do NOT run this skill or its heavy checks (`--test`, `--clippy`, `--quick-doc`, `--full`) after minor or routine edits.**
+> For routine edits and interim review points, run ONLY fast checks (`./check.fish --check` and `./check.fish --fmt`).
 
 ## Non-Blocking Execution via Subagents
 
@@ -264,13 +267,11 @@ When performing quality checks or complex refactorings:
    modifications.
 2. **Milestone Review Pauses:** Stop and request a manual review after any meaningful 
    progress (e.g., refactoring is complete and `cargo check` passes).
-3. **Attention Signal:** Run `fish -c "beep"` when stopping for a mandatory review point 
-   to alert the user.
-4. **Validation First:** Never present broken code to the user. Always run 
+3. **Validation First:** Never present broken code to the user. Always run 
    `./check.fish --check` or `cargo check` before asking for a review.
-5. **Strict Documentation Preservation:** Maintain absolute byte-perfect integrity of 
+4. **Strict Documentation Preservation:** Maintain absolute byte-perfect integrity of 
    surrounding documentation when performing surgical edits.
-6. **Mandatory Manual Review:** Follow the file-by-file `codium-insider` review 
+5. **Mandatory Manual Review:** Follow the file-by-file `codium-insider` review 
    workflow described in the "Final Step" section above for all modified files.
 
 ## Optional Performance Analysis

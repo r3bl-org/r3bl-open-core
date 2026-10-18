@@ -4,10 +4,10 @@
 //! status.
 
 use crate::constants::{json_rpc, lsp_methods};
+use r3bl_tui::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap,
-          io::Write,
+use std::{io::Write,
           sync::{Arc, Mutex, mpsc::SyncSender}};
 
 // LSP Specification Primitives & Request ID
@@ -338,14 +338,14 @@ mod tests {
         let uri_ref: DocumentUriRef<'_> = &uri;
         assert_eq!(uri_ref, "file:///main.rs");
         let diag_list: DiagnosticList = vec![json!({"message": "error"})];
-        let mut diag_table = DiagnosticsTable::new();
+        let mut diag_table = DiagnosticsTable::default();
         diag_table.insert(uri.clone(), diag_list.clone());
         let safe_diag_table: SafeDiagnosticsTable = Arc::new(Mutex::new(diag_table));
         assert_eq!(safe_diag_table.lock().unwrap().get(&uri), Some(&diag_list));
 
         let (tx, _rx) = std::sync::mpsc::sync_channel::<Value>(1);
         let sender: ResponseSender = tx;
-        let mut pending_table = PendingRequestsTable::new();
+        let mut pending_table = PendingRequestsTable::default();
         pending_table.insert(req_id, sender);
         let safe_pending: SafePendingRequestsTable = Arc::new(Mutex::new(pending_table));
         assert!(safe_pending.lock().unwrap().contains_key(&req_id));

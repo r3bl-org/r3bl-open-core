@@ -27,6 +27,8 @@ exclude = [
     # Test fixture URLs in test code (not meant to resolve).
     "^https?://test\\.com",
     "^https?://link1\\.com",
+    "^https?://127\\.0\\.0\\.1",
+    "^https?://localhost",
     # Placeholder images in markdown parser conformance test data.
     "^https?://via\\.placeholder\\.com/",
     # YouTube blocks automated link checkers (returns 404 to bots).
@@ -49,6 +51,10 @@ exclude = [
     "^https?://doi\\.org/10\\.1145/",
     # Release tags not yet pushed to GitHub during release prep.
     "^https?://github\\.com/r3bl-org/r3bl-open-core/blob/v[0-9].*-tui/CHANGELOG\\.md",
+    # Base URL prefix for binary release downloads.
+    "^https?://github\\.com/r3bl-org/r3bl-binaries/releases/download$",
+    # Planned version manifest endpoint not yet published.
+    "^https?://r3bl\\.com/versions\\.jsonc$",
 ]
 
 # Exclude specific files from link checking.

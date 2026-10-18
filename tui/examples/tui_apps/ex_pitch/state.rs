@@ -3,8 +3,7 @@
 use crate::ex_pitch::Id;
 use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, CIndex, ComponentRegistryMap,
                DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FileExtensionToken, FlexBoxId,
-               HasEditorBuffers, NumericValue, c_index, c_len};
-use rustc_hash::FxHashMap;
+               HasEditorBuffers, HashMap, NumericValue, c_index, c_len};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 pub const FILE_CONTENT_ARRAY: [&str; 13] = [
@@ -25,7 +24,7 @@ pub const FILE_CONTENT_ARRAY: [&str; 13] = [
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
     pub current_slide_index: CIndex,
 }
 
@@ -95,7 +94,7 @@ pub mod state_mutator {
         };
 
         let editor_buffers = {
-            let mut it = FxHashMap::default();
+            let mut it = HashMap::default();
             let id = FlexBoxId::from(Id::Editor);
             it.insert(id, editor_buffer);
             it

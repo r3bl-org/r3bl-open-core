@@ -135,7 +135,3 @@ When testing specific subsystems (like `core::pty`) during active refactoring ra
 | **Windows** | `nazmul-win.local` | **PASSED** | 55 | 0 | 0.46s |
 
 4. If any test fails, extract the failure diagnostics and failing test names for triage.
-5. Emit attention beep signal:
-   ```bash
-   fish -c "beep"
-   ```

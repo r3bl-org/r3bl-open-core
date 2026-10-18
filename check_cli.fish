@@ -85,23 +85,46 @@ function show_help
     set_color yellow
     echo "USAGE:"
     set_color normal
-    echo "  ./check.fish              Run default checks (tests, doctests, docs)"
-    echo "  ./check.fish --check      Run typecheck only (cargo check)"
-    echo "  ./check.fish --build      Run build only (cargo build)"
-    echo "  ./check.fish --clippy     Run clippy only (cargo clippy --all-targets)"
-    echo "  ./check.fish --fmt        Run formatting (cargo fmt --all + cargo-rustdoc-fmt on changed files)"
-    echo "  ./check.fish --test       Run tests only (cargo test + doctests)"
-    echo "  ./check.fish --doc        Build documentation only (full, with deps, dep-doc caching)"
-    echo "  ./check.fish --quick-doc  Build docs (quick, --no-deps, staging + sync)"
-    echo "  ./check.fish --full       Run ALL checks (check + build + clippy + tests + doctests + docs + windows + lychee)"
-    echo "  ./check.fish --clean      Clean target build cache (empties tmpfs backing store)"
-    echo "  ./check.fish --ensure-target Ensure target symlink and backing store exist"
-    echo "  ./check.fish --watch      Watch mode: run default checks on changes"
-    echo "  ./check.fish --watch-test Watch mode: run tests/doctests only"
-    echo "  ./check.fish --watch-doc  Watch mode: run doc build (full with deps)"
-    echo "  ./check.fish --star-history Re-generate star history SVG chart"
-    echo "  ./check.fish --help       Show this help message"
-    echo "  ./check.fish --kill       Kill any running watch instances and cleanup"
+    echo "  ./check.fish [MODE | OPTION]"
+    echo ""
+
+    set_color yellow
+    echo "CHECKS & COMPILATION (ONE-OFF):"
+    set_color normal
+    echo "  (default)       Runs default checks: tests, doctests, docs"
+    echo "  --check         Runs typecheck only: cargo check (fast compile check)"
+    echo "  --build         Runs build only: cargo build (compile production code)"
+    echo "  --clippy        Runs clippy only: cargo clippy --all-targets (lint warnings)"
+    echo "  --fmt           Formats changed files: cargo fmt + cargo-rustdoc-fmt"
+    echo "  --test          Runs tests only: cargo test + doctests"
+    echo "  --quick-doc     Builds docs (quick, --no-deps, staging + sync)"
+    echo "  --doc           Builds documentation only (full, with deps, dep-doc caching)"
+    echo "  --full          Runs ALL checks: check + build + clippy + tests + doctests + docs + windows + lychee"
+    echo "                  Auto-recovers from ICE (escalates to rust-toolchain-update.fish)"
+    echo "                  and stale build artifacts (cleans cache, retries)"
+    echo ""
+
+    set_color yellow
+    echo "WATCH MODES (CONTINUOUS):"
+    set_color normal
+    echo "  --watch, -w     Runs all checks: tests, doctests, docs (full with deps)"
+    echo "  --watch-test    Runs tests only: cargo test + doctests (faster iteration)"
+    echo "  --watch-doc     Runs quick docs first, then forks full docs to background"
+    echo ""
+
+    set_color yellow
+    echo "CACHE & ENVIRONMENT UTILITIES:"
+    set_color normal
+    echo "  --ensure-target Ensures target symlink and tmpfs backing store exist"
+    echo "  --clean         Cleans target build cache: empties $CHECK_TARGET_DIR tmpfs store"
+    echo "  --kill          Kill any running watch instances and cleanup leaked zombies"
+    echo "  --star-history  Re-generate star history SVG chart"
+    echo ""
+
+    set_color yellow
+    echo "GENERAL:"
+    set_color normal
+    echo "  --help, -h      Show this help message"
     echo ""
 
     set_color yellow
@@ -129,29 +152,8 @@ function show_help
     echo ""
 
     set_color yellow
-    echo "ONE-OFF MODES:"
+    echo "WATCH MODE DETAILS:"
     set_color normal
-    echo "  (default)     Runs default checks: tests, doctests, docs"
-    echo "  --check       Runs typecheck only: cargo check (fast compile check)"
-    echo "  --build       Runs build only: cargo build (compile production code)"
-    echo "  --clippy      Runs clippy only: cargo clippy --all-targets (lint warnings)"
-    echo "  --fmt         Formats changed files: cargo fmt + cargo-rustdoc-fmt"
-    echo "  --test        Runs tests only: cargo test + doctests"
-    echo "  --doc         Builds documentation only (full, with deps, dep-doc caching)"
-    echo "  --quick-doc   Builds docs (quick, --no-deps, staging + sync)"
-    echo "  --full        Runs ALL checks: check + build + clippy + tests + doctests + docs + windows + lychee"
-    echo "                Auto-recovers from ICE (escalates to rust-toolchain-update.fish)"
-    echo "                and stale build artifacts (cleans cache, retries)"
-    echo "  --clean       Cleans target build cache: empties $CHECK_TARGET_DIR tmpfs store"
-    echo ""
-
-    set_color yellow
-    echo "WATCH MODES:"
-    set_color normal
-    echo "  --watch       Runs all checks: tests, doctests, docs (full with deps)"
-    echo "  --watch-test  Runs tests only: cargo test + doctests (faster iteration)"
-    echo "  --watch-doc   Runs quick docs first, then forks full docs to background"
-    echo ""
     echo "  Watch mode options:"
     echo "  Monitors: cmdr/src/, analytics_schema/src/, tui/src/, plus all config files"
     echo "  Toolchain: Validated once at startup, before watch loop begins"
@@ -368,6 +370,9 @@ function show_help
     echo ""
     echo "  # Clean target build cache (empties tmpfs backing store)"
     echo "  ./check.fish --clean"
+    echo ""
+    echo "  # Ensure target symlink and backing store exist"
+    echo "  ./check.fish --ensure-target"
     echo ""
     echo "  # Show this help"
     echo "  ./check.fish --help"

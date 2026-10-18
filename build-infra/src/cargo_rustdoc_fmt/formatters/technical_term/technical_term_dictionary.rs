@@ -7,7 +7,7 @@
 //! Builds from the seed file (`known_technical_term_link_dictionary.jsonc`) embedded at
 //! compile time, or from a custom file provided via `--terms-file`.
 
-use rustc_hash::FxHashMap;
+use r3bl_tui::HashMap;
 use std::path::Path;
 
 /// Embedded seed file (JSON5 format with comments).
@@ -16,7 +16,7 @@ const EMBEDDED_SEED: &str = include_str!("known_technical_term_link_dictionary.j
 /// Dictionary of known technical terms and their canonical link targets.
 #[derive(Debug)]
 pub struct TechnicalTermDictionary {
-    terms: FxHashMap<String, String>,
+    terms: HashMap<String, String>,
 }
 
 impl TechnicalTermDictionary {
@@ -65,7 +65,7 @@ impl TechnicalTermDictionary {
 }
 
 /// Parses the seed file content (JSON5 format) into a term-to-target map.
-fn parse_seed(content: &str) -> miette::Result<FxHashMap<String, String>> {
+fn parse_seed(content: &str) -> miette::Result<HashMap<String, String>> {
     json5::from_str(content)
         .map_err(|err| miette::miette!("Failed to parse seed file: {err}"))
 }

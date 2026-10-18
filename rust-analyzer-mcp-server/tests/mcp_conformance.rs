@@ -2,7 +2,7 @@
 
 //! End-to-end integration tests using the official MCP Inspector CLI.
 //!
-//! These tests execute `npx -y @modelcontextprotocol/inspector --cli` against the
+//! These tests execute `mcp-inspector --cli` against the
 //! compiled `rust-analyzer-mcp-server` binary to validate protocol compliance, tool
 //! discovery, and AST symbol inspection.
 
@@ -15,27 +15,44 @@ fn get_server_bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_rust-analyzer-mcp-server"))
 }
 
-/// Tests tool discovery via `npx @modelcontextprotocol/inspector --cli ... --method
-/// tools/list`.
-fn get_npx_command() -> Command {
-    #[cfg(windows)]
-    {
-        Command::new("npx.cmd")
-    }
-    #[cfg(not(windows))]
-    {
-        Command::new("npx")
-    }
-}
-
-/// Helper to construct the base `npx @modelcontextprotocol/inspector --cli <server_bin>`
-/// command with platform-appropriate timeouts. On Windows, process spawning and NTFS
-/// overhead require a larger connection timeout.
+/// Helper to construct the base `mcp-inspector --cli <server_bin>` command.
+///
+/// Looks for the locally-installed `@modelcontextprotocol/inspector` binary in
+/// `node_modules/.bin/mcp-inspector` (or `mcp-inspector.cmd` on Windows).
+/// If not found locally, falls back to checking `$PATH`.
+/// If absent entirely, panics immediately with an actionable error message directing
+/// the developer or agent to run `npm install` or `./bootstrap.sh`.
 fn create_inspector_cli_command(server_bin: &Path) -> Command {
-    let mut cmd = get_npx_command();
+    let bin_name = if cfg!(windows) {
+        "mcp-inspector.cmd"
+    } else {
+        "mcp-inspector"
+    };
+
+    let local_bin = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("node_modules")
+        .join(".bin")
+        .join(bin_name);
+
+    let inspector_path = if local_bin.exists() {
+        local_bin
+    } else {
+        // Fallback: check if mcp-inspector is globally available in PATH.
+        which::which(bin_name).unwrap_or_else(|_| {
+            panic!(
+                "\n❌ MCP conformance tests require @modelcontextprotocol/inspector.\n\
+                 Binary not found at: {}\n\n\
+                 To install dependencies, please run:\n\
+                   cd rust-analyzer-mcp-server && npm install\n\
+                 Or run project bootstrap:\n\
+                   ./bootstrap.sh\n",
+                local_bin.display()
+            );
+        })
+    };
+
+    let mut cmd = Command::new(inspector_path);
     cmd.args([
-        "-y",
-        "@modelcontextprotocol/inspector",
         "--cli",
         server_bin.to_str().expect("Valid binary path string"),
     ]);
@@ -56,7 +73,7 @@ fn test_inspector_cli_tools_list() {
     let output = create_inspector_cli_command(&server_bin)
         .args(["--method", "tools/list"])
         .output()
-        .expect("Failed to execute npx inspector CLI");
+        .expect("Failed to execute inspector CLI");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -136,7 +153,7 @@ fn test_inspector_cli_tools_call_symbols() {
             &file_arg,
         ])
         .output()
-        .expect("Failed to execute npx inspector CLI");
+        .expect("Failed to execute inspector CLI");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);

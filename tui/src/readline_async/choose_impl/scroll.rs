@@ -45,7 +45,7 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crate::{ChUnit, DEVELOPMENT_MODE, RangeBoundsResult, ViewportBoundsCheck, ch,
+use crate::{ChUnit, DEBUG_CHOOSE, RangeBoundsResult, ViewportBoundsCheck, ch,
             fg_green, inline_string, vp_idx, vp_len};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -78,7 +78,7 @@ pub fn locate_cursor_in_viewport(
     let abs_row_index =
         get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::info! {
             message = "locate_cursor_in_viewport()",

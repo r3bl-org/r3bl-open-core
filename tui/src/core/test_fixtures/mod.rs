@@ -157,6 +157,30 @@ pub fn suppress_wer_dialogs() {
     }
 }
 
+/// Compares `actual` against `expected` using [`similar::TextDiff`] for readable
+/// unified diffs on multi-line strings in unit tests.
+///
+/// # Panics
+///
+/// Panics if `actual != expected`, printing a unified line-by-line diff with 3 lines
+/// of context to [`stderr`] before panicking at the caller's source location.
+///
+/// [`stderr`]: std::io::stderr
+#[cfg(test)]
+#[track_caller] // Reports the test call site's file and line number on panic instead of this helper's.
+pub fn assert_str_diff_eq(actual: &str, expected: &str) {
+    if actual != expected {
+        let diff = similar::TextDiff::from_lines(expected, actual);
+        let unified_diff = diff
+            .unified_diff()
+            .context_radius(3)
+            .header("expected", "actual")
+            .to_string();
+        eprintln!("=== DIFF (expected vs actual) ===\n{unified_diff}");
+        panic!("Actual string output does not match expected string output");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

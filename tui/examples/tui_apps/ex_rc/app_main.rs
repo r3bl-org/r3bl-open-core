@@ -5,7 +5,7 @@ use crate::ex_rc::app_main::animator_task::start_animator_task;
 use chrono::{DateTime, Local};
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
-               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD, EditMode,
+               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI, EditMode,
                EditorComponent, EditorEngineConfig, EventPropagation, FlexBoxId,
                GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
                InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement, LengthOps,
@@ -118,7 +118,7 @@ mod constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct ex_rc::AppWithLayout");
             });
@@ -367,7 +367,7 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -404,7 +404,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"

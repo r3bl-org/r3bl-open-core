@@ -1,20 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`RAII`] thread-exit guard that transitions the dedicated thread's state to
+//! [RAII] thread-exit guard that transitions the dedicated thread's state to
 //! [`Stopped`] when the work loop exits. See [`TerminationGuard`] for details.
 //!
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`Stopped`]: super::ThreadState::Stopped
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use super::{RRTWorker, ThreadLifecycleMonitor, ThreadState};
 use crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD;
 use std::sync::Arc;
 
-/// [`RAII`] guard that transitions the dedicated thread to [`ThreadState::Stopped`] and
+/// [RAII] guard that transitions the dedicated thread to [`ThreadState::Stopped`] and
 /// wakes any blocked subscribers when the work loop exits.
 ///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`ThreadState::Stopped`]: super::ThreadState::Stopped
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[allow(missing_debug_implementations)]
 pub struct TerminationGuard<W: RRTWorker> {
     pub shared_state: Arc<ThreadLifecycleMonitor<W>>,
