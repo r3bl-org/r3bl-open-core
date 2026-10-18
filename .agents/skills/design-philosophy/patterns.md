@@ -443,7 +443,7 @@ define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] => ...);
 pub const SGR_RESET_BYTES: &[u8] = b"\x1b[0m";
 ```
 
-### Good: Single Source of Truth & Derivation Hierarchy
+### Good: Constant Derivation Hierarchy
 
 Rust const evaluation has two distinct constraints:
 1. `&str::chars()` is not a `const fn`. Extracting a `char` from `&str` at compile time is clumsy.
@@ -451,12 +451,12 @@ Rust const evaluation has two distinct constraints:
 
 Therefore, constants follow a strict derivation hierarchy based on whether they are atomic primitives or composed sequences.
 
-#### 1. Atomic Primitives (Single byte/char): `u8` is the SSOT
+#### 1. Atomic Primitives (Single byte/char): Derive from `u8`
 
-For foundational 1-byte protocol building blocks (`NUL`, `b';'`, `b':'`, `b'<'`, `b'M'`), the `u8` byte value is the SSOT. Derive `char` and `&str` outward using helper functions:
+For foundational 1-byte protocol building blocks (`NUL`, `b';'`, `b':'`, `b'<'`, `b'M'`), define the `u8` byte value first and derive `char` and `&str` outward using helper functions:
 
 ```rust
-// ✅ Good: u8 is SSOT for atomic primitives.
+// ✅ Good: Define u8 first for atomic primitives.
 pub const NUL: u8 = 0;
 pub const NUL_CHAR: char = ascii_byte_to_char(NUL);
 pub const NUL_STR: &str = ascii_byte_to_str(&[NUL]);
@@ -481,12 +481,12 @@ Defined in `tui/src/core/ansi/constants/mod.rs`:
   - **Why**: Performs compile-time UTF-8 validation via `core::str::from_utf8`.
   - **When to use**: Whenever deriving a 1-character string slice (`_STR`) from an atomic `u8` constant (e.g. `ascii_byte_to_str(&[NUL])`). Do not use this for multi-byte composed sequences; composed sequences start as `&str` instead.
 
-#### 2. Composed Sequences (Multi-byte strings): `&str` is the SSOT
+#### 2. Composed Sequences (Multi-byte strings): Derive from `&str`
 
-For multi-byte sequences composed of prefixes, markers, or parameters, the `&str` is the SSOT. Derive byte slice and length outward:
+For multi-byte sequences composed of prefixes, markers, or parameters, define the `&str` constant first and derive byte slice and length outward:
 
 ```rust
-// ✅ Good: &str is SSOT for composed sequences.
+// ✅ Good: Define &str first for composed sequences.
 pub const MOUSE_SGR_PREFIX_STR: &str =
     const_format::formatcp!("{CSI_START}{MOUSE_SGR_MARKER_CHAR}");
 pub const MOUSE_SGR_PREFIX: &[u8] = MOUSE_SGR_PREFIX_STR.as_bytes();
@@ -498,7 +498,7 @@ pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
 
 #### Decision Matrix
 
-| Scenario | SSOT Type | Conversion Mechanism | Resulting Constants |
+| Scenario | Base Type | Conversion Mechanism | Resulting Constants |
 | :--- | :--- | :--- | :--- |
 | **Atomic Primitive** (Single byte/char, e.g. `NUL`, `;`, `:`, `<`, `M`) | `u8` | `ascii_byte_to_char(BYTE)`<br>`ascii_byte_to_str(&[BYTE])` | `FOO: u8`<br>`FOO_CHAR: char`<br>`FOO_STR: &str` |
 | **Composed Sequence** (Multi-byte strings, e.g. `ESC [ <`, `ESC [ 0 m`, `ESC ]`) | `&str` | `formatcp!` / `define_ansi_const!`<br>`.as_bytes()`<br>`.len()` | `FOO_STR: &str`<br>`FOO: &[u8]`<br>`FOO_LEN: usize` |
@@ -515,4 +515,4 @@ pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
 | Abstraction Worth      | "Does this abstraction make the code easier or harder to understand?"           |
 | ADT Const Params       | "Can I use a const enum to replace a trait or runtime field?"                   |
 | Type Co-location       | "Is this floating function constructing or decoding a co-located domain type?"   |
-| Constant Hierarchy     | "Is this atomic (u8 SSOT) or a composed sequence (&str SSOT)?"                   |
+| Constant Hierarchy     | "Is this atomic (base u8) or a composed sequence (base &str)?"                  |

@@ -77,9 +77,9 @@ release `r3bl_tui = "0.8.0"`.
       implemented resilient recovery in `StatefulInputParser::advance` that purges
       unrecognized terminated sequences, preventing permanent input event loop lockups.
     - **`MaybeMore` State Machine & Zero-Latency ESC Disambiguation**: Replaced loose
-      booleans with the `MaybeMore` enum (`KernelDrained`, `KernelMayHaveMore`),
-      enabling 0ms zero-latency ESC handling while correctly reassembling multi-packet
-      escape sequences across SSH.
+      booleans with the `MaybeMore` enum (`KernelDrained`, `KernelMayHaveMore`), enabling
+      0ms zero-latency ESC handling while correctly reassembling multi-packet escape
+      sequences across SSH.
     - **OSC Terminal Query Absorption**: Implemented `OscScanState` and
       `scan_osc_sequence` state machine to scan, frame, and absorb terminal query
       responses (OSC 10/11 color queries, OSC 52 clipboard) on `stdin`, preventing text
@@ -176,7 +176,7 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Track B (Sequential - After worktree merge):           │
-│ Phase 4: Merge worktree & SSOT documentation sync      │
+│ Phase 4: Merge worktree & documentation sync           │
 │ Phase 5: Release r3bl_tui v0.8.0                       │
 │ Phase 6: Release r3bl-build-infra v0.0.6               │
 │ Phase 7: Release r3bl-cmdr v0.0.27                     │
@@ -476,7 +476,7 @@ Task: make-0.8.0-release.md" ```
 _Execute this track once the worktree branch `binaries` (`../roc-binaries`) is fully
 completed and merged into `main`._
 
-### Phase 4: Workspace Merge & Documentation SSOT Sync
+### Phase 4: Workspace Merge & Documentation Sync
 
 - [x] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
       worktree.
@@ -498,7 +498,7 @@ completed and merged into `main`._
         git pull origin main
         git status
         ```
-- [ ] Update `tui/src/lib.rs` (Single Source of Truth under `//! # Why R3BL?`):
+- [ ] Update `tui/src/lib.rs` (under `//! # Why R3BL?`):
     - Add subsection `//! ## Mathematically & Empirically Validated Type Safety` detailing
       FUNARCH 2023 & 2026 academic research, typestate coordinate boundaries, and zero
       runtime penalty (using `//! ##` so rustdoc navigation shows it cleanly and
@@ -603,7 +603,7 @@ completed and merged into `main`._
 ### Phase 6: Release `r3bl-build-infra` v0.0.6 (Tooling Crate)
 
 - [ ] Bump package version in `build-infra/Cargo.toml`: Set `version = "0.0.6"`.
-- [ ] Generate README from SSOT `build-infra/src/lib.rs`:
+- [ ] Generate README from `build-infra/src/lib.rs`:
     ```bash
     cd build-infra && cargo readme > README.md && cd ..
     ```
@@ -647,7 +647,7 @@ completed and merged into `main`._
 ### Phase 7: Release `r3bl-cmdr` v0.0.27 (CLI & Apps Crate)
 
 - [ ] Bump package version in `cmdr/Cargo.toml`: Set `version = "0.0.27"`.
-- [ ] Generate README from SSOT `cmdr/src/lib.rs`:
+- [ ] Generate README from `cmdr/src/lib.rs`:
     ```bash
     cd cmdr && cargo readme > README.md && cd ..
     ```
