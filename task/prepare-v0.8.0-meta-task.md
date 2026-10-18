@@ -104,6 +104,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [revamp-arch-with-cst.md](done/revamp-arch-with-cst.md)
 - [x] [rustdoc-fmt-clean-rust-code-fenced-blocks.md](done/rustdoc-fmt-clean-rust-code-fenced-blocks.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [replace-expect-with-rust-perf.md](replace-expect-with-rust-perf.md)
 - [ ] [telemetry-server.md](telemetry-server.md)
@@ -115,8 +116,15 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] Unify rendering
 
-- [ ] [unify the interactive entry points to alternate screen](task_refactor_interactive_apis_to_alternate_screen.md)
 - [ ] [unify styling](task_unify_cli_and_styled_text.md)
+    - Extends `TuiStyledText` with builder methods so `RenderOps` can be used cleanly in
+      CLI prompts
+- [ ] [unify 3 entry pts](task_refactor_interactive_apis_to_alternate_screen.md)
+    - Consolidates `choose` and `readline` onto Full TUI `Component`/`App` primitives on
+      alternate screen, eliminating legacy cursor engines
+- [ ] [remove tokio from tui](remove-tokio.md)
+    - With all UI consolidated on `TerminalWindow`, convert `TerminalWindow` &
+      `InputDevice` to sync and drop Tokio completely from `tui`
 
 # [TODO] Clean up tasks
 
@@ -141,7 +149,7 @@ Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-rele
 ┌──────────────────────────▼─────────────────────────────┐
 │ Track B (Sequential - After worktree merge):           │
 │ 1. Complete & merge fix-shift-home-lockup to main      │
-│ 2. Update tui/src/lib.rs (SSOT) & generate README.md   │
+│ 2. Update tui/src/lib.rs & generate README.md          │
 │ 3. Update root README.md & all workspace Cargo.tomls   │
 │ 4. Execute sequential multi-crate release DAG:         │
 │    r3bl_tui -> r3bl-build-infra -> cmdr -> mcp-server  │
@@ -183,10 +191,10 @@ Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-rele
 
 ### Track B: Release Execution (Post-Merge of `fix-shift-home-lockup`)
 
-- [ ] **Merge Worktree & Documentation SSOT Sync**:
+- [ ] **Merge Worktree & Documentation Sync**:
     - [ ] Merge `../roc-fix-shift-home-lockup` into `main`.
-    - [ ] Update `tui/src/lib.rs` (SSOT under `//! # Why R3BL?`) with Type Safety and
-          Systems Performance sections.
+    - [ ] Update `tui/src/lib.rs` (under `//! # Why R3BL?`) with Type Safety and Systems
+          Performance sections.
     - [ ] Generate `tui/README.md`: `cd tui && cargo readme > README.md && cd ..`.
     - [ ] Update root `README.md` and run `mktoc`.
     - [ ] Update all `Cargo.toml` files (`tui` to `0.8.0`, others with
@@ -207,7 +215,7 @@ Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-rele
         - Push commit/tag and create GitHub release via
           `--notes-file docs/release-notes/r3bl_tui/v0.8.0.md`.
     - [ ] **Step 2: Release `r3bl-build-infra` v0.0.6 (Tooling Crate)**
-        - Generate README from SSOT: `cd build-infra && cargo readme > README.md`.
+        - Generate README from `src/lib.rs`: `cd build-infra && cargo readme > README.md`.
         - Perform dry run:
           `cd build-infra && cargo publish --dry-run --allow-dirty --no-verify`.
         - User permission checkpoint.
@@ -218,7 +226,7 @@ Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-rele
         - Push commit/tag, create GitHub release via `--notes-file`, and re-install binary
           (`cargo install --path build-infra --force`).
     - [ ] **Step 3: Release `r3bl-cmdr` v0.0.27 (CLI & Apps Crate)**
-        - Generate README from SSOT: `cd cmdr && cargo readme > README.md`.
+        - Generate README from `src/lib.rs`: `cd cmdr && cargo readme > README.md`.
         - Perform dry run: `cd cmdr && cargo publish --dry-run --allow-dirty --no-verify`.
         - User permission checkpoint.
         - Commit & Tag (explicit):
@@ -227,7 +235,7 @@ Detailed execution plan is maintained in [make-0.8.0-release.md](make-0.8.0-rele
         - Push commit/tag, create GitHub release via `--notes-file`, and re-install binary
           (`cargo install --path cmdr --force`).
     - [ ] **Step 4: Release `r3bl-rust-analyzer-mcp-server` v1.1.5 (MCP Server)**
-        - _Do NOT run cargo readme_ (README.md is hand-crafted SSOT for crates.io).
+        - _Do NOT run cargo readme_ (`README.md` is hand-crafted for crates.io).
         - Perform dry run:
           `cd rust-analyzer-mcp-server && cargo publish --dry-run --allow-dirty --no-verify`.
         - User permission checkpoint.

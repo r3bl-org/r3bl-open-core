@@ -26,9 +26,9 @@ Code should be easy to understand without loading too much into working memory.
 - Limit the number of concepts a reader must hold simultaneously
 - **Clean Imports**: Use `use` statements at the top of files rather than inline absolute paths (e.g. `crate::Type`) to reduce visual noise and cognitive clutter in function bodies.
 - **No Magic Numbers/Strings**: Extract domain-specific numbers and strings (like ANSI mode integers or escape sequences) into named constants (e.g., in `tui/src/core/ansi/constants/`). Do not use magic numbers directly in business logic or pattern matches, as this requires readers to memorize their meaning.
-- **Single Source of Truth for Constants**: Never duplicate raw literals across byte, string, and length constants. Follow the Constant Derivation Hierarchy:
-  - **Atomic Primitives (Single byte/char)**: `u8` is the SSOT (`u8` to `char` via `ascii_byte_to_char` to `&str` via `ascii_byte_to_str`).
-  - **Composed Sequences (Multi-byte strings)**: `&str` is the SSOT (`&str` via compile-time concatenation/macro to `&[u8]` via `.as_bytes()` to `usize` via `.len()`).
+- **Constant Derivation Hierarchy (No Duplicate Literals)**: Never duplicate raw literals across byte, string, and length constants. Derive related constants from a single base definition:
+  - **Atomic Primitives (Single byte/char)**: Define the `u8` constant first (`u8` to `char` via `ascii_byte_to_char` to `&str` via `ascii_byte_to_str`).
+  - **Composed Sequences (Multi-byte strings)**: Define the `&str` constant first (`&str` via compile-time concatenation/macro to `&[u8]` via `.as_bytes()` to `usize` via `.len()`).
   See [Constant Design Patterns in `patterns.md`](patterns.md#constant-design-patterns).
 - **Technical Precision**: Use standard, precise terminology (e.g., Parameter vs. Argument) to ensure the reader's mental model matches the implementation exactly. See the [Terminology Precision] guide.
 
@@ -87,7 +87,8 @@ Treat errors as a user interface (UI) for developers. Public-facing errors must 
 
 **Guidelines:**
 
-- **Standardize on `miette`**: All custom error types (enums/structs) must derive `miette::Diagnostic` in addition to `thiserror::Error`.
+- **Standardize on `thiserror` and `miette` (No Manual Boilerplate)**: All custom error types (enums/structs) **must** derive both `thiserror::Error` and `miette::Diagnostic` (`#[derive(Debug, thiserror::Error, miette::Diagnostic)]`). **Never** manually implement `std::fmt::Display` or `std::error::Error` for custom error types—always use `#[error("...")]` attributes instead.
+- **Derive Enum Deserialization via `#[serde(rename_all = "...")]` Instead of Custom Error Boilerplate**: When deserializing fixed-variant enums (e.g., `"open-source"` / `"closed-source"`), use `#[derive(Deserialize)]` with `#[serde(rename_all = "kebab-case")]` (or `"snake_case"`, `"lowercase"`, etc.) so `serde` automatically generates both the parser and the error message (`unknown variant ..., expected ...`). **Never** use `#[serde(try_from = "String")]` on unit enums or write manual `FromStr` / `TryFrom<&str>` / `TryFrom<String>` + custom error boilerplate just to deserialize an enum. Reserve `#[serde(try_from = "String")]` strictly for composite structs (such as `CrateVersion { major, minor, patch }`) that decompose a string into multiple fields.
 - **Actionable Metadata**: Use `#[diagnostic(help(...))]` to provide hints on how to resolve the error.
 - **Searchable Codes**: Use `#[diagnostic(code(...))]` to provide unique identifiers for errors, facilitating documentation and search.
 - **Preserve Context**: Avoid "lossy" error conversions (like turning a rich `miette::Report` into a plain string). Use transparent delegation or dedicated variants to preserve the full error chain.

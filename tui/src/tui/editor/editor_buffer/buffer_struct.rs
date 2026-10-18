@@ -3,7 +3,7 @@
 use super::{EditorBufferConfig, SelectionContainer, history::EditorHistory,
             render_cache::RenderCache};
 use crate::{CCaret, CCol, CHeight, CPos, CRow, CWidth, CursorPositionBoundsStatus,
-            DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
+            DEBUG_TUI_COPY_PASTE, DEBUG_TUI, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, NumericValue, TinyInlineString, VPCaret,
             VPSize, Viewport, ZeroCopyGapBuffer, format_as_kibibytes_with_commas,
@@ -339,7 +339,7 @@ mod construct {
                 ..Default::default()
             };
 
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH),

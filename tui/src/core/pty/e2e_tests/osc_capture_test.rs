@@ -2,7 +2,7 @@
 
 use super::cross_platform_commands;
 use crate::{DefaultPtySessionConfig, OscPtyEvent, PtyOutputEvent,
-            PtySessionConfigOption, osc_codes::OscSequence, pc};
+            PtySessionConfigToken, osc_codes::OscSequence, pc};
 
 #[test]
 fn test_osc_capture_enabled() {
@@ -10,8 +10,8 @@ fn test_osc_capture_enabled() {
     let session = cross_platform_commands::printf(&osc_seq)
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::CaptureOsc
-                + PtySessionConfigOption::NoCaptureOutput,
+                + PtySessionConfigToken::CaptureOsc
+                + PtySessionConfigToken::NoCaptureOutput,
         )
         .start()
         .expect("Failed to spawn read-only session");
@@ -42,7 +42,7 @@ fn test_osc_capture_enabled() {
 fn test_osc_capture_disabled() {
     let osc_seq = OscSequence::ProgressUpdate(pc!(75).unwrap()).to_string();
     let session = cross_platform_commands::printf(&osc_seq)
-        .with_config(DefaultPtySessionConfig + PtySessionConfigOption::NoCaptureOutput)
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::NoCaptureOutput)
         .start()
         .expect("Failed to spawn read-only session");
 

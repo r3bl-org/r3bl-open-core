@@ -104,6 +104,7 @@ comparison_chain = "warn"
 elidable_lifetime_names = "warn"
 wildcard_imports = "warn"
 large_futures = "warn"
+disallowed_types = "warn"
 # ╔══════════════════════════════════════════════════════╗
 # ║ Explicitly allow/suppress these lints to avoid noise ║
 # ╚══════════════════════════════════════════════════════╝

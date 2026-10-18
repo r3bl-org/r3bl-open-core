@@ -69,11 +69,11 @@ use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
-/// This is the [`RAII`] guard returned by [`SINGLETON.try_subscribe()`]. Holding this
+/// This is the [RAII] guard returned by [`SINGLETON.try_subscribe()`]. Holding this
 /// guard keeps you subscribed to input events; dropping it triggers the cleanup protocol
 /// that may cause the thread to exit.
 ///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`SINGLETON.try_subscribe()`]: crate::RRT::try_subscribe
 pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 

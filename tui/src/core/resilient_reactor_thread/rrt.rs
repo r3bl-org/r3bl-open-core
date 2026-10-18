@@ -280,8 +280,8 @@ pub fn try_subscribe<W: RRTWorker>(
 ///      [`RRTWorker`] encounters a domain stop condition (like an [`EOF`] on [`stdin`]),
 ///      it returns [`Continuation::Stop`].
 ///    - On exit, [`run_worker_loop(worker, ...)`] returns, and the [`RRTWorker`] goes out
-///      of scope, triggering [`RAII`] cleanup on the OS resources it owns.
-///    - [`TerminationGuard::drop()`] (a local [`RAII`] guard) runs, transitioning the
+///      of scope, triggering [RAII] cleanup on the OS resources it owns.
+///    - [`TerminationGuard::drop()`] (a local [RAII] guard) runs, transitioning the
 ///      state to [`Stopped`] and calling [`notify_all()`] so new subscribers can spawn a
 ///      fresh thread.
 /// 5. **Panic Exit** - if your [`block_until_ready_then_dispatch()`] implementation
@@ -456,7 +456,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// 1. The framework acquires the [`shared_state`] lock, transitions from [`Running`] to
 ///    [`Restarting`] (consuming the old [`RRTSoftwareInterrupt`]), **and immediately
 ///    releases the lock to begin dropping and recreating OS resources**.
-/// 2. The current [`RRTWorker`] is dropped and [`RAII`] cleanup releases OS resources.
+/// 2. The current [`RRTWorker`] is dropped and [RAII] cleanup releases OS resources.
 /// 3. The framework sleeps for the configured delay (see [`RestartPolicy`]).
 /// 4. [`RRTWorker::create_and_register_os_sources()`] is called to create a fresh
 ///    [`RRTWorker`] + [`RRTSoftwareInterrupt`] pair. The new [`RRTWorker`] allocates new
@@ -515,7 +515,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`notify_all()`]: std::sync::Condvar::notify_all
 /// [`Output`]: super::RRTWorker::Output
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`Restarting`]: super::ThreadState::Restarting
 /// [`RestartPolicy`]: super::RestartPolicy

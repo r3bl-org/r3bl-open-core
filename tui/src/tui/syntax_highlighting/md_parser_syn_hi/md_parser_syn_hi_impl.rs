@@ -92,9 +92,9 @@ mod tests_try_parse_and_highlight {
                 throws, tui_color};
     use serial_test::serial;
 
-    /// [`RAII`] guard for color support override cleanup
+    /// [RAII] guard for color support override cleanup
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }
@@ -742,9 +742,9 @@ mod tests_style_us_span_lines_from {
                 global_color_support, new_style, parse_list, throws, tui_color};
     use serial_test::serial;
 
-    /// [`RAII`] guard for color support override cleanup
+    /// [RAII] guard for color support override cleanup
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }

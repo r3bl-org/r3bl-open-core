@@ -7,10 +7,13 @@ description: Run comprehensive Rust code quality checks including compilation, l
 
 ## When to Use
 
-- After completing significant code changes
-- Before creating commits
-- Before creating pull requests
-- When user says "check code quality", "run quality checks", "make sure code is good", etc.
+- When user explicitly invokes `/check` or says "check code quality", "run quality checks", "make sure code is good", etc.
+- Before creating commits or opening pull requests (final milestone verification)
+- After completing an entire task or major feature phase (with user confirmation)
+
+> [!IMPORTANT]
+> **Do NOT run this skill or its heavy checks (`--test`, `--clippy`, `--quick-doc`, `--full`) after minor or routine edits.**
+> For routine edits and interim review points, run ONLY fast checks (`./check.fish --check` and `./check.fish --fmt`).
 
 ## Non-Blocking Execution via Subagents
 

@@ -1979,67 +1979,6 @@ mod bench {
         });
     }
 
-    /// Benchmark: `FxHashMap` vs `HashMap` - Cache insertion performance
-    ///
-    /// Real-world flamegraph results:
-    /// - Before `FxHashMap`: 38M samples in `COLORIZATION_CACHE` hash operations
-    /// - After `FxHashMap`: Only 5M samples in `lolcat_into_string` (all operations)
-    /// - Performance improvement: 87% reduction in `ColorWheel` CPU usage
-    #[bench]
-    fn bench_fxhashmap_vs_hashmap_insert(b: &mut Bencher) {
-        use rustc_hash::{FxBuildHasher, FxHashMap};
-        use std::collections::HashMap;
-
-        // Create test keys.
-        let mut keys = Vec::new();
-        for i in 0..100 {
-            let key = color_wheel_cache::ColorWheelCacheKey::new(
-                &format!("Test string number {i}"),
-                &VecConfigs::new(),
-                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(None),
-                None,
-            );
-            keys.push(key);
-        }
-
-        // Test FxHashMap.
-        let fx_time = {
-            let start = std::time::Instant::now();
-            b.iter(|| {
-                let mut map: FxHashMap<
-                    color_wheel_cache::ColorWheelCacheKey,
-                    TuiStyledTexts,
-                > = FxHashMap::with_capacity_and_hasher(100, FxBuildHasher);
-                for key in &keys {
-                    map.insert(key.clone(), TuiStyledTexts::default());
-                }
-                test::black_box(map)
-            });
-            start.elapsed()
-        };
-
-        // Test standard HashMap.
-        let hash_time = {
-            let start = std::time::Instant::now();
-            b.iter(|| {
-                let mut map: HashMap<
-                    color_wheel_cache::ColorWheelCacheKey,
-                    TuiStyledTexts,
-                > = HashMap::with_capacity(100);
-                for key in &keys {
-                    map.insert(key.clone(), TuiStyledTexts::default());
-                }
-                test::black_box(map)
-            });
-            start.elapsed()
-        };
-
-        // The benchmark framework will show the actual performance.
-        // This is just to ensure both paths are tested.
-        test::black_box((fx_time, hash_time));
-    }
-
     /// Benchmark: `LruCache` lookup performance
     #[bench]
     fn bench_lru_cache_lookup(b: &mut Bencher) {

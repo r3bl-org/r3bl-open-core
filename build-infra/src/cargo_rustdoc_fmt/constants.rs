@@ -179,7 +179,7 @@ pub const HIDDEN_PATH_PREFIX: char = '.';
 /// Default directory substring excluded from file discovery (`"test_data"`).
 pub const DEFAULT_SKIP_FOLDER_MATCH: &str = "test_data";
 
-/// Cargo `CLI` executable name (`"cargo"`).
+/// Cargo CLI executable name (`"cargo"`).
 pub const CARGO_PROGRAM: &str = "cargo";
 
 /// Cargo format subcommand name (`"fmt"`).
@@ -205,7 +205,7 @@ pub const TOC_CLOSE_MARKER: &str = "<!-- /TOC";
 /// Rust inclusive range delimiter (`"10..=20"`).
 pub const RANGE_DELIM_DOT_DOT_EQ: &str = "..=";
 
-/// Rust range delimiter (`"10..20"`, treated as inclusive on the `CLI`).
+/// Rust range delimiter (`"10..20"`, treated as inclusive on the CLI).
 pub const RANGE_DELIM_DOT_DOT: &str = "..";
 
 /// Colon range delimiter (`"10:20"`).
@@ -214,7 +214,7 @@ pub const RANGE_DELIM_COLON: &str = ":";
 /// Hyphen range delimiter (`"10-20"`).
 pub const RANGE_DELIM_HYPHEN: &str = "-";
 
-/// Supported `CLI` range delimiters in precedence order (`"..="` before `".."`).
+/// Supported CLI range delimiters in precedence order (`"..="` before `".."`).
 pub const RANGE_DELIMITERS: [&str; 4] = [
     RANGE_DELIM_DOT_DOT_EQ,
     RANGE_DELIM_DOT_DOT,
