@@ -48,11 +48,14 @@ unified, hybrid distribution and self-upgrade architecture.
 >   parser (`VersionsManifest::try_parse_jsonc`), and comment-preserving CST updater
 >   (`VersionsManifest::update_crate_in_jsonc_str`) for `https://r3bl.com/versions.jsonc`.
 > - **Architecture Specification**: This document is the technical specification for the
->   shared upgrade engine (`r3bl_tui::core::script::upgrade`), centralized manifest
->   (`https://r3bl.com/versions.jsonc`), bootstrap installers
->   (`https://r3bl.com/install.sh`, `https://r3bl.com/install.ps1`), and binary
->   distribution repository (`https://github.com/r3bl-org/r3bl-binaries`). Proprietary
->   crates in `r3bl-base` import `r3bl_tui` and reference this specification.
+>   shared client-side upgrade engine (`r3bl_tui::core::script::upgrade`), centralized
+>   manifest schema (`https://r3bl.com/versions.jsonc`), and binary distribution
+>   repository (`https://github.com/r3bl-org/r3bl-binaries`).
+> - **Maintainer Release Pipeline (`r3bl-base`)**: The private release orchestrator
+>   (`release.fish`), manifest publisher CLI (`r3bl-manifest-update`), and canonical
+>   authoring of `versions.jsonc`, `install.sh`, and `install.ps1` live in `../r3bl-base`
+>   and are tracked in
+>   [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md).
 
 1. **Primary (Fast Binary Download — Open & Closed Source)**: 1-2 second HTTP download and
    atomic in-place binary swap via `self_replace` from pre-compiled GitHub Releases hosted
@@ -112,12 +115,11 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
   `jsonc_parser::cst::CstRootNode` (Concrete Syntax Tree) so release tooling can update a
   crate's version entry in `versions.jsonc` while preserving 100% of existing comments and
   formatting.
-    - [ ] **TODO (`r3bl-base` — closed-source repo, outside `r3bl-open-core`)**: Build a
-          separate CLI helper binary in `../r3bl-base` (and install it to `~/.cargo/bin`)
-          that hooks into `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()` so
-          `release.fish` can update `../r3bl_website/versions.jsonc`. This work lives in
-          `r3bl-base` (not in this open-source repo), but must be completed as part of
-          finishing this task file.
+    - See
+      [`r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
+      for the `r3bl-base` CLI binary (`r3bl-manifest-update`) that calls
+      `VersionsManifest::update_crate_in_jsonc_str()` and deploys `versions.jsonc` to
+      `r3bl.com` and `github.com/r3bl-org/r3bl-binaries`.
 
 ```jsonc
 {
@@ -151,10 +153,11 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
       `#[serde(try_from = "u32", into = "u32")]`): Validated integer schema version (`1`),
       rejecting unknown/future schema versions at deserialization time and routing to the
       version-specific parser in `VersionsManifest::try_parse_jsonc`.
-    - `version` (`CrateVersion` struct with `pub major: u16, pub minor: u16, pub patch: u16`
-      and `#[serde(try_from = "String", into = "String")]`): Validated semantic version
-      parsed via slice pattern matching (`[major_str, minor_str, patch_str]`) at
-      deserialization time, with explicit `Ord` / `PartialOrd` comparing
+    - `version` (`CrateVersion` struct with
+      `pub major: u16, pub minor: u16, pub patch: u16` and
+      `#[serde(try_from = "String", into = "String")]`): Validated semantic version parsed
+      via slice pattern matching (`[major_str, minor_str, patch_str]`) at deserialization
+      time, with explicit `Ord` / `PartialOrd` comparing
       `(self.major, self.minor, self.patch)` in SemVer precedence order.
     - `crate_distribution` (`CrateDistribution` with
       `#[serde(rename_all = "kebab-case")]`): Enum witness indicating distribution and
@@ -169,11 +172,11 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
       window before upgrading).
 - **Strictly Newer Version Comparison (`remote_version > local_version`)**:
     - Both remote (`versions.jsonc`) and local (`CARGO_PKG_VERSION`) versions are parsed
-      into `CrateVersion { major, minor, patch }` and compared directly via `CrateVersion`'s
-      `Ord` implementation (`remote_version > local_version` rather than `!=`). This
-      prevents local development builds (whose `Cargo.toml` version has been bumped ahead
-      of `versions.jsonc`) from falsely triggering an upgrade that would downgrade the
-      local binary.
+      into `CrateVersion { major, minor, patch }` and compared directly via
+      `CrateVersion`'s `Ord` implementation (`remote_version > local_version` rather than
+      `!=`). This prevents local development builds (whose `Cargo.toml` version has been
+      bumped ahead of `versions.jsonc`) from falsely triggering an upgrade that would
+      downgrade the local binary.
 - **Pinned Version in `crates.io` Compilation Fallback (Open Source Only)**:
     - When `crate_distribution == CrateDistribution::OpenSource` and the pre-compiled
       binary cannot be downloaded from `github.com/r3bl-org/r3bl-binaries`, the fallback
@@ -443,83 +446,39 @@ control exit upgrade behavior (with zero magic environment variable inspection):
 **Centralized Installers (`r3bl.com/install.sh`, `r3bl.com/install.ps1`) & Version
 Manifest (`r3bl.com/versions.jsonc`)**:
 
-- [ ] Hosted in `../r3bl_website/` so they are served directly from `https://r3bl.com/`
-      (with canonical copies maintained in `r3bl-open-core` and synced to
-      `../r3bl_website/`):
-    - [ ] `https://r3bl.com/versions.jsonc`: Central JSONC manifest (with preserved
-          comments) mapping crate names to
-          `{ "version", "crate_distribution", "released_on" }`.
-    - [ ] `https://r3bl.com/install.sh`: POSIX shell bootstrap script for Linux & macOS
-          (`curl -LsSf https://r3bl.com/install.sh | sh`).
-    - [ ] `https://r3bl.com/install.ps1`: PowerShell bootstrap script for Windows
-          (`irm https://r3bl.com/install.ps1 | iex`).
-- [ ] Supports optional target crate argument (`cmdr` (default), `build-infra`,
-      `mcp-server`, `all`, or any crate entry present in `versions.jsonc`).
-- [ ] **Bootstrap Execution Flow**:
-    - [ ]   1. Fetches `https://r3bl.com/versions.jsonc` to resolve the target crate's
-           pinned `version` and `crate_distribution` (`"open-source"` vs
-           `"closed-source"`).
-    - [ ]   2. Downloads the pre-compiled `.tar.gz` archive and `.sha256` checksum from
-           `https://github.com/r3bl-org/r3bl-binaries/releases/download/v<ver>-<crate>/<crate>-v<ver>-<target>.tar.gz`,
-           verifies the checksum, and extracts all executables inside the archive into
-           `~/.cargo/bin` (or `$env:USERPROFILE\.cargo\bin`).
-    - [ ]   3. If the binary download fails and `"crate_distribution": "open-source"`,
-           checks for `cargo` on `$PATH` and runs
-           `cargo install <crate> --version <ver> --force` (strictly using the `<ver>`
-           pinned in `versions.jsonc`). If `"crate_distribution": "closed-source"`, prints
-           a clean error without attempting a `crates.io` build.
-- [ ] **First-Time Install Caveat During Outages**:
-    - [ ] For open-source crates, all documentation also provides the manual source
-          compilation fallback at the end: `cargo install <crate> --force`.
+- Authored canonically in `../r3bl-base` and deployed/published by the `r3bl-base` release
+  pipeline to both `../r3bl_website/` (`https://r3bl.com/`) and `../r3bl-binaries/`
+  (`https://github.com/r3bl-org/r3bl-binaries`). See
+  [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
+  for the complete authoring and deployment implementation plan:
+    - `https://r3bl.com/versions.jsonc`: Central JSONC manifest (with preserved comments)
+      mapping crate names to `{ "version", "crate_distribution", "released_on" }`.
+    - `https://r3bl.com/install.sh`: POSIX shell bootstrap script for Linux & macOS
+      (`curl -LsSf https://r3bl.com/install.sh | sh`).
+    - `https://r3bl.com/install.ps1`: PowerShell bootstrap script for Windows
+      (`irm https://r3bl.com/install.ps1 | iex`).
+- **First-Time Install Caveat During Outages**:
+    - For open-source crates, all documentation also provides the manual source
+      compilation fallback at the end: `cargo install <crate> --force`.
 
 ### 6. Release Script & `github.com/r3bl-org/r3bl-binaries`
 
-**Automated End-to-End Release Automation (`release.fish`)**:
+**Maintainer Release Pipeline in `r3bl-base`
+(`../r3bl-base/task/task_release_pipeline.md`)**:
 
 - [x] **Dedicated Binary Distribution Repository (`github.com/r3bl-org/r3bl-binaries`)**:
     - [x] Created at `https://github.com/r3bl-org/r3bl-binaries` (and cloned locally at
           `../r3bl-binaries`) with a single `README.md` commit on `main` and repository
-          metadata configured. Used exclusively to host GitHub Release binary archives for
-          all R3BL open-source and closed-source tools.
-- [ ] **TODO (`r3bl-base` — closed-source repo, outside `r3bl-open-core`) — Manifest
-      Updater Helper Binary**:
-    - [ ] Build a dedicated CLI helper binary in `../r3bl-base` (and install locally into
-          `~/.cargo/bin`) that imports `r3bl_tui` and calls
-          `VersionsManifest::update_crate_in_jsonc_str()` to losslessly update a crate's
-          `version`, `crate_distribution`, and `released_on` UTC timestamp in
-          `../r3bl_website/versions.jsonc` while preserving all comments and formatting.
-          (This work is outside `r3bl-open-core` and must be done in `r3bl-base` as part
-          of completing this task file.)
-- [ ] `release.fish`: Automated, end-to-end release manager supporting both binary and
-      library crates:
-    - [ ]   1. **Version Validation**: Fails fast if target version is not strictly
-           greater than current version.
-    - [ ]   2. **CHANGELOG.md & Release Notes Verification**: Fails fast if `CHANGELOG.md`
-           lacks an entry for `### v<version>` or if the standalone release notes file
-           `docs/release-notes/<crate>/v<version>.md` does not exist.
-    - [ ]   3. **Quality Checks**: Executes `./check.fish --full`.
-    - [ ]   4. **Multi-Platform Binary Packaging**: For binary crates (`r3bl-cmdr`,
-           `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`), builds Linux native
-           binaries, cross-compiles Windows `.exe` binaries (and optionally collects macOS
-           fleet artifacts), strips symbols, and packages `.tar.gz` archives with
-           `.sha256` checksums into `dist/`.
-    - [ ]   5. **Dry-Run Validation**: For open-source crates, runs
-           `cargo publish -p <crate> --dry-run --allow-dirty --no-verify`.
-    - [ ]   6. **Interactive Confirmation**: Prompts for explicit user approval before
-           publishing.
-    - [ ]   7. **Atomic Publish, Binary Upload & `versions.jsonc` Update**:
-        - [ ] Bumps `Cargo.toml`, regenerates `README.md` via `cargo readme` (except
-              `rust-analyzer-mcp-server` which uses a hand-crafted `README.md`), creates
-              git commit/tag, pushes to remote, and publishes open-source crates to
-              `crates.io`.
-        - [ ] Creates the GitHub Release on `github.com/r3bl-org/r3bl-binaries` using:
-              `gh release create <tag> --repo r3bl-org/r3bl-binaries --title "<tag>" --notes-file docs/release-notes/<crate>/v<version>.md`
-              with attached `dist/*` binary assets (`.tar.gz` and `.sha256`).
-        - [ ] Invokes the `r3bl-base` manifest updater helper binary (which wraps
-              `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()`) to update
-              `../r3bl_website/versions.jsonc` (preserving all comments) with the new
-              `version`, `crate_distribution`, and `released_on` UTC timestamp (plus syncs
-              `install.sh` and `install.ps1` to `../r3bl_website/`).
+          metadata configured. Used to host GitHub Release binary archives (`.tar.gz` and
+          `.sha256`) and mirror `versions.jsonc`, `install.sh`, and `install.ps1` for all
+          R3BL open-source and closed-source tools.
+- [ ] **Release Orchestration & Manifest Publisher (`../r3bl-base`)**:
+    - [ ] Tracked in
+          [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
+          (`r3bl-manifest-update` CLI binary calling
+          `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()`, canonical
+          `versions.jsonc` / `install.sh` / `install.ps1`, and `release.fish` deploying to
+          `../r3bl-binaries` and `../r3bl_website`).
 
 ### 7. Website & Documentation
 
@@ -559,8 +518,8 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [x] Create `tui/src/core/script/upgrade/constants.rs` centralizing toolchain binary
       names, CLI flags, archive constants, JSONC manifest keys, and error reason strings.
 - [x] Create `tui/src/core/script/upgrade/versions_manifest.rs` defining
-      `VersionsManifest` (the schema for `versions.jsonc` with `try_parse_jsonc` validating
-      `ManifestSchemaVersion` via `ManifestHeader` before dispatching to the
+      `VersionsManifest` (the schema for `versions.jsonc` with `try_parse_jsonc`
+      validating `ManifestSchemaVersion` via `ManifestHeader` before dispatching to the
       version-specific parser, and CST-based `update_crate_in_jsonc_str`),
       `ManifestSchemaVersion` (`V1 = 1` witness enum with
       `#[serde(try_from = "u32", into = "u32")]`), `CrateDistribution`, `CrateName`,
@@ -621,47 +580,26 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 
 ### Phase 2: Bootstrap, Manifest & Release Script
 
-**Bootstrap scripts (`install.sh`, `install.ps1`), `versions.jsonc`, and `release.fish`**:
+**Maintainer release pipeline (`../r3bl-base/task/task_release_pipeline.md`)**:
 
 - [x] Create and configure `https://github.com/r3bl-org/r3bl-binaries` repository with
       metadata, topics, and initial `README.md` on `main`.
-- [ ] Create `../r3bl_website/versions.jsonc` initialized with schema v1 (`version`,
-      `crate_distribution`, `released_on` and explanatory comments for `r3bl-cmdr`,
-      `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`).
-- [ ] Create `install.sh` (at repo root and synced to `../r3bl_website/install.sh`) for
-      Linux and macOS bootstrap installation via `https://r3bl.com/install.sh`.
-- [ ] Create `install.ps1` (at repo root and synced to `../r3bl_website/install.ps1`) for
-      Windows PowerShell bootstrap installation via `https://r3bl.com/install.ps1`.
-- [ ] **TODO (`r3bl-base` — closed-source repo, outside `r3bl-open-core`)**: Build and
-      install a CLI helper binary in `../r3bl-base` (into `~/.cargo/bin`) that wraps
-      `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()` to losslessly update a
-      crate's `version`, `crate_distribution`, and `released_on` UTC timestamp in
-      `../r3bl_website/versions.jsonc` while preserving all comments and formatting.
-- [ ] Create `release.fish` at repo root implementing:
-    - [ ] `<crate>` and `<version>` argument parsing with interactive fallback.
-    - [ ] Version validation against `<crate>/Cargo.toml`.
-    - [ ] `CHANGELOG.md` entry and `docs/release-notes/<crate>/v<version>.md`
-          verification.
-    - [ ] Binary multi-platform compilation & packaging into `dist/` (Linux `.tar.gz` and
-          Windows `.tar.gz` cross-compiled directly on Linux) with `.sha256` checksums.
-    - [ ] `cargo publish --dry-run --allow-dirty --no-verify` and explicit user
-          confirmation prompt.
-    - [ ] Automated version bump, git commit, git tag (`v<version>-<crate>`), git push,
-          `cargo publish`, binary upload via
-          `gh release create --repo r3bl-org/r3bl-binaries --notes-file docs/release-notes/<crate>/v<version>.md`
-          with attached `dist/*` assets, and invoking the `r3bl-base` manifest updater
-          helper binary to update `../r3bl_website/versions.jsonc` (preserving comments).
-- [ ] Test `release.fish` validation guardrails (`--dry-run`, missing changelog/release
-      notes, invalid version).
+- [ ] Complete
+      [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
+      in `../r3bl-base` (private maintainer repository):
+    - [ ] Phase 1: Build `r3bl-manifest-update` CLI binary in `../r3bl-base` wrapping
+          `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()` and deploying/pushing
+          to `../r3bl_website` and `../r3bl-binaries`.
+    - [ ] Phase 2: Author canonical `versions.jsonc`, `install.sh`, and `install.ps1` in
+          `../r3bl-base` and deploy them to `../r3bl-binaries` and `../r3bl_website`.
+    - [ ] Phase 3: Build `release.fish` in `../r3bl-base` to orchestrate multi-platform
+          binary packaging, GitHub Release uploads to `r3bl-org/r3bl-binaries`, and
+          `versions.jsonc` publishing.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [ ] `../r3bl-base` (closed-source manifest updater helper binary)
-    - [ ] `../r3bl_website/versions.jsonc`
-    - [ ] `install.sh`
-    - [ ] `../r3bl_website/install.sh`
-    - [ ] `install.ps1`
-    - [ ] `../r3bl_website/install.ps1`
-    - [ ] `release.fish`
+    - [ ] `../r3bl-base/task/task_release_pipeline.md`
+    - [ ] `../r3bl-base/README.md`
+    - [ ] `../r3bl-base/task/prd_monetization_approach.md`
 
 ### Phase 3: Refactor cmdr
 

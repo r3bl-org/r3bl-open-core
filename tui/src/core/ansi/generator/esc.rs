@@ -106,6 +106,7 @@ generate_impl_display_for_fast_stringify!(EscSequence);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HashSet;
 
     #[test]
     fn test_esc_save_cursor() {
@@ -215,7 +216,7 @@ mod tests {
             EscSequence::SelectDECGraphics,
         ];
 
-        let mut outputs = crate::HashSet::default();
+        let mut outputs = HashSet::default();
 
         for sequence in &sequences {
             let output = sequence.to_string();
