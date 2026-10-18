@@ -53,8 +53,8 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`RM`]: reset_mode
 //! [`SM`]: set_mode
-//! [`test_mode_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
-//! [`vt_100_impl_mode_ops`]: vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
+//! [`test_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
+//! [`vt_100_impl_mode_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_mode_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
 //! [ops module]: vt_100_pty_output_parser::ops

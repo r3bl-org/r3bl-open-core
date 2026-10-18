@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ClipboardResult, ClipboardService};
-use crate::{ClipboardTarget, DEBUG_TUI_COPY_PASTE, OscSequence, ok};
+use crate::{ClipboardTarget, DEBUG_TUI_COPY_PASTE, OscSequence};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::Write;
 
@@ -17,7 +17,7 @@ use std::io::Write;
 /// by [`DEC`] Private Mode 2004 Bracketed Paste (`CSI 200 ~`).
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`try_to_get_content_from_clipboard`]:
 ///     ClipboardService::try_to_get_content_from_clipboard
 #[derive(Debug, Default, Clone, Copy)]
@@ -136,7 +136,7 @@ impl ClipboardService for SystemClipboard {
 }
 
 #[cfg(any(test, doc))]
-pub mod clipboard_test_fixtures {
+pub(crate) mod clipboard_test_fixtures { // Shared test clipboard used across editor_component and editor_engine tests.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

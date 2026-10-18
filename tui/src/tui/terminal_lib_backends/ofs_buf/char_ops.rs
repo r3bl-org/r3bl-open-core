@@ -7,7 +7,7 @@
 
 use super::{CanvasStorage, OfsBuf, PixelChar};
 use crate::{NarrowingCastToU16, RangeBoundsExt, RangeExclusive, RangeExt,
-            RangeValidityStatus, VPCol, VPPos, VPRow, ok, vp_len};
+            RangeValidityStatus, VPCol, VPPos, VPRow, vp_len};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl<S: CanvasStorage> OfsBuf<S> {

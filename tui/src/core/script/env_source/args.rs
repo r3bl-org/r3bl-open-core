@@ -33,7 +33,7 @@ pub enum BaseEnv {
 /// This determines how [`diff::format_env_diff()`] serializes added, modified, and
 /// removed environment variables.
 ///
-/// [`diff::format_env_diff()`]: crate::diff::format_env_diff
+/// [`diff::format_env_diff()`]: super::diff::format_env_diff
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Display, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum OutputFormat {

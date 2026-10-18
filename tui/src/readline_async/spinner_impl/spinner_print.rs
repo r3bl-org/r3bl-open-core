@@ -2,7 +2,7 @@
 
 use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle,
             TERMINAL_LIB_BACKEND, TermCol, TermRowDelta, TerminalLibBackend,
-            ansi_output, ok, queue_commands, queue_commands_no_lock};
+            ansi_output};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};

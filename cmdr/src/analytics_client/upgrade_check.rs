@@ -49,23 +49,21 @@
 //! - **Upgrade (`cargo install`)**: Replaces the currently installed application binary
 //!   with a newer release published on crates.io.
 //!
-//! [`OSC`]: r3bl_tui::osc_codes::OscSequence
+//! [`OSC`]: r3bl_tui::OscSequence
 //! [`PtySessionConfigToken::CaptureOsc`]: r3bl_tui::PtySessionConfigToken::CaptureOsc
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 //! [`remove_toolchains.sh`]:
 //!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
 
 use super::ui_str;
-use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
+use crate::{DEBUG_ANALYTICS_CLIENT, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscPtyEvent, OutputDevice,
-               SpinnerStyle, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
-               TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
-               cli_text_inline, cli_text_line,
+               Spinner, SpinnerStyle, StyleSheet, TerminalInteractiveStatus,
+               TuiAvailability, TuiAvailabilityChooseExt, check_is_terminal_interactive,
+               choose, cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
-               inline_string,
-               spinner::Spinner,
-               try_get_latest_release_version_from_crates_io, vp_height};
+               inline_string, try_get_latest_release_version_from_crates_io, vp_height};
 use smallvec::smallvec;
 use std::{env::current_exe,
           io::{Error, ErrorKind},
@@ -99,7 +97,7 @@ pub fn start_task_to_check_if_upgrade_is_needed() {
         if let Ok(version_crates) =
             try_get_latest_release_version_from_crates_io(get_self_crate_name()).await
         {
-            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+            DEBUG_ANALYTICS_CLIENT.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = "📦📦📦 Latest version of cmdr",
@@ -109,7 +107,7 @@ pub fn start_task_to_check_if_upgrade_is_needed() {
 
             if version_self != version_crates {
                 UPGRADE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                DEBUG_ANALYTICS_CLIENT.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info!(
                         message = "💿💿💿 There is a new version of cmdr available",
@@ -264,7 +262,7 @@ fn extract_rustup_progress(output: &str) -> String {
 /// that can be used to show progress. This function captures that output and updates the
 /// spinner message with meaningful progress information.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: r3bl_tui::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Error> {
     // Use Output mode to capture rustup's output for progress display.
@@ -311,7 +309,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
 /// See [`PtySessionConfigToken::CaptureOsc`] for the environment variables that
 /// trigger [`OSC`] 9;4 emission from cargo.
 ///
-/// [`OSC`]: r3bl_tui::osc_codes::OscSequence
+/// [`OSC`]: r3bl_tui::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtySessionConfigToken::CaptureOsc`]: r3bl_tui::PtySessionConfigToken::CaptureOsc
 async fn run_cargo_install_with_progress(
@@ -352,7 +350,7 @@ async fn run_cargo_install_with_progress(
 
 /// Handle [`OSC`] events from cargo install and update the spinner message accordingly.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: r3bl_tui::OscSequence
 fn handle_osc_event(event: OscPtyEvent, crate_name: &str, spinner: Option<&Spinner>) {
     if let Some(spinner) = spinner {
         match event {

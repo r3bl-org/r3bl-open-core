@@ -35,9 +35,9 @@
 //! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach
-pub mod grapheme_string;
-pub mod grapheme_string_owned_ext;
-pub mod seg_content;
+mod grapheme_string;
+mod grapheme_string_owned_ext;
+mod seg_content;
 
 // Re-export
 pub use grapheme_string::*;

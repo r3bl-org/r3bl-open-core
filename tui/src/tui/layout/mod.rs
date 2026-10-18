@@ -1,15 +1,18 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Attach source files.
-pub mod flex_box;
-pub mod flex_box_id;
-pub mod layout_and_positioning_traits;
-pub mod layout_error;
-pub mod partial_flex_box;
-pub mod props;
-pub mod surface;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod layout_error;
 
-// Re-export the public items.
+// Attach.
+mod surface;
+mod flex_box;
+mod flex_box_id;
+mod layout_and_positioning_traits;
+mod partial_flex_box;
+mod props;
+
+// Re-export.
 pub use flex_box::*;
 pub use flex_box_id::*;
 pub use layout_and_positioning_traits::*;

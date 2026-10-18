@@ -17,7 +17,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::test_helpers::*;
-use crate::{ansi_output, render_op::RenderOpCommon, tui_color, vp_col, vp_row};
+use crate::{ansi_output, render_op::RenderOpCommon, vp_col, vp_row};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {

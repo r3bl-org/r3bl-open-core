@@ -1,13 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::InlineVec;
-use rustc_hash::FxHashMap;
+use crate::{HashMap, InlineVec};
 use smallvec::smallvec;
 
 #[derive(Debug)]
 pub struct OrderedMap<K, V> {
     keys: InlineVec<K>,
-    map: FxHashMap<K, V>,
+    map: HashMap<K, V>,
 }
 
 impl<K: std::hash::Hash + Eq + Clone, V> OrderedMap<K, V> {
@@ -15,7 +14,7 @@ impl<K: std::hash::Hash + Eq + Clone, V> OrderedMap<K, V> {
     pub fn new() -> Self {
         OrderedMap {
             keys: smallvec![],
-            map: FxHashMap::default(),
+            map: HashMap::default(),
         }
     }
 

@@ -9,7 +9,7 @@
 //!
 //! [`PixelChar`]: crate::tui::PixelChar
 
-use crate::{GetMemSize, TuiStyle, fg_magenta, ok};
+use crate::{GetMemSize, TuiStyle, fg_magenta};
 use std::{fmt::{self, Debug},
           mem::size_of};
 
@@ -74,8 +74,8 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Flat2DArray, SPACER_GLYPH_CHAR, new_style,
-                tui::terminal_lib_backends::ofs_buf::OfsBuf, tui_color,
+    use crate::{Flat2DArray, SPACER_GLYPH_CHAR,
+                tui::terminal_lib_backends::ofs_buf::OfsBuf,
                 tui_style_attrib::Underline, tui_style_attribs, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBuf {

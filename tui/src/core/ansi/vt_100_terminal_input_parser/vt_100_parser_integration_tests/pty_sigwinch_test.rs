@@ -62,7 +62,7 @@
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
             GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
-            PtyTestContext, PtyTestMode, VPSize, generate_pty_test,
+            PtyTestContext, PtyTestMode, VPSize,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
             vp_height, vp_width};
 use std::{io::Write, time::Duration};
@@ -135,6 +135,7 @@ fn controller(context: PtyTestContext) {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SIGWINCH`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGWINCH
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{MSG_CONTROLLED_STARTING}");

@@ -226,44 +226,22 @@
 
 #![rustfmt::skip]
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// ║                   COORDINATE SYSTEM MODULE ORGANIZATION                   ║
-// ║                    (Private modules with public re-exports)               ║
-// ║                                                                           ║
-// ║ This module follows the pattern from AGENTS.md:                           ║
-// ║ - Submodules are kept private (hide internal structure)                   ║
-// ║ - Public re-exports provide a flat, stable API surface                    ║
-// ║ - Users should import from the flat re-exports, not qualified paths       ║
-// ╚═══════════════════════════════════════════════════════════════════════════╝
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod viewport_coords;
+#[macro_use]
+mod percent_spec;
 
-// Submodule declarations (internal implementation detail).
-// Note: These are public to support existing codebase that uses qualified paths.
-// New code should avoid importing from qualified paths and instead use the
-// public re-exports below.
-pub mod bounds_check;
-pub mod viewport_coords;
-pub mod byte;
-pub mod canvas;
-pub mod percent_spec;
-pub mod primitives;
-pub mod vt_100_ansi_coords;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod canvas; // Cross-folder rustdoc module links (lib.rs, README.md, pty_mux, ofs_buf).
+pub(crate) mod bounds_check; // Cross-folder rustdoc module links (lib.rs, README.md, ofs_buf).
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PUBLIC RE-EXPORTS (Flat API Surface - Recommended Way to Import)
-// ═══════════════════════════════════════════════════════════════════════════
-//
-// All public types and traits from submodules are re-exported at this level
-// to provide a clean, flat API. Users should import from here.
-//
-// GOOD:
-//    use r3bl_tui::{RowIndex, ColIndex, ViewportBoundsCheck, TermRow, TermCol};
-//
-// AVOID:
-//    use r3bl_tui::core::coordinates::viewport_coords::{VPRow, VPCol};
-//    use r3bl_tui::core::coordinates::bounds_check::ViewportBoundsCheck;
-//
-// ═══════════════════════════════════════════════════════════════════════════
+// Attach. Folder-local (Intra-module).
+mod byte;
+mod primitives;
+mod vt_100_ansi_coords;
 
+// Re-export.
 pub use bounds_check::*;
 pub use viewport_coords::*;
 pub use byte::*;
@@ -271,15 +249,3 @@ pub use canvas::*;
 pub use percent_spec::*;
 pub use primitives::*;
 pub use vt_100_ansi_coords::*;
-
-// Rustdoc search link fixes.
-
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use bounds_check::{
-    array_bounds_check, cursor_bounds_check, index_ops, length_ops, numeric_value, range,
-    result_enums, viewport_bounds_check,
-};
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use viewport_coords::{
-    caret, col_index, col_width, index, length, pos, row_height, row_index, size,
-};

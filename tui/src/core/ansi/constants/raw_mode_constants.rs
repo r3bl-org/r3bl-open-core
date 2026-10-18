@@ -85,7 +85,7 @@
 //!
 //! [`crossterm`]: crossterm
 //! [`RawModeGuard`]: crate::RawModeGuard
-//! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`terminal_raw_mode`]: mod@crate::core::ansi::terminal_raw_mode
 //! [`termios`]: https://en.wikipedia.org/wiki/Termios
 
 // ==================== Special Codes for Raw Mode ====================

@@ -142,14 +142,14 @@ impl TracingConfig {
     }
 }
 
-/// Combined [`RAII`] guard for thread-local tracing subscribers.
+/// Combined [RAII] guard for thread-local tracing subscribers.
 ///
 /// Returned by [`TracingConfig::install_thread_local()`]. Holds both the tracing
 /// [`dispatcher::DefaultGuard`] (which resets the thread-local subscriber on drop) and
 /// a [`GlobalLogFileGuard`] (which flushes the non-blocking file writer on drop). Callers
 /// hold a single value instead of managing two guards separately.
 ///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[derive(Debug)]
 pub struct ThreadLocalLogFileGuard {
     _default_guard: dispatcher::DefaultGuard,

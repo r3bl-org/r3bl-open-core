@@ -2,7 +2,7 @@
 
 use super::buf_read_ext::BufReadExt;
 use crate::{ControlledChild, ControlledChildTerminationHandle, ControllerWriter, EIO,
-            GLYPH_CONTROLLED, GLYPH_SUCCESS, GLYPH_WARNING, PtyPair, ReadLinesResult, ok};
+            GLYPH_CONTROLLED, GLYPH_SUCCESS, GLYPH_WARNING, PtyPair, ReadLinesResult};
 use std::io::{BufRead, BufReader, Read};
 
 /// Wraps [`ControlledChild`] to prevent the [`PTY`] buffer deadlock that occurs when the
@@ -162,7 +162,7 @@ impl PtyTestChild {
     /// [`EIO`]: https://manpages.debian.org/errno.3
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`fd`]: https://manpages.debian.org/open.2
-    /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+    /// [`PTY`]: crate::PtyPair#pty-primer
     /// [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
     /// [`PtyPair`]: crate::PtyPair
     /// [`read()`]: https://manpages.debian.org/read.2
@@ -237,7 +237,7 @@ impl PtyTestChild {
     ///
     /// [`EIO`]: https://manpages.debian.org/errno.3
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+    /// [`PTY`]: crate::PtyPair#pty-primer
     pub fn wait_for_ready<R: BufRead>(
         &self,
         reader: &mut R,
@@ -310,7 +310,7 @@ impl PtyTestChild {
     /// Panics on [`EOF`] or I/O read errors.
     ///
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-    /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+    /// [`PTY`]: crate::PtyPair#pty-primer
     /// [`stderr`]: std::io::stderr
     /// [`stdout`]: std::io::stdout
     pub fn read_line_state<R: BufRead>(
@@ -518,6 +518,7 @@ impl PtyTestChild {
     /// [`portable_pty`]: portable_pty
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
+    // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
     #[cfg(target_os = "windows")]
     fn get_writer_windows<R: Read>(
         &self,

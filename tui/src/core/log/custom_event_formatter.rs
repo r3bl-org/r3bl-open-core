@@ -138,9 +138,9 @@
 
 use crate::{ColorWheel, GCStringOwned, InlineString, LruCache, OrderedMap, RgbValue,
             ThreadSafeLruCache, TuiColor, TuiStyle, VPWidth, cli_text_inline, fg_color,
-            get_terminal_width, glyphs, inline_string, new_style,
-            new_threadsafe_lru_cache, ok, remove_escaped_quotes, truncate_from_right,
-            tui_color, tui_style_attrib, usize, vp_width};
+            get_terminal_width, glyphs,
+            new_threadsafe_lru_cache, remove_escaped_quotes, truncate_from_right,
+            tui_style_attrib, usize, vp_width};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
@@ -602,7 +602,7 @@ pub fn build_spacer(max_display_width: VPWidth) -> InlineString {
 #[cfg(test)]
 mod tests_tracing_custom_event_formatter {
     use super::*;
-    use crate::{core::test_fixtures::StdoutMock, glyphs::SPACER_GLYPH as SPACER};
+    use crate::{StdoutMock, glyphs::SPACER_GLYPH as SPACER};
     use std::sync::Mutex;
     use tracing::{info, subscriber::set_default};
     use tracing_subscriber::fmt::SubscriberBuilder;

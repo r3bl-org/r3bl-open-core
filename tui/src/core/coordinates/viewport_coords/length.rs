@@ -2,7 +2,7 @@
 
 //! One-based character size measurements for terminal UI - see [`VPLength`] type.
 
-use crate::{ChUnit, VPHeight, VPIndex, VPWidth, generate_length_type_impl};
+use crate::{ChUnit, VPHeight, VPIndex, VPWidth};
 use std::hash::Hash;
 
 /// Represents a length measurement in character units within a viewport.

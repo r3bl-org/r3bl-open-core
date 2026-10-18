@@ -98,7 +98,7 @@ macro_rules! new_style {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TuiColor, TuiStyle, TuiStyleId, ch, tui_color};
+    use crate::{TuiColor, TuiStyle, TuiStyleId, ch};
 
     const BLACK: TuiColor = tui_color!(black);
 

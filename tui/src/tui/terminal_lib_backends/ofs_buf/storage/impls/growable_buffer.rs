@@ -4,7 +4,7 @@ use super::super::CanvasStorage;
 use crate::{CPos, CRow, CanvasRangeExt, GetMemSize, PixelChar, PixelCharLine,
             RangeBoundsResult, RangeExclusive, RangeValidityStatus, ScrollbackAmount,
             ShiftLinesDirection, StorageLineLimit, VPLength, VPRow, VPSize, Viewport,
-            ViewportToCanvasExt, ok, scrollback_amount, vp_height};
+            ViewportToCanvasExt, scrollback_amount, vp_height};
 use std::{cmp::{max, min},
           collections::VecDeque};
 
@@ -463,13 +463,14 @@ fn check_pan_validity(
 }
 
 #[cfg(any(test, doc))]
-pub mod test_fixture_growable_buffer_for_conformance_tests {
+pub(crate) mod test_fixture_growable_buffer_for_conformance_tests { // Shared GrowableBuffer test extension used by VT-100 conformance tests.
     use super::*;
     use std::collections::VecDeque;
 
     pub trait TestGrowableBufferExt {
         fn get_lines(&self) -> &VecDeque<PixelCharLine>;
         fn get_lines_mut(&mut self) -> &mut VecDeque<PixelCharLine>;
+        #[allow(dead_code)] // Symmetric immutable test accessor alongside get_viewport_mut.
         fn get_viewport(&self) -> &Viewport;
         fn get_viewport_mut(&mut self) -> &mut Viewport;
         fn get_storage_line_limit(&self) -> StorageLineLimit;

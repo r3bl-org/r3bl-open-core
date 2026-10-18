@@ -40,8 +40,8 @@ pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 /// [`copypasta`]: copypasta
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
 /// [`Osc52Clipboard`]: crate::Osc52Clipboard
-/// [`OSC`]: crate::osc_codes::OscSequence
-/// [`OscSequence::ClipboardSet`]: crate::osc_codes::OscSequence::ClipboardSet
+/// [`OSC`]: crate::OscSequence
+/// [`OscSequence::ClipboardSet`]: crate::OscSequence::ClipboardSet
 /// [`stdout`]: std::io::stdout
 /// [`SystemClipboard`]: crate::SystemClipboard
 pub trait ClipboardService {
@@ -87,7 +87,7 @@ pub fn copy_to_clipboard(
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                FileExtensionToken, SelectionAction, assert_eq2,
+                FileExtensionToken, SelectionAction,
                 clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor};
 

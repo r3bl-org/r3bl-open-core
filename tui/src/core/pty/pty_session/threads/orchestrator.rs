@@ -36,7 +36,7 @@ use std::sync::{Arc, Mutex,
 /// [`ConPTY`]:
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 /// [`PtySession`]: crate::PtySession
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 pub fn spawn_pty_orchestrator_thread(
     mut controlled_child: ControlledChild,
     controller: Controller,
@@ -129,6 +129,8 @@ mod impl_windows_conpty {
                 DSR_CURSOR_POSITION_ORIGIN_RESPONSE, DSR_CURSOR_POSITION_REQUEST};
     use miette::miette;
     use std::io::{Cursor, Read, Write};
+
+    // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
 
     /// Performs the Windows [`ConPTY`] initialization handshake.
     ///

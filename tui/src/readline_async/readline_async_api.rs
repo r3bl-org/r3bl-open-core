@@ -5,7 +5,7 @@ use crate::{ChannelCapacity, CommonResult, CursorPositionBoundsStatus, GCStringO
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
             ReadlineEvent, SegIndex, SharedWriter, TerminalInteractiveStatus,
             TuiAvailability, check_is_terminal_interactive,
-            emit_stderr_redirection_disclaimer, get_size, inline_string, ok};
+            emit_stderr_redirection_disclaimer, get_size};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use tokio::sync::broadcast;

@@ -52,7 +52,7 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`DSR`]: crate::DsrSequence
-//! [`test_dsr_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
+//! [`test_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
 //! [`vt_100_impl_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_dsr_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self

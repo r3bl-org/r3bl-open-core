@@ -2,7 +2,7 @@
 
 //! Lexical scanning of Operating System Command ([`OSC`]) sequences.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 
 use crate::{ByteOffset, byte_offset,
             core::ansi::constants::{ANSI_BEL, ANSI_ESC, ANSI_PARAM_SEPARATOR,
@@ -17,7 +17,7 @@ use crate::{ByteOffset, byte_offset,
 /// keystrokes (`Alt+]`), terminal emulator query responses, and unparsed byte
 /// classifications.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OscScanResult {
     /// Found a complete, well-formed [`OSC`] sequence starting with `ESC ]` and
@@ -30,7 +30,7 @@ pub enum OscScanResult {
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ByteOffset`]: crate::ByteOffset
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     Complete(ByteOffset),
 
     /// The sequence begins with `ESC ]` and follows valid [`OSC`] command syntax, but
@@ -45,7 +45,7 @@ pub enum OscScanResult {
     ///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
     /// [`MaybeMore::KernelMayHaveMore`]:
     ///     crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     IncompleteDigits,
 
     /// The sequence has seen the parameter delimiter (`;` or `?`) and is scanning
@@ -54,7 +54,7 @@ pub enum OscScanResult {
     /// read boundaries (bounded by [`MAX_OSC_SEQUENCE_LENGTH`]).
     ///
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     IncompletePayload,
 
     /// The sequence begins with `ESC ]`, but violates [`OSC`] command syntax (such as
@@ -62,7 +62,7 @@ pub enum OscScanResult {
     /// newline/carriage return characters). This cannot be a valid [`OSC`] sequence;
     /// the parser immediately rejects it and falls back to emitting `Alt+]`.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     InvalidSyntax,
 
     /// The candidate [`OSC`] sequence exceeded [`MAX_OSC_SEQUENCE_LENGTH`] without
@@ -70,7 +70,7 @@ pub enum OscScanResult {
     /// growth and input freezes.
     ///
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     Runaway,
 }
 
@@ -109,7 +109,7 @@ impl OscScanResult {
     ///
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     #[must_use]
     pub fn scan(chunk: &[u8]) -> Self {

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{ClipboardTarget, OscPtyEvent, osc_codes::OscSequence};
-use crate::{Pc, TerminalColorRole, core::terminal_io::OutputDevice, ok};
+use super::{ClipboardTarget, OscPtyEvent, OscSequence};
+use crate::{Pc, TerminalColorRole, core::terminal_io::OutputDevice};
 use miette::IntoDiagnostic;
 
 /// Sender for emitting [`OSC`] (Operating System Command) sequences to the terminal's
@@ -298,7 +298,7 @@ impl<'a> OscSender<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{OutputDevice, OutputDeviceExt, pc};
+    use crate::{OutputDevice, OutputDeviceExt};
 
     #[test]
     fn test_osc_sender_send_set_progress() {

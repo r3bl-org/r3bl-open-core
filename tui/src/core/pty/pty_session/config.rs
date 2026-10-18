@@ -36,14 +36,14 @@ pub enum CaptureFlag {
 /// ```
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PtySessionConfig {
     /// Whether to capture **[`OSC`]** sequences.
     ///
     /// See [`PtySessionConfigToken::CaptureOsc`] for details.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub capture_osc: CaptureFlag,
 
     /// Whether to capture raw terminal output.
@@ -115,7 +115,7 @@ pub enum PtySessionConfigToken {
     /// See [`enable_osc_sequences()`] for more details.
     ///
     /// [`enable_osc_sequences()`]: crate::PtySessionBuilder::enable_osc_sequences
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtyOutputEvent::Osc`]: crate::PtyOutputEvent::Osc
     CaptureOsc,
@@ -126,7 +126,7 @@ pub enum PtySessionConfigToken {
     /// delivered via [`PtyOutputEvent::Output`], rather than being parsed into
     /// structured events.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`PtyOutputEvent::Output`]: crate::PtyOutputEvent::Output
     NoCaptureOsc,
 
@@ -163,9 +163,6 @@ pub enum PtySessionConfigToken {
     Size(VPSize),
 }
 
-/// Backwards compatibility alias for [`PtySessionConfigToken`].
-pub type PtySessionConfigOption = PtySessionConfigToken;
-
 // XMARK: Elegant Constructor DSL.
 
 /// This module implements the "heavy lifting" for the Elegant Constructor DSL Pattern.
@@ -196,7 +193,7 @@ pub type PtySessionConfigOption = PtySessionConfigToken;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtySessionBuilder::with_config`]: crate::PtySessionBuilder::with_config
 /// [`PtySessionBuilder`]: crate::PtySessionBuilder
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 mod impl_elegant_constructor_dsl_pattern {
     #[allow(clippy::wildcard_imports)]
     use super::*;

@@ -86,7 +86,7 @@
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`TermCol::from_raw_non_zero_value()`]: crate::TermCol::from_raw_non_zero_value
 //! [`TermRow::from_raw_non_zero_value()`]: crate::TermRow::from_raw_non_zero_value
-//! [`test_cursor_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`test_cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
 //! [`VPCol`]: crate::VPCol
 //! [`VPRow`]: crate::VPRow
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html

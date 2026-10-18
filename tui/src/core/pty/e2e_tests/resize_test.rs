@@ -2,7 +2,7 @@
 
 use super::cross_platform_commands;
 use crate::{DefaultPtySessionConfig, PtyInputEvent, PtyOutputEvent,
-            PtySessionConfigOption, vp_height, vp_width};
+            PtySessionConfigToken, vp_height, vp_width};
 use std::time::{Duration, Instant};
 
 #[test]
@@ -10,7 +10,7 @@ fn test_pty_resize() {
     let session = cross_platform_commands::sh()
         .with_config(
             DefaultPtySessionConfig
-                + PtySessionConfigOption::Size(vp_width(80) + vp_height(24)),
+                + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
         .start()
         .expect("Failed to spawn session");

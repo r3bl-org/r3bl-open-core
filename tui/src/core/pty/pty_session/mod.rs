@@ -84,20 +84,17 @@
 
 #![rustfmt::skip]
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod events; // Cross-folder rustdoc module link for child key_press_generator (protocol_conversion).
 
+// Attach. Folder-local (Intra-module).
 mod builder;
 mod config;
-#[cfg(any(test, doc))]
-pub mod events;
-#[cfg(not(any(test, doc)))]
-mod events;
 mod session;
-pub mod threads;
+mod threads;
 mod type_aliases;
 
 // Re-export.
-
 pub use builder::*;
 pub use config::*;
 pub use events::*;

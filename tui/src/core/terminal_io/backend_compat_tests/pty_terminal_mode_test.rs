@@ -11,8 +11,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{OutputDevice, PtyTestContext, PtyTestMode, TerminalModeController,
-            ansi_output::{cursor_visibility, screen_clearing, terminal_modes},
-            generate_pty_test};
+            ansi_output::{cursor_visibility, screen_clearing, terminal_modes}};
 use std::io::{Read, Write};
 
 generate_pty_test! {

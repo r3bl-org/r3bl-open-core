@@ -50,12 +50,19 @@ async fn test_async_session_with_cat() {
         }
     }
 
-    // 4. Drain any remaining output from the channel.
-    while let Ok(event) = session.rx_output_event.try_recv() {
-        if let PtyOutputEvent::Output(bytes) = event {
-            captured_output.extend_from_slice(&bytes);
+    // 4. Drain any remaining output from the channel until closed.
+    let drain_result = tokio::time::timeout(Duration::from_secs(5), async {
+        while let Some(event) = session.rx_output_event.recv().await {
+            if let PtyOutputEvent::Output(bytes) = event {
+                captured_output.extend_from_slice(&bytes);
+            }
         }
-    }
+    })
+    .await;
+    assert!(
+        drain_result.is_ok(),
+        "Timed out waiting for output channel to drain and close"
+    );
 
     let output_str = String::from_utf8_lossy(&captured_output);
     assert!(
@@ -86,18 +93,25 @@ async fn test_async_session_kill_reporting() {
 
     // Verify that the output channel receives an Exit event and closes.
     let mut exit_reported = false;
-    while let Some(event) = session.rx_output_event.recv().await {
-        match event {
-            PtyOutputEvent::Exit(s) => {
-                assert!(!s.success());
-                exit_reported = true;
+    let drain_result = tokio::time::timeout(Duration::from_secs(5), async {
+        while let Some(event) = session.rx_output_event.recv().await {
+            match event {
+                PtyOutputEvent::Exit(s) => {
+                    assert!(!s.success());
+                    exit_reported = true;
+                }
+                PtyOutputEvent::UnexpectedExit(_) => {
+                    exit_reported = true;
+                }
+                _ => {}
             }
-            PtyOutputEvent::UnexpectedExit(_) => {
-                exit_reported = true;
-            }
-            _ => {}
         }
-    }
+    })
+    .await;
+    assert!(
+        drain_result.is_ok(),
+        "Timed out waiting for output channel to drain and close"
+    );
     assert!(exit_reported);
 }
 

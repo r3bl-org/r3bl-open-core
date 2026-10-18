@@ -48,7 +48,7 @@
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 use super::{CSI_START, ascii_byte_to_char};
 

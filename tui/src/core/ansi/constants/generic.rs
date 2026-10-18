@@ -54,26 +54,24 @@
 //! - [XTerm Control Sequences] - [`xterm`] and community extensions (1003+)
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`csi`]: crate::constants::csi
 //! [`CSI`]: crate::CsiSequence
+//! [`csi`]: mod@crate::core::ansi::constants::csi
 //! [`CsiSequence`]: crate::CsiSequence
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-//! [`esc`]: crate::constants::esc
 //! [`ESC`]: crate::EscSequence
+//! [`esc`]: mod@crate::core::ansi::constants::esc
 //! [`EscSequence`]: crate::EscSequence
-//! [`generic`]: crate::constants::generic
-//! [`mouse`]: crate::constants::mouse
+//! [`generic`]: mod@crate::core::ansi::constants::generic
+//! [`mouse`]: mod@crate::core::ansi::constants::mouse
 //! [`PrivateModeType`]: crate::PrivateModeType
 //! [`rxvt-unicode`]: https://en.wikipedia.org/wiki/Rxvt-unicode
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-220`]: https://en.wikipedia.org/wiki/VT220
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 //! [VT510 Programmer Reference]: https://vt100.net/docs/vt510-rm/contents.html
 //! [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-
-use crate::define_ansi_const;
 
 // Terminal Behavior Modes (DEC modes 1-7).
 

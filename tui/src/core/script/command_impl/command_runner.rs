@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommandOutputResult, ok};
+use crate::CommandOutputResult;
 use miette::{Context, IntoDiagnostic};
 use std::process::Stdio;
 use tokio::{io::AsyncWriteExt,
@@ -32,7 +32,7 @@ pub type TokioCommand = tokio::process::Command;
 ///
 /// ```
 /// # use r3bl_tui::command;
-/// # use r3bl_tui::command_runner::TokioCommand;
+/// # use r3bl_tui::TokioCommand;
 ///
 /// async fn run_command() {
 ///     let arg_2 = "world!";
@@ -69,7 +69,7 @@ pub type TokioCommand = tokio::process::Command;
 ///
 /// ```
 /// # use r3bl_tui::command;
-/// # use r3bl_tui::command_runner::Run;
+/// # use r3bl_tui::Run;
 ///
 /// async fn run_command() {
 ///     // Example 1.

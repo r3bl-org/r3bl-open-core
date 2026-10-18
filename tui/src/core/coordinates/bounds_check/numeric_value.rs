@@ -43,7 +43,7 @@
 /// [`TermRow`]: crate::TermRow
 /// [`try_as_u16`]: Self::try_as_u16
 /// [Trait Hierarchy of Coordinate Types]:
-///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+///     mod@crate::core::coordinates::bounds_check#trait-hierarchy-of-coordinate-types
 pub trait NumericConversions: Copy + Sized {
     /// Converts to a [`usize`] value for array indexing, length calculations, and generic
     /// numeric operations across all coordinate types.
@@ -149,7 +149,7 @@ pub trait NumericConversions: Copy + Sized {
 /// [`VPRow`]: crate::VPRow
 /// [`VPWidth`]: crate::VPWidth
 /// [Trait Hierarchy of Coordinate Types]:
-///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+///     mod@crate::core::coordinates::bounds_check#trait-hierarchy-of-coordinate-types
 pub trait NumericValue: NumericConversions + Ord {
     /// Checks if this numeric value or coordinate index is 0.
     ///
@@ -180,7 +180,7 @@ pub trait NumericValue: NumericConversions + Ord {
 /// [`VPCol`]: crate::VPCol
 /// [`VPRow`]: crate::VPRow
 /// [Trait Hierarchy of Coordinate Types]:
-///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+///     mod@crate::core::coordinates::bounds_check#trait-hierarchy-of-coordinate-types
 pub trait ScreenCoordinate: NumericValue + From<u16> {
     fn as_u16(&self) -> u16;
 }
@@ -218,5 +218,5 @@ pub trait ScreenCoordinate: NumericValue + From<u16> {
 /// [`ScrollbackAmount`]: crate::ScrollbackAmount
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [Trait Hierarchy of Coordinate Types]:
-///     mod@crate::bounds_check#trait-hierarchy-of-coordinate-types
+///     mod@crate::core::coordinates::bounds_check#trait-hierarchy-of-coordinate-types
 pub trait StorageCoordinate: NumericValue + From<usize> {}

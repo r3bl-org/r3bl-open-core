@@ -129,12 +129,12 @@ use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OfsBufVT100,
             OutputDevice, PixelChar, PtyPair, PtyTestChild, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, TuiStyle, TuiStyleAttribs,
             core::ansi::terminal_raw_mode,
-            global_color_support, ok,
+            global_color_support,
             render_op::RenderOpCommon,
-            retry_until_success_test, spawn_controlled_in_pty,
+            spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_color, tui_style_attrib, vp_col, vp_height, vp_row, vp_width};
+            tui_style_attrib, vp_col, vp_height, vp_row, vp_width};
 use std::{cmp::min,
           fmt::Write as _,
           io::{Read, Write}};
@@ -262,7 +262,7 @@ fn run_single_test_attempt() -> Result<(), String> {
 /// [`PTY`] Controller Logic - captures all raw bytes.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub mod controller {
+mod controller {
     use super::*;
 
     /// Capture all raw [`ANSI`] bytes from the controlled process.
@@ -346,7 +346,7 @@ pub mod controller {
 }
 
 /// Crossterm backend controlled process.
-pub mod controlled_crossterm {
+mod controlled_crossterm {
     use super::*;
 
     /// Crossterm controlled process entry point.
@@ -407,7 +407,7 @@ pub mod controlled_crossterm {
 }
 
 /// `DirectToAnsi` backend controlled process.
-pub mod controlled_direct_to_ansi {
+mod controlled_direct_to_ansi {
     use super::*;
 
     /// `DirectToAnsi` controlled process entry point.
@@ -469,7 +469,7 @@ pub mod controlled_direct_to_ansi {
 }
 
 /// Test Render Operations Generation.
-pub mod generate_test_render_ops {
+mod generate_test_render_ops {
     use super::*;
 
     /// All test render operation sequences for backend compatibility testing.

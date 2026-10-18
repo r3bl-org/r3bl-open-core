@@ -106,7 +106,7 @@
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
             CursorBoundsCheck, LINE_FEED_BYTE, NUL, RangeBoundsExt, RangeValidityStatus,
-            c_len, ok};
+            c_len};
 use miette::{Result, miette};
 use std::ops::Range;
 

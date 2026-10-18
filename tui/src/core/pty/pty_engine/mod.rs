@@ -2,11 +2,13 @@
 
 #![rustfmt::skip]
 
-// Attach.
-pub mod controlled_child;
-pub mod pty_engine_types;
-pub mod pty_pair;
-pub mod pty_size;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod pty_engine_types; // Cross-folder rustdoc module link (generate_pty_test).
+
+// Attach. Folder-local (Intra-module).
+mod controlled_child;
+mod pty_pair;
+mod pty_size;
 #[cfg(windows)]
 mod windows_terminate_process;
 

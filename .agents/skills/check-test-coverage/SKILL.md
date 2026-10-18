@@ -27,7 +27,7 @@ In this codebase, **test quality is measured by branch-targeted verification of 
 2. **Never Test Dependencies or Compiler Derives**:
    - Never write tests that merely assert standard library behavior (`std::collections::HashMap`, `std::env`, `std::ffi::OsString`).
    - Never write unit tests for standard compiler derives (`#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]`).
-   - Never write unit tests for third-party derive macros (such as `#[derive(Display, EnumString)]` with `#[strum(serialize_all = "lowercase")]` or `clap::ValueEnum`).
+   - Never write unit tests for third-party derive macros (such as `#[derive(thiserror::Error, miette::Diagnostic)]`, `#[derive(Display, EnumString)]` with `#[strum(serialize_all = "lowercase")]`, or `clap::ValueEnum`). Also never write manual `Display`/`Error` implementations on error types when `#[derive(thiserror::Error, miette::Diagnostic)]` should be used instead.
 3. **High Signal, Low Maintenance Overhead**:
    - Redundant tests slow down `cargo test` and `check.fish` iteration cycles.
    - Redundant test failures during refactoring obscure real bugs and create maintenance friction.
@@ -53,8 +53,8 @@ Separate items into two categories:
 
 | Category | What it includes | Testing Requirement |
 | :--- | :--- | :--- |
-| **OUR Custom Logic** | Custom functions, custom parsers/formatters, manual trait impls (`From`, `TryFrom`, `Display`), business logic, state machines, boundary checks, error branches | **Must be covered** with targeted test cases (1 test per branch/boundary) |
-| **Upstream / Derives** | `#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]`, strum macro attributes, clap derive attributes, standard library forwards | **Do NOT test** (testing these is test bloat) |
+| **OUR Custom Logic** | Custom functions, custom parsers/formatters, manual trait impls (`From`, `TryFrom`, domain `Display`), business logic, state machines, boundary checks, error branches | **Must be covered** with targeted test cases (1 test per branch/boundary) |
+| **Upstream / Derives** | `#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]`, `thiserror::Error`, `miette::Diagnostic`, strum macro attributes, clap derive attributes, standard library forwards | **Do NOT test** (testing these is test bloat) |
 
 ### Step 3: Discover All Test Locations
 
@@ -124,7 +124,7 @@ Provide a concise, high-signal report:
   ```
 - **Third-Party Macro Derives**:
   ```rust
-  // DO NOT TEST: Testing .to_string() tests strum's macro generator.
+  // DO NOT TEST: Testing .to_string() tests strum's or thiserror's macro generator.
   #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Display, EnumString)]
   #[strum(serialize_all = "lowercase")]
   pub enum OutputFormat {
@@ -132,6 +132,12 @@ Provide a concise, high-signal report:
       Powershell,
       Json,
       Dotenv,
+  }
+
+  #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+  pub enum VersionParseErrorKind {
+      #[error("Invalid semantic version: expected 'MAJOR.MINOR.PATCH'")]
+      WrongSegmentCount,
   }
   ```
 - **Standard Library Collections / Types**:

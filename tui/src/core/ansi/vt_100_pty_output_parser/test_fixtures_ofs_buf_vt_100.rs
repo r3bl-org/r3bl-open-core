@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ActiveScreenBuffer, List, OfsBufVT100, PixelChar, PixelCharDiffChunks,
-            RangeExclusive, RangeExt, VPCol, VPHeight, VPPos, VPRow, ok, vp_height,
+            RangeExclusive, RangeExt, VPCol, VPHeight, VPPos, VPRow, vp_height,
             vp_width};
 use std::cmp::min;
 

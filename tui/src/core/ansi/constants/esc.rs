@@ -12,10 +12,9 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`ESC`]: crate::EscSequence
 //! [`EscSequence`]: crate::EscSequence
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 use super::{ascii_byte_to_char, input_sequences::ANSI_ESC};
-use crate::define_ansi_const;
 
 // Cursor Save/Restore Operations
 
@@ -233,9 +232,8 @@ pub const ESC_START: char = ascii_byte_to_char(ANSI_ESC);
 /// without macros so that it can be used by the [`const_format`] crate (via
 /// [`define_ansi_const!`]) to construct complex [Tier 2] sequences at compile time.
 ///
-/// [`define_ansi_const!`]: crate::define_ansi_const
-/// [Tier 1]: mod@crate::constants#tier-1---foundational-parts
-/// [Tier 2]: mod@crate::constants#tier-2---composed-sequences
+/// [Tier 1]: mod@crate::core::ansi::constants#tier-1---foundational-parts
+/// [Tier 2]: mod@crate::core::ansi::constants#tier-2---composed-sequences
 pub const ESC_STR: &str = "\x1b";
 
 define_ansi_const!(@esc_str : ESC_SAVE_CURSOR_STR = ["7"] =>

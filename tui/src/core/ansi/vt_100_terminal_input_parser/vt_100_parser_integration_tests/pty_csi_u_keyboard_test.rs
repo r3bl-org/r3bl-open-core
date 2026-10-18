@@ -87,7 +87,7 @@ use crate::{ANSI_CSI_BRACKET, ANSI_CSI_U_CHAR, ANSI_OSC_CLOSE_BRACKET,
             KITTY_PUA_UP, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_NONE, MODIFIER_SHIFT,
             MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING,
             PtyTestContext, PtyTestMode, csi_u, csi_u_codepoint,
-            csi_u_with_alternate_key, csi_u_with_event_type, generate_pty_test};
+            csi_u_with_alternate_key, csi_u_with_event_type};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {

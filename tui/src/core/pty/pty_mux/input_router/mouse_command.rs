@@ -46,11 +46,11 @@ impl From<(&MouseInput, &OfsBufVT100)> for MouseCommand {
     /// [`Disabled`]: MouseTrackingMode::Disabled
     /// [`Enabled`]: MouseTrackingMode::Enabled
     /// [`mouse.format`]: MouseTrackingMode
-    /// [`mouse.mode`]: TerminalModeState::mouse_tracking
+    /// [`mouse.mode`]: crate::TerminalModeState::mouse_tracking_mode
     /// [`MouseTrackingFormat`]: MouseTrackingFormat
-    /// [`SGR`]: SgrCode
+    /// [`SGR`]: crate::SgrCode
     /// [virtual terminal tab]:
-    ///     pty_mux#virtual-terminal-architecture
+    ///     mod@crate::core::pty::pty_mux#virtual-terminal-architecture
     fn from(args: (&MouseInput, &OfsBufVT100)) -> MouseCommand {
         let (mouse_input, active_buffer) = args;
         match active_buffer.get_terminal_mode().mouse_tracking_mode {

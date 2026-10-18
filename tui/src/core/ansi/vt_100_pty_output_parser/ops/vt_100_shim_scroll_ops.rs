@@ -75,7 +75,7 @@
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
 //! [`OfsBuf`]: crate::tui::OfsBuf
-//! [`test_scroll_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
+//! [`test_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_scroll_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_scroll_ops
 //! [module-level Architecture Overview]: super#architecture-overview

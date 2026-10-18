@@ -1,12 +1,11 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+use crate::{ChUnit, CliTextInline, CommonResult, DEBUG_CHOOSE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
             RangeExt, SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
             TermRowDelta, TerminalLibBackend, TuiStyle, VPHeight, ansi_output, c_col,
-            ch, cli_text_inline, core::common::string_repeat_cache::get_spaces, fg_blue,
-            get_terminal_width, inline_string, ok, queue_commands,
-            queue_commands_no_lock, usize, vp_height, vp_width};
+            ch, cli_text_inline, fg_blue, get_spaces, get_terminal_width, usize,
+            vp_height, vp_width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
@@ -135,7 +134,7 @@ mod render_helper {
     }
 
     pub fn log_render_debug_info(state: &State, render_context: &RenderContext) {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::info! {
                 message = "🍎🍎🍎\n render()::state",

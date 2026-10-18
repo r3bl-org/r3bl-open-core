@@ -3,17 +3,20 @@
 //! A single line of Markdown may have many fragments, eg: `**bold**`, `*italic*`,
 //! `[link](http://r3bl.com)`, etc.
 //!
-//! As opposed to markdown [`crate::block`]s (like code block or smart lists) which may
-//! span multiple lines.
+//! As opposed to markdown [`block`]s (like code block or smart lists) which may span
+//! multiple lines.
 //!
 //! Fragments may be found in every single line of text. These parsers extract each
 //! fragment into either a string slice or some other intermediate representation.
 //!
-//! To see this in action, set the [`crate::DEBUG_MD_PARSER_STDOUT`] to true, and run all
-//! the tests in this file.
+//! To see this in action, set [`DEBUG_MD_PARSER_STDOUT`] to `true`, and run all the tests
+//! in this file.
+//!
+//! [`block`]: mod@crate::tui::md_parser::block
+//! [`DEBUG_MD_PARSER_STDOUT`]: crate::DEBUG_MD_PARSER_STDOUT
 
 use crate::{CheckboxParsePolicy, DEBUG_MD_PARSER, MdLineFragment, fg_green, fg_red,
-            inline_string, parse_fragment_plain_text_no_new_line,
+            parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
             parse_fragment_starts_with_checkbox_checkbox_into_bool,
             parse_fragment_starts_with_checkbox_into_str,
@@ -113,7 +116,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 #[cfg(test)]
 mod tests_parse_fragment {
     use super::*;
-    use crate::{HyperlinkData, assert_eq2};
+    use crate::HyperlinkData;
     use nom::{Err as NomErr,
               error::{Error, ErrorKind}};
 

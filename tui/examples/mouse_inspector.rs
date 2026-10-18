@@ -49,7 +49,7 @@ use r3bl_tui::{DefaultIoDevices, InputDevice, InputEvent, Key, KeyPress, KeyStat
                OutputDevice, PaintMode, TermCol, TermRow, TerminalModeController,
                TuiAvailabilityChooseExt, VPPos, ansi_output,
                assert_terminal_is_interactive, choose, ok,
-               readline_async::{HowToChoose, style::StyleSheet},
+               readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, vp_col, vp_row};
 use std::collections::VecDeque;
 

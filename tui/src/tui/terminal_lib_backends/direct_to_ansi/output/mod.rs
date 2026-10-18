@@ -24,25 +24,22 @@
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`RenderToAnsi`]: crate::RenderToAnsi
 
-// Attach.
-// Conditionally public for documentation links.
-#[cfg(any(test, doc))]
-pub mod direct_to_ansi_paint_render_op_impl;
-#[cfg(not(any(test, doc)))]
-mod direct_to_ansi_paint_render_op_impl;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod direct_to_ansi_paint_render_op_impl; // Cross-folder rustdoc link (terminal_lib_backends).
 
+// Attach. Folder-local (Intra-module).
 mod pixel_char_renderer;
 mod render_to_ansi;
 
-// Re-exports - flatten the public API
+// Re-export.
 pub use direct_to_ansi_paint_render_op_impl::*;
 pub use pixel_char_renderer::*;
 pub use render_to_ansi::*;
 
-// Tests
+// Tests.
 #[cfg(test)]
 mod tests;
 
 // Integration tests are conditionally public for documentation links.
 #[cfg(any(test, doc))]
-pub mod direct_to_ansi_output_integration_tests;
+pub(crate) mod direct_to_ansi_output_integration_tests; // Cross-folder rustdoc module links (direct_to_ansi, input stub).

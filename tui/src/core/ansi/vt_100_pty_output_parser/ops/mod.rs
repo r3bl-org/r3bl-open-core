@@ -147,43 +147,44 @@
 //! [`vt_100_shim_sgr_ops`]: vt_100_shim_sgr_ops
 //! [`vt_100_shim_terminal_ops`]: vt_100_shim_terminal_ops
 //! [`vt_100_test_char_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
 //! [`vt_100_test_control_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_control_ops
 //! [`vt_100_test_cursor_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_cursor_ops
 //! [`vt_100_test_dsr_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
 //! [`vt_100_test_line_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_line_ops
 //! [`vt_100_test_margin_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_margin_ops
 //! [`vt_100_test_mode_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_mode_ops
 //! [`vt_100_test_osc_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
 //! [`vt_100_test_scroll_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_scroll_ops
 //! [`vt_100_test_sgr_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_sgr_ops
 //! [`vt_100_test_terminal_ops`]:
-//!     crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//!     crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
 
-pub mod vt_100_shim_char_ops;
-pub mod vt_100_shim_clear_ops;
-pub mod vt_100_shim_control_ops;
-pub mod vt_100_shim_cursor_ops;
-pub mod vt_100_shim_da_ops;
-pub mod vt_100_shim_dsr_ops;
-pub mod vt_100_shim_line_ops;
-pub mod vt_100_shim_margin_ops;
-pub mod vt_100_shim_mode_ops;
-pub mod vt_100_shim_osc_ops;
-pub mod vt_100_shim_scroll_ops;
-pub mod vt_100_shim_sgr_ops;
-pub mod vt_100_shim_terminal_ops;
+// Attach.
+pub(crate) mod vt_100_shim_char_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_clear_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_control_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_cursor_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_da_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_dsr_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_line_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_margin_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_mode_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_osc_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_scroll_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_sgr_ops; // Cross-folder impl/test rustdoc links.
+pub(crate) mod vt_100_shim_terminal_ops; // Cross-folder impl/test rustdoc links.
 
-// Re-export all operations for easier access.
+// Re-export.
 pub use vt_100_shim_char_ops::*;
 pub use vt_100_shim_control_ops::*;
 pub use vt_100_shim_cursor_ops::*;

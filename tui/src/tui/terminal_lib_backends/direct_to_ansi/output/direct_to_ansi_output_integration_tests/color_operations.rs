@@ -23,7 +23,7 @@
 //! [`SGR`]: crate::SgrCode
 
 use super::test_helpers::*;
-use crate::{render_op::RenderOpCommon, tui_color};
+use crate::render_op::RenderOpCommon;
 
 #[test]
 fn test_set_fg_color_basic_red() {

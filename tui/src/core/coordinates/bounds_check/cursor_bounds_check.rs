@@ -148,8 +148,8 @@ use std::ops::Add;
 /// [`VPLength`]: crate::VPLength
 /// [`VPWidth`]: crate::VPWidth
 /// [blanket implementation]: #implementors
-/// [Interval Notation]: mod@crate::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 #[rustfmt::skip]
 pub trait CursorBoundsCheck: LengthOps
 where

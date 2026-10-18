@@ -2,17 +2,17 @@
 
 #![rustfmt::skip]
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod render_cache; // Crate-internal render cache types used by editor_engine (not re-exported).
+
+// Attach. Folder-local (Intra-module).
 mod buffer_config_struct;
 mod buffer_struct;
 mod caret_locate;
 mod clipboard;
 mod history;
 mod selection;
-
-// Not re-exported.
-pub mod render_cache;
-pub mod sizing;
+mod sizing; // Not re-exported.
 
 // Re-export.
 pub use buffer_config_struct::*;

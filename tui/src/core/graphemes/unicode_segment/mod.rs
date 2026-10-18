@@ -13,10 +13,10 @@
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [module docs]: crate::graphemes
 
-pub mod seg;
-pub mod seg_index;
-pub mod seg_length;
-pub mod segment_builder;
+mod seg;
+mod seg_index;
+mod seg_length;
+mod segment_builder;
 
 pub use seg::*;
 pub use seg_index::*;

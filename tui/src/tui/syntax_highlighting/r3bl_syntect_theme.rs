@@ -38,7 +38,7 @@ pub fn load_default_theme() -> Theme {
 
 #[cfg(test)]
 mod tests {
-    use crate::{throws, try_load_r3bl_theme};
+    use crate::try_load_r3bl_theme;
 
     #[test]
     fn load_theme() -> std::io::Result<()> {

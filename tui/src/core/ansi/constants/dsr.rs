@@ -10,9 +10,7 @@
 //! [`DSR`]: crate::DsrSequence
 //! [`DsrRequestType`]: crate::DsrRequestType
 //! [`DsrSequence`]: crate::DsrSequence
-//! [constants module design]: mod@crate::constants#design
-
-use crate::define_ansi_const;
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 // DSR request sequences.
 

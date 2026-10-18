@@ -37,8 +37,7 @@
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 
 use super::test_helpers_rendered::*;
-use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor,
-            generate_isolated_process_test, global_color_support,
+use crate::{ANSIBasicColor, ColorSupport, RgbValue, TuiColor, global_color_support,
             ofs_buf::test_fixtures_ofs_buf::*};
 
 /// Verify styled text with foreground color renders correct characters and color.

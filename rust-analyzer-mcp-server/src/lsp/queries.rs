@@ -25,7 +25,7 @@ impl RustAnalyzerClient {
         uri: DocumentUriRef<'_>,
         content: &str,
     ) -> Result<(), McpServerError> {
-        if self.open_documents.contains(&uri.to_string()) {
+        if self.open_documents.iter().any(|it| it == uri) {
             return ok!();
         }
 

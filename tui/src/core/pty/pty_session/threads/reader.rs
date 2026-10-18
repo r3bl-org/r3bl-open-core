@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CaptureFlag, ControllerReader, PtyOscProgressScanner, PtyOutputEvent,
-            PtySessionConfig, READ_BUFFER_SIZE, ok};
+            PtySessionConfig, READ_BUFFER_SIZE};
 use miette::miette;
 use std::{io::Read, sync::mpsc::SyncSender, thread::JoinHandle};
 
@@ -29,7 +29,7 @@ use std::{io::Read, sync::mpsc::SyncSender, thread::JoinHandle};
 ///
 /// Returns an [`Err`] if spawning the OS thread fails.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
 pub fn spawn_pty_reader_thread(

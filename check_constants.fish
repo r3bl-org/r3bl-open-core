@@ -139,8 +139,8 @@ end
 # Changes to these files should trigger a clean rebuild to avoid stale artifact issues.
 # Used by check_config_changed to detect when target/check needs to be cleaned.
 # Dynamically includes: root Cargo.toml, all workspace crate Cargo.toml files,
-# rust-toolchain.toml, and .cargo/config.toml.
-set -g CONFIG_FILES_TO_WATCH Cargo.toml rust-toolchain.toml .cargo/config.toml
+# rust-toolchain.toml, .cargo/config.toml, and clippy.toml.
+set -g CONFIG_FILES_TO_WATCH Cargo.toml rust-toolchain.toml .cargo/config.toml clippy.toml
 # Dynamically add all workspace crate Cargo.toml files (*/Cargo.toml)
 for crate_toml in */Cargo.toml
     if test -f $crate_toml

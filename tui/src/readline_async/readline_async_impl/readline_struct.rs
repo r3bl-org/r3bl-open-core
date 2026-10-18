@@ -11,7 +11,7 @@ use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
             ReadlineControlFlow, ReadlineError, ReadlineEvent, ReadlineLockManager,
             SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex,
-            TerminalModeController, VPSize, ok};
+            TerminalModeController, VPSize};
 use std::sync::Arc;
 use tokio::{select, spawn,
             sync::{broadcast, mpsc},

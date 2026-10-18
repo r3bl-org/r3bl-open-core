@@ -79,7 +79,7 @@ use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOS
             RenderOpsLocalData, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, VPPos,
             VPSize, VPWidth, WideningCastToUsize, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
-            inline_string, usize, vp_col, vp_width};
+            usize, vp_col, vp_width};
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -694,10 +694,8 @@ mod print_text_with_attributes_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Flat2DArray, NarrowingCastToU16, NarrowingCastToUsize, assert_eq2,
-                new_style, render_pipeline, tui_color, vp_col, vp_height, vp_pos,
-                vp_row, vp_width};
-    use rustc_hash::FxHashMap;
+    use crate::{Flat2DArray, HashMap, NarrowingCastToU16, NarrowingCastToUsize,
+                vp_col, vp_height, vp_pos, vp_row, vp_width};
 
     #[allow(clippy::too_many_lines)]
     #[test]
@@ -1146,7 +1144,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1222,7 +1220,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1357,7 +1355,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,

@@ -42,13 +42,13 @@
 //! [`Readline::drop()`]: Readline::drop()
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 //! [`SIGABRT`]: https://manpages.debian.org/signal.7
-//! [`TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
+//! [`TTY`]: crate::PtyPair#what-is-a-tty
 
 use crate::{CaughtPanicResult, ChannelCapacity, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
             GLYPH_FAILURE, GLYPH_SUCCESS, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, extract_panic_message,
-            generate_pty_test, vp_height, vp_width};
+            vp_height, vp_width};
 use std::{io::Write, panic::catch_unwind, process::exit};
 use tokio::sync::broadcast;
 
@@ -122,6 +122,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     const EXPECTED_SECOND_PANIC_MSG: &str = "Second panic triggering drop()";
 

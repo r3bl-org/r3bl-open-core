@@ -442,7 +442,7 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`Spinner::try_start()`]: crate::Spinner::try_start
 //! [`Spinner`]: crate::Spinner
-//! [`spinner`]: mod@crate::readline_async::spinner
+//! [`spinner`]: mod@spinner
 //! [`std::io::Stdin::read_line()`]: std::io::Stdin::read_line
 //! [`std::write!`]: std::write
 //! [`std::writeln!`]: std::writeln
@@ -482,16 +482,21 @@
 // XMARK: Prevent rustfmt from reformatting entire file.
 #![rustfmt::skip]
 
-// Attach sources.
-pub mod readline_async_api;
-pub mod choose_impl;
-pub mod readline_async_impl;
-pub mod choose_api;
-pub mod spinner;
-pub mod spinner_impl;
-pub mod modal_terminal_guard;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod choose_impl;
 
-// Re-export the public API.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod choose_api; // Cross-folder rustdoc module link (lib.rs).
+pub(crate) mod readline_async_api; // Cross-folder rustdoc module link (lib.rs).
+pub(crate) mod readline_async_impl; // Cross-folder integration test rustdoc links.
+
+// Attach. Folder-local (Intra-module).
+mod modal_terminal_guard;
+mod spinner;
+mod spinner_impl;
+
+// Re-export.
 pub use choose_api::*;
 pub use choose_impl::*;
 pub use readline_async_api::*;

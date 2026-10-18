@@ -58,7 +58,7 @@
 //! [`.into_bytes()`]: String::into_bytes()
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CsiSequence`]: crate::CsiSequence
-//! [`FastStringify`]: crate::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 use crate::{ColorTarget, SgrAttributeSequence, SgrColorSequence, TermRowDelta, TuiColor,

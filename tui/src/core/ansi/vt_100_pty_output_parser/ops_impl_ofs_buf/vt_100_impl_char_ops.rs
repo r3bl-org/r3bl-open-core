@@ -29,11 +29,9 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, OfsBufVT100, PixelChar,
-            VPLength,
-            core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
-                                              RangeBoundsExt, RangeConvertExt, RangeExt},
-            ok, vp_col, vp_width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, CursorBoundsCheck,
+            LengthOps, OfsBufVT100, PixelChar, RangeBoundsExt, RangeConvertExt, RangeExt,
+            VPLength, vp_col, vp_width};
 
 impl OfsBufVT100 {
     /// Insert blank characters at cursor position (for `ICH` - Insert Character).

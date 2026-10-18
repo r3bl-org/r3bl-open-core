@@ -1,0 +1,9 @@
+{
+  "name": "r3bl-rust-analyzer-mcp-server-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Integration test harness dependencies for MCP conformance tests",
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^2.11.0"
+  }
+}

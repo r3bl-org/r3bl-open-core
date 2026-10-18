@@ -1,10 +1,16 @@
-# Compiler and Linker Speedups:
-# 1. Parallel frontend compiler (`-Z threads=8`)
-# 2. Fast bundled `rust-lld` linker (`-C linker-features=+lld`)
-# Requires nightly toolchain (see rust-toolchain.toml).
+# Compiler and Linker Speedups (Linux only; macOS/Windows use compiler defaults):
+# 1. Parallel frontend compiler (`-Z unstable-options --jobs-frontend=8`; requires nightly —
+#    nightly defaults to 2 frontend threads since `nightly-2026-11-14`)
+# 2. Fast bundled `rust-lld` linker (`-C linker-features=+lld`, stable on Linux)
+# Blog post: https://blog.rust-lang.org/2026/11/16/enabling-parallel-frontend-on-nightly/
 # Tracking issue: https://github.com/rust-lang/rust/issues/113349
 [target.x86_64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8", "-Z", "unstable-options", "-C", "linker-features=+lld"]
+rustflags = ["-Z", "unstable-options", "--jobs-frontend=8", "-C", "linker-features=+lld"]
+
+[build]
+# Document private items locally to match `check.fish` and `[package.metadata.docs.rs]`.
+# Note: `check_docs.fish` sets `RUSTDOCFLAGS`, which overrides this key, so keep both in sync.
+rustdocflags = ["--document-private-items"]
 
 [profile.dev]
 # Only disable to avoid rustc dep graph ICE on nightly which should not

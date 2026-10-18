@@ -2,22 +2,33 @@
 
 #![rustfmt::skip]
 
-pub mod decl_macros;
-pub mod stack_alloc_types;
-pub mod tui_style;
-pub mod tui_styled_text;
-pub mod coordinates;
-pub mod script;
-pub mod terminal_io;
-pub mod test_fixtures;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod decl_macros;
+#[macro_use]
+pub(crate) mod stack_alloc_types; // Cross-folder rustdoc module link (heap_alloc_types).
+#[macro_use]
+pub(crate) mod test_fixtures; // Cross-folder rustdoc module link (lib.rs -> pty_test_fixtures).
+#[macro_use]
 pub mod common;
-pub mod log;
-pub mod misc;
-pub mod notification;
-pub mod heap_alloc_types;
-pub mod ansi;
+#[macro_use]
+pub mod tui_style;
+#[macro_use]
+pub mod tui_styled_text;
+#[macro_use]
+pub mod coordinates;
+#[macro_use]
+pub mod terminal_io;
+#[macro_use]
+mod misc;
+#[macro_use]
+mod heap_alloc_types;
 
-// Consumer-only modules.
+// Attach.
+pub mod ansi;
+pub mod log;
+pub mod script;
+pub mod notification;
 pub mod color_wheel;
 pub mod glyphs;
 pub mod graphemes;
@@ -28,7 +39,6 @@ pub mod storage;
 // Re-export.
 pub use color_wheel::*;
 pub use coordinates::*;
-pub use decl_macros::*;
 pub use glyphs::*;
 pub use graphemes::*;
 pub use heap_alloc_types::*;
@@ -46,17 +56,3 @@ pub use tui_styled_text::*;
 pub use resilient_reactor_thread::*;
 pub use ansi::*;
 pub use common::*;
-
-// Rustdoc search link fixes.
-
-#[cfg(any(test, doc))] // Guard needed: ansi::constants sub-modules are only pub in doc/test builds.
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use ansi::{csi, dsr, esc, generic, input_sequences, raw_mode_constants, sgr, utf8};
-
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use coordinates::{bounds_check, viewport_coords, byte, percent_spec, primitives,
-                      vt_100_ansi_coords};
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use graphemes::{gc_string, traits, unicode_segment, word_boundaries};
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use pty::{pty_engine, pty_mux, pty_session};

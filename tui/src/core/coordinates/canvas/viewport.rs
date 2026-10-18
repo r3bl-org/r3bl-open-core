@@ -248,7 +248,7 @@ mod impl_viewport_from {
 }
 
 #[cfg(test)]
-pub mod test_fixture_viewport {
+pub(crate) mod test_fixture_viewport { // Shared test viewport builder used by VT-100 clear_ops tests.
     use super::*;
 
     pub trait TestViewportExt {

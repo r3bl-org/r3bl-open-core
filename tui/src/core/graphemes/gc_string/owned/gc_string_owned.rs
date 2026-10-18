@@ -10,7 +10,7 @@ use crate::{ByteIndex, CCol, ChUnit, CowInlineString, GraphemeString, GraphemeSt
             SegIndex, SegLength, SegmentArray, VPCol, VPWidth, ch,
             graphemes::unicode_segment::{build_segments_for_str,
                                          calculate_display_width},
-            join, seg_index, seg_length, usize, vp_width};
+            seg_index, seg_length, usize, vp_width};
 use std::fmt::{Debug, Display, Formatter};
 
 /// Wide segments detection result.
@@ -375,7 +375,7 @@ impl From<(Seg, &GCStringOwned)> for SegStringOwned {
 
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
-pub mod at_display_col_index {
+mod at_display_col_index {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -600,7 +600,7 @@ pub mod at_display_col_index {
 /// Methods for easily modifying [`grapheme`] cluster segments for common TUI use cases.
 ///
 /// [`grapheme`]: https://unicode.org/reports/tr29/
-pub mod mutate {
+mod mutate {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

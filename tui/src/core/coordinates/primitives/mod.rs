@@ -13,7 +13,7 @@
 //! [`viewport_coords`]: super::viewport_coords
 
 // Attach source file.
-pub mod ch_unit;
+mod ch_unit;
 
 // Re-export.
 pub use ch_unit::*;

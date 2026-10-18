@@ -87,19 +87,16 @@
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
-//! [`SGR_SET_GRAPHICS`]: crate::constants::SGR_SET_GRAPHICS
+//! [`SGR_SET_GRAPHICS`]: crate::SGR_SET_GRAPHICS
 //! [`SGR`]: crate::SgrCode
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
-use crate::{AnsiValue, NarrowingCastToU8, RgbValue, TuiColor, WideningCastToU16,
-            convert_u16_to_ascii_str_slice,
-            core::{ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR,
-                                     SGR_BG_EXTENDED, SGR_COLOR_MODE_256,
-                                     SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
-                                     SGR_SET_GRAPHICS},
-                   common::fast_stringify::{BufTextStorage, FastStringify}},
-            generate_impl_display_for_fast_stringify, ok};
+use crate::{AnsiValue, BufTextStorage, FastStringify, NarrowingCastToU8, RgbValue,
+            TuiColor, WideningCastToU16,
+            core::ansi::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
+                                    SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB,
+                                    SGR_FG_EXTENDED, SGR_SET_GRAPHICS}};
 // use std::fmt::Result;
 
 /// Which layer (foreground or background) a color applies to.

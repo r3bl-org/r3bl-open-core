@@ -23,12 +23,12 @@
 //!
 //! [`into_inner()`]: std::sync::Mutex::into_inner
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
-//! [child process's `TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
+//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+//! [child process's `TTY`]: crate::PtyPair#what-is-a-tty
 
 use crate::{CaughtPanicResult, GLYPH_SUCCESS, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, PtyTestContext, PtyTestMode,
-            disable_raw_mode, enable_raw_mode, extract_panic_message, generate_pty_test,
+            disable_raw_mode, enable_raw_mode, extract_panic_message,
             terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS};
 use rustix::termios::Termios;
 use std::{io::{Write, stdout},
@@ -69,6 +69,8 @@ fn controller(
     assert_eq!(exit_code, 0, "Controlled process exited with error");
 }
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
     println!("{MSG_CONTROLLED_READY}");

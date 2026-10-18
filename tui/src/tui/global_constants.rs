@@ -175,7 +175,7 @@ pub const NUL_STR: &str = ascii_byte_to_str(&[NUL]);
 /// [`EIO`] (`errno` `5`) is how Linux signals that the controlled side of a [`PTY`] has
 /// closed. See [POSIX `EOF` vs Linux `EIO`] and [`BufReadExt`] for more info.
 ///
-/// [`BufReadExt`]: crate::test_fixtures::pty_test_fixtures::BufReadExt
+/// [`BufReadExt`]: crate::BufReadExt
 /// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [POSIX `EOF` vs Linux `EIO`]: crate::PtyPair#posix-eof-vs-linux-eio

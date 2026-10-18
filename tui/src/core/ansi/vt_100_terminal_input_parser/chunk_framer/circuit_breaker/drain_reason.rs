@@ -9,7 +9,7 @@ use std::fmt::Display;
 /// syntax abort by raw newline or new escape sequence, safety ceiling overflow,
 /// or ongoing runaway payload consumption).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscCircuitBreaker`]: super::OscCircuitBreaker
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OscDrainReason {
@@ -54,7 +54,7 @@ pub enum OscDrainReason {
     /// The entire chunk was consumed as runaway [`OSC`] payload. The circuit breaker
     /// remains in [`OscCircuitBreaker::Open`].
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscCircuitBreaker::Open`]: super::OscCircuitBreaker::Open
     RunawayPayloadOngoing,
 

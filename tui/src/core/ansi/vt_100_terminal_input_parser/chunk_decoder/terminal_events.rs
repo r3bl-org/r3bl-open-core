@@ -84,7 +84,7 @@
 //! [`VT100InputEventIR::TerminalColorReport`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::TerminalColorReport
 //! [`VT100PasteModeIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100PasteModeIR
 //! [Bidirectional Communication]: mod@super::super#bidirectional-communication-user-input-vs-terminal-responses
-//! [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+//! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                                      VT100InputEventIR, VT100KeyCodeIR,
@@ -92,7 +92,7 @@ use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                     maybe_more::MaybeMore},
             csi_scanner::CsiParams,
             osc_scanner::OscScanResult};
-use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OscSequence, byte_offset,
+use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, HexSlice, OscSequence, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR,
                                     ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
@@ -101,7 +101,7 @@ use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OscSequence, byte_offset,
                                     RESIZE_EVENT_PARSE_PARAM, RESIZE_TERMINATOR},
             vp_height, vp_width};
 
-pub mod csi {
+pub(super) mod csi {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -177,7 +177,7 @@ pub mod csi {
     }
 }
 
-pub mod osc {
+pub(crate) mod osc { // Cross-folder osc_codes/osc_sender/maybe_more links.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -294,7 +294,7 @@ pub mod osc {
                     tracing::warn! {
                         message = "try_disambiguate_or_alt_bracket - parsed OSC sequence from stdin",
                         event = ?event,
-                        raw_osc_hex = %format!("{:02X?}", &chunk[..len]),
+                        raw_osc_hex = %HexSlice { inner: &chunk[..len] },
                         raw_osc_str = %String::from_utf8_lossy(&chunk[..len]),
                         consumed_bytes = len,
                     };

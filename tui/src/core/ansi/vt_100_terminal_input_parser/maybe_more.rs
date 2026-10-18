@@ -160,7 +160,7 @@
 /// [`mod@super`]: super
 /// [`ncurses`]: https://en.wikipedia.org/wiki/Ncurses
 /// [`OSC` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#OSC
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`read()`]: https://manpages.debian.org/read.2
 /// [`SSH`]: <https://en.wikipedia.org/wiki/Secure_Shell>

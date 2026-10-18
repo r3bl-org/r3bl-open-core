@@ -38,7 +38,7 @@ fn create_alphabet_buffer() -> OfsBufVT100 {
 }
 
 /// Tests for Delete Character (DCH) operations.
-pub mod delete_char {
+mod delete_char {
     use super::*;
 
     #[test]
@@ -112,7 +112,7 @@ pub mod delete_char {
 }
 
 /// Tests for Insert Character (ICH) operations.
-pub mod insert_char {
+mod insert_char {
     use super::*;
 
     #[test]
@@ -186,7 +186,7 @@ pub mod insert_char {
 }
 
 /// Tests for Erase Character (ECH) operations.
-pub mod erase_char {
+mod erase_char {
     use super::*;
 
     #[test]

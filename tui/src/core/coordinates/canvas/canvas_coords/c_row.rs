@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{CCol, CHeight, CPos, c_height};
-use crate::{VPHeight, generate_canvas_index_type_impl};
+use crate::VPHeight;
 use std::ops::Add;
 
 /// Absolute 0-based row index in the continuous storage buffer space (64-bit [`Canvas`]

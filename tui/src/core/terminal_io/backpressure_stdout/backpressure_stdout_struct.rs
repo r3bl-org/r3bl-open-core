@@ -99,7 +99,7 @@ use crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::{
 ///    [`std::io::Error`] ensures the error propagates up cleanly rather than getting
 ///    stuck in an infinite retry loop.
 ///
-/// [`/dev/tty`]: crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
+/// [`/dev/tty`]: crate::PtyPair#controlling-terminal-alias-devtty
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`cat`]: https://en.wikipedia.org/wiki/Cat_(Unix)
 /// [`Crossterm`]: crate::tui::TerminalLibBackend::Crossterm

@@ -26,6 +26,8 @@
 //! The enum defines operations like cursor movement, colors, text, and screen control
 //! that every stage of the pipeline needs to understand.
 //!
+//! [`RenderOpIR`]: crate::RenderOpIR
+//! [`RenderOpOutput`]: crate::RenderOpOutput
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{InlineString, TuiColor, TuiStyle, VPCol, VPHeight, VPPos};

@@ -12,13 +12,13 @@
 //! See [constants module design] for the three-tier architecture.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`mouse`]: crate::constants::mouse
+//! [`mouse`]: mod@crate::core::ansi::constants::mouse
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 //! [keyboard]: mod@crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::keyboard#keyboard-encoding-explained
 
 use super::{CSI_START, ESC_STR, ascii_byte_to_char, ascii_byte_to_str};
-use crate::{NUL, NUL_CHAR, define_ansi_const};
+use crate::{NUL, NUL_CHAR};
 
 // ==================== ANSI Sequence Components ====================
 
@@ -873,7 +873,7 @@ pub const CONTROL_A: u8 = 1;
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
-/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [cooked mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 pub const CONTROL_C: u8 = 3;
 
 /// End of Transmission (EOT) ([`ANSI`]): The `Ctrl+D` control character.
@@ -884,7 +884,7 @@ pub const CONTROL_C: u8 = 3;
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [cooked mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 pub const CONTROL_D: u8 = 4;
 
 /// Control-to-Lowercase Mask ([`ANSI`]): OR with control byte to get lowercase letter.
@@ -1041,7 +1041,7 @@ pub const ASCII_LOWER_Z: u8 = b'z';
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const ASCII_QUESTION_MARK: u8 = b'?';
 
 // ==================== CSI Prefix ====================

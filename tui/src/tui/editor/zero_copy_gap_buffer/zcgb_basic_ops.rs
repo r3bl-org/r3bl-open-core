@@ -18,8 +18,8 @@ use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
             ByteLength, CCol, CIndex, CLength, CRow, CWidth, CursorBoundsCheck, DocSeg,
             GCStringOwned, GapBufferLine, LineMetadata, RangeExt, SegStringOwned,
-            byte_len, byte_offset, c_col, c_index, c_len, c_row, c_width,
-            segment_builder::build_segments_for_str};
+            build_segments_for_str, byte_len, byte_offset, c_col, c_index, c_len, c_row,
+            c_width};
 use std::ops::Range;
 
 impl ZeroCopyGapBuffer {

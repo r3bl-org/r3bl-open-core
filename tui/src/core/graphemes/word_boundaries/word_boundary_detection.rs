@@ -11,7 +11,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck, GCStringOw
 /// ## Examples
 ///
 /// ```
-/// use r3bl_tui::core::graphemes::word_boundaries::is_word_boundary;
+/// use r3bl_tui::is_word_boundary;
 ///
 /// assert_eq!(is_word_boundary(" "), true);   // Space
 /// assert_eq!(is_word_boundary("\t"), true);  // Tab
@@ -67,7 +67,7 @@ fn get_seg_str(line: &GCStringOwned, idx: SegIndex) -> &str {
 /// ## Examples
 ///
 /// ```
-/// use r3bl_tui::core::graphemes::word_boundaries::find_prev_word_start;
+/// use r3bl_tui::find_prev_word_start;
 /// use r3bl_tui::{GCStringOwned, seg_index};
 ///
 /// // "world" -> "hello"
@@ -154,7 +154,7 @@ pub fn find_prev_word_start(
 /// ## Examples
 ///
 /// ```
-/// use r3bl_tui::core::graphemes::word_boundaries::find_next_word_end;
+/// use r3bl_tui::find_next_word_end;
 /// use r3bl_tui::{GCStringOwned, seg_index};
 ///
 /// // "hello"
@@ -230,7 +230,7 @@ pub fn find_next_word_end(line: &GCStringOwned, cursor: impl Into<SegIndex>) -> 
 /// ## Examples
 ///
 /// ```
-/// use r3bl_tui::core::graphemes::word_boundaries::find_next_word_start;
+/// use r3bl_tui::find_next_word_start;
 /// use r3bl_tui::{GCStringOwned, seg_index};
 ///
 /// // "one two three"

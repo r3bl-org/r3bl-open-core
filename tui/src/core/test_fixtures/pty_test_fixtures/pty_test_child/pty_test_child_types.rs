@@ -38,7 +38,7 @@ pub struct PtyTestContext {
 
 /// Result of reading [`PTY`] output lines until a marker.
 ///
-/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+/// [`PTY`]: crate::PtyPair#pty-primer
 #[derive(Debug)]
 pub struct ReadLinesResult {
     /// Collected output lines (normalized, filtered).

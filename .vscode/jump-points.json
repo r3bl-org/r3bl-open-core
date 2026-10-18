@@ -1,0 +1,40 @@
+{
+  "version": "3.0",
+  "tasks": {
+    "5279764f-7bbc-4dd8-bec0-0a42f5c871d3": {
+      "points": [
+        {
+          "id": "1794760854271-84ie3t",
+          "uriString": "file:///home/nazmul/github/roc-binaries/cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs",
+          "fsPath": "/home/nazmul/github/roc-binaries/cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs",
+          "relativePath": "cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs",
+          "line": 117,
+          "character": 45,
+          "symbolLabel": "from_bytes",
+          "linePreview": "let archive_sha256 = Sha256Digest::from_bytes(&archive_bytes);"
+        },
+        {
+          "id": "1794760854289-z4f9n1",
+          "uriString": "file:///home/nazmul/github/roc-binaries/cmdr/src/self_upgrade/upgrade/sha256_digest.rs",
+          "fsPath": "/home/nazmul/github/roc-binaries/cmdr/src/self_upgrade/upgrade/sha256_digest.rs",
+          "relativePath": "cmdr/src/self_upgrade/upgrade/sha256_digest.rs",
+          "line": 30,
+          "character": 11,
+          "symbolLabel": "fn from_bytes",
+          "linePreview": "pub fn from_bytes(bytes: &[u8]) -> Self {"
+        },
+        {
+          "id": "1794760860998-0g758v",
+          "uriString": "file:///home/nazmul/github/roc-binaries/tui/src/core/common/fast_strings/hex_slice.rs",
+          "fsPath": "/home/nazmul/github/roc-binaries/tui/src/core/common/fast_strings/hex_slice.rs",
+          "relativePath": "tui/src/core/common/fast_strings/hex_slice.rs",
+          "line": 63,
+          "character": 11,
+          "symbolLabel": "fn try_parse_str",
+          "linePreview": "pub fn try_parse_str<T: AsMut<[u8]>>(in_hex_str: &str, mut out_buf: T) -> Opt..."
+        }
+      ],
+      "currentIndex": 0
+    }
+  }
+}

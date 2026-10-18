@@ -4,12 +4,12 @@
 
 #![rustfmt::skip]
 
-// Private modules (hide internal structure)
+// Attach.
 mod core;
 mod local_branch_info;
 mod constants;
 
-// Public re-exports (expose stable flat API)
+// Re-export.
 pub use core::*;
 pub use local_branch_info::*;
-pub use constants::*;
+pub(crate) use constants::*;

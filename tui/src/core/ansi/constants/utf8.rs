@@ -47,7 +47,7 @@
 //! ```
 //!
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 // ============================================================================
 // UTF-8 Start Byte Ranges (First byte of sequence)

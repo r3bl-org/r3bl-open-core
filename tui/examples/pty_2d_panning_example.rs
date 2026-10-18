@@ -30,16 +30,15 @@
 //! - `Shift + Mouse Wheel Up/Down` to pan horizontally left/right.
 //! - `Ctrl+Q` to quit
 //!
-//! [`OSC`]: r3bl_tui::core::ansi::osc_codes::OscSequence
-//! [`pty_mux`]: r3bl_tui::core::pty_mux
-//! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
+//! [`OSC`]: r3bl_tui::OscSequence
+//! [`pty_mux`]: r3bl_tui::PTYMux
+//! [`PTYMux`]: r3bl_tui::PTYMux
 
 use r3bl_tui::{DefaultIoDevices, EventPropagation, InputEvent, IntoErr, Key, KeyPress,
-               KeyState, ModifierKeysMask, TuiAvailability, TuiAvailabilityChooseExt,
-               assert_terminal_is_interactive, choose,
-               core::pty_mux::{PTYMux, ProcessManager},
+               KeyState, ModifierKeysMask, PTYMux, ProcessManager, TuiAvailability,
+               TuiAvailabilityChooseExt, assert_terminal_is_interactive, choose,
                is_command_available, ok,
-               readline_async::{HowToChoose, style::StyleSheet},
+               readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, show_notification_non_blocking,
                try_initialize_logging_global, vp_width};
 use tracing_core::LevelFilter;

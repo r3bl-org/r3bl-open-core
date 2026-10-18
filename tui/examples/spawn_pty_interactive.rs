@@ -29,7 +29,7 @@ use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
                ok,
-               readline_async::{HowToChoose, style::StyleSheet},
+               readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, vp_height, vp_width};
 use tokio::time::{Duration, sleep};
 

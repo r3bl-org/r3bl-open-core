@@ -4,8 +4,7 @@ use crate::{BroadcastSender, Continuation,
             DeadlockPreventionPolicy::PanicOnAnyLockNesting, InterruptHandle, RRTEvent,
             RRTSoftwareInterrupt, RRTWorker, RestartPolicy, ScopedMutex,
             ThreadLifecycleMonitor, ThreadState,
-            core::resilient_reactor_thread::SubscriberGuard, run_worker_loop,
-            scoped_mutex};
+            core::resilient_reactor_thread::SubscriberGuard, run_worker_loop};
 use std::{collections::VecDeque,
           sync::{Arc, LazyLock,
                  atomic::{AtomicU32, Ordering},
@@ -141,6 +140,10 @@ pub fn create_test_resources() -> (
 ///
 /// This function never actually returns an error, but returns [`Result`] to match the
 /// expected type signature in [`TestFactoryState`].
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "Returns miette::Result to match TestFactoryState's create_results signature"
+)]
 pub fn create_ok_result() -> miette::Result<(TestWorker, TestInterrupt)> {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
     Ok((worker, interrupt))
@@ -215,6 +218,7 @@ pub fn get_create_count() -> u32 {
 /// # Panics
 ///
 /// Panics if the receiver has been dropped.
+#[allow(dead_code)] // Shared isolated-process test helper alongside send_cmd_via_guard.
 pub fn send_cmd(cmd_sender: &tokio::sync::broadcast::Sender<u8>, cmd: u8) {
     let _ = cmd_sender.send(cmd);
 }

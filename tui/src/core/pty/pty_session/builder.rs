@@ -3,10 +3,9 @@
 use super::{config::{CaptureFlag, DefaultPtySessionConfig, PtySessionConfig},
             events::{PtyInputEvent, PtyOutputEvent},
             session::{AsyncPtySession, PtySession},
-            threads::orchestrator::spawn_pty_orchestrator_thread};
-use crate::{DefaultSize, PtyCommand, PtyPair};
+            spawn_pty_orchestrator_thread};
+use crate::{DefaultSize, HashMap, PtyCommand, PtyPair};
 use miette::{IntoDiagnostic, miette};
-use rustc_hash::FxHashMap;
 use std::path::PathBuf;
 
 /// Builder for configuring and spawning [`PTY`] sessions.
@@ -79,7 +78,7 @@ use std::path::PathBuf;
 /// [`start()`]: Self::start()
 /// [`start_async()`]: Self::start_async()
 /// [`with_config()`]: Self::with_config()
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 #[derive(Debug, Clone)]
 pub struct PtySessionBuilder {
     /// The executable command to run (e.g., [`bash`] or [`ls`]).
@@ -92,7 +91,7 @@ pub struct PtySessionBuilder {
     pub cli_args: Vec<String>,
 
     /// Environment variables to set for the child process.
-    pub env_vars: FxHashMap<String, String>,
+    pub env_vars: HashMap<String, String>,
 
     /// Optional working directory for the child process.
     ///
@@ -114,7 +113,7 @@ impl PtySessionBuilder {
         Self {
             command: command.into(),
             cli_args: Vec::new(),
-            env_vars: FxHashMap::default(),
+            env_vars: HashMap::default(),
             maybe_cwd: None,
             config: DefaultPtySessionConfig.into(),
         }
@@ -175,7 +174,7 @@ impl PtySessionBuilder {
     /// variables that trigger [`OSC`] emission from [`cargo`] and [`rustup`].
     ///
     /// [`cargo`]: https://github.com/rust-lang/cargo
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtySessionConfigToken::CaptureOsc`]: crate::PtySessionConfigToken::CaptureOsc
     /// [`rustup`]: https://rust-lang.github.io/rustup/
@@ -301,10 +300,10 @@ impl PtySessionBuilder {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Background Threads]: crate::core::pty#the-thread-trio
     /// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
-    /// [Orchestrator Thread]: crate::threads::spawn_pty_orchestrator_thread
-    /// [Reader Thread]: crate::threads::spawn_pty_reader_thread
-    /// [Session Layer]: mod@crate::pty_session
-    /// [Writer Thread]: crate::threads::spawn_pty_writer_thread
+    /// [Orchestrator Thread]: crate::spawn_pty_orchestrator_thread
+    /// [Reader Thread]: crate::spawn_pty_reader_thread
+    /// [Session Layer]: mod@crate::core::pty::pty_session
+    /// [Writer Thread]: crate::spawn_pty_writer_thread
     pub fn start(self) -> miette::Result<PtySession> {
         use std::sync::mpsc::sync_channel;
 
@@ -492,7 +491,7 @@ impl PtySessionBuilder {
     /// [`cargo`]: https://github.com/rust-lang/cargo
     /// [`examine_env_vars_to_determine_hyperlink_support()`]:
     ///     crate::examine_env_vars_to_determine_hyperlink_support
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscPtyEvent`]: crate::OscPtyEvent
     /// [`ProgressUpdate(Pc)`]: crate::OscPtyEvent::ProgressUpdate
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal

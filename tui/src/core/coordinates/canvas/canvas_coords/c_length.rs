@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::CIndex;
-use crate::{VPLength, generate_canvas_length_type_impl};
+use crate::VPLength;
 
 /// Generic 1-based 1D length or count in the continuous storage buffer space (64-bit
 /// [`Canvas`] domain).

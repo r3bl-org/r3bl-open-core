@@ -127,7 +127,7 @@ impl Deref for ChUnit {
     fn deref(&self) -> &Self::Target { &self.value }
 }
 
-pub mod ch_unit_math_ops {
+mod ch_unit_math_ops {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -217,7 +217,7 @@ pub mod ch_unit_math_ops {
 }
 
 /// Converts to other types [prim@f64], [prim@isize], [prim@usize], etc. from [`ChUnit`].
-pub mod convert_to_other_types_from_ch {
+mod convert_to_other_types_from_ch {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -255,7 +255,7 @@ pub mod convert_to_other_types_from_ch {
 }
 
 /// Converts from other types [prim@f64], [prim@isize], [prim@usize], etc. to [`ChUnit`].
-pub mod convert_from_other_types_to_ch {
+mod convert_from_other_types_to_ch {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -266,6 +266,9 @@ pub mod convert_from_other_types_to_ch {
     /// This is what happens if an error occurs:
     /// - Generate a tracing error if the conversion fails.
     /// - Even if it fails, return `0` and consume the error.
+    ///
+    /// [`f64`]: prim@f64
+    /// [`u16`]: prim@u16
     fn f64_to_u16(value: f64) -> Result<u16, String> {
         let value = value.round(); // Remove the fractional part by rounding up or down.
         if value < 0.0 || value > f64::from(u16::MAX) {
@@ -415,7 +418,6 @@ mod bounds_check_trait_impls {
 #[cfg(test)]
 mod tests_convert {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_as_usize() {
@@ -504,7 +506,6 @@ mod tests_convert {
 #[cfg(test)]
 mod tests_ch_unit_math_ops {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_add_ch_units() {

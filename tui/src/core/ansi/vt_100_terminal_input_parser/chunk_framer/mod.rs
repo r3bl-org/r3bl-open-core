@@ -139,7 +139,7 @@
 //! [`Iterator`]: std::iter::Iterator
 //! [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
 //! [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`OscCircuitBreaker::Open`]: circuit_breaker::OscCircuitBreaker::Open
 //! [`OscCircuitBreaker::trip()`]: circuit_breaker::OscCircuitBreaker::trip
 //! [`OscCircuitBreaker::try_drain()`]: circuit_breaker::OscCircuitBreaker::try_drain
@@ -154,26 +154,17 @@
 //! [bidirectional_comm]: mod@crate::core::ansi::vt_100_terminal_input_parser#bidirectional-communication-user-input-vs-terminal-responses
 //! [sans_io_arch]: mod@crate::core::ansi::vt_100_terminal_input_parser#parser-architecture-sans-io
 
-// Attach source files.
-// Private.
+// Attach.
+mod accumulator;
 mod chunk_framer_struct;
-
-// Private in production, public for docs/tests (enables rustdoc links to submodules).
-#[cfg(any(test, doc))]
-pub mod circuit_breaker;
-#[cfg(not(any(test, doc)))]
 mod circuit_breaker;
 
 #[cfg(any(test, doc))]
-pub mod accumulator;
-#[cfg(not(any(test, doc)))]
-mod accumulator;
+pub(crate) mod unit_tests; // Cross-folder backend_compat link.
 
-// Tests.
-#[cfg(any(test, doc))]
-pub mod unit_tests;
-
-// Public re-exports (barrel export pattern).
+// Re-export.
+#[allow(unused_imports)] // Re-exported for rustdoc links and tests.
 pub use accumulator::*;
 pub use chunk_framer_struct::*;
+#[allow(unused_imports)] // Re-exported for rustdoc links and tests.
 pub use circuit_breaker::*;

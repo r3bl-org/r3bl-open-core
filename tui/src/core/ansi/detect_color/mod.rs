@@ -3,13 +3,10 @@
 #![rustfmt::skip]
 
 // Attach.
-pub mod detect_color_support;
+mod detect_color_support;
+
+#[cfg(any(test, doc))]
+mod detect_color_integration_tests;
 
 // Re-export.
 pub use detect_color_support::*;
-
-// Tests.
-#[cfg(any(test, doc))]
-pub use detect_color_integration_tests::*;
-#[cfg(any(test, doc))]
-pub mod detect_color_integration_tests;

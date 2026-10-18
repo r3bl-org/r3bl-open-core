@@ -39,8 +39,7 @@
 
 use crate::{GLYPH_COMPLETION, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_STEP,
             GLYPH_SUCCESS, GLYPH_WAITING, PtyTestContext, PtyTestMode,
-            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
-            generate_pty_test};
+            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
@@ -100,6 +99,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: tests thread reuse with overlapping subscriptions. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{REUSE_READY}");
     std::io::stdout().flush().expect("Failed to flush");

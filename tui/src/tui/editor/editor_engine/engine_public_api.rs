@@ -3,19 +3,19 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use crate::{ClipboardService, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+use crate::{ClipboardService, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI,
             DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
             EditorEvent, FlexBox, GapBufferLine, HasFocus, InlineString, InputEvent,
             Key, KeyPress, NarrowingCastToU16, PrettyPrintDebug, RangeBoundsResult,
             RangeConstructExt, RenderArgs, RenderOpCommon, RenderOpIR, RenderOpIRVec,
             RenderPipeline, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
             SyntaxHighlightPipeline, VPHeight, VPRow, VPSize, VPWidth, Viewport,
-            ViewportBoundsCheck, ZOrder, c_width, convert_syntect_to_styled_text,
-            core::CanvasCameraExt,
-            fg_green, get_selection_style, glyphs, inline_string, new_style, ok,
+            ViewportBoundsCheck, ZOrder, c_width,
+            convert_highlighted_line_from_syntect_to_tui, core::CanvasCameraExt,
+            fg_green, get_selection_style, glyphs,
             render_cache::{RenderCache, UseRenderCache},
-            render_pipeline, render_tui_styled_texts_into, throws, try_get_syntax_ref,
-            try_parse_and_highlight, tui_color, vp_col, vp_height, vp_pos, vp_row};
+            render_tui_styled_texts_into, try_get_syntax_ref,
+            try_parse_and_highlight, vp_col, vp_height, vp_pos, vp_row};
 use syntect::easy::HighlightLines;
 
 /// Checks if we should stop rendering at this row index.
@@ -185,7 +185,7 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVe
 
     let syn_hi_pipeline = editor_buffer.get_syntax_highlight_pipeline();
 
-    DEBUG_TUI_MOD.then(|| {
+    DEBUG_TUI.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = %inline_string!(
@@ -389,13 +389,16 @@ mod syn_hi_r3bl_path {
 
     /// Try to convert [`ZeroCopyGapBuffer`] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using [`editor_buffer.get_lines()`].
-    /// - Step 2: Convert the lines into a [List] of [`StyleUSSpanLine`] using
+    /// - Step 2: Convert the lines into a [`List`] of [`StyleUSSpanLine`] using
     ///   [`try_parse_and_highlight()`]. If this fails then take the path of no syntax
     ///   highlighting else take the path of syntax highlighting.
     ///
     /// [`editor_buffer.get_lines()`]: EditorBuffer::get_lines()
-    /// [`MDDocument`]: crate::markdown_parser::MDDocument
-    /// [`ZeroCopyGapBuffer`]: ZeroCopyGapBuffer
+    /// [`List`]: crate::List
+    /// [`MdDocument`]: crate::MdDocument
+    /// [`StyleUSSpanLine`]: crate::StyleUSSpanLine
+    /// [`try_parse_and_highlight()`]: crate::try_parse_and_highlight
+    /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: VPHeight,
@@ -587,10 +590,7 @@ mod syn_hi_syntect_path {
         mut render_ops: &mut RenderOpIRVec,
     ) {
         let vp_origin = editor_buffer.get_vp_origin();
-        let line =
-            convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
-                &syntect_highlighted_line,
-            );
+        let line = convert_highlighted_line_from_syntect_to_tui(&syntect_highlighted_line);
         let styled_texts = line.clip(vp_origin, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops += RenderOpCommon::ResetColor;
@@ -709,7 +709,7 @@ mod tests {
     use super::*;
     use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask,
                 RenderList, VPBoundingBox, VPPos, c_col,
-                clipboard_test_fixtures::TestClipboard, key_press, vp_row, vp_width};
+                clipboard_test_fixtures::TestClipboard, vp_row, vp_width};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {

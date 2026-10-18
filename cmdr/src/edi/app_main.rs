@@ -2,7 +2,7 @@
 
 use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
-               ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
+               ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI,
                DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfig,
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
@@ -63,11 +63,11 @@ mod impl_id {
 pub struct AppMain;
 
 mod app_main_constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI_MOD, State};
+    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI, State};
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct edi::AppMain");
             });
@@ -136,7 +136,7 @@ mod app_main_impl_app_trait {
                 let result_open = open::that(link_url);
                 match result_open {
                     Ok(()) => {
-                        DEBUG_TUI_MOD.then(|| {
+                        DEBUG_TUI.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                 message = "📣 Opened feedback link",
@@ -326,7 +326,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             text.into(),
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal simple",
@@ -379,7 +379,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
                         let user_input_file_path = text.trim();
                         if !user_input_file_path.is_empty() {
-                            DEBUG_TUI_MOD.then(|| {
+                            DEBUG_TUI.then(|| {
                                 // % is Display, ? is Debug.
                                 tracing::debug!(
                                     message = "💾💾💾 About to save the new buffer with given filename",
@@ -447,7 +447,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message =
@@ -530,7 +530,7 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::ComponentEditor);
         has_focus.set_id(id);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -564,7 +564,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"

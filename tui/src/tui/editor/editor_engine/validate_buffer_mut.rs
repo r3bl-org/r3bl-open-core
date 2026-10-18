@@ -17,7 +17,7 @@
 //! size cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`].
 //!
-//! <!-- It is ok to use ignore here - demonstrates [`RAII`] pattern with Drop trait, not
+//! <!-- It is ok to use ignore here - demonstrates [RAII] pattern with Drop trait, not
 //! a complete runnable example -->
 //!
 //! ```ignore
@@ -31,13 +31,12 @@
 //! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful
 //! for operations that don't modify content (e.g., viewport resizing).
 //!
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [newtype pattern]: https://doc.rust-lang.org/rust-by-example/generics/new_types.html
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
-use crate::{CCaret, CWidth, CanvasCameraExt, CursorPositionBoundsStatus,
-            MemoizedMemorySize, SelectionContainer, Viewport, ZeroCopyGapBuffer,
-            core::coordinates::bounds_check::cursor_bounds_check::CursorBoundsCheck,
-            scroll_editor_content::{self}};
+use crate::{CCaret, CWidth, CanvasCameraExt, CursorBoundsCheck,
+            CursorPositionBoundsStatus, MemoizedMemorySize, SelectionContainer, Viewport,
+            ZeroCopyGapBuffer, scroll_editor_content::{self}};
 
 /// Mutable access to editor buffer fields using concrete [`ZeroCopyGapBuffer`] storage.
 #[derive(Debug)]
@@ -360,7 +359,7 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 #[cfg(test)]
 mod tests {
     use crate::{ArrayBoundsCheck, ArrayOverflowResult, EditorBuffer, EditorEngine,
-                EditorEngineConfig, assert_eq2, c_col, c_row, vp_height, vp_width};
+                EditorEngineConfig, c_col, c_row, vp_height, vp_width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {

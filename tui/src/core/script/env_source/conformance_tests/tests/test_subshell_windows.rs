@@ -1,11 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{assert_eq2,
-            core::script::env_source::{BaseEnv, OutputFormat,
-                                       conformance_tests::{test_data::*,
-                                                           test_fixtures::*},
-                                       try_env_source},
-            try_create_temp_dir};
+use super::super::{test_data::*, test_fixtures::*};
+use crate::{BaseEnv, OutputFormat, assert_eq2, try_create_temp_dir, try_env_source};
 use std::io::Write;
 
 #[test]

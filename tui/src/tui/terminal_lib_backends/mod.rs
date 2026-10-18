@@ -2,7 +2,7 @@
 
 //! # Rendering Pipeline Architecture
 //!
-//! **Source of Truth:** This module documents the complete 6-stage rendering pipeline.
+//! This module documents the complete 6-stage rendering pipeline.
 //! Each stage has its own module with "You Are Here" breadcrumbs. Use the stage reference
 //! table below to understand data flow and find relevant implementations.
 //!
@@ -167,7 +167,7 @@
 //! [`direct_to_ansi_paint_render_op_impl`]: mod@direct_to_ansi::output::direct_to_ansi_paint_render_op_impl
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`OfsBuf`]: struct@ofs_buf::OfsBuf
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`paint_impl`]: mod@ofs_buf::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::crossterm_paint_render_op_impl
 //! [`PixelChar`]: enum@ofs_buf::PixelChar
@@ -187,67 +187,25 @@
 
 #![rustfmt::skip]
 
-/**************************/
-/** Attach source files. **/
-/**************************/
-// Private mod.
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+pub(crate) mod render_pipeline; // Cross-folder rustdoc links (compositor, render_op_ir) and #[macro_use] macros.
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod crossterm_backend; // Cross-folder rustdoc links (sgr_code, backend_compat_tests).
+pub(crate) mod compositor_render_ops_to_ofs_buf; // Cross-folder rustdoc link (flat_2d_array/benches) and ofs_buf tests.
+pub(crate) mod direct_to_ansi; // Cross-folder DirectToAnsiInputDevice imports and rustdoc links (core/ansi, core/pty, rrt).
+pub(crate) mod ofs_buf; // Cross-folder OfsBuf test fixtures and rustdoc links (vt_100_pty_output_parser, lib.rs).
+pub(crate) mod paint; // Cross-folder rustdoc links (lib.rs, flat_2d_array/core, render_op_common).
+pub(crate) mod render_op; // Cross-folder rustdoc links and RenderOpCommon imports (direct_to_ansi).
+
+// Attach. Folder-local (Intra-module).
 mod backend_selection;
-
-#[cfg(any(test, doc))]
-pub mod render_pipeline;
-#[cfg(not(any(test, doc)))]
-mod render_pipeline;
-
-#[cfg(any(test, doc))]
-pub mod crossterm_backend;
-#[cfg(not(any(test, doc)))]
-mod crossterm_backend;
-
-// Private in production, public for docs/tests (enables rustdoc links to submodules).
-
-#[cfg(any(test, doc))]
-pub mod compositor_render_ops_to_ofs_buf;
-#[cfg(not(any(test, doc)))]
-mod compositor_render_ops_to_ofs_buf;
-
-#[cfg(any(test, doc))]
-pub mod direct_to_ansi;
-#[cfg(not(any(test, doc)))]
-mod direct_to_ansi;
-
-#[cfg(any(test, doc))]
-pub mod ofs_buf;
-#[cfg(not(any(test, doc)))]
-mod ofs_buf;
-
-#[cfg(any(test, doc))]
-pub mod offscreen_buffer_pool;
-#[cfg(not(any(test, doc)))]
 mod offscreen_buffer_pool;
-
-#[cfg(any(test, doc))]
-pub mod paint;
-#[cfg(not(any(test, doc)))]
-mod paint;
-
-#[cfg(any(test, doc))]
-pub mod render_op;
-#[cfg(not(any(test, doc)))]
-mod render_op;
-
-#[cfg(any(test, doc))]
-pub mod render_tui_styled_texts;
-#[cfg(not(any(test, doc)))]
 mod render_tui_styled_texts;
-
-#[cfg(any(test, doc))]
-pub mod z_order;
-#[cfg(not(any(test, doc)))]
 mod z_order;
 
-/***********************************************/
-/** Re-export shared components (Stages 1-5). **/
-/***********************************************/
+// Re-export.
 pub use compositor_render_ops_to_ofs_buf::*;
 pub use ofs_buf::*;
 pub use offscreen_buffer_pool::*;

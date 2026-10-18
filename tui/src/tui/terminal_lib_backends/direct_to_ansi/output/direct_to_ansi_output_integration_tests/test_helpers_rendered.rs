@@ -32,11 +32,10 @@
 //! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`StdoutMock`]: StdoutMock
 
-use crate::{InlineString, NarrowingCastToU16, OfsBufVT100, OutputDevice, RenderOpOutput,
-            RenderOpPaint, RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, RgbValue,
-            TuiColor, TuiStyle, TuiStyleAttribs, VPSize, render_op::RenderOpCommon,
-            test_fixtures::output_device_fixtures::OutputDeviceExt, vp_col, vp_height,
-            vp_pos, vp_row, vp_width};
+use crate::{InlineString, NarrowingCastToU16, OfsBufVT100, OutputDevice, OutputDeviceExt,
+            RenderOpOutput, RenderOpPaint, RenderOpPaintImplDirectToAnsi,
+            RenderOpsLocalData, RgbValue, TuiColor, TuiStyle, TuiStyleAttribs, VPSize,
+            render_op::RenderOpCommon, vp_col, vp_height, vp_pos, vp_row, vp_width};
 
 /// Standard buffer size for rendered tests (matches typical terminal).
 pub fn rendered_test_buffer_size() -> VPSize { vp_width(80) + vp_height(24) }

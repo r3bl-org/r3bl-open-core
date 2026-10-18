@@ -32,8 +32,8 @@ macro_rules! req_size_pc {
         height: $arg_height: expr
     ) => {
         $crate::ReqSizePc {
-            width_pc: $crate::pc!($arg_width)?,
-            height_pc: $crate::pc!($arg_height)?,
+            width_pc: $crate::Pc::try_from($arg_width)?,
+            height_pc: $crate::Pc::try_from($arg_height)?,
         }
     };
 }

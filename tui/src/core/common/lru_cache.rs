@@ -35,8 +35,7 @@
 //! assert_eq!(cache.get(&"key".to_string()), Some(&42));
 //! ```
 
-use crate::StdMutex;
-use rustc_hash::{FxBuildHasher, FxHashMap};
+use crate::{FxBuildHasher, HashMap, StdMutex};
 use std::{hash::Hash, sync::Arc};
 
 /// Entry in the LRU cache containing the value and access metadata.
@@ -53,7 +52,7 @@ struct CacheEntry<V> {
 /// counter to ensure true LRU behavior.
 #[derive(Debug)]
 pub struct LruCache<K, V> {
-    map: FxHashMap<K, CacheEntry<V>>,
+    map: HashMap<K, CacheEntry<V>>,
     capacity: usize,
     access_counter: u64,
 }
@@ -76,7 +75,7 @@ where
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Cache capacity must be greater than 0");
         Self {
-            map: FxHashMap::with_capacity_and_hasher(capacity, FxBuildHasher),
+            map: HashMap::with_capacity_and_hasher(capacity, FxBuildHasher),
             capacity,
             access_counter: 0,
         }

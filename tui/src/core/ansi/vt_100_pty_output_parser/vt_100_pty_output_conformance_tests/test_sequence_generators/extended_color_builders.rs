@@ -29,7 +29,7 @@
 //! modules aren't accessible from doctests -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
 //! // 256-color sequences
 //! let fg = fg_ansi256(196);                  // → "\x1b[38:5:196m"

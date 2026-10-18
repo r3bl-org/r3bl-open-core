@@ -4,25 +4,21 @@
 //! [`StyleUSSpanLines`].
 
 use super::create_color_wheel_from_heading_data;
-use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
-            HyperlinkData, InlineString, Lines, MdDocument, MdElement, MdLineFragment,
-            PrettyPrintDebug, RenderList, StyleUSSpan, StyleUSSpanLine,
-            StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
-            ZeroCopyGapBuffer, convert_syntect_to_styled_text,
-            generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
-            get_bold_style, get_checkbox_checked_style, get_checkbox_unchecked_style,
+use crate::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, CODE_BLOCK_START_PARTIAL,
+            CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
+            CommonResult, DATE, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
+            HyperlinkData, InlineString, LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
+            Lines, MdDocument, MdElement, MdLineFragment, NEW_LINE, PrettyPrintDebug,
+            RIGHT_BRACKET, RIGHT_IMAGE, RIGHT_PARENTHESIS, RenderList, STAR, StyleUSSpan,
+            StyleUSSpanLine, StyleUSSpanLines, TAGS, TITLE, TextColorizationPolicy,
+            TuiStyle, TuiStyledTexts, UNCHECKED_OUTPUT, UNDERSCORE, ZeroCopyGapBuffer,
+            convert_highlighted_line_from_syntect_to_tui,
+            generate_ordered_list_item_bullet, generate_unordered_list_item_bullet, get_bold_style,
+            get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
-            tui::md_parser::md_parser_constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT,
-                                                  CODE_BLOCK_START_PARTIAL, DATE,
-                                                  LEFT_BRACKET, LEFT_IMAGE,
-                                                  LEFT_PARENTHESIS, NEW_LINE,
-                                                  RIGHT_BRACKET, RIGHT_IMAGE,
-                                                  RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
-                                                  UNCHECKED_OUTPUT, UNDERSCORE}};
+            get_list_bullet_style, parse_markdown, try_get_syntax_ref};
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
@@ -88,13 +84,12 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use super::*;
-    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, new_style,
-                throws, tui_color};
+    use crate::{ColorSupport, fg_cyan, global_color_support};
     use serial_test::serial;
 
-    /// [`RAII`] guard for color support override cleanup
+    /// [RAII] guard for color support override cleanup
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }
@@ -331,8 +326,9 @@ mod from_block_codeblock_helper {
     use super::{CODE_BLOCK_START_PARTIAL, CodeBlockLineContent, CodeBlockLines,
                 HighlightLines, RenderList, StyleUSSpan, StyleUSSpanLine,
                 StyleUSSpanLines, SyntaxSet, Theme, TuiStyle,
-                convert_syntect_to_styled_text, get_code_block_content_style,
-                get_code_block_lang_style, get_foreground_dim_style, try_get_syntax_ref};
+                convert_highlighted_line_from_syntect_to_tui,
+                get_code_block_content_style, get_code_block_lang_style,
+                get_foreground_dim_style, try_get_syntax_ref};
 
     #[allow(clippy::similar_names)]
     pub fn try_use_syntect(
@@ -367,9 +363,9 @@ mod from_block_codeblock_helper {
                     )> = highlighter.highlight_line(line_of_text, syntax_set).ok()?;
 
                     let line_converted_to_tui: RenderList<StyleUSSpan> =
-                                convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
-                                    &syntect_highlighted_line,
-                                );
+                        convert_highlighted_line_from_syntect_to_tui(
+                            &syntect_highlighted_line,
+                        );
 
                     acc_line_output += line_converted_to_tui;
                 }
@@ -736,15 +732,15 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
     use super::*;
-    use crate::{BulletKind, CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
+    use crate::{BulletKind, CodeBlockLine, ColorSupport, HeadingLevel,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style,
-                global_color_support, new_style, parse_list, throws, tui_color};
+                global_color_support};
     use serial_test::serial;
 
-    /// [`RAII`] guard for color support override cleanup
+    /// [RAII] guard for color support override cleanup
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
         fn drop(&mut self) { global_color_support::clear_override(); }

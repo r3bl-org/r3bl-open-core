@@ -11,7 +11,7 @@
 use super::{erase_mode::{EraseDisplayMode, EraseLineMode},
             private_mode::PrivateModeType};
 use crate::{BufTextStorage, CsiCount, FastStringify, TermCol, TermColDelta, TermRow,
-            TermRowDelta, WideningCastToU16, convert_u16_to_ascii_str_slice,
+            TermRowDelta, WideningCastToU16,
             core::ansi::{constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE,
                                      CPL_CURSOR_PREV_LINE, CSI_PARAM_SEPARATOR,
                                      CSI_PRIVATE_MODE_PREFIX, CSI_START,
@@ -26,8 +26,7 @@ use crate::{BufTextStorage, CsiCount, FastStringify, TermCol, TermColDelta, Term
                                      RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR,
                                      SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE,
                                      SU_SCROLL_UP, VPA_VERTICAL_POSITION},
-                         generator::DsrRequestType},
-            generate_impl_display_for_fast_stringify, ok};
+                         generator::DsrRequestType}};
 use smallvec::SmallVec;
 use std::fmt::Formatter;
 

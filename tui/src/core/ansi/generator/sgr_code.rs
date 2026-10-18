@@ -48,7 +48,7 @@
 //! We use **semicolons** because:
 //!
 //! 1. **Universal compatibility**: Semicolons work in virtually all terminals, while
-//!    colons are not supported by [`VSCode`]/[`xterm.js`] and many older terminals.
+//!    colons are not supported by `VSCode`/`xterm.js` and many older terminals.
 //!
 //! 2. **[`xterm`] established the standard**: Most terminal emulators implement
 //!    [`xterm`]'s semicolon format, not the ISO standard's colon format.
@@ -66,6 +66,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Crossterm backend`]: crate::crossterm_backend
+//! [`Display`]: std::fmt::Display
 //! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -76,8 +77,7 @@ use crate::{ANSIBasicColor, AnsiValue, CSI_START, FastStringify, SGR_BOLD_STR,
             SGR_RESET_BOLD_DIM_STR, SGR_RESET_HIDDEN_STR, SGR_RESET_INVERT_STR,
             SGR_RESET_ITALIC_STR, SGR_RESET_STR, SGR_RESET_STRIKETHROUGH_STR,
             SGR_RESET_UNDERLINE_STR, SGR_SET_GRAPHICS, SGR_SLOW_BLINK_STR,
-            SGR_STRIKETHROUGH_STR, SGR_UNDERLINE_STR, WideningCastToUsize,
-            generate_impl_display_for_fast_stringify, ok};
+            SGR_STRIKETHROUGH_STR, SGR_UNDERLINE_STR, WideningCastToUsize};
 
 /// Select Graphic Rendition ([`SGR`], [`SGR` spec]) codes for [`ANSI`] text styling.
 ///

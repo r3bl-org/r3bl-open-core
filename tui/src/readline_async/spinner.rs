@@ -4,7 +4,8 @@ use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
             TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
             contains_ansi_escape_sequence, emit_stderr_redirection_disclaimer,
-            get_terminal_width, ok, spinner_print, spinner_render};
+            get_terminal_width, print_start_if_standalone, print_tick_final_msg,
+            print_tick_interval_msg, render_final_tick, render_tick};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
 
@@ -322,7 +323,7 @@ impl Spinner {
         let self_safe_is_shutdown = self.safe_is_shutdown.clone();
 
         // This does nothing if this is used in a `ReadlineAsyncContext` context.
-        spinner_print::print_start_if_standalone(
+        print_start_if_standalone(
             self.output_device.clone(),
             &self.maybe_shared_writer,
         )?;
@@ -363,13 +364,13 @@ impl Spinner {
                             }
 
                             // Print the final message.
-                            let final_output = spinner_render::render_final_tick(
+                            let final_output = render_final_tick(
                                 &style_clone,
                                 &final_message_clone,
                                 get_terminal_width(),
                             );
                             // We don't care about the result of this operation.
-                            spinner_print::print_tick_final_msg(
+                            print_tick_final_msg(
                                 &style_clone,
                                 &final_output,
                                 output_device_clone.clone(),
@@ -412,14 +413,14 @@ impl Spinner {
                             // Render and print the interval message, based on style.
                             let current_message = interval_message_clone.read(Clone::clone);
 
-                            let output = spinner_render::render_tick(
+                            let output = render_tick(
                                 &mut style_clone,
                                 &current_message,
                                 count,
                                 get_terminal_width(),
                             );
                             // We don't care about the result of this operation.
-                            spinner_print::print_tick_interval_msg(
+                            print_tick_interval_msg(
                                 &style_clone,
                                 &output,
                                 output_device_clone.clone()

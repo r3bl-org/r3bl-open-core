@@ -265,7 +265,7 @@ pub enum SelectionStartVPLocation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ZeroCopyGapBuffer, assert_eq2, c_col, c_pos, c_row};
+    use crate::{ZeroCopyGapBuffer, c_col, c_pos, c_row};
 
     #[test]
     fn test_clip_to_range_str() {

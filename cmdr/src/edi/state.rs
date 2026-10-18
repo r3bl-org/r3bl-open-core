@@ -1,19 +1,18 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AnalyticsAction, edi::Id, report_analytics};
-use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
+use r3bl_tui::{DEBUG_TUI, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
                EditorBuffer, FileExtensionToken, FilePathToken, FlexBoxId,
-               HasDialogBuffers, HasEditorBuffers, InlineString, TinyInlineString,
-               fg_green, fg_red, inline_string, into_existing, ok};
-use rustc_hash::FxHashMap;
+               HasDialogBuffers, HasEditorBuffers, HashMap, InlineString,
+               TinyInlineString, fg_green, fg_red, inline_string, ok, read_from_file};
 use std::{ffi::OsStr,
           fmt::{Debug, Display, Formatter, Result},
           path::Path};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffers: FxHashMap<FlexBoxId, DialogBuffer>,
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
 }
 
 pub mod constructor {
@@ -24,7 +23,7 @@ pub mod constructor {
         fn default() -> Self {
             Self {
                 editor_buffers: create_hash_map_of_editor_buffers(None),
-                dialog_buffers: FxHashMap::default(),
+                dialog_buffers: HashMap::default(),
             }
         }
     }
@@ -34,7 +33,7 @@ pub mod constructor {
         match maybe_file_path {
             Some(_) => State {
                 editor_buffers: create_hash_map_of_editor_buffers(maybe_file_path),
-                dialog_buffers: FxHashMap::default(),
+                dialog_buffers: HashMap::default(),
             },
             None => State::default(),
         }
@@ -42,7 +41,7 @@ pub mod constructor {
 
     fn create_hash_map_of_editor_buffers(
         maybe_file_path: Option<&str>,
-    ) -> FxHashMap<FlexBoxId, EditorBuffer> {
+    ) -> HashMap<FlexBoxId, EditorBuffer> {
         let editor_buffer = {
             let file_ext = &file_utils::get_file_extension(maybe_file_path);
 
@@ -59,7 +58,7 @@ pub mod constructor {
         };
 
         {
-            let mut it = FxHashMap::default();
+            let mut it = HashMap::default();
             it.insert(FlexBoxId::from(Id::ComponentEditor), editor_buffer);
             it
         }
@@ -86,7 +85,7 @@ pub mod file_utils {
     }
 
     /// This is just a wrapper around
-    /// [`into_existing::read_from_file::try_read_file_path_into_inline_string()`].
+    /// [`read_from_file::try_read_file_path_into_inline_string()`].
     pub fn read_file_into_storage(maybe_file_path: Option<&str>) -> DocumentStorage {
         // Create an empty document storage.
         let mut acc = DocumentStorage::new();
@@ -94,11 +93,11 @@ pub mod file_utils {
         // Read the file contents into acc if possible (file exists, have read
         // permissions, etc).
         if let Some(file_path) = maybe_file_path {
-            match into_existing::read_from_file::try_read_file_path_into_inline_string(
+            match read_from_file::try_read_file_path_into_inline_string(
                 &mut acc, file_path,
             ) {
                 Ok(()) => {
-                    DEBUG_TUI_MOD.then(|| {
+                    DEBUG_TUI.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "💾💾💾✅ Successfully read file",
@@ -134,7 +133,7 @@ pub mod file_utils {
             let result_file_write = std::fs::write(&*file_path, &content);
             match result_file_write {
                 Ok(()) => {
-                    DEBUG_TUI_MOD.then(|| {
+                    DEBUG_TUI.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "💾💾💾❌ Successfully saved file",
@@ -259,7 +258,7 @@ mod tests {
     use crate::edi::Id;
     use r3bl_tui::{DialogBuffer, EditorBuffer, FlexBoxId, HasDialogBuffers,
                    HasEditorBuffers, InlineString, InlineVec, assert_eq2,
-                   friendly_random_id};
+                   generate_friendly_random_id};
 
     #[test]
     fn test_file_extension() {
@@ -303,10 +302,7 @@ mod tests {
     #[test]
     fn test_read_file_content() {
         // Make up a file name.
-        let filename = &format!(
-            "/tmp/{}_file.md",
-            friendly_random_id::generate_friendly_random_id()
-        );
+        let filename = &format!("/tmp/{}_file.md", generate_friendly_random_id());
         println!("🍍🍎🍏filename: {filename}");
 
         // Write some content to this file.
@@ -323,10 +319,7 @@ mod tests {
     #[test]
     fn test_state_constructor_with_file() {
         // Make up a file name.
-        let filename = format!(
-            "/tmp/{}_file.md",
-            friendly_random_id::generate_friendly_random_id()
-        );
+        let filename = format!("/tmp/{}_file.md", generate_friendly_random_id());
         let maybe_file_path = Some(filename.as_str());
         println!("🍍🍎🍏filename: {filename}");
 

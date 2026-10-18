@@ -1,17 +1,26 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Color specification parsing for [`OSC`] color sequences.
+//! Color specification parsing and report types for [`OSC`] color sequences.
 //!
-//! Handles terminal color specifications in both:
+//! Defines [`TerminalColorReport`] and [`TerminalColorRole`], and handles terminal color
+//! specifications in both:
 //! - Standard X11/XTerm format: `rgb:rrrr/gggg/bbbb` (1 to 4 hex digits per channel)
 //! - Hex formats: `#rrggbb` and `#rgb`
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
+//! [`TerminalColorReport`]: TerminalColorReport
+//! [`TerminalColorRole`]: TerminalColorRole
 
-use crate::{LossyConvertToByte, RgbValue,
+use crate::{HexSlice, OSC_CODE_COLOR_REPORT_BACKGROUND, OSC_CODE_COLOR_REPORT_CURSOR,
+            OSC_CODE_COLOR_REPORT_FOREGROUND, OSC_CODE_COLOR_REPORT_HIGHLIGHT,
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND,
+            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND,
+            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND, RgbValue,
             core::ansi::constants::{OSC_COLOR_SPEC_CHANNEL_SEPARATOR,
                                     OSC_COLOR_SPEC_HASH_PREFIX,
                                     OSC_COLOR_SPEC_RGB_PREFIX}};
+use std::{fmt::{Display, Formatter},
+          str::FromStr};
 
 /// Parses a terminal color payload, supporting both the standard X11/XTerm
 /// `rgb:rrrr/gggg/bbbb` format and the hash hex `#rrggbb` / `#rgb` format.
@@ -54,17 +63,23 @@ fn try_parse_rgb_spec_color(payload: &[u8]) -> Option<RgbValue> {
 
 /// Parses 1, 2, 3, or 4 hex digits into an 8-bit color channel (`0..=255`).
 fn try_parse_hex_channel(slice: &[u8]) -> Option<u8> {
-    let hex_str = std::str::from_utf8(slice).ok()?;
-    let value = u16::from_str_radix(hex_str, 16).ok()?;
-    let channel = match hex_str.len() {
-        1 => value * 17, // 4-bit to 8-bit duplication (e.g., 0xF -> 0xFF).
-        2 => value,      // 8-bit full value.
-        3 => value >> 4, // 12-bit to top 8 bits.
-        4 => value >> 8, // 16-bit to top 8 bits.
-        _ => return None,
-    };
-
-    Some(LossyConvertToByte::to_u8_lossy(channel))
+    match *slice {
+        // 1 hex digit (4-bit): duplicate into both nibbles (e.g., b'f' -> "ff" = 0xff).
+        [d] => HexSlice::decode_byte(d, d),
+        // 2 hex digits (8-bit): full byte value (e.g., b"8a" -> 0x8a).
+        [hi, lo] => HexSlice::decode_byte(hi, lo),
+        // 3 hex digits (12-bit): validate trailing digit, keep upper 8 bits.
+        [hi, lo, d2] => {
+            HexSlice::decode_nibble(d2)?;
+            HexSlice::decode_byte(hi, lo)
+        }
+        // 4 hex digits (16-bit): validate trailing pair, keep upper 8 bits.
+        [hi, lo, d2, d3] => {
+            HexSlice::decode_byte(d2, d3)?;
+            HexSlice::decode_byte(hi, lo)
+        }
+        _ => None,
+    }
 }
 
 /// Parses `#RRGGBB` or `#RGB` hex colors into an [`RgbValue`].
@@ -84,11 +99,219 @@ fn try_parse_hash_hex_color(payload: &[u8]) -> Option<RgbValue> {
     Some(RgbValue::from_u8(red, green, blue))
 }
 
+/// Structured terminal color response decoded from an [`OSC`] 10, 11, 12, 13, 14, 17, or
+/// 19 sequence.
+///
+/// Contains the reported [`RgbValue`] and the functional [`TerminalColorRole`] it applies
+/// to.
+///
+/// [`OSC`]: crate::OscSequence
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TerminalColorReport {
+    pub role: TerminalColorRole,
+    pub color: RgbValue,
+}
+
+/// Functional role for a terminal color report sequence ([`OSC`] 10, 11, 12, 13, 14, 17,
+/// or 19).
+///
+/// # Omitted Sequences ([`OSC`] 15, 16, and 18)
+///
+/// In the [XTerm Control Sequences] specification for dynamic window colors ([`OSC`]
+/// 10-19), parameter codes 15, 16, and 18 are historically allocated to Tektronix 4014
+/// mode:
+/// - [`OSC`] 15: Tektronix foreground color.
+/// - [`OSC`] 16: Tektronix background color.
+/// - [`OSC`] 18: Tektronix cursor color.
+///
+/// Because modern terminal emulators do not implement Tektronix vector graphics
+/// emulation, these sequences are obsolete and omitted here. Only the [`VT-100`] text,
+/// cursor, pointer, and highlight color roles are supported.
+///
+/// [`OSC`]: crate::OscSequence
+/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
+/// [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TerminalColorRole {
+    /// Foreground color report ([`OSC`] 10).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    Foreground,
+
+    /// Background color report ([`OSC`] 11).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    Background,
+
+    /// Text cursor color report ([`OSC`] 12).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    Cursor,
+
+    /// Mouse pointer foreground color report ([`OSC`] 13).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    MouseForeground,
+
+    /// Mouse pointer background color report ([`OSC`] 14).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    MouseBackground,
+
+    /// Highlight / selection background color report ([`OSC`] 17).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    Highlight,
+
+    /// Highlight / selection foreground color report ([`OSC`] 19).
+    ///
+    /// [`OSC`]: crate::OscSequence
+    HighlightForeground,
+}
+
+impl TerminalColorRole {
+    /// Returns the [`OSC`] parameter code for this color role.
+    ///
+    /// [`OSC`]: crate::OscSequence
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Foreground => OSC_CODE_COLOR_REPORT_FOREGROUND,
+            Self::Background => OSC_CODE_COLOR_REPORT_BACKGROUND,
+            Self::Cursor => OSC_CODE_COLOR_REPORT_CURSOR,
+            Self::MouseForeground => OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND,
+            Self::MouseBackground => OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND,
+            Self::Highlight => OSC_CODE_COLOR_REPORT_HIGHLIGHT,
+            Self::HighlightForeground => OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND,
+        }
+    }
+}
+
+impl FromStr for TerminalColorRole {
+    type Err = ();
+
+    fn from_str(code: &str) -> Result<Self, Self::Err> {
+        match code {
+            OSC_CODE_COLOR_REPORT_FOREGROUND => Ok(Self::Foreground),
+            OSC_CODE_COLOR_REPORT_BACKGROUND => Ok(Self::Background),
+            OSC_CODE_COLOR_REPORT_CURSOR => Ok(Self::Cursor),
+            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND => Ok(Self::MouseForeground),
+            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND => Ok(Self::MouseBackground),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT => Ok(Self::Highlight),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND => Ok(Self::HighlightForeground),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Display for TerminalColorRole {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{OscSequence, TerminalColorReport, TerminalColorRole,
-                core::ansi::constants::*};
+    use crate::{OscSequence, RgbValue, core::ansi::constants::*};
+
+    #[test]
+    fn test_terminal_color_role_display() {
+        assert_eq!(
+            TerminalColorRole::Foreground.as_str(),
+            OSC_CODE_COLOR_REPORT_FOREGROUND
+        );
+        assert_eq!(
+            TerminalColorRole::Background.as_str(),
+            OSC_CODE_COLOR_REPORT_BACKGROUND
+        );
+        assert_eq!(
+            TerminalColorRole::Cursor.as_str(),
+            OSC_CODE_COLOR_REPORT_CURSOR
+        );
+        assert_eq!(
+            TerminalColorRole::MouseForeground.as_str(),
+            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND
+        );
+        assert_eq!(
+            TerminalColorRole::MouseBackground.as_str(),
+            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND
+        );
+        assert_eq!(
+            TerminalColorRole::Highlight.as_str(),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT
+        );
+        assert_eq!(
+            TerminalColorRole::HighlightForeground.as_str(),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND
+        );
+
+        assert_eq!(
+            format!("{}", TerminalColorRole::Foreground),
+            OSC_CODE_COLOR_REPORT_FOREGROUND
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::Background),
+            OSC_CODE_COLOR_REPORT_BACKGROUND
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::Cursor),
+            OSC_CODE_COLOR_REPORT_CURSOR
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::MouseForeground),
+            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::MouseBackground),
+            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::Highlight),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT
+        );
+        assert_eq!(
+            format!("{}", TerminalColorRole::HighlightForeground),
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND
+        );
+    }
+
+    #[test]
+    fn test_terminal_color_role_from_str() {
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_FOREGROUND.parse(),
+            Ok(TerminalColorRole::Foreground)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_BACKGROUND.parse(),
+            Ok(TerminalColorRole::Background)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_CURSOR.parse(),
+            Ok(TerminalColorRole::Cursor)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND.parse(),
+            Ok(TerminalColorRole::MouseForeground)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND.parse(),
+            Ok(TerminalColorRole::MouseBackground)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT.parse(),
+            Ok(TerminalColorRole::Highlight)
+        );
+        assert_eq!(
+            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND.parse(),
+            Ok(TerminalColorRole::HighlightForeground)
+        );
+
+        assert!("".parse::<TerminalColorRole>().is_err());
+        assert!("0".parse::<TerminalColorRole>().is_err());
+        assert!("20".parse::<TerminalColorRole>().is_err());
+        assert!("invalid".parse::<TerminalColorRole>().is_err());
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -339,5 +562,11 @@ mod tests {
         assert_eq!(try_parse_color_spec(b""), None);
         // 5 hex digits that parse as u16 but exceed 4-digit channel limit.
         assert_eq!(try_parse_color_spec(b"rgb:00000/00/00"), None);
+        // Leading '+' sign (accepted by u16::from_str_radix) is rejected.
+        assert_eq!(try_parse_color_spec(b"rgb:+f/+f/+f"), None);
+        assert_eq!(try_parse_color_spec(b"#+f0000"), None);
+        // Invalid trailing hex digits in 3- and 4-digit channels are rejected.
+        assert_eq!(try_parse_color_spec(b"rgb:12g/00/00"), None);
+        assert_eq!(try_parse_color_spec(b"rgb:123g/00/00"), None);
     }
 }

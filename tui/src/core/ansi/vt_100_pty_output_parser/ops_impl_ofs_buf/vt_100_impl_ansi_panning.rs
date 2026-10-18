@@ -69,8 +69,9 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{OfsBufVT100, term_row, vp_height, vp_width,
-                vt_100_pty_output_conformance_tests::nz};
+    use crate::{OfsBufVT100,
+                core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::nz,
+                term_row, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = vp_width(10) + vp_height(6);

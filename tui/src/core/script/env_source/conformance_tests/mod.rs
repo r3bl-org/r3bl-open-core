@@ -26,15 +26,7 @@
 
 #![rustfmt::skip]
 
-// Note: `test_data` and `test_fixtures` are declared `pub mod` (rather than private
-// `mod`) so cross-platform fixtures (such as Windows batch scripts and mock environments)
-// are treated as an exposed test interface and not flagged as dead code when compiling on
-// Unix, and vice versa. The parent module `env_source/mod.rs` gates this entire module
-// behind `#[cfg(test)]`, so none of these items leak into production builds.
-
-pub mod test_data;
-pub mod test_fixtures;
-
-// Tests.
-
+// Attach.
+mod test_data;
+mod test_fixtures;
 mod tests;

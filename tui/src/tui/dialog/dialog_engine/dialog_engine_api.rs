@@ -10,8 +10,7 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             TextColorizationPolicy, TuiStyle, VPBoundingBox, VPPos, VPSize,
             ViewportBoundsCheck, WideningCastToU8, WideningCastToU16, ZOrder, c_col,
             c_row, ch,
-            editor_engine::engine_public_api,
-            inline_string, ok, pc, render_tui_styled_texts_into, throws_with_return,
+            editor_engine::engine_public_api, render_tui_styled_texts_into,
             tui_style_attrib::{Dim, Underline},
             tui_style_attribs, u16, vp_col, vp_height, vp_row, vp_width};
 use std::{borrow::Cow, fmt::Debug};
@@ -227,9 +226,9 @@ mod impl_internal {
     ///   escapes the boundaries of the layout engine and really just paints itself on top
     ///   of everything. It can reach any corner of the screen.
     ///   - In autocomplete mode it sizes itself differently than in normal mode.
-    /// - However, it is still constrained by the bounds of the [Surface] itself and does
+    /// - However, it is still constrained by the bounds of the [`Surface`] itself and does
     ///   not take into account the full window size (in case these are different). This
-    ///   only applies if a [Surface] is passed in as an argument.
+    ///   only applies if a [`Surface`] is passed in as an argument.
     ///
     /// ```text
     /// EditorEngineFlexBox {
@@ -239,6 +238,8 @@ mod impl_internal {
     ///   maybe_computed_style: None,
     /// }
     /// ```
+    ///
+    /// [`Surface`]: crate::Surface
     pub fn make_flex_box_for_dialog(
         dialog_id: FlexBoxId,
         dialog_options: DialogEngineConfig,
@@ -637,8 +638,10 @@ mod impl_internal {
         ops
     }
 
-    /// Only Colorizes text in-place if [Style]'s `lolcat` field is true. Otherwise leaves
-    /// `text` alone.
+    /// Only Colorizes text in-place if [`TuiStyle`]'s `lolcat` field is true. Otherwise
+    /// leaves `text` alone.
+    ///
+    /// [`TuiStyle`]: crate::TuiStyle
     fn lolcat_from_style(
         ops: &mut RenderOpIRVec,
         color_wheel: &mut ColorWheel,
@@ -696,7 +699,8 @@ mod impl_internal {
         use super::{ColorWheel, DialogEngine, DialogEngineMode, DisplayConstants,
                     RenderOpCommon, RenderOpIRVec, TuiStyle, VPPos, VPSize,
                     lolcat_from_style, u16};
-        use crate::{WideningCastToU16, border_cache, vp_col, vp_row};
+        use super::super::super::border_cache;
+        use crate::{WideningCastToU16, vp_col, vp_row};
 
         /// Renders all border lines for the dialog
         pub fn render_border_lines(
@@ -983,9 +987,9 @@ mod impl_internal {
 
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
+    use super::super::super::test_dialog::mock_real_objects_for_dialog::{self, make_global_data};
     use super::*;
-    use crate::{HasFocus, assert_eq2,
-                test_dialog::mock_real_objects_for_dialog::{self, make_global_data}};
+    use crate::HasFocus;
 
     #[test]
     fn render_engine_with_no_dialog_buffer_in_state() {
@@ -1022,7 +1026,7 @@ mod test_dialog_engine_api_render_engine {
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
     use super::*;
-    use crate::{Surface, assert_eq2};
+    use crate::Surface;
 
     /// More info on `is` and downcasting:
     /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
@@ -1211,8 +1215,8 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
 #[cfg(test)]
 mod test_dialog_engine_api_apply_event {
+    use super::super::super::test_dialog::mock_real_objects_for_dialog;
     use super::*;
-    use crate::{assert_eq2, key_press, test_dialog::mock_real_objects_for_dialog};
 
     #[test]
     fn apply_event_esc() {

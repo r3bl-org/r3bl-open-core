@@ -8,7 +8,7 @@
 //! getting, setting, swapping, and shifting lines.
 
 use super::{OfsBuf, PixelChar};
-use crate::{CanvasStorage, Flat2DArray, VPRow, ok};
+use crate::{CanvasStorage, Flat2DArray, VPRow};
 
 /// Line-level operations.
 impl<S: CanvasStorage> OfsBuf<S> {

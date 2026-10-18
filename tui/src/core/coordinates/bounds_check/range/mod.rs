@@ -5,25 +5,10 @@
 #![rustfmt::skip]
 
 // Attach.
-#[cfg(any(test, doc))]
-pub mod range_bounds_check;
-#[cfg(not(any(test, doc)))]
-mod range_bounds_check;
-
-#[cfg(any(test, doc))]
-pub mod range_construct_ext;
-#[cfg(not(any(test, doc)))]
-mod range_construct_ext;
-
-#[cfg(any(test, doc))]
-pub mod range_convert_ext;
-#[cfg(not(any(test, doc)))]
-mod range_convert_ext;
-
-#[cfg(any(test, doc))]
-pub mod range_ext;
-#[cfg(not(any(test, doc)))]
-mod range_ext;
+pub(crate) mod range_bounds_check; // Linked from parent bounds_check module docs.
+pub(crate) mod range_construct_ext; // Linked from parent bounds_check module docs.
+pub(crate) mod range_convert_ext; // Linked from parent bounds_check module docs.
+pub(crate) mod range_ext; // Linked from parent bounds_check module docs.
 
 // Re-export.
 pub use range_bounds_check::*;

@@ -126,7 +126,7 @@ use std::collections::VecDeque;
 /// [`mio_poller`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller
 /// [`MioPollWorker`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
 /// [`OSC_PREFIX`]: crate::OSC_PREFIX
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscCircuitBreaker::Open`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker::Open
 /// [`parse_stdin_bytes_with_sender()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::parse_stdin_bytes_with_sender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -145,7 +145,7 @@ use std::collections::VecDeque;
 /// [`UnparsedBufferAction`]: UnparsedBufferAction
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 #[derive(Debug)]
 pub struct ChunkFramer {
     /// Accumulator for current [`ANSI`] escape sequence being parsed.
@@ -158,7 +158,7 @@ pub struct ChunkFramer {
 
     /// Circuit breaker for swallowing runaway [`OSC`] sequences without allocating.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     osc_circuit_breaker: OscCircuitBreaker,
 }
 
@@ -220,7 +220,7 @@ impl ChunkFramer {
     ///
     /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
     /// [`MioPollWorker`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker
     /// [`read()`]: https://manpages.debian.org/read.2
     /// [`stdin`]: std::io::stdin

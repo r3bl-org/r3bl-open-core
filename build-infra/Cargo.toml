@@ -21,8 +21,14 @@ reference-style links, auto-links technical terms, and normalizes code fences \
 keywords = ["rustdoc", "markdown", "formatter", "cargo-subcommand", "documentation"]
 categories = ["development-tools", "command-line-utilities"]
 
-# https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
 [package.metadata.docs.rs]
+# Passes `--document-private-items` when docs.rs builds this crate in the cloud
+# (docs.rs ignores `.cargo/config.toml` and `check_docs.fish`, and only reads
+# `[package.metadata.docs.rs]`). Controls what pages are rendered (private modules,
+# structs, and functions get HTML pages).
+rustdoc-args = ["--document-private-items"]
+# Build docs for Linux, macOS, and Windows (docs.rs only builds default target otherwise):
+# https://blog.rust-lang.org/2026/04/04/docsrs-only-default-targets/
 targets = [
     "x86_64-unknown-linux-gnu",
     "x86_64-apple-darwin",
@@ -51,8 +57,8 @@ thiserror = "2.0.17"
 json5 = "1.3"
 walkdir = "2.5"
 unicode-width = "0.2"
-rustc-hash = "2.1.0"
 
 [dev-dependencies]
 test-case = "3.3.1"
 tempfile = "3.23"
+similar = "2.6"

@@ -210,7 +210,6 @@ macro_rules! generate_impl_display_for_fast_stringify {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ok;
     use pretty_assertions::assert_eq;
     use std::fmt::Write;
 

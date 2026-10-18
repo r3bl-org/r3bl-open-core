@@ -1,14 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, ItemsOwned, ResultAndCommand, Run, command, ok,
-            script::git::types::{LocalBranchInfo,
-                                 git_command_args::{GIT_ARG_CREATE_BRANCH,
-                                                    GIT_ARG_DELETE_FORCE,
-                                                    GIT_ARG_FORMAT,
-                                                    GIT_ARG_REFNAME_SHORT,
-                                                    GIT_ARG_SHOW_CURRENT},
-                                 git_command_names::{GIT_CMD_BRANCH, GIT_CMD_CHECKOUT,
-                                                     GIT_PROGRAM}}};
+use super::types::{LocalBranchInfo,
+                   git_command_args::{GIT_ARG_CREATE_BRANCH, GIT_ARG_DELETE_FORCE,
+                                      GIT_ARG_FORMAT, GIT_ARG_REFNAME_SHORT,
+                                      GIT_ARG_SHOW_CURRENT},
+                   git_command_names::{GIT_CMD_BRANCH, GIT_CMD_CHECKOUT, GIT_PROGRAM}};
+use crate::{InlineString, ItemsOwned, ResultAndCommand, Run};
 
 pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
     let mut cmd = command!(
@@ -202,12 +199,9 @@ pub(super) async fn try_execute_git_command_to_get_branches()
 
 #[cfg(test)]
 mod tests {
+    use super::super::{git_test_fixtures::helper_setup_git_repo_with_commit,
+                       types::{BranchExists, git_ui_strings::CURRENT_BRANCH_PREFIX}};
     use super::*;
-    use crate::{generate_async_isolated_process_test, inline_vec, ok,
-                script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
-                              types::{BranchExists,
-                                      git_ui_strings::CURRENT_BRANCH_PREFIX}},
-                try_create_temp_dir_and_cd, with_saved_pwd};
 
     async fn test_try_get_current_branch_name() -> miette::Result<()> {
         with_saved_pwd!(async {

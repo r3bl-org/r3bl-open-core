@@ -109,8 +109,8 @@ use std::{env::vars_os, path::PathBuf};
 ///
 /// [`BaseEnv`]: crate::BaseEnv
 /// [`bass`]: https://github.com/edc/bass
-/// [`diff::compute_env_diff`]: crate::diff::compute_env_diff
-/// [`diff::format_env_diff`]: crate::diff::format_env_diff
+/// [`diff::compute_env_diff`]: super::diff::compute_env_diff
+/// [`diff::format_env_diff`]: super::diff::format_env_diff
 /// [`EnvMap`]: crate::EnvMap
 /// [`filter_env_map`]: crate::filter_env_map
 /// [`Invoke-Environment`]: https://github.com/nightroman/PowerShelf

@@ -1,10 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{assert_eq2,
-            core::script::env_source::{OutputFormat,
-                                       conformance_tests::test_data::*,
-                                       diff::{self, EnvDiffChunk},
-                                       formatters::{format_fish, format_powershell}}};
+use super::super::{super::diff, test_data::*};
+use crate::{EnvDiffChunk, OutputFormat, format_fish, format_powershell};
 
 #[test]
 fn test_golden_sanitized_user_profile_fish() {

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::core::script::env_source::diff::EnvDiffChunk;
+use super::super::diff::EnvDiffChunk;
 
 /// Formats environment diff chunks into Fish shell commands.
 ///

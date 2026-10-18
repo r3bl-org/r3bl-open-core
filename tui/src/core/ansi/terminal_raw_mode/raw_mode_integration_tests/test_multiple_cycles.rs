@@ -26,13 +26,13 @@
 //! [`enable`]: crate::enable_raw_mode
 //! [`PENDIN`]: https://manpages.debian.org/termios.3
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 //! [`tcsetattr`]: https://manpages.debian.org/termios.3
 //! [`termios`]: https://en.wikipedia.org/wiki/Termios
 
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,
-            MSG_SUCCESS, PtyTestContext, PtyTestMode, generate_pty_test};
+            MSG_SUCCESS, PtyTestContext, PtyTestMode};
 use rustix::termios;
 use std::{io::Write,
           time::{Duration, Instant}};
@@ -111,6 +111,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: performs multiple enable/disable cycles. The harness performs
 /// [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 #[allow(clippy::too_many_lines)]
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");

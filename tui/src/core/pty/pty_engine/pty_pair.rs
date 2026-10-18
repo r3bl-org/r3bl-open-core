@@ -963,8 +963,7 @@ impl From<portable_pty::PtyPair> for PtyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PtyCommand, core::pty::pty_engine::pty_size::DefaultPtySize, vp_height,
-                vp_width};
+    use crate::{DefaultPtySize, PtyCommand, vp_height, vp_width};
 
     #[test]
     fn test_open_raw_pair_default_size() {

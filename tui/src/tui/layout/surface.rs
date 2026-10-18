@@ -3,7 +3,7 @@
 use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
             LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
 use crate::{CommonResult, InlineVec, ReqSizePc, TuiStyle, TuiStylesheet, VPBoundingBox,
-            VPPos, VPSize, throws, unwrap_or_err, vp_col, vp_height, vp_row, vp_width};
+            VPPos, VPSize, vp_col, vp_height, vp_row, vp_width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.
@@ -379,10 +379,8 @@ fn cascade_styles(
 #[cfg(test)]
 mod test_surface_2_col_complex {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
-                LayoutManagement, Surface, SurfaceProps, TuiStylesheet, assert_eq2,
-                box_end, box_start, ch, console_log, get_tui_styles, new_style,
-                req_size_pc, throws, throws_with_return, tui_color, tui_stylesheet,
-                vp_col, vp_height, vp_row, vp_width};
+                LayoutManagement, Surface, SurfaceProps, TuiStylesheet, ch, vp_col,
+                vp_height, vp_row, vp_width};
 
     #[test]
     fn test_surface_2_col_complex() -> CommonResult {
@@ -604,10 +602,8 @@ mod test_surface_2_col_complex {
 #[cfg(test)]
 mod test_surface_2_col_simple {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
-                LayoutManagement, Surface, SurfaceProps, TuiStylesheet, assert_eq2,
-                box_end, box_start, get_tui_styles, new_style, req_size_pc, throws,
-                throws_with_return, tui_color, tui_stylesheet, vp_col, vp_height,
-                vp_row, vp_width};
+                LayoutManagement, Surface, SurfaceProps, TuiStylesheet, vp_col,
+                vp_height, vp_row, vp_width};
 
     #[test]
     fn test_surface_2_col_simple() -> CommonResult {
@@ -801,8 +797,8 @@ mod test_surface_2_col_simple {
 #[cfg(test)]
 mod test_surface_offset_origin {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
-                LayoutManagement, Surface, SurfaceProps, assert_eq2, req_size_pc,
-                throws, vp_col, vp_height, vp_row, vp_width};
+                LayoutManagement, Surface, SurfaceProps, vp_col, vp_height, vp_row,
+                vp_width};
 
     #[test]
     fn test_surface_horizontal_non_zero_origin() -> CommonResult {

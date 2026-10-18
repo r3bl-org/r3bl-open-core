@@ -40,10 +40,10 @@ use std::fmt::{self, Display};
 /// [`DsrSequence`]: crate::DsrSequence
 /// [`pending_pty_response_events`]: ParserGlobalState::pending_pty_response_events
 /// [`Process::process_pty_output_and_update_buffer()`]:
-///     crate::pty_mux::Process::process_pty_output_and_update_buffer
-/// [`Process`]: crate::pty_mux::Process
-/// [`ProcessManager`]: crate::pty_mux::ProcessManager
-/// [`pty_mux`]: crate::pty_mux
+///     crate::Process::process_pty_output_and_update_buffer
+/// [`Process`]: crate::Process
+/// [`ProcessManager`]: crate::ProcessManager
+/// [`pty_mux`]: mod@crate::core::pty::pty_mux
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`session.tx_input_event`]: crate::core::pty::PtySession::tx_input_event
 /// [`stdin`]: std::io::stdin
@@ -91,7 +91,7 @@ impl Display for PtyResponseEvent {
 mod tests {
     use super::*;
     use crate::core::ansi::constants::{DA1_VT220_COLOR_RESPONSE_STR, DSR_STATUS_OK_FULL_RESPONSE};
-    use crate::vt_100_pty_output_conformance_tests::{
+    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::{
         nz, test_sequence_generators::dsr_builders::dsr_cursor_position_response,
     };
     use crate::{term_col, term_row};

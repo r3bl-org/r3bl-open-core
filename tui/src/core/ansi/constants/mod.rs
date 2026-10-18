@@ -102,59 +102,26 @@
 
 #![rustfmt::skip]
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod csi;
-#[cfg(not(any(test, doc)))]
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod ansi_const_macros;
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod mouse; // Cross-folder sequence generators and rustdoc links.
+
+// Attach. Folder-local (Intra-module).
 mod csi;
-#[cfg(any(test, doc))]
-pub mod dsr;
-#[cfg(not(any(test, doc)))]
+mod da;
 mod dsr;
-#[cfg(any(test, doc))]
-pub mod esc;
-#[cfg(not(any(test, doc)))]
 mod esc;
-#[cfg(any(test, doc))]
-pub mod generic;
-#[cfg(not(any(test, doc)))]
 mod generic;
-#[cfg(any(test, doc))]
-pub mod input_sequences;
-#[cfg(not(any(test, doc)))]
 mod input_sequences;
-#[cfg(any(test, doc))]
-pub mod mouse;
-#[cfg(not(any(test, doc)))]
-mod mouse;
-#[cfg(any(test, doc))]
-pub mod raw_mode_constants;
-#[cfg(not(any(test, doc)))]
+mod osc_constants;
 mod raw_mode_constants;
-#[cfg(any(test, doc))]
-pub mod sgr;
-#[cfg(not(any(test, doc)))]
 mod sgr;
-#[cfg(any(test, doc))]
-pub mod utf8;
-#[cfg(not(any(test, doc)))]
 mod utf8;
 
-#[cfg(any(test, doc))]
-pub mod da;
-#[cfg(not(any(test, doc)))]
-mod da;
-
-#[cfg(any(test, doc))]
-pub mod osc_constants;
-#[cfg(not(any(test, doc)))]
-mod osc_constants;
-
-// Macros for const expansion.
-mod macros;
-
-// Public re-exports (flat API) for convenience.
+// Re-export.
 pub use csi::*;
 pub use dsr::*;
 pub use esc::*;

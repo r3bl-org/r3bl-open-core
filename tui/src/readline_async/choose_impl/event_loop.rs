@@ -3,7 +3,7 @@
 use super::KeyPressReader;
 use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
             InputEvent, ItemsOwned, TTYResult, TerminalModeController,
-            emit_stderr_redirection_disclaimer, is_output_interactive, ok};
+            emit_stderr_redirection_disclaimer, is_output_interactive};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::large_enum_variant)]

@@ -6,16 +6,16 @@
 
 #![rustfmt::skip]
 
-// Private modules (hide internal structure).
+// Attach.
 mod args;
 mod core;
-pub mod diff;
+mod diff;
 mod filter;
 mod formatters;
 mod parser;
 mod run_shell;
 
-// Public re-exports (expose stable API).
+// Re-export.
 pub use args::*;
 pub use core::*;
 pub use diff::{EnvDiff, EnvDiffChunk};
@@ -26,4 +26,4 @@ pub use run_shell::*;
 
 // Conformance test suite.
 #[cfg(test)]
-pub mod conformance_tests;
+mod conformance_tests;

@@ -17,7 +17,7 @@
 
 use super::GCStringOwned;
 use crate::{ByteIndex, CCol, InlineString, SegIndex, VPCol, VPWidth, byte_index, c_col,
-            ch, pad_fmt, seg_index, usize};
+            ch, seg_index, usize};
 use std::ops::Add;
 
 /// Converts between different types of indices. This unifies the API so that different
@@ -60,7 +60,7 @@ use std::ops::Add;
 ///
 /// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
-pub mod convert {
+mod convert {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -140,7 +140,7 @@ pub mod convert {
 /// TUI use cases.
 ///
 /// [`grapheme`]: https://unicode.org/reports/tr29/
-pub mod trunc_end {
+mod trunc_end {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -250,7 +250,7 @@ pub mod trunc_end {
 /// common TUI use cases.
 ///
 /// [`grapheme`]: https://unicode.org/reports/tr29/
-pub mod trunc_start {
+mod trunc_start {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

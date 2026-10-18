@@ -41,34 +41,24 @@ impl<'a> FileProcessor<'a> {
         }
     }
 
-    /// Processes multiple files using the lossless [`SourceFileCst`] pipeline.
+    /// Formats the given Rust `source` string in memory using the lossless
+    /// [`SourceFileCst`] pipeline.
+    ///
+    /// Returns a tuple of:
+    /// - [`FormatStatus::Modified`] and the reconstructed string if changes were made.
+    /// - [`FormatStatus::Unchanged`] and `source.to_owned()` if no formatting was needed
+    ///   or the file was skipped via `// rustdoc-fmt: skip`.
     #[must_use]
-    pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
-        paths.iter().map(|path| self.process_file(path)).collect()
-    }
-
-    /// Processes a single file using the lossless [`SourceFileCst`] pipeline.
-    fn process_file(&self, path: &Path) -> ProcessingResult {
-        let mut result = ProcessingResult::new(path.to_path_buf());
-
-        // Read file.
-        let source = match std::fs::read_to_string(path) {
-            Ok(content) => content,
-            Err(err) => {
-                result.add_error(format!("Failed to read file: {err}"));
-                return result;
-            }
-        };
-
+    pub fn process_source(&self, source: &str) -> (FormatStatus, String) {
         // Skip entire file if it contains `// rustdoc-fmt: skip`, UNLESS
         // line_range is specified (e.g. `--lines-force`). Explicit line range
         // overrides file-level skip directive for our binary.
         let range = self.options.line_range.as_ref();
-        if range.is_none() && has_rustdoc_fmt_skip(&source) {
-            return result;
+        if range.is_none() && has_rustdoc_fmt_skip(source) {
+            return (FormatStatus::Unchanged, source.to_owned());
         }
 
-        let mut cst = SourceFileCst::parse(&source);
+        let mut cst = SourceFileCst::parse(source);
         let mut modified = false;
 
         for chunk in &mut cst.chunks {
@@ -113,13 +103,41 @@ impl<'a> FileProcessor<'a> {
         if modified {
             let new_source = cst.reconstruct();
             if new_source != source {
-                if self.options.mode == ExecutionMode::CheckOnly {
-                    result.mark_modified();
-                } else if let Err(err) = std::fs::write(path, new_source) {
-                    result.add_error(format!("Failed to write file: {err}"));
-                } else {
-                    result.mark_modified();
-                }
+                return (FormatStatus::Modified, new_source);
+            }
+        }
+
+        (FormatStatus::Unchanged, source.to_owned())
+    }
+
+    /// Processes multiple files using the lossless [`SourceFileCst`] pipeline.
+    #[must_use]
+    pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
+        paths.iter().map(|path| self.process_file(path)).collect()
+    }
+
+    /// Processes a single file using the lossless [`SourceFileCst`] pipeline.
+    fn process_file(&self, path: &Path) -> ProcessingResult {
+        let mut result = ProcessingResult::new(path.to_path_buf());
+
+        // Read file.
+        let source = match std::fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(err) => {
+                result.add_error(format!("Failed to read file: {err}"));
+                return result;
+            }
+        };
+
+        let (status, new_source) = self.process_source(&source);
+
+        if status == FormatStatus::Modified {
+            if self.options.mode == ExecutionMode::CheckOnly {
+                result.mark_modified();
+            } else if let Err(err) = std::fs::write(path, new_source) {
+                result.add_error(format!("Failed to write file: {err}"));
+            } else {
+                result.mark_modified();
             }
         }
 
@@ -177,6 +195,35 @@ mod tests {
         let processor = FileProcessor::new(options, None);
         let result = processor.process_file(Path::new("/nonexistent/file.rs"));
         assert!(!result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_process_source_in_memory() {
+        let options = FormatOptions {
+            format_tables: PassPolicy::Skipped,
+            convert_links: PassPolicy::Enabled,
+            link_terms: PassPolicy::Skipped,
+            normalize_fences: PassPolicy::Skipped,
+            line_range: None,
+            mode: ExecutionMode::ApplyChanges,
+            verbosity: Verbosity::Quiet,
+        };
+        let processor = FileProcessor::new(options, None);
+        let input = "//! [example](https://example.com)\nfn main() {}\n";
+        let (status, formatted) = processor.process_source(input);
+        assert_eq!(status, FormatStatus::Modified);
+        assert!(formatted.contains("//! [example]: https://example.com"));
+    }
+
+    #[test]
+    fn test_process_source_skip_directive() {
+        let options = FormatOptions::default();
+        let processor = FileProcessor::new(options, None);
+        let input =
+            "// rustdoc-fmt: skip\n\n//! [example](https://example.com)\nfn main() {}\n";
+        let (status, formatted) = processor.process_source(input);
+        assert_eq!(status, FormatStatus::Unchanged);
+        assert_eq!(formatted, input);
     }
 
     #[test]

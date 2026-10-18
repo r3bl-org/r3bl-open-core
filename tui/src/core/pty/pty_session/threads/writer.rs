@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyInputEvent,
-            PtyOutputEvent, ok};
+            PtyOutputEvent};
 use miette::miette;
 use std::{io::Write,
           sync::{Arc, Mutex,

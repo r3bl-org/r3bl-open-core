@@ -246,27 +246,21 @@
 //! [GNU Readline]: https://tiswww.case.edu/php/chet/readline/rltop.html
 //! [Nushell]: https://www.nushell.sh/
 //! [Reedline]: https://github.com/nushell/reedline
-//! [Unix implementation's termios section]: mod@crate::terminal_raw_mode::raw_mode_unix#the-termios-interface
+//! [Unix implementation's termios section]: mod@crate::core::ansi::terminal_raw_mode::raw_mode_unix#the-termios-interface
 
-// Private modules (hide internal structure).
+// Attach.
 mod raw_mode_core;
-
-// Public for docs and tests, private otherwise.
-#[cfg(all(unix, any(test, doc)))]
-pub mod raw_mode_unix;
-#[cfg(all(unix, not(any(test, doc))))]
-mod raw_mode_unix;
-
 #[cfg(windows)]
 mod raw_mode_windows;
 
-// Re-export the public API (flat, ergonomic surface).
+#[cfg(unix)]
+pub(crate) mod raw_mode_unix; // Cross-folder termios rustdoc links and Unix raw-mode tests.
+
+#[cfg(all(unix, any(test, doc)))]
+pub(crate) mod raw_mode_integration_tests; // Cross-folder rustdoc module links (lib.rs, generate_pty_test).
+
+#[cfg(all(unix, any(test, doc)))]
+mod validation_tests;
+
+// Re-export.
 pub use raw_mode_core::*;
-
-// Integration tests (Unix only).
-#[cfg(all(unix, any(test, doc)))]
-pub mod raw_mode_integration_tests;
-
-// Conditional re-export for manual validation tests (Unix only).
-#[cfg(all(unix, any(test, doc)))]
-pub mod validation_tests;

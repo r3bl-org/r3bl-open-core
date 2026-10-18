@@ -1,9 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AUTHORS, DATE, MdDocument, MdElement, NUL_CHAR, ParseList, TAGS, TITLE,
-            ZeroCopyGapBuffer, parse_block_markdown_text_with_or_without_new_line,
+            ZeroCopyGapBuffer, is, parse_block_markdown_text_with_or_without_new_line,
             parse_csv_opt_eol, parse_fenced_code_block, parse_heading_in_single_line,
-            parse_null_padded_line::is, parse_smart_list_block, parse_unique_kv_opt_eol};
+            parse_smart_list_block, parse_unique_kv_opt_eol};
 use nom::{IResult, Parser, branch::alt, bytes::complete::take_while, combinator::map,
           multi::many0};
 
@@ -25,17 +25,27 @@ use nom::{IResult, Parser, branch::alt, bytes::complete::take_while, combinator:
 ///
 /// Returns a [`MdDocument`] containing [`MdElement`] blocks, which can be:
 ///
-/// 1. **Metadata**: Title ([`crate::parse_metadata_kv`]), tags and authors ([`crate::parse_metadata_kcsv`]), date
-/// 2. **Heading**: Contains [`crate::HeadingLevel`] & [`crate::MdLineFragments`]
-/// 3. **Smart Lists**: Ordered & unordered lists with [`crate::MdLineFragments`] ([`mod@parse_smart_list_block`])
-/// 4. **Code Block**: Language & code string slices ([`mod@parse_fenced_code_block`])
-/// 5. **Text**: Line fragments ([`mod@crate::fragment`])
+/// 1. **Metadata**: Title ([`parse_unique_kv_opt_eol()`]), tags and authors
+///    ([`parse_csv_opt_eol()`]), date
+/// 2. **Heading**: Contains [`HeadingLevel`] & [`MdLineFragments`]
+/// 3. **Smart Lists**: Ordered & unordered lists with [`MdLineFragments`]
+///    ([`parse_smart_list_block()`])
+/// 4. **Code Block**: Language & code string slices ([`parse_fenced_code_block()`])
+/// 5. **Text**: Line fragments ([`fragment`])
 ///
-/// Each [`crate::MdLineFragments`] roughly corresponds to a line of parsed text.
+/// Each [`MdLineFragments`] roughly corresponds to a line of parsed text.
 ///
 /// # Errors
 ///
 /// Returns a nom parsing error if the input doesn't contain valid markdown.
+///
+/// [`fragment`]: mod@super::fragment
+/// [`HeadingLevel`]: crate::HeadingLevel
+/// [`MdLineFragments`]: crate::MdLineFragments
+/// [`parse_csv_opt_eol()`]: crate::parse_csv_opt_eol
+/// [`parse_fenced_code_block()`]: crate::parse_fenced_code_block
+/// [`parse_smart_list_block()`]: crate::parse_smart_list_block
+/// [`parse_unique_kv_opt_eol()`]: crate::parse_unique_kv_opt_eol
 #[rustfmt::skip]
 pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>> {
     let str_input = input.as_str();
@@ -109,7 +119,7 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests_integration_block_smart_lists {
     use super::*;
-    use crate::{PrettyPrintDebug, assert_eq2};
+    use crate::PrettyPrintDebug;
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -298,7 +308,7 @@ mod tests_integration_block_smart_lists {
 mod tests_parse_markdown {
     use super::*;
     use crate::{BulletKind, CodeBlockLine, CodeBlockLineContent, HeadingData,
-                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2};
+                HeadingLevel, HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_no_line() {

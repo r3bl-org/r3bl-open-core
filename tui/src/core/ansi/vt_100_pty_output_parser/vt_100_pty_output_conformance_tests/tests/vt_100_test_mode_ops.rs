@@ -29,7 +29,7 @@ use crate::{core::ansi::vt_100_pty_output_parser::{CsiSequence, PrivateModeType}
             term_col, term_row};
 
 /// Tests for DECAWM (Auto Wrap Mode) operations.
-pub mod auto_wrap_mode {
+mod auto_wrap_mode {
     use super::*;
     use crate::AutoWrapMode;
 
@@ -192,7 +192,7 @@ pub mod auto_wrap_mode {
 }
 
 /// Tests for mode state combinations and interactions.
-pub mod mode_interactions {
+mod mode_interactions {
     use super::*;
     use crate::AutoWrapMode;
 
@@ -291,7 +291,7 @@ pub mod mode_interactions {
 }
 
 /// Tests for the Alternate Screen Buffer (`?1049`) mode operations.
-pub mod alt_screen_mode {
+mod alt_screen_mode {
     use super::*;
     use crate::ActiveScreenBuffer;
 
@@ -334,7 +334,7 @@ pub mod alt_screen_mode {
 }
 
 /// Tests for Mouse Tracking Mode operations.
-pub mod mouse_tracking_mode {
+mod mouse_tracking_mode {
     use super::*;
     use crate::{MouseTrackingFormat, MouseTrackingMode};
 
@@ -483,7 +483,7 @@ pub mod mouse_tracking_mode {
 }
 
 /// Tests for Cursor Key Mode operations.
-pub mod cursor_key_mode {
+mod cursor_key_mode {
     use super::*;
     use crate::CursorKeyMode;
 

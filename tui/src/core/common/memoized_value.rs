@@ -9,8 +9,6 @@
 //! The memory size related types have been moved to [`crate::GetMemSize`] module
 //! to consolidate memory size calculation and caching logic.
 
-// Re-export memory size types from get_mem_size module.
-pub use crate::{MemoizedMemorySize, MemorySize};
 use std::fmt::Display;
 
 /// Memoized value calculation for performance optimization.

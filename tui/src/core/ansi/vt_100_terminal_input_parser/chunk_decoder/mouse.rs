@@ -153,7 +153,7 @@
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
 //! [`terminal_events`]: mod@super::terminal_events
-//! [`TermPos`]: crate::vt_100_ansi_coords::TermPos
+//! [`TermPos`]: crate::TermPos
 //! [`Unknown`]: crate::core::ansi::vt_100_terminal_input_parser::VT100MouseButtonIR::Unknown
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
@@ -162,8 +162,8 @@
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-//! [parent module documentation]: mod@crate::vt_100_terminal_input_parser
-//! [parent module's testing strategy documentation]: mod@crate::vt_100_terminal_input_parser#testing-strategy
+//! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
+//! [parent module's testing strategy documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy
 //! [Raw Mode]: crate::core::ansi::terminal_raw_mode
 //! [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
 
@@ -506,7 +506,8 @@ mod helpers {
     ///
     /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
     /// [`SGR`]: crate::SgrCode
-    /// [digits]: crate::vt_100_terminal_input_parser::csi_scanner::parse_decimal_digits
+    /// [digits]:
+    ///     crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::csi_scanner::parse_decimal_digits
     pub fn parse_semicolon_triplet(payload: &[u8]) -> Option<(u16, u16, u16)> {
         let mut parts = payload.split(|&byte| byte == ANSI_PARAM_SEPARATOR);
         let cb = parse_decimal_digits(parts.next()?)?.as_u16_narrowing();
@@ -634,7 +635,7 @@ mod helpers {
 /// consistency between sequence generation and parsing. For testing strategy details,
 /// see the [testing strategy] documentation.
 ///
-/// [testing strategy]: mod@crate::vt_100_terminal_input_parser#testing-strategy
+/// [testing strategy]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy
 #[cfg(test)]
 mod tests {
     use super::*;

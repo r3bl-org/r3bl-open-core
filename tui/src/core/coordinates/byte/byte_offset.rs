@@ -3,10 +3,8 @@
 //! Relative byte displacement from a reference point - see [`ByteOffset`] type.
 
 use super::ByteIndex;
-use crate::{ArrayBoundsCheck, ChUnit, VPIndex, VPLength, VPRow,
-            bounds_check::{IndexOps, LengthOps, NumericConversions, NumericValue,
-                           StorageCoordinate},
-            byte_index, usize};
+use crate::{ArrayBoundsCheck, ChUnit, IndexOps, LengthOps, NumericConversions,
+            NumericValue, StorageCoordinate, VPIndex, VPLength, VPRow, byte_index, usize};
 use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 
 /// Represents a byte offset within a line or buffer segment.

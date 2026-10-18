@@ -31,14 +31,16 @@
 //!
 //! See [`crate::Telemetry`] for usage in performance monitoring.
 //!
-//! [`Pc`]: crate::coordinates::percent_spec::Pc
-//! [`ReqSizePc`]: crate::coordinates::percent_spec::ReqSizePc
-//! [`VPHeight`]: crate::coordinates::viewport_coords::VPHeight
-//! [`VPWidth`]: crate::coordinates::viewport_coords::VPWidth
+//! [`Pc`]: crate::Pc
+//! [`ReqSizePc`]: crate::ReqSizePc
+//! [`VPHeight`]: crate::VPHeight
+//! [`VPWidth`]: crate::VPWidth
 
-// Attach source files.
-pub mod pc;
-pub mod req_size_pc;
+// Attach. Upward #[macro_use] propagation.
+#[macro_use]
+mod pc;
+#[macro_use]
+mod req_size_pc;
 
 // Re-export.
 pub use pc::*;

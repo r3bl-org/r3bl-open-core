@@ -5,8 +5,8 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CSI_ERASE_DISPLAY_
             CsiSequence, CursorBoundsCheck, FunctionKey, GCStringOwned, InputEvent, Key,
             KeyPress, KeyState, NarrowingCastToIsize, NumericValue, ReadlineError,
             ReadlineEvent, SafeHistory, SegIndex, SpecialKey, VPSize,
-            early_return_if_paused, find_next_word_end, find_next_word_start,
-            find_prev_word_start, inline_string, tui::NEW_LINE, vp_col, vp_row};
+            find_next_word_end, find_next_word_start,
+            find_prev_word_start, tui::NEW_LINE, vp_col, vp_row};
 use std::{io::Write, num::NonZeroU8};
 
 impl LineState {
@@ -44,7 +44,7 @@ impl LineState {
     /// // Setup
     /// let mut line_state = LineState::new(String::new(), vp_width(80) + vp_height(24));
     /// let mut stdout = StdoutMock::default();
-    /// let history = r3bl_tui::readline_async::readline_async_impl::History::new();
+    /// let history = r3bl_tui::History::new();
     /// let safe_history = Arc::new(StdMutex::new(history));
     ///
     /// // Simulate typing "hello"
@@ -817,8 +817,8 @@ fn get_byte_index_or_end(line: &GCStringOwned, seg_idx: SegIndex) -> ByteIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{History, ModifierKeysMask, StdMutex, core::test_fixtures::StdoutMock,
-                seg_index, vp_col, vp_height, vp_width};
+    use crate::{History, ModifierKeysMask, StdMutex, StdoutMock, seg_index, vp_col,
+                vp_height, vp_width};
     use std::sync::Arc;
 
     #[test]

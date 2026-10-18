@@ -146,7 +146,7 @@ use crate::NumericValue;
 /// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`index.overflows()`]: ArrayBoundsCheck::overflows
 /// [`IndexOps`]: crate::IndexOps
-/// [`length.is_overflowed_by()`]: crate::length_ops::LengthOps::is_overflowed_by
+/// [`length.is_overflowed_by()`]: crate::LengthOps::is_overflowed_by
 /// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
 /// [`overflows()`]: ArrayBoundsCheck::overflows

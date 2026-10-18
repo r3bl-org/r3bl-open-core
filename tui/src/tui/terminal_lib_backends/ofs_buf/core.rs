@@ -7,7 +7,7 @@
 
 use super::pixel_char::PixelChar;
 use crate::{CanvasStorage, Flat2DArray, GetMemSize, RangeExt, VPHeight, VPPos, VPRow,
-            VPSize, ch, fg_green, inline_string, vp_size};
+            VPSize, ch, fg_green, vp_size};
 use std::{fmt::{self, Debug},
           mem::size_of,
           ops::{Deref, DerefMut}};
@@ -64,7 +64,7 @@ use std::{fmt::{self, Debug},
 /// [`copy_chars_within_line()`]: OfsBuf::copy_chars_within_line
 /// [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
 /// [`diff()`]: OfsBuf::diff
-/// [`Flat2DArray`]: crate::core::common::flat_2d_array::Flat2DArray
+/// [`Flat2DArray`]: crate::Flat2DArray
 /// [`GrowableBuffer`]: crate::tui::GrowableBuffer
 /// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 /// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
