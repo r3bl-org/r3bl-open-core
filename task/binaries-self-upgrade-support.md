@@ -41,25 +41,32 @@ Transition all R3BL binary tools—both open-source (`r3bl-cmdr`, `r3bl-build-in
 `r3bl-rust-analyzer-mcp-server`) and future closed-source binaries (`r3bl-base`)—to a
 unified, hybrid distribution and self-upgrade architecture.
 
-> **Single Source of Truth (SSOT)**: This document is the technical SSOT for the shared
-> upgrade engine (`r3bl_tui::core::script::upgrade`), centralized manifest
-> (`https://r3bl.com/versions.json`), bootstrap installers (`https://r3bl.com/install.sh`,
-> `https://r3bl.com/install.ps1`), and binary distribution repository
-> (`https://github.com/r3bl-org/r3bl-binaries`). Proprietary crates in `r3bl-base` import
-> `r3bl_tui` and reference this specification.
+> **Single Source of Truth (SSOT)**:
+> - **Code Schema SSOT**: [`VersionsManifest`] in `tui/src/core/script/upgrade/versions_manifest.rs` is the
+>   authoritative Rust schema definition, JSONC parser (`VersionsManifest::from_jsonc_str`), and
+>   comment-preserving CST updater (`VersionsManifest::update_crate_in_jsonc_str`) for
+>   `https://r3bl.com/versions.jsonc`.
+> - **Architectural SSOT**: This document is the technical specification for the shared
+>   upgrade engine (`r3bl_tui::core::script::upgrade`), centralized manifest
+>   (`https://r3bl.com/versions.jsonc`), bootstrap installers (`https://r3bl.com/install.sh`,
+>   `https://r3bl.com/install.ps1`), and binary distribution repository
+>   (`https://github.com/r3bl-org/r3bl-binaries`). Proprietary crates in `r3bl-base` import
+>   `r3bl_tui` and reference this specification.
 
 1. **Primary (Fast Binary Download — Open & Closed Source)**: 1-2 second HTTP download and
    atomic in-place binary swap via `self_replace` from pre-compiled GitHub Releases hosted
    on the dedicated history-free binary distribution repo
    (`https://github.com/r3bl-org/r3bl-binaries`).
 2. **Fallback (Resilient Source Compilation — Open Source Only)**: For open-source crates
-   (`"open_source": true` in `versions.json`), if `github.com/r3bl-org/r3bl-binaries` is
-   down, blocked, or lacks a release asset for the host target triple, automatically fall
-   back to building the pinned version from `crates.io` using the shared PTY session
-   manager (`rustup toolchain install nightly --force` +
-   `cargo +nightly install <crate> --version <ver>`) with live OSC 9;4 compilation
-   progress tracking. Closed-source binaries (`"open_source": false`) have no source
-   fallback and exit with a clean retry message.
+   (`"crate_distribution": "open-source"` / `CrateDistribution::OpenSource` in
+   `versions.jsonc`), if `github.com/r3bl-org/r3bl-binaries` is down, blocked, or lacks a
+   release asset for the host target triple, automatically fall back to building the
+   pinned version from `crates.io` using the shared PTY session manager
+   (`rustup toolchain install nightly --force` +
+   `cargo +nightly install <crate> --version <ver> --force`) with live OSC 9;4 compilation
+   progress tracking. Closed-source binaries (`"crate_distribution": "closed-source"` /
+   `CrateDistribution::ClosedSource`) have no source fallback and exit with a clean retry
+   message.
 
 ### Dual-Engine Strategy
 
@@ -79,8 +86,8 @@ resilient source compilation for open-source crates:
   storage CDN (`objects.githubusercontent.com`) outside `.git` history, the repository
   remains near 0 KB forever and never counts against GitHub's 1 GB Git repository quota.
 - **Resilient Fallback for Open-Source Crates**: If GitHub CDN is unreachable and the
-  crate is marked `"open_source": true`, the engine checks the local environment for
-  `rustup` or `cargo` and automatically compiles the target version from `crates.io`.
+  crate has `"crate_distribution": "open-source"`, the engine checks the local environment
+  for `rustup` or `cargo` and automatically compiles the target version from `crates.io`.
 - **Universal Branded Bootstrap Scripts (`r3bl.com`)**: Single-line first-time installs
   served directly from `r3bl.com`:
     - Linux/macOS: `curl -LsSf https://r3bl.com/install.sh | sh`
@@ -88,25 +95,39 @@ resilient source compilation for open-source crates:
 
 ### Source of Truth
 
-**`r3bl.com/versions.json` as the Sole Version SOT**: Background version checks and
-bootstrap scripts query `https://r3bl.com/versions.json` as the single authoritative
-Source of Truth (SOT) for version numbers and crate visibility—never `crates.io` or
-GitHub's rate-limited REST API:
+**`r3bl.com/versions.jsonc` as the Sole Version SOT (Schema SSOT: [`VersionsManifest`] in `tui/src/core/script/upgrade/versions_manifest.rs`)**:
+Background version checks and bootstrap scripts query `https://r3bl.com/versions.jsonc`
+as the single authoritative Source of Truth (SOT) for version numbers and crate
+distribution—never `crates.io` or GitHub's rate-limited REST API.
 
-```json
+Because we use **JSONC** (JSON with Comments and trailing commas) across the codebase,
+`r3bl_tui` parses `versions.jsonc` via `jsonc-parser` (`features = ["serde", "cst"]`):
+- **Deserialization (`VersionsManifest::from_jsonc_str`)**: Parses JSONC with `//` line
+  comments, `/* ... */` block comments, and trailing commas directly into
+  `VersionsManifest`.
+- **Comment-Preserving Mutation (`VersionsManifest::update_crate_in_jsonc_str`)**: Uses
+  `jsonc_parser::cst::CstRootNode` (Concrete Syntax Tree) so release tooling can update a
+  crate's version entry in `versions.jsonc` while preserving 100% of existing comments and
+  formatting.
+
+```jsonc
 {
+    // Schema version for forward compatibility (`ManifestSchemaVersion`).
     "schema_version": 1,
     "crates": {
+        // Open-source interactive CLI suite (`giti`, `edi`, `env-source`).
         "r3bl-cmdr": {
             "version": "0.0.25",
             "crate_distribution": "open-source",
             "released_on": "2026-10-17T00:00:00Z"
         },
+        // Open-source build & documentation tooling (`cargo-rustdoc-fmt`).
         "r3bl-build-infra": {
             "version": "0.1.0",
             "crate_distribution": "open-source",
             "released_on": "2026-10-17T00:00:00Z"
         },
+        // Open-source Rust Analyzer MCP server (`rust-analyzer-mcp-server`).
         "r3bl-rust-analyzer-mcp-server": {
             "version": "0.1.0",
             "crate_distribution": "open-source",
@@ -116,29 +137,35 @@ GitHub's rate-limited REST API:
 }
 ```
 
-- **Schema Fields**:
-    - `version`: Target semantic version string pinned for the crate.
-    - `crate_distribution`: Witness string indicating distribution and licensing model
-      (`"open-source"` for open-source crates in `r3bl-open-core` eligible for `cargo install`
-      source compilation fallback, `"closed-source"` for closed-source crates in `r3bl-base`).
-    - `released_on`: ISO 8601 UTC timestamp (`YYYY-MM-DDTHH:MM:SSZ`) recording when the
-      release was published (also used by commercial binaries in `r3bl-base` to verify the
-      user's `updates_until` maintenance window before upgrading).
+- **Schema Fields (defined in [`VersionsManifest`] & [`CrateVersionMetadata`])**:
+    - `schema_version` (`ManifestSchemaVersion(pub u32)`): Schema version integer (`1`).
+    - `version` (`CrateVersion(pub String)`): Target semantic version string pinned for
+      the crate.
+    - `crate_distribution` (`CrateDistribution` with `#[serde(rename_all = "kebab-case")]`):
+      Enum witness indicating distribution and licensing model:
+        - `"open-source"` (`CrateDistribution::OpenSource`): Open-source crates in
+          `r3bl-open-core` eligible for `cargo install` source compilation fallback.
+        - `"closed-source"` (`CrateDistribution::ClosedSource`): Closed-source crates in
+          `r3bl-base` distributed exclusively as pre-compiled binaries.
+    - `released_on` (`chrono::DateTime<chrono::Utc>`): ISO 8601 / RFC 3339 UTC timestamp
+      (`YYYY-MM-DDTHH:MM:SSZ`) recording when the release was published (also used by
+      commercial binaries in `r3bl-base` to verify the user's `updates_until` maintenance
+      window before upgrading).
 - **Strictly Newer Version Comparison (`remote_version > local_version`)**:
-    - Both remote (`versions.json`) and local (`CARGO_PKG_VERSION`) strings are parsed as
+    - Both remote (`versions.jsonc`) and local (`CARGO_PKG_VERSION`) strings are parsed as
       `(major, minor, patch)` semantic version tuples and compared using
       `remote_version > local_version` (rather than `!=`). This prevents local development
-      builds (whose `Cargo.toml` version has been bumped ahead of `versions.json`) from
+      builds (whose `Cargo.toml` version has been bumped ahead of `versions.jsonc`) from
       falsely triggering an upgrade that would downgrade the local binary.
 - **Pinned Version in `crates.io` Compilation Fallback (Open Source Only)**:
-    - When `open_source == true` and the pre-compiled binary cannot be downloaded from
-      `github.com/r3bl-org/r3bl-binaries`, the fallback compilation codepath **never**
-      installs an unpinned "latest" version from `crates.io`. Instead, it **always**
-      passes `--version <pinned_ver>` using the exact version `<pinned_ver>` read from
-      `r3bl.com/versions.json`:
-      `cargo +nightly install <crate_name> --version <pinned_ver>`.
-    - Closed-source binaries (`open_source == false`) have no fallback and only download
-      pre-compiled binaries from `github.com/r3bl-org/r3bl-binaries`.
+    - When `crate_distribution == CrateDistribution::OpenSource` and the pre-compiled
+      binary cannot be downloaded from `github.com/r3bl-org/r3bl-binaries`, the fallback
+      compilation codepath **never** installs an unpinned "latest" version from
+      `crates.io`. Instead, it **always** passes `--version <pinned_ver>` using the exact
+      version `<pinned_ver>` read from `r3bl.com/versions.jsonc`:
+      `cargo +nightly install <crate_name> --version <pinned_ver> --force`.
+    - Closed-source binaries (`CrateDistribution::ClosedSource`) have no fallback and only
+      download pre-compiled binaries from `github.com/r3bl-org/r3bl-binaries`.
 - **Direct CDN Asset Checking**: When an upgrade is available, a lightweight HTTP `HEAD`
   request directly checks the `r3bl-org/r3bl-binaries` GitHub Release asset download URL:
   `https://github.com/r3bl-org/r3bl-binaries/releases/download/v{ver}-{crate}/{crate}-v{ver}-{target}.tar.gz`.
@@ -146,15 +173,18 @@ GitHub's rate-limited REST API:
 
 ### CLI Flag
 
-**Dedicated `--upgrade` Flag Across All Binaries**: All workspace binaries provide a
-top-level `--upgrade` CLI argument to run standalone self-upgrades without running the
-main application:
+**Dedicated `--upgrade` and `--upgrade-policy` Flags Across All Binaries**: All workspace
+binaries provide top-level CLI arguments to run standalone self-upgrades or explicitly
+control exit upgrade behavior (with zero magic environment variable inspection):
 
-- Supports `giti --upgrade`, `edi --upgrade`, `env-source --upgrade`,
+- `--upgrade`: Supports `giti --upgrade`, `edi --upgrade`, `env-source --upgrade`,
   `cargo-rustdoc-fmt --upgrade` (and `cargo rustdoc-fmt --upgrade`), and
-  `rust-analyzer-mcp-server --upgrade`.
-- When passed, the binary bypasses normal application startup, executes the upgrade flow,
-  and exits (`0` on success, `1` on error).
+  `rust-analyzer-mcp-server --upgrade`. When passed, the binary bypasses normal
+  application startup, executes the upgrade flow, and exits (`0` on success, `1` on
+  error).
+- `--upgrade-policy <policy>`: Explicit `clap::ValueEnum` override (`interactive-prompt` /
+  `prompt`, `auto-upgrade` / `auto`, `notify-only` / `notify`, `never` / `off`). When
+  omitted, falls back to the binary's `default_policy`.
 
 ## Lifecycle Flowchart
 
@@ -165,10 +195,10 @@ main application:
                                       │
                                       ▼
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ 1. Version Check & SOT Evaluation (`r3bl.com/versions.json`)                 │
+│ 1. Version Check & SOT Evaluation (`r3bl.com/versions.jsonc`)                │
 │                                                                              │
-│ GET https://r3bl.com/versions.json                                           │
-│ ├─► Parses `version` (pinned), `open_source`, and `released_on`              │
+│ GET https://r3bl.com/versions.jsonc                                          │
+│ ├─► Parses `version` (pinned), `crate_distribution`, and `released_on`       │
 │ ├─► Compares `(major, minor, patch)`: `remote_version > local_version`       │
 │ └─► Stores state in `AtomicU8 (UpgradeCheckResult)`                          │
 ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -200,8 +230,8 @@ main application:
 │ │   └─► `UpgradeSource::GithubReleaseArtifact`                               │
 │ │                                                                            │
 │ └─► Returns 404 / 5xx / Network Error / Offline:                             │
-│     ├─► `open_source == false` ───────────► Error: `NoViableUpgradeSource`   │
-│     ├─► `open_source == true`:                                               │
+│     ├─► `CrateDistribution::ClosedSource` ──► Error: `NoViableUpgradeSource` │
+│     ├─► `CrateDistribution::OpenSource`:                                     │
 │     │   ├─► `rustup` on $PATH ──► `UpgradeSource::BuildFromSourceRustup`     │
 │     │   ├─► `cargo`  on $PATH ──► `UpgradeSource::BuildFromSourceCargo`      │
 │     │   └─► Neither on $PATH  ──► Error: `NoViableUpgradeSource`             │
@@ -214,13 +244,13 @@ main application:
 │ ├─► [GithubReleaseArtifact]                                                  │
 │ │   Stream download with % and MB spinner, verify `.sha256`, unpack archive, │
 │ │   atomic swap via `self_replace` (plus sibling binaries in archive).       │
-│ │   (If stream fails mid-way & `open_source == true`, falls back to source). │
+│ │   (If stream fails mid-way & `OpenSource`, falls back to source build).    │
 │ │                                                                            │
-│ ├─► [BuildFromSourceRustup] (open_source == true only; uses pinned_ver)      │
+│ ├─► [BuildFromSourceRustup] (OpenSource only; uses pinned_ver)               │
 │ │   Run `rustup toolchain install nightly --force` in PTY session,           │
 │ │   then `cargo +nightly install <crate> --version <pinned_ver>` (OSC 9;4).  │
 │ │                                                                            │
-│ ├─► [BuildFromSourceCargo] (open_source == true only; uses pinned_ver)       │
+│ ├─► [BuildFromSourceCargo] (OpenSource only; uses pinned_ver)                │
 │ │   Run `cargo +nightly install <crate> --version <pinned_ver>` (OSC 9;4).   │
 │ │                                                                            │
 │ └─► [All Attempts Fail]                                                      │
@@ -235,20 +265,40 @@ main application:
 **Shared Upgrade Engine**: The unified upgrade module is housed inside
 `r3bl_tui::core::script::upgrade`:
 
-- [x] `types.rs`:
-    - [x] `CrateVersionMetadata`: Deserialized entry from `r3bl.com/versions.json`
-          (`version`, `open_source`, `released_on`).
-    - [x] `UpgradeConfig`: Per-binary configuration (`crate_name`, `policy`,
-          `output_target`).
+- [x] `constants.rs`:
+    - [x] Centralized string constants: `toolchain_binaries` (`rustup`, `cargo`),
+          `toolchain_args` (`toolchain`, `install`, `nightly`, `+nightly`, `--version`,
+          `--force`), `archive` (`NON_BINARY_EXTENSIONS`, `DEFAULT_ARCHIVE_FILENAME`,
+          `EXTRACTED_DIR_NAME`, `UPGRADE_TMP_SUFFIX`), `manifest_keys` (`schema_version`,
+          `crates`, `version`, `crate_distribution`, `released_on`), and
+          `upgrade_reasons`.
+- [x] `versions_manifest.rs`:
+    - [x] `VersionsManifest`: Single Source of Truth (SSOT) for the
+          `https://r3bl.com/versions.jsonc` schema, providing `from_jsonc_str()` and
+          comment-preserving `update_crate_in_jsonc_str()` via `jsonc-parser` CST.
+    - [x] Domain newtypes and enums: `ManifestSchemaVersion(pub u32)`,
+          `CrateDistribution` (`OpenSource` / `ClosedSource`,
+          `#[serde(rename_all = "kebab-case")]`), `CrateName(pub String)`,
+          `CrateVersion(pub String)`.
+    - [x] `CrateVersionMetadata`: Deserialized entry from `r3bl.com/versions.jsonc`
+          (`version: CrateVersion`, `crate_distribution: CrateDistribution`,
+          `released_on: chrono::DateTime<chrono::Utc>`).
+- [x] `upgrade_types.rs`:
+    - [x] `UpgradeConfig`: Per-binary configuration (`crate_name: CrateName`,
+          `local_version: CrateVersion`, `policy: UpgradePolicy`,
+          `output_target: UpgradeOutputTarget`), resolving `policy` deterministically via
+          `cli_policy.unwrap_or(default_policy)`.
     - [x] `UpgradeSource`: `GithubReleaseArtifact`, `BuildFromSourceRustup`,
           `BuildFromSourceCargo`.
     - [x] `UpgradePolicy`: `InteractivePrompt` (interactive TUI apps), `AutoUpgrade`
-          (headless / agent tooling), `NotifyOnly`, and `Never` (supports Clap
-          `ValueEnum` for `--upgrade-policy <policy>`).
+          (headless / agent tooling), `NotifyOnly`, and `Never` (derives
+          `clap::ValueEnum` for `--upgrade-policy <policy>`).
     - [x] `UpgradeOutputTarget`: `Stdout` (default CLI/TUI), `Stderr` (MCP server and
           stdout-piped tools like `env-source`), and `Quiet` (structured tracing only).
     - [x] `UpgradeCheckResult`: `NotChecked`, `Checking`, `UpToDate`, `UpgradeAvailable`,
           `FailedCheck`.
+    - [x] `UpgradeError`: Error types for strategy resolution, checksum mismatch, platform
+          support, and user cancellation.
 - [x] `target_triple.rs`:
     - [x] `get_host_target_triple()`: Automatically resolves platform triple
           (`x86_64-unknown-linux-gnu`, `x86_64-apple-darwin`, `aarch64-apple-darwin`,
@@ -259,41 +309,42 @@ main application:
           plus `.sha256`.
     - [x] Performs lightweight HTTP `HEAD` asset accessibility check.
 - [x] `strategy_resolver.rs`:
-    - [x] `resolve_upgrade_strategy(crate_name, pinned_version, open_source)`: Evaluates
+    - [x] `resolve_upgrade_strategy(crate_name, pinned_version, distribution)`: Evaluates
           `github.com/r3bl-org/r3bl-binaries` asset availability; if unavailable and
-          `open_source == true`, checks local toolchain presence (`rustup` / `cargo`) on
-          `$PATH`. If `open_source == false`, returns `Err(NoViableUpgradeSource)`.
+          `distribution == CrateDistribution::OpenSource`, checks local toolchain presence
+          (`rustup` / `cargo`) on `$PATH`. If `CrateDistribution::ClosedSource`, returns
+          `Err(NoViableUpgradeSource)`.
 - [x] `version_check.rs`:
     - [x] `try_get_crate_metadata_from_r3bl_versions_json(crate_name)`: Fetches
-          `https://r3bl.com/versions.json` and extracts `CrateVersionMetadata` (`version`,
-          `open_source`, `released_on`).
+          `https://r3bl.com/versions.jsonc` and parses `CrateVersionMetadata` via
+          `VersionsManifest::from_jsonc_str`.
     - [x] Compares semantic versions strictly (`remote_version > local_version`) so local
           development builds with bumped `Cargo.toml` versions never trigger a downgrade.
     - [x] `start_background_version_check(config)`: Non-blocking async task running the
-          SOT version check.
+          SOT version check (no-op if `config.policy == UpgradePolicy::Never`).
     - [x] `start_background_version_check_sync(config)`: Spawns a detached OS thread with
           a lightweight `current_thread` Tokio runtime for synchronous binaries (such as
           `rust-analyzer-mcp-server` which intentionally runs without `#[tokio::main]`).
     - [x] Updates atomic state `UpgradeCheckResult` and caches the resolved
-          `CrateVersionMetadata` (`version`, `open_source`, `released_on`).
+          `CrateVersionMetadata` (`version`, `crate_distribution`, `released_on`).
 - [x] `source_build.rs`:
     - [x] Generalized PTY session manager (`PtySessionBuilder` with
           `DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc`) for `rustup`
           toolchain updates and
-          `cargo +nightly install <crate> --version <pinned_version_from_versions_json>`.
+          `cargo +nightly install <crate> --version <pinned_version_from_versions_jsonc> --force`.
     - [x] Never installs an unpinned version from `crates.io`; always pins `--version` to
-          the exact version resolved from `r3bl.com/versions.json`.
+          the exact version resolved from `r3bl.com/versions.jsonc`.
     - [x] `OscPtyEvent::ProgressUpdate` (`OSC 9;4`) compilation escape sequence handler
           and live `Spinner` updater.
 - [x] `run_upgrade.rs`:
     - [x] `handle_upgrade_at_exit()` / `handle_upgrade_at_exit_sync()`: Coordinates exit
           phase based on policy and output target.
     - [x] `run_upgrade()` / `run_upgrade_sync()`: Executes the resolved `UpgradeSource`
-          (streaming download from `github.com/r3bl-org/r3bl-binaries` + `.sha256`
-          verification + archive extraction via `flate2`/`tar` + `self_replace` on current
-          binary and updating any sibling binaries in the unpacked archive, OR PTY/OSC
-          `rustup` + `cargo +nightly install <crate> --version <pinned_ver>` when
-          `open_source == true`).
+          (streaming `.tar.gz` download from `github.com/r3bl-org/r3bl-binaries` +
+          `.sha256` verification + archive extraction via `flate2`/`tar` + `self_replace`
+          on current binary and updating any sibling binaries in the unpacked archive, OR
+          PTY/OSC `rustup` + `cargo +nightly install <crate> --version <pinned_ver>` when
+          `CrateDistribution::OpenSource`).
     - [x] `run_upgrade_cli_arg_interceptor()`: Helper for standalone `--upgrade` CLI
           invocations.
     - [x] Listens for cooperative `tokio::signal::ctrl_c()`.
@@ -370,29 +421,32 @@ main application:
 ### 5. Bootstrap Scripts & Manifest on `r3bl.com`
 
 **Centralized Installers (`r3bl.com/install.sh`, `r3bl.com/install.ps1`) & Version
-Manifest (`r3bl.com/versions.json`)**:
+Manifest (`r3bl.com/versions.jsonc`)**:
 
 - [ ] Hosted in `../r3bl_website/` so they are served directly from `https://r3bl.com/`
       (with canonical copies maintained in `r3bl-open-core` and synced to
       `../r3bl_website/`):
-    - [ ] `https://r3bl.com/versions.json`: Central JSON manifest mapping crate names to
-          `{ "version", "open_source", "released_on" }`.
+    - [ ] `https://r3bl.com/versions.jsonc`: Central JSONC manifest (with preserved
+          comments) mapping crate names to
+          `{ "version", "crate_distribution", "released_on" }`.
     - [ ] `https://r3bl.com/install.sh`: POSIX shell bootstrap script for Linux & macOS
           (`curl -LsSf https://r3bl.com/install.sh | sh`).
     - [ ] `https://r3bl.com/install.ps1`: PowerShell bootstrap script for Windows
           (`irm https://r3bl.com/install.ps1 | iex`).
 - [ ] Supports optional target crate argument (`cmdr` (default), `build-infra`,
-      `mcp-server`, `all`, or any crate entry present in `versions.json`).
+      `mcp-server`, `all`, or any crate entry present in `versions.jsonc`).
 - [ ] **Bootstrap Execution Flow**:
-    - [ ]   1. Fetches `https://r3bl.com/versions.json` to resolve the target crate's
-           pinned `version` and `open_source` boolean.
-    - [ ]   2. Downloads the pre-compiled archive and `.sha256` checksum from
+    - [ ]   1. Fetches `https://r3bl.com/versions.jsonc` to resolve the target crate's
+           pinned `version` and `crate_distribution` (`"open-source"` vs
+           `"closed-source"`).
+    - [ ]   2. Downloads the pre-compiled `.tar.gz` archive and `.sha256` checksum from
            `https://github.com/r3bl-org/r3bl-binaries/releases/download/v<ver>-<crate>/<crate>-v<ver>-<target>.tar.gz`,
            verifies the checksum, and extracts all executables inside the archive into
            `~/.cargo/bin` (or `$env:USERPROFILE\.cargo\bin`).
-    - [ ]   3. If the binary download fails and `"open_source": true`, checks for `cargo`
-           on `$PATH` and runs `cargo install <crate> --version <ver> --force` (strictly
-           using the `<ver>` pinned in `versions.json`). If `"open_source": false`, prints
+    - [ ]   3. If the binary download fails and `"crate_distribution": "open-source"`,
+           checks for `cargo` on `$PATH` and runs
+           `cargo install <crate> --version <ver> --force` (strictly using the `<ver>`
+           pinned in `versions.jsonc`). If `"crate_distribution": "closed-source"`, prints
            a clean error without attempting a `crates.io` build.
 - [ ] **First-Time Install Caveat During Outages**:
     - [ ] For open-source crates, all documentation also provides the manual source
@@ -424,7 +478,7 @@ Manifest (`r3bl.com/versions.json`)**:
            `cargo publish -p <crate> --dry-run --allow-dirty --no-verify`.
     - [ ]   6. **Interactive Confirmation**: Prompts for explicit user approval before
            publishing.
-    - [ ]   7. **Atomic Publish, Binary Upload & `versions.json` Update**:
+    - [ ]   7. **Atomic Publish, Binary Upload & `versions.jsonc` Update**:
         - [ ] Bumps `Cargo.toml`, regenerates `README.md` via `cargo readme` (except
               `rust-analyzer-mcp-server` which uses a hand-crafted `README.md`), creates
               git commit/tag, pushes to remote, and publishes open-source crates to
@@ -432,9 +486,9 @@ Manifest (`r3bl.com/versions.json`)**:
         - [ ] Creates the GitHub Release on `github.com/r3bl-org/r3bl-binaries` using:
               `gh release create <tag> --repo r3bl-org/r3bl-binaries --title "<tag>" --notes-file docs/release-notes/<crate>/v<version>.md`
               with attached `dist/*` binary assets (`.tar.gz` and `.sha256`).
-        - [ ] Updates `../r3bl_website/versions.json` with the new `version`,
-              `open_source`, and `released_on` UTC timestamp (plus syncs `install.sh` and
-              `install.ps1` to `../r3bl_website/`).
+        - [ ] Updates `../r3bl_website/versions.jsonc` (preserving all comments) with the
+              new `version`, `crate_distribution`, and `released_on` UTC timestamp (plus
+              syncs `install.sh` and `install.ps1` to `../r3bl_website/`).
 
 ### 7. Website & Documentation
 
@@ -444,12 +498,12 @@ Manifest (`r3bl.com/versions.json`)**:
       `rust-analyzer-mcp-server`, and root `r3bl-open-core`) provides:
     - [ ]   1. Primary: 1-line bootstrap script (`https://r3bl.com/install.sh` /
            `https://r3bl.com/install.ps1`).
-    - [ ]   2. Feature docs & `--upgrade` CLI flag instructions.
+    - [ ]   2. Feature docs & `--upgrade` / `--upgrade-policy` CLI flag instructions.
     - [ ]   3. End-of-file fallback instructions: `cargo install <crate> --force`.
 - [ ] **R3BL Website (`r3bl.com` in `../r3bl_website/`)**:
-    - [ ] Host `versions.json`, `install.sh`, and `install.ps1` at the root of
+    - [ ] Host `versions.jsonc`, `install.sh`, and `install.ps1` at the root of
           `../r3bl_website/` so they are served at
-          `https://r3bl.com/{versions.json,install.sh,install.ps1}`.
+          `https://r3bl.com/{versions.jsonc,install.sh,install.ps1}`.
     - [ ] Update `../r3bl_website/index.html` to consolidate the entire tool suite
           (`r3bl-cmdr` [`giti`, `edi`, `env-source`], `r3bl-build-infra`
           [`cargo-rustdoc-fmt`], `r3bl-rust-analyzer-mcp-server`) with copy-pasteable
@@ -467,46 +521,60 @@ Manifest (`r3bl.com/versions.json`)**:
 
 **Module implementation in `r3bl_tui`**:
 
-- [x] Add `self-replace = "1.5"` and `tar = { version = "0.4", default-features = false }`
-      to `tui/Cargo.toml` (alongside `flate2` with `zlib-rs` backend and `sha2`).
-- [x] Create `tui/src/core/script/upgrade/types.rs` defining `CrateVersionMetadata`,
-      `UpgradeConfig`, `UpgradeSource`, `UpgradePolicy`, `UpgradeOutputTarget`, and
-      `UpgradeCheckResult`.
+- [x] Add `self-replace = "1.5"`, `tar = { version = "0.4", default-features = false }`,
+      `flate2 = { version = "1.1.5", default-features = false, features = ["zlib-rs"] }`,
+      and `jsonc-parser = { version = "0.34", features = ["serde", "cst"] }` to
+      `tui/Cargo.toml`.
+- [x] Create `tui/src/core/script/upgrade/constants.rs` centralizing toolchain binary
+      names, CLI flags, archive constants, JSONC manifest keys, and error reason strings.
+- [x] Create `tui/src/core/script/upgrade/versions_manifest.rs` defining
+      `VersionsManifest` (the SSOT for `versions.jsonc` with `from_jsonc_str` and
+      CST-based `update_crate_in_jsonc_str`), `ManifestSchemaVersion`, `CrateDistribution`,
+      `CrateName`, `CrateVersion`, and `CrateVersionMetadata`.
+- [x] Create `tui/src/core/script/upgrade/upgrade_types.rs` defining `UpgradeConfig`,
+      `UpgradeSource`, `UpgradePolicy`, `UpgradeOutputTarget`, `UpgradeCheckResult`, and
+      `UpgradeError`.
 - [x] Create `tui/src/core/script/upgrade/target_triple.rs` implementing
       `get_host_target_triple()`.
 - [x] Create `tui/src/core/script/upgrade/github_release.rs` implementing
       `github.com/r3bl-org/r3bl-binaries` asset URL formatting and HTTP `HEAD`
       availability check.
 - [x] Create `tui/src/core/script/upgrade/strategy_resolver.rs` implementing
-      `resolve_upgrade_strategy(crate_name, pinned_version, open_source)` and local
-      `$PATH` inspection (gating source build fallback on `open_source == true`).
+      `resolve_upgrade_strategy(crate_name, pinned_version, distribution)` and local
+      `$PATH` inspection (gating source build fallback on
+      `CrateDistribution::OpenSource`).
 - [x] Move and generalize PTY/OSC `rustup` & `cargo` build engine from
       `cmdr/src/analytics_client/upgrade_check.rs` into
       `tui/src/core/script/upgrade/source_build.rs` (always passing
-      `--version <pinned_version>` from `versions.json` to `cargo +nightly install`).
+      `--version <pinned_version>` from `versions.jsonc` to `cargo +nightly install`).
 - [x] Create `tui/src/core/script/upgrade/version_check.rs` querying
-      `https://r3bl.com/versions.json` as the sole SOT, comparing versions strictly via
+      `https://r3bl.com/versions.jsonc` as the sole SOT via
+      `VersionsManifest::from_jsonc_str`, comparing versions strictly via
       `(major, minor, patch)` (`remote_version > local_version`), with both async and
       sync-thread variants and `AtomicU8` state management.
 - [x] Create `tui/src/core/script/upgrade/run_upgrade.rs` implementing
       `handle_upgrade_at_exit()`, `handle_upgrade_at_exit_sync()`,
       `run_upgrade_cli_arg_interceptor()`, `run_upgrade_sync()`, binary streaming download
-      from `github.com/r3bl-org/r3bl-binaries` with `.sha256` check, archive extraction,
-      `self_replace` on the running executable plus updating sibling binaries in the
-      archive, and automatic source fallback execution (pinned to
-      `--version <pinned_ver>`) when `open_source == true`.
+      from `github.com/r3bl-org/r3bl-binaries` with `.sha256` check, `.tar.gz` archive
+      extraction, `self_replace` on the running executable plus updating sibling binaries
+      in the archive, and automatic source fallback execution (pinned to
+      `--version <pinned_ver>`) when `CrateDistribution::OpenSource`.
 - [x] Create `tui/src/core/script/upgrade/ui_strings.rs` providing parameterized
       formatters.
 - [x] Create `tui/src/core/script/upgrade/mod.rs` with private modules and public barrel
       exports.
 - [x] Wire `upgrade` into `tui/src/core/script/mod.rs` and export at `r3bl_tui::*`.
-- [x] Add unit tests in `tui/src/core/script/upgrade/` for `versions.json` parsing, strict
-      `remote > local` version comparison, types, strategy resolver (both
-      `open_source: true` and `open_source: false`), target triple, and UI strings.
+- [x] Add unit tests in `tui/src/core/script/upgrade/` for `versions.jsonc` parsing (with
+      comments and trailing commas), CST comment-preserving updates, strict
+      `remote > local` version comparison, `upgrade_types`, `versions_manifest`, strategy
+      resolver (both `CrateDistribution::OpenSource` and `CrateDistribution::ClosedSource`),
+      target triple, and UI strings.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [x] `tui/Cargo.toml`
-    - [ ] `tui/src/core/script/upgrade/types.rs`
+    - [ ] `tui/src/core/script/upgrade/constants.rs`
+    - [ ] `tui/src/core/script/upgrade/upgrade_types.rs`
+    - [ ] `tui/src/core/script/upgrade/versions_manifest.rs`
     - [ ] `tui/src/core/script/upgrade/target_triple.rs`
     - [ ] `tui/src/core/script/upgrade/github_release.rs`
     - [ ] `tui/src/core/script/upgrade/strategy_resolver.rs`
@@ -519,13 +587,13 @@ Manifest (`r3bl.com/versions.json`)**:
 
 ### Phase 2: Bootstrap, Manifest & Release Script
 
-**Bootstrap scripts (`install.sh`, `install.ps1`), `versions.json`, and `release.fish`**:
+**Bootstrap scripts (`install.sh`, `install.ps1`), `versions.jsonc`, and `release.fish`**:
 
 - [x] Create and configure `https://github.com/r3bl-org/r3bl-binaries` repository with
       metadata, topics, and initial `README.md` on `main`.
-- [ ] Create `../r3bl_website/versions.json` initialized with schema v1 (`version`,
-      `open_source`, `released_on` for `r3bl-cmdr`, `r3bl-build-infra`, and
-      `r3bl-rust-analyzer-mcp-server`).
+- [ ] Create `../r3bl_website/versions.jsonc` initialized with schema v1 (`version`,
+      `crate_distribution`, `released_on` and explanatory comments for `r3bl-cmdr`,
+      `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`).
 - [ ] Create `install.sh` (at repo root and synced to `../r3bl_website/install.sh`) for
       Linux and macOS bootstrap installation via `https://r3bl.com/install.sh`.
 - [ ] Create `install.ps1` (at repo root and synced to `../r3bl_website/install.ps1`) for
@@ -542,12 +610,13 @@ Manifest (`r3bl.com/versions.json`)**:
     - [ ] Automated version bump, git commit, git tag (`v<version>-<crate>`), git push,
           `cargo publish`, binary upload via
           `gh release create --repo r3bl-org/r3bl-binaries --notes-file docs/release-notes/<crate>/v<version>.md`
-          with attached `dist/*` assets, and updating `../r3bl_website/versions.json`.
+          with attached `dist/*` assets, and updating `../r3bl_website/versions.jsonc`
+          (preserving comments).
 - [ ] Test `release.fish` validation guardrails (`--dry-run`, missing changelog/release
       notes, invalid version).
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [ ] `../r3bl_website/versions.json`
+    - [ ] `../r3bl_website/versions.jsonc`
     - [ ] `install.sh`
     - [ ] `../r3bl_website/install.sh`
     - [ ] `install.ps1`
@@ -558,9 +627,9 @@ Manifest (`r3bl.com/versions.json`)**:
 
 **Integration into `r3bl-cmdr` suite (`giti`, `edi`, `env-source`)**:
 
-- [ ] Add `--upgrade` CLI flag to `giti` (`cmdr/src/giti/clap_config.rs`), `edi`
-      (`cmdr/src/edi/clap_config.rs`), and `env-source`
-      (`cmdr/src/env_source/clap_config.rs`).
+- [ ] Add `--upgrade` and `--upgrade-policy` CLI flags to `giti`
+      (`cmdr/src/giti/clap_config.rs`), `edi` (`cmdr/src/edi/clap_config.rs`), and
+      `env-source` (`cmdr/src/env_source/clap_config.rs`).
 - [ ] Intercept `--upgrade` at startup in `cmdr/src/bin/giti.rs`, `cmdr/src/bin/edi.rs`,
       and `cmdr/src/bin/env-source.rs` to run standalone upgrade and exit.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` to delegate to
@@ -622,25 +691,27 @@ Manifest (`r3bl.com/versions.json`)**:
 - [ ] Update `cmdr/README.md` and `cmdr/src/lib.rs`:
     - [ ] Add 1-line bootstrap install commands (`https://r3bl.com/install.sh` and
           `https://r3bl.com/install.ps1`).
-    - [ ] Document `--upgrade` standalone CLI argument for `giti`, `edi`, and
+    - [ ] Document `--upgrade` and `--upgrade-policy` CLI arguments for `giti`, `edi`, and
           `env-source`.
     - [ ] Add end-of-file fallback instructions: `cargo install r3bl-cmdr --force`.
 - [ ] Update `build-infra/README.md` and `build-infra/src/lib.rs`:
     - [ ] Add bootstrap install commands (`https://r3bl.com/install.sh` /
           `https://r3bl.com/install.ps1` with `build-infra`).
-    - [ ] Document `cargo-rustdoc-fmt --upgrade` / `cargo rustdoc-fmt --upgrade`.
+    - [ ] Document `cargo-rustdoc-fmt --upgrade` / `cargo rustdoc-fmt --upgrade` and
+          `--upgrade-policy`.
     - [ ] Add end-of-file fallback instructions: `cargo install r3bl-build-infra --force`.
 - [ ] Update `rust-analyzer-mcp-server/README.md` and
       `rust-analyzer-mcp-server/src/lib.rs`:
     - [ ] Add bootstrap install commands (`https://r3bl.com/install.sh` /
           `https://r3bl.com/install.ps1` with `mcp-server`).
-    - [ ] Document `rust-analyzer-mcp-server --upgrade` standalone CLI argument.
+    - [ ] Document `rust-analyzer-mcp-server --upgrade` and `--upgrade-policy` CLI
+          arguments.
     - [ ] Add end-of-file fallback instructions:
           `cargo install r3bl-rust-analyzer-mcp-server --force`.
 - [ ] Update root `README.md`:
     - [ ] Consolidate all binary tools with quick 1-line bootstrap install commands from
           `r3bl.com`.
-    - [ ] Document `--upgrade` usage across tools.
+    - [ ] Document `--upgrade` and `--upgrade-policy` usage across tools.
     - [ ] Add fallback `cargo install <crate> --force` instructions.
 - [ ] Update `r3bl.com` website in `../r3bl_website/index.html`:
     - [ ] Replace placeholder content with product showcase for `r3bl-cmdr` (`giti`,
@@ -653,11 +724,12 @@ Manifest (`r3bl.com/versions.json`)**:
     - [ ] Clean up and modernize `../r3bl_website/css/styles.css` and `css/root_vars.css`.
 - [ ] Update `.agents/skills/release-crate/SKILL.md` to incorporate
       `./release.fish <crate> <version>`, `github.com/r3bl-org/r3bl-binaries`, and
-      `../r3bl_website/versions.json`.
+      `../r3bl_website/versions.jsonc`.
 - [ ] Update `docs/release-guide.md` to reflect binary artifact generation, upload to
-      `github.com/r3bl-org/r3bl-binaries`, and `versions.json` updates via `release.fish`.
+      `github.com/r3bl-org/r3bl-binaries`, and `versions.jsonc` updates via
+      `release.fish`.
 - [x] Update `../r3bl-base/task/prd_monetization_approach.md` (Section 7) to reference
-      this task file as the SSOT for the shared upgrade engine, `r3bl.com/versions.json`,
+      this task file as the SSOT for the shared upgrade engine, `r3bl.com/versions.jsonc`,
       `r3bl.com/install.{sh,ps1}`, and `github.com/r3bl-org/r3bl-binaries`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
@@ -694,23 +766,24 @@ Manifest (`r3bl.com/versions.json`)**:
 
 Comprehensive validation matrix ensuring correct behavior across all supported operating
 systems (Linux, macOS Apple Silicon, macOS Intel, and Windows), network states, crate
-visibility (`open_source: true` vs. `false`), and toolchain environments.
+distribution (`CrateDistribution::OpenSource` vs. `CrateDistribution::ClosedSource`), and
+toolchain environments.
 
 ### Test Scenario Matrix
 
-| Scenario                                     | Crate Visibility     | Network State                                          | Local Toolchain                    | Target Resolved                  | Expected Outcome & Verification                                                                                                                                                           |
-| :------------------------------------------- | :------------------- | :----------------------------------------------------- | :--------------------------------- | :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. Fast Binary Upgrade**                   | Open or Closed       | `r3bl.com/versions.json` + `r3bl-org/r3bl-binaries` OK | Any / None needed                  | `GithubReleaseArtifact`          | Streams `.tar.gz` from `github.com/r3bl-org/r3bl-binaries`, verifies `.sha256`, swaps binary via `self_replace` (and updates sibling binaries), exits 0.                                  |
-| **2. Binaries Repo Down + Full Rustup**      | `open_source: true`  | `r3bl-org/r3bl-binaries` 404 / Offline                 | `rustup` + `cargo` on `$PATH`      | `BuildFromSourceRustup`          | Displays fallback message, runs `rustup toolchain install nightly --force` with PTY, runs `cargo +nightly install <crate> --version <pinned_ver>` (pinned from `versions.json`), exits 0. |
-| **3. Binaries Repo Down + Standalone Cargo** | `open_source: true`  | `r3bl-org/r3bl-binaries` 404 / Offline                 | `cargo` on `$PATH` (no `rustup`)   | `BuildFromSourceCargo`           | Displays fallback message, runs `cargo +nightly install <crate> --version <pinned_ver>` (pinned from `versions.json`), does not error on missing `rustup`, exits 0.                       |
-| **4. Binaries Repo Down + Zero Toolchain**   | `open_source: true`  | `r3bl-org/r3bl-binaries` 404 / Offline                 | No `rustup`, no `cargo` on `$PATH` | `Err(NoViableUpgradeSource)`     | Displays clean error: `"Upgrade failed: GitHub release unreachable and no local Rust build toolchain found. Please retry later: <bin> --upgrade"`, exits 1 cleanly without panic.         |
-| **5. Binaries Repo Down (Closed Source)**    | `open_source: false` | `r3bl-org/r3bl-binaries` 404 / Offline                 | Any (ignored)                      | `Err(NoViableUpgradeSource)`     | Does NOT attempt `crates.io` fallback. Displays clean error: `"Upgrade failed: Binary release server unreachable. Please retry later: <bin> --upgrade"`, exits 1.                         |
-| **6. Local Dev Version Ahead of SOT**        | Open or Closed       | `r3bl.com/versions.json` OK                            | Any                                | `UpgradeCheckResult::UpToDate`   | Local `CARGO_PKG_VERSION` >= `versions.json` `version`; strict `remote > local` comparison evaluates false so local dev binary is never downgraded.                                       |
-| **7. Mid-Stream Network Drop**               | `open_source: true`  | Download aborts mid-stream                             | `rustup` or `cargo` on `$PATH`     | Dynamic fallback to Source Build | Download stream error caught, temp files cleaned up, seamlessly transitions to `BuildFromSourceRustup` or `BuildFromSourceCargo` with `--version <pinned_ver>` from `versions.json`.      |
-| **8. User Cancellation (Ctrl+C)**            | Open or Closed       | Interrupted during download or compilation             | Any                                | Interrupted                      | Cooperative `tokio::signal::ctrl_c()` caught, PTY session / HTTP stream terminated, temp files purged, original binary remains 100% intact.                                               |
-| **9. First-Time Bootstrap Install**          | Open or Closed       | `r3bl.com` + `r3bl-org/r3bl-binaries` 200 OK           | None required                      | Script installer                 | `r3bl.com/install.sh` (Linux/macOS) or `r3bl.com/install.ps1` (Windows) reads `versions.json`, extracts archive to `~/.cargo/bin` or `$env:USERPROFILE\.cargo\bin`, sets perms.           |
-| **10. First-Time Install Outage (Open)**     | `open_source: true`  | `r3bl-org/r3bl-binaries` Down / Offline                | Rust toolchain present             | Manual Cargo fallback            | `install.{sh,ps1}` runs `cargo install <crate> --version <pinned_ver> --force` (or manual `cargo install <crate> --force` if `r3bl.com` is also offline).                                 |
-| **11. MCP Server & `env-source` Stdout**     | Open or Closed       | Any upgrade or normal execution                        | Any                                | `UpgradeOutputTarget::Stderr`    | All progress, spinners, and logs route exclusively to `stderr`. `stdout` remains 100% pure JSON-RPC (`mcp-server`) or shell export statements (`env-source`).                             |
+| Scenario                                     | Crate Distribution   | Network State                                           | Local Toolchain                    | Target Resolved                  | Expected Outcome & Verification                                                                                                                                                            |
+| :------------------------------------------- | :------------------- | :------------------------------------------------------ | :--------------------------------- | :------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Fast Binary Upgrade**                   | Open or Closed       | `r3bl.com/versions.jsonc` + `r3bl-org/r3bl-binaries` OK | Any / None needed                  | `GithubReleaseArtifact`          | Streams `.tar.gz` from `github.com/r3bl-org/r3bl-binaries`, verifies `.sha256`, swaps binary via `self_replace` (and updates sibling binaries), exits 0.                                   |
+| **2. Binaries Repo Down + Full Rustup**      | `"open-source"`      | `r3bl-org/r3bl-binaries` 404 / Offline                  | `rustup` + `cargo` on `$PATH`      | `BuildFromSourceRustup`          | Displays fallback message, runs `rustup toolchain install nightly --force` with PTY, runs `cargo +nightly install <crate> --version <pinned_ver>` (pinned from `versions.jsonc`), exits 0. |
+| **3. Binaries Repo Down + Standalone Cargo** | `"open-source"`      | `r3bl-org/r3bl-binaries` 404 / Offline                  | `cargo` on `$PATH` (no `rustup`)   | `BuildFromSourceCargo`           | Displays fallback message, runs `cargo +nightly install <crate> --version <pinned_ver>` (pinned from `versions.jsonc`), does not error on missing `rustup`, exits 0.                       |
+| **4. Binaries Repo Down + Zero Toolchain**   | `"open-source"`      | `r3bl-org/r3bl-binaries` 404 / Offline                  | No `rustup`, no `cargo` on `$PATH` | `Err(NoViableUpgradeSource)`     | Displays clean error: `"Upgrade failed: GitHub release unreachable and no local Rust build toolchain found. Please retry later: <bin> --upgrade"`, exits 1 cleanly without panic.          |
+| **5. Binaries Repo Down (Closed Source)**    | `"closed-source"`    | `r3bl-org/r3bl-binaries` 404 / Offline                  | Any (ignored)                      | `Err(NoViableUpgradeSource)`     | Does NOT attempt `crates.io` fallback. Displays clean error: `"Upgrade failed: Binary release server unreachable. Please retry later: <bin> --upgrade"`, exits 1.                          |
+| **6. Local Dev Version Ahead of SOT**        | Open or Closed       | `r3bl.com/versions.jsonc` OK                            | Any                                | `UpgradeCheckResult::UpToDate`   | Local `CARGO_PKG_VERSION` >= `versions.jsonc` `version`; strict `remote > local` comparison evaluates false so local dev binary is never downgraded.                                       |
+| **7. Mid-Stream Network Drop**               | `"open-source"`      | Download aborts mid-stream                              | `rustup` or `cargo` on `$PATH`     | Dynamic fallback to Source Build | Download stream error caught, temp files cleaned up, seamlessly transitions to `BuildFromSourceRustup` or `BuildFromSourceCargo` with `--version <pinned_ver>` from `versions.jsonc`.      |
+| **8. User Cancellation (Ctrl+C)**            | Open or Closed       | Interrupted during download or compilation              | Any                                | Interrupted                      | Cooperative `tokio::signal::ctrl_c()` caught, PTY session / HTTP stream terminated, temp files purged, original binary remains 100% intact.                                                |
+| **9. First-Time Bootstrap Install**          | Open or Closed       | `r3bl.com` + `r3bl-org/r3bl-binaries` 200 OK            | None required                      | Script installer                 | `r3bl.com/install.sh` (Linux/macOS) or `r3bl.com/install.ps1` (Windows) reads `versions.jsonc`, extracts `.tar.gz` archive to `~/.cargo/bin` or `$env:USERPROFILE\.cargo\bin`, sets perms. |
+| **10. First-Time Install Outage (Open)**     | `"open-source"`      | `r3bl-org/r3bl-binaries` Down / Offline                 | Rust toolchain present             | Manual Cargo fallback            | `install.{sh,ps1}` runs `cargo install <crate> --version <pinned_ver> --force` (or manual `cargo install <crate> --force` if `r3bl.com` is also offline).                                  |
+| **11. MCP Server & `env-source` Stdout**     | Open or Closed       | Any upgrade or normal execution                         | Any                                | `UpgradeOutputTarget::Stderr`    | All progress, spinners, and logs route exclusively to `stderr`. `stdout` remains 100% pure JSON-RPC (`mcp-server`) or shell export statements (`env-source`).                              |
 
 ### OS-Specific Verification Checklist
 

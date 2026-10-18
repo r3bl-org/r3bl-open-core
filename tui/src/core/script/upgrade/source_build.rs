@@ -3,14 +3,16 @@
 //! Source compilation fallback engine using [`PtySessionBuilder`] and `OSC 9;4` progress
 //! tracking.
 //!
-//! When `open_source == true` and pre-compiled GitHub Release binaries are unreachable,
-//! this module compiles the exact version pinned in `r3bl.com/versions.json` from
-//! `crates.io`:
+//! When `crate_distribution` is [`CrateDistribution::OpenSource`] and pre-compiled GitHub
+//! Release binaries are unreachable, this module compiles the exact version pinned in
+//! `r3bl.com/versions.jsonc` from `crates.io`:
 //! 1. Optional toolchain update: `rustup toolchain install nightly --force`
 //! 2. Pinned crate installation: `cargo +nightly install <crate_name> --version
 //!    <pinned_version> --force`
+//!
+//! [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
 
-use super::{toolchain_args, toolchain_binaries, ui_strings};
+use super::{rustup_progress, toolchain_args, toolchain_binaries, ui_strings};
 use crate::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, TuiAvailability,
             core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                         PtySessionConfigToken}};
@@ -26,11 +28,10 @@ use tokio::signal;
 /// - `info: downloading component 'rust-std'`
 /// - `info: installing component 'cargo'`
 ///
-/// [`info: `]: ui_strings::rustup_progress::INFO_PREFIX
+/// [`info: `]: rustup_progress::INFO_PREFIX
 #[must_use]
 pub fn extract_rustup_progress(output: &str) -> String {
-    use ui_strings::rustup_progress::{ELLIPSIS, INFO_PREFIX, MAX_DISPLAY_LEN,
-                                      TRUNCATE_LEN};
+    use rustup_progress::{ELLIPSIS, INFO_PREFIX, MAX_DISPLAY_LEN, TRUNCATE_LEN};
 
     let lines: Vec<&str> = output
         .lines()
@@ -326,8 +327,8 @@ mod tests {
     fn test_extract_rustup_progress_truncation() {
         let long_line = "info: syncing channel updates for 'nightly-x86_64-unknown-linux-gnu' and extra long text";
         let result = extract_rustup_progress(long_line);
-        assert_eq2!(result.len(), ui_strings::rustup_progress::MAX_DISPLAY_LEN);
-        assert!(result.ends_with(ui_strings::rustup_progress::ELLIPSIS));
+        assert_eq2!(result.len(), rustup_progress::MAX_DISPLAY_LEN);
+        assert!(result.ends_with(rustup_progress::ELLIPSIS));
     }
 
     #[test]

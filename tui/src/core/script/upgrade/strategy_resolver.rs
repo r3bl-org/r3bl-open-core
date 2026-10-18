@@ -3,11 +3,9 @@
 //! Upgrade strategy resolution (`GithubReleaseArtifact` vs. open-source `crates.io`
 //! fallback).
 
-use super::{
-    CrateDistribution, CrateName, CrateVersion, UpgradeError, UpgradeSource,
-    check_github_release_asset_available, format_github_release_asset_urls,
-    get_host_target_triple, toolchain_args, toolchain_binaries, upgrade_reasons,
-};
+use super::{CrateDistribution, CrateName, CrateVersion, UpgradeError, UpgradeSource,
+            check_github_release_asset_available, format_github_release_asset_urls,
+            get_host_target_triple, toolchain_args, toolchain_binaries, upgrade_reasons};
 use crate::CommandOutputResult;
 
 /// Checks whether a binary command is available on `$PATH` by invoking `<cmd> --version`.

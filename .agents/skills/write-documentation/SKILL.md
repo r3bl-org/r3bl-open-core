@@ -162,6 +162,32 @@ sentences in documentation.**
 /// This is the main trait: implement it to add your logic.
 ```
 
+### No "Source of Truth (SOT)" Buzzwords
+
+**Never use phrases like `"Authoritative Source of Truth (SOT)"`, `"Single Source of Truth
+(SSOT)"`, `"Source of Truth (SOT)"`, or the acronyms `"SOT"` / `"SSOT"` in documentation,
+comments, or prose.**
+
+- They are strange robotic phrases, not natural human English.
+- They add zero information and act as pure noise.
+- State directly what the type, constant, or module is in plain English.
+
+```rust
+// ❌ Bad: Robotic noise
+/// Authoritative Source of Truth (SOT) URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Single Source of Truth (SSOT) schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+
+// ✅ Good: Direct human English
+/// URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+```
+
 ### Technical Terminology Precision
 
 **Use precise terms for the code lifecycle and generics to maintain low cognitive load.**

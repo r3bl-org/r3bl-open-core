@@ -1,25 +1,21 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Centralized version check querying `https://r3bl.com/versions.json` as the sole
-//! Source of Truth (SOT).
+//! Centralized version check querying [`R3BL_VERSIONS_JSON_URL`].
 //!
 //! Compares versions strictly via `(major, minor, patch)` semantic version tuples
-//! (`remote_version > local_version`) so local development builds ahead of `versions.json`
-//! are never downgraded.
+//! (`remote_version > local_version`) so local development builds ahead of
+//! `versions.jsonc` are never downgraded.
+//!
+//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 
-use super::{
-    CrateVersionMetadata, UpgradeCheckResult, UpgradeConfig, UpgradePolicy,
-    VersionsManifest,
-};
+use super::{CrateVersionMetadata, R3BL_VERSIONS_JSON_URL, UpgradeCheckResult, UpgradeConfig,
+            UpgradePolicy, VersionsManifest};
 use crate::{AtomicU8Ext as _, DeadlockPreventionPolicy::PanicOnSpecificLockNesting,
             SCRIPT_MOD_DEBUG, ScopedMutex, fg_magenta, ok, scoped_mutex,
             script::http_client};
 use miette::IntoDiagnostic;
 use std::{sync::{LazyLock, atomic::AtomicU8},
           time::Duration};
-
-/// Authoritative Source of Truth (SOT) URL for R3BL crate versions and visibility.
-pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.json";
 
 /// Network timeout for background version check requests.
 const VERSION_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
@@ -29,7 +25,7 @@ const VERSION_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 pub static UPGRADE_CHECK_STATE: AtomicU8 = AtomicU8::new(0);
 
 /// Thread-safe cache storing the resolved [`CrateVersionMetadata`] from
-/// `r3bl.com/versions.json`.
+/// `r3bl.com/versions.jsonc`.
 pub static CACHED_CRATE_METADATA: LazyLock<
     ScopedMutex<Option<CrateVersionMetadata>, { PanicOnSpecificLockNesting }>,
 > = LazyLock::new(|| scoped_mutex!(SPECIFIC, None));
@@ -101,60 +97,61 @@ pub fn is_remote_version_strictly_newer(
     remote_tuple > local_tuple
 }
 
-/// Parses a JSON string matching the `r3bl.com/versions.json` schema and extracts the
-/// [`CrateVersionMetadata`] for `crate_name`.
+/// Parses a JSONC string matching the `r3bl.com/versions.jsonc` schema
+/// ([`VersionsManifest`]) and extracts the [`CrateVersionMetadata`] for `crate_name`.
 ///
 /// # Errors
 ///
-/// Returns an error if the JSON is malformed or if `crate_name` is not present in
+/// Returns an error if the JSONC is malformed or if `crate_name` is not present in
 /// `crates`.
 pub fn parse_crate_metadata_from_versions_json_str(
     json_str: &str,
     crate_name: &str,
 ) -> miette::Result<CrateVersionMetadata> {
-    let manifest: VersionsManifest =
-        serde_json::from_str(json_str).into_diagnostic()?;
+    let manifest = VersionsManifest::from_jsonc_str(json_str)?;
 
-    manifest
-        .crates
-        .get(crate_name)
-        .cloned()
-        .ok_or_else(|| {
-            miette::miette!(
-                "Crate '{}' not found in versions.json (available: {:?})",
-                crate_name,
-                manifest.crates.keys().collect::<Vec<_>>()
-            )
-        })
+    manifest.crates.get(crate_name).cloned().ok_or_else(|| {
+        miette::miette!(
+            "Crate '{}' not found in versions.jsonc (available: {:?})",
+            crate_name,
+            manifest.crates.keys().collect::<Vec<_>>()
+        )
+    })
 }
 
-/// Fetches `https://r3bl.com/versions.json` and extracts the [`CrateVersionMetadata`] for
-/// `crate_name`.
+/// Fetches [`R3BL_VERSIONS_JSON_URL`] and extracts the [`CrateVersionMetadata`]
+/// for `crate_name`.
 ///
 /// # Errors
 ///
 /// Returns an error if the HTTP request fails, times out, returns a non-2xx status, or if
-/// the crate is missing from `versions.json`.
+/// the crate is missing from `versions.jsonc`.
+///
+/// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub async fn try_get_crate_metadata_from_r3bl_versions_json(
     crate_name: &str,
 ) -> miette::Result<CrateVersionMetadata> {
     try_get_crate_metadata_from_url(R3BL_VERSIONS_JSON_URL, crate_name).await
 }
 
-/// Fetches `versions.json` from a custom URL (or [`R3BL_VERSIONS_JSON_URL`]) and extracts
-/// the [`CrateVersionMetadata`] for `crate_name`.
+/// Fetches `versions.jsonc` from a custom URL (or [`R3BL_VERSIONS_JSON_URL`]) and
+/// extracts the [`CrateVersionMetadata`] for `crate_name`.
 ///
 /// # Errors
 ///
 /// Returns an error if the HTTP request fails, times out, returns a non-2xx status, or if
 /// the crate is missing from the manifest.
+///
+/// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub async fn try_get_crate_metadata_from_url(
     url: &str,
     crate_name: &str,
 ) -> miette::Result<CrateVersionMetadata> {
     SCRIPT_MOD_DEBUG.then(|| {
         tracing::debug!(
-            message = "Fetching crate version metadata from SOT",
+            message = "Fetching crate version metadata",
             crate_name = %crate_name,
             url = %fg_magenta(url)
         );
@@ -172,12 +169,24 @@ pub async fn try_get_crate_metadata_from_url(
     ok!(metadata)
 }
 
-/// Performs the SOT version check against `https://r3bl.com/versions.json` and updates
+/// Performs a version check against [`R3BL_VERSIONS_JSON_URL`] and updates
 /// [`UPGRADE_CHECK_STATE`] and [`CACHED_CRATE_METADATA`].
-pub async fn check_version_against_sot(config: &UpgradeConfig) -> UpgradeCheckResult {
+///
+/// # Error Handling
+///
+/// This check is opportunistic and fails silently when offline or when the manifest is
+/// unreachable. See the [`upgrade`] module documentation for details on invocation modes
+/// and error handling.
+///
+/// [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
+/// [`upgrade`]: mod@crate::core::script::upgrade
+pub async fn check_version_against_manifest(config: &UpgradeConfig) -> UpgradeCheckResult {
     set_upgrade_check_result(UpgradeCheckResult::Checking);
 
-    match try_get_crate_metadata_from_r3bl_versions_json(config.crate_name.as_str()).await {
+    match try_get_crate_metadata_from_r3bl_versions_json(config.crate_name.as_str()).await
+    {
         Ok(metadata) => {
             let is_newer = is_remote_version_strictly_newer(
                 metadata.version.as_str(),
@@ -188,7 +197,7 @@ pub async fn check_version_against_sot(config: &UpgradeConfig) -> UpgradeCheckRe
             let result = if is_newer {
                 SCRIPT_MOD_DEBUG.then(|| {
                     tracing::info!(
-                        message = "Newer version available in versions.json",
+                        message = "Newer version available in versions.jsonc",
                         crate_name = %config.crate_name,
                         local_version = %config.local_version,
                         remote_version = %metadata.version
@@ -204,7 +213,7 @@ pub async fn check_version_against_sot(config: &UpgradeConfig) -> UpgradeCheckRe
         Err(err) => {
             SCRIPT_MOD_DEBUG.then(|| {
                 tracing::debug!(
-                    message = "Failed to check version against r3bl.com/versions.json",
+                    message = "Failed to check version against r3bl.com/versions.jsonc",
                     crate_name = %config.crate_name,
                     error = ?err
                 );
@@ -215,29 +224,33 @@ pub async fn check_version_against_sot(config: &UpgradeConfig) -> UpgradeCheckRe
     }
 }
 
-/// Spawns a non-blocking background Tokio task to check `https://r3bl.com/versions.json`
+/// Spawns a non-blocking background Tokio task to check [`R3BL_VERSIONS_JSON_URL`]
 /// for a newer version of `config.crate_name`.
 ///
 /// If [`UpgradeConfig::policy`] is [`UpgradePolicy::Never`], this function returns
 /// immediately without spawning any background task or making network requests.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check(config: UpgradeConfig) {
     if config.policy == UpgradePolicy::Never {
         return;
     }
 
     tokio::spawn(async move {
-        check_version_against_sot(&config).await;
+        check_version_against_manifest(&config).await;
     });
 }
 
 /// Spawns a detached OS thread with a lightweight `current_thread` Tokio runtime to check
-/// `https://r3bl.com/versions.json`.
+/// [`R3BL_VERSIONS_JSON_URL`].
 ///
 /// Designed for synchronous binaries (such as `rust-analyzer-mcp-server`) that
 /// intentionally run without a global `#[tokio::main]` runtime.
 ///
 /// If [`UpgradeConfig::policy`] is [`UpgradePolicy::Never`], this function returns
 /// immediately without spawning any thread or making network requests.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check_sync(config: UpgradeConfig) {
     if config.policy == UpgradePolicy::Never {
         return;
@@ -252,15 +265,14 @@ pub fn start_background_version_check_sync(config: UpgradeConfig) {
             return;
         };
         rt.block_on(async move {
-            check_version_against_sot(&config).await;
+            check_version_against_manifest(&config).await;
         });
     });
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::CrateDistribution;
+    use super::{super::CrateDistribution, *};
     use crate::assert_eq2;
 
     #[test]
@@ -297,7 +309,8 @@ mod tests {
 
     #[test]
     fn test_parse_crate_metadata_from_versions_json_str() {
-        let json = r#"{
+        let jsonc = r#"{
+            // R3BL versions.jsonc manifest
             "schema_version": 1,
             "crates": {
                 "r3bl-cmdr": {
@@ -313,18 +326,18 @@ mod tests {
                 "r3bl-rust-analyzer-mcp-server": {
                     "version": "0.1.0",
                     "crate_distribution": "open-source",
-                    "released_on": "2026-10-17T00:00:00Z"
-                }
+                    "released_on": "2026-10-17T00:00:00Z",
+                },
             }
         }"#;
 
         let cmdr =
-            parse_crate_metadata_from_versions_json_str(json, "r3bl-cmdr").unwrap();
+            parse_crate_metadata_from_versions_json_str(jsonc, "r3bl-cmdr").unwrap();
         assert_eq2!(cmdr.version.as_str(), "0.0.25");
         assert_eq2!(cmdr.crate_distribution, CrateDistribution::OpenSource);
 
         let missing =
-            parse_crate_metadata_from_versions_json_str(json, "nonexistent-crate");
+            parse_crate_metadata_from_versions_json_str(jsonc, "nonexistent-crate");
         assert!(missing.is_err());
     }
 }

@@ -87,11 +87,8 @@ pub async fn check_github_release_asset_available(archive_url: &str) -> bool {
         return false;
     };
 
-    let Ok(Ok(response)) = tokio::time::timeout(
-        HEAD_CHECK_TIMEOUT,
-        client.head(archive_url).send(),
-    )
-    .await
+    let Ok(Ok(response)) =
+        tokio::time::timeout(HEAD_CHECK_TIMEOUT, client.head(archive_url).send()).await
     else {
         return false;
     };

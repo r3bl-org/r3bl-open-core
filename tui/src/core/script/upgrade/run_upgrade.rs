@@ -4,15 +4,15 @@
 //! `github.com/r3bl-org/r3bl-binaries`, `.sha256` checksum verification, archive
 //! extraction, atomic `self_replace` binary replacement (including sibling binaries in
 //! the archive), and automatic fallback to `crates.io` source compilation when
-//! `open_source == true`.
+//! `crate_distribution` is [`CrateDistribution::OpenSource`].
 
-use super::{
-    CrateDistribution, CrateVersionMetadata, UpgradeConfig, UpgradeError,
-    UpgradeOutputTarget, UpgradePolicy, UpgradeSource, archive, check_version_against_sot,
-    get_cached_crate_metadata, is_upgrade_available, resolve_source_fallback,
-    resolve_upgrade_strategy, run_source_build_with_spinner,
-    try_get_crate_metadata_from_r3bl_versions_json, ui_strings, upgrade_reasons,
-};
+use super::{CrateDistribution, CrateVersionMetadata, UpgradeConfig, UpgradeError,
+            UpgradeOutputTarget, UpgradePolicy, UpgradeSource, archive,
+            check_version_against_manifest, get_cached_crate_metadata,
+            is_remote_version_strictly_newer, is_upgrade_available,
+            resolve_source_fallback, resolve_upgrade_strategy,
+            run_source_build_with_spinner,
+            try_get_crate_metadata_from_r3bl_versions_json, ui_strings, upgrade_reasons};
 use crate::{DefaultIoDevices, HowToChoose, InlineString, OutputDevice, Spinner,
             SpinnerStyle, StdMutex, StyleSheet, TerminalInteractiveStatus,
             TuiAvailability, TuiAvailabilityChooseExt, check_is_terminal_interactive,
@@ -408,11 +408,15 @@ pub async fn download_and_replace_github_release(
 }
 
 /// Resolves the [`CrateVersionMetadata`] for `config.crate_name` (reading from the cache
-/// if already populated, or querying `https://r3bl.com/versions.json` on demand).
+/// if already populated, or querying [`R3BL_VERSIONS_JSON_URL`] on demand).
 ///
 /// # Errors
 ///
-/// Returns [`UpgradeError::Other`] if `versions.json` cannot be reached or parsed.
+/// Returns [`UpgradeError::Other`] if `versions.jsonc` cannot be reached or parsed.
+///
+/// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`UpgradeError::Other`]: crate::core::script::upgrade::UpgradeError::Other
 pub async fn resolve_metadata_for_upgrade(
     config: &UpgradeConfig,
 ) -> Result<CrateVersionMetadata, UpgradeError> {
@@ -677,12 +681,14 @@ fn report_strategy_error(
 
 /// Runs an on-demand upgrade (e.g., when invoked via `<binary> --upgrade`).
 ///
-/// Queries `https://r3bl.com/versions.json` for the target version and executes the
+/// Queries [`R3BL_VERSIONS_JSON_URL`] for the target version and executes the
 /// upgrade engine.
 ///
 /// # Errors
 ///
 /// Returns an error if the version check or upgrade execution fails.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub async fn run_upgrade(config: &UpgradeConfig) -> miette::Result<()> {
     let bin_name = get_current_bin_name();
     let metadata = match resolve_metadata_for_upgrade(config).await {
@@ -697,6 +703,20 @@ pub async fn run_upgrade(config: &UpgradeConfig) -> miette::Result<()> {
             return Err(miette::miette!("{err}"));
         }
     };
+
+    let is_newer = is_remote_version_strictly_newer(
+        metadata.version.as_str(),
+        config.local_version.as_str(),
+    );
+    if !is_newer {
+        config
+            .output_target
+            .println(ui_strings::format_already_up_to_date_msg(
+                config.crate_name.as_str(),
+                config.local_version.as_str(),
+            ));
+        return ok!();
+    }
 
     execute_upgrade_with_metadata(config, &metadata)
         .await
@@ -752,7 +772,8 @@ pub fn run_upgrade_cli_arg_interceptor_sync(upgrade_flag: bool, config: &Upgrade
 }
 
 /// Handles pending upgrades at application exit based on [`UpgradeConfig::policy`]:
-/// - [`UpgradePolicy::Never`]: Suppresses exit upgrade notifications and actions entirely.
+/// - [`UpgradePolicy::Never`]: Suppresses exit upgrade notifications and actions
+///   entirely.
 /// - [`UpgradePolicy::NotifyOnly`]: Prints a one-line notice if an upgrade is available.
 /// - [`UpgradePolicy::AutoUpgrade`]: Automatically runs the upgrade if an upgrade is
 ///   available.
@@ -863,7 +884,7 @@ pub fn handle_upgrade_at_exit_sync(config: &UpgradeConfig) {
 /// (or run it if not yet checked).
 pub async fn ensure_version_checked_and_handle_at_exit(config: &UpgradeConfig) {
     if get_cached_crate_metadata().is_none() {
-        check_version_against_sot(config).await;
+        check_version_against_manifest(config).await;
     }
     handle_upgrade_at_exit(config).await;
 }
@@ -940,5 +961,29 @@ mod tests {
         assert_eq2!(extracted.len(), 1);
         assert!(extracted[0].ends_with("giti"));
         assert_eq2!(fs::read(&extracted[0]).unwrap(), b"#!/bin/sh\necho hello\n");
+    }
+
+    #[tokio::test]
+    async fn test_run_upgrade_already_up_to_date() {
+        use super::super::set_cached_crate_metadata;
+        use chrono::Utc;
+
+        let meta = CrateVersionMetadata {
+            version: "0.0.25".into(),
+            crate_distribution: CrateDistribution::OpenSource,
+            released_on: Utc::now(),
+        };
+        set_cached_crate_metadata(meta);
+
+        let config = UpgradeConfig::new(
+            "r3bl-cmdr",
+            "0.0.25",
+            None,
+            UpgradePolicy::AutoUpgrade,
+            UpgradeOutputTarget::Quiet,
+        );
+
+        let result = run_upgrade(&config).await;
+        assert!(result.is_ok());
     }
 }

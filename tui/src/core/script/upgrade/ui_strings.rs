@@ -4,22 +4,6 @@
 
 use crate::Pc;
 
-pub mod rustup_progress {
-    /// Prefix stripped from `rustup` [`stdout`] lines to extract progress information.
-    ///
-    /// [`stdout`]: std::io::stdout
-    pub const INFO_PREFIX: &str = "info: ";
-
-    /// Suffix appended to truncated progress output.
-    pub const ELLIPSIS: &str = "...";
-
-    /// Maximum character length of progress message shown in spinner display.
-    pub const MAX_DISPLAY_LEN: usize = 50;
-
-    /// Truncation slice length before appending [`ELLIPSIS`].
-    pub const TRUNCATE_LEN: usize = MAX_DISPLAY_LEN - ELLIPSIS.len();
-}
-
 /// Interactive prompt option for confirming an upgrade.
 #[must_use]
 pub const fn yes_upgrade_now_raw() -> &'static str { "Yes, upgrade now" }

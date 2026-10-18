@@ -471,6 +471,12 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `<kbd>` that renders it as a 3D keycap button, clearly distinguishing physical keys
    from terminal escape code bytes.
 
+10. **No "Source of Truth (SOT)" Buzzwords**: Never use phrases like `"Authoritative Source
+    of Truth (SOT)"`, `"Single Source of Truth (SSOT)"`, `"Source of Truth (SOT)"`, or the
+    acronyms `"SOT"` / `"SSOT"` in documentation, comments, or prose. These are robotic
+    phrases that add no information and are pure noise. State directly what the item is or
+    does in plain human English.
+
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
 ### Constructor Conventions: `Default` over No-Arg `new()`

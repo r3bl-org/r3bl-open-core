@@ -3,7 +3,12 @@
 //! Shared constants for binary self-upgrade operations, toolchain probes, and archive
 //! handling.
 
-/// Toolchain binary names used on `$PATH` and in PTY sessions.
+/// URL for R3BL crate versions and distribution visibility.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Toolchain binary names used on `$PATH` and in [`PTY`] sessions.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub mod toolchain_binaries {
     /// Binary name for `rustup`.
     pub const RUSTUP: &str = "rustup";
@@ -53,7 +58,27 @@ pub mod archive {
     pub const UPGRADE_TMP_SUFFIX: &str = "upgrade.tmp";
 
     /// Non-binary metadata file extensions to ignore during sibling binary replacement.
-    pub const NON_BINARY_EXTENSIONS: [&str; 4] = ["md", "txt", "json", "sha256"];
+    pub const NON_BINARY_EXTENSIONS: [&str; 5] = ["md", "txt", "json", "jsonc", "sha256"];
+}
+
+/// Property keys used in the [`R3BL_VERSIONS_JSON_URL`] manifest.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+pub mod manifest_keys {
+    /// Top-level schema version key (`"schema_version"`).
+    pub const SCHEMA_VERSION: &str = "schema_version";
+
+    /// Top-level crates map key (`"crates"`).
+    pub const CRATES: &str = "crates";
+
+    /// Crate semantic version key (`"version"`).
+    pub const VERSION: &str = "version";
+
+    /// Crate distribution and licensing model key (`"crate_distribution"`).
+    pub const CRATE_DISTRIBUTION: &str = "crate_distribution";
+
+    /// Crate UTC release timestamp key (`"released_on"`).
+    pub const RELEASED_ON: &str = "released_on";
 }
 
 /// Descriptive reason strings for [`UpgradeError::NoViableUpgradeSource`] and retry
@@ -73,4 +98,21 @@ pub mod upgrade_reasons {
 
     /// Reason when an upgrade step is canceled cooperatively by the user.
     pub const CANCELLED_BY_USER: &str = "cancelled by user";
+}
+
+/// Progress parsing constants for `rustup` terminal output.
+pub mod rustup_progress {
+    /// Prefix stripped from `rustup` [`stdout`] lines to extract progress information.
+    ///
+    /// [`stdout`]: std::io::stdout
+    pub const INFO_PREFIX: &str = "info: ";
+
+    /// Suffix appended to truncated progress output.
+    pub const ELLIPSIS: &str = "...";
+
+    /// Maximum character length of progress message shown in spinner display.
+    pub const MAX_DISPLAY_LEN: usize = 50;
+
+    /// Truncation slice length before appending [`ELLIPSIS`].
+    pub const TRUNCATE_LEN: usize = MAX_DISPLAY_LEN - ELLIPSIS.len();
 }
