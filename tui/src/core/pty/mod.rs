@@ -177,7 +177,7 @@
 //! #### The Final Cleanup (RAII and the Drop Chain)
 //!
 //! When your app drops the [`PtySession`] handle, Rust's automatic resource management
-//! ([`RAII`]) triggers a cleanup chain across all internal components:
+//! ([RAII]) triggers a cleanup chain across all internal components:
 //!
 //! - **Session Layer**:
 //!   - The [MPSC channels] are closed when their halves are dropped.
@@ -187,7 +187,7 @@
 //!       Thread] handles.
 //! - **Engine Layer**:
 //!   - The [`Controller`] (from the [Engine Layer]) is dropped.
-//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [`RAII`] to guarantee that
+//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [RAII] to guarantee that
 //!     all OS-level file descriptors are closed. This eliminates the risk of
 //!     [resource-leaking deadlocks] and ensures a clean system state.
 //!
@@ -336,7 +336,7 @@
 //! - Cancellation Safety and Stream Corruption: Dropping an async future at an `.await`
 //!   point (e.g., within a [`select!`] branch) can abort read or write operations
 //!   mid-stream, leading to dropped bytes, corrupted state, or orphaned child processes.
-//! - Deterministic Cleanup: With synchronous threads, Rust's [`RAII`] guarantees clean,
+//! - Deterministic Cleanup: With synchronous threads, Rust's [RAII] guarantees clean,
 //!   linear teardown. Dropping the session handle cascades through the thread handles,
 //!   joins all background threads, closes OS file descriptors, and prevents zombie
 //!   processes.
@@ -446,7 +446,6 @@
 //! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
 //! [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
 //! [`PtySessionBuilder`]: crate::PtySessionBuilder
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`select!`]: tokio::select
 //! [`spawn_pty_orchestrator_thread()`]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
@@ -476,6 +475,7 @@
 //! [Orchestrator]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [PTY Core Concept]: #the-pty-core-concept
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [Reader Thread]: crate::pty_session::threads::reader::spawn_pty_reader_thread
 //! [Reader]: crate::pty_session::threads::reader::spawn_pty_reader_thread
 //! [resource-leaking deadlocks]: crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock

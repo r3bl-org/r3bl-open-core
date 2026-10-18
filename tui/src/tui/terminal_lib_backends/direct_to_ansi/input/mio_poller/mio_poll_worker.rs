@@ -298,12 +298,12 @@ impl MioPollWorker {
 impl Drop for MioPollWorker {
     /// Restores the original [`stdin`] file status flags when the worker is dropped.
     ///
-    /// This is an [`RAII`] guard that ensures we don't permanently leave the terminal's
+    /// This is an [RAII] guard that ensures we don't permanently leave the terminal's
     /// [`stdin`] in non-blocking mode if the poller thread panics or the application
     /// exits. Failing to do so would break the user's shell after the application exits.
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     /// [`stdin`]: std::io::stdin
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     fn drop(&mut self) {
         if let Some(original_flags) = self.original_stdin_flags {
             let _ = rustix::fs::fcntl_setfl(&self.sources.stdin, original_flags);

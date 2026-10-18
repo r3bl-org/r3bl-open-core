@@ -44,8 +44,8 @@ impl PreallocatedStringExt for String {
 /// It will clear the given buffer, write the format string directly into the existing
 /// heap capacity using [`std::fmt::Write`], and evaluate to a `&str`.
 ///
-/// See [`fast_strings`] for the central architecture covering all string performance and
-/// allocation strategies in the codebase.
+/// See [`fast_strings`][1] for the central architecture covering all string performance
+/// and allocation strategies in the codebase.
 ///
 /// # How format args are passed to the trait method
 ///
@@ -68,8 +68,7 @@ impl PreallocatedStringExt for String {
 /// }
 /// ```
 ///
-/// [`fast_strings`]:
-///     mod@crate::core::common::fast_strings#string-allocation-performance-strategy
+/// [1]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
 /// [`format_into()`]: PreallocatedStringExt::format_into
 #[macro_export]
 macro_rules! format_no_alloc {

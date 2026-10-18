@@ -25,7 +25,7 @@
 //! operation abstraction layer.
 //!
 //! ## Navigation
-//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth).
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs].
 //! - **Previous stage**: [`ofs_buf::paint_impl` mod docs] (Stage 4: Backend Converter,
 //!   shared by both Crossterm and [`DirectToAnsi`]).
 //! - **Alternative Stage 5**: [`crossterm_backend::crossterm_paint_render_op_impl` mod
@@ -35,7 +35,7 @@
 //! <div class="warning">
 //!
 //! **For the complete rendering architecture**, see [`terminal_lib_backends` mod docs]
-//! module documentation (this is the authoritative source of truth).
+//! module documentation.
 //!
 //! </div>
 //!
@@ -83,8 +83,8 @@
 //! `core/osc/`.
 //!
 //! Rather than duplicating low-level protocol specifications across backends, this module
-//! serves as the central navigation hub linking to the authoritative protocol
-//! documentation across the codebase.
+//! serves as the central navigation hub linking to the protocol documentation across the
+//! codebase.
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────────────────────┐
@@ -109,7 +109,7 @@
 //!
 //! 1. **[`Kitty`] Keyboard Protocol (`CSI u`)**:
 //!    - **Direction**: 🛬 Inbound ([`stdin`]) & Outbound ([`stdout`])
-//!    - **Source of Truth**: [`vt_100_terminal_input_parser`]
+//!    - **Implementation**: [`vt_100_terminal_input_parser`]
 //!    - **Highlights**:
 //!      - Zero-latency progressive enhancement (`CSI > 1 u`).
 //!      - Disambiguates `Shift+Enter`, `Ctrl+Tab`, and distinct `Ctrl+I` vs `Tab`.
@@ -117,7 +117,7 @@
 //!
 //! 2. **[`OSC`] 52 In-Band Clipboard**:
 //!    - **Direction**: 🛫 Outbound ([`stdout`])
-//!    - **Source of Truth**: [`ClipboardService`] & [`Osc52Clipboard`]
+//!    - **Implementation**: [`ClipboardService`] & [`Osc52Clipboard`]
 //!    - **Highlights**:
 //!      - Automatic fallback when desktop display server (`$DISPLAY` / `$WAYLAND_DISPLAY`)
 //!        is unset.
@@ -126,14 +126,14 @@
 //!
 //! 3. **[`DEC`] 2004 Bracketed Paste**:
 //!    - **Direction**: 🛬 Inbound ([`stdin`])
-//!    - **Source of Truth**: [`paste_state_machine`] & [`terminal_events`]
+//!    - **Implementation**: [`paste_state_machine`] & [`terminal_events`]
 //!    - **Highlights**:
 //!      - Asynchronous paste handling (`CSI 200 ~` / `CSI 201 ~`).
 //!      - Eliminates need for insecure synchronous [`OSC`] 52 queries.
 //!
 //! 4. **Inbound [`OSC`] Framing & `Alt+]` Disambiguation**:
 //!    - **Direction**: 🛬 Inbound ([`stdin`])
-//!    - **Source of Truth**: [`terminal_events`] & [`osc_scanner`]
+//!    - **Implementation**: [`terminal_events`] & [`osc_scanner`]
 //!    - **Highlights**:
 //!      - 2-phase lexical scanner distinguishing human `Alt+]` from terminal [`OSC`]
 //!        responses.
@@ -142,7 +142,7 @@
 //!
 //! 5. **Outbound [`OSC`] Codes & Formatting**:
 //!    - **Direction**: 🛫 Outbound ([`stdout`])
-//!    - **Source of Truth**: [`core::osc`] & [`OscSender`]
+//!    - **Implementation**: [`core::osc`] & [`OscSender`]
 //!    - **Highlights**:
 //!      - Type-safe enum builder ([`OscSequence`]).
 //!      - Sets window titles (`OSC 0`/`2`), creates clickable hyperlinks (`OSC 8`), and
@@ -150,7 +150,7 @@
 //!
 //! 6. **[`PTY`] Controlled Child Interception**:
 //!    - **Direction**: 🔄 Intermediate ([`PTY`] controlled output)
-//!    - **Source of Truth**: [`core::pty`] & [`PtyOscProgressScanner`]
+//!    - **Implementation**: [`core::pty`] & [`PtyOscProgressScanner`]
 //!    - **Highlights**:
 //!      - Uses `TERM=xterm-256color` masquerading for child processes.
 //!      - Background reader scans and extracts cargo/rustup `OSC 9;4` progress updates.

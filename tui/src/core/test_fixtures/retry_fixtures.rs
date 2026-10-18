@@ -65,7 +65,7 @@
 /// });
 /// ```
 ///
-/// [module-level documentation]: crate::core::test_fixtures::retry
+/// [module-level documentation]: crate::core::test_fixtures::retry_fixtures
 #[macro_export]
 macro_rules! retry_until_success_test {
     ($max_attempts:expr, $body:block) => {
@@ -114,7 +114,7 @@ macro_rules! retry_until_success_test {
 /// # }
 /// ```
 ///
-/// [module-level documentation]: crate::core::test_fixtures::retry
+/// [module-level documentation]: crate::core::test_fixtures::retry_fixtures
 #[macro_export]
 macro_rules! retry_until_success_test_async {
     ($max_attempts:expr, $body:block) => {

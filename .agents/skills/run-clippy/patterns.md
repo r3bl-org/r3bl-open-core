@@ -591,6 +591,7 @@ When running the `run-clippy` skill:
 - [ ] Comment punctuation follows rules (single-line: period, wrapped: period at end, independent: each gets period)
 - [ ] Suppressed lints (`#[allow(...)]`) include the built-in `reason` parameter
 - [ ] No `.and_then()` used for Option/Result combinators (prefer `?` early returns)
+- [ ] Custom error enums/structs derive `thiserror::Error` and `miette::Diagnostic` (no manual `Display` or `std::error::Error` impls), and serde unit enums use `#[serde(rename_all = "...")]` instead of `#[serde(try_from = "String")]` + `FromStr`/`TryFrom` boilerplate
 - [ ] Module organization follows private + re-export pattern where appropriate
 - [ ] Rustdoc reference-style links properly formatted (if applicable)
 - [ ] Tests pass after auto-fixes: `cargo test --all-targets`

@@ -86,7 +86,7 @@ impl DeadlockPreventionPolicy {
     }
 }
 
-/// Private [`RAII`] guard used by [`ScopedMutex::read()`] and [`ScopedMutex::write()`] to
+/// Private [RAII] guard used by [`ScopedMutex::read()`] and [`ScopedMutex::write()`] to
 /// automatically acquire and release locks from the [`SharedLedger`].
 ///
 /// - This guard enforces the chosen policy by using the thread-local [`SharedLedger`]
@@ -105,10 +105,10 @@ impl DeadlockPreventionPolicy {
 ///
 /// [`drop()`]: #method.drop
 /// [`new()`]: Self::new()
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`SharedLedger`]: crate::SharedLedger
 /// [`write()`]: crate::ScopedMutex::write
 /// [Parameters]: crate::ScopedMutex#parameters
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[derive(Debug)]
 pub struct DeadlockPreventionGuard<'a, S: ?Sized, const POLICY: DeadlockPreventionPolicy>
 {

@@ -274,16 +274,9 @@ macro_rules! ok {
 ///
 /// ```
 /// use r3bl_tui::timed;
-/// use sha2::{Digest, Sha256};
-/// let (retval, duration) = timed!({
-///     let prompt = "Hello, World!";
-///     let mut hasher = Sha256::new();
-///     hasher.update(prompt);
-///     let result = hasher.finalize();
-///     let mut bytes = [0u8; 4];
-///     bytes.copy_from_slice(&result.as_slice()[..4]);
-///     u32::from_le_bytes(bytes)
-/// });
+/// let (retval, duration) = timed!({ (1_u32..=100).sum::<u32>() });
+/// assert_eq!(retval, 5050);
+/// let _ = duration;
 /// ```
 #[macro_export]
 macro_rules! timed {

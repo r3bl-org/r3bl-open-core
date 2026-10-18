@@ -102,7 +102,7 @@
 //! See [`RRT`]'s [Thread Lifecycle] for the step-by-step shutdown sequence.
 //!
 //! **Thread cleanup** - When the [thread] self-terminates, your [`RRTWorker`] trait
-//! implementation goes out of scope, triggering [`RAII`] cleanup via [`Drop`] on the OS
+//! implementation goes out of scope, triggering [RAII] cleanup via [`Drop`] on the OS
 //! resources it owns (like [`fds`]). If new subscribers have appeared [in the meantime],
 //! RRT reuses the existing [thread] generation. Then [`TerminationGuard`] transitions the
 //! [`ThreadState`] to [`Stopped`] and calls [`notify_all()`] on the [`Condvar`], waking
@@ -197,11 +197,18 @@
 //! [`ThreadState::Stopped`] via [`TerminationGuard`]'s [`Drop`] impl. Regardless of the
 //! path, calling [`try_subscribe()`] again will relaunch a fresh dedicated [thread].
 //!
-//! | Path                  | Trigger                                       | State Transition                            | Subscribers Notified?                                |
-//! | :-------------------- | :-------------------------------------------- | :------------------------------------------ | :--------------------------------------------------- |
-//! | **Normal Stop**       | zero-receivers, [`EOF`], or [`Stop`]          | [`Running`] → [`Stopping`] → [`Stopped`]    | No                                                   |
-//! | **Restart Exhausted** | [`RestartPolicy`] budget depleted             | [`Restarting`] → [`Stopping`] → [`Stopped`] | Yes ([`RRTEvent::Shutdown(RestartPolicyExhausted)`]) |
-//! | **Panic**             | [`block_until_ready_then_dispatch()`] panics  | Any → [`Stopped`] (direct)                  | Yes ([`RRTEvent::Shutdown(Panic)`])                  |
+//! - Normal Stop
+//!   - *Trigger*: zero-receivers, [`EOF`], or [`Stop`].
+//!   - *State Transition*: [`Running`] → [`Stopping`] → [`Stopped`].
+//!   - *Subscribers Notified?*: No.
+//! - Restart Exhausted
+//!   - *Trigger*: [`RestartPolicy`] budget depleted.
+//!   - *State Transition*: [`Restarting`] → [`Stopping`] → [`Stopped`].
+//!   - *Subscribers Notified?*: Yes ([`RRTEvent::Shutdown(RestartPolicyExhausted)`]).
+//! - Panic
+//!   - *Trigger*: [`block_until_ready_then_dispatch()`] panics.
+//!   - *State Transition*: Any → [`Stopped`] (direct).
+//!   - *Subscribers Notified?*: Yes ([`RRTEvent::Shutdown(Panic)`]).
 //!
 //! **Panics in [`block_until_ready_then_dispatch()`]** are caught and do not crash the
 //! process - no restart is attempted, since a panic signals a logic bug, not a transient
@@ -212,11 +219,18 @@
 //!
 //! ## What's in a name? 😛
 //!
-//! | Word          | Meaning                                                                                                                                                                                      |
-//! | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-//! | **Resilient** | [Thread] can stop or crash and be relaunched with [generation] tracking; [`RestartPolicy`] for self-healing restarts; [`broadcast channel`] isolates async consumers from [Thread Lifecycle] |
-//! | **Reactor**   | Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]) via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching [`RRTSoftwareInterrupt`]                         |
-//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTSoftwareInterrupt`] & [`RAII`] cleanup via [`Drop`] on thread exit                                                      |
+//! - Resilient
+//!     - [Thread] can stop or crash and be relaunched with [generation] tracking.
+//!     - [`RestartPolicy`] for self-healing restarts.
+//!     - [`broadcast channel`] isolates async consumers from [Thread Lifecycle].
+//! - Reactor
+//!     - Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]).
+//!     - Via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching
+//!       [`RRTSoftwareInterrupt`].
+//! - Thread
+//!     - Dedicated [thread] for [blocking I/O].
+//!     - Cooperative shutdown via [`RRTSoftwareInterrupt`].
+//!     - [RAII] cleanup via [`Drop`] on thread exit.
 //!
 //! ## Mental Model for Web Developers
 //!
@@ -246,7 +260,7 @@
 //!   [`try_subscribe()`].
 //!
 //! - **Lifecycle**: [Web Workers] require manual cleanup (`terminate()` or
-//!   `self.close()`); RRT uses [`RAII`] via [`SubscriberGuard`] - the thread
+//!   `self.close()`); RRT uses [RAII] via [`SubscriberGuard`] - the thread
 //!   self-terminates when all guards are dropped.
 //!
 //! - **Communication**: [Web Workers] use serialized `postMessage`; RRT uses a type-safe
@@ -350,12 +364,16 @@
 //!
 //! The "[blocks on I/O]" claim holds for various I/O sources when using [`mio`]:
 //!
-//! | I/O Backend                                 | Blocks? | Notes                                                                                                                                |
-//! | :------------------------------------------ | :------ | :----------------------------------------------------------------------------------------------------------------------------------- |
-//! | [`mio`] + [`stdin`]                         | Yes     | See [`mio_poller`]                                                                                                                   |
-//! | [`mio`] + [sockets]                         | Yes     | [`TCP`], [`UDP`], [Unix domain sockets]                                                                                              |
-//! | [`mio`] + [signals]                         | Yes     | Signals are async interrupts (not [`pollable`]); [`signalfd(2)`] or [`signal-hook`] wraps them as [`fd`]s (see [`mio_poller`])       |
-//! | [`mio`] + [`pipe(2)`]/[`fifo(7)`]           | Yes     | [`pollable`] [`fd`]s ie, 1-1 one-way byte streams: [`pipe(2)`] = parent↔child (anonymous), [`fifo(7)`] = via filesystem path (named) |
+//! - [`mio`] + [`stdin`]:
+//!     - See [`mio_poller`].
+//! - [`mio`] + [sockets]:
+//!     - [`TCP`], [`UDP`], [Unix domain sockets].
+//! - [`mio`] + [signals]:
+//!     - Signals are async interrupts (not [`pollable`]); [`signalfd(2)`] or
+//!       [`signal-hook`] wraps them as [`fd`]s (see [`mio_poller`]).
+//! - [`mio`] + [`pipe(2)`] / [`fifo(7)`]:
+//!     - [`pollable`] [`fd`]s, i.e., 1-1 one-way byte streams: [`pipe(2)`] = parent ←→
+//!       child (anonymous), [`fifo(7)`] = via filesystem path (named).
 //!
 //! The [thread] blocks in [`mio::Poll::poll()`] until the kernel signals readiness (via
 //! [`epoll`] on Linux). The blocking behavior is identical for all the sources above.
@@ -388,12 +406,29 @@
 //!   [`RRTSoftwareInterrupt`] and [`Event`] types). Without your worker concrete type
 //!   (and these other pieces) to inject ([`DI`]), the framework has nothing to run.
 //!
-//!   | Type / Trait             | Purpose                                                                                           | Implementation                                                                    |
-//!   | :----------------------- | :------------------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------- |
-//!   | [`RRTWorker`]            | [`create_and_register_os_sources()`], [`block_until_ready_then_dispatch()`], [`restart_policy()`] | Your logic: create resources, poll, handle events                                 |
-//!   | [`RRTSoftwareInterrupt`] | Interrupt mechanism (returned by [`create_and_register_os_sources()`])                            | Backend-specific impl (see [why user-provided?])                                  |
-//!   | [`Event`]                | Domain-specific subscriber event data                                                             | Struct/enum sent via [`sender.send()`] from [`block_until_ready_then_dispatch()`] |
-//!   | [`RestartPolicy`]        | Config for [self-healing restarts]                                                                | Override [`restart_policy()`] or use [default policy]                             |
+//!   - [`RRTWorker`]
+//!     - *Purpose*:
+//!         - [`create_and_register_os_sources()`],
+//!         - [`block_until_ready_then_dispatch()`],
+//!         - [`restart_policy()`].
+//!     - *Implementation*:
+//!         - Your logic: create resources, poll, handle events.
+//!   - [`RRTSoftwareInterrupt`]
+//!     - *Purpose*:
+//!         - Interrupt mechanism (returned by [`create_and_register_os_sources()`]).
+//!     - *Implementation*:
+//!         - Backend-specific impl (see [why user-provided?]).
+//!   - [`Event`]
+//!     - *Purpose*:
+//!         - Domain-specific subscriber event data.
+//!     - *Implementation*:
+//!         - Struct/enum sent via [`sender.send()`] from
+//!           [`block_until_ready_then_dispatch()`].
+//!   - [`RestartPolicy`]
+//!     - *Purpose*:
+//!         - Config for [self-healing restarts].
+//!     - *Implementation*:
+//!         - Override [`restart_policy()`] or use [default policy].
 //!
 //!   See the [Example] section for details.
 //!
@@ -626,9 +661,9 @@
 //! When the thread starts tearing down, it transitions the state from [`Running`] to
 //! [`Stopping`] *before* dropping any OS resources. A new subscriber arriving during the
 //! teardown window sees [`Stopping`] (or [`Stopped`]) and blocks on the [`Condvar`] until
-//! the dying thread fully exits and the state reaches [`Stopped`], at which point the
-//! new subscriber takes ownership and spawns a fresh thread. There is no spin-wait, and
-//! no "fast path that sees an interrupt handle for a dying thread."
+//! the dying thread fully exits and the state reaches [`Stopped`], at which point the new
+//! subscriber takes ownership and spawns a fresh thread. There is no spin-wait, and no
+//! "fast path that sees an interrupt handle for a dying thread."
 //!
 //! ### The Zombie Interrupt Bug
 //!
@@ -639,8 +674,8 @@
 //! clone of the previous interrupt handle.
 //!
 //! Calling that stale interrupt handle did nothing useful (the target was a dead
-//! [`mio::Poll`]), so the new thread never got interrupted by that subscriber's drop.
-//! The subscriber had become a "zombie", holding an interrupt handle that pointed at a
+//! [`mio::Poll`]), so the new thread never got interrupted by that subscriber's drop. The
+//! subscriber had become a "zombie", holding an interrupt handle that pointed at a
 //! corpse.
 //!
 //! **How it was mitigated:** The framework introduced a `SharedInterruptSlot`,
@@ -654,8 +689,8 @@
 //! that **deliberately does not implement [`Clone`] or [`Copy`]**. The variant lives
 //! inside the [`ThreadLifecycleMonitor`], shared via [`Arc`]. Every subscriber holds a
 //! clone of the same `Arc<ThreadLifecycleMonitor>` - never a clone of the interrupt
-//! handle itself, because the interrupt handle *cannot be cloned*. Subscribers access
-//! the interrupt handle only through [`ThreadLifecycleMonitor::interrupt_if_running()`],
+//! handle itself, because the interrupt handle *cannot be cloned*. Subscribers access the
+//! interrupt handle only through [`ThreadLifecycleMonitor::interrupt_if_running()`],
 //! which locks the state and matches on the [`Running`] variant on every call. When the
 //! framework relaunches the thread (`Restarting → Running`), the new [`InterruptHandle`]
 //! is installed in the new [`Running`] variant atomically; the old handle is dropped
@@ -740,7 +775,8 @@
 //! - **[`rrt_worker`]**: Core traits ([`RRTWorker`], [`RRTSoftwareInterrupt`])
 //! - **[`rrt_event`]**: Two-tier event model ([`RRTEvent`], [`ShutdownReason`])
 //! - **[`rrt_restart_policy`]**: Self-healing configuration ([`RestartPolicy`])
-//! - **[`rrt_interrupt_handle`]**: Non-clonable interrupt handle wrapper ([`InterruptHandle`])
+//! - **[`rrt_interrupt_handle`]**: Non-clonable interrupt handle wrapper
+//!   ([`InterruptHandle`])
 //! - **[`rrt_subscriber_guard`]**: RAII subscription guard ([`SubscriberGuard`])
 //! - **[`rrt_termination_guard`]**: RAII thread-exit guard ([`TerminationGuard`])
 //! - **[`rrt_monitor`]**: State machine and synchronization ([`ThreadLifecycleMonitor`],
@@ -860,12 +896,28 @@
 //! RRT shares traits with several classic concurrency patterns but doesn't fit neatly
 //! into any single category:
 //!
-//! | Pattern           | Similarity                          | Key Difference                                                                               |
-//! | :---------------- | :---------------------------------- | :------------------------------------------------------------------------------------------- |
-//! | [Actor]           | Dedicated execution context         | Actors are lightweight (many per [thread]); RRT is one OS [thread] that [blocks on I/O]      |
-//! | [Reactor]         | Event demultiplexing, I/O readiness | Reactor typically runs in the main loop; RRT isolates [blocking I/O] on a dedicated [thread] |
-//! | [Proactor]        | Async I/O, kernel involvement       | Proactor uses completion callbacks; RRT blocks waiting for readiness                         |
-//! | Producer-Consumer | [Thread] produces for consumers     | Producer-Consumer uses 1:1 queues; RRT uses 1:N [`broadcast`]                                |
+//! - [Actor]
+//!   - *Similarity*:
+//!     - Dedicated execution context.
+//!   - *Key Difference*:
+//!     - Actors are lightweight (many per [thread]); RRT is one OS [thread] that [blocks
+//!       on I/O].
+//! - [Reactor]
+//!   - *Similarity*:
+//!     - Event demultiplexing, I/O readiness.
+//!   - *Key Difference*:
+//!     - Reactor typically runs in the main loop; RRT isolates [blocking I/O] on a
+//!       dedicated [thread].
+//! - [Proactor]
+//!   - *Similarity*:
+//!     - Async I/O, kernel involvement.
+//!   - *Key Difference*:
+//!     - Proactor uses completion callbacks; RRT blocks waiting for readiness.
+//! - Producer-Consumer
+//!   - *Similarity*:
+//!     - [Thread] produces for consumers.
+//!   - *Key Difference*:
+//!     - Producer-Consumer uses 1:1 queues; RRT uses 1:N [`broadcast`].
 //!
 //! **What makes RRT distinct:**
 //!
@@ -922,10 +974,8 @@
 //! [`io_uring`: An Alternative Model]: #io_uring-an-alternative-model
 //! [`io_uring`]: https://manpages.debian.org/io_uring.7
 //! [`IOCP`]: https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
-//! [`IORING_OP_ASYNC_CANCEL`]:
-//!     https://manpages.debian.org/io_uring_prep_cancel.3
-//! [`IORING_OP_MSG_RING`]:
-//!     https://manpages.debian.org/io_uring_prep_msg_ring.3
+//! [`IORING_OP_ASYNC_CANCEL`]: https://manpages.debian.org/io_uring_prep_cancel.3
+//! [`IORING_OP_MSG_RING`]: https://manpages.debian.org/io_uring_prep_msg_ring.3
 //! [`kevent()`]: https://man.freebsd.org/cgi/man.cgi?query=kevent
 //! [`kill -9`]: https://manpages.debian.org/kill.1
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
@@ -941,7 +991,6 @@
 //! [`pollable`]: https://manpages.debian.org/poll.2
 //! [`PTY` pair]: crate::pty_engine::pty_pair::PtyPair
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`read(2)`]: https://manpages.debian.org/read.2
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv
@@ -1054,11 +1103,11 @@
 //! [Multi-threaded runtime]: tokio::runtime::Builder::new_multi_thread
 //! [poll loop]: run_worker_loop
 //! [Proactor]: https://en.wikipedia.org/wiki/Proactor_pattern
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 //! [Reactor]: https://en.wikipedia.org/wiki/Reactor_pattern
 //! [readiness]: https://manpages.debian.org/epoll.7#DESCRIPTION
-//! [Registered buffers]:
-//!     https://manpages.debian.org/io_uring_register_buffers.3
+//! [Registered buffers]: https://manpages.debian.org/io_uring_register_buffers.3
 //! [Registered FDs]: https://manpages.debian.org/io_uring_register_files.3
 //! [restart budget]: RestartPolicy
 //! [RRT section]: crate#resilient-reactor-thread-rrt-pattern
@@ -1159,11 +1208,13 @@ pub use rrt_types::*;
 pub use rrt_interrupt_handle::*;
 pub use rrt_worker::*;
 pub use rrt_input_sender::*;
+
 // --- Internal Implementation (How it works) ---
 pub use rrt_engine::*;
 pub use rrt_monitor::*;
 pub use rrt_termination_guard::*;
 pub use rrt_thread_state::*;
+
 // Tests.
 #[cfg(any(test, doc))]
 pub mod rrt_integration_tests;

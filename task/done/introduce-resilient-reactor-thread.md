@@ -1,26 +1,26 @@
 # Resilient Reactor Thread (RRT) Pattern
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
+- [Resilient Reactor Thread (RRT) Pattern](#resilient-reactor-thread-rrt-pattern)
 - [Overview](#overview)
-  - [Origin Story](#origin-story)
-  - [Core Invariants](#core-invariants)
-  - [Goals](#goals)
-  - [Architecture Overview](#architecture-overview)
+- [Origin Story](#origin-story)
+- [Core Invariants](#core-invariants)
+- [Goals](#goals)
+- [Architecture Overview](#architecture-overview)
     - [Component Relationships](#component-relationships)
     - [The Chicken-Egg Problem & Solution](#the-chicken-egg-problem--solution)
     - [Cleanup Chain (No Leaks!)](#cleanup-chain-no-leaks)
     - [Understanding `'static` Bounds](#understanding-static-bounds)
-  - [Module Structure](#module-structure)
+- [Module Structure](#module-structure)
     - [New Generic Module](#new-generic-module)
     - [Refactored mio_poller Module](#refactored-mio_poller-module)
-  - [Design Decisions](#design-decisions)
+- [Design Decisions](#design-decisions)
     - [Generics vs `Box<dyn ThreadWaker>`](#generics-vs-boxdyn-threadwaker)
-    - [`poll_once() → Continuation` vs `run()`](#poll_once-%E2%86%92-continuation-vs-run)
+    - [`poll_once() → Continuation` vs `run()`](#poll_once-→-continuation-vs-run)
     - [Error Handling](#error-handling)
 - [Implementation Plan](#implementation-plan)
-  - [Phase 1: Create Generic RRT Module [COMPLETE]](#phase-1-create-generic-rrt-module-complete)
+- [Phase 1: Create Generic RRT Module [COMPLETE]](#phase-1-create-generic-rrt-module-complete)
     - [Step 1.0: Create module structure [COMPLETE]](#step-10-create-module-structure-complete)
     - [Step 1.1: Implement ThreadWaker trait [COMPLETE]](#step-11-implement-threadwaker-trait-complete)
     - [Step 1.2: Implement ThreadWorker and ThreadWorkerFactory traits [COMPLETE]](#step-12-implement-threadworker-and-threadworkerfactory-traits-complete)
@@ -28,33 +28,34 @@
     - [Step 1.4: Implement ThreadState [COMPLETE]](#step-14-implement-threadstate-complete)
     - [Step 1.5: Implement SubscriberGuard [COMPLETE]](#step-15-implement-subscriberguard-complete)
     - [Step 1.6: Implement ThreadSafeGlobalState [COMPLETE]](#step-16-implement-threadsafeglobalstate-complete)
-  - [Phase 2: Refactor mio_poller to Use RRT [COMPLETE]](#phase-2-refactor-mio_poller-to-use-rrt-complete)
+- [Phase 2: Refactor mio_poller to Use RRT [COMPLETE]](#phase-2-refactor-mio_poller-to-use-rrt-complete)
     - [Step 2.0: Create MioPollWaker [COMPLETE]](#step-20-create-miopollwaker-complete)
     - [Step 2.1: Create MioPollWorker and Factory [COMPLETE]](#step-21-create-miopollworker-and-factory-complete)
     - [Step 2.2: Rename source files [DEFERRED]](#step-22-rename-source-files-deferred)
     - [Step 2.3: Update input_device_impl.rs [DEFERRED]](#step-23-update-input_device_implrs-deferred)
     - [Step 2.4: Update all imports and doc links [COMPLETE]](#step-24-update-all-imports-and-doc-links-complete)
-  - [Phase 3: Testing & Documentation [COMPLETE]](#phase-3-testing--documentation-complete)
+- [Phase 3: Testing & Documentation [COMPLETE]](#phase-3-testing--documentation-complete)
     - [Step 3.0: Verify existing tests pass [COMPLETE]](#step-30-verify-existing-tests-pass-complete)
     - [Step 3.1: Add unit tests for generic module [DEFERRED]](#step-31-add-unit-tests-for-generic-module-deferred)
     - [Step 3.2: Write comprehensive module documentation [COMPLETE]](#step-32-write-comprehensive-module-documentation-complete)
     - [Step 3.3: Run full quality checks [COMPLETE]](#step-33-run-full-quality-checks-complete)
-  - [Phase 4: Future Preparation (Optional) [PENDING]](#phase-4-future-preparation-optional-pending)
+- [Phase 4: Future Preparation (Optional) [PENDING]](#phase-4-future-preparation-optional-pending)
     - [Step 4.0: Document extension points [PENDING]](#step-40-document-extension-points-pending)
     - [Step 4.1: Create example implementations [PENDING]](#step-41-create-example-implementations-pending)
-  - [Success Criteria](#success-criteria)
-  - [Estimated Effort](#estimated-effort)
-  - [References](#references)
+- [Success Criteria](#success-criteria)
+- [Estimated Effort](#estimated-effort)
+- [References](#references)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Overview
 
 ## Origin Story
 
-This pattern emerged from the `DirectToAnsiInputDevice` and `mio_poller` implementation, where we
-needed to manage a dedicated thread for blocking I/O (stdin, signals) while providing a clean async
-interface to consumers. The architecture proved to be highly generalizable.
+This pattern emerged from the `DirectToAnsiInputDevice` and `mio_poller` implementation,
+where we needed to manage a dedicated thread for blocking I/O (stdin, signals) while
+providing a clean async interface to consumers. The architecture proved to be highly
+generalizable.
 
 ```text
 InputDevice
@@ -69,30 +70,31 @@ InputDevice
         WorkerThread
 ```
 
-**Key Insight**: "Resilient Reactor Thread Pattern → can be reused in many other places, e.g.,
-servers inside the TUI process to manage network services while having resilience in thread
-lifecycle changes tied to OS resources / sys calls (fallible), network failures, etc."
+**Key Insight**: "Resilient Reactor Thread Pattern → can be reused in many other places,
+e.g., servers inside the TUI process to manage network services while having resilience in
+thread lifecycle changes tied to OS resources / sys calls (fallible), network failures,
+etc."
 
 ## Core Invariants
 
 The RRT pattern captures three fundamental invariants:
 
-1. **Thread-safe global state lifecycle** — Static global with lazy initialization, thread-safe
-   access via `Mutex<Option<Arc<ThreadState>>>`
+1. **Thread-safe global state lifecycle** — Static global with lazy initialization,
+   thread-safe access via `Mutex<Option<Arc<ThreadState>>>`
 
-2. **State machine** — Created/destroyed/reused with generation tracking to detect thread restarts
-   vs thread reuse
+2. **State machine** — Created/destroyed/reused with generation tracking to detect thread
+   restarts vs thread reuse
 
-3. **Contract preservation** — Async consumers never see broken promises; the broadcast channel
-   decouples producers from consumers
+3. **Contract preservation** — Async consumers never see broken promises; the broadcast
+   channel decouples producers from consumers
 
 ## Goals
 
-1. **Extract reusable infrastructure** from `mio_poller` into a generic `resilient_reactor_thread`
-   module
+1. **Extract reusable infrastructure** from `mio_poller` into a generic
+   `resilient_reactor_thread` module
 2. **Preserve all existing behavior** — No regression in `DirectToAnsiInputDevice`
-3. **Enable future use cases** — Chi remote control (mDNS discovery, TLS connections), other network
-   services
+3. **Enable future use cases** — Chi remote control (mDNS discovery, TLS connections),
+   other network services
 4. **Maintain type safety** — Use generics to make illegal states unrepresentable
 5. **Document the pattern** — Comprehensive rustdoc explaining the architecture
 
@@ -329,7 +331,8 @@ Create the new `resilient_reactor_thread` module under `tui/src/core/`.
 
 **Tasks:**
 
-- [x] Create `tui/src/core/resilient_reactor_thread/mod.rs` with module-level documentation
+- [x] Create `tui/src/core/resilient_reactor_thread/mod.rs` with module-level
+      documentation
 - [x] Create `tui/src/core/resilient_reactor_thread/types.rs` with trait definitions
 - [x] Create `tui/src/core/resilient_reactor_thread/thread_state.rs`
 - [x] Create `tui/src/core/resilient_reactor_thread/subscriber_guard.rs`
@@ -592,8 +595,8 @@ impl ThreadWorkerFactory for MioPollWorkerFactory {
 
 ### Step 2.2: Rename source files [DEFERRED]
 
-Decided to keep existing file structure. The new generic RRT module lives alongside the existing
-mio_poller implementation. Created new files instead:
+Decided to keep existing file structure. The new generic RRT module lives alongside the
+existing mio_poller implementation. Created new files instead:
 
 - `mio_poll_waker.rs` — MioPollWaker implementing ThreadWaker
 - `mio_poll_worker.rs` — MioPollWorker and MioPollWorkerFactory
@@ -602,7 +605,8 @@ mio_poller implementation. Created new files instead:
 
 The existing global state pattern continues to work. The generic RRT infrastructure is now
 available for future implementations (Chi remote control, etc.). Migration of the existing
-mio_poller to fully use ThreadSafeGlobalState can be done in a future iteration if desired.
+mio_poller to fully use ThreadSafeGlobalState can be done in a future iteration if
+desired.
 
 ### Step 2.4: Update all imports and doc links [COMPLETE]
 
@@ -624,9 +628,9 @@ All existing tests continue to pass. Ran `cargo test -p r3bl_tui` — 305 tests 
 ### Step 3.1: Add unit tests for generic module [DEFERRED]
 
 The generic RRT module is validated through the existing mio_poller integration tests. The
-`MioPollWorker` and `MioPollWorkerFactory` implementations prove the traits work correctly.
-Additional unit tests with mock wakers can be added when implementing new RRT consumers
-(Chi remote control, etc.).
+`MioPollWorker` and `MioPollWorkerFactory` implementations prove the traits work
+correctly. Additional unit tests with mock wakers can be added when implementing new RRT
+consumers (Chi remote control, etc.).
 
 ### Step 3.2: Write comprehensive module documentation [COMPLETE]
 
@@ -676,8 +680,8 @@ Stub implementations showing the pattern:
 ## Success Criteria
 
 1. **Zero regression** — All existing tests pass
-2. **Clean separation** — Generic infrastructure in `resilient_reactor_thread`, mio-specific in
-   `mio_poller`
+2. **Clean separation** — Generic infrastructure in `resilient_reactor_thread`,
+   mio-specific in `mio_poller`
 3. **Type safety** — Generics prevent mixing incompatible wakers/events
 4. **Documentation** — Comprehensive rustdoc for the pattern
 5. **Extensibility** — Clear path for future implementations
@@ -697,6 +701,6 @@ Stub implementations showing the pattern:
 - Race condition documentation: `mio_poller/poller_thread_state.rs`
 - Integration tests: `tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/`
 - Future use case: `task/pending/prd_chi.md` (Remote Control Mode)
-- **Applications of RRT**: `task/pending/rrt-applications.md` — Design exploration for mDNS
-  discovery, Unix/TCP IPC, clipboard sync, CRDTs, and P2P mesh architectures that will use the RRT
-  infrastructure
+- **Applications of RRT**: `task/pending/rrt-applications.md` — Design exploration for
+  mDNS discovery, Unix/TCP IPC, clipboard sync, CRDTs, and P2P mesh architectures that
+  will use the RRT infrastructure
