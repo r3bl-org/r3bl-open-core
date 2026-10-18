@@ -18,7 +18,6 @@
         // Others.
         "usernamehw.errorlens", // Error Lens.
         "tekumara.typos-vscode", // Typos Spell Checker (Rust LSP).
-        "elijah-potter.harper", // Harper Grammar & Spell Checker (Rust LSP).
         "rust-lang.rust-analyzer", // Rust Analyzer.
         "dnut.rewrap-revived", // Rewrap Revived.
         "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
@@ -28,13 +27,14 @@
         "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
         "bmalehorn.vscode-fish", // Fish.
         "perkovec.emoji", // Emoji.
-        "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
-        "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
         "alefragnani.bookmarks", // Bookmarks.
         "esbenp.prettier-vscode" // Prettier.
     ],
     // List of extensions that should not be recommended for users of this workspace.
     "unwantedRecommendations": [
+        "elijah-potter.harper", // Harper Grammar & Spell Checker (Rust LSP).
+        "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
+        "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.
         "ryuta46.multi-command", // Multi Command.
         "qwtel.sqlite-viewer", // SQLite Viewer.
         "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker.

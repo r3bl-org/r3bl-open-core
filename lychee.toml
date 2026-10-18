@@ -49,6 +49,10 @@ exclude = [
     "^https?://doi\\.org/10\\.1145/",
     # Release tags not yet pushed to GitHub during release prep.
     "^https?://github\\.com/r3bl-org/r3bl-open-core/blob/v[0-9].*-tui/CHANGELOG\\.md",
+    # Base URL prefix for binary release downloads.
+    "^https?://github\\.com/r3bl-org/r3bl-binaries/releases/download$",
+    # Planned version manifest endpoint not yet published.
+    "^https?://r3bl\\.com/versions\\.jsonc$",
 ]
 
 # Exclude specific files from link checking.

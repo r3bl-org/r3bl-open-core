@@ -28,56 +28,19 @@
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
 //! <!-- prettier-ignore-start -->
-//! ```text
+//! <pre style="border: none; background: transparent; padding: 0;"><span style="color: #FD2F53; background: linear-gradient(90deg, #FD2F53, #057FF1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; font-family: monospace; font-weight: bold; line-height: 1.2;">
 //! ██████╗ ██████╗ ██████╗ ██╗         ████████╗██╗   ██╗██╗
 //! ██╔══██╗╚════██╗██╔══██╗██║         ╚══██╔══╝██║   ██║██║
 //! ██████╔╝ █████╔╝██████╔╝██║            ██║   ██║   ██║██║
 //! ██╔══██╗ ╚═══██╗██╔══██╗██║            ██║   ██║   ██║██║
 //! ██║  ██║██████╔╝██████╔╝███████╗       ██║   ╚██████╔╝██║
 //! ╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝       ╚═╝    ╚═════╝ ╚═╝
-//! ```
+//! </span></pre>
 //! <!-- prettier-ignore-end -->
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
-//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
-//! style="color:#F92363"> </span><span style="color:#F82067">T</span><span
-//! style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
-//! style="color:#F31874"> </span><span style="color:#F11678">l</span><span
-//! style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
-//! style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
-//! style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
-//! style="color:#E10895"> </span><span style="color:#DE0799">a</span><span
-//! style="color:#DB069E">l</span><span style="color:#D804A2">l</span><span
-//! style="color:#D503A6">o</span><span style="color:#D203AA">w</span><span
-//! style="color:#CF02AE">s</span><span style="color:#CB01B2"> </span><span
-//! style="color:#C801B6">y</span><span style="color:#C501B9">o</span><span
-//! style="color:#C101BD">u</span><span style="color:#BD01C1"> </span><span
-//! style="color:#BA01C4">t</span><span style="color:#B601C8">o</span><span
-//! style="color:#B201CB"> </span><span style="color:#AE02CF">c</span><span
-//! style="color:#AA03D2">r</span><span style="color:#A603D5">e</span><span
-//! style="color:#A204D8">a</span><span style="color:#9E06DB">t</span><span
-//! style="color:#9A07DE">e</span><span style="color:#9608E1"> </span><span
-//! style="color:#910AE3">a</span><span style="color:#8D0BE6">p</span><span
-//! style="color:#890DE8">p</span><span style="color:#850FEB">s</span><span
-//! style="color:#8111ED"> </span><span style="color:#7C13EF">t</span><span
-//! style="color:#7815F1">o</span><span style="color:#7418F3"> </span><span
-//! style="color:#701AF5">e</span><span style="color:#6B1DF6">n</span><span
-//! style="color:#6720F8">h</span><span style="color:#6322F9">a</span><span
-//! style="color:#5F25FA">n</span><span style="color:#5B28FB">c</span><span
-//! style="color:#572CFC">e</span><span style="color:#532FFD"> </span><span
-//! style="color:#4F32FD">d</span><span style="color:#4B36FE">e</span><span
-//! style="color:#4739FE">v</span><span style="color:#443DFE">e</span><span
-//! style="color:#4040FE">l</span><span style="color:#3C44FE">o</span><span
-//! style="color:#3948FE">p</span><span style="color:#354CFE">e</span><span
-//! style="color:#324FFD">r</span><span style="color:#2E53FD"> </span><span
-//! style="color:#2B57FC">p</span><span style="color:#285BFB">r</span><span
-//! style="color:#245EFA">o</span><span style="color:#215FF9">d</span><span
-//! style="color:#1E63F8">u</span><span style="color:#1A67F7">c</span><span
-//! style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
-//! style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
-//! style="color:#097BF2">t</span><span style="color:#057FF1">y</span>.
+//! <span style="color: #FD2F53; background: linear-gradient(90deg, #FD2F53, #057FF1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">R3BL TUI library allows you to create apps to enhance developer productivity.</span>
 //!
 //! Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
 //! a better understanding of the context in which this crate is meant to exist.

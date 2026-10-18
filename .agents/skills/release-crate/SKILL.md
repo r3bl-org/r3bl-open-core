@@ -143,7 +143,7 @@ cargo update --workspace
 cd <crate> && cargo readme > README.md && cd ..
 ```
 
-*Note: Only run this for crates where `src/lib.rs` is the Single Source of Truth (SSOT) for `README.md` (`tui`, `build-infra`, `cmdr`). Do NOT run this for `rust-analyzer-mcp-server` where `README.md` is hand-crafted and maintained directly for crates.io.*
+*Note: Only run this for crates where `README.md` is generated from `src/lib.rs` (`tui`, `build-infra`, `cmdr`). Do NOT run this for `rust-analyzer-mcp-server` where `README.md` is hand-crafted and maintained directly for crates.io.*
 
 ### Step 8. Dry-Run Publish
 

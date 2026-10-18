@@ -274,12 +274,13 @@ impl RustAnalyzerClient {
 mod tests {
     use super::*;
     use crate::lsp::readiness_types::IndexingStatus;
-    use std::{collections::HashMap, sync::Mutex};
+    use r3bl_tui::HashMap;
+    use std::sync::Mutex;
 
     #[test]
     fn test_process_incoming_json_routes_response_success() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
         let (tx, rx) = sync_channel(1);
         pending.lock().unwrap().insert(JsonRpcRequestId(42), tx);
@@ -300,8 +301,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_routes_response_error() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
         let (tx, rx) = sync_channel(1);
         pending.lock().unwrap().insert(JsonRpcRequestId(99), tx);
@@ -321,8 +322,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_caches_publish_diagnostics() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         let json_payload = r#"{
@@ -351,8 +352,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_updates_server_status_and_signals_condvar() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         let json_payload = r#"{
@@ -379,8 +380,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_handles_invalid_json() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         // Should not panic on malformed JSON
@@ -402,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_deliver_response_unknown_id_does_not_panic() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
         RustAnalyzerClient::deliver_response(
             &pending,
             JsonRpcRequestId(9999),

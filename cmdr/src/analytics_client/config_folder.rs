@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use crate::DEBUG_ANALYTICS_CLIENT;
 use dirs::config_dir;
 use r3bl_tui::{CommonError, CommonErrorType, CommonResult};
 use std::{fmt::{Display, Formatter, Result},
@@ -60,7 +60,7 @@ pub fn create() -> CommonResult<PathBuf> {
         let result_create_dir_all = fs::create_dir_all(&config_folder_path);
         match result_create_dir_all {
             Ok(()) => {
-                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                DEBUG_ANALYTICS_CLIENT.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "Successfully created config folder.",

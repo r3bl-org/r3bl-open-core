@@ -4,9 +4,8 @@ use super::{config::{CaptureFlag, DefaultPtySessionConfig, PtySessionConfig},
             events::{PtyInputEvent, PtyOutputEvent},
             session::{AsyncPtySession, PtySession},
             threads::orchestrator::spawn_pty_orchestrator_thread};
-use crate::{DefaultSize, PtyCommand, PtyPair};
+use crate::{DefaultSize, HashMap, PtyCommand, PtyPair};
 use miette::{IntoDiagnostic, miette};
-use rustc_hash::FxHashMap;
 use std::path::PathBuf;
 
 /// Builder for configuring and spawning [`PTY`] sessions.
@@ -92,7 +91,7 @@ pub struct PtySessionBuilder {
     pub cli_args: Vec<String>,
 
     /// Environment variables to set for the child process.
-    pub env_vars: FxHashMap<String, String>,
+    pub env_vars: HashMap<String, String>,
 
     /// Optional working directory for the child process.
     ///
@@ -114,7 +113,7 @@ impl PtySessionBuilder {
         Self {
             command: command.into(),
             cli_args: Vec::new(),
-            env_vars: FxHashMap::default(),
+            env_vars: HashMap::default(),
             maybe_cwd: None,
             config: DefaultPtySessionConfig.into(),
         }

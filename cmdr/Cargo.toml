@@ -62,7 +62,27 @@ r3bl_tui = { path = "../tui", version = "0.7.8" }                           # ve
 reqwest = { version = "0.12.24", default-features = false, features = [
     "json",
     "rustls-tls",
+    "stream",
 ] }
+
+# Time.
+chrono = { version = "0.4.42", features = ["serde"] }
+
+# Hashes & Checksums.
+sha2 = "0.10.9"
+
+# Self-upgrade binary replacement and archive unpacking.
+self-replace = "1.5"
+tar = { version = "0.4", default-features = false }
+
+# Compression for archive extraction (powered by `zlib-rs`).
+flate2 = { version = "1.1.5", default-features = false, features = ["zlib-rs"] }
+
+# JSON with Comments (JSONC) parser & lossless CST.
+jsonc-parser = { version = "0.34", features = ["serde", "cst"] }
+
+# Futures utility.
+futures-util = "0.3.31"
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
@@ -71,6 +91,10 @@ clap = { version = "4.5.51", features = ["derive", "wrap_help", "help"] }
 # serde-json.
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+
+# strum.
+strum = "0.27.1"
+strum_macros = "0.27.1"
 
 # Base64 decoding for image handling.
 base64 = "0.22.1"
@@ -89,6 +113,7 @@ tracing = "0.1.41"
 tracing-core = "0.1.33"
 
 # Error handling.
+thiserror = "2.0.17"
 miette = { version = "7.6.0", features = ["fancy"] }
 
 # For smallstr & smallvec.
@@ -97,9 +122,6 @@ smallvec = { version = "1.15.0", features = [
     "const_generics",
     "const_new",
 ] }
-
-# Fast non-cryptographic hash for HashMaps / HashSets.
-rustc-hash = "2.1.0"
 
 # `mimalloc` is a replacement for the default global allocator. It's optimized for
 # multi-threaded use cases where lots of small objects are created and destroyed.
@@ -115,3 +137,4 @@ mimalloc = "0.1.48"
 serial_test = "3.2.0"
 pretty_assertions = "1.4.1"
 test-case = "3.3.1"
+similar = "2.6"

@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEBUG_CHOOSE,
             EventLoopResult, Header, InlineString, InputDevice, InputEvent, IntoErr,
             ItemsOwned, Key, KeyPress, KeyState, ModifierKeysMask, OutputDevice,
             SelectComponent, SpecialKey, State, StyleSheet, TerminalInteractiveStatus,
@@ -311,7 +311,7 @@ impl DefaultIoDevices {
 
 #[allow(clippy::needless_pass_by_value)]
 fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResult {
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport()",
@@ -381,7 +381,7 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
         _ => keypress_handler_helper::handle_other_keys(),
     };
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "👉 *after* keypress: locate_cursor_in_viewport()",
@@ -400,7 +400,7 @@ mod keypress_handler_helper {
         state: &mut State,
         size: crate::VPSize,
     ) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "🍎🍎🍎 keypress_handler() resize",
@@ -416,7 +416,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_down_key(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Down");
         });
@@ -439,7 +439,7 @@ mod keypress_handler_helper {
                 // Do nothing.
             }
         }
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "enter_event_loop()::state",
@@ -451,7 +451,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_up_key(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Up");
         });
@@ -477,7 +477,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_enter_key_multi_select(state: &State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Enter on multi-select",
@@ -492,7 +492,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_enter_key_single_select(state: &State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Enter",
@@ -508,7 +508,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_escape_or_ctrl_c() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Esc");
         });
@@ -516,7 +516,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_space_key_multi_select(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Space on multi-select",
@@ -544,7 +544,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_space_key_default() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Space");
         });
@@ -552,7 +552,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_other_keys() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Ignore key event");
         });
