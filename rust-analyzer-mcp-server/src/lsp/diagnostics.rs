@@ -50,7 +50,7 @@ impl RustAnalyzerClient {
     /// Aggregates compiler diagnostics from the local push notification cache and open
     /// documents.
     pub fn collect_cached_workspace_diagnostics(&mut self) -> DiagnosticsTable {
-        let mut aggregated = DiagnosticsTable::new();
+        let mut aggregated = DiagnosticsTable::default();
 
         // 1. Ingest all non-empty diagnostics cached from textDocument/publishDiagnostics
         //    notifications.
@@ -202,13 +202,13 @@ mod tests {
         let fallback_called = std::cell::Cell::new(false);
         let resolved = valid.unwrap_or_else_fallback(|| {
             fallback_called.set(true);
-            DiagnosticsTable::new()
+            DiagnosticsTable::default()
         });
         assert_eq!(resolved, json!({ "items": [] }));
         assert!(!fallback_called.get());
 
         let needs_fallback = RawWorkspaceDiagnosticsResult::NeedsCacheFallback;
-        let mut sample_map = DiagnosticsTable::new();
+        let mut sample_map = DiagnosticsTable::default();
         sample_map.insert(
             "file:///test.rs".to_string(),
             vec![json!({ "severity": 1 })],

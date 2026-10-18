@@ -3,7 +3,7 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use crate::{ClipboardService, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+use crate::{ClipboardService, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI,
             DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
             EditorEvent, FlexBox, GapBufferLine, HasFocus, InlineString, InputEvent,
             Key, KeyPress, NarrowingCastToU16, PrettyPrintDebug, RangeBoundsResult,
@@ -185,7 +185,7 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVe
 
     let syn_hi_pipeline = editor_buffer.get_syntax_highlight_pipeline();
 
-    DEBUG_TUI_MOD.then(|| {
+    DEBUG_TUI.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = %inline_string!(

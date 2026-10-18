@@ -46,4 +46,4 @@ pub use package_manager::*;
 pub use permissions::*;
 pub use temp_dir::*;
 
-pub const SCRIPT_MOD_DEBUG: bool = true;
+pub const DEBUG_SCRIPT: bool = true;

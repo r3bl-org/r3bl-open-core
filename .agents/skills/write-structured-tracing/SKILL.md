@@ -17,7 +17,7 @@ Make sure the flag you use is specifically scoped to the module or subsystem you
 - If a suitable module-specific flag does not exist, create a new one (e.g., `DEBUG_TUI_VT100_PARSER`) to ensure developers can isolate and filter logs effectively without overwhelming the IO overhead.
 
 ```rust
-crate::DEBUG_TUI_MOD.then(|| {
+crate::DEBUG_TUI.then(|| {
     // ... tracing call ...
 });
 ```
@@ -31,7 +31,7 @@ You **MUST** add the exact line comment `// % is Display, ? is Debug.` directly 
 Do not use unstructured string formatting (e.g., `tracing::info!("Hello {}", name)`). Instead, use structured fields with an explicit `message` key that identifies the context (e.g., the struct and method name).
 
 ```rust
-crate::DEBUG_TUI_MOD.then(|| {
+crate::DEBUG_TUI.then(|| {
     // % is Display, ? is Debug.
     tracing::info! {
         message = "ComponentName::method_name",
@@ -47,7 +47,7 @@ When you need to format complex strings within a tracing field, bind it to a fie
 - If the resulting string will be **> 16 bytes**, use the standard `format!` macro (since `inline_string!` would spill to the heap and allocate anyway).
 
 ```rust
-crate::DEBUG_TUI_MOD.then(|| {
+crate::DEBUG_TUI.then(|| {
     // % is Display, ? is Debug.
     tracing::info! {
         message = "AppNoLayout::handle_event",

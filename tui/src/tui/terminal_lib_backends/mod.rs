@@ -2,7 +2,7 @@
 
 //! # Rendering Pipeline Architecture
 //!
-//! **Source of Truth:** This module documents the complete 6-stage rendering pipeline.
+//! This module documents the complete 6-stage rendering pipeline.
 //! Each stage has its own module with "You Are Here" breadcrumbs. Use the stage reference
 //! table below to understand data flow and find relevant implementations.
 //!

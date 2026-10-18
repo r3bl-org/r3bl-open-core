@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, MemoizedLenMap, OfsBuf,
+use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf,
             OfsBufPool, OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport,
             VPSize, core::glyphs, ok, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
@@ -172,7 +172,7 @@ where
 
     pub fn set_size(&mut self, new_size: VPSize) {
         self.window_size = new_size;
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "main_event_loop -> Resize ⇲",

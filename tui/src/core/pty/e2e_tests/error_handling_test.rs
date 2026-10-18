@@ -1,12 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::cross_platform_commands;
-use crate::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionConfigOption};
+use crate::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionConfigToken};
 
 #[test]
 fn test_unexpected_exit_reporting() {
     let mut session = cross_platform_commands::sleep(10)
-        .with_config(DefaultPtySessionConfig + PtySessionConfigOption::NoCaptureOutput)
+        .with_config(DefaultPtySessionConfig + PtySessionConfigToken::NoCaptureOutput)
         .start()
         .expect("Failed to spawn session");
 

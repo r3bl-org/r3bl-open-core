@@ -109,7 +109,7 @@ pub struct CLIArg {
 }
 
 impl CLIArg {
-    /// Validates `CLI` arguments for semantic consistency.
+    /// Validates CLI arguments for semantic consistency.
     ///
     /// # Errors
     ///
@@ -153,7 +153,7 @@ impl CLIArg {
         Ok(())
     }
 
-    /// Converts `CLI` arguments to [`FormatOptions`].
+    /// Converts CLI arguments to [`FormatOptions`].
     #[must_use]
     pub fn to_format_options(&self) -> FormatOptions {
         let format_tables =
@@ -180,7 +180,7 @@ impl CLIArg {
     }
 }
 
-/// Parses a 1-indexed `CLI` line range specification (e.g. `"10:20"`, `"10..20"`,
+/// Parses a 1-indexed CLI line range specification (e.g. `"10:20"`, `"10..20"`,
 /// `"10..=20"`, `"10-20"`, or `"42"`) into a 0-based inclusive [`RangeInclusive<CRow>`].
 ///
 /// # Errors
@@ -252,7 +252,7 @@ pub fn parse_line_range(range_str: &str) -> Result<RangeInclusive<CRow>, LineRan
     Ok(EditorLineNum::to_c_row_range(start, end))
 }
 
-/// Error encountered when parsing a 1-indexed line range from `CLI` input into a 0-based
+/// Error encountered when parsing a 1-indexed line range from CLI input into a 0-based
 /// [`RangeInclusive<CRow>`].
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
 pub enum LineRangeError {

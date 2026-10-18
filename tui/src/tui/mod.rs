@@ -3,7 +3,7 @@
 #![rustfmt::skip]
 
 /// Enable or disable generating log output for telemetry data. This has higher precedence
-/// than [`DEBUG_TUI_MOD`]. The telemetry logs are not debug level, but info level.
+/// than [`DEBUG_TUI`]. The telemetry logs are not debug level, but info level.
 pub const DISPLAY_LOG_TELEMETRY: bool = true;
 
 /// This is the global `DEBUG` const. It is possible to create local (module scoped)
@@ -12,7 +12,7 @@ pub const DISPLAY_LOG_TELEMETRY: bool = true;
 /// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
 ///
 /// If set to `true` it enables file logging for entire module.
-pub const DEBUG_TUI_MOD: bool = true;
+pub const DEBUG_TUI: bool = true;
 
 /// Enable or disable bounds checking debug logging. This logs bounds check conversions,
 /// such as when a saturating cast to `u16` overflows or underflows.

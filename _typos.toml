@@ -1,6 +1,5 @@
 [files]
 extend-exclude = [
-    ".harper-dictionary.txt",
     "*.perf-folded",
     "task/done/**",
 ]

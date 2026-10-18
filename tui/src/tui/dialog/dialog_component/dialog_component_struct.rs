@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
+use crate::{Component, DEBUG_TUI, DialogEngine, DialogEngineApi,
             DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfig,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
@@ -140,7 +140,7 @@ where
                 DialogChoice(dialog_choice) => {
                     has_focus.reset_modal_id();
 
-                    DEBUG_TUI_MOD.then(|| {
+                    DEBUG_TUI.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "🐝 restore focus to non modal",
