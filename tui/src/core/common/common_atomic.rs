@@ -110,8 +110,7 @@ impl AtomicU8Ext for AtomicU8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::LossyConvertToByte;
-    use rustc_hash::FxHashSet;
+    use crate::{HashSet, LossyConvertToByte};
     use std::{sync::Arc, thread};
 
     #[test]
@@ -218,7 +217,7 @@ mod tests {
 
         // Every returned value must be unique - this is the core guarantee that
         // the wrapping_add approach provides over a separate load.
-        let unique: FxHashSet<u8> = all_values.iter().copied().collect();
+        let unique: HashSet<u8> = all_values.iter().copied().collect();
         assert_eq!(
             unique.len(),
             TOTAL,

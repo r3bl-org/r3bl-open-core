@@ -1,0 +1,9 @@
+# Clippy configuration for the r3bl-open-core workspace.
+# See `[workspace.lints.clippy]` in `Cargo.toml`.
+
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "Use `r3bl_tui::HashMap` (or `crate::HashMap` inside `r3bl_tui`), which aliases `FxHashMap` for ~3-5x faster non-cryptographic hashing. Add `#[allow(clippy::disallowed_types)]` if `SipHash` is explicitly required." },
+    { path = "std::collections::HashSet", reason = "Use `r3bl_tui::HashSet` (or `crate::HashSet` inside `r3bl_tui`), which aliases `FxHashSet` for ~3-5x faster non-cryptographic hashing. Add `#[allow(clippy::disallowed_types)]` if `SipHash` is explicitly required." },
+    { path = "rustc_hash::FxHashMap", reason = "Use the `r3bl_tui::HashMap` (or `crate::HashMap`) type alias instead of `rustc_hash::FxHashMap` directly." },
+    { path = "rustc_hash::FxHashSet", reason = "Use the `r3bl_tui::HashSet` (or `crate::HashSet`) type alias instead of `rustc_hash::FxHashSet` directly." },
+]

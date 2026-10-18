@@ -10,7 +10,7 @@ use crate::cargo_rustdoc_fmt::{constants::{BACKTICK_CHAR, BACKTICKED_LINK_PREFIX
                                            RUST_PATH_SEPARATOR},
                                cst::{DocBlockCst, DocNode, LinkReference,
                                      split_reference_def_label_and_rest}};
-use rustc_hash::FxHashMap;
+use r3bl_tui::HashMap;
 use std::collections::BTreeSet;
 
 /// Pre-existing reference definitions extracted and indexed from a [`DocBlockCst`].
@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 pub(super) struct ExistingRefDefs {
     pub(super) refs: Vec<LinkReference>,
     pub(super) ref_node_count: usize,
-    pub(super) ref_def_map: FxHashMap<String, (String, LinkReference)>,
+    pub(super) ref_def_map: HashMap<String, (String, LinkReference)>,
 }
 
 /// Collects existing reference definitions from all [`DocNode::ReferenceDefinitions`]
@@ -33,8 +33,7 @@ pub(super) fn collect_existing_ref_defs(nodes: &[DocNode]) -> ExistingRefDefs {
         }
     }
 
-    let mut ref_def_map: FxHashMap<String, (String, LinkReference)> =
-        FxHashMap::default();
+    let mut ref_def_map: HashMap<String, (String, LinkReference)> = HashMap::default();
     for def in &existing_refs {
         let rendered = def.render();
         if let Some((term, target)) = parse_ref_def(&rendered) {

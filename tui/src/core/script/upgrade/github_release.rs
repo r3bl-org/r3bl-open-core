@@ -3,14 +3,9 @@
 //! GitHub Release asset URL formatting and HTTP `HEAD` availability verification against
 //! `https://github.com/r3bl-org/r3bl-binaries`.
 
-use super::get_archive_extension_for_target;
+use super::{get_archive_extension_for_target, R3BL_BINARIES_RELEASE_BASE_URL};
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
 use std::time::Duration;
-
-/// Base URL for pre-compiled release assets in the dedicated history-free binary
-/// repository.
-pub const R3BL_BINARIES_RELEASE_BASE_URL: &str =
-    "https://github.com/r3bl-org/r3bl-binaries/releases/download";
 
 /// Timeout for the lightweight HTTP `HEAD` check against GitHub's release CDN.
 const HEAD_CHECK_TIMEOUT: Duration = Duration::from_secs(5);

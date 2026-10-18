@@ -6,6 +6,11 @@
 /// URL for R3BL crate versions and distribution visibility.
 pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
 
+/// Base URL for pre-compiled release assets in the dedicated history-free binary
+/// repository.
+pub const R3BL_BINARIES_RELEASE_BASE_URL: &str =
+    "https://github.com/r3bl-org/r3bl-binaries/releases/download";
+
 /// Toolchain binary names used on `$PATH` and in [`PTY`] sessions.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -115,4 +120,10 @@ pub mod rustup_progress {
 
     /// Truncation slice length before appending [`ELLIPSIS`].
     pub const TRUNCATE_LEN: usize = MAX_DISPLAY_LEN - ELLIPSIS.len();
+}
+
+/// Semantic version formatting and parsing constants.
+pub mod semver {
+    /// Delimiter separating `MAJOR.MINOR.PATCH` version components (`'.'`).
+    pub const DELIMITER: char = '.';
 }

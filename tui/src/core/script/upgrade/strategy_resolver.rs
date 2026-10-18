@@ -33,7 +33,7 @@ pub fn is_toolchain_binary_on_path(binary_name: &str) -> bool {
 /// nor `cargo` is available.
 pub fn resolve_upgrade_strategy_pure(
     crate_name: &str,
-    pinned_version: &str,
+    pinned_version: CrateVersion,
     distribution: CrateDistribution,
     github_asset_urls: Option<(String, String)>,
     has_rustup: bool,
@@ -43,7 +43,7 @@ pub fn resolve_upgrade_strategy_pure(
         return Ok(UpgradeSource::GithubReleaseArtifact {
             archive_url,
             sha256_url,
-            pinned_version: CrateVersion::from(pinned_version),
+            pinned_version,
         });
     }
 
@@ -68,18 +68,14 @@ pub fn resolve_upgrade_strategy_pure(
 /// `$PATH`.
 pub fn resolve_source_fallback_pure(
     crate_name: &str,
-    pinned_version: &str,
+    pinned_version: CrateVersion,
     has_rustup: bool,
     has_cargo: bool,
 ) -> Result<UpgradeSource, UpgradeError> {
     if has_rustup {
-        Ok(UpgradeSource::BuildFromSourceRustup {
-            pinned_version: CrateVersion::from(pinned_version),
-        })
+        Ok(UpgradeSource::BuildFromSourceRustup { pinned_version })
     } else if has_cargo {
-        Ok(UpgradeSource::BuildFromSourceCargo {
-            pinned_version: CrateVersion::from(pinned_version),
-        })
+        Ok(UpgradeSource::BuildFromSourceCargo { pinned_version })
     } else {
         Err(UpgradeError::NoViableUpgradeSource {
             crate_name: CrateName::from(crate_name),
@@ -107,12 +103,16 @@ pub fn resolve_source_fallback_pure(
 /// Returns [`UpgradeError::NoViableUpgradeSource`] if no viable upgrade strategy exists.
 pub async fn resolve_upgrade_strategy(
     crate_name: &str,
-    pinned_version: &str,
+    pinned_version: CrateVersion,
     distribution: CrateDistribution,
 ) -> Result<UpgradeSource, UpgradeError> {
+    let pinned_version_str = pinned_version.to_string();
     let github_asset_urls = if let Ok(target_triple) = get_host_target_triple() {
-        let (archive_url, sha256_url) =
-            format_github_release_asset_urls(crate_name, pinned_version, target_triple);
+        let (archive_url, sha256_url) = format_github_release_asset_urls(
+            crate_name,
+            &pinned_version_str,
+            target_triple,
+        );
         if check_github_release_asset_available(&archive_url).await {
             Some((archive_url, sha256_url))
         } else {
@@ -166,7 +166,7 @@ pub async fn resolve_upgrade_strategy(
 /// [`CrateDistribution::ClosedSource`] or neither `rustup` nor `cargo` is on `$PATH`.
 pub fn resolve_source_fallback(
     crate_name: &str,
-    pinned_version: &str,
+    pinned_version: CrateVersion,
     distribution: CrateDistribution,
 ) -> Result<UpgradeSource, UpgradeError> {
     if distribution == CrateDistribution::ClosedSource {
@@ -193,11 +193,13 @@ mod tests {
             "https://example.com/archive.tar.gz".to_string(),
             "https://example.com/archive.tar.gz.sha256".to_string(),
         );
+        let v_0_0_25 = CrateVersion::try_from("0.0.25").unwrap();
+        let v_1_0_0 = CrateVersion::try_from("1.0.0").unwrap();
 
         // Open source with GitHub asset available -> GithubReleaseArtifact.
         let res_open = resolve_upgrade_strategy_pure(
             "r3bl-cmdr",
-            "0.0.25",
+            v_0_0_25,
             CrateDistribution::OpenSource,
             Some(urls.clone()),
             true,
@@ -209,14 +211,14 @@ mod tests {
             UpgradeSource::GithubReleaseArtifact {
                 archive_url: urls.0.clone(),
                 sha256_url: urls.1.clone(),
-                pinned_version: CrateVersion::from("0.0.25"),
+                pinned_version: v_0_0_25,
             }
         );
 
         // Closed source with GitHub asset available -> GithubReleaseArtifact.
         let res_closed = resolve_upgrade_strategy_pure(
             "r3bl-closed",
-            "1.0.0",
+            v_1_0_0,
             CrateDistribution::ClosedSource,
             Some(urls.clone()),
             false,
@@ -228,17 +230,19 @@ mod tests {
             UpgradeSource::GithubReleaseArtifact {
                 archive_url: urls.0,
                 sha256_url: urls.1,
-                pinned_version: CrateVersion::from("1.0.0"),
+                pinned_version: v_1_0_0,
             }
         );
     }
 
     #[test]
     fn test_strategy_open_source_fallback_to_rustup_then_cargo() {
+        let v_0_0_25 = CrateVersion::try_from("0.0.25").unwrap();
+
         // Both rustup and cargo on PATH -> BuildFromSourceRustup.
         let res_rustup = resolve_upgrade_strategy_pure(
             "r3bl-cmdr",
-            "0.0.25",
+            v_0_0_25,
             CrateDistribution::OpenSource,
             None,
             true,
@@ -248,14 +252,14 @@ mod tests {
         assert_eq2!(
             res_rustup,
             UpgradeSource::BuildFromSourceRustup {
-                pinned_version: CrateVersion::from("0.0.25"),
+                pinned_version: v_0_0_25,
             }
         );
 
         // Only cargo on PATH (no rustup) -> BuildFromSourceCargo.
         let res_cargo = resolve_upgrade_strategy_pure(
             "r3bl-cmdr",
-            "0.0.25",
+            v_0_0_25,
             CrateDistribution::OpenSource,
             None,
             false,
@@ -265,14 +269,14 @@ mod tests {
         assert_eq2!(
             res_cargo,
             UpgradeSource::BuildFromSourceCargo {
-                pinned_version: CrateVersion::from("0.0.25"),
+                pinned_version: v_0_0_25,
             }
         );
 
         // Neither rustup nor cargo -> Err(NoViableUpgradeSource).
         let res_none = resolve_upgrade_strategy_pure(
             "r3bl-cmdr",
-            "0.0.25",
+            v_0_0_25,
             CrateDistribution::OpenSource,
             None,
             false,
@@ -293,7 +297,7 @@ mod tests {
         // Err(NoViableUpgradeSource).
         let res = resolve_upgrade_strategy_pure(
             "r3bl-closed",
-            "1.0.0",
+            CrateVersion::try_from("1.0.0").unwrap(),
             CrateDistribution::ClosedSource,
             None,
             true,

@@ -65,16 +65,18 @@ mod impl_upgrade_config {
         #[must_use]
         pub fn new(
             crate_name: impl Into<CrateName>,
-            local_version: impl Into<CrateVersion>,
+            local_version: &str,
             cli_policy: Option<UpgradePolicy>,
             default_policy: UpgradePolicy,
             output_target: UpgradeOutputTarget,
         ) -> Self {
             let policy = cli_policy.unwrap_or(default_policy);
+            let local_version =
+                CrateVersion::try_from(local_version).unwrap_or_default();
 
             Self {
                 crate_name: crate_name.into(),
-                local_version: local_version.into(),
+                local_version,
                 policy,
                 output_target,
             }

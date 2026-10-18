@@ -98,7 +98,7 @@ use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINA
             ASCII_DEL, CONTROL_A, CONTROL_C, CONTROL_ENTER, CONTROL_TAB,
             CrosstermInputDevice, DEFAULT_COL_WIDTH, DEFAULT_ROW_HEIGHT, EIO,
             FUNCTION_F5_CODE, GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS,
-            GLYPH_WAITING, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
+            GLYPH_WAITING, HashMap, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
             MODIFIER_SHIFT, MSG_CONTROLLED_READY, PtyPair, PtyTestChild,
             SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
             SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
@@ -107,7 +107,6 @@ use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINA
                          terminal_raw_mode},
             ok, retry_until_success_test, spawn_controlled_in_pty,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use rustc_hash::FxHashMap;
 use std::{fmt::Write as _,
           io::{BufRead, Write}};
 
@@ -219,7 +218,7 @@ fn run_single_test_attempt() -> Result<(), String> {
 pub mod controller {
     use super::*;
 
-    /// Runs controller logic and collects events as a [`FxHashMap`].
+    /// Runs controller logic and collects events as a [`HashMap`].
     ///
     /// Used by the comparison test to directly capture events without printing. Returns a
     /// map of sequence description → EVENT string.
@@ -235,7 +234,7 @@ pub mod controller {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn run_and_collect(
         (backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild),
-    ) -> Result<FxHashMap<String, String>, String> {
+    ) -> Result<HashMap<String, String>, String> {
         let mut writer = pty_pair
             .controller()
             .take_writer()
@@ -250,7 +249,7 @@ pub mod controller {
         // after the signal is preserved in the reader's internal buffer.
         child.wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)?;
 
-        let mut events = FxHashMap::default();
+        let mut events = HashMap::default();
 
         for (desc, bytes) in generate_test_sequences::all() {
             writer

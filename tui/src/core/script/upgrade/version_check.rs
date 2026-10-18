@@ -8,8 +8,8 @@
 //!
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 
-use super::{CrateVersionMetadata, R3BL_VERSIONS_JSON_URL, UpgradeCheckResult, UpgradeConfig,
-            UpgradePolicy, VersionsManifest};
+use super::{CrateVersion, CrateVersionMetadata, R3BL_VERSIONS_JSON_URL,
+            UpgradeCheckResult, UpgradeConfig, UpgradePolicy, VersionsManifest};
 use crate::{AtomicU8Ext as _, DeadlockPreventionPolicy::PanicOnSpecificLockNesting,
             SCRIPT_MOD_DEBUG, ScopedMutex, fg_magenta, ok, scoped_mutex,
             script::http_client};
@@ -61,40 +61,18 @@ pub fn set_cached_crate_metadata(metadata: CrateVersionMetadata) {
     });
 }
 
-/// Parses a semantic version string (e.g., `"0.0.25"`, `"v1.2.3"`, `"0.7.8-alpha"`) into
-/// a `(major, minor, patch)` tuple.
-#[must_use]
-pub fn parse_semver_tuple(version_str: &str) -> Option<(u64, u64, u64)> {
-    let trimmed = version_str.trim().trim_start_matches('v');
-    // Strip any pre-release or build metadata suffix (e.g., "-alpha.1" or "+build").
-    let core_version = trimmed.split(['-', '+']).next()?;
-    let mut parts = core_version.split('.');
-    let major: u64 = parts.next()?.parse().ok()?;
-    let minor: u64 = parts.next()?.parse().ok()?;
-    let patch: u64 = parts.next()?.parse().ok()?;
-    if parts.next().is_some() {
-        return None;
-    }
-    Some((major, minor, patch))
-}
-
-/// Strictly compares `remote_version` against `local_version` as `(major, minor, patch)`
-/// tuples, returning `true` if and only if `remote_version > local_version`.
+/// Strictly compares `remote_version` against `local_version` via [`CrateVersion`]'s
+/// `SemVer` [`Ord`] implementation, returning `true` if and only if
+/// `remote_version > local_version`.
 ///
 /// If local development version is equal to or ahead of `remote_version`, returns `false`
 /// to prevent accidental downgrades.
 #[must_use]
 pub fn is_remote_version_strictly_newer(
-    remote_version: &str,
-    local_version: &str,
+    remote_version: CrateVersion,
+    local_version: CrateVersion,
 ) -> bool {
-    let Some(remote_tuple) = parse_semver_tuple(remote_version) else {
-        return false;
-    };
-    let Some(local_tuple) = parse_semver_tuple(local_version) else {
-        return false;
-    };
-    remote_tuple > local_tuple
+    remote_version > local_version
 }
 
 /// Parses a JSONC string matching the `r3bl.com/versions.jsonc` schema
@@ -103,18 +81,18 @@ pub fn is_remote_version_strictly_newer(
 /// # Errors
 ///
 /// Returns an error if the JSONC is malformed or if `crate_name` is not present in
-/// `crates`.
+/// `crates_map`.
 pub fn parse_crate_metadata_from_versions_json_str(
     json_str: &str,
     crate_name: &str,
 ) -> miette::Result<CrateVersionMetadata> {
-    let manifest = VersionsManifest::from_jsonc_str(json_str)?;
+    let manifest = VersionsManifest::try_parse_jsonc(json_str)?;
 
-    manifest.crates.get(crate_name).cloned().ok_or_else(|| {
+    manifest.crates_map.get(crate_name).cloned().ok_or_else(|| {
         miette::miette!(
             "Crate '{}' not found in versions.jsonc (available: {:?})",
             crate_name,
-            manifest.crates.keys().collect::<Vec<_>>()
+            manifest.crates_map.keys().collect::<Vec<_>>()
         )
     })
 }
@@ -188,10 +166,8 @@ pub async fn check_version_against_manifest(config: &UpgradeConfig) -> UpgradeCh
     match try_get_crate_metadata_from_r3bl_versions_json(config.crate_name.as_str()).await
     {
         Ok(metadata) => {
-            let is_newer = is_remote_version_strictly_newer(
-                metadata.version.as_str(),
-                config.local_version.as_str(),
-            );
+            let is_newer =
+                is_remote_version_strictly_newer(metadata.version, config.local_version);
             set_cached_crate_metadata(metadata.clone());
 
             let result = if is_newer {
@@ -276,35 +252,40 @@ mod tests {
     use crate::assert_eq2;
 
     #[test]
-    fn test_parse_semver_tuple() {
-        assert_eq2!(parse_semver_tuple("0.0.25"), Some((0, 0, 25)));
-        assert_eq2!(parse_semver_tuple("v1.2.3"), Some((1, 2, 3)));
-        assert_eq2!(parse_semver_tuple("  2.10.4  "), Some((2, 10, 4)));
-        assert_eq2!(parse_semver_tuple("0.7.8-alpha.1"), Some((0, 7, 8)));
-        assert_eq2!(parse_semver_tuple("invalid"), None);
-        assert_eq2!(parse_semver_tuple("1.2"), None);
-        assert_eq2!(parse_semver_tuple("1.2.3.4"), None);
-    }
-
-    #[test]
     fn test_is_remote_version_strictly_newer() {
         // Strictly newer -> true
-        assert!(is_remote_version_strictly_newer("0.0.26", "0.0.25"));
-        assert!(is_remote_version_strictly_newer("0.1.0", "0.0.99"));
-        assert!(is_remote_version_strictly_newer("1.0.0", "0.9.9"));
+        assert!(is_remote_version_strictly_newer(
+            CrateVersion::try_from("0.0.26").unwrap(),
+            CrateVersion::try_from("0.0.25").unwrap(),
+        ));
+        assert!(is_remote_version_strictly_newer(
+            CrateVersion::try_from("0.1.0").unwrap(),
+            CrateVersion::try_from("0.0.99").unwrap(),
+        ));
+        assert!(is_remote_version_strictly_newer(
+            CrateVersion::try_from("1.0.0").unwrap(),
+            CrateVersion::try_from("0.9.9").unwrap(),
+        ));
 
         // Equal -> false
-        assert!(!is_remote_version_strictly_newer("0.0.25", "0.0.25"));
-        assert!(!is_remote_version_strictly_newer("v0.0.25", "0.0.25"));
+        assert!(!is_remote_version_strictly_newer(
+            CrateVersion::try_from("0.0.25").unwrap(),
+            CrateVersion::try_from("0.0.25").unwrap(),
+        ));
 
         // Local ahead of remote (dev version bumped) -> false (prevents downgrade!)
-        assert!(!is_remote_version_strictly_newer("0.0.25", "0.0.26"));
-        assert!(!is_remote_version_strictly_newer("0.1.0", "0.2.0"));
-        assert!(!is_remote_version_strictly_newer("1.0.0", "2.0.0"));
-
-        // Malformed -> false
-        assert!(!is_remote_version_strictly_newer("invalid", "0.0.25"));
-        assert!(!is_remote_version_strictly_newer("0.0.25", "invalid"));
+        assert!(!is_remote_version_strictly_newer(
+            CrateVersion::try_from("0.0.25").unwrap(),
+            CrateVersion::try_from("0.0.26").unwrap(),
+        ));
+        assert!(!is_remote_version_strictly_newer(
+            CrateVersion::try_from("0.1.0").unwrap(),
+            CrateVersion::try_from("0.2.0").unwrap(),
+        ));
+        assert!(!is_remote_version_strictly_newer(
+            CrateVersion::try_from("1.0.0").unwrap(),
+            CrateVersion::try_from("2.0.0").unwrap(),
+        ));
     }
 
     #[test]
@@ -333,7 +314,7 @@ mod tests {
 
         let cmdr =
             parse_crate_metadata_from_versions_json_str(jsonc, "r3bl-cmdr").unwrap();
-        assert_eq2!(cmdr.version.as_str(), "0.0.25");
+        assert_eq2!(cmdr.version, CrateVersion::try_from("0.0.25").unwrap());
         assert_eq2!(cmdr.crate_distribution, CrateDistribution::OpenSource);
 
         let missing =

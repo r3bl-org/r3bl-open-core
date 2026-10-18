@@ -6,8 +6,8 @@
 //! the archive), and automatic fallback to `crates.io` source compilation when
 //! `crate_distribution` is [`CrateDistribution::OpenSource`].
 
-use super::{CrateDistribution, CrateVersionMetadata, UpgradeConfig, UpgradeError,
-            UpgradeOutputTarget, UpgradePolicy, UpgradeSource, archive,
+use super::{CrateDistribution, CrateVersion, CrateVersionMetadata, UpgradeConfig,
+            UpgradeError, UpgradeOutputTarget, UpgradePolicy, UpgradeSource, archive,
             check_version_against_manifest, get_cached_crate_metadata,
             is_remote_version_strictly_newer, is_upgrade_available,
             resolve_source_fallback, resolve_upgrade_strategy,
@@ -452,7 +452,7 @@ pub async fn execute_upgrade_with_metadata(
     let bin_name = get_current_bin_name();
     let strategy = match resolve_upgrade_strategy(
         config.crate_name.as_str(),
-        metadata.version.as_str(),
+        metadata.version,
         metadata.crate_distribution,
     )
     .await
@@ -477,22 +477,23 @@ pub async fn execute_upgrade_with_metadata(
                 metadata.crate_distribution,
                 &archive_url,
                 sha256_url.as_str(),
-                pinned_version.as_str(),
+                pinned_version,
                 output_device,
                 &bin_name,
             )
             .await
         }
         UpgradeSource::BuildFromSourceRustup { pinned_version } => {
+            let pinned_version_str = pinned_version.to_string();
             config
                 .output_target
                 .println(ui_strings::format_fallback_to_source_notice(
                     config.crate_name.as_str(),
-                    pinned_version.as_str(),
+                    &pinned_version_str,
                 ));
             execute_source_build_step(
                 config,
-                pinned_version.as_str(),
+                &pinned_version_str,
                 true,
                 output_device,
                 &bin_name,
@@ -500,15 +501,16 @@ pub async fn execute_upgrade_with_metadata(
             .await
         }
         UpgradeSource::BuildFromSourceCargo { pinned_version } => {
+            let pinned_version_str = pinned_version.to_string();
             config
                 .output_target
                 .println(ui_strings::format_fallback_to_source_notice(
                     config.crate_name.as_str(),
-                    pinned_version.as_str(),
+                    &pinned_version_str,
                 ));
             execute_source_build_step(
                 config,
-                pinned_version.as_str(),
+                &pinned_version_str,
                 false,
                 output_device,
                 &bin_name,
@@ -523,13 +525,14 @@ async fn execute_github_release_or_fallback(
     distribution: CrateDistribution,
     archive_url: &str,
     sha256_url: &str,
-    pinned_version: &str,
+    pinned_version: CrateVersion,
     output_device: OutputDevice,
     bin_name: &str,
 ) -> Result<(), UpgradeError> {
+    let pinned_version_str = pinned_version.to_string();
     match download_and_replace_github_release(
         config.crate_name.as_str(),
-        pinned_version,
+        &pinned_version_str,
         archive_url,
         sha256_url,
         output_device.clone(),
@@ -541,7 +544,7 @@ async fn execute_github_release_or_fallback(
                 .output_target
                 .println(ui_strings::format_upgrade_success_msg(
                     config.crate_name.as_str(),
-                    pinned_version,
+                    &pinned_version_str,
                 ));
             Ok(())
         }
@@ -565,7 +568,7 @@ async fn execute_github_release_or_fallback(
                 config.output_target.println(
                     ui_strings::format_fallback_to_source_notice(
                         config.crate_name.as_str(),
-                        pinned_version,
+                        &pinned_version_str,
                     ),
                 );
                 let use_rustup = matches!(
@@ -574,7 +577,7 @@ async fn execute_github_release_or_fallback(
                 );
                 return execute_source_build_step(
                     config,
-                    pinned_version,
+                    &pinned_version_str,
                     use_rustup,
                     output_device,
                     bin_name,
@@ -704,16 +707,15 @@ pub async fn run_upgrade(config: &UpgradeConfig) -> miette::Result<()> {
         }
     };
 
-    let is_newer = is_remote_version_strictly_newer(
-        metadata.version.as_str(),
-        config.local_version.as_str(),
-    );
+    let is_newer =
+        is_remote_version_strictly_newer(metadata.version, config.local_version);
     if !is_newer {
+        let local_version_str = config.local_version.to_string();
         config
             .output_target
             .println(ui_strings::format_already_up_to_date_msg(
                 config.crate_name.as_str(),
-                config.local_version.as_str(),
+                &local_version_str,
             ));
         return ok!();
     }
@@ -789,6 +791,8 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
     };
 
     let bin_name = get_current_bin_name();
+    let local_version_str = config.local_version.to_string();
+    let remote_version_str = metadata.version.to_string();
 
     match config.policy {
         UpgradePolicy::Never => {}
@@ -797,8 +801,8 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
                 .output_target
                 .println(ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    config.local_version.as_str(),
-                    metadata.version.as_str(),
+                    &local_version_str,
+                    &remote_version_str,
                 ));
         }
         UpgradePolicy::AutoUpgrade => {
@@ -806,8 +810,8 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
                 .output_target
                 .println(ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    config.local_version.as_str(),
-                    metadata.version.as_str(),
+                    &local_version_str,
+                    &remote_version_str,
                 ));
             drop(execute_upgrade_with_metadata(config, &metadata).await);
         }
@@ -822,8 +826,8 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
                 .output_target
                 .println(ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    config.local_version.as_str(),
-                    metadata.version.as_str(),
+                    &local_version_str,
+                    &remote_version_str,
                 ));
 
             let yes_no_options = &[
@@ -832,7 +836,7 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
             ];
             let prompt_header = ui_strings::format_interactive_prompt_header(
                 config.crate_name.as_str(),
-                metadata.version.as_str(),
+                &remote_version_str,
             );
             let header_lines = smallvec![cli_text_line![cli_text_inline(
                 prompt_header,
@@ -969,7 +973,7 @@ mod tests {
         use chrono::Utc;
 
         let meta = CrateVersionMetadata {
-            version: "0.0.25".into(),
+            version: CrateVersion::try_from("0.0.25").unwrap(),
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
