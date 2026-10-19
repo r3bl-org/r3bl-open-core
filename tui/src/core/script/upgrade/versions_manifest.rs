@@ -70,8 +70,8 @@ use std::{borrow::Borrow,
 ///       "crate_distribution": "open-source",
 ///       "released_on": "2026-10-17T00:00:00Z",
 ///     },
-///     // Commercial tool example.
-///     "r3bl-closed-tool": {
+///     // Closed-source product example.
+///     "r3bl-closed-source-product": {
 ///       "version": "1.2.0",
 ///       "crate_distribution": "closed-source",
 ///       "released_on": "2026-10-17T12:00:00Z",
@@ -315,7 +315,7 @@ pub struct CrateVersionMetadata {
     /// Target semantic version string pinned for the crate (e.g., `"0.0.25"`).
     pub version: CrateVersion,
 
-    /// Distribution and licensing model of the crate: `"open-source"` (eligible for
+    /// Distribution model of the crate: `"open-source"` (eligible for
     /// `cargo +nightly install <crate> --version <version>` source compilation fallback)
     /// or `"closed-source"`.
     pub crate_distribution: CrateDistribution,
@@ -325,7 +325,7 @@ pub struct CrateVersionMetadata {
     pub released_on: DateTime<Utc>,
 }
 
-/// Witness enum capturing the distribution and licensing model of a crate.
+/// Witness enum capturing the distribution model of a crate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CrateDistribution {
@@ -541,8 +541,8 @@ mod tests {
                     "crate_distribution": "open-source",
                     "released_on": "2026-10-17T00:00:00Z",
                 },
-                // Closed-source binary
-                "r3bl-closed-tool": {
+                // Closed-source product
+                "r3bl-closed-source-product": {
                     "version": "1.2.0",
                     "crate_distribution": "closed-source",
                     "released_on": "2026-10-17T12:00:00Z"
@@ -560,7 +560,7 @@ mod tests {
         assert_eq2!(cmdr.crate_distribution, CrateDistribution::OpenSource);
         assert_eq2!(cmdr.released_on.to_rfc3339(), "2026-10-17T00:00:00+00:00");
 
-        let closed = &manifest.crates_map["r3bl-closed-tool"];
+        let closed = &manifest.crates_map["r3bl-closed-source-product"];
         assert_eq2!(closed.version, CrateVersion::try_from("1.2.0").unwrap());
         assert_eq2!(closed.crate_distribution, CrateDistribution::ClosedSource);
     }

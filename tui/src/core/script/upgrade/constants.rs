@@ -79,7 +79,7 @@ pub mod manifest_keys {
     /// Crate semantic version key (`"version"`).
     pub const VERSION: &str = "version";
 
-    /// Crate distribution and licensing model key (`"crate_distribution"`).
+    /// Crate distribution model key (`"crate_distribution"`).
     pub const CRATE_DISTRIBUTION: &str = "crate_distribution";
 
     /// Crate UTC release timestamp key (`"released_on"`).
