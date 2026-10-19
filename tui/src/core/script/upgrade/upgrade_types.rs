@@ -6,34 +6,24 @@
 
 use super::{CrateDistribution, CrateName, CrateVersion};
 
-/// Per-binary upgrade configuration passed to the upgrade engine.
-///
-/// # Explicit Configuration (No Environment Variables or `CI=<bool>`)
-///
-/// Environment variables—including standard continuous integration variables (`CI=true`
-/// or `CI=false`) and custom variables like `R3BL_NO_AUTO_UPGRADE`—are **never**
-/// inspected or taken into account by the upgrade engine.
+/// Configuration passed to the upgrade engine, to upgrade a single binary.
 ///
 /// Unlike tools that implicitly alter their behavior or downgrade policies when
 /// `CI=true`, this engine is 100% deterministic: `CI=<bool>` does **not** influence
-/// policy resolution. All upgrade behaviors are controlled strictly through explicit CLI
-/// flags (such as `--upgrade-policy`) and program configuration to eliminate hidden
-/// behavior, ambient state dependencies, and ambiguity.
+/// policy resolution. All upgrade behaviors are controlled strictly through:
+/// 1. Explicit CLI flags (such as passing [`UpgradePolicy`] via `--upgrade-policy`). For
+///    examples of this, you can look at the `CLIArg` structs in our binary crates like
+///    `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
+/// 2. Programmatic configuration composition to eliminate hidden behavior, ambient state
+///    dependencies, and ambiguity.
 ///
 /// # Policy Precedence
 ///
 /// When determining the effective [`UpgradePolicy`] in [`Self::new`]:
 /// 1. **Explicit CLI override**: If a CLI override (`Option<UpgradePolicy>`) is provided
 ///    (e.g., via `--upgrade-policy`), that explicit choice is always used.
-/// 2. **Default policy**: If no CLI override is provided (`None`), the binary's
-///    designated default [`UpgradePolicy`] is used
-///    (`cli_policy.unwrap_or(default_policy)`).
-///
-/// Continuous integration environments (`CI=true` or `CI=false`) do **not** alter,
-/// intercept, or derive this policy. If a non-default policy (such as
-/// [`UpgradePolicy::NotifyOnly`] or [`UpgradePolicy::Never`]) is desired in CI pipelines,
-/// it must be passed explicitly via `--upgrade-policy notify-only` or `--upgrade-policy
-/// never`.
+/// 2. **Default policy**: If no CLI override is provided (`None`), the binary's provided
+///    default [`UpgradePolicy`] is used.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeConfig {
     /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
