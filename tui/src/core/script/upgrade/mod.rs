@@ -45,8 +45,7 @@
 //!     in `versions.jsonc` from `crates.io` via [`PTY`] + `OSC 9;4` progress tracking
 //!     when pre-built release archives are unreachable.
 //!   - [`CrateDistribution::ClosedSource`]: Upgrades exclusively from pre-built GitHub
-//!     release archives (no `crates.io` fallback), using `released_on` to validate the
-//!     user's active maintenance window.
+//!     release archives (with no `crates.io` fallback).
 //!
 //! # Centralized Version Manifest (`r3bl.com/versions.jsonc`)
 //!
