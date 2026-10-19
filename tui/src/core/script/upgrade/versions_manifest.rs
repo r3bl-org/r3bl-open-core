@@ -27,7 +27,7 @@ use std::{borrow::Borrow,
 /// - **Binary Clients (Read Path)**: Deserialized into [`VersionsManifest`] via
 ///   [`Self::try_parse_jsonc`] to inspect available versions.
 /// - **Release Automation (Write Path)**: Mutated programmatically via
-///   [`Self::update_crate_in_jsonc_str`], updating versions and timestamps losslessly
+///   [`Self::try_update_crate_in_jsonc`], updating versions and timestamps losslessly
 ///   without erasing comments, blank lines, or formatting.
 ///
 /// # Why JSONC (`versions.jsonc`)?
@@ -36,21 +36,21 @@ use std::{borrow::Borrow,
 /// - **Human-readable documentation in-file**: Supports `//` line comments, `/* ... */`
 ///   block comments, and trailing commas directly inside `versions.jsonc`.
 /// - **Lossless comment-preserving updates**: When release tooling updates a crate's
-///   version and release timestamp via [`Self::update_crate_in_jsonc_str`],
+///   version and release timestamp via [`Self::try_update_crate_in_jsonc`],
 ///   [`jsonc_parser::cst::CstRootNode`] mutates only the target `AST` nodes in-place,
 ///   preserving 100% of existing comments, blank lines, and formatting.
 ///
 /// # Canonical Schema (`schema_version: 1`)
 ///
-/// - **`schema_version`** ([`ManifestSchemaVersion`]): Witness enum for the integer
-///   schema version (currently [`ManifestSchemaVersion::V1`] / `1`), validated before
-///   routing to the version-specific parser in [`Self::try_parse_jsonc`].
+/// - **`schema_version`** ([`ManifestSchemaVersion`]): Supported integer schema version
+///   (currently [`ManifestSchemaVersion::V1`] / `1`), validated before routing to the
+///   version-specific parser in [`Self::try_parse_jsonc`].
 /// - **`crates`** (`crates_map: HashMap<CrateName, CrateVersionMetadata>`): Map keyed by
 ///   canonical Cargo package name (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`,
 ///   `"r3bl-rust-analyzer-mcp-server"`). Each entry contains:
 ///   - **`version`** ([`CrateVersion`]): Pinned semantic version string
 ///     (`"MAJOR.MINOR.PATCH"`).
-///   - **`crate_distribution`** ([`CrateDistribution`]): Witness enum serialized in
+///   - **`crate_distribution`** ([`CrateDistribution`]): Domain enum serialized in
 ///     `kebab-case` (`"open-source"` for [`CrateDistribution::OpenSource`] or
 ///     `"closed-source"` for [`CrateDistribution::ClosedSource`]).
 ///   - **`released_on`** ([`chrono::DateTime<chrono::Utc>`]): RFC 3339 / ISO 8601 `UTC`
@@ -97,13 +97,6 @@ mod impl_versions_manifest {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Minimal header used to validate and inspect `schema_version` before routing to a
-    /// version-specific manifest parser.
-    #[derive(Deserialize)]
-    struct ManifestHeader {
-        schema_version: ManifestSchemaVersion,
-    }
-
     impl VersionsManifest {
         /// Primary read entry point: parses a JSONC string (supporting `//` line
         /// comments, `/* ... */` block comments, and trailing commas) into a
@@ -142,10 +135,15 @@ mod impl_versions_manifest {
         /// ([`CstRootNode`]), preserving 100% of existing comments, blank lines,
         /// and formatting.
         ///
+        /// # Returns
+        ///
+        /// Returns the complete, updated JSONC document as an owned [`String`],
+        /// preserving all existing comments, blank lines, and formatting.
+        ///
         /// # Errors
         ///
         /// Returns an error if `jsonc_str` cannot be parsed as valid JSONC.
-        pub fn update_crate_in_jsonc_str(
+        pub fn try_update_crate_in_jsonc(
             jsonc_str: &str,
             crate_name: &str,
             metadata: &CrateVersionMetadata,
@@ -199,7 +197,14 @@ mod impl_versions_manifest {
     }
 }
 
-/// Witness enum representing supported schema versions of the
+/// Minimal header used to validate and inspect `schema_version` before routing to a
+/// version-specific manifest parser.
+#[derive(Deserialize)]
+struct ManifestHeader {
+    schema_version: ManifestSchemaVersion,
+}
+
+/// Enum representing supported schema versions of the
 /// [`R3BL_VERSIONS_JSON_URL`] manifest.
 ///
 /// Deserializes as an integer (`1` for [`Self::V1`]) via [`TryFrom<u32>`], rejecting
@@ -242,8 +247,8 @@ mod impl_manifest_schema_version {
         }
     }
 
-    /// Converts the witness enum back to its integer representation for JSONC CST updates
-    /// in [`VersionsManifest::update_crate_in_jsonc_str`] and [`Display`].
+    /// Converts the enum back to its integer representation for JSONC CST updates
+    /// in [`VersionsManifest::try_update_crate_in_jsonc`] and [`Display`].
     impl From<ManifestSchemaVersion> for u32 {
         fn from(version: ManifestSchemaVersion) -> Self {
             match version {
@@ -325,7 +330,7 @@ pub struct CrateVersionMetadata {
     pub released_on: DateTime<Utc>,
 }
 
-/// Witness enum capturing the distribution model of a crate.
+/// Domain enum capturing the distribution model of a crate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CrateDistribution {
@@ -338,7 +343,7 @@ mod impl_crate_distribution {
     use super::*;
 
     /// Formats the distribution in `kebab-case` (`"open-source"` or `"closed-source"`)
-    /// for JSONC CST updates in [`VersionsManifest::update_crate_in_jsonc_str`] and logs.
+    /// for JSONC CST updates in [`VersionsManifest::try_update_crate_in_jsonc`] and logs.
     impl Display for CrateDistribution {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
@@ -602,7 +607,7 @@ mod tests {
             released_on: "2026-10-18T15:30:00Z".parse().unwrap(),
         };
 
-        let updated_jsonc = VersionsManifest::update_crate_in_jsonc_str(
+        let updated_jsonc = VersionsManifest::try_update_crate_in_jsonc(
             original_jsonc,
             "r3bl-cmdr",
             &updated_meta,

@@ -7,6 +7,7 @@ You are a senior code reviewer ensuring high code quality standards.
 - **Be terse**: Skip greetings, pleasantries, and post-edit summaries. Give code + 1-line root cause only.
 - **Cargo output hygiene**: Always pass `-q --message-format=short` to direct cargo commands (or use `./check.fish`).
 - **Subagent model**: Always use `Model: "inherit"` when invoking subagents so they inherit whatever model is set in `agy-cli`.
+- **No autonomous heavy checks**: Do not trigger long-running checks (`--test`, `--quick-doc`, `--clippy`, `--full`) after minor edits. Reserve heavy operations for explicit user prompts or full quality audits.
 
 ## Instructions
 
@@ -268,7 +269,7 @@ When invoked, delegate to the `write-documentation` skill, which handles:
 
 If there are doc link warnings, the skill will automatically invoke `fix-intradoc-links` to fix them.
 
-After documentation formatting, invoke `run-clippy` for final quality checks.
+After documentation formatting, invoke `run-clippy` for final quality checks only if performing a full quality audit or when explicitly requested.
 
 ## Related Skills
 

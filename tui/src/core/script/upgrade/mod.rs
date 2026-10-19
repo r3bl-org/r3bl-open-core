@@ -23,7 +23,7 @@
 //!    [`self_replace`] (plus any sibling binaries), or falls back to `crates.io`.
 //! 2. Write Path: The shared schema and in-place JSONC mutator (via [`CST`] which is
 //!    provided by the [JSONC parser] crate) is exposed via
-//!    [`VersionsManifest::update_crate_in_jsonc_str`] as a library API so external
+//!    [`VersionsManifest::try_update_crate_in_jsonc`] as a library API so external
 //!    release tooling can losslessly update `versions.jsonc` entries while preserving all
 //!    existing comments, blank lines, and formatting.
 //!
@@ -97,7 +97,7 @@
 //! [`UpgradeConfig::local_version`]: crate::core::script::upgrade::UpgradeConfig::local_version
 //! [`UpgradePolicy`]: crate::core::script::upgrade::UpgradePolicy
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
-//! [`VersionsManifest::update_crate_in_jsonc_str`]: crate::core::script::upgrade::VersionsManifest::update_crate_in_jsonc_str
+//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc
 //! [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest
 //! [JSONC parser]: mod@jsonc_parser
 

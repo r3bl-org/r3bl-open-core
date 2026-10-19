@@ -1096,6 +1096,13 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 # (runs: cargo test --doc)
 ```
 
+> [!IMPORTANT]
+> **Frequency Directive:** Do NOT run `./check.fish --quick-doc` or `./check.fish --test` after minor, isolated doc comment edits.
+> Fast typechecking (`./check.fish --check`) is sufficient for routine edits. Run `--quick-doc` and doctests only when:
+> 1. Explicitly requested by the user (or running `/docs`).
+> 2. Performing a dedicated documentation refactoring pass.
+> 3. At final pre-commit verification before creating a commit or PR.
+
 > [!TIP] **Run in a Subagent:** Building workspace documentation and running doctests can
 > take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) with
 > `Model: "inherit"` so the active conversation with the user is not blocked.

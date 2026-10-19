@@ -46,7 +46,7 @@ unified, hybrid distribution and self-upgrade architecture.
 > - **Code Schema**: [`VersionsManifest`] in
 >   `tui/src/core/script/upgrade/versions_manifest.rs` defines the Rust schema, JSONC
 >   parser (`VersionsManifest::try_parse_jsonc`), and comment-preserving CST updater
->   (`VersionsManifest::update_crate_in_jsonc_str`) for `https://r3bl.com/versions.jsonc`.
+>   (`VersionsManifest::try_update_crate_in_jsonc`) for `https://r3bl.com/versions.jsonc`.
 > - **Architecture Specification**: This document is the technical specification for the
 >   shared client-side upgrade engine (`r3bl_tui::core::script::upgrade`), centralized
 >   manifest schema (`https://r3bl.com/versions.jsonc`), and binary distribution
@@ -111,14 +111,14 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
   comments, `/* ... */` block comments, and trailing commas, validates
   `ManifestSchemaVersion` via an intermediate header, and dispatches to the
   version-specific parser (`ManifestSchemaVersion::V1`).
-- **Comment-Preserving Mutation (`VersionsManifest::update_crate_in_jsonc_str`)**: Uses
+- **Comment-Preserving Mutation (`VersionsManifest::try_update_crate_in_jsonc`)**: Uses
   `jsonc_parser::cst::CstRootNode` (Concrete Syntax Tree) so release tooling can update a
   crate's version entry in `versions.jsonc` while preserving 100% of existing comments and
   formatting.
     - See
       [`r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
       for the `r3bl-base` CLI binary (`r3bl-manifest-update`) that calls
-      `VersionsManifest::update_crate_in_jsonc_str()` and deploys `versions.jsonc` to
+      `VersionsManifest::try_update_crate_in_jsonc()` and deploys `versions.jsonc` to
       `r3bl.com` and `github.com/r3bl-org/r3bl-binaries`.
 
 ```jsonc
@@ -296,7 +296,7 @@ control exit upgrade behavior (with zero magic environment variable inspection):
     - [x] `VersionsManifest`: Schema for `https://r3bl.com/versions.jsonc`, providing
           `try_parse_jsonc()` (validating `ManifestSchemaVersion` via `ManifestHeader`
           before dispatching to the version-specific parser) and comment-preserving
-          `update_crate_in_jsonc_str()` via `jsonc-parser` CST.
+          `try_update_crate_in_jsonc()` via `jsonc-parser` CST.
     - [x] Domain newtypes and enums: `ManifestSchemaVersion` (`V1 = 1` witness enum with
           `#[serde(try_from = "u32", into = "u32")]`), `CrateDistribution` (`OpenSource` /
           `ClosedSource`, `#[serde(rename_all = "kebab-case")]`), `CrateName(pub String)`,
@@ -476,7 +476,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [ ] Tracked in
           [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
           (`r3bl-manifest-update` CLI binary calling
-          `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()`, canonical
+          `r3bl_tui::VersionsManifest::try_update_crate_in_jsonc()`, canonical
           `versions.jsonc` / `install.sh` / `install.ps1`, and `release.fish` deploying to
           `../r3bl-binaries` and `../r3bl_website`).
 
@@ -520,7 +520,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [x] Create `tui/src/core/script/upgrade/versions_manifest.rs` defining
       `VersionsManifest` (the schema for `versions.jsonc` with `try_parse_jsonc`
       validating `ManifestSchemaVersion` via `ManifestHeader` before dispatching to the
-      version-specific parser, and CST-based `update_crate_in_jsonc_str`),
+      version-specific parser, and CST-based `try_update_crate_in_jsonc`),
       `ManifestSchemaVersion` (`V1 = 1` witness enum with
       `#[serde(try_from = "u32", into = "u32")]`), `CrateDistribution`, `CrateName`,
       `CrateVersion`, and `CrateVersionMetadata`.
@@ -588,7 +588,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       [`../r3bl-base/task/task_release_pipeline.md`](../../r3bl-base/task/task_release_pipeline.md)
       in `../r3bl-base` (private maintainer repository):
     - [ ] Phase 1: Build `r3bl-manifest-update` CLI binary in `../r3bl-base` wrapping
-          `r3bl_tui::VersionsManifest::update_crate_in_jsonc_str()` and deploying/pushing
+          `r3bl_tui::VersionsManifest::try_update_crate_in_jsonc()` and deploying/pushing
           to `../r3bl_website` and `../r3bl-binaries`.
     - [ ] Phase 2: Author canonical `versions.jsonc`, `install.sh`, and `install.ps1` in
           `../r3bl-base` and deploy them to `../r3bl-binaries` and `../r3bl_website`.

@@ -80,8 +80,13 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
 2. **Milestone Stability:** Stop and ask for a review as soon as you achieve any stable
    milestone (e.g., code compiles after a refactor, a sub-module is renamed, or a complex
    regex operation is completed).
-3. **Validation before Review:** Always run `./check.fish --check` or `cargo check`
-   locally BEFORE asking the user for a review. Never present "broken" progress.
+3. **Validation before Review (Fast Checks Only):** Always run `./check.fish --check`
+   (or `cargo check -q --message-format=short`) locally BEFORE asking the user for a review.
+   Never present "broken" progress.
+   - **No Autonomous Heavy Checks:** Do NOT run heavy operations (`./check.fish --test`,
+     `--clippy`, `--quick-doc`, `--doc`, or `--full`) autonomously after routine edits or
+     during interim review pauses. Heavy checks must run ONLY when explicitly requested by
+     the user or when reaching a final pre-commit / pre-PR milestone.
 4. **Attention Signal:** When stopping for a mandatory review point, run `fish -c "beep"`
    to alert the user.
 5. **Mandatory Manual Review:** A task, phase, or sub-phase is not complete until the user
@@ -391,6 +396,17 @@ Commands with **no check.fish equivalent** (run directly):
 - `cargo rustdoc-fmt`: format rustdoc comments
 - `cargo clippy --all-targets --fix --allow-dirty`: auto-fix lints
 - `cargo fmt --all`: format code
+
+### Verification Hierarchy & Frequency Policy
+
+To keep the development loop fast and prevent long-running commands from bogging down
+routine edits, checks are organized into three tiers:
+
+| Tier | Commands | When to Run | Autonomous Execution Rule |
+| :--- | :--- | :--- | :--- |
+| **Tier 1: Routine / Fast** | `./check.fish --check`<br>`./check.fish --fmt` | After code edits, before asking for review | **Mandatory & autonomous**: Fast typecheck (~1–3s) must always pass before presenting review. |
+| **Tier 2: Targeted Unit Test** | `cargo test -q <test_name>` | When actively adding or modifying a specific test | **Surgical only**: Run *only* the specific test being worked on. Never run the entire workspace test suite autonomously. |
+| **Tier 3: Heavy Suite** | `./check.fish --test`<br>`./check.fish --clippy`<br>`./check.fish --quick-doc`<br>`./check.fish --full` | **Only on explicit user request** or final pre-commit / pre-PR milestone | **Strictly prohibited autonomously**: Never run after minor edits, typo fixes, or routine refactors unless explicitly prompted by the user (e.g. `/check`, `/clippy`, "run tests", "verify docs") or before final task completion. |
 
 ### Non-Blocking Verification via Subagents
 
