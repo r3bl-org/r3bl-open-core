@@ -1037,6 +1037,7 @@ ustring
 utf8
 vcvarsall
 vecs
+ver
 virals
 vppos
 vt

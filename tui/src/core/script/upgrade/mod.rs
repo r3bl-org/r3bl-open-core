@@ -12,7 +12,7 @@
 //! `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`).
 //!
 //! Instead of making unauthenticated requests against multiple individual GitHub release
-//! endpoints or `crates.io` `API`s across dozens of executables, all R3BL binaries query
+//! endpoints or `crates.io` APIs across dozens of executables, all R3BL binaries query
 //! a single lightweight document ([`R3BL_VERSIONS_JSON_URL`]) to discover current release
 //! states, distribution channels, and upgrade strategies.
 //!
