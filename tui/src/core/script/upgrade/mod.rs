@@ -15,10 +15,12 @@
 //! ## Included in this module: The Engine
 //!
 //! 1. Read and Upgrade Path: The client runtime is embedded into product binaries to
-//!    parse [`R3BL_VERSIONS_JSON_URL`] via [`VersionsManifest::try_parse_jsonc`], stream
-//!    and verify `.tar.gz` and `.sha256` release assets from
-//!    [`R3BL_BINARIES_RELEASE_BASE_URL`], swap binaries in-place via [`self_replace`], or
-//!    fall back to `crates.io` (only for open source crates/binaries).
+//!    fetch [`R3BL_VERSIONS_JSON_URL`] ([`check_version_against_manifest`]), parse
+//!    [`VersionsManifest::try_parse_jsonc`], and guard against downgrading local dev
+//!    builds (`remote_version > local_version` via [`UpgradeConfig::local_version`]).
+//!    When an upgrade runs, it streams and verifies `.tar.gz` and `.sha256` release
+//!    assets from [`R3BL_BINARIES_RELEASE_BASE_URL`], swaps binaries in-place via
+//!    [`self_replace`] (plus any sibling binaries), or falls back to `crates.io`.
 //! 2. Write Path: The shared schema and in-place JSONC mutator (via [`CST`] which is
 //!    provided by the [JSONC parser] crate) is exposed via
 //!    [`VersionsManifest::update_crate_in_jsonc_str`] as a library API so external
@@ -38,9 +40,13 @@
 //!
 //! - Because both open-source crates in this workspace and external R3BL binary crates
 //!   link against `r3bl_tui` for self-upgrading, [`CrateDistribution`] supports both
-//!   distribution models ([`CrateDistribution::OpenSource`] with `crates.io` fallback,
-//!   and [`CrateDistribution::ClosedSource`] via pre-built binary releases only) through
-//!   a single unified schema.
+//!   distribution models through a single unified schema:
+//!   - [`CrateDistribution::OpenSource`]: Falls back to building the exact version pinned
+//!     in `versions.jsonc` from `crates.io` via [`PTY`] + `OSC 9;4` progress tracking
+//!     when pre-built release archives are unreachable.
+//!   - [`CrateDistribution::ClosedSource`]: Upgrades exclusively from pre-built GitHub
+//!     release archives (no `crates.io` fallback), using `released_on` to validate the
+//!     user's active maintenance window.
 //!
 //! # Centralized Version Manifest (`r3bl.com/versions.jsonc`)
 //!
@@ -52,34 +58,6 @@
 //! endpoints or `crates.io` APIs all R3BL binaries query a single lightweight document
 //! ([`R3BL_VERSIONS_JSON_URL`]) to discover current release states, distribution
 //! channels, and upgrade strategies.
-//!
-//! # How Upgrades Work
-//!
-//! 1. Discovery & version guarding:
-//!    - [`check_version_against_manifest`] fetches [`R3BL_VERSIONS_JSON_URL`], parses
-//!      [`VersionsManifest`], and extracts the crate's [`CrateVersionMetadata`]:
-//!      `version` ([`CrateVersion`]), `crate_distribution` ([`CrateDistribution`]), and
-//!      `released_on`.
-//!    - [`CrateVersion`] enforces strict `"MAJOR.MINOR.PATCH"` semantic versioning
-//!      (rejecting `v` prefixes, pre-release tags, and build metadata).
-//!    - Compares the remote [`CrateVersion`] strictly against
-//!      [`UpgradeConfig::local_version`] (`env!("CARGO_PKG_VERSION")` from the calling
-//!      binary, `remote_version > local_version`) so local development builds are never
-//!      downgraded.
-//! 2. Primary engine: pre-built binary download:
-//!    - Streams `.tar.gz` archives from [`R3BL_BINARIES_RELEASE_BASE_URL`] across Linux,
-//!      macOS, and Windows with live `%` and `MiB` progress, verifies `.sha256`
-//!      checksums, unpacks the archive, and atomically swaps the running executable
-//!      in-place via [`self_replace`] (plus updates any sibling binaries).
-//! 3. Distribution routing & fallback:
-//!    - Open-source binaries ([`CrateDistribution::OpenSource`]): When the pre-compiled
-//!      binary release is unreachable, falls back to building the exact version pinned in
-//!      `versions.jsonc` from `crates.io` via [`PTY`] + `OSC 9;4` progress tracking
-//!      (`rustup toolchain install nightly --force` + `cargo +nightly install <crate>
-//!      --version <pinned_ver> --force`).
-//!    - Closed-source binaries ([`CrateDistribution::ClosedSource`]): Downloads
-//!      exclusively from GitHub releases (no `crates.io` fallback), using `released_on`
-//!      to validate the user's active maintenance window before upgrading.
 //!
 //! # Invocation Modes and Error Handling
 //!
@@ -106,8 +84,6 @@
 //! [`CrateDistribution::ClosedSource`]: crate::core::script::upgrade::CrateDistribution::ClosedSource
 //! [`CrateDistribution::OpenSource`]: crate::core::script::upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::core::script::upgrade::CrateDistribution
-//! [`CrateVersion`]: crate::core::script::upgrade::CrateVersion
-//! [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
 //! [`CST`]: jsonc_parser::cst::CstRootNode
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
