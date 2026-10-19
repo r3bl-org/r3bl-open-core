@@ -93,18 +93,25 @@ async fn test_async_session_kill_reporting() {
 
     // Verify that the output channel receives an Exit event and closes.
     let mut exit_reported = false;
-    while let Some(event) = session.rx_output_event.recv().await {
-        match event {
-            PtyOutputEvent::Exit(s) => {
-                assert!(!s.success());
-                exit_reported = true;
+    let drain_result = tokio::time::timeout(Duration::from_secs(5), async {
+        while let Some(event) = session.rx_output_event.recv().await {
+            match event {
+                PtyOutputEvent::Exit(s) => {
+                    assert!(!s.success());
+                    exit_reported = true;
+                }
+                PtyOutputEvent::UnexpectedExit(_) => {
+                    exit_reported = true;
+                }
+                _ => {}
             }
-            PtyOutputEvent::UnexpectedExit(_) => {
-                exit_reported = true;
-            }
-            _ => {}
         }
-    }
+    })
+    .await;
+    assert!(
+        drain_result.is_ok(),
+        "Timed out waiting for output channel to drain and close"
+    );
     assert!(exit_reported);
 }
 
