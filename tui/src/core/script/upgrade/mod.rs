@@ -51,11 +51,11 @@
 //! # Centralized Version Manifest (`r3bl.com/versions.jsonc`)
 //!
 //! The version manifest ([`VersionsManifest`]) is the central registry for all R3BL
-//! binary products. These include `r3bl-cmdr`, `edi`, `giti`, `r3bl-build-infra`, and
-//! `r3bl-rust-analyzer-mcp-server`.
+//! binary crates. These include `r3bl-cmdr` (`giti`, `edi`, `env-source`),
+//! `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`.
 //!
 //! Instead of making unauthenticated requests against multiple individual GitHub release
-//! endpoints or `crates.io` APIs all R3BL binaries query a single lightweight document
+//! endpoints or `crates.io` APIs, all R3BL binaries query a single lightweight document
 //! ([`R3BL_VERSIONS_JSON_URL`]) to discover current release states, distribution
 //! channels, and upgrade strategies.
 //!
@@ -63,9 +63,10 @@
 //!
 //! Upgrades run in one of two modes:
 //!
-//! 1. Background version check (silent failure):
-//!    - Runs in the background on startup ([`start_background_version_check`]) or before
-//!      exit ([`handle_upgrade_at_exit`]).
+//! 1. Normal execution (startup check + exit handler, silent failure):
+//!    - Checks [`R3BL_VERSIONS_JSON_URL`] in the background on startup
+//!      ([`start_background_version_check`]) and acts on the result before exit
+//!      ([`handle_upgrade_at_exit`]) according to [`UpgradePolicy`].
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
@@ -95,6 +96,7 @@
 //! [`stderr`]: std::io::stderr
 //! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
 //! [`UpgradeConfig::local_version`]: crate::core::script::upgrade::UpgradeConfig::local_version
+//! [`UpgradePolicy`]: crate::core::script::upgrade::UpgradePolicy
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
 //! [`VersionsManifest::update_crate_in_jsonc_str`]: crate::core::script::upgrade::VersionsManifest::update_crate_in_jsonc_str
 //! [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest
