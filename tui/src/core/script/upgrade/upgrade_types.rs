@@ -71,8 +71,7 @@ mod impl_upgrade_config {
             output_target: UpgradeOutputTarget,
         ) -> Self {
             let policy = cli_policy.unwrap_or(default_policy);
-            let local_version =
-                CrateVersion::try_from(local_version).unwrap_or_default();
+            let local_version = CrateVersion::try_from(local_version).unwrap_or_default();
 
             Self {
                 crate_name: crate_name.into(),

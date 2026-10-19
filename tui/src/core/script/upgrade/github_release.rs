@@ -3,7 +3,7 @@
 //! GitHub Release asset URL formatting and HTTP `HEAD` availability verification against
 //! `https://github.com/r3bl-org/r3bl-binaries`.
 
-use super::{get_archive_extension_for_target, R3BL_BINARIES_RELEASE_BASE_URL};
+use super::{R3BL_BINARIES_RELEASE_BASE_URL, get_archive_extension_for_target};
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
 use std::time::Duration;
 

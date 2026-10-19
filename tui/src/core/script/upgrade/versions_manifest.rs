@@ -45,8 +45,8 @@ use std::{borrow::Borrow,
 /// - **`schema_version`** ([`ManifestSchemaVersion`]): Witness enum for the integer
 ///   schema version (currently [`ManifestSchemaVersion::V1`] / `1`), validated before
 ///   routing to the version-specific parser in [`Self::try_parse_jsonc`].
-/// - **`crates`** (`crates_map: HashMap<CrateName, CrateVersionMetadata>`): Map keyed
-///   by canonical Cargo package name (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`,
+/// - **`crates`** (`crates_map: HashMap<CrateName, CrateVersionMetadata>`): Map keyed by
+///   canonical Cargo package name (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`,
 ///   `"r3bl-rust-analyzer-mcp-server"`). Each entry contains:
 ///   - **`version`** ([`CrateVersion`]): Pinned semantic version string
 ///     (`"MAJOR.MINOR.PATCH"`).

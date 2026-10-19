@@ -211,6 +211,7 @@ InputEvents
 InputSubscriberGuard
 Intelli
 Interbyte
+JSONC
 Jan
 Jetpack
 KB
@@ -685,6 +686,7 @@ linkifying
 linux
 litint
 localpaintedeffect
+losslessly
 machinectl
 malloc
 mandoc
@@ -732,6 +734,7 @@ multiaddr
 multibyte
 multispace
 multithreaded
+mutator
 mworld
 myapp
 nadia

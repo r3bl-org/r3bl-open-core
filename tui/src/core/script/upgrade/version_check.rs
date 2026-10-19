@@ -160,7 +160,9 @@ pub async fn try_get_crate_metadata_from_url(
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 /// [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 /// [`upgrade`]: mod@crate::core::script::upgrade
-pub async fn check_version_against_manifest(config: &UpgradeConfig) -> UpgradeCheckResult {
+pub async fn check_version_against_manifest(
+    config: &UpgradeConfig,
+) -> UpgradeCheckResult {
     set_upgrade_check_result(UpgradeCheckResult::Checking);
 
     match try_get_crate_metadata_from_r3bl_versions_json(config.crate_name.as_str()).await
