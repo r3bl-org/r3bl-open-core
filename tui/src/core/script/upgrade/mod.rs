@@ -17,10 +17,11 @@
 //! 1. Read and Upgrade Path: The client runtime is embedded into product binaries to
 //!    fetch [`R3BL_VERSIONS_JSON_URL`] ([`check_version_against_manifest`]), parse
 //!    [`VersionsManifest::try_parse_jsonc`], and guard against downgrading local dev
-//!    builds (`remote_version > local_version` via [`UpgradeConfig::local_version`]).
-//!    When an upgrade runs, it streams and verifies `.tar.gz` and `.sha256` release
-//!    assets from [`R3BL_BINARIES_RELEASE_BASE_URL`], swaps binaries in-place via
-//!    [`self_replace`] (plus any sibling binaries), or falls back to `crates.io`.
+//!    builds (`remote_version > current_version` via
+//!    [`SelfBinaryUpgradeConfig::current_version`]). When an upgrade runs, it streams and
+//!    verifies `.tar.gz` and `.sha256` release assets from
+//!    [`R3BL_BINARIES_RELEASE_BASE_URL`], swaps binaries in-place via [`self_replace`]
+//!    (plus any sibling binaries), or falls back to `crates.io`.
 //! 2. Write Path: The shared schema and in-place JSONC mutator (via [`CST`] which is
 //!    provided by the [JSONC parser] crate) is exposed via
 //!    [`VersionsManifest::try_update_crate_in_jsonc`] as a library API so external
@@ -65,7 +66,7 @@
 //! 1. Normal execution (startup check + exit handler, silent failure):
 //!    - Checks [`R3BL_VERSIONS_JSON_URL`] in the background on startup
 //!      ([`start_background_version_check`]) and acts on the result before exit
-//!      ([`handle_upgrade_at_exit`]) according to [`UpgradePolicy`].
+//!      ([`handle_upgrade_at_exit`]) according to [`UpdateBehavior`].
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
@@ -91,11 +92,11 @@
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 //! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor
 //! [`SCRIPT_MOD_DEBUG`]: crate::core::script::SCRIPT_MOD_DEBUG
+//! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::upgrade::SelfBinaryUpgradeConfig::current_version
 //! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
 //! [`stderr`]: std::io::stderr
+//! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
 //! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
-//! [`UpgradeConfig::local_version`]: crate::core::script::upgrade::UpgradeConfig::local_version
-//! [`UpgradePolicy`]: crate::core::script::upgrade::UpgradePolicy
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
 //! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc
 //! [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest

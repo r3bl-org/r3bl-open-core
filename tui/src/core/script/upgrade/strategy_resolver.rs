@@ -5,7 +5,7 @@
 
 use super::{CrateDistribution, CrateName, CrateVersion, UpgradeError, UpgradeSource,
             check_github_release_asset_available, format_github_release_asset_urls,
-            get_host_target_triple, toolchain_cli_args, toolchain_bin, upgrade_reasons};
+            get_host_target_triple, toolchain_bin, toolchain_cli_args, upgrade_reasons};
 use crate::CommandOutputResult;
 
 /// Checks whether a binary command is available on `$PATH` by invoking `<cmd> --version`.

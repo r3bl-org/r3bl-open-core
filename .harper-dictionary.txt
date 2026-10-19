@@ -398,6 +398,7 @@ antipattern
 anychar
 appender
 arboard
+args
 as-raw-fd
 asciicast
 assert_eq
@@ -499,6 +500,7 @@ delims
 demultiplexing
 deprecations
 depthfrom
+deref
 derivebuilder
 desaturated
 deschedules

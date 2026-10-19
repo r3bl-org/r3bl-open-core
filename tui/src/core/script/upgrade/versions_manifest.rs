@@ -304,9 +304,10 @@ mod impl_crate_name {
         }
     }
 
-    /// Constructs a [`CrateName`] from a string slice (e.g., in [`UpgradeConfig::new`]).
+    /// Constructs a [`CrateName`] from a string slice (e.g., in
+    /// [`SelfBinaryUpgradeConfig::try_new`]).
     ///
-    /// [`UpgradeConfig::new`]: crate::core::script::upgrade::UpgradeConfig::new
+    /// [`SelfBinaryUpgradeConfig::try_new`]: crate::core::script::upgrade::SelfBinaryUpgradeConfig::try_new
     impl From<&str> for CrateName {
         fn from(s: &str) -> Self { Self(s.to_string()) }
     }

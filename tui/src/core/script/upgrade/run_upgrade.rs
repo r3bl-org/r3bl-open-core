@@ -6,9 +6,9 @@
 //! the archive), and automatic fallback to `crates.io` source compilation when
 //! `crate_distribution` is [`CrateDistribution::OpenSource`].
 
-use super::{CrateDistribution, CrateVersion, CrateVersionMetadata, UpgradeConfig,
-            UpgradeError, UpgradeOutputTarget, UpgradePolicy, UpgradeSource, archive,
-            check_version_against_manifest, get_cached_crate_metadata,
+use super::{CrateDistribution, CrateVersion, CrateVersionMetadata,
+            SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeError, UpgradeSource,
+            UserFeedbackChannel, archive, check_version_against_manifest, get_cached_crate_metadata,
             is_remote_version_strictly_newer, is_upgrade_available,
             resolve_source_fallback, resolve_upgrade_strategy,
             run_source_build_with_spinner,
@@ -47,16 +47,18 @@ pub fn get_current_bin_name() -> InlineString {
         .unwrap_or_else(|| inline_string!("r3bl-binary"))
 }
 
-/// Constructs an [`OutputDevice`] matching the requested [`UpgradeOutputTarget`].
+/// Constructs an [`OutputDevice`] matching the requested [`UserFeedbackChannel`].
 #[must_use]
-pub fn create_output_device_for_target(target: UpgradeOutputTarget) -> OutputDevice {
-    match target {
-        UpgradeOutputTarget::Stdout => OutputDevice::new_stdout(),
-        UpgradeOutputTarget::Stderr => OutputDevice {
+pub fn create_output_device_for_feedback_channel(
+    channel: UserFeedbackChannel,
+) -> OutputDevice {
+    match channel {
+        UserFeedbackChannel::Stdout => OutputDevice::new_stdout(),
+        UserFeedbackChannel::Stderr => OutputDevice {
             resource: Arc::new(StdMutex::new(std::io::stderr())),
             paint_mode: crate::PaintMode::Real,
         },
-        UpgradeOutputTarget::Quiet => OutputDevice {
+        UserFeedbackChannel::Quiet => OutputDevice {
             resource: Arc::new(StdMutex::new(std::io::sink())),
             paint_mode: crate::PaintMode::Mock,
         },
@@ -327,7 +329,7 @@ async fn stream_archive_to_disk(
 ///
 /// # Errors
 ///
-/// Returns [`UpgradeError`] if the download fails, is cancelled, fails SHA-256
+/// Returns [`UpgradeError`] if the download fails, is canceled, fails SHA-256
 /// verification, or cannot replace the executable.
 pub async fn download_and_replace_github_release(
     crate_name: &str,
@@ -418,7 +420,7 @@ pub async fn download_and_replace_github_release(
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 /// [`UpgradeError::Other`]: crate::core::script::upgrade::UpgradeError::Other
 pub async fn resolve_metadata_for_upgrade(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
 ) -> Result<CrateVersionMetadata, UpgradeError> {
     if let Some(cached) = get_cached_crate_metadata() {
         return Ok(cached);
@@ -441,12 +443,12 @@ pub async fn resolve_metadata_for_upgrade(
 ///
 /// # Errors
 ///
-/// Returns [`UpgradeError`] if all viable upgrade paths fail or are cancelled.
+/// Returns [`UpgradeError`] if all viable upgrade paths fail or are canceled.
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub async fn execute_upgrade_with_metadata(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
     metadata: &CrateVersionMetadata,
 ) -> Result<(), UpgradeError> {
     let bin_name = get_current_bin_name();
@@ -464,7 +466,8 @@ pub async fn execute_upgrade_with_metadata(
         }
     };
 
-    let output_device = create_output_device_for_target(config.output_target);
+    let output_device =
+        create_output_device_for_feedback_channel(config.user_feedback_channel);
 
     match strategy {
         UpgradeSource::GithubReleaseArtifact {
@@ -485,12 +488,12 @@ pub async fn execute_upgrade_with_metadata(
         }
         UpgradeSource::BuildFromSourceRustup { pinned_version } => {
             let pinned_version_str = pinned_version.to_string();
-            config
-                .output_target
-                .println(ui_strings::format_fallback_to_source_notice(
+            config.user_feedback_channel.println(
+                ui_strings::format_fallback_to_source_notice(
                     config.crate_name.as_str(),
                     &pinned_version_str,
-                ));
+                ),
+            );
             execute_source_build_step(
                 config,
                 &pinned_version_str,
@@ -502,12 +505,12 @@ pub async fn execute_upgrade_with_metadata(
         }
         UpgradeSource::BuildFromSourceCargo { pinned_version } => {
             let pinned_version_str = pinned_version.to_string();
-            config
-                .output_target
-                .println(ui_strings::format_fallback_to_source_notice(
+            config.user_feedback_channel.println(
+                ui_strings::format_fallback_to_source_notice(
                     config.crate_name.as_str(),
                     &pinned_version_str,
-                ));
+                ),
+            );
             execute_source_build_step(
                 config,
                 &pinned_version_str,
@@ -521,7 +524,7 @@ pub async fn execute_upgrade_with_metadata(
 }
 
 async fn execute_github_release_or_fallback(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
     distribution: CrateDistribution,
     archive_url: &str,
     sha256_url: &str,
@@ -541,7 +544,7 @@ async fn execute_github_release_or_fallback(
     {
         Ok(()) => {
             config
-                .output_target
+                .user_feedback_channel
                 .println(ui_strings::format_upgrade_success_msg(
                     config.crate_name.as_str(),
                     &pinned_version_str,
@@ -549,12 +552,12 @@ async fn execute_github_release_or_fallback(
             Ok(())
         }
         Err(UpgradeError::Cancelled) => {
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(
                     bin_name,
                     upgrade_reasons::CANCELLED_BY_USER,
-                ));
+                ),
+            );
             Err(UpgradeError::Cancelled)
         }
         Err(download_err) => {
@@ -565,7 +568,7 @@ async fn execute_github_release_or_fallback(
                     CrateDistribution::OpenSource,
                 )
             {
-                config.output_target.println(
+                config.user_feedback_channel.println(
                     ui_strings::format_fallback_to_source_notice(
                         config.crate_name.as_str(),
                         &pinned_version_str,
@@ -586,11 +589,11 @@ async fn execute_github_release_or_fallback(
             }
 
             if distribution == CrateDistribution::OpenSource {
-                config.output_target.eprintln(
+                config.user_feedback_channel.eprintln(
                     ui_strings::format_open_source_no_toolchain_error(bin_name),
                 );
             } else {
-                config.output_target.eprintln(
+                config.user_feedback_channel.eprintln(
                     ui_strings::format_closed_source_unreachable_error(bin_name),
                 );
             }
@@ -600,7 +603,7 @@ async fn execute_github_release_or_fallback(
 }
 
 async fn execute_source_build_step(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
     pinned_version: &str,
     use_rustup: bool,
     output_device: OutputDevice,
@@ -616,7 +619,7 @@ async fn execute_source_build_step(
     {
         Ok(status) if status.success() => {
             config
-                .output_target
+                .user_feedback_channel
                 .println(ui_strings::format_upgrade_success_msg(
                     config.crate_name.as_str(),
                     pinned_version,
@@ -625,36 +628,32 @@ async fn execute_source_build_step(
         }
         Ok(status) => {
             let reason = format!("cargo install exited with status {status}");
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
-                    bin_name, &reason,
-                ));
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(bin_name, &reason),
+            );
             Err(UpgradeError::Other(reason))
         }
         Err(err) if err.kind() == io::ErrorKind::Interrupted => {
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(
                     bin_name,
                     upgrade_reasons::CANCELLED_BY_USER,
-                ));
+                ),
+            );
             Err(UpgradeError::Cancelled)
         }
         Err(err) => {
             let reason = err.to_string();
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
-                    bin_name, &reason,
-                ));
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(bin_name, &reason),
+            );
             Err(UpgradeError::Other(reason))
         }
     }
 }
 
 fn report_strategy_error(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
     distribution: CrateDistribution,
     bin_name: &str,
     err: &UpgradeError,
@@ -662,22 +661,19 @@ fn report_strategy_error(
     match err {
         UpgradeError::NoViableUpgradeSource { .. } => {
             if distribution == CrateDistribution::OpenSource {
-                config.output_target.eprintln(
+                config.user_feedback_channel.eprintln(
                     ui_strings::format_open_source_no_toolchain_error(bin_name),
                 );
             } else {
-                config.output_target.eprintln(
+                config.user_feedback_channel.eprintln(
                     ui_strings::format_closed_source_unreachable_error(bin_name),
                 );
             }
         }
         other => {
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
-                    bin_name,
-                    &other.to_string(),
-                ));
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(bin_name, &other.to_string()),
+            );
         }
     }
 }
@@ -692,30 +688,27 @@ fn report_strategy_error(
 /// Returns an error if the version check or upgrade execution fails.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-pub async fn run_upgrade(config: &UpgradeConfig) -> miette::Result<()> {
+pub async fn run_upgrade(config: &SelfBinaryUpgradeConfig) -> miette::Result<()> {
     let bin_name = get_current_bin_name();
     let metadata = match resolve_metadata_for_upgrade(config).await {
         Ok(meta) => meta,
         Err(err) => {
-            config
-                .output_target
-                .eprintln(ui_strings::format_upgrade_failed_retry_msg(
-                    &bin_name,
-                    &err.to_string(),
-                ));
+            config.user_feedback_channel.eprintln(
+                ui_strings::format_upgrade_failed_retry_msg(&bin_name, &err.to_string()),
+            );
             return Err(miette::miette!("{err}"));
         }
     };
 
     let is_newer =
-        is_remote_version_strictly_newer(metadata.version, config.local_version);
+        is_remote_version_strictly_newer(metadata.version, config.current_version);
     if !is_newer {
-        let local_version_str = config.local_version.to_string();
+        let current_version_str = config.current_version.to_string();
         config
-            .output_target
+            .user_feedback_channel
             .println(ui_strings::format_already_up_to_date_msg(
                 config.crate_name.as_str(),
-                &local_version_str,
+                &current_version_str,
             ));
         return ok!();
     }
@@ -734,7 +727,7 @@ pub async fn run_upgrade(config: &UpgradeConfig) -> miette::Result<()> {
 /// # Errors
 ///
 /// Returns an error if the Tokio runtime cannot be built or if [`run_upgrade`] fails.
-pub fn run_upgrade_sync(config: &UpgradeConfig) -> miette::Result<()> {
+pub fn run_upgrade_sync(config: &SelfBinaryUpgradeConfig) -> miette::Result<()> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -748,7 +741,10 @@ pub fn run_upgrade_sync(config: &UpgradeConfig) -> miette::Result<()> {
 /// If `upgrade_flag` is `true`, executes [`run_upgrade`] and exits the process with code
 /// `0` on success or `1` on failure. If `false`, returns immediately so normal program
 /// execution continues.
-pub async fn run_upgrade_cli_arg_interceptor(upgrade_flag: bool, config: &UpgradeConfig) {
+pub async fn run_upgrade_cli_arg_interceptor(
+    upgrade_flag: bool,
+    config: &SelfBinaryUpgradeConfig,
+) {
     if !upgrade_flag {
         return;
     }
@@ -763,7 +759,10 @@ pub async fn run_upgrade_cli_arg_interceptor(upgrade_flag: bool, config: &Upgrad
 ///
 /// If `upgrade_flag` is `true`, executes [`run_upgrade_sync`] and exits the process with
 /// code `0` on success or `1` on failure.
-pub fn run_upgrade_cli_arg_interceptor_sync(upgrade_flag: bool, config: &UpgradeConfig) {
+pub fn run_upgrade_cli_arg_interceptor_sync(
+    upgrade_flag: bool,
+    config: &SelfBinaryUpgradeConfig,
+) {
     if !upgrade_flag {
         return;
     }
@@ -773,16 +772,16 @@ pub fn run_upgrade_cli_arg_interceptor_sync(upgrade_flag: bool, config: &Upgrade
     }
 }
 
-/// Handles pending upgrades at application exit based on [`UpgradeConfig::policy`]:
-/// - [`UpgradePolicy::Never`]: Suppresses exit upgrade notifications and actions
+/// Handles pending upgrades at application exit based on
+/// [`SelfBinaryUpgradeConfig::update_behavior`]:
+/// - [`UpdateBehavior::Disable`]: Suppresses exit upgrade notifications and actions
 ///   entirely.
-/// - [`UpgradePolicy::NotifyOnly`]: Prints a one-line notice if an upgrade is available.
-/// - [`UpgradePolicy::AutoUpgrade`]: Automatically runs the upgrade if an upgrade is
-///   available.
-/// - [`UpgradePolicy::InteractivePrompt`]: Prompts the user interactively (`choose()`)
+/// - [`UpdateBehavior::NotifyOnly`]: Prints a one-line notice if an upgrade is available.
+/// - [`UpdateBehavior::Auto`]: Automatically runs the upgrade if an upgrade is available.
+/// - [`UpdateBehavior::PromptToUpgrade`]: Prompts the user interactively (`choose()`)
 ///   whether to upgrade now.
-pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
-    if config.policy == UpgradePolicy::Never || !is_upgrade_available() {
+pub async fn handle_upgrade_at_exit(config: &SelfBinaryUpgradeConfig) {
+    if config.update_behavior == UpdateBehavior::Disable || !is_upgrade_available() {
         return;
     }
 
@@ -791,44 +790,44 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
     };
 
     let bin_name = get_current_bin_name();
-    let local_version_str = config.local_version.to_string();
+    let current_version_str = config.current_version.to_string();
     let remote_version_str = metadata.version.to_string();
 
-    match config.policy {
-        UpgradePolicy::Never => {}
-        UpgradePolicy::NotifyOnly => {
-            config
-                .output_target
-                .println(ui_strings::format_upgrade_available_notice(
+    match config.update_behavior {
+        UpdateBehavior::Disable => {}
+        UpdateBehavior::NotifyOnly => {
+            config.user_feedback_channel.println(
+                ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    &local_version_str,
+                    &current_version_str,
                     &remote_version_str,
-                ));
+                ),
+            );
         }
-        UpgradePolicy::AutoUpgrade => {
-            config
-                .output_target
-                .println(ui_strings::format_upgrade_available_notice(
+        UpdateBehavior::Auto => {
+            config.user_feedback_channel.println(
+                ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    &local_version_str,
+                    &current_version_str,
                     &remote_version_str,
-                ));
+                ),
+            );
             drop(execute_upgrade_with_metadata(config, &metadata).await);
         }
-        UpgradePolicy::InteractivePrompt => {
+        UpdateBehavior::PromptToUpgrade => {
             if let TerminalInteractiveStatus::NotAvailable(_) =
                 check_is_terminal_interactive()
             {
                 return;
             }
 
-            config
-                .output_target
-                .println(ui_strings::format_upgrade_available_notice(
+            config.user_feedback_channel.println(
+                ui_strings::format_upgrade_available_notice(
                     &bin_name,
-                    &local_version_str,
+                    &current_version_str,
                     &remote_version_str,
-                ));
+                ),
+            );
 
             let yes_no_options = &[
                 ui_strings::yes_upgrade_now_raw(),
@@ -869,7 +868,7 @@ pub async fn handle_upgrade_at_exit(config: &UpgradeConfig) {
 
 /// Synchronous wrapper around [`handle_upgrade_at_exit`] for binaries that run without a
 /// global Tokio runtime (`rust-analyzer-mcp-server`).
-pub fn handle_upgrade_at_exit_sync(config: &UpgradeConfig) {
+pub fn handle_upgrade_at_exit_sync(config: &SelfBinaryUpgradeConfig) {
     if !is_upgrade_available() {
         return;
     }
@@ -886,7 +885,7 @@ pub fn handle_upgrade_at_exit_sync(config: &UpgradeConfig) {
 
 /// Helper for binaries that want to ensure the version check has completed before exit
 /// (or run it if not yet checked).
-pub async fn ensure_version_checked_and_handle_at_exit(config: &UpgradeConfig) {
+pub async fn ensure_version_checked_and_handle_at_exit(config: &SelfBinaryUpgradeConfig) {
     if get_cached_crate_metadata().is_none() {
         check_version_against_manifest(config).await;
     }
@@ -979,13 +978,13 @@ mod tests {
         };
         set_cached_crate_metadata(meta);
 
-        let config = UpgradeConfig::new(
+        let config = SelfBinaryUpgradeConfig::try_new(
             "r3bl-cmdr",
             "0.0.25",
             None,
-            UpgradePolicy::AutoUpgrade,
-            UpgradeOutputTarget::Quiet,
-        );
+            UserFeedbackChannel::Quiet,
+        )
+        .unwrap();
 
         let result = run_upgrade(&config).await;
         assert!(result.is_ok());

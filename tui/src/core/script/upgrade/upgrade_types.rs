@@ -1,74 +1,92 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Core types, configuration, and state definitions for the unified binary self-upgrade
-//! engine. See [`UpgradeConfig`], [`UpgradeSource`], [`UpgradePolicy`],
-//! [`UpgradeOutputTarget`], and [`CrateDistribution`] for details.
+//! engine. See [`SelfBinaryUpgradeConfig`], [`UpgradeSource`], [`UpdateBehavior`],
+//! [`UserFeedbackChannel`], and [`CrateDistribution`] for details.
 
 use super::{CrateDistribution, CrateName, CrateVersion};
 
-/// Configuration passed to the upgrade engine, to upgrade a single binary.
+/// Configuration passed to the self-upgrade engine, defining how a single binary
+/// participates in self-upgrades.
 ///
-/// Unlike tools that implicitly alter their behavior or downgrade policies when
+/// Unlike tools that implicitly alter their behavior or downgrade actions when
 /// `CI=true`, this engine is 100% deterministic: `CI=<bool>` does **not** influence
-/// policy resolution. All upgrade behaviors are controlled strictly through:
-/// 1. Explicit CLI flags (such as passing [`UpgradePolicy`] via `--upgrade-policy`). For
-///    examples of this, you can look at the `CLIArg` structs in our binary crates like
-///    `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
+/// behavior resolution. All upgrade behaviors are controlled strictly through:
+/// 1. Explicit CLI flags (such as passing [`UpdateBehavior`] via `--update-behavior`).
+///    For examples of this, you can look at the `CLIArg` structs in our binary crates
+///    like `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
 /// 2. Programmatic configuration composition to eliminate hidden behavior, ambient state
 ///    dependencies, and ambiguity.
 ///
-/// # Policy Precedence
+/// # Behavior Resolution
 ///
-/// When determining the effective [`UpgradePolicy`] in [`Self::new`]:
-/// 1. **Explicit CLI override**: If a CLI override (`Option<UpgradePolicy>`) is provided
-///    (e.g., via `--upgrade-policy`), that explicit choice is always used.
-/// 2. **Default policy**: If no CLI override is provided (`None`), the binary's provided
-///    default [`UpgradePolicy`] is used.
+/// When determining the effective [`UpdateBehavior`] in [`Self::new`]:
+/// 1. **Explicit override**: If an override (`Option<UpdateBehavior>`) is provided
+///    (`Some(...)`, whether from a CLI flag or programmatic configuration), that explicit
+///    choice is used.
+/// 2. **Universal default (`Auto`)**: If no override is provided (`None`), it falls back
+///    to the universal default [`UpdateBehavior::default()`] ([`UpdateBehavior::Auto`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpgradeConfig {
+pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
     /// `"r3bl-cmdr"`).
     pub crate_name: CrateName,
 
-    /// Local version of the binary compiled from `Cargo.toml`
+    /// Current version of the binary compiled from `Cargo.toml`
     /// (`env!("CARGO_PKG_VERSION")`).
-    pub local_version: CrateVersion,
+    pub current_version: CrateVersion,
 
-    /// Behavior when an upgrade is available at application exit.
-    pub policy: UpgradePolicy,
+    /// Behavior governing background update checks and application exit handling.
+    pub update_behavior: UpdateBehavior,
 
-    /// Stream where progress messages, spinners, and notifications are written.
-    pub output_target: UpgradeOutputTarget,
+    /// Channel where progress messages, spinners, and notifications are written.
+    pub user_feedback_channel: UserFeedbackChannel,
 }
 
-mod impl_upgrade_config {
+mod impl_self_binary_upgrade_config {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UpgradeConfig {
-        /// Creates a new [`UpgradeConfig`].
+    impl SelfBinaryUpgradeConfig {
+        /// Creates a new [`SelfBinaryUpgradeConfig`], validating that `current_version`
+        /// is a valid semantic version (`MAJOR.MINOR.PATCH`).
         ///
-        /// The effective [`UpgradePolicy`] is resolved by
-        /// `cli_policy.unwrap_or(default_policy)`. See the [`UpgradeConfig`] struct-level
-        /// documentation for details on policy precedence and explicit configuration
-        /// rules.
-        #[must_use]
-        pub fn new(
+        /// The effective [`UpdateBehavior`] is resolved by
+        /// `maybe_update_behavior.unwrap_or_default()`. If no override is provided
+        /// (`None`), it automatically defaults to [`UpdateBehavior::Auto`].
+        ///
+        /// # Arguments
+        ///
+        /// * `crate_name` - The crate name as registered in `r3bl.com/versions.jsonc`
+        ///   (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`).
+        /// * `current_version` - Semantic version string of the running binary, typically
+        ///   from `env!("CARGO_PKG_VERSION")`.
+        /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
+        ///   configuration). When `None`, falls back to [`UpdateBehavior::default()`]
+        ///   ([`UpdateBehavior::Auto`]).
+        /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
+        ///   and notices are written.
+        ///
+        /// # Errors
+        ///
+        /// Returns [`UpgradeError::InvalidVersion`] if `current_version` cannot be parsed
+        /// as a valid [`CrateVersion`].
+        pub fn try_new(
             crate_name: impl Into<CrateName>,
-            local_version: &str,
-            cli_policy: Option<UpgradePolicy>,
-            default_policy: UpgradePolicy,
-            output_target: UpgradeOutputTarget,
-        ) -> Self {
-            let policy = cli_policy.unwrap_or(default_policy);
-            let local_version = CrateVersion::try_from(local_version).unwrap_or_default();
+            current_version: &str,
+            maybe_update_behavior: Option<UpdateBehavior>,
+            user_feedback_channel: UserFeedbackChannel,
+        ) -> Result<Self, UpgradeError> {
+            let update_behavior = maybe_update_behavior.unwrap_or_default();
+            let current_version = CrateVersion::try_from(current_version)
+                .map_err(UpgradeError::InvalidVersion)?;
 
-            Self {
+            Ok(Self {
                 crate_name: crate_name.into(),
-                local_version,
-                policy,
-                output_target,
-            }
+                current_version,
+                update_behavior,
+                user_feedback_channel,
+            })
         }
     }
 }
@@ -106,44 +124,44 @@ pub enum UpgradeSource {
     },
 }
 
-/// Upgrade policy determining how the binary behaves at exit when a newer version is
-/// available.
+/// Behavior governing background update checks and application exit handling.
 #[derive(
     Debug,
     Clone,
     Copy,
     PartialEq,
     Eq,
+    Default,
     clap::ValueEnum,
     serde::Serialize,
     serde::Deserialize,
 )]
 #[serde(rename_all = "kebab-case")]
-pub enum UpgradePolicy {
+pub enum UpdateBehavior {
     /// Interactive prompt asking the user (`"Yes, upgrade now"` / `"No, thanks"`) at
-    /// exit. Used by interactive TUI apps like `giti` and `edi`.
-    #[value(name = "interactive-prompt", alias = "prompt", alias = "interactive")]
-    InteractivePrompt,
+    /// exit if a newer version is available.
+    #[value(name = "prompt-to-upgrade")]
+    PromptToUpgrade,
 
-    /// Automatically downloads and installs the upgrade at exit without prompting.
-    /// Used by non-interactive CLI/agent tools like `cargo-rustdoc-fmt` and
-    /// `rust-analyzer-mcp-server`.
-    #[value(name = "auto-upgrade", alias = "auto")]
-    AutoUpgrade,
+    /// Automatically downloads and installs the upgrade at exit without prompting if a
+    /// newer version is available. Default behavior for all workspace binaries.
+    #[default]
+    #[value(name = "auto")]
+    Auto,
 
     /// Prints a one-line notification that a newer version is available without running
-    /// the upgrade. Selected explicitly via `--upgrade-policy notify-only`.
-    #[value(name = "notify-only", alias = "notify")]
+    /// the upgrade. Selected explicitly via `--update-behavior notify-only`.
+    #[value(name = "notify-only")]
     NotifyOnly,
 
-    /// Suppresses version checks and exit upgrade handling entirely.
-    #[value(name = "never", alias = "off", alias = "disabled")]
-    Never,
+    /// Suppresses background version checks and exit upgrade handling entirely.
+    #[value(name = "disable")]
+    Disable,
 }
 
-/// Target output stream for upgrade messages, spinners, and progress reporting.
+/// Target output channel for upgrade messages, spinners, and progress reporting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UpgradeOutputTarget {
+pub enum UserFeedbackChannel {
     /// Write upgrade output to [`stdout`] (default for standard CLI and TUI tools).
     ///
     /// [`stdout`]: std::io::stdout
@@ -161,12 +179,12 @@ pub enum UpgradeOutputTarget {
     Quiet,
 }
 
-mod impl_upgrade_output_target {
+mod impl_user_feedback_channel {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UpgradeOutputTarget {
-        /// Prints a line to the configured output target.
+    impl UserFeedbackChannel {
+        /// Prints a line to the configured feedback channel.
         pub fn println(&self, msg: impl AsRef<str>) {
             match self {
                 Self::Stdout => println!("{}", msg.as_ref()),
@@ -177,8 +195,8 @@ mod impl_upgrade_output_target {
             }
         }
 
-        /// Prints an error line to the configured output target ([`stderr`] for both
-        /// `Stdout` and `Stderr` targets, `tracing::error!` for `Quiet`).
+        /// Prints an error line to the configured feedback channel ([`stderr`] for both
+        /// `Stdout` and `Stderr` channels, `tracing::error!` for `Quiet`).
         ///
         /// [`stderr`]: std::io::stderr
         pub fn eprintln(&self, msg: impl AsRef<str>) {
@@ -250,6 +268,10 @@ mod impl_upgrade_check_result {
 /// Errors that can occur during strategy resolution or upgrade execution.
 #[derive(Debug, thiserror::Error)]
 pub enum UpgradeError {
+    /// Invalid semantic version string (`MAJOR.MINOR.PATCH` required).
+    #[error("Invalid version string '{0}'")]
+    InvalidVersion(String),
+
     /// Neither GitHub release binaries nor a viable local source build toolchain are
     /// available.
     #[error(
@@ -308,80 +330,80 @@ mod tests {
     }
 
     #[test]
-    fn test_upgrade_config_policy_resolution() {
-        let make_config = |cli_policy, default_policy| {
-            UpgradeConfig::new(
+    fn test_self_binary_upgrade_config_behavior_resolution() {
+        let make_config = |maybe_behavior| {
+            SelfBinaryUpgradeConfig::try_new(
                 "r3bl-cmdr",
                 "0.0.1",
-                cli_policy,
-                default_policy,
-                UpgradeOutputTarget::Stdout,
+                maybe_behavior,
+                UserFeedbackChannel::Stdout,
             )
+            .unwrap()
         };
 
         // 1. Explicit CLI override always wins.
         assert_eq2!(
-            make_config(
-                Some(UpgradePolicy::AutoUpgrade),
-                UpgradePolicy::InteractivePrompt,
-            )
-            .policy,
-            UpgradePolicy::AutoUpgrade
+            make_config(Some(UpdateBehavior::PromptToUpgrade)).update_behavior,
+            UpdateBehavior::PromptToUpgrade
         );
 
         assert_eq2!(
-            make_config(Some(UpgradePolicy::Never), UpgradePolicy::AutoUpgrade,).policy,
-            UpgradePolicy::Never
+            make_config(Some(UpdateBehavior::Disable)).update_behavior,
+            UpdateBehavior::Disable
         );
 
         assert_eq2!(
-            make_config(
-                Some(UpgradePolicy::NotifyOnly),
-                UpgradePolicy::InteractivePrompt,
-            )
-            .policy,
-            UpgradePolicy::NotifyOnly
-        );
-
-        // 2. When no CLI override is provided (None), falls back to default_policy.
-        assert_eq2!(
-            make_config(None, UpgradePolicy::AutoUpgrade).policy,
-            UpgradePolicy::AutoUpgrade
+            make_config(Some(UpdateBehavior::NotifyOnly)).update_behavior,
+            UpdateBehavior::NotifyOnly
         );
 
         assert_eq2!(
-            make_config(None, UpgradePolicy::InteractivePrompt).policy,
-            UpgradePolicy::InteractivePrompt
+            make_config(Some(UpdateBehavior::Auto)).update_behavior,
+            UpdateBehavior::Auto
         );
 
-        assert_eq2!(
-            make_config(None, UpgradePolicy::Never).policy,
-            UpgradePolicy::Never
-        );
+        // 2. When no CLI override is provided (None), falls back to universal default
+        //    Auto.
+        assert_eq2!(make_config(None).update_behavior, UpdateBehavior::Auto);
     }
 
     #[test]
-    fn test_upgrade_policy_clap_value_enum() {
+    fn test_self_binary_upgrade_config_invalid_version() {
+        let result = SelfBinaryUpgradeConfig::try_new(
+            "r3bl-cmdr",
+            "invalid-version",
+            None,
+            UserFeedbackChannel::Stdout,
+        );
+        assert!(matches!(result, Err(UpgradeError::InvalidVersion(_))));
+    }
+
+    #[test]
+    fn test_update_behavior_clap_value_enum() {
         use clap::ValueEnum;
 
-        let prompt = UpgradePolicy::from_str("interactive-prompt", true).unwrap();
-        assert_eq2!(prompt, UpgradePolicy::InteractivePrompt);
-        let prompt_alias = UpgradePolicy::from_str("prompt", true).unwrap();
-        assert_eq2!(prompt_alias, UpgradePolicy::InteractivePrompt);
+        let prompt = UpdateBehavior::from_str("prompt-to-upgrade", true).unwrap();
+        assert_eq2!(prompt, UpdateBehavior::PromptToUpgrade);
 
-        let auto = UpgradePolicy::from_str("auto-upgrade", true).unwrap();
-        assert_eq2!(auto, UpgradePolicy::AutoUpgrade);
-        let auto_alias = UpgradePolicy::from_str("auto", true).unwrap();
-        assert_eq2!(auto_alias, UpgradePolicy::AutoUpgrade);
+        let auto = UpdateBehavior::from_str("auto", true).unwrap();
+        assert_eq2!(auto, UpdateBehavior::Auto);
+        assert_eq2!(UpdateBehavior::default(), UpdateBehavior::Auto);
 
-        let notify = UpgradePolicy::from_str("notify-only", true).unwrap();
-        assert_eq2!(notify, UpgradePolicy::NotifyOnly);
-        let notify_alias = UpgradePolicy::from_str("notify", true).unwrap();
-        assert_eq2!(notify_alias, UpgradePolicy::NotifyOnly);
+        let notify = UpdateBehavior::from_str("notify-only", true).unwrap();
+        assert_eq2!(notify, UpdateBehavior::NotifyOnly);
 
-        let never = UpgradePolicy::from_str("never", true).unwrap();
-        assert_eq2!(never, UpgradePolicy::Never);
-        let off_alias = UpgradePolicy::from_str("off", true).unwrap();
-        assert_eq2!(off_alias, UpgradePolicy::Never);
+        let disable = UpdateBehavior::from_str("disable", true).unwrap();
+        assert_eq2!(disable, UpdateBehavior::Disable);
+
+        // Verify that aliases and obsolete names are rejected to prevent ambiguity.
+        assert!(UpdateBehavior::from_str("prompt", true).is_err());
+        assert!(UpdateBehavior::from_str("interactive", true).is_err());
+        assert!(UpdateBehavior::from_str("interactive-prompt", true).is_err());
+        assert!(UpdateBehavior::from_str("auto-upgrade", true).is_err());
+        assert!(UpdateBehavior::from_str("notify", true).is_err());
+        assert!(UpdateBehavior::from_str("disabled", true).is_err());
+        assert!(UpdateBehavior::from_str("none", true).is_err());
+        assert!(UpdateBehavior::from_str("never", true).is_err());
+        assert!(UpdateBehavior::from_str("off", true).is_err());
     }
 }

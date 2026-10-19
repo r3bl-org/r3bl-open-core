@@ -3,13 +3,14 @@
 //! Centralized version check querying [`R3BL_VERSIONS_JSON_URL`].
 //!
 //! Compares versions strictly via `(major, minor, patch)` semantic version tuples
-//! (`remote_version > local_version`) so local development builds ahead of
+//! (`remote_version > current_version`) so local development builds ahead of
 //! `versions.jsonc` are never downgraded.
 //!
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 
 use super::{CrateVersion, CrateVersionMetadata, R3BL_VERSIONS_JSON_URL,
-            UpgradeCheckResult, UpgradeConfig, UpgradePolicy, VersionsManifest};
+            SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeCheckResult,
+            VersionsManifest};
 use crate::{AtomicU8Ext as _, DeadlockPreventionPolicy::PanicOnSpecificLockNesting,
             SCRIPT_MOD_DEBUG, ScopedMutex, fg_magenta, ok, scoped_mutex,
             script::http_client};
@@ -61,18 +62,18 @@ pub fn set_cached_crate_metadata(metadata: CrateVersionMetadata) {
     });
 }
 
-/// Strictly compares `remote_version` against `local_version` via [`CrateVersion`]'s
+/// Strictly compares `remote_version` against `current_version` via the [`CrateVersion`]
 /// `SemVer` [`Ord`] implementation, returning `true` if and only if
-/// `remote_version > local_version`.
+/// `remote_version > current_version`.
 ///
-/// If local development version is equal to or ahead of `remote_version`, returns `false`
+/// If current version is equal to or ahead of `remote_version`, returns `false`
 /// to prevent accidental downgrades.
 #[must_use]
 pub fn is_remote_version_strictly_newer(
     remote_version: CrateVersion,
-    local_version: CrateVersion,
+    current_version: CrateVersion,
 ) -> bool {
-    remote_version > local_version
+    remote_version > current_version
 }
 
 /// Parses a JSONC string matching the `r3bl.com/versions.jsonc` schema
@@ -161,7 +162,7 @@ pub async fn try_get_crate_metadata_from_url(
 /// [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 /// [`upgrade`]: mod@crate::core::script::upgrade
 pub async fn check_version_against_manifest(
-    config: &UpgradeConfig,
+    config: &SelfBinaryUpgradeConfig,
 ) -> UpgradeCheckResult {
     set_upgrade_check_result(UpgradeCheckResult::Checking);
 
@@ -169,7 +170,7 @@ pub async fn check_version_against_manifest(
     {
         Ok(metadata) => {
             let is_newer =
-                is_remote_version_strictly_newer(metadata.version, config.local_version);
+                is_remote_version_strictly_newer(metadata.version, config.current_version);
             set_cached_crate_metadata(metadata.clone());
 
             let result = if is_newer {
@@ -177,7 +178,7 @@ pub async fn check_version_against_manifest(
                     tracing::info!(
                         message = "Newer version available in versions.jsonc",
                         crate_name = %config.crate_name,
-                        local_version = %config.local_version,
+                        current_version = %config.current_version,
                         remote_version = %metadata.version
                     );
                 });
@@ -205,12 +206,13 @@ pub async fn check_version_against_manifest(
 /// Spawns a non-blocking background Tokio task to check [`R3BL_VERSIONS_JSON_URL`]
 /// for a newer version of `config.crate_name`.
 ///
-/// If [`UpgradeConfig::policy`] is [`UpgradePolicy::Never`], this function returns
-/// immediately without spawning any background task or making network requests.
+/// If [`SelfBinaryUpgradeConfig::update_behavior`] is [`UpdateBehavior::Disable`], this
+/// function returns immediately without spawning any background task or making network
+/// requests.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-pub fn start_background_version_check(config: UpgradeConfig) {
-    if config.policy == UpgradePolicy::Never {
+pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
+    if config.update_behavior == UpdateBehavior::Disable {
         return;
     }
 
@@ -225,12 +227,13 @@ pub fn start_background_version_check(config: UpgradeConfig) {
 /// Designed for synchronous binaries (such as `rust-analyzer-mcp-server`) that
 /// intentionally run without a global `#[tokio::main]` runtime.
 ///
-/// If [`UpgradeConfig::policy`] is [`UpgradePolicy::Never`], this function returns
-/// immediately without spawning any thread or making network requests.
+/// If [`SelfBinaryUpgradeConfig::update_behavior`] is [`UpdateBehavior::Disable`], this
+/// function returns immediately without spawning any thread or making network
+/// requests.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-pub fn start_background_version_check_sync(config: UpgradeConfig) {
-    if config.policy == UpgradePolicy::Never {
+pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
+    if config.update_behavior == UpdateBehavior::Disable {
         return;
     }
 
@@ -275,7 +278,7 @@ mod tests {
             CrateVersion::try_from("0.0.25").unwrap(),
         ));
 
-        // Local ahead of remote (dev version bumped) -> false (prevents downgrade!)
+        // Current version ahead of remote (dev version bumped) -> false (prevents downgrade!)
         assert!(!is_remote_version_strictly_newer(
             CrateVersion::try_from("0.0.25").unwrap(),
             CrateVersion::try_from("0.0.26").unwrap(),
