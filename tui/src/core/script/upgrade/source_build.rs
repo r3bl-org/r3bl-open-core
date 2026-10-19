@@ -12,7 +12,7 @@
 //!
 //! [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
 
-use super::{rustup_progress, toolchain_args, toolchain_binaries, ui_strings};
+use super::{rustup_progress, toolchain_bin, toolchain_cli_args, ui_strings};
 use crate::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, TuiAvailability,
             core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                         PtySessionConfigToken}};
@@ -62,12 +62,12 @@ pub fn extract_rustup_progress(output: &str) -> String {
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Error> {
-    let mut session = PtySessionBuilder::new(toolchain_binaries::RUSTUP)
+    let mut session = PtySessionBuilder::new(toolchain_bin::RUSTUP)
         .cli_args([
-            toolchain_args::TOOLCHAIN,
-            toolchain_args::INSTALL,
-            toolchain_args::NIGHTLY_TOOLCHAIN,
-            toolchain_args::FORCE,
+            toolchain_cli_args::TOOLCHAIN,
+            toolchain_cli_args::INSTALL,
+            toolchain_cli_args::NIGHTLY_TOOLCHAIN,
+            toolchain_cli_args::FORCE,
         ])
         .start_async()
         .map_err(Error::other)?;
@@ -111,12 +111,12 @@ pub fn format_pinned_cargo_install_args<'a>(
     pinned_version: &'a str,
 ) -> [&'a str; 6] {
     [
-        toolchain_args::NIGHTLY_FLAG,
-        toolchain_args::INSTALL,
+        toolchain_cli_args::NIGHTLY_FLAG,
+        toolchain_cli_args::INSTALL,
         crate_name,
-        toolchain_args::VERSION,
+        toolchain_cli_args::VERSION,
         pinned_version.trim_start_matches('v'),
-        toolchain_args::FORCE,
+        toolchain_cli_args::FORCE,
     ]
 }
 
@@ -137,7 +137,7 @@ pub async fn run_cargo_install_with_progress(
     spinner: Option<&Spinner>,
 ) -> Result<ExitStatus, Error> {
     let args = format_pinned_cargo_install_args(crate_name, pinned_version);
-    let mut session = PtySessionBuilder::new(toolchain_binaries::CARGO)
+    let mut session = PtySessionBuilder::new(toolchain_bin::CARGO)
         .cli_args(args)
         .with_config(DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc)
         .start_async()

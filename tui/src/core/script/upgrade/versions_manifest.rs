@@ -4,7 +4,7 @@
 //! [`VersionsManifest`] for details. The primary read entry point is
 //! [`VersionsManifest::try_parse_jsonc()`].
 
-use super::{manifest_keys, semver};
+use super::{semver, versions_manifest_keys};
 use crate::{HashMap, ok};
 use chrono::{DateTime, Utc};
 use jsonc_parser::{ParseOptions, cst::CstRootNode, json, parse_to_serde_value};
@@ -154,14 +154,17 @@ mod impl_versions_manifest {
                 })?;
             let root_obj = root.object_value_or_set();
 
-            if root_obj.get(manifest_keys::SCHEMA_VERSION).is_none() {
+            if root_obj
+                .get(versions_manifest_keys::SCHEMA_VERSION)
+                .is_none()
+            {
                 root_obj.append(
-                    manifest_keys::SCHEMA_VERSION,
+                    versions_manifest_keys::SCHEMA_VERSION,
                     json!(u32::from(ManifestSchemaVersion::default())),
                 );
             }
 
-            let crates_obj = root_obj.object_value_or_set(manifest_keys::CRATES);
+            let crates_obj = root_obj.object_value_or_set(versions_manifest_keys::CRATES);
             let released_on_str = metadata
                 .released_on
                 .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
@@ -170,26 +173,30 @@ mod impl_versions_manifest {
             let version_str = metadata.version.to_string();
             let crate_obj = crates_obj.object_value_or_set(crate_name);
 
-            if let Some(prop) = crate_obj.get(manifest_keys::VERSION) {
+            if let Some(prop) = crate_obj.get(versions_manifest_keys::VERSION) {
                 prop.set_value(json!(version_str.as_str()));
             } else {
-                crate_obj.append(manifest_keys::VERSION, json!(version_str.as_str()));
+                crate_obj
+                    .append(versions_manifest_keys::VERSION, json!(version_str.as_str()));
             }
 
-            if let Some(prop) = crate_obj.get(manifest_keys::CRATE_DISTRIBUTION) {
+            if let Some(prop) = crate_obj.get(versions_manifest_keys::CRATE_DISTRIBUTION)
+            {
                 prop.set_value(json!(distribution_str.as_str()));
             } else {
                 crate_obj.append(
-                    manifest_keys::CRATE_DISTRIBUTION,
+                    versions_manifest_keys::CRATE_DISTRIBUTION,
                     json!(distribution_str.as_str()),
                 );
             }
 
-            if let Some(prop) = crate_obj.get(manifest_keys::RELEASED_ON) {
+            if let Some(prop) = crate_obj.get(versions_manifest_keys::RELEASED_ON) {
                 prop.set_value(json!(released_on_str.as_str()));
             } else {
-                crate_obj
-                    .append(manifest_keys::RELEASED_ON, json!(released_on_str.as_str()));
+                crate_obj.append(
+                    versions_manifest_keys::RELEASED_ON,
+                    json!(released_on_str.as_str()),
+                );
             }
 
             ok!(root.to_string())

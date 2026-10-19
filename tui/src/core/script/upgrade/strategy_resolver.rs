@@ -5,7 +5,7 @@
 
 use super::{CrateDistribution, CrateName, CrateVersion, UpgradeError, UpgradeSource,
             check_github_release_asset_available, format_github_release_asset_urls,
-            get_host_target_triple, toolchain_args, toolchain_binaries, upgrade_reasons};
+            get_host_target_triple, toolchain_cli_args, toolchain_bin, upgrade_reasons};
 use crate::CommandOutputResult;
 
 /// Checks whether a binary command is available on `$PATH` by invoking `<cmd> --version`.
@@ -15,7 +15,7 @@ use crate::CommandOutputResult;
 #[must_use]
 pub fn is_toolchain_binary_on_path(binary_name: &str) -> bool {
     let result = std::process::Command::new(binary_name)
-        .arg(toolchain_args::VERSION)
+        .arg(toolchain_cli_args::VERSION)
         .output();
     matches!(
         CommandOutputResult::from(result),
@@ -144,8 +144,8 @@ pub async fn resolve_upgrade_strategy(
         );
     }
 
-    let has_rustup = is_toolchain_binary_on_path(toolchain_binaries::RUSTUP);
-    let has_cargo = is_toolchain_binary_on_path(toolchain_binaries::CARGO);
+    let has_rustup = is_toolchain_binary_on_path(toolchain_bin::RUSTUP);
+    let has_cargo = is_toolchain_binary_on_path(toolchain_bin::CARGO);
 
     resolve_upgrade_strategy_pure(
         crate_name,
@@ -177,8 +177,8 @@ pub fn resolve_source_fallback(
         });
     }
 
-    let has_rustup = is_toolchain_binary_on_path(toolchain_binaries::RUSTUP);
-    let has_cargo = is_toolchain_binary_on_path(toolchain_binaries::CARGO);
+    let has_rustup = is_toolchain_binary_on_path(toolchain_bin::RUSTUP);
+    let has_cargo = is_toolchain_binary_on_path(toolchain_bin::CARGO);
     resolve_source_fallback_pure(crate_name, pinned_version, has_rustup, has_cargo)
 }
 

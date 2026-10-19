@@ -14,7 +14,7 @@ pub const R3BL_BINARIES_RELEASE_BASE_URL: &str =
 /// Toolchain binary names used on `$PATH` and in [`PTY`] sessions.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub mod toolchain_binaries {
+pub mod toolchain_bin {
     /// Binary name for `rustup`.
     pub const RUSTUP: &str = "rustup";
 
@@ -23,7 +23,7 @@ pub mod toolchain_binaries {
 }
 
 /// CLI arguments and flags passed to toolchain binaries (`rustup`, `cargo`).
-pub mod toolchain_args {
+pub mod toolchain_cli_args {
     /// `--version` flag used to probe binary presence on `$PATH` and specify crate
     /// version.
     pub const VERSION: &str = "--version";
@@ -69,7 +69,7 @@ pub mod archive {
 /// Property keys used in the [`R3BL_VERSIONS_JSON_URL`] manifest.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-pub mod manifest_keys {
+pub mod versions_manifest_keys {
     /// Top-level schema version key (`"schema_version"`).
     pub const SCHEMA_VERSION: &str = "schema_version";
 
