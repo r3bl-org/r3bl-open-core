@@ -20,12 +20,14 @@ use super::{CrateDistribution, CrateName, CrateVersion};
 ///
 /// # Behavior Resolution
 ///
-/// When determining the effective [`UpdateBehavior`] in [`Self::new`]:
+/// When determining the effective [`UpdateBehavior`] in [`Self::try_new`]:
 /// 1. **Explicit override**: If an override (`Option<UpdateBehavior>`) is provided
 ///    (`Some(...)`, whether from a CLI flag or programmatic configuration), that explicit
 ///    choice is used.
 /// 2. **Universal default (`Auto`)**: If no override is provided (`None`), it falls back
 ///    to the universal default [`UpdateBehavior::default()`] ([`UpdateBehavior::Auto`]).
+///
+/// [`Self::try_new`]: Self::try_new
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
