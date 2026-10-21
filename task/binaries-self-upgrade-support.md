@@ -195,7 +195,8 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 
 **Dedicated `--upgrade` and `--update-behavior` Flags Across All Binaries**: All workspace
 binaries provide top-level CLI arguments to run standalone self-upgrades or explicitly
-control update and exit upgrade behavior (with zero magic environment variable inspection):
+control update and exit upgrade behavior (with zero magic environment variable
+inspection):
 
 - `--upgrade`: Supports `giti --upgrade`, `edi --upgrade`, `env-source --upgrade`,
   `cargo-rustdoc-fmt --upgrade` (and `cargo rustdoc-fmt --upgrade`), and
@@ -204,21 +205,21 @@ control update and exit upgrade behavior (with zero magic environment variable i
   error).
 - `--update-behavior <behavior>`: Explicit `clap::ValueEnum` override
   (`prompt-to-upgrade`, `auto`, `notify-only`, `disable`). When omitted, defaults to
-  `auto` (`UpdateBehavior::Auto`) across ALL workspace binaries without exception
-  (`giti`, `edi`, `env-source`, `cargo-rustdoc-fmt`, `rust-analyzer-mcp-server`), with
+  `auto` (`UpdateBehavior::Auto`) across ALL workspace binaries without exception (`giti`,
+  `edi`, `env-source`, `cargo-rustdoc-fmt`, `rust-analyzer-mcp-server`), with
   `prompt-to-upgrade` available as an explicit opt-in override for users who prefer
   interactive prompts. All feedback for `env-source` routes to `stderr`
   (`UserFeedbackChannel::Stderr`) so `stdout` shell evaluation remains pure.
 
 #### Binary Configuration Matrix
 
-| Binary | Default `update_behavior` | `user_feedback_channel` | Rationale |
-| :--- | :--- | :--- | :--- |
-| `giti` | `UpdateBehavior::Auto` | `UserFeedbackChannel::Stdout` | Seamless auto-upgrade at exit; interactive prompt opt-in via `--update-behavior prompt-to-upgrade`. |
-| `edi` | `UpdateBehavior::Auto` | `UserFeedbackChannel::Stdout` | Seamless auto-upgrade at exit; interactive prompt opt-in via `--update-behavior prompt-to-upgrade`. |
-| `cargo-rustdoc-fmt` | `UpdateBehavior::Auto` | `UserFeedbackChannel::Stdout` | Non-interactive developer & CI doc formatter; seamless auto-upgrade at exit. |
-| `rust-analyzer-mcp-server` | `UpdateBehavior::Auto` | `UserFeedbackChannel::Stderr` | MCP/LSP server; `stderr` ensures stdio JSON-RPC transport on `stdout` remains 100% uncorrupted. |
-| `env-source` | `UpdateBehavior::Auto` | `UserFeedbackChannel::Stderr` | Sub-2ms shell startup tool; `stderr` ensures piped shell export stream on `stdout` remains 100% uncorrupted. |
+| Binary                     | Default `update_behavior` | `user_feedback_channel`       | Rationale                                                                                                    |
+| :------------------------- | :------------------------ | :---------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| `giti`                     | `UpdateBehavior::Auto`    | `UserFeedbackChannel::Stdout` | Seamless auto-upgrade at exit; interactive prompt opt-in via `--update-behavior prompt-to-upgrade`.          |
+| `edi`                      | `UpdateBehavior::Auto`    | `UserFeedbackChannel::Stdout` | Seamless auto-upgrade at exit; interactive prompt opt-in via `--update-behavior prompt-to-upgrade`.          |
+| `cargo-rustdoc-fmt`        | `UpdateBehavior::Auto`    | `UserFeedbackChannel::Stdout` | Non-interactive developer & CI doc formatter; seamless auto-upgrade at exit.                                 |
+| `rust-analyzer-mcp-server` | `UpdateBehavior::Auto`    | `UserFeedbackChannel::Stderr` | MCP/LSP server; `stderr` ensures stdio JSON-RPC transport on `stdout` remains 100% uncorrupted.              |
+| `env-source`               | `UpdateBehavior::Auto`    | `UserFeedbackChannel::Stderr` | Sub-2ms shell startup tool; `stderr` ensures piped shell export stream on `stdout` remains 100% uncorrupted. |
 
 ## Lifecycle Flowchart
 
@@ -328,9 +329,9 @@ control update and exit upgrade behavior (with zero magic environment variable i
           deterministically via `cli_behavior.unwrap_or_default()`.
     - [x] `UpgradeSource`: `GithubReleaseArtifact`, `BuildFromSourceRustup`,
           `BuildFromSourceCargo`.
-    - [x] `UpdateBehavior`: `PromptToUpgrade` (interactive TUI apps), `Auto`
-          (headless / agent tooling), `NotifyOnly`, and `Disable` (derives `clap::ValueEnum`
-          for `--update-behavior <behavior>`).
+    - [x] `UpdateBehavior`: `PromptToUpgrade` (interactive TUI apps), `Auto` (headless /
+          agent tooling), `NotifyOnly`, and `Disable` (derives `clap::ValueEnum` for
+          `--update-behavior <behavior>`).
     - [x] `UserFeedbackChannel`: `Stdout` (default CLI/TUI), `Stderr` (MCP server and
           stdout-piped tools like `env-source`), and `Quiet` (structured tracing only).
     - [x] `UpgradeCheckResult`: `NotChecked`, `Checking`, `UpToDate`, `UpgradeAvailable`,
@@ -359,7 +360,8 @@ control update and exit upgrade behavior (with zero magic environment variable i
     - [x] Compares semantic versions strictly (`remote_version > local_version`) so local
           development builds with bumped `Cargo.toml` versions never trigger a downgrade.
     - [x] `start_background_version_check(config)`: Non-blocking async task running the
-          manifest version check (no-op if `config.update_behavior == UpdateBehavior::Disable`).
+          manifest version check (no-op if
+          `config.update_behavior == UpdateBehavior::Disable`).
     - [x] `start_background_version_check_sync(config)`: Spawns a detached OS thread with
           a lightweight `current_thread` Tokio runtime for synchronous binaries (such as
           `rust-analyzer-mcp-server` which intentionally runs without `#[tokio::main]`).
@@ -407,13 +409,15 @@ control update and exit upgrade behavior (with zero magic environment variable i
           (`env-source -i ~/.profile -o fish | source`).
     - [ ] Like all binaries, `env-source` defaults to `UpdateBehavior::Auto` (configured
           with `UserFeedbackChannel::Stderr` so all progress, notifications, and upgrade
-          messages route exclusively to `stderr` and never corrupt `stdout` shell exports).
+          messages route exclusively to `stderr` and never corrupt `stdout` shell
+          exports).
     - [ ] `env-source --upgrade` runs the standalone upgrade flow on-demand via
           `run_upgrade_sync()` with `UserFeedbackChannel::Stderr`.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` (used by
       `giti` and `edi`) to delegate to `r3bl_tui::core::script::upgrade::*` using
-      `UpdateBehavior::Auto` as the default (with `UpdateBehavior::PromptToUpgrade` available
-      via `--update-behavior prompt-to-upgrade`) and `UserFeedbackChannel::Stdout`.
+      `UpdateBehavior::Auto` as the default (with `UpdateBehavior::PromptToUpgrade`
+      available via `--update-behavior prompt-to-upgrade`) and
+      `UserFeedbackChannel::Stdout`.
 - [ ] Preserve `cmdr`-specific interactive prompts, `ExitContext` handling, emojis, and
       lolcat greetings.
 - [ ] Release archive for `r3bl-cmdr` on `github.com/r3bl-org/r3bl-binaries` bundles all 3
@@ -503,7 +507,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] **Crate READMEs & `lib.rs` Modules**: Each binary crate (`cmdr`, `build-infra`,
       `rust-analyzer-mcp-server`, and root `r3bl-open-core`) provides:
     - [ ]   1. Primary: 1-line bootstrap script (`https://r3bl.com/install.sh` /
-            `https://r3bl.com/install.ps1`).
+           `https://r3bl.com/install.ps1`).
     - [ ]   2. Feature docs & `--upgrade` / `--update-behavior` CLI flag instructions.
     - [ ]   3. End-of-file fallback instructions: `cargo install <crate> --force`.
 - [ ] **R3BL Website (`r3bl.com` in `../r3bl_website/`)**:
@@ -581,7 +585,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [x] `tui/Cargo.toml`
-    - [ ] `tui/src/core/script/upgrade/constants.rs`
+    - [x] `tui/src/core/script/upgrade/constants.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_types.rs`
     - [ ] `tui/src/core/script/upgrade/versions_manifest.rs`
     - [ ] `tui/src/core/script/upgrade/target_triple.rs`
@@ -627,10 +631,12 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] Intercept `--upgrade` at startup in `cmdr/src/bin/giti.rs`, `cmdr/src/bin/edi.rs`,
       and `cmdr/src/bin/env-source.rs` to run standalone upgrade and exit.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` to delegate to
-      `r3bl_tui::core::script::upgrade::*`:
-      - `giti`: `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stdout)?`.
-      - `edi`: `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stdout)?`.
-      - `env-source`: `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stderr)?`.
+      `r3bl_tui::core::script::upgrade::*`: - `giti`:
+      `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stdout)?`. -
+      `edi`:
+      `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stdout)?`. -
+      `env-source`:
+      `SelfBinaryUpgradeConfig::try_new("r3bl-cmdr", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stderr)?`.
 - [ ] Run `cmdr` unit tests and verify `giti`, `edi`, and `env-source` compile and
       function.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -654,8 +660,8 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] Intercept `--upgrade` at startup in `build-infra/src/bin/cargo-rustdoc-fmt.rs`.
 - [ ] Integrate background check and exit upgrade handler with
       `SelfBinaryUpgradeConfig::try_new("r3bl-build-infra", env!("CARGO_PKG_VERSION"), args.update_behavior, UserFeedbackChannel::Stdout)?`.
-- [ ] Ensure `--update-behavior` explicitly controls exit behavior without inspecting magic
-      environment variables like `CI`.
+- [ ] Ensure `--update-behavior` explicitly controls exit behavior without inspecting
+      magic environment variables like `CI`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `build-infra/src/bin/cargo-rustdoc-fmt.rs`
@@ -688,8 +694,8 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] Update `cmdr/README.md` and `cmdr/src/lib.rs`:
     - [ ] Add 1-line bootstrap install commands (`https://r3bl.com/install.sh` and
           `https://r3bl.com/install.ps1`).
-    - [ ] Document `--upgrade` and `--update-behavior` CLI arguments for `giti`, `edi`, and
-          `env-source`.
+    - [ ] Document `--upgrade` and `--update-behavior` CLI arguments for `giti`, `edi`,
+          and `env-source`.
     - [ ] Add end-of-file fallback instructions: `cargo install r3bl-cmdr --force`.
 - [ ] Update `build-infra/README.md` and `build-infra/src/lib.rs`:
     - [ ] Add bootstrap install commands (`https://r3bl.com/install.sh` /
@@ -804,7 +810,8 @@ behaviors across clean container environments for 3 major Linux distributions:
     - [ ] Test fallback source compilation with Linux PTY (`/dev/pts`) when GitHub is
           simulated offline.
     - [ ] Verify `--update-behavior` explicitly selects `Auto`, `PromptToUpgrade`,
-          `NotifyOnly`, or `Disable` without inspecting magic environment variables like `CI`.
+          `NotifyOnly`, or `Disable` without inspecting magic environment variables like
+          `CI`.
     - [ ] Run `./cleanup.fish` after verification completes.
 - **Follow-up Workspace Task**:
     - [ ] Consolidate and generalize `cmdr/systemd-nspawn/` and

@@ -327,6 +327,12 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
   when asked to process, read, or analyze log files that may contain terminal escape
   codes.
 
+### Communication
+
+- **caveman** - Ultra-terse communication mode. Eliminates conversational filler and
+  pleasantries while keeping code, commands, paths, and technical facts exact. Use via
+  `/caveman`.
+
 ## Available Agents (`.agents/agents/`)
 
 | Agent              | Purpose                                     |
@@ -348,6 +354,7 @@ via autocomplete in the Antigravity CLI.
 | `/audit-task`               | audit-task                                 |
 | `/check-regression`         | analyze-performance                        |
 | `/batch-refactor`           | batch-refactor-with-sub-agents             |
+| `/caveman`                  | caveman                                    |
 | `/check-bounds-safety`      | check-bounds-safety                        |
 | `/check`                    | check-code-quality                         |
 | `/check-test-coverage`      | check-test-coverage                        |
@@ -426,8 +433,17 @@ blocking the active conversation loop:
 
 ### Output & Context Discipline
 
-- **Terse Communication**: Be terse. Skip greetings, pleasantries, and post-edit narrative
-  summaries. State code changes and 1-line root cause only.
+- **Default Communication Style (Caveman Mode)**: Always communicate in Caveman mode
+  (see `caveman` skill) by default:
+  - **Answer First**: Direct answer, then reason, then next step. No intro or outro.
+  - **Eliminate Ceremony**: No greetings, filler, signoffs, or recaps.
+  - **Payload Verbatim**: Code blocks, diffs, commands, file paths, numbers, and errors
+    remain 100% exact.
+  - **Concise Phrasing**: Short, active sentences. Omit optional filler words.
+  - **Exceptions**: Use full plain English only for critical security warnings or
+    required clarifications.
+  - **Exit Condition**: Revert to normal style only if user explicitly says "normal mode"
+    or "stop caveman".
 - **Cargo Output Hygiene**:
   - Prefer the `./check.fish` wrapper over raw cargo calls.
   - When running raw `cargo check` or `cargo clippy`, always pass `-q --message-format=short`
