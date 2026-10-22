@@ -40,7 +40,7 @@ pub enum UpgradeSource {
     /// followed by `cargo +nightly install <crate> --version <pinned_version>`.
     /// Only eligible when [`CrateDistribution::OpenSource`].
     ///
-    /// [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
+    /// [`CrateDistribution::OpenSource`]: crate::core::script::self_update::CrateDistribution::OpenSource
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     BuildFromSourceRustup {
         /// Pinned target version string from [`R3BL_VERSIONS_JSON_URL`].

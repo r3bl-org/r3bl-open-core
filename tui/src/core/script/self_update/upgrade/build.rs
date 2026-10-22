@@ -19,7 +19,7 @@
 //! - [`cargo_installer`]: Executing `cargo install` inside a [`PTY`] with [`OSC`]
 //!   progress capture.
 //!
-//! [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
+//! [`CrateDistribution::OpenSource`]: crate::core::script::self_update::CrateDistribution::OpenSource
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL

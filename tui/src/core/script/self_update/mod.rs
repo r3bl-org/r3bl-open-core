@@ -151,7 +151,7 @@
 //! [`CrateDistribution::OpenSource`]: crate::core::script::self_update::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::core::script::self_update::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
-//! [`execute_upgrade_with_metadata`]: crate::core::script::self_update::execute_upgrade_with_metadata
+//! [`execute_upgrade_with_metadata`]: crate::core::script::self_update::upgrade_execution::execute_upgrade_with_metadata
 //! [`handle_upgrade_at_exit_sync`]: crate::core::script::self_update::handle_upgrade_at_exit_sync
 //! [`handle_upgrade_at_exit`]: crate::core::script::self_update::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
