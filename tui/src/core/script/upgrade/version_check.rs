@@ -106,9 +106,12 @@ pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
 // Inner Modules (Underlying Implementation & Domain Logic)
 // -------------------------------------------------------------------------------------------------
 
-/// Core version check engine coordinating manifest query, SemVer evaluation, and cache
-/// updates.
+/// Core version check engine coordinating manifest query, [`SemVer`] evaluation, and
+/// cache updates.
+///
+/// [`SemVer`]: https://semver.org/
 pub mod check_engine {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Performs a version check against [`R3BL_VERSIONS_JSON_URL`] and updates
@@ -175,6 +178,7 @@ pub mod check_engine {
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub mod manifest_query {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Network timeout for background version check requests.
@@ -259,8 +263,11 @@ pub mod manifest_query {
     }
 }
 
-/// Strict SemVer comparison ensuring local development builds are never downgraded.
+/// Strict [`SemVer`] comparison ensuring local development builds are never downgraded.
+///
+/// [`SemVer`]: https://semver.org/
 pub mod version_compare {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Strictly compares `remote_version` against `current_version` via the

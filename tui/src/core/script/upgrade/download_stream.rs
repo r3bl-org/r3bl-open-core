@@ -64,7 +64,8 @@ pub async fn download_and_verify_archive(
 
 /// Synchronous variant of [`download_and_verify_archive`].
 ///
-/// Builds a private `current_thread` Tokio runtime to drive the download and verification.
+/// Builds a private `current_thread` Tokio runtime to drive the download and
+/// verification.
 ///
 /// # Errors
 ///
@@ -98,10 +99,11 @@ pub fn download_and_verify_archive_sync(
 
 /// SHA-256 digest calculation, formatting, and file verification.
 pub mod sha256_checksum {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Parses the expected hex SHA-256 digest from the contents of a `.sha256` checksum file
-    /// (handles both `<hex>  <filename>` and plain `<hex>` formats).
+    /// Parses the expected hex SHA-256 digest from the contents of a `.sha256` checksum
+    /// file (handles both `<hex>  <filename>` and plain `<hex>` formats).
     #[must_use]
     pub fn parse_sha256_checksum_text(text: &str) -> Option<String> {
         let token = text.split_whitespace().next()?.trim();
@@ -136,7 +138,8 @@ pub mod sha256_checksum {
         file_path: &Path,
         expected_hex: &str,
     ) -> Result<(), UpgradeError> {
-        let bytes = fs::read(file_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let bytes =
+            fs::read(file_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
         let actual_hex = compute_sha256_hex(&bytes);
         let expected_lower = expected_hex.trim().to_ascii_lowercase();
         if actual_hex != expected_lower {
@@ -152,7 +155,8 @@ pub mod sha256_checksum {
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError`] on network failure, cancellation, or invalid checksum text.
+    /// Returns [`UpgradeError`] on network failure, cancellation, or invalid checksum
+    /// text.
     pub async fn fetch_expected_sha256(
         client: &reqwest::Client,
         sha256_url: &str,
@@ -180,6 +184,7 @@ pub mod sha256_checksum {
 
 /// HTTP streaming archive downloads to local storage.
 pub mod archive_stream {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Streams the binary archive from `archive_url` to disk at `archive_path`, updating

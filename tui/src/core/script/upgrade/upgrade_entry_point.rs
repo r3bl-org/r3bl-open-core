@@ -135,7 +135,7 @@ pub fn run_upgrade_sync(config: &SelfBinaryUpgradeConfig) -> miette::Result<()> 
 /// available, returns immediately with 0 ms latency.
 ///
 /// If an update is available:
-/// - [`UpdateBehavior::Disable`]: No-op.
+/// - [`UpdateBehavior::Disable`][]: No-op.
 /// - [`UpdateBehavior::NotifyOnly`]: Prints notification notice.
 /// - [`UpdateBehavior::Auto`]: Downloads and installs update automatically.
 /// - [`UpdateBehavior::PromptToUpgrade`]: Prompts the user interactively via
@@ -279,6 +279,7 @@ pub enum UpgradeError {
 /// Core upgrade execution engine handling strategy resolution, binary download/swap,
 /// and source compilation.
 pub mod upgrade_execution {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Executes the resolved upgrade flow for `config`:
@@ -363,6 +364,11 @@ pub mod upgrade_execution {
 
     /// Attempts GitHub release download and replacement, falling back to source build on
     /// failure if `distribution == CrateDistribution::OpenSource`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UpgradeError`] if downloading, verifying, replacing the binary, or
+    /// falling back to source build fails.
     pub async fn execute_github_release_or_fallback(
         config: &SelfBinaryUpgradeConfig,
         distribution: CrateDistribution,
@@ -443,6 +449,11 @@ pub mod upgrade_execution {
     }
 
     /// Executes the source compilation step with live spinner progress.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UpgradeError`] if the cargo install or rustup toolchain command fails or
+    /// exits with a non-zero status.
     pub async fn execute_source_build_step(
         config: &SelfBinaryUpgradeConfig,
         pinned_version: &str,
@@ -563,6 +574,7 @@ pub mod upgrade_execution {
 
 /// Metadata resolution and binary naming helpers.
 pub mod metadata_resolver {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Returns the filename of the currently running executable (without directory path).
@@ -584,7 +596,8 @@ pub mod metadata_resolver {
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError::Other`] if [`R3BL_VERSIONS_JSON_URL`] cannot be reached or parsed.
+    /// Returns [`UpgradeError::Other`] if [`R3BL_VERSIONS_JSON_URL`] cannot be reached or
+    /// parsed.
     ///
     /// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
@@ -604,6 +617,7 @@ pub mod metadata_resolver {
 
 /// Feedback channel output devices and user-facing error reporting.
 pub mod feedback_device {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Constructs an [`OutputDevice`] matching the requested [`UserFeedbackChannel`].

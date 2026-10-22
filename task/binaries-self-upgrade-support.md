@@ -645,8 +645,8 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `tui/src/core/script/upgrade/` to reflect the unified architecture.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [ ] `tui/src/core/script/upgrade/constants.rs`
-    - [ ] `tui/src/core/script/upgrade/upgrade_types.rs`
+    - [x] `tui/src/core/script/upgrade/constants.rs`
+    - [ ] `tui/src/core/script/upgrade/upgrade_config.rs`
     - [ ] `tui/src/core/script/upgrade/versions_manifest.rs`
     - [ ] `tui/src/core/script/upgrade/target_triple.rs`
     - [ ] `tui/src/core/script/upgrade/github_release.rs`

@@ -147,6 +147,7 @@ pub fn run_source_build_with_spinner_sync(
 
 /// Rustup toolchain installation and output monitoring.
 pub mod toolchain_setup {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Extracts meaningful progress information from `rustup` output.
@@ -241,6 +242,7 @@ pub mod toolchain_setup {
 ///
 /// [`OSC`]: crate::osc_codes::OscSequence
 pub mod cargo_installer {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Formats the CLI arguments for `cargo +nightly install` pinned to `pinned_version`.

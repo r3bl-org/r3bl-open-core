@@ -75,12 +75,12 @@
 //!          ([`start_background_version_check_sync`]) in synchronous binaries, ensuring 0
 //!          ms user-perceived startup latency.
 //!    - When the spawned task or thread finishes fetching and parsing the manifest, it
-//!      evaluates SemVer and atomically populates the in-memory cache
+//!      evaluates [`SemVer`] and atomically populates the in-memory cache
 //!      ([`UpgradeCheckCache`]) with [`UpgradeCheckStatus`].
 //!    - At process exit, [`handle_upgrade_at_exit`] (or [`handle_upgrade_at_exit_sync`])
-//!      reads the cached state from [`UpgradeCheckCache`] via
-//!      [`UpgradeCheckCache::get`] with 0 ms latency (no second HTTP round-trip),
-//!      executing actions according to [`UpdateBehavior`].
+//!      reads the cached state from [`UpgradeCheckCache`] via [`UpgradeCheckCache::get`]
+//!      with 0 ms latency (no second HTTP round-trip), executing actions according to
+//!      [`UpdateBehavior`].
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
@@ -163,6 +163,7 @@
 //! [`run_upgrade_sync`]: crate::core::script::upgrade::run_upgrade_sync
 //! [`SCRIPT_MOD_DEBUG`]: crate::core::script::SCRIPT_MOD_DEBUG
 //! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::upgrade::SelfBinaryUpgradeConfig::current_version
+//! [`SemVer`]: https://semver.org/
 //! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
 //! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
 //! [`stderr`]: std::io::stderr

@@ -52,7 +52,8 @@ pub mod toolchain_cli_args {
 
 /// CLI arguments and flags recognized by binaries for self-upgrade operations.
 pub mod upgrade_cli_args {
-    /// `--upgrade` flag intercepted at binary startup to trigger an immediate self-upgrade.
+    /// `--upgrade` flag intercepted at binary startup to trigger an immediate
+    /// self-upgrade.
     pub const UPGRADE: &str = "--upgrade";
 
     /// `--update-behavior` flag passed to configure runtime update behavior.

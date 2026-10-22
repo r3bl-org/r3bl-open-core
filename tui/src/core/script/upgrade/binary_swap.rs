@@ -5,9 +5,10 @@
 //! Provides the primary extraction entry point [`extract_and_apply_archive`].
 //!
 //! Underlying logic is encapsulated into inner modules:
-//! - [`archive_extraction`]: Decompressing `.tar.gz` archives and setting executable bits.
-//! - [`binary_replacement`]: In-place executable replacement via `self_replace` and sibling
-//!   binary updates.
+//! - [`archive_extraction`]: Decompressing `.tar.gz` archives and setting executable
+//!   bits.
+//! - [`binary_replacement`]: In-place executable replacement via `self_replace` and
+//!   sibling binary updates.
 
 use super::{UpgradeError, archive};
 use crate::script::permissions::try_set_file_executable;
@@ -46,6 +47,7 @@ pub fn extract_and_apply_archive(
 
 /// Archive unpacking and file metadata filtering.
 pub mod archive_extraction {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Unpacks a `.tar.gz` archive into `extract_dir` and returns the list of extracted
@@ -104,16 +106,18 @@ pub mod archive_extraction {
 
 /// In-place executable replacement and sibling executable updates.
 pub mod binary_replacement {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Replaces the currently running executable via [`self_replace::self_replace`] and
     /// updates any sibling binaries included in the extracted archive (e.g. when `giti`
-    /// upgrades `r3bl-cmdr`, it also updates `edi` and `env-source` in the same directory).
+    /// upgrades `r3bl-cmdr`, it also updates `edi` and `env-source` in the same
+    /// directory).
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError::Other`] if the current executable path cannot be resolved or
-    /// if `self_replace` fails.
+    /// Returns [`UpgradeError::Other`] if the current executable path cannot be resolved
+    /// or if `self_replace` fails.
     pub fn apply_extracted_binaries(
         extracted_files: &[PathBuf],
     ) -> Result<(), UpgradeError> {

@@ -162,6 +162,7 @@ mod impl_upgrade_source {
 /// Pure decision functions that evaluate [`UpgradeSource`] without performing network
 /// calls or process executions.
 pub mod pure_evaluator {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Pure decision function that resolves the [`UpgradeSource`] given pre-evaluated
@@ -224,6 +225,7 @@ pub mod pure_evaluator {
 
 /// Host toolchain and binary detection helpers.
 pub mod toolchain_probe {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Checks whether a binary command is available on `$PATH` by invoking `<cmd>
