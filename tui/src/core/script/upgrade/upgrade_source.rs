@@ -18,7 +18,8 @@ use crate::CommandOutputResult;
 /// Evaluated by [`UpgradeSource::try_resolve`] prior to calling
 /// [`execute_upgrade_with_metadata`].
 ///
-/// [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::execute_upgrade_with_metadata
+/// [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::upgrade_execution::execute_upgrade_with_metadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpgradeSource {
     /// Pre-compiled binary archive hosted on [`R3BL_BINARIES_RELEASE_BASE_URL`].
@@ -31,15 +32,22 @@ pub enum UpgradeSource {
         /// Direct download URL for the `.sha256` checksum file.
         sha256_url: String,
 
-        /// Pinned target version string from `versions.jsonc`.
+        /// Pinned target version string from [`R3BL_VERSIONS_JSON_URL`].
+        ///
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
         pinned_version: CrateVersion,
     },
 
     /// Build from `crates.io` source using `rustup toolchain install nightly --force`
     /// followed by `cargo +nightly install <crate> --version <pinned_version>`.
     /// Only eligible when [`CrateDistribution::OpenSource`].
+    ///
+    /// [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
     BuildFromSourceRustup {
-        /// Pinned target version string from `versions.jsonc`.
+        /// Pinned target version string from [`R3BL_VERSIONS_JSON_URL`].
+        ///
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
         pinned_version: CrateVersion,
     },
 }

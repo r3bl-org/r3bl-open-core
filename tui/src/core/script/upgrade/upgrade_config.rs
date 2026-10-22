@@ -18,10 +18,14 @@ use super::{CrateName, CrateVersion};
 /// - Programmatically creating this config to eliminate ambiguity.
 ///
 /// Use [`Self::new()`] to construct this struct.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
-    /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
+    /// Name of the crate as registered in [`R3BL_VERSIONS_JSON_URL`] (e.g.,
     /// `"r3bl-cmdr"`).
+    ///
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
     pub crate_name: CrateName,
 
     /// Current version of the binary compiled from `Cargo.toml`
@@ -44,7 +48,7 @@ mod impl_self_binary_upgrade_config {
         ///
         /// # Arguments
         ///
-        /// * `crate_name` - The crate name as registered in `r3bl.com/versions.jsonc`
+        /// * `crate_name` - The crate name as registered in [`R3BL_VERSIONS_JSON_URL`]
         ///   (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`).
         /// * `current_version` - Semantic version of the running binary, typically parsed
         ///   from `env!("CARGO_PKG_VERSION")` via [`CrateVersion::try_from`].
@@ -52,6 +56,8 @@ mod impl_self_binary_upgrade_config {
         ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
+        ///
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
         pub fn new(
             crate_name: impl Into<CrateName>,
             current_version: CrateVersion,

@@ -9,9 +9,8 @@
 //! # Background Version Check & Cache Lifecycle
 //!
 //! To keep application startup instantaneous (0 ms user-perceived latency) while
-//! eliminating redundant network round-trips at shutdown, the upgrade engine uses a
-//! two-phase decoupled lifecycle coordinated through [`UPGRADE_CHECK_STATE`] and
-//! [`CACHED_CRATE_METADATA`]:
+//! eliminating redundant network round-trips at shutdown, the upgrade engine coordinates
+//! background check results through the [`UpgradeCheckCache`] singleton:
 //!
 //! ```text
 //! 1. Binary Startup (0 ms non-blocking):
@@ -21,36 +20,32 @@
 //!
 //! 2. Concurrent Manifest Query:
 //!    check_version_against_manifest() ───► HTTP GET versions.jsonc
-//!    ├── Parses CrateVersionMetadata
-//!    ├── Stores metadata in CACHED_CRATE_METADATA (set_cached_crate_metadata)
-//!    └── Updates atomic state UPGRADE_CHECK_STATE (UpgradeAvailable | UpToDate | FailedCheck)
+//!    ├── Evaluates SemVer (remote > local)
+//!    └── Atomically updates UpgradeCheckCache:
+//!        ├── UpgradeAvailable(metadata) (if strictly newer)
+//!        ├── UpToDate(metadata)         (if equal or ahead)
+//!        └── FailedCheck                (if network or parse error)
 //!
 //! 3. Binary Exit (0 ms in-memory read):
 //!    handle_upgrade_at_exit()
-//!    ├── Checks is_upgrade_available() (atomic load)
-//!    └── Reads cached metadata via get_cached_crate_metadata() (no 2nd HTTP request!)
+//!    ├── UpgradeCheckCache::get()
+//!    └── Matches UpgradeCheckStatus::UpgradeAvailable(metadata) (no 2nd HTTP request!)
 //! ```
 //!
-//! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::version_check_cache::CACHED_CRATE_METADATA
 //! [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
-//! [`get_cached_crate_metadata`]: crate::core::script::upgrade::version_check_cache::get_cached_crate_metadata
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
-//! [`is_upgrade_available`]: crate::core::script::upgrade::version_check_cache::is_upgrade_available
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-//! [`set_cached_crate_metadata`]: crate::core::script::upgrade::version_check_cache::set_cached_crate_metadata
 //! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
 //! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
-//! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::version_check_cache::UPGRADE_CHECK_STATE
+//! [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
+//! [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
 
 use super::{CrateVersion, CrateVersionMetadata, R3BL_VERSIONS_JSON_URL,
-            SelfBinaryUpgradeConfig, UpdateBehavior, VersionsManifest};
-use crate::{AtomicU8Ext as _, DeadlockPreventionPolicy::PanicOnSpecificLockNesting,
-            SCRIPT_MOD_DEBUG, ScopedMutex, fg_magenta, ok, scoped_mutex,
-            script::http_client};
+            SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeCheckCache,
+            UpgradeCheckStatus, VersionsManifest};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
-use std::{sync::{LazyLock, atomic::AtomicU8},
-          time::Duration};
-pub use version_check_cache::UpgradeCheckResult;
+use std::time::Duration;
 
 // -------------------------------------------------------------------------------------------------
 // Top-level Entry Points (Runtime Call-Site Adapters)
@@ -98,9 +93,7 @@ pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
             .enable_all()
             .build()
         else {
-            version_check_cache::set_upgrade_check_result(
-                UpgradeCheckResult::FailedCheck,
-            );
+            UpgradeCheckCache::set(UpgradeCheckStatus::FailedCheck);
             return;
         };
         rt.block_on(async move {
@@ -119,7 +112,7 @@ pub mod check_engine {
     use super::*;
 
     /// Performs a version check against [`R3BL_VERSIONS_JSON_URL`] and updates
-    /// [`UPGRADE_CHECK_STATE`] and [`CACHED_CRATE_METADATA`].
+    /// [`UpgradeCheckCache`].
     ///
     /// # Error Handling
     ///
@@ -127,14 +120,13 @@ pub mod check_engine {
     /// is unreachable. See the [`upgrade`] module documentation for details on
     /// invocation modes and error handling.
     ///
-    /// [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::version_check_cache::CACHED_CRATE_METADATA
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-    /// [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::version_check_cache::UPGRADE_CHECK_STATE
     /// [`upgrade`]: mod@crate::core::script::upgrade
+    /// [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
     pub async fn check_version_against_manifest(
         config: &SelfBinaryUpgradeConfig,
-    ) -> UpgradeCheckResult {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::Checking);
+    ) -> UpgradeCheckStatus {
+        UpgradeCheckCache::set(UpgradeCheckStatus::Checking);
 
         match manifest_query::try_get_crate_metadata_from_r3bl_versions_json(
             config.crate_name.as_str(),
@@ -146,9 +138,8 @@ pub mod check_engine {
                     metadata.version,
                     config.current_version,
                 );
-                version_check_cache::set_cached_crate_metadata(metadata.clone());
 
-                let result = if is_newer {
+                let state = if is_newer {
                     SCRIPT_MOD_DEBUG.then(|| {
                         tracing::info!(
                             message = "Newer version available in versions.jsonc",
@@ -157,189 +148,49 @@ pub mod check_engine {
                             remote_version = %metadata.version
                         );
                     });
-                    UpgradeCheckResult::UpgradeAvailable
+                    UpgradeCheckStatus::UpgradeAvailable(metadata)
                 } else {
-                    UpgradeCheckResult::UpToDate
+                    UpgradeCheckStatus::UpToDate(metadata)
                 };
-                version_check_cache::set_upgrade_check_result(result);
-                result
+                UpgradeCheckCache::set(state.clone());
+                state
             }
             Err(err) => {
                 SCRIPT_MOD_DEBUG.then(|| {
                     tracing::debug!(
-                        message =
-                            "Failed to check version against r3bl.com/versions.jsonc",
+                        message = "Failed to check version against versions manifest",
                         crate_name = %config.crate_name,
+                        url = %fg_magenta(R3BL_VERSIONS_JSON_URL),
                         error = ?err
                     );
                 });
-                version_check_cache::set_upgrade_check_result(
-                    UpgradeCheckResult::FailedCheck,
-                );
-                UpgradeCheckResult::FailedCheck
+                UpgradeCheckCache::set(UpgradeCheckStatus::FailedCheck);
+                UpgradeCheckStatus::FailedCheck
             }
         }
     }
 }
 
-/// In-memory cache and atomic status state for background version check results.
-pub mod version_check_cache {
-    use super::*;
-
-    /// Atomic state representation of the background version check.
-    ///
-    /// Stored inside an [`AtomicU8`] and manipulated via [`AtomicU8Ext`].
-    ///
-    /// [`AtomicU8`]: std::sync::atomic::AtomicU8
-    /// [`AtomicU8Ext`]: crate::AtomicU8Ext
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    #[repr(u8)]
-    pub enum UpgradeCheckResult {
-        /// Background version check has not yet started.
-        NotChecked = 0,
-
-        /// Background version check is currently in flight.
-        Checking = 1,
-
-        /// Local binary version is greater than or equal to the remote `versions.jsonc`
-        /// version.
-        UpToDate = 2,
-
-        /// Remote `versions.jsonc` version is strictly greater than local binary version.
-        UpgradeAvailable = 3,
-
-        /// Network or parsing error occurred while checking `versions.jsonc`.
-        FailedCheck = 4,
-    }
-
-    mod impl_upgrade_check_result {
-        #[allow(clippy::wildcard_imports)]
-        use super::*;
-
-        impl From<u8> for UpgradeCheckResult {
-            fn from(value: u8) -> Self {
-                match value {
-                    0 => Self::NotChecked,
-                    1 => Self::Checking,
-                    2 => Self::UpToDate,
-                    3 => Self::UpgradeAvailable,
-                    _ => Self::FailedCheck,
-                }
-            }
-        }
-
-        impl From<UpgradeCheckResult> for u8 {
-            fn from(value: UpgradeCheckResult) -> Self {
-                match value {
-                    UpgradeCheckResult::NotChecked => 0,
-                    UpgradeCheckResult::Checking => 1,
-                    UpgradeCheckResult::UpToDate => 2,
-                    UpgradeCheckResult::UpgradeAvailable => 3,
-                    UpgradeCheckResult::FailedCheck => 4,
-                }
-            }
-        }
-    }
-
-    /// Global atomic state tracking the result of the background version check.
-    /// Initialized to `0` ([`UpgradeCheckResult::NotChecked`]).
-    pub static UPGRADE_CHECK_STATE: AtomicU8 = AtomicU8::new(0);
-
-    /// Thread-safe in-memory cache storing the resolved [`CrateVersionMetadata`] from
-    /// `r3bl.com/versions.jsonc`.
-    ///
-    /// # Purpose
-    ///
-    /// Bridges the gap between startup and shutdown without making redundant HTTP
-    /// requests. When the background check completes,
-    /// [`check_version_against_manifest`] stores the parsed manifest metadata here
-    /// via [`set_cached_crate_metadata`].
-    ///
-    /// At application exit, [`handle_upgrade_at_exit`] reads the metadata via
-    /// [`get_cached_crate_metadata`] in 0 ms without needing to re-fetch or re-parse
-    /// `versions.jsonc`.
-    ///
-    /// [`check_version_against_manifest`]: crate::core::script::upgrade::check_engine::check_version_against_manifest
-    /// [`get_cached_crate_metadata`]: crate::core::script::upgrade::version_check_cache::get_cached_crate_metadata
-    /// [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
-    /// [`set_cached_crate_metadata`]: crate::core::script::upgrade::version_check_cache::set_cached_crate_metadata
-    pub static CACHED_CRATE_METADATA: LazyLock<
-        ScopedMutex<Option<CrateVersionMetadata>, { PanicOnSpecificLockNesting }>,
-    > = LazyLock::new(|| scoped_mutex!(SPECIFIC, None));
-
-    /// Returns the current [`UpgradeCheckResult`] from the atomic state.
-    #[must_use]
-    pub fn get_upgrade_check_result() -> UpgradeCheckResult {
-        UpgradeCheckResult::from(UPGRADE_CHECK_STATE.get())
-    }
-
-    /// Sets the current [`UpgradeCheckResult`] in the atomic state.
-    pub fn set_upgrade_check_result(result: UpgradeCheckResult) {
-        UPGRADE_CHECK_STATE.set(result.into());
-    }
-
-    /// Returns `true` if a strictly newer version was found during the version check.
-    #[must_use]
-    pub fn is_upgrade_available() -> bool {
-        get_upgrade_check_result() == UpgradeCheckResult::UpgradeAvailable
-    }
-
-    /// Returns a clone of the cached [`CrateVersionMetadata`] if the background version
-    /// check has completed successfully.
-    ///
-    /// # Consumers
-    ///
-    /// This function is called by:
-    /// - [`handle_upgrade_at_exit`]: to display version notices or execute an automatic
-    ///   upgrade at shutdown without making a second network call.
-    /// - [`resolve_metadata_for_upgrade`]: to reuse existing metadata before falling back
-    ///   to a direct network query.
-    ///
-    /// Returns `None` if the background check is still in flight, has failed, or if
-    /// update checks were disabled via [`UpdateBehavior::Disable`].
-    ///
-    /// [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
-    /// [`resolve_metadata_for_upgrade`]: crate::core::script::upgrade::metadata_resolver::resolve_metadata_for_upgrade
-    /// [`UpdateBehavior::Disable`]: crate::core::script::upgrade::UpdateBehavior::Disable
-    #[must_use]
-    pub fn get_cached_crate_metadata() -> Option<CrateVersionMetadata> {
-        CACHED_CRATE_METADATA.read(Clone::clone)
-    }
-
-    /// Stores the resolved [`CrateVersionMetadata`] in the global
-    /// [`CACHED_CRATE_METADATA`].
-    ///
-    /// # Writers
-    ///
-    /// This function is called by:
-    /// - [`check_version_against_manifest`]: upon successfully fetching and parsing
-    ///   `r3bl.com/versions.jsonc`.
-    /// - Unit tests: to deterministically inject mock remote version metadata without
-    ///   requiring internet access or live HTTP requests.
-    ///
-    /// [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::version_check_cache::CACHED_CRATE_METADATA
-    /// [`check_version_against_manifest`]: crate::core::script::upgrade::check_engine::check_version_against_manifest
-    pub fn set_cached_crate_metadata(metadata: CrateVersionMetadata) {
-        CACHED_CRATE_METADATA.write(|slot| {
-            *slot = Some(metadata);
-        });
-    }
-}
-
-/// Network query and manifest parsing for `r3bl.com/versions.jsonc`.
+/// Network query and manifest parsing for [`R3BL_VERSIONS_JSON_URL`].
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 pub mod manifest_query {
     use super::*;
 
     /// Network timeout for background version check requests.
     const VERSION_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 
-    /// Parses a JSONC string matching the `r3bl.com/versions.jsonc` schema
+    /// Parses a JSONC string matching the [`R3BL_VERSIONS_JSON_URL`] schema
     /// ([`VersionsManifest`]) and extracts the [`CrateVersionMetadata`] for `crate_name`.
     ///
     /// # Errors
     ///
     /// Returns an error if the JSONC is malformed or if `crate_name` is not present in
     /// `crates_map`.
+    ///
+    /// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+    /// [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest
     pub fn parse_crate_metadata_from_versions_json_str(
         json_str: &str,
         crate_name: &str,
@@ -429,8 +280,10 @@ pub mod version_compare {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::CrateDistribution, *};
+    use super::{super::{CrateDistribution, UpgradeCheckCache},
+                *};
     use crate::assert_eq2;
+    use serial_test::serial;
 
     #[test]
     fn test_is_remote_version_strictly_newer() {
@@ -510,31 +363,9 @@ mod tests {
     }
 
     #[test]
-    fn test_upgrade_check_result_roundtrip() {
-        let variants = [
-            UpgradeCheckResult::NotChecked,
-            UpgradeCheckResult::Checking,
-            UpgradeCheckResult::UpToDate,
-            UpgradeCheckResult::UpgradeAvailable,
-            UpgradeCheckResult::FailedCheck,
-        ];
-
-        for variant in variants {
-            let byte: u8 = variant.into();
-            let converted = UpgradeCheckResult::from(byte);
-            assert_eq2!(variant, converted);
-        }
-
-        // Unknown u8 maps to FailedCheck.
-        assert_eq2!(
-            UpgradeCheckResult::from(99),
-            UpgradeCheckResult::FailedCheck
-        );
-    }
-
-    #[test]
+    #[serial]
     fn test_start_background_version_check_disabled() {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::NotChecked);
+        UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_from("0.0.25").unwrap(),
@@ -542,15 +373,13 @@ mod tests {
             super::super::UserFeedbackChannel::Quiet,
         );
         start_background_version_check(config);
-        assert_eq2!(
-            version_check_cache::get_upgrade_check_result(),
-            UpgradeCheckResult::NotChecked
-        );
+        assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked);
     }
 
     #[test]
+    #[serial]
     fn test_start_background_version_check_sync_disabled() {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::NotChecked);
+        UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_from("0.0.25").unwrap(),
@@ -558,9 +387,6 @@ mod tests {
             super::super::UserFeedbackChannel::Quiet,
         );
         start_background_version_check_sync(config);
-        assert_eq2!(
-            version_check_cache::get_upgrade_check_result(),
-            UpgradeCheckResult::NotChecked
-        );
+        assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked);
     }
 }

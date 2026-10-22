@@ -236,7 +236,7 @@ inspection):
 │ GET https://r3bl.com/versions.jsonc                                          │
 │ ├─► Parses `version` (pinned), `crate_distribution`, and `released_on`       │
 │ ├─► Compares `(major, minor, patch)`: `remote_version > local_version`       │
-│ └─► Stores state in `AtomicU8 (UpgradeCheckResult)`                          │
+│ └─► Stores state in `CACHED_UPGRADE_STATE (UpgradeCheckState)`        │
 │     (Bypassed entirely if `--update-behavior disable`)                       │
 ╰──────────────────────────────────────────────────────────────────────────────╯
                                       │
@@ -332,8 +332,8 @@ inspection):
           `--update-behavior <behavior>`).
     - [x] `UserFeedbackChannel`: `Stdout` (default CLI/TUI), `Stderr` (MCP server and
           stdout-piped tools like `env-source`), and `Quiet` (structured tracing only).
-    - [x] `UpgradeCheckResult`: `NotChecked`, `Checking`, `UpToDate`, `UpgradeAvailable`,
-          `FailedCheck`.
+    - [x] `UpgradeCheckState`: `NotChecked`, `Checking`, `UpToDate(CrateVersionMetadata)`,
+          `UpgradeAvailable(CrateVersionMetadata)`, `FailedCheck`.
     - [x] `UpgradeError`: Error types for strategy resolution, checksum mismatch, platform
           support, and user cancellation.
 - [x] `target_triple.rs`:
@@ -364,8 +364,9 @@ inspection):
           `UnsupportedPlatform`, `ChecksumMismatch`, `Cancelled`, `Other`) co-located with
           public entry points.
 - [x] `version_check.rs`:
-    - [x] `UpgradeCheckResult`: Atomic status enum (`NotChecked`, `Checking`, `UpToDate`,
-          `UpgradeAvailable`, `FailedCheck`) co-located with `version_check_cache`.
+    - [x] `UpgradeCheckState`: Unified status enum (`NotChecked`, `Checking`,
+          `UpToDate(metadata)`, `UpgradeAvailable(metadata)`, `FailedCheck`) co-located with
+          `version_check_cache`.
     - [x] `try_get_crate_metadata_from_r3bl_versions_json(crate_name)`: Fetches
           `https://r3bl.com/versions.jsonc` and parses `CrateVersionMetadata` via
           `VersionsManifest::try_parse_jsonc`.
@@ -374,8 +375,7 @@ inspection):
     - [x] `start_background_version_check(config)` / `start_background_version_check_sync(config)`:
           Non-blocking background check entry points. No-op if
           `config.update_behavior == UpdateBehavior::Disable`.
-    - [x] Updates atomic state `UpgradeCheckResult` and caches the resolved
-          `CrateVersionMetadata` (`version`, `crate_distribution`, `released_on`).
+    - [x] Updates `CACHED_UPGRADE_STATE` with `UpgradeCheckState`.
 - [x] `source_build.rs`:
     - [x] Generalized PTY session manager (`PtySessionBuilder` with
           `DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc`) for `rustup`
@@ -554,7 +554,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `CrateVersion`, and `CrateVersionMetadata`.
 - [x] Create `tui/src/core/script/upgrade/upgrade_types.rs` defining
       `SelfBinaryUpgradeConfig`, `UpgradeSource`, `UpdateBehavior`, `UserFeedbackChannel`,
-      `UpgradeCheckResult`, and `UpgradeError`.
+      and `UpgradeError`.
 - [x] Create `tui/src/core/script/upgrade/target_triple.rs` implementing
       `get_host_target_triple()`.
 - [x] Create `tui/src/core/script/upgrade/github_release.rs` implementing
@@ -625,9 +625,22 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - Async binaries (`giti`, `edi`) use async APIs: `start_background_version_check`, `run_upgrade`, `run_upgrade_cli_arg_interceptor`, `handle_upgrade_at_exit`.
     - Sync binaries (`env-source`, `rust-analyzer-mcp-server`) use dedicated `_sync` APIs with lightweight private `current_thread` runtimes on the calling thread: `start_background_version_check_sync`, `run_upgrade_sync`, `run_upgrade_cli_arg_interceptor_sync`, `handle_upgrade_at_exit_sync`.
     - Zero runtime bridge complexity: no dynamic `runtime_flavor` checks, no `block_in_place`, and no nested runtime issues.
-- [ ] Transition from loose global state (`CACHED_CRATE_METADATA`, `UPGRADE_CHECK_STATE`)
-      toward an explicit, typed lifecycle pipeline (`Unchecked` -> `Checked` -> `Resolved`
-      -> `Applied`).
+- [x] Consolidate bifurcated global state (`UPGRADE_CHECK_STATE` and `CACHED_CRATE_METADATA`)
+      into a unified `UpgradeCheckState` enum in dedicated `upgrade_check_state.rs` to
+      make illegal states unrepresentable:
+    - [x] Define `UpgradeCheckState` enum with variants `NotChecked`, `Checking`,
+          `UpToDate(CrateVersionMetadata)`, `UpgradeAvailable(CrateVersionMetadata)`,
+          `FailedCheck`.
+    - [x] Replace `UPGRADE_CHECK_STATE: AtomicU8` and `CACHED_CRATE_METADATA: ScopedMutex<Option<...>>`
+          with a single static `CACHED_UPGRADE_STATE: LazyLock<ScopedMutex<UpgradeCheckState, { PanicOnSpecificLockNesting }>>`
+          initialized to `UpgradeCheckState::NotChecked`.
+    - [x] Update `check_engine::check_version_against_manifest` to atomically write the
+          resolved state (`UpToDate(metadata)` or `UpgradeAvailable(metadata)`) or `FailedCheck`.
+    - [x] Update consumer call sites in `upgrade_entry_point.rs`:
+        - `handle_upgrade_at_exit`: pattern match `UpgradeCheckState::UpgradeAvailable(metadata)` directly.
+        - `handle_upgrade_at_exit_sync`: check `is_upgrade_available()`.
+        - `ensure_version_checked_and_handle_at_exit`: check `UpgradeCheckState::NotChecked`.
+    - [x] Update documentation, ASCII lifecycle diagrams, and unit tests.
 - [x] Update documentation, Unicode decision tree, and all unit tests in
       `tui/src/core/script/upgrade/` to reflect the unified architecture.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -639,6 +652,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [ ] `tui/src/core/script/upgrade/github_release.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_source.rs`
     - [ ] `tui/src/core/script/upgrade/source_build.rs`
+    - [ ] `tui/src/core/script/upgrade/upgrade_check_state.rs`
     - [ ] `tui/src/core/script/upgrade/version_check.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_entry_point.rs`
     - [ ] `tui/src/core/script/upgrade/download_stream.rs`
@@ -831,7 +845,7 @@ toolchain environments.
 | **3. Binaries Repo Down + Missing Rustup**   | `"open-source"`    | `r3bl-org/r3bl-binaries` 404 / Offline                  | No `rustup` on `$PATH`             | `Err(NoViableUpgradeSource)`     | Does NOT attempt `cargo +nightly` (`+toolchain` unsupported without rustup proxy, and stable fails on `#![feature]`). Displays clean error that `rustup` is required to compile Nightly crates from source, exits 1. |
 | **4. Binaries Repo Down + Zero Toolchain**   | `"open-source"`    | `r3bl-org/r3bl-binaries` 404 / Offline                  | No `rustup`, no `cargo` on `$PATH` | `Err(NoViableUpgradeSource)`     | Displays clean error: `"Upgrade failed: GitHub release unreachable and no local Rust build toolchain found. Please retry later: <bin> --upgrade"`, exits 1 cleanly without panic.          |
 | **5. Binaries Repo Down (Closed Source)**    | `"closed-source"`  | `r3bl-org/r3bl-binaries` 404 / Offline                  | Any (ignored)                      | `Err(NoViableUpgradeSource)`     | Does NOT attempt `crates.io` fallback. Displays clean error: `"Upgrade failed: Binary release server unreachable. Please retry later: <bin> --upgrade"`, exits 1.                          |
-| **6. Local Dev Version Ahead of Manifest**   | Open or Closed     | `r3bl.com/versions.jsonc` OK                            | Any                                | `UpgradeCheckResult::UpToDate`   | Local `CARGO_PKG_VERSION` >= `versions.jsonc` `version`; strict `remote > local` comparison evaluates false so local dev binary is never downgraded.                                       |
+| **6. Local Dev Version Ahead of Manifest**   | Open or Closed     | `r3bl.com/versions.jsonc` OK                            | Any                                | `UpgradeCheckState::UpToDate`    | Local `CARGO_PKG_VERSION` >= `versions.jsonc` `version`; strict `remote > local` comparison evaluates false so local dev binary is never downgraded.                                       |
 | **7. Mid-Stream Network Drop**               | `"open-source"`    | Download aborts mid-stream                              | `rustup` on `$PATH`                | Dynamic fallback to Source Build | Download stream error caught, temp files cleaned up, seamlessly transitions to `BuildFromSourceRustup` with `--version <pinned_ver>` from `versions.jsonc`.                                  |
 | **8. User Cancellation (Ctrl+C)**            | Open or Closed     | Interrupted during download or compilation              | Any                                | Interrupted                      | Cooperative `tokio::signal::ctrl_c()` caught, PTY session / HTTP stream terminated, temp files purged, original binary remains 100% intact.                                                |
 | **9. First-Time Bootstrap Install**          | Open or Closed     | `r3bl.com` + `r3bl-org/r3bl-binaries` 200 OK            | None required                      | Script installer                 | `r3bl.com/install.sh` (Linux/macOS) or `r3bl.com/install.ps1` (Windows) reads `versions.jsonc`, extracts `.tar.gz` archive to `~/.cargo/bin` or `$env:USERPROFILE\.cargo\bin`, sets perms. |

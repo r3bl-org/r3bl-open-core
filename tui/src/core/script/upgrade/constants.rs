@@ -22,6 +22,12 @@ pub mod toolchain_bin {
     pub const CARGO: &str = "cargo";
 }
 
+/// Binary name constants and fallbacks.
+pub mod bin_names {
+    /// Default fallback binary name when [`std::env::current_exe`] cannot resolve.
+    pub const DEFAULT_FALLBACK_BIN_NAME: &str = "r3bl-binary";
+}
+
 /// CLI arguments and flags passed to toolchain binaries (`rustup`, `cargo`).
 pub mod toolchain_cli_args {
     /// `--version` flag used to probe binary presence on `$PATH` and specify crate
@@ -42,6 +48,15 @@ pub mod toolchain_cli_args {
 
     /// `+nightly` toolchain override flag for `cargo`.
     pub const NIGHTLY_FLAG: &str = "+nightly";
+}
+
+/// CLI arguments and flags recognized by binaries for self-upgrade operations.
+pub mod upgrade_cli_args {
+    /// `--upgrade` flag intercepted at binary startup to trigger an immediate self-upgrade.
+    pub const UPGRADE: &str = "--upgrade";
+
+    /// `--update-behavior` flag passed to configure runtime update behavior.
+    pub const UPDATE_BEHAVIOR: &str = "--update-behavior";
 }
 
 /// File extensions and names for pre-compiled release archives and temporary extraction

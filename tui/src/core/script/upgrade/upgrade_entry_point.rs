@@ -15,50 +15,14 @@
 //!   execution.
 
 use super::{CrateDistribution, CrateName, CrateVersion, CrateVersionMetadata,
-            SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeSource, UserFeedbackChannel,
-            archive, check_engine, download_and_verify_archive,
-            extract_and_apply_archive, manifest_query, prompt_user_to_upgrade,
-            run_source_build_with_spinner, ui_strings, upgrade_reasons,
-            version_check_cache, version_compare};
+            SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeCheckCache,
+            UpgradeCheckStatus, UpgradeSource, UserFeedbackChannel, archive, bin_names,
+            check_engine, download_and_verify_archive, extract_and_apply_archive,
+            manifest_query, prompt_user_to_upgrade, run_source_build_with_spinner,
+            ui_strings, upgrade_cli_args, upgrade_reasons, version_compare};
 use crate::{InlineString, OutputDevice, Spinner, SpinnerStyle, StdMutex,
             TuiAvailability, inline_string, ok, script::temp_dir::try_create_temp_dir};
 use std::{env::current_exe, io, sync::Arc, time::Duration};
-
-// -------------------------------------------------------------------------------------------------
-// Error Types
-// -------------------------------------------------------------------------------------------------
-
-/// Errors that can occur during strategy resolution or upgrade execution.
-#[derive(Debug, thiserror::Error)]
-pub enum UpgradeError {
-    /// Neither GitHub release binaries nor a viable local source build toolchain are
-    /// available.
-    #[error(
-        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
-    )]
-    NoViableUpgradeSource {
-        crate_name: CrateName,
-        crate_distribution: CrateDistribution,
-        reason: String,
-    },
-
-    /// Host platform or architecture does not have pre-compiled binaries and cannot fall
-    /// back.
-    #[error("Unsupported host target platform: {0}")]
-    UnsupportedPlatform(String),
-
-    /// SHA-256 checksum mismatch on downloaded archive.
-    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
-    ChecksumMismatch { expected: String, actual: String },
-
-    /// User canceled the operation via `Ctrl+C`.
-    #[error("Upgrade cancelled by user")]
-    Cancelled,
-
-    /// General I/O, network, or archive error.
-    #[error("{0}")]
-    Other(String),
-}
 
 // -------------------------------------------------------------------------------------------------
 // Top-level Entry Points (Runtime Call-Site Adapters)
@@ -77,7 +41,7 @@ pub enum UpgradeError {
 pub async fn run_upgrade_cli_arg_interceptor(
     config: &SelfBinaryUpgradeConfig,
 ) -> miette::Result<()> {
-    let has_upgrade_arg = std::env::args().any(|arg| arg == "--upgrade");
+    let has_upgrade_arg = std::env::args().any(|arg| arg == upgrade_cli_args::UPGRADE);
     if !has_upgrade_arg {
         return ok!();
     }
@@ -102,7 +66,7 @@ pub async fn run_upgrade_cli_arg_interceptor(
 pub fn run_upgrade_cli_arg_interceptor_sync(
     config: &SelfBinaryUpgradeConfig,
 ) -> miette::Result<()> {
-    let has_upgrade_arg = std::env::args().any(|arg| arg == "--upgrade");
+    let has_upgrade_arg = std::env::args().any(|arg| arg == upgrade_cli_args::UPGRADE);
     if !has_upgrade_arg {
         return ok!();
     }
@@ -181,16 +145,9 @@ pub async fn handle_upgrade_at_exit(config: &SelfBinaryUpgradeConfig) {
         return;
     }
 
-    let Some(metadata) = version_check_cache::get_cached_crate_metadata() else {
+    let UpgradeCheckStatus::UpgradeAvailable(metadata) = UpgradeCheckCache::get() else {
         return;
     };
-
-    if !version_compare::is_remote_version_strictly_newer(
-        metadata.version,
-        config.current_version,
-    ) {
-        return;
-    }
 
     let bin_name = metadata_resolver::get_current_bin_name();
     let current_version_str = config.current_version.to_string();
@@ -243,7 +200,7 @@ pub async fn handle_upgrade_at_exit(config: &SelfBinaryUpgradeConfig) {
 /// Synchronous wrapper around [`handle_upgrade_at_exit`] for binaries that run without a
 /// global Tokio runtime (`rust-analyzer-mcp-server`).
 pub fn handle_upgrade_at_exit_sync(config: &SelfBinaryUpgradeConfig) {
-    if !version_check_cache::is_upgrade_available() {
+    if !UpgradeCheckCache::is_upgrade_available() {
         return;
     }
 
@@ -260,7 +217,7 @@ pub fn handle_upgrade_at_exit_sync(config: &SelfBinaryUpgradeConfig) {
 /// Helper for asynchronous binaries that want to ensure the version check has completed
 /// before exit (or run it if not yet checked).
 pub async fn ensure_version_checked_and_handle_at_exit(config: &SelfBinaryUpgradeConfig) {
-    if version_check_cache::get_cached_crate_metadata().is_none() {
+    if matches!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked) {
         check_engine::check_version_against_manifest(config).await;
     }
     handle_upgrade_at_exit(config).await;
@@ -277,6 +234,42 @@ pub fn ensure_version_checked_and_handle_at_exit_sync(config: &SelfBinaryUpgrade
     };
 
     rt.block_on(ensure_version_checked_and_handle_at_exit(config));
+}
+
+// -------------------------------------------------------------------------------------------------
+// Error Types
+// -------------------------------------------------------------------------------------------------
+
+/// Errors that can occur during strategy resolution or upgrade execution.
+#[derive(Debug, thiserror::Error)]
+pub enum UpgradeError {
+    /// Neither GitHub release binaries nor a viable local source build toolchain are
+    /// available.
+    #[error(
+        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
+    )]
+    NoViableUpgradeSource {
+        crate_name: CrateName,
+        crate_distribution: CrateDistribution,
+        reason: String,
+    },
+
+    /// Host platform or architecture does not have pre-compiled binaries and cannot fall
+    /// back.
+    #[error("Unsupported host target platform: {0}")]
+    UnsupportedPlatform(String),
+
+    /// SHA-256 checksum mismatch on downloaded archive.
+    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
+    ChecksumMismatch { expected: String, actual: String },
+
+    /// User canceled the operation via `Ctrl+C`.
+    #[error("Upgrade cancelled by user")]
+    Cancelled,
+
+    /// General I/O, network, or archive error.
+    #[error("{0}")]
+    Other(String),
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -583,7 +576,7 @@ pub mod metadata_resolver {
                     .to_str()
                     .map(|f_name| inline_string!("{f_name}"))
             })
-            .unwrap_or_else(|| inline_string!("r3bl-binary"))
+            .unwrap_or_else(|| inline_string!("{}", bin_names::DEFAULT_FALLBACK_BIN_NAME))
     }
 
     /// Resolves the [`CrateVersionMetadata`] for `config.crate_name` (reading from the
@@ -591,14 +584,14 @@ pub mod metadata_resolver {
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError::Other`] if `versions.jsonc` cannot be reached or parsed.
+    /// Returns [`UpgradeError::Other`] if [`R3BL_VERSIONS_JSON_URL`] cannot be reached or parsed.
     ///
     /// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
     pub async fn resolve_metadata_for_upgrade(
         config: &SelfBinaryUpgradeConfig,
     ) -> Result<CrateVersionMetadata, UpgradeError> {
-        if let Some(meta) = version_check_cache::get_cached_crate_metadata() {
+        if let Some(meta) = UpgradeCheckCache::get_cached_crate_metadata() {
             return Ok(meta);
         }
         manifest_query::try_get_crate_metadata_from_r3bl_versions_json(
@@ -664,10 +657,13 @@ pub mod feedback_device {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::UpgradeCheckResult, *};
+    use super::{super::{UpgradeCheckCache, UpgradeCheckStatus},
+                *};
     use chrono::Utc;
+    use serial_test::serial;
 
     #[tokio::test]
+    #[serial]
     async fn test_run_upgrade_already_up_to_date() {
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let meta = CrateVersionMetadata {
@@ -675,7 +671,7 @@ mod tests {
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
-        version_check_cache::set_cached_crate_metadata(meta);
+        UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
@@ -689,6 +685,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_run_upgrade_sync_already_up_to_date() {
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let meta = CrateVersionMetadata {
@@ -696,7 +693,7 @@ mod tests {
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
-        version_check_cache::set_cached_crate_metadata(meta);
+        UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
@@ -742,9 +739,15 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_handle_upgrade_at_exit_sync_no_upgrade() {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::UpToDate);
         let version = CrateVersion::try_from("0.0.25").unwrap();
+        let meta = CrateVersionMetadata {
+            version,
+            crate_distribution: CrateDistribution::OpenSource,
+            released_on: Utc::now(),
+        };
+        UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
             version,
@@ -755,15 +758,15 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_ensure_version_checked_and_handle_at_exit_no_upgrade() {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::UpToDate);
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let meta = CrateVersionMetadata {
             version,
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
-        version_check_cache::set_cached_crate_metadata(meta);
+        UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
@@ -775,15 +778,15 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_ensure_version_checked_and_handle_at_exit_sync_no_upgrade() {
-        version_check_cache::set_upgrade_check_result(UpgradeCheckResult::UpToDate);
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let meta = CrateVersionMetadata {
             version,
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
-        version_check_cache::set_cached_crate_metadata(meta);
+        UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",

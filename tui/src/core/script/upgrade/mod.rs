@@ -48,7 +48,7 @@
 //!   - [`CrateDistribution::ClosedSource`]: Upgrades exclusively from pre-built GitHub
 //!     release archives (with no `crates.io` fallback).
 //!
-//! # Centralized Version Manifest (`r3bl.com/versions.jsonc`)
+//! # Centralized Version Manifest ([`R3BL_VERSIONS_JSON_URL`])
 //!
 //! The version manifest ([`VersionsManifest`]) is the central registry for all R3BL
 //! binary crates. These include `r3bl-cmdr` (`giti`, `edi`, `env-source`),
@@ -75,16 +75,16 @@
 //!          ([`start_background_version_check_sync`]) in synchronous binaries, ensuring 0
 //!          ms user-perceived startup latency.
 //!    - When the spawned task or thread finishes fetching and parsing the manifest, it
-//!      populates the in-memory cache ([`CACHED_CRATE_METADATA`]) and updates the atomic
-//!      status flag ([`UPGRADE_CHECK_STATE`]).
+//!      evaluates SemVer and atomically populates the in-memory cache
+//!      ([`UpgradeCheckCache`]) with [`UpgradeCheckStatus`].
 //!    - At process exit, [`handle_upgrade_at_exit`] (or [`handle_upgrade_at_exit_sync`])
-//!      checks the atomic state and retrieves the resolved version metadata from the
-//!      in-memory cache via [`get_cached_crate_metadata`] with 0 ms latency (no second
-//!      HTTP round-trip), executing actions according to [`UpdateBehavior`].
+//!      reads the cached state from [`UpgradeCheckCache`] via
+//!      [`UpgradeCheckCache::get`] with 0 ms latency (no second HTTP round-trip),
+//!      executing actions according to [`UpdateBehavior`].
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
-//!      the state as [`UpgradeCheckResult::FailedCheck`].
+//!      the state as [`UpgradeCheckStatus::FailedCheck`].
 //!    - Users running routine operations (such as `CLI` commands or `MCP` server
 //!      sessions) when the server is down or unreachable are never interrupted with error
 //!      dialogs or failed exit codes.
@@ -146,14 +146,12 @@
 //!                                      └─────────────┘
 //! ```
 //!
-//! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
-//! [`check_version_against_manifest`]: crate::core::script::upgrade::check_version_against_manifest
+//! [`check_version_against_manifest`]: crate::core::script::upgrade::check_engine::check_version_against_manifest
 //! [`CrateDistribution::ClosedSource`]: crate::core::script::upgrade::CrateDistribution::ClosedSource
 //! [`CrateDistribution::OpenSource`]: crate::core::script::upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::core::script::upgrade::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
-//! [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::execute_upgrade_with_metadata
-//! [`get_cached_crate_metadata`]: crate::core::script::upgrade::get_cached_crate_metadata
+//! [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::upgrade_execution::execute_upgrade_with_metadata
 //! [`handle_upgrade_at_exit_sync`]: crate::core::script::upgrade::handle_upgrade_at_exit_sync
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -169,8 +167,10 @@
 //! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
 //! [`stderr`]: std::io::stderr
 //! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
-//! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
-//! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
+//! [`UpgradeCheckCache::get`]: crate::core::script::upgrade::UpgradeCheckCache::get
+//! [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
+//! [`UpgradeCheckStatus::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckStatus::FailedCheck
+//! [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
 //! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::upgrade::UpgradeSource::try_fallback_to_source
 //! [`UpgradeSource::try_resolve`]: crate::core::script::upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::core::script::upgrade::UpgradeSource
@@ -188,6 +188,7 @@ mod source_build;
 mod target_triple;
 mod ui_prompt;
 mod ui_strings;
+mod upgrade_check_state;
 mod upgrade_config;
 mod upgrade_entry_point;
 mod upgrade_source;
@@ -203,6 +204,7 @@ pub use source_build::*;
 pub use target_triple::*;
 pub use ui_prompt::*;
 pub use ui_strings::*;
+pub use upgrade_check_state::*;
 pub use upgrade_config::*;
 pub use upgrade_entry_point::*;
 pub use upgrade_source::*;

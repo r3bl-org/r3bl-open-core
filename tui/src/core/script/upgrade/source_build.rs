@@ -8,7 +8,7 @@
 //!
 //! When `crate_distribution` is [`CrateDistribution::OpenSource`] and pre-compiled GitHub
 //! Release binaries are unreachable, this module compiles the exact version pinned in
-//! `r3bl.com/versions.jsonc` from `crates.io`:
+//! [`R3BL_VERSIONS_JSON_URL`] from `crates.io`:
 //! 1. Optional toolchain update: `rustup toolchain install nightly --force`
 //! 2. Pinned crate installation: `cargo +nightly install <crate_name> --version
 //!    <pinned_version> --force`
@@ -22,6 +22,7 @@
 //! [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
 
 use super::{rustup_progress, toolchain_bin, toolchain_cli_args, ui_strings};
 use crate::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, TuiAvailability,

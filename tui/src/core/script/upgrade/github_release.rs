@@ -3,7 +3,7 @@
 //! GitHub Release asset URL formatting and HTTP `HEAD` availability verification against
 //! `https://github.com/r3bl-org/r3bl-binaries`.
 
-use super::{R3BL_BINARIES_RELEASE_BASE_URL, get_archive_extension_for_target};
+use super::{R3BL_BINARIES_RELEASE_BASE_URL, archive, get_archive_extension_for_target};
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, script::http_client};
 use std::time::Duration;
 
@@ -61,7 +61,7 @@ pub fn format_github_release_asset_urls_with_base(
     let archive_name = format_archive_filename(crate_name, version, target_triple);
     let base = base_url.trim_end_matches('/');
     let archive_url = format!("{base}/{tag}/{archive_name}");
-    let sha256_url = format!("{archive_url}.sha256");
+    let sha256_url = format!("{archive_url}.{}", archive::SHA256_EXT);
     (archive_url, sha256_url)
 }
 
