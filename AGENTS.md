@@ -491,10 +491,13 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `write-documentation` skill. This keeps rendered docs clean, validates real types on
    Linux, and compiles safely on macOS and Windows.
 
-8. **No `flowchart TD` in Diagrams (Global Rule)**: NEVER use `flowchart TD` (top-down) for
-   Mermaid diagrams in markdown, task files, documentation, or chat responses. It does
-   not work or render properly in the terminal. Prefer `flowchart LR` (left-to-right),
-   Markdown tables, or plain indented text lists instead.
+8. **No Mermaid Diagrams / Use ASCII Art Instead (Global Rule)**: NEVER use Mermaid
+   diagrams (such as ```` ```mermaid ````, `flowchart TD`, `flowchart LR`, `sequenceDiagram`,
+   etc.) anywhere in markdown, task files, documentation, or chat responses. Mermaid
+   diagrams do not render properly in terminal CLI environments (often causing errors like
+   "Diagram exceeds terminal width"). Always use ASCII or Unicode box-drawing diagrams
+   (fenced with text or code blocks, using font-safe glyphs from `docs/boxes.md`), Markdown
+   tables, or plain indented text lists instead.
 
 9. **Physical Keycaps with `<kbd>`**: When documenting physical keyboard input in rustdoc
    or markdown (such as key presses, keyboard shortcuts, or contrasting physical keys with
