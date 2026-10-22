@@ -182,6 +182,7 @@
 
 // Private submodules.
 mod binary_swap;
+mod check_engine;
 mod constants;
 mod download_stream;
 mod github_release;
@@ -193,11 +194,11 @@ mod upgrade_check_state;
 mod upgrade_config;
 mod upgrade_entry_point;
 mod upgrade_source;
-mod version_check;
 mod versions_manifest;
 
 // Public barrel re-exports.
 pub use binary_swap::*;
+pub use check_engine::*;
 pub use constants::*;
 pub use download_stream::*;
 pub use github_release::*;
@@ -209,5 +210,4 @@ pub use upgrade_check_state::*;
 pub use upgrade_config::*;
 pub use upgrade_entry_point::*;
 pub use upgrade_source::*;
-pub use version_check::*;
 pub use versions_manifest::*;

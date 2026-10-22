@@ -1,8 +1,5 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Configuration and behavioral settings for the unified binary self-upgrade engine.
-//! See [`SelfBinaryUpgradeConfig`], [`UpdateBehavior`], and [`UserFeedbackChannel`].
-
 use super::{CrateName, CrateVersion};
 
 /// Configuration passed to the self-upgrade engine. This is how a binary tells the

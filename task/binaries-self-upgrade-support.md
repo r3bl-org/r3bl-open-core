@@ -653,7 +653,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [ ] `tui/src/core/script/upgrade/upgrade_source.rs`
     - [ ] `tui/src/core/script/upgrade/source_build.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_check_state.rs`
-    - [ ] `tui/src/core/script/upgrade/version_check.rs`
+    - [ ] `tui/src/core/script/upgrade/check_engine.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_entry_point.rs`
     - [ ] `tui/src/core/script/upgrade/download_stream.rs`
     - [ ] `tui/src/core/script/upgrade/binary_swap.rs`

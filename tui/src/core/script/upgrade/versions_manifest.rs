@@ -1,9 +1,5 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Version manifest schema and JSONC parsing/mutation for `versions.jsonc`. See
-//! [`VersionsManifest`] for details. The primary read entry point is
-//! [`VersionsManifest::try_parse_jsonc()`].
-
 use super::{semver, versions_manifest_keys};
 use crate::{HashMap, ok};
 use chrono::{DateTime, Utc};

@@ -28,6 +28,57 @@ use std::{env::current_exe, io, sync::Arc, time::Duration};
 // Top-level Entry Points (Runtime Call-Site Adapters)
 // -------------------------------------------------------------------------------------------------
 
+/// Spawns a non-blocking background Tokio task to check [`R3BL_VERSIONS_JSON_URL`]
+/// for a newer version of `config.crate_name`.
+///
+/// Designed for asynchronous binaries (such as `giti` and `edi`) with an active
+/// `#[tokio::main]` runtime.
+///
+/// If [`SelfBinaryUpgradeConfig::update_behavior`] is [`UpdateBehavior::Disable`], this
+/// function returns immediately without spawning any background task or making network
+/// requests.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
+    if config.update_behavior == UpdateBehavior::Disable {
+        return;
+    }
+
+    tokio::spawn(async move {
+        check_engine::check_version_against_manifest(&config).await;
+    });
+}
+
+/// Spawns a detached OS thread with a lightweight `current_thread` Tokio runtime to check
+/// [`R3BL_VERSIONS_JSON_URL`].
+///
+/// Designed for synchronous binaries (such as `rust-analyzer-mcp-server`) that
+/// intentionally run without a global `#[tokio::main]` runtime.
+///
+/// If [`SelfBinaryUpgradeConfig::update_behavior`] is [`UpdateBehavior::Disable`], this
+/// function returns immediately without spawning any thread or making network
+/// requests.
+///
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
+    if config.update_behavior == UpdateBehavior::Disable {
+        return;
+    }
+
+    std::thread::spawn(move || {
+        let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        else {
+            UpgradeCheckCache::set(UpgradeCheckStatus::CheckFailed);
+            return;
+        };
+        rt.block_on(async move {
+            check_engine::check_version_against_manifest(&config).await;
+        });
+    });
+}
+
 /// Standalone CLI argument interceptor for `--upgrade` in asynchronous binaries.
 ///
 /// If `--upgrade` is passed in CLI arguments, runs the upgrade flow and terminates the
@@ -809,5 +860,33 @@ mod tests {
             UserFeedbackChannel::Quiet,
         );
         ensure_version_checked_and_handle_at_exit_sync(&config);
+    }
+
+    #[test]
+    #[serial]
+    fn test_start_background_version_check_disabled() {
+        UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
+        let config = SelfBinaryUpgradeConfig::new(
+            "r3bl-cmdr",
+            CrateVersion::try_from("0.0.25").unwrap(),
+            Some(UpdateBehavior::Disable),
+            UserFeedbackChannel::Quiet,
+        );
+        start_background_version_check(config);
+        assert_eq!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked);
+    }
+
+    #[test]
+    #[serial]
+    fn test_start_background_version_check_sync_disabled() {
+        UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
+        let config = SelfBinaryUpgradeConfig::new(
+            "r3bl-cmdr",
+            CrateVersion::try_from("0.0.25").unwrap(),
+            Some(UpdateBehavior::Disable),
+            UserFeedbackChannel::Quiet,
+        );
+        start_background_version_check_sync(config);
+        assert_eq!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked);
     }
 }

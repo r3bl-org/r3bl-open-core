@@ -1,8 +1,5 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Upgrade source resolution ([`UpgradeSource::GithubReleaseArtifact`] vs. open-source
-//! `crates.io` fallback [`UpgradeSource::BuildFromSourceRustup`]).
-
 use super::{CrateDistribution, CrateName, CrateVersion, UpgradeError,
             check_github_release_asset_available, format_github_release_asset_urls,
             get_host_target_triple, toolchain_bin, toolchain_cli_args, upgrade_reasons};

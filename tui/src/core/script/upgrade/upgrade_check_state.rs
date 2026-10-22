@@ -1,41 +1,5 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Status representation and process-wide singleton cache for background version checks.
-//!
-//! # Background Version Check & Cache Lifecycle
-//!
-//! To keep application startup instantaneous (0 ms user-perceived latency) while
-//! eliminating redundant network round-trips at shutdown, the upgrade engine coordinates
-//! background check results through the [`UpgradeCheckCache`] singleton:
-//!
-//! ```text
-//! 1. Binary Startup (0 ms non-blocking):
-//!    ├── start_background_version_check()      ──► Spawns Tokio task (for async binaries)
-//!    └── start_background_version_check_sync() ──► Spawns dedicated OS thread (for sync binaries)
-//!    Main thread immediately proceeds with user CLI/TUI logic
-//!
-//! 2. Concurrent Manifest Query:
-//!    check_version_against_manifest() ───► HTTP GET versions.jsonc
-//!    ├── Evaluates SemVer (remote > local)
-//!    └── Atomically updates UpgradeCheckCache:
-//!        ├── UpgradeAvailable(metadata) (if strictly newer)
-//!        ├── UpToDate(metadata)         (if equal or ahead)
-//!        └── CheckFailed                (if network or parse error)
-//!
-//! 3. Binary Exit (0 ms in-memory read):
-//!    handle_upgrade_at_exit()
-//!    ├── UpgradeCheckCache::get()
-//!    └── Matches UpgradeCheckStatus::UpgradeAvailable(metadata) (no 2nd HTTP request!)
-//! ```
-//!
-//! [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
-//! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
-//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-//! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
-//! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
-//! [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
-//! [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
-
 use super::CrateVersionMetadata;
 use crate::{DeadlockPreventionPolicy::PanicOnSpecificLockNesting, ScopedMutex,
             scoped_mutex};
@@ -47,6 +11,32 @@ use std::sync::LazyLock;
 
 /// Thread-safe process-wide singleton cache storing the [`UpgradeCheckStatus`] from
 /// [`R3BL_VERSIONS_JSON_URL`].
+///
+/// # Background Version Check & Cache Lifecycle
+///
+/// To keep application startup instantaneous (0 ms user-perceived latency) while
+/// eliminating redundant network round-trips at shutdown, the upgrade engine coordinates
+/// background check results through the [`UpgradeCheckCache`] singleton:
+///
+/// ```text
+/// 1. Binary Startup (0 ms non-blocking):
+///    ├── start_background_version_check()      ──► Spawns Tokio task (for async binaries)
+///    └── start_background_version_check_sync() ──► Spawns dedicated OS thread (for sync binaries)
+///    Main thread immediately proceeds with user CLI/TUI logic
+///
+/// 2. Concurrent Manifest Query:
+///    check_version_against_manifest() ───► HTTP GET versions.jsonc
+///    ├── Evaluates SemVer (remote > local)
+///    └── Atomically updates UpgradeCheckCache:
+///        ├── UpgradeAvailable(metadata) (if strictly newer)
+///        ├── UpToDate(metadata)         (if equal or ahead)
+///        └── CheckFailed                (if network or parse error)
+///
+/// 3. Binary Exit (0 ms in-memory read):
+///    handle_upgrade_at_exit()
+///    ├── UpgradeCheckCache::get()
+///    └── Matches UpgradeCheckStatus::UpgradeAvailable(metadata) (no 2nd HTTP request!)
+/// ```
 ///
 /// # Singleton Pattern
 ///
@@ -81,10 +71,13 @@ use std::sync::LazyLock;
 /// [`Readline`]: crate::Readline
 /// [`ScopedMutex`]: crate::ScopedMutex
 /// [`SPECIFIC`]: crate::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
+/// [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
+/// [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
 /// [`UpgradeCheckCache::get`]: crate::core::script::upgrade::UpgradeCheckCache::get
 /// [`UpgradeCheckCache::is_upgrade_available`]: crate::core::script::upgrade::UpgradeCheckCache::is_upgrade_available
 /// [`UpgradeCheckCache::set`]: crate::core::script::upgrade::UpgradeCheckCache::set
 /// [`UpgradeCheckCache::try_get_crate_metadata`]: crate::core::script::upgrade::UpgradeCheckCache::try_get_crate_metadata
+/// [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
 /// [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct UpgradeCheckCache {
