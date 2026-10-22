@@ -6,28 +6,19 @@
 
 use super::{CrateDistribution, CrateName, CrateVersion};
 
-/// Configuration passed to the self-upgrade engine, defining how a single binary
-/// participates in self-upgrades.
+/// Configuration passed to the self-upgrade engine. This is how a binary tells the
+/// upgrade engine how it should do the update & upgrade.
 ///
-/// Unlike tools that implicitly alter their behavior or downgrade actions when
-/// `CI=true`, this engine is 100% deterministic: `CI=<bool>` does **not** influence
-/// behavior resolution. All upgrade behaviors are controlled strictly through:
-/// 1. Explicit CLI flags (such as passing [`UpdateBehavior`] via `--update-behavior`).
-///    For examples of this, you can look at the `CLIArg` structs in our binary crates
-///    like `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
-/// 2. Programmatic configuration composition to eliminate hidden behavior, ambient state
-///    dependencies, and ambiguity.
+/// Unlike tools that implicitly alter their behavior or downgrade actions when `CI=true`,
+/// this engine doesn't have side effects from environment variables: `CI=<bool>` does
+/// **not** influence behavior resolution. All upgrade behaviors are controlled strictly
+/// by either:
+/// - Explicit CLI flags (such as passing [`UpdateBehavior`] via `--update-behavior`). For
+///   examples of this, you can look at the `CLIArg` structs in our binary crates like
+///   `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
+/// - Programmatically creating this config to eliminate ambiguity.
 ///
-/// # Behavior Resolution
-///
-/// When determining the effective [`UpdateBehavior`] in [`Self::try_new`]:
-/// 1. **Explicit override**: If an override (`Option<UpdateBehavior>`) is provided
-///    (`Some(...)`, whether from a CLI flag or programmatic configuration), that explicit
-///    choice is used.
-/// 2. **Universal default (`Auto`)**: If no override is provided (`None`), it falls back
-///    to the universal default [`UpdateBehavior::default()`] ([`UpdateBehavior::Auto`]).
-///
-/// [`Self::try_new`]: Self::try_new
+/// Use [`Self::try_new()`] to construct this struct.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
@@ -53,10 +44,6 @@ mod impl_self_binary_upgrade_config {
         /// Creates a new [`SelfBinaryUpgradeConfig`], validating that `current_version`
         /// is a valid semantic version (`MAJOR.MINOR.PATCH`).
         ///
-        /// The effective [`UpdateBehavior`] is resolved by
-        /// `maybe_update_behavior.unwrap_or_default()`. If no override is provided
-        /// (`None`), it automatically defaults to [`UpdateBehavior::Auto`].
-        ///
         /// # Arguments
         ///
         /// * `crate_name` - The crate name as registered in `r3bl.com/versions.jsonc`
@@ -64,8 +51,7 @@ mod impl_self_binary_upgrade_config {
         /// * `current_version` - Semantic version string of the running binary, typically
         ///   from `env!("CARGO_PKG_VERSION")`.
         /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
-        ///   configuration). When `None`, falls back to [`UpdateBehavior::default()`]
-        ///   ([`UpdateBehavior::Auto`]).
+        ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
         ///
@@ -79,9 +65,10 @@ mod impl_self_binary_upgrade_config {
             maybe_update_behavior: Option<UpdateBehavior>,
             user_feedback_channel: UserFeedbackChannel,
         ) -> Result<Self, UpgradeError> {
-            let update_behavior = maybe_update_behavior.unwrap_or_default();
             let current_version = CrateVersion::try_from(current_version)
                 .map_err(UpgradeError::InvalidVersion)?;
+
+            let update_behavior = maybe_update_behavior.unwrap_or_default();
 
             Ok(Self {
                 crate_name: crate_name.into(),

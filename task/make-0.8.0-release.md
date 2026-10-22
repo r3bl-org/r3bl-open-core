@@ -181,7 +181,7 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
 │ Phase 6: Release r3bl-build-infra v0.0.6               │
 │ Phase 7: Release r3bl-cmdr v0.0.27                     │
 │ Phase 8: Release r3bl-rust-analyzer-mcp-server v1.1.5  │
-│ Phase 9: Community visibility & housekeeping           │
+│ Phase 9: Community marketing & housekeeping            │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -734,21 +734,56 @@ completed and merged into `main`._
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v1.1.5-rust-analyzer-mcp-server`
 
-### Phase 9: Community Visibility & Housekeeping
+### Phase 9: Community Marketing & Housekeeping
 
-- [ ] Share release announcements across developer communities following
+- [ ] Execute release marketing and community visibility across channels following
       `docs/release-guide.md`:
-    - [ ] **Reddit (`r/rust`)**: Post
-          `[Release] r3bl_tui v0.8.0: Async TUI library with 2D Canvas/Viewport coords, Flat2DArray SIMD layout, and 0ms ESC handling`
-          with body from `docs/release-notes/r3bl_tui/v0.8.0.md`.
-    - [ ] **Hacker News (Show HN)**: Post
+    - [ ] **Reddit (`r/rust`)** (Primary announcement):
+        - **Subreddit Rules Compliance**:
+            - **Rule 2 (Descriptive title)**: Do not use generic prefixes like `[Release]`.
+              Must explain what the crate does:
+              `Announcing r3bl_tui 0.8.0: Async, reactive terminal UI framework with flexbox layouts, PTY orchestration, and modern web ergonomics`
+            - **Rule 6 (Self-promotion limit)**: At most 1 self-promotion post per week.
+            - **Flair**: Tag post with `Project` flair.
+        - **Format**: Curated high-signal text submission (do **not** copy the full 50KB
+          release notes, which exceeds Reddit's 40,000-character limit and causes reader
+          fatigue).
+        - **Content Outline**:
+            - Quick hook & what it is (modernizing the terminal, React/Elm/flexbox
+              ergonomics in pure Rust, async/non-blocking I/O).
+            - The 4 interaction primitives (`readline_async`, inline `choose`, full-screen
+              TUI, PTY multiplexing).
+            - Key v0.8.0 highlights (dynamic OSC color querying, Flat2DArray SIMD layout,
+              0ms ESC handling, 16 interactive demos).
+            - Media: Embed a demo GIF or screenshot directly into the post body.
+            - Links: GitHub repo, crates.io, docs.rs, and link to the full 900+ line
+              release notes & migration guide on GitHub.
+    - [ ] **Reddit (`r/madeinrust`)** (Showcase sub):
+        - Post a dedicated showcase focusing on what was built with Rust.
+        - Include demo GIFs/screenshots and instructions to test drive the 16 interactive
+          examples (`cargo run --example <name>`).
+    - [ ] **Official Rust Users Forum (`users.rust-lang.org`)** (High-signal & friendly):
+        - Post to the **Announcements** category.
+        - Friendly, zero-toxicity audience of core Rustaceans and crate maintainers.
+        - Include the curated summary, benchmark highlights, and link to GitHub release
+          notes.
+    - [ ] **Reddit (`r/commandline`)** (Optional CLI showcase):
+        - Post showcasing CLI/TUI apps built with `r3bl_tui` (e.g., `edi`, `giti`, or the
+          multi-tab virtual terminal demos).
+    - [ ] **Hacker News (`Show HN`)**:
+        - Title:
           `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
-          linking to GitHub release or developerlife.com article.
-    - [ ] **LinkedIn**: Post highlights of the 0.8.0 release family (`r3bl_tui`,
-          `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`) with
-          performance metrics and video links.
-- [ ] Update `task/prepare-v0.8.0-meta-task.md` to reflect publication completion.
+        - URL: Link to the GitHub Release page
+          (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.8.0-tui`) or the
+          architectural deep-dive article on `developerlife.com`.
+    - [ ] **LinkedIn & Social Media**:
+        - Post highlights of the 0.8.0 release family (`r3bl_tui`, `r3bl-cmdr`,
+          `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`).
+        - Highlight empirical benchmarks (2.3x rendering speedup, ±98% jitter
+          elimination, L1 D-Cache alignment).
+        - Link to `developerlife.com` articles and YouTube video walkthroughs.
+- [ ] Update `task/prepare-v0.8.0-meta-task.md` to reflect publication and marketing completion.
 - [ ] Audit diff via `git diff task/` to verify clean metadata updates.
-- [ ] **Mandatory manual review:** Verify all release tracking tasks are marked complete.
+- [ ] **Mandatory manual review:** Verify all release tracking tasks and community posts are reviewed.
     - [ ] `task/prepare-v0.8.0-meta-task.md`
     - [ ] `task/make-0.8.0-release.md`
