@@ -257,7 +257,7 @@ inspection):
                                       │
                                       ▼
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ 3. Strategy Resolution (`resolve_upgrade_strategy`)                          │
+│ 3. Upgrade Source Resolution (`UpgradeSource::try_resolve`)                 │
 │                                                                              │
 │ Internal `get_host_target_triple()` detects OS & Architecture                │
 │ HEAD https://github.com/r3bl-org/r3bl-binaries/releases/download/            │
@@ -345,24 +345,35 @@ inspection):
           `https://github.com/r3bl-org/r3bl-binaries/releases/download/v<version>-<crate>/<crate>-v<version>-<target>.tar.gz`,
           plus `.sha256`.
     - [x] Performs lightweight HTTP `HEAD` asset accessibility check.
-- [x] `strategy_resolver.rs`:
-    - [x] `resolve_upgrade_strategy(crate_name, pinned_version, distribution)`: Evaluates
+- [x] `upgrade_source.rs`:
+    - [x] `UpgradeSource`: Resolved execution source enum (`GithubReleaseArtifact`,
+          `BuildFromSourceRustup`) as the centerpiece with `UpgradeSource::try_resolve` and
+          `UpgradeSource::try_fallback_to_source`.
+    - [x] `UpgradeSource::try_resolve(&crate_name, pinned_version, distribution)`: Evaluates
           `github.com/r3bl-org/r3bl-binaries` asset availability; if unavailable and
           `distribution == CrateDistribution::OpenSource`, checks local toolchain presence
-          (`rustup` / `cargo`) on `$PATH`. If `CrateDistribution::ClosedSource`, returns
+          (`rustup`) on `$PATH`. If `CrateDistribution::ClosedSource`, returns
           `Err(NoViableUpgradeSource)`.
+- [x] `upgrade_config.rs`:
+    - [x] `SelfBinaryUpgradeConfig`: Primary configuration struct passed by client binaries.
+    - [x] `UpdateBehavior`: CLI-configurable behavior enum (`Auto`, `PromptToUpgrade`,
+          `NotifyOnly`, `Disable`).
+    - [x] `UserFeedbackChannel`: Output routing enum (`Stdout`, `Stderr`, `Quiet`).
+- [x] `upgrade_entry_point.rs`:
+    - [x] `UpgradeError`: Subsystem error enum (`NoViableUpgradeSource`,
+          `UnsupportedPlatform`, `ChecksumMismatch`, `Cancelled`, `Other`) co-located with
+          public entry points.
 - [x] `version_check.rs`:
+    - [x] `UpgradeCheckResult`: Atomic status enum (`NotChecked`, `Checking`, `UpToDate`,
+          `UpgradeAvailable`, `FailedCheck`) co-located with `version_check_cache`.
     - [x] `try_get_crate_metadata_from_r3bl_versions_json(crate_name)`: Fetches
           `https://r3bl.com/versions.jsonc` and parses `CrateVersionMetadata` via
           `VersionsManifest::try_parse_jsonc`.
     - [x] Compares semantic versions strictly (`remote_version > local_version`) so local
           development builds with bumped `Cargo.toml` versions never trigger a downgrade.
-    - [x] `start_background_version_check(config)`: Non-blocking async task running the
-          manifest version check (no-op if
-          `config.update_behavior == UpdateBehavior::Disable`).
-    - [x] `start_background_version_check_sync(config)`: Spawns a detached OS thread with
-          a lightweight `current_thread` Tokio runtime for synchronous binaries (such as
-          `rust-analyzer-mcp-server` which intentionally runs without `#[tokio::main]`).
+    - [x] `start_background_version_check(config)` / `start_background_version_check_sync(config)`:
+          Non-blocking background check entry points. No-op if
+          `config.update_behavior == UpdateBehavior::Disable`.
     - [x] Updates atomic state `UpgradeCheckResult` and caches the resolved
           `CrateVersionMetadata` (`version`, `crate_distribution`, `released_on`).
 - [x] `source_build.rs`:
@@ -374,18 +385,17 @@ inspection):
           the exact version resolved from `r3bl.com/versions.jsonc`.
     - [x] `OscPtyEvent::ProgressUpdate` (`OSC 9;4`) compilation escape sequence handler
           and live `Spinner` updater.
-- [x] `run_upgrade.rs`:
-    - [x] `handle_upgrade_at_exit()` / `handle_upgrade_at_exit_sync()`: Coordinates exit
-          phase based on policy and output target.
-    - [x] `run_upgrade()` / `run_upgrade_sync()`: Executes the resolved `UpgradeSource`
-          (streaming `.tar.gz` download from `github.com/r3bl-org/r3bl-binaries` +
-          `.sha256` verification + archive extraction via `flate2`/`tar` + `self_replace`
-          on current binary and updating any sibling binaries in the unpacked archive, OR
-          PTY/OSC `rustup` + `cargo +nightly install <crate> --version <pinned_ver>` when
-          `CrateDistribution::OpenSource`).
-    - [x] `run_upgrade_cli_arg_interceptor()`: Helper for standalone `--upgrade` CLI
-          invocations.
-    - [x] Listens for cooperative `tokio::signal::ctrl_c()`.
+- [x] `download_stream.rs`:
+    - [x] Streams binary archive from `github.com/r3bl-org/r3bl-binaries`, verifies
+          SHA-256 checksum, updates `Spinner`, and checks for `tokio::signal::ctrl_c()`.
+- [x] `binary_swap.rs`:
+    - [x] Unpacks `.tar.gz` and performs atomic in-place binary swapping via `self_replace`
+          on current executable and updates any sibling binaries.
+- [x] `ui_prompt.rs`:
+    - [x] Interactive exit prompt (`choose`) for `UpdateBehavior::PromptToUpgrade`.
+- [x] `upgrade_entry_point.rs`:
+    - [x] Public CLI and shutdown entry points: `run_upgrade` / `_sync`,
+          `handle_upgrade_at_exit` / `_sync`, and `run_upgrade_cli_arg_interceptor` / `_sync`.
 - [x] `ui_strings.rs`:
     - [x] Parameterized messages for GitHub download progress (% + MB), fallback
           transition notices, source compilation progress, success, and failure/retry
@@ -445,7 +455,7 @@ inspection):
 
 - [ ] **Pure `std::thread` Compatibility**: `rust-analyzer-mcp-server` intentionally runs
       without a global `#[tokio::main]` async runtime on its MCP/LSP bridge threads. It
-      uses the synchronous entry points (`start_background_version_check_sync`,
+      uses the runtime-agnostic entry points (`start_background_version_check`,
       `handle_upgrade_at_exit_sync`, `run_upgrade_sync`) which isolate async HTTP/PTY I/O
       inside a dedicated background/on-demand thread.
 - [ ] Add `--upgrade` and `--update-behavior` CLI arguments to `CLIArg` in
@@ -599,25 +609,26 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       on the nightly compiler` plus `#![feature]` rejections.
     - Require `rustup` on `$PATH` as the single prerequisite for open-source source
       fallback.
-- [ ] Collapse `UpgradeSource` from 3 variants to 2:
+- [x] Collapse `UpgradeSource` from 3 variants to 2:
     - `GithubReleaseArtifact { archive_url, sha256_url, pinned_version }`
     - `BuildFromSourceRustup { pinned_version }`
     - Remove `BuildFromSourceCargo` and update all matching sites across
       `strategy_resolver.rs`, `run_upgrade.rs`, `upgrade_types.rs`, and tests.
     - Update `Cross-Platform Test Matrix` Scenario 3 and 7 to remove `BuildFromSourceCargo`
       and verify missing `rustup` cleanly yields `Err(NoViableUpgradeSource)`.
-- [ ] Rename and decompose monolithic `run_upgrade.rs` (~1,000 lines) into focused, cohesive modules:
-    - `upgrade_entry_point.rs`: Public consumer entry points (`handle_upgrade_at_exit` / `_sync`, `run_upgrade_cli_arg_interceptor` / `_sync`, `run_upgrade_sync`).
+- [x] Rename and decompose monolithic `run_upgrade.rs` (~1,000 lines) into focused, cohesive modules:
+    - `upgrade_entry_point.rs`: Public consumer entry points (`handle_upgrade_at_exit` / `_sync`, `run_upgrade_cli_arg_interceptor` / `_sync`, `run_upgrade` / `_sync`).
     - `download_stream.rs`: Archive download stream & SHA256 checksum verification pipeline.
     - `binary_swap.rs`: In-place binary swapping (`self_replace`) & sibling executable management.
     - `ui_prompt.rs`: Interactive user prompts & exit confirmation dialogs.
-- [ ] Unify and streamline sync vs async execution:
-    - Standardize runtime bridging (avoid redundant thread/runtime boilerplate across
-      wrappers).
+- [x] Natural sync vs async API separation:
+    - Async binaries (`giti`, `edi`) use async APIs: `start_background_version_check`, `run_upgrade`, `run_upgrade_cli_arg_interceptor`, `handle_upgrade_at_exit`.
+    - Sync binaries (`env-source`, `rust-analyzer-mcp-server`) use dedicated `_sync` APIs with lightweight private `current_thread` runtimes on the calling thread: `start_background_version_check_sync`, `run_upgrade_sync`, `run_upgrade_cli_arg_interceptor_sync`, `handle_upgrade_at_exit_sync`.
+    - Zero runtime bridge complexity: no dynamic `runtime_flavor` checks, no `block_in_place`, and no nested runtime issues.
 - [ ] Transition from loose global state (`CACHED_CRATE_METADATA`, `UPGRADE_CHECK_STATE`)
       toward an explicit, typed lifecycle pipeline (`Unchecked` -> `Checked` -> `Resolved`
       -> `Applied`).
-- [ ] Update documentation, Unicode decision tree, and all unit tests in
+- [x] Update documentation, Unicode decision tree, and all unit tests in
       `tui/src/core/script/upgrade/` to reflect the unified architecture.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
@@ -626,7 +637,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [ ] `tui/src/core/script/upgrade/versions_manifest.rs`
     - [ ] `tui/src/core/script/upgrade/target_triple.rs`
     - [ ] `tui/src/core/script/upgrade/github_release.rs`
-    - [ ] `tui/src/core/script/upgrade/strategy_resolver.rs`
+    - [ ] `tui/src/core/script/upgrade/upgrade_source.rs`
     - [ ] `tui/src/core/script/upgrade/source_build.rs`
     - [ ] `tui/src/core/script/upgrade/version_check.rs`
     - [ ] `tui/src/core/script/upgrade/upgrade_entry_point.rs`
@@ -715,7 +726,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `rust-analyzer-mcp-server/src/cli_arg.rs`.
 - [ ] Intercept `--upgrade` at startup in `rust-analyzer-mcp-server/src/main.rs` via
       `run_upgrade_sync()`.
-- [ ] Integrate background check (`start_background_version_check_sync`) and shutdown
+- [ ] Integrate background check (`start_background_version_check`) and shutdown
       upgrade handler (`handle_upgrade_at_exit_sync` with
       `SelfBinaryUpgradeConfig::new("r3bl-rust-analyzer-mcp-server", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`).
 - [ ] Ensure `--update-behavior` explicitly controls shutdown behavior without inspecting

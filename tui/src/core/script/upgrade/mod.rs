@@ -66,8 +66,8 @@
 //! 1. Normal execution (startup check + exit handler, silent failure):
 //!    - When the binary starts, a check is initiated to determine whether an update is
 //!      available. The result of checking is stored in a shared memory location, so that
-//!      it can be at the time of exit to perform the actual upgrade if needed.
-//!    - There are 2 entry points for this one sync and another async, since this engine
+//!      it can be read at the time of exit to perform the actual upgrade if needed.
+//!    - There are 2 entry points for this (one sync and another async), since this engine
 //!      is agnostic to the binary's async or sync nature:
 //!        - **Async**: spawns [`tokio::task`] ([`start_background_version_check`]) in
 //!          async binaries.
@@ -106,9 +106,10 @@
 //! current_version`), it must decide *how* to perform the upgrade before downloading or
 //! running build commands. This decision resolves into an [`UpgradeSource`].
 //!
-//! - **Who resolves it**: Evaluated by [`resolve_upgrade_strategy`] (and its pure
-//!   decision function [`resolve_upgrade_strategy_pure`]). If a binary download fails
-//!   mid-stream, [`resolve_source_fallback`] evaluates fallback viability.
+//! - **Who resolves it**: Evaluated by [`UpgradeSource::try_resolve`] (and its pure
+//!   decision function [`pure_evaluator::evaluate_upgrade_source_pure`]). If a binary
+//!   download fails mid-stream, [`UpgradeSource::try_fallback_to_source`] evaluates
+//!   fallback viability.
 //! - **Where it is called**: Invoked by [`execute_upgrade_with_metadata`] immediately
 //!   before dispatching to download or compilation routines.
 //! - **When it runs**: Right after manifest evaluation confirms that a newer version is
@@ -132,17 +133,17 @@
 //! │ GithubReleaseArtifact     │    └───┬───────────────┬───┘
 //! └───────────────────────────┘        │ Closed        │ Open
 //!                                      ▼               ▼
-//!                              ┌───────────────┐ ┌───────────────┐
-//!                              │ Err(NoViable  │ │ Check $PATH   │
-//!                              │ UpgradeSource)│ │ rustup/cargo  │
-//!                              └───────────────┘ └───┬───────┬───┘
-//!                                       rustup found │       │ cargo only
-//!                                                    ▼       ▼
-//!                                      ┌─────────────┐ ┌─────────────┐
-//!                                      │UpgradeSource│ │UpgradeSource│
-//!                                      │::BuildFrom  │ │::BuildFrom  │
-//!                                      │SourceRustup │ │SourceCargo  │
-//!                                      └─────────────┘ └─────────────┘
+//!                              ┌───────────────┐ ┌──────────────────┐
+//!                              │ Err(NoViable  │ │ Check $PATH for  │
+//!                              │ UpgradeSource)│ │ rustup           │
+//!                              └───────────────┘ └───┬──────────┬───┘
+//!                                        rustup found│          │ missing
+//!                                                    ▼          ▼
+//!                                      ┌─────────────┐   ┌───────────────┐
+//!                                      │UpgradeSource│   │ Err(NoViable  │
+//!                                      │::BuildFrom  │   │ UpgradeSource)│
+//!                                      │SourceRustup │   └───────────────┘
+//!                                      └─────────────┘
 //! ```
 //!
 //! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
@@ -156,11 +157,9 @@
 //! [`handle_upgrade_at_exit_sync`]: crate::core::script::upgrade::handle_upgrade_at_exit_sync
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::upgrade::pure_evaluator::evaluate_upgrade_source_pure
 //! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-//! [`resolve_source_fallback`]: crate::core::script::upgrade::resolve_source_fallback
-//! [`resolve_upgrade_strategy_pure`]: crate::core::script::upgrade::resolve_upgrade_strategy_pure
-//! [`resolve_upgrade_strategy`]: crate::core::script::upgrade::resolve_upgrade_strategy
 //! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor_sync
 //! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor
 //! [`run_upgrade_sync`]: crate::core::script::upgrade::run_upgrade_sync
@@ -172,6 +171,8 @@
 //! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
 //! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 //! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
+//! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::upgrade::UpgradeSource::try_fallback_to_source
+//! [`UpgradeSource::try_resolve`]: crate::core::script::upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::core::script::upgrade::UpgradeSource
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
 //! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc
@@ -179,24 +180,31 @@
 //! [JSONC parser]: mod@jsonc_parser
 
 // Private submodules.
+mod binary_swap;
 mod constants;
+mod download_stream;
 mod github_release;
-mod run_upgrade;
 mod source_build;
-mod strategy_resolver;
 mod target_triple;
+mod ui_prompt;
 mod ui_strings;
-mod upgrade_types;
+mod upgrade_config;
+mod upgrade_entry_point;
+mod upgrade_source;
 mod version_check;
 mod versions_manifest;
 
 // Public barrel re-exports.
+pub use binary_swap::*;
 pub use constants::*;
+pub use download_stream::*;
 pub use github_release::*;
-pub use run_upgrade::*;
 pub use source_build::*;
-pub use strategy_resolver::*;
 pub use target_triple::*;
-pub use upgrade_types::*;
+pub use ui_prompt::*;
+pub use ui_strings::*;
+pub use upgrade_config::*;
+pub use upgrade_entry_point::*;
+pub use upgrade_source::*;
 pub use version_check::*;
 pub use versions_manifest::*;

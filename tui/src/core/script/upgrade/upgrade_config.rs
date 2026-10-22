@@ -1,10 +1,9 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Core types, configuration, and state definitions for the unified binary self-upgrade
-//! engine. See [`SelfBinaryUpgradeConfig`], [`UpgradeSource`], [`UpdateBehavior`],
-//! [`UserFeedbackChannel`], and [`CrateDistribution`] for details.
+//! Configuration and behavioral settings for the unified binary self-upgrade engine.
+//! See [`SelfBinaryUpgradeConfig`], [`UpdateBehavior`], and [`UserFeedbackChannel`].
 
-use super::{CrateDistribution, CrateName, CrateVersion};
+use super::{CrateName, CrateVersion};
 
 /// Configuration passed to the self-upgrade engine. This is how a binary tells the
 /// upgrade engine how it should do the update & upgrade.
@@ -69,52 +68,6 @@ mod impl_self_binary_upgrade_config {
             }
         }
     }
-}
-
-/// Resolved execution source for performing the upgrade.
-///
-/// "Resolved" signifies that the upgrade engine has evaluated runtime environment
-/// conditions (host target architecture, remote asset availability on GitHub, crate
-/// distribution model, and local Rust toolchain availability on `$PATH`) to determine
-/// the exact execution path before initiating downloads or builds.
-///
-/// Evaluated by [`resolve_upgrade_strategy`] prior to calling
-/// [`execute_upgrade_with_metadata`].
-///
-/// [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::execute_upgrade_with_metadata
-/// [`resolve_upgrade_strategy`]: crate::core::script::upgrade::resolve_upgrade_strategy
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UpgradeSource {
-    /// Pre-compiled binary archive hosted on [`R3BL_BINARIES_RELEASE_BASE_URL`].
-    ///
-    /// [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
-    GithubReleaseArtifact {
-        /// Direct download URL for the `.tar.gz` archive.
-        archive_url: String,
-
-        /// Direct download URL for the `.sha256` checksum file.
-        sha256_url: String,
-
-        /// Pinned target version string from `versions.jsonc`.
-        pinned_version: CrateVersion,
-    },
-
-    /// Build from `crates.io` source using `rustup toolchain install nightly --force`
-    /// followed by `cargo +nightly install <crate> --version <pinned_version>`.
-    /// Only eligible when [`CrateDistribution::OpenSource`].
-    BuildFromSourceRustup {
-        /// Pinned target version string from `versions.jsonc`.
-        pinned_version: CrateVersion,
-    },
-
-    /// Build from `crates.io` source directly using
-    /// `cargo +nightly install <crate> --version <pinned_version>` (when `cargo` is on
-    /// `$PATH` without `rustup`).
-    /// Only eligible when [`CrateDistribution::OpenSource`].
-    BuildFromSourceCargo {
-        /// Pinned target version string from `versions.jsonc`.
-        pinned_version: CrateVersion,
-    },
 }
 
 /// Behavior governing background update checks and application exit handling.
@@ -203,120 +156,10 @@ mod impl_user_feedback_channel {
     }
 }
 
-/// Atomic state representation of the background version check.
-///
-/// Stored inside an [`AtomicU8`] and manipulated via [`AtomicU8Ext`].
-///
-/// [`AtomicU8`]: std::sync::atomic::AtomicU8
-/// [`AtomicU8Ext`]: crate::AtomicU8Ext
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum UpgradeCheckResult {
-    /// Background version check has not yet started.
-    NotChecked = 0,
-
-    /// Background version check is currently in flight.
-    Checking = 1,
-
-    /// Local binary version is greater than or equal to the remote `versions.jsonc`
-    /// version.
-    UpToDate = 2,
-
-    /// Remote `versions.jsonc` version is strictly greater than local binary version.
-    UpgradeAvailable = 3,
-
-    /// Network or parsing error occurred while checking `versions.jsonc`.
-    FailedCheck = 4,
-}
-
-mod impl_upgrade_check_result {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<u8> for UpgradeCheckResult {
-        fn from(value: u8) -> Self {
-            match value {
-                0 => Self::NotChecked,
-                1 => Self::Checking,
-                2 => Self::UpToDate,
-                3 => Self::UpgradeAvailable,
-                _ => Self::FailedCheck,
-            }
-        }
-    }
-
-    impl From<UpgradeCheckResult> for u8 {
-        fn from(value: UpgradeCheckResult) -> Self {
-            match value {
-                UpgradeCheckResult::NotChecked => 0,
-                UpgradeCheckResult::Checking => 1,
-                UpgradeCheckResult::UpToDate => 2,
-                UpgradeCheckResult::UpgradeAvailable => 3,
-                UpgradeCheckResult::FailedCheck => 4,
-            }
-        }
-    }
-}
-
-/// Errors that can occur during strategy resolution or upgrade execution.
-#[derive(Debug, thiserror::Error)]
-pub enum UpgradeError {
-    /// Neither GitHub release binaries nor a viable local source build toolchain are
-    /// available.
-    #[error(
-        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
-    )]
-    NoViableUpgradeSource {
-        crate_name: CrateName,
-        crate_distribution: CrateDistribution,
-        reason: String,
-    },
-
-    /// Host platform or architecture does not have pre-compiled binaries and cannot fall
-    /// back.
-    #[error("Unsupported host target platform: {0}")]
-    UnsupportedPlatform(String),
-
-    /// SHA-256 checksum mismatch on downloaded archive.
-    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
-    ChecksumMismatch { expected: String, actual: String },
-
-    /// User canceled the operation via `Ctrl+C`.
-    #[error("Upgrade cancelled by user")]
-    Cancelled,
-
-    /// General I/O, network, or archive error.
-    #[error("{0}")]
-    Other(String),
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::assert_eq2;
-
-    #[test]
-    fn test_upgrade_check_result_roundtrip() {
-        let variants = [
-            UpgradeCheckResult::NotChecked,
-            UpgradeCheckResult::Checking,
-            UpgradeCheckResult::UpToDate,
-            UpgradeCheckResult::UpgradeAvailable,
-            UpgradeCheckResult::FailedCheck,
-        ];
-
-        for variant in variants {
-            let byte: u8 = variant.into();
-            let converted = UpgradeCheckResult::from(byte);
-            assert_eq2!(variant, converted);
-        }
-
-        // Unknown u8 maps to FailedCheck.
-        assert_eq2!(
-            UpgradeCheckResult::from(99),
-            UpgradeCheckResult::FailedCheck
-        );
-    }
 
     #[test]
     fn test_self_binary_upgrade_config_behavior_resolution() {
