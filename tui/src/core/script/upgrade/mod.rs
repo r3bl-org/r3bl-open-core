@@ -84,7 +84,7 @@
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
-//!      the state as [`UpgradeCheckStatus::FailedCheck`].
+//!      the state as [`UpgradeCheckStatus::CheckFailed`].
 //!    - Users running routine operations (such as `CLI` commands or `MCP` server
 //!      sessions) when the server is down or unreachable are never interrupted with error
 //!      dialogs or failed exit codes.
@@ -169,7 +169,7 @@
 //! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
 //! [`UpgradeCheckCache::get`]: crate::core::script::upgrade::UpgradeCheckCache::get
 //! [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
-//! [`UpgradeCheckStatus::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckStatus::FailedCheck
+//! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::upgrade::UpgradeCheckStatus::CheckFailed
 //! [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
 //! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::upgrade::UpgradeSource::try_fallback_to_source
 //! [`UpgradeSource::try_resolve`]: crate::core::script::upgrade::UpgradeSource::try_resolve

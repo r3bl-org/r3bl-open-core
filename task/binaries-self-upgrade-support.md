@@ -332,8 +332,8 @@ inspection):
           `--update-behavior <behavior>`).
     - [x] `UserFeedbackChannel`: `Stdout` (default CLI/TUI), `Stderr` (MCP server and
           stdout-piped tools like `env-source`), and `Quiet` (structured tracing only).
-    - [x] `UpgradeCheckState`: `NotChecked`, `Checking`, `UpToDate(CrateVersionMetadata)`,
-          `UpgradeAvailable(CrateVersionMetadata)`, `FailedCheck`.
+    - [x] `UpgradeCheckStatus`: `NotChecked`, `Checking`, `UpToDate(CrateVersionMetadata)`,
+          `UpgradeAvailable(CrateVersionMetadata)`, `CheckFailed`.
     - [x] `UpgradeError`: Error types for strategy resolution, checksum mismatch, platform
           support, and user cancellation.
 - [x] `target_triple.rs`:
@@ -364,9 +364,9 @@ inspection):
           `UnsupportedPlatform`, `ChecksumMismatch`, `Cancelled`, `Other`) co-located with
           public entry points.
 - [x] `version_check.rs`:
-    - [x] `UpgradeCheckState`: Unified status enum (`NotChecked`, `Checking`,
-          `UpToDate(metadata)`, `UpgradeAvailable(metadata)`, `FailedCheck`) co-located with
-          `version_check_cache`.
+    - [x] `UpgradeCheckStatus`: Unified status enum (`NotChecked`, `Checking`,
+          `UpToDate(metadata)`, `UpgradeAvailable(metadata)`, `CheckFailed`) co-located with
+          `UpgradeCheckCache`.
     - [x] `try_get_crate_metadata_from_r3bl_versions_json(crate_name)`: Fetches
           `https://r3bl.com/versions.jsonc` and parses `CrateVersionMetadata` via
           `VersionsManifest::try_parse_jsonc`.
@@ -628,14 +628,14 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [x] Consolidate bifurcated global state (`UPGRADE_CHECK_STATE` and `CACHED_CRATE_METADATA`)
       into a unified `UpgradeCheckState` enum in dedicated `upgrade_check_state.rs` to
       make illegal states unrepresentable:
-    - [x] Define `UpgradeCheckState` enum with variants `NotChecked`, `Checking`,
+    - [x] Define `UpgradeCheckStatus` enum with variants `NotChecked`, `Checking`,
           `UpToDate(CrateVersionMetadata)`, `UpgradeAvailable(CrateVersionMetadata)`,
-          `FailedCheck`.
+          `CheckFailed`.
     - [x] Replace `UPGRADE_CHECK_STATE: AtomicU8` and `CACHED_CRATE_METADATA: ScopedMutex<Option<...>>`
-          with a single static `CACHED_UPGRADE_STATE: LazyLock<ScopedMutex<UpgradeCheckState, { PanicOnSpecificLockNesting }>>`
-          initialized to `UpgradeCheckState::NotChecked`.
+          with a single static `SINGLETON: LazyLock<ScopedMutex<UpgradeCheckCache, { PanicOnSpecificLockNesting }>>`
+          initialized to `UpgradeCheckCache::default()` (`UpgradeCheckStatus::NotChecked`).
     - [x] Update `check_engine::check_version_against_manifest` to atomically write the
-          resolved state (`UpToDate(metadata)` or `UpgradeAvailable(metadata)`) or `FailedCheck`.
+          resolved state (`UpToDate(metadata)` or `UpgradeAvailable(metadata)`) or `CheckFailed`.
     - [x] Update consumer call sites in `upgrade_entry_point.rs`:
         - `handle_upgrade_at_exit`: pattern match `UpgradeCheckState::UpgradeAvailable(metadata)` directly.
         - `handle_upgrade_at_exit_sync`: check `is_upgrade_available()`.

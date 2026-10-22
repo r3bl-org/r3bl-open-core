@@ -24,7 +24,7 @@
 //!    └── Atomically updates UpgradeCheckCache:
 //!        ├── UpgradeAvailable(metadata) (if strictly newer)
 //!        ├── UpToDate(metadata)         (if equal or ahead)
-//!        └── FailedCheck                (if network or parse error)
+//!        └── CheckFailed                (if network or parse error)
 //!
 //! 3. Binary Exit (0 ms in-memory read):
 //!    handle_upgrade_at_exit()
@@ -93,7 +93,7 @@ pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
             .enable_all()
             .build()
         else {
-            UpgradeCheckCache::set(UpgradeCheckStatus::FailedCheck);
+            UpgradeCheckCache::set(UpgradeCheckStatus::CheckFailed);
             return;
         };
         rt.block_on(async move {
@@ -164,8 +164,8 @@ pub mod check_engine {
                         error = ?err
                     );
                 });
-                UpgradeCheckCache::set(UpgradeCheckStatus::FailedCheck);
-                UpgradeCheckStatus::FailedCheck
+                UpgradeCheckCache::set(UpgradeCheckStatus::CheckFailed);
+                UpgradeCheckStatus::CheckFailed
             }
         }
     }

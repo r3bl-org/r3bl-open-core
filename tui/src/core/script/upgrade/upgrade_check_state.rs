@@ -20,7 +20,7 @@
 //!    └── Atomically updates UpgradeCheckCache:
 //!        ├── UpgradeAvailable(metadata) (if strictly newer)
 //!        ├── UpToDate(metadata)         (if equal or ahead)
-//!        └── FailedCheck                (if network or parse error)
+//!        └── CheckFailed                (if network or parse error)
 //!
 //! 3. Binary Exit (0 ms in-memory read):
 //!    handle_upgrade_at_exit()
@@ -53,7 +53,7 @@ use std::sync::LazyLock;
 /// Operates as a process-wide in-memory singleton backed by a static [`ScopedMutex`].
 /// Callers interact exclusively through associated functions ([`UpgradeCheckCache::get`],
 /// [`UpgradeCheckCache::set`], [`UpgradeCheckCache::is_upgrade_available`], and
-/// [`UpgradeCheckCache::get_cached_crate_metadata`]) without managing instances directly.
+/// [`UpgradeCheckCache::try_get_crate_metadata`]) without managing instances directly.
 ///
 /// # Purpose
 ///
@@ -81,10 +81,10 @@ use std::sync::LazyLock;
 /// [`Readline`]: crate::Readline
 /// [`ScopedMutex`]: crate::ScopedMutex
 /// [`SPECIFIC`]: crate::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
-/// [`UpgradeCheckCache::get_cached_crate_metadata`]: crate::core::script::upgrade::UpgradeCheckCache::get_cached_crate_metadata
 /// [`UpgradeCheckCache::get`]: crate::core::script::upgrade::UpgradeCheckCache::get
 /// [`UpgradeCheckCache::is_upgrade_available`]: crate::core::script::upgrade::UpgradeCheckCache::is_upgrade_available
 /// [`UpgradeCheckCache::set`]: crate::core::script::upgrade::UpgradeCheckCache::set
+/// [`UpgradeCheckCache::try_get_crate_metadata`]: crate::core::script::upgrade::UpgradeCheckCache::try_get_crate_metadata
 /// [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct UpgradeCheckCache {
@@ -146,8 +146,14 @@ mod impl_upgrade_check_cache {
         /// [`UpgradeCheckStatus::UpgradeAvailable`]: crate::core::script::upgrade::UpgradeCheckStatus::UpgradeAvailable
         /// [`UpgradeCheckStatus::UpToDate`]: crate::core::script::upgrade::UpgradeCheckStatus::UpToDate
         #[must_use]
-        pub fn get_cached_crate_metadata() -> Option<CrateVersionMetadata> {
-            Self::get().crate_metadata().cloned()
+        pub fn try_get_crate_metadata() -> Option<CrateVersionMetadata> {
+            match Self::get() {
+                UpgradeCheckStatus::UpToDate(meta)
+                | UpgradeCheckStatus::UpgradeAvailable(meta) => Some(meta),
+                UpgradeCheckStatus::NotChecked
+                | UpgradeCheckStatus::Checking
+                | UpgradeCheckStatus::CheckFailed => None,
+            }
         }
     }
 }
@@ -189,20 +195,7 @@ pub enum UpgradeCheckStatus {
     /// Network or parsing error occurred while querying [`R3BL_VERSIONS_JSON_URL`].
     ///
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-    FailedCheck,
-}
-
-impl UpgradeCheckStatus {
-    /// Returns a reference to the [`CrateVersionMetadata`] if present in this status.
-    ///
-    /// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
-    #[must_use]
-    pub fn crate_metadata(&self) -> Option<&CrateVersionMetadata> {
-        match self {
-            Self::UpToDate(meta) | Self::UpgradeAvailable(meta) => Some(meta),
-            Self::NotChecked | Self::Checking | Self::FailedCheck => None,
-        }
-    }
+    CheckFailed,
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -232,13 +225,13 @@ mod tests {
         UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
         assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked);
         assert!(!UpgradeCheckCache::is_upgrade_available());
-        assert!(UpgradeCheckCache::get_cached_crate_metadata().is_none());
+        assert!(UpgradeCheckCache::try_get_crate_metadata().is_none());
 
         // In-flight
         UpgradeCheckCache::set(UpgradeCheckStatus::Checking);
         assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::Checking);
         assert!(!UpgradeCheckCache::is_upgrade_available());
-        assert!(UpgradeCheckCache::get_cached_crate_metadata().is_none());
+        assert!(UpgradeCheckCache::try_get_crate_metadata().is_none());
 
         // Up to date
         let meta_up_to_date = make_test_metadata("0.1.0");
@@ -249,7 +242,7 @@ mod tests {
         );
         assert!(!UpgradeCheckCache::is_upgrade_available());
         assert_eq2!(
-            UpgradeCheckCache::get_cached_crate_metadata(),
+            UpgradeCheckCache::try_get_crate_metadata(),
             Some(meta_up_to_date.clone())
         );
 
@@ -264,30 +257,14 @@ mod tests {
         );
         assert!(UpgradeCheckCache::is_upgrade_available());
         assert_eq2!(
-            UpgradeCheckCache::get_cached_crate_metadata(),
+            UpgradeCheckCache::try_get_crate_metadata(),
             Some(meta_upgrade.clone())
         );
 
         // Failed check
-        UpgradeCheckCache::set(UpgradeCheckStatus::FailedCheck);
-        assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::FailedCheck);
+        UpgradeCheckCache::set(UpgradeCheckStatus::CheckFailed);
+        assert_eq2!(UpgradeCheckCache::get(), UpgradeCheckStatus::CheckFailed);
         assert!(!UpgradeCheckCache::is_upgrade_available());
-        assert!(UpgradeCheckCache::get_cached_crate_metadata().is_none());
-    }
-
-    #[test]
-    fn test_upgrade_check_status_crate_metadata() {
-        let meta = make_test_metadata("1.0.0");
-        let not_checked = UpgradeCheckStatus::NotChecked;
-        let checking = UpgradeCheckStatus::Checking;
-        let up_to_date = UpgradeCheckStatus::UpToDate(meta.clone());
-        let upgrade_available = UpgradeCheckStatus::UpgradeAvailable(meta.clone());
-        let failed = UpgradeCheckStatus::FailedCheck;
-
-        assert!(not_checked.crate_metadata().is_none());
-        assert!(checking.crate_metadata().is_none());
-        assert_eq2!(up_to_date.crate_metadata(), Some(&meta));
-        assert_eq2!(upgrade_available.crate_metadata(), Some(&meta));
-        assert!(failed.crate_metadata().is_none());
+        assert!(UpgradeCheckCache::try_get_crate_metadata().is_none());
     }
 }

@@ -591,7 +591,7 @@ pub mod metadata_resolver {
     pub async fn resolve_metadata_for_upgrade(
         config: &SelfBinaryUpgradeConfig,
     ) -> Result<CrateVersionMetadata, UpgradeError> {
-        if let Some(meta) = UpgradeCheckCache::get_cached_crate_metadata() {
+        if let Some(meta) = UpgradeCheckCache::try_get_crate_metadata() {
             return Ok(meta);
         }
         manifest_query::try_get_crate_metadata_from_r3bl_versions_json(
