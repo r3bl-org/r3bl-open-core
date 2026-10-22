@@ -30,11 +30,12 @@ mod package_manager;
 mod permissions;
 mod temp_dir;
 #[cfg(any(test, doc))]
-pub mod upgrade;
+pub mod auto_update;
 #[cfg(not(any(test, doc)))]
-mod upgrade;
+mod auto_update;
 
 // Re-export.
+pub use auto_update::*;
 pub use command_impl::*;
 pub use crates_api::*;
 pub use directory_change::*;
@@ -49,6 +50,5 @@ pub use http_client::*;
 pub use package_manager::*;
 pub use permissions::*;
 pub use temp_dir::*;
-pub use upgrade::*;
 
 pub const SCRIPT_MOD_DEBUG: bool = true;

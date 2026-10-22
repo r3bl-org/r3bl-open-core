@@ -146,68 +146,48 @@
 //!                                      └─────────────┘
 //! ```
 //!
-//! [`check_version_against_manifest`]: crate::core::script::upgrade::check_engine::check_version_against_manifest
-//! [`CrateDistribution::ClosedSource`]: crate::core::script::upgrade::CrateDistribution::ClosedSource
-//! [`CrateDistribution::OpenSource`]: crate::core::script::upgrade::CrateDistribution::OpenSource
-//! [`CrateDistribution`]: crate::core::script::upgrade::CrateDistribution
+//! [`check_version_against_manifest`]: crate::core::script::auto_update::check_version_against_manifest
+//! [`CrateDistribution::ClosedSource`]: crate::core::script::auto_update::CrateDistribution::ClosedSource
+//! [`CrateDistribution::OpenSource`]: crate::core::script::auto_update::CrateDistribution::OpenSource
+//! [`CrateDistribution`]: crate::core::script::auto_update::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
-//! [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::upgrade_execution::execute_upgrade_with_metadata
-//! [`handle_upgrade_at_exit_sync`]: crate::core::script::upgrade::handle_upgrade_at_exit_sync
-//! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
+//! [`execute_upgrade_with_metadata`]: crate::core::script::auto_update::execute_upgrade_with_metadata
+//! [`handle_upgrade_at_exit_sync`]: crate::core::script::auto_update::handle_upgrade_at_exit_sync
+//! [`handle_upgrade_at_exit`]: crate::core::script::auto_update::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::upgrade::pure_evaluator::evaluate_upgrade_source_pure
-//! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
-//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
-//! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor_sync
-//! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor
-//! [`run_upgrade_sync`]: crate::core::script::upgrade::run_upgrade_sync
+//! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::auto_update::pure_evaluator::evaluate_upgrade_source_pure
+//! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::auto_update::R3BL_BINARIES_RELEASE_BASE_URL
+//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+//! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::auto_update::run_upgrade_cli_arg_interceptor_sync
+//! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::auto_update::run_upgrade_cli_arg_interceptor
+//! [`run_upgrade_sync`]: crate::core::script::auto_update::run_upgrade_sync
 //! [`SCRIPT_MOD_DEBUG`]: crate::core::script::SCRIPT_MOD_DEBUG
-//! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::upgrade::SelfBinaryUpgradeConfig::current_version
+//! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::auto_update::SelfBinaryUpgradeConfig::current_version
 //! [`SemVer`]: https://semver.org/
-//! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
-//! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
+//! [`start_background_version_check_sync`]: crate::core::script::auto_update::start_background_version_check_sync
+//! [`start_background_version_check`]: crate::core::script::auto_update::start_background_version_check
 //! [`stderr`]: std::io::stderr
-//! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
-//! [`UpgradeCheckCache::get`]: crate::core::script::upgrade::UpgradeCheckCache::get
-//! [`UpgradeCheckCache`]: crate::core::script::upgrade::UpgradeCheckCache
-//! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::upgrade::UpgradeCheckStatus::CheckFailed
-//! [`UpgradeCheckStatus`]: crate::core::script::upgrade::UpgradeCheckStatus
-//! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::upgrade::UpgradeSource::try_fallback_to_source
-//! [`UpgradeSource::try_resolve`]: crate::core::script::upgrade::UpgradeSource::try_resolve
-//! [`UpgradeSource`]: crate::core::script::upgrade::UpgradeSource
-//! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
-//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc
-//! [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest
+//! [`UpdateBehavior`]: crate::core::script::auto_update::UpdateBehavior
+//! [`UpgradeCheckCache::get`]: crate::core::script::auto_update::UpgradeCheckCache::get
+//! [`UpgradeCheckCache`]: crate::core::script::auto_update::UpgradeCheckCache
+//! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::auto_update::UpgradeCheckStatus::CheckFailed
+//! [`UpgradeCheckStatus`]: crate::core::script::auto_update::UpgradeCheckStatus
+//! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::auto_update::UpgradeSource::try_fallback_to_source
+//! [`UpgradeSource::try_resolve`]: crate::core::script::auto_update::UpgradeSource::try_resolve
+//! [`UpgradeSource`]: crate::core::script::auto_update::UpgradeSource
+//! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::auto_update::VersionsManifest::try_parse_jsonc
+//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::auto_update::VersionsManifest::try_update_crate_in_jsonc
+//! [`VersionsManifest`]: crate::core::script::auto_update::VersionsManifest
 //! [JSONC parser]: mod@jsonc_parser
 
 // Private submodules.
-mod binary_swap;
-mod check_engine;
 mod constants;
-mod download_stream;
-mod github_release;
-mod source_build;
-mod target_triple;
-mod ui_prompt;
-mod ui_strings;
-mod upgrade_check_state;
-mod upgrade_config;
-mod upgrade_entry_point;
-mod upgrade_source;
-mod versions_manifest;
+mod entry_point;
+mod update;
+mod upgrade;
 
 // Public barrel re-exports.
-pub use binary_swap::*;
-pub use check_engine::*;
 pub use constants::*;
-pub use download_stream::*;
-pub use github_release::*;
-pub use source_build::*;
-pub use target_triple::*;
-pub use ui_prompt::*;
-pub use ui_strings::*;
-pub use upgrade_check_state::*;
-pub use upgrade_config::*;
-pub use upgrade_entry_point::*;
-pub use upgrade_source::*;
-pub use versions_manifest::*;
+pub use entry_point::*;
+pub use update::*;
+pub use upgrade::*;

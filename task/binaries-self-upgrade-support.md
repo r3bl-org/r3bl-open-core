@@ -45,11 +45,11 @@ unified, hybrid distribution and self-upgrade architecture.
 > **Architecture & Schema Reference**:
 >
 > - **Code Schema**: [`VersionsManifest`] in
->   `tui/src/core/script/upgrade/versions_manifest.rs` defines the Rust schema, JSONC
+>   `tui/src/core/script/auto_update/update/manifest.rs` defines the Rust schema, JSONC
 >   parser (`VersionsManifest::try_parse_jsonc`), and comment-preserving CST updater
 >   (`VersionsManifest::try_update_crate_in_jsonc`) for `https://r3bl.com/versions.jsonc`.
 > - **Architecture Specification**: This document is the technical specification for the
->   shared client-side upgrade engine (`r3bl_tui::core::script::upgrade`), centralized
+>   shared client-side upgrade engine (`r3bl_tui::core::script::auto_update`), centralized
 >   manifest schema (`https://r3bl.com/versions.jsonc`), and binary distribution
 >   repository (`https://github.com/r3bl-org/r3bl-binaries`).
 > - **Maintainer Release Pipeline (`r3bl-base`)**: The private release orchestrator
@@ -101,7 +101,7 @@ resilient source compilation for open-source crates:
 ### Version Manifest
 
 **`r3bl.com/versions.jsonc` (Schema: [`VersionsManifest`] in
-`tui/src/core/script/upgrade/versions_manifest.rs`)**: Background version checks and
+`tui/src/core/script/auto_update/update/manifest.rs`)**: Background version checks and
 bootstrap scripts query `https://r3bl.com/versions.jsonc` for version numbers and crate
 distribution—never `crates.io` or GitHub's rate-limited REST API.
 
@@ -297,7 +297,7 @@ inspection):
 ### 1. r3bl_tui
 
 **Shared Upgrade Engine**: The unified upgrade module is housed inside
-`r3bl_tui::core::script::upgrade`:
+`r3bl_tui::core::script::auto_update`:
 
 - [x] `constants.rs`:
     - [x] Centralized string constants: `toolchain_binaries` (`rustup`, `cargo`),
@@ -422,7 +422,7 @@ inspection):
     - [ ] `env-source --upgrade` runs the standalone upgrade flow on-demand via
           `run_upgrade_sync()` with `UserFeedbackChannel::Stderr`.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` (used by
-      `giti` and `edi`) to delegate to `r3bl_tui::core::script::upgrade::*` using
+      `giti` and `edi`) to delegate to `r3bl_tui::core::script::auto_update::*` using
       `UpdateBehavior::Auto` as the default (with `UpdateBehavior::PromptToUpgrade`
       available via `--update-behavior prompt-to-upgrade`) and
       `UserFeedbackChannel::Stdout`.
@@ -598,7 +598,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 
 ### Phase 2: Refactor & Unify Upgrade Engine Architecture
 
-**Refactoring to Simplify and Unify `r3bl_tui::core::script::upgrade`**:
+**Refactoring to Simplify and Unify `r3bl_tui::core::script::auto_update`**:
 
 - [x] Align on strategy scope:
     - Retain Nightly source build fallback since `tui` and `cmdr` strictly require
@@ -616,11 +616,10 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `strategy_resolver.rs`, `run_upgrade.rs`, `upgrade_types.rs`, and tests.
     - Update `Cross-Platform Test Matrix` Scenario 3 and 7 to remove `BuildFromSourceCargo`
       and verify missing `rustup` cleanly yields `Err(NoViableUpgradeSource)`.
-- [x] Rename and decompose monolithic `run_upgrade.rs` (~1,000 lines) into focused, cohesive modules:
-    - `upgrade_entry_point.rs`: Public consumer entry points (`handle_upgrade_at_exit` / `_sync`, `run_upgrade_cli_arg_interceptor` / `_sync`, `run_upgrade` / `_sync`).
-    - `download_stream.rs`: Archive download stream & SHA256 checksum verification pipeline.
-    - `binary_swap.rs`: In-place binary swapping (`self_replace`) & sibling executable management.
-    - `ui_prompt.rs`: Interactive user prompts & exit confirmation dialogs.
+- [x] Organize upgrade engine into cohesive domain submodules (`update/` and `upgrade/`):
+    - `entry_point.rs`: Public consumer entry points (`handle_upgrade_at_exit` / `_sync`, `run_upgrade_cli_arg_interceptor` / `_sync`, `run_upgrade` / `_sync`).
+    - `update/`: `config.rs`, `manifest.rs`, `state.rs`, `engine.rs` (checking/fetching metadata).
+    - `upgrade/`: `strategy.rs`, `download.rs`, `swap.rs`, `build.rs`, `release.rs`, `target.rs`, `prompt.rs`, `strings.rs` (asset download, verification, binary swap, compilation).
 - [x] Natural sync vs async API separation:
     - Async binaries (`giti`, `edi`) use async APIs: `start_background_version_check`, `run_upgrade`, `run_upgrade_cli_arg_interceptor`, `handle_upgrade_at_exit`.
     - Sync binaries (`env-source`, `rust-analyzer-mcp-server`) use dedicated `_sync` APIs with lightweight private `current_thread` runtimes on the calling thread: `start_background_version_check_sync`, `run_upgrade_sync`, `run_upgrade_cli_arg_interceptor_sync`, `handle_upgrade_at_exit_sync`.
@@ -637,29 +636,38 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [x] Update `check_engine::check_version_against_manifest` to atomically write the
           resolved state (`UpToDate(metadata)` or `UpgradeAvailable(metadata)`) or `CheckFailed`.
     - [x] Update consumer call sites in `upgrade_entry_point.rs`:
-        - `handle_upgrade_at_exit`: pattern match `UpgradeCheckState::UpgradeAvailable(metadata)` directly.
-        - `handle_upgrade_at_exit_sync`: check `is_upgrade_available()`.
-        - `ensure_version_checked_and_handle_at_exit`: check `UpgradeCheckState::NotChecked`.
+         - `handle_upgrade_at_exit`: pattern match `UpgradeCheckState::UpgradeAvailable(metadata)` directly.
+         - `handle_upgrade_at_exit_sync`: check `is_upgrade_available()`.
+         - `ensure_version_checked_and_handle_at_exit`: check `UpgradeCheckState::NotChecked`.
     - [x] Update documentation, ASCII lifecycle diagrams, and unit tests.
 - [x] Update documentation, Unicode decision tree, and all unit tests in
-      `tui/src/core/script/upgrade/` to reflect the unified architecture.
+      `tui/src/core/script/auto_update/` to reflect the unified architecture.
+- [x] Align module naming with package manager conventions (`upgrade` -> `auto_update`,
+      `check` -> `update`, `update` -> `upgrade`):
+    - [x] Rename subdirectories (`update/` -> `upgrade/`, `check/` -> `update/`,
+          `upgrade/` -> `auto_update/`).
+    - [x] Update `tui/src/core/script/mod.rs` (`pub mod auto_update;`) and barrel
+          re-exports.
+    - [x] Update internal module declarations and intra-doc links to `auto_update::*`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [x] `tui/src/core/script/upgrade/constants.rs`
-    - [ ] `tui/src/core/script/upgrade/upgrade_config.rs`
-    - [ ] `tui/src/core/script/upgrade/versions_manifest.rs`
-    - [ ] `tui/src/core/script/upgrade/target_triple.rs`
-    - [ ] `tui/src/core/script/upgrade/github_release.rs`
-    - [ ] `tui/src/core/script/upgrade/upgrade_source.rs`
-    - [ ] `tui/src/core/script/upgrade/source_build.rs`
-    - [ ] `tui/src/core/script/upgrade/upgrade_check_state.rs`
-    - [ ] `tui/src/core/script/upgrade/check_engine.rs`
-    - [ ] `tui/src/core/script/upgrade/upgrade_entry_point.rs`
-    - [ ] `tui/src/core/script/upgrade/download_stream.rs`
-    - [ ] `tui/src/core/script/upgrade/binary_swap.rs`
-    - [ ] `tui/src/core/script/upgrade/ui_prompt.rs`
-    - [ ] `tui/src/core/script/upgrade/ui_strings.rs`
-    - [ ] `tui/src/core/script/upgrade/mod.rs`
+    - [x] `tui/src/core/script/auto_update/constants.rs`
+    - [ ] `tui/src/core/script/auto_update/update/config.rs`
+    - [ ] `tui/src/core/script/auto_update/update/manifest.rs`
+    - [ ] `tui/src/core/script/auto_update/update/state.rs`
+    - [ ] `tui/src/core/script/auto_update/update/engine.rs`
+    - [ ] `tui/src/core/script/auto_update/update/mod.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/strategy.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/download.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/swap.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/build.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/release.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/target.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/prompt.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/strings.rs`
+    - [ ] `tui/src/core/script/auto_update/upgrade/mod.rs`
+    - [ ] `tui/src/core/script/auto_update/entry_point.rs`
+    - [ ] `tui/src/core/script/auto_update/mod.rs`
     - [ ] `tui/src/core/script/mod.rs`
 
 ### Phase 3: Bootstrap, Manifest & Release Script
@@ -695,7 +703,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] Intercept `--upgrade` at startup in `cmdr/src/bin/giti.rs`, `cmdr/src/bin/edi.rs`,
       and `cmdr/src/bin/env-source.rs` to run standalone upgrade and exit.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` to delegate to
-      `r3bl_tui::core::script::upgrade::*`: - `giti`:
+      `r3bl_tui::core::script::auto_update::*`: - `giti`:
       `SelfBinaryUpgradeConfig::new("r3bl-cmdr", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -
       `edi`:
       `SelfBinaryUpgradeConfig::new("r3bl-cmdr", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -

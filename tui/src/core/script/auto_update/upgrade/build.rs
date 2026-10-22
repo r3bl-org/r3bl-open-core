@@ -22,9 +22,9 @@
 //! [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
 //! [`OSC`]: crate::osc_codes::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
 
-use super::{rustup_progress, toolchain_bin, toolchain_cli_args, ui_strings};
+use super::{super::{rustup_progress, toolchain_bin, toolchain_cli_args}, ui_strings};
 use crate::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, TuiAvailability,
             core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                         PtySessionConfigToken}};

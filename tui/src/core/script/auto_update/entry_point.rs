@@ -17,9 +17,10 @@
 use super::{CrateDistribution, CrateName, CrateVersion, CrateVersionMetadata,
             SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeCheckCache,
             UpgradeCheckStatus, UpgradeSource, UserFeedbackChannel, archive, bin_names,
-            check_engine, download_and_verify_archive, extract_and_apply_archive,
-            manifest_query, prompt_user_to_upgrade, run_source_build_with_spinner,
-            ui_strings, upgrade_cli_args, upgrade_reasons, version_compare};
+            check_version_against_manifest, download_and_verify_archive,
+            extract_and_apply_archive, manifest_query, prompt_user_to_upgrade,
+            run_source_build_with_spinner, ui_strings, upgrade_cli_args, upgrade_reasons,
+            version_compare};
 use crate::{InlineString, OutputDevice, Spinner, SpinnerStyle, StdMutex,
             TuiAvailability, inline_string, ok, script::temp_dir::try_create_temp_dir};
 use std::{env::current_exe, io, sync::Arc, time::Duration};
@@ -38,14 +39,14 @@ use std::{env::current_exe, io, sync::Arc, time::Duration};
 /// function returns immediately without spawning any background task or making network
 /// requests.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
     if config.update_behavior == UpdateBehavior::Disable {
         return;
     }
 
     tokio::spawn(async move {
-        check_engine::check_version_against_manifest(&config).await;
+        check_version_against_manifest(&config).await;
     });
 }
 
@@ -59,7 +60,7 @@ pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
 /// function returns immediately without spawning any thread or making network
 /// requests.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
     if config.update_behavior == UpdateBehavior::Disable {
         return;
@@ -74,7 +75,7 @@ pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
             return;
         };
         rt.block_on(async move {
-            check_engine::check_version_against_manifest(&config).await;
+            check_version_against_manifest(&config).await;
         });
     });
 }
@@ -269,7 +270,7 @@ pub fn handle_upgrade_at_exit_sync(config: &SelfBinaryUpgradeConfig) {
 /// before exit (or run it if not yet checked).
 pub async fn ensure_version_checked_and_handle_at_exit(config: &SelfBinaryUpgradeConfig) {
     if matches!(UpgradeCheckCache::get(), UpgradeCheckStatus::NotChecked) {
-        check_engine::check_version_against_manifest(config).await;
+        check_version_against_manifest(config).await;
     }
     handle_upgrade_at_exit(config).await;
 }
@@ -650,8 +651,8 @@ pub mod metadata_resolver {
     /// Returns [`UpgradeError::Other`] if [`R3BL_VERSIONS_JSON_URL`] cannot be reached or
     /// parsed.
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
     pub async fn resolve_metadata_for_upgrade(
         config: &SelfBinaryUpgradeConfig,
     ) -> Result<CrateVersionMetadata, UpgradeError> {

@@ -10,7 +10,7 @@
 //! - [`binary_replacement`]: In-place executable replacement via `self_replace` and
 //!   sibling binary updates.
 
-use super::{UpgradeError, archive};
+use super::super::{UpgradeError, archive};
 use crate::script::permissions::try_set_file_executable;
 use flate2::read::GzDecoder;
 use std::{env::current_exe,

@@ -1,8 +1,9 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CrateDistribution, CrateName, CrateVersion, UpgradeError,
-            check_github_release_asset_available, format_github_release_asset_urls,
-            get_host_target_triple, toolchain_bin, toolchain_cli_args, upgrade_reasons};
+use super::{check_github_release_asset_available, format_github_release_asset_urls,
+            get_host_target_triple,
+            super::{CrateDistribution, CrateName, CrateVersion, UpgradeError,
+                    toolchain_bin, toolchain_cli_args, upgrade_reasons}};
 use crate::CommandOutputResult;
 
 /// Resolved execution source for performing the upgrade.
@@ -15,13 +16,13 @@ use crate::CommandOutputResult;
 /// Evaluated by [`UpgradeSource::try_resolve`] prior to calling
 /// [`execute_upgrade_with_metadata`].
 ///
-/// [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::upgrade_execution::execute_upgrade_with_metadata
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`execute_upgrade_with_metadata`]: crate::core::script::auto_update::upgrade_execution::execute_upgrade_with_metadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpgradeSource {
     /// Pre-compiled binary archive hosted on [`R3BL_BINARIES_RELEASE_BASE_URL`].
     ///
-    /// [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
+    /// [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::auto_update::R3BL_BINARIES_RELEASE_BASE_URL
     GithubReleaseArtifact {
         /// Direct download URL for the `.tar.gz` archive.
         archive_url: String,
@@ -31,7 +32,7 @@ pub enum UpgradeSource {
 
         /// Pinned target version string from [`R3BL_VERSIONS_JSON_URL`].
         ///
-        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
         pinned_version: CrateVersion,
     },
 
@@ -40,11 +41,11 @@ pub enum UpgradeSource {
     /// Only eligible when [`CrateDistribution::OpenSource`].
     ///
     /// [`CrateDistribution::OpenSource`]: super::CrateDistribution::OpenSource
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
     BuildFromSourceRustup {
         /// Pinned target version string from [`R3BL_VERSIONS_JSON_URL`].
         ///
-        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
         pinned_version: CrateVersion,
     },
 }

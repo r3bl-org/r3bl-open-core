@@ -84,7 +84,7 @@ pub mod archive {
 
 /// Property keys used in the [`R3BL_VERSIONS_JSON_URL`] manifest.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
 pub mod versions_manifest_keys {
     /// Top-level schema version key (`"schema_version"`).
     pub const SCHEMA_VERSION: &str = "schema_version";

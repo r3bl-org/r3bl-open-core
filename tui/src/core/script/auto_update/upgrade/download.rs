@@ -9,7 +9,7 @@
 //! - [`sha256_checksum`]: Checksum parsing, computation, and verification.
 //! - [`archive_stream`]: Streaming HTTP download with live spinner updates.
 
-use super::{UpgradeError, ui_strings};
+use super::{super::UpgradeError, ui_strings};
 use crate::{Spinner, script::http_client::create_client_with_user_agent};
 use futures_util::StreamExt;
 use sha2::{Digest, Sha256};

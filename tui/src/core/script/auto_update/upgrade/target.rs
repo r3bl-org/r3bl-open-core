@@ -2,7 +2,7 @@
 
 //! Host target triple detection for binary archive resolution.
 
-use super::{UpgradeError, archive};
+use super::super::{UpgradeError, archive};
 
 /// Resolves the Rust target triple for the current host OS and CPU architecture.
 ///
