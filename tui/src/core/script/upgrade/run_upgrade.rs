@@ -8,9 +8,9 @@
 
 use super::{CrateDistribution, CrateVersion, CrateVersionMetadata,
             SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeError, UpgradeSource,
-            UserFeedbackChannel, archive, check_version_against_manifest, get_cached_crate_metadata,
-            is_remote_version_strictly_newer, is_upgrade_available,
-            resolve_source_fallback, resolve_upgrade_strategy,
+            UserFeedbackChannel, archive, check_version_against_manifest,
+            get_cached_crate_metadata, is_remote_version_strictly_newer,
+            is_upgrade_available, resolve_source_fallback, resolve_upgrade_strategy,
             run_source_build_with_spinner,
             try_get_crate_metadata_from_r3bl_versions_json, ui_strings, upgrade_reasons};
 use crate::{DefaultIoDevices, HowToChoose, InlineString, OutputDevice, Spinner,
@@ -894,8 +894,9 @@ pub async fn ensure_version_checked_and_handle_at_exit(config: &SelfBinaryUpgrad
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{super::set_cached_crate_metadata, *};
     use crate::assert_eq2;
+    use chrono::Utc;
     use flate2::{Compression, write::GzEncoder};
 
     #[test]
@@ -968,23 +969,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_upgrade_already_up_to_date() {
-        use super::super::set_cached_crate_metadata;
-        use chrono::Utc;
-
+        let version = CrateVersion::try_from("0.0.25").unwrap();
         let meta = CrateVersionMetadata {
-            version: CrateVersion::try_from("0.0.25").unwrap(),
+            version,
             crate_distribution: CrateDistribution::OpenSource,
             released_on: Utc::now(),
         };
         set_cached_crate_metadata(meta);
 
-        let config = SelfBinaryUpgradeConfig::try_new(
+        let config = SelfBinaryUpgradeConfig::new(
             "r3bl-cmdr",
-            "0.0.25",
+            version,
             None,
             UserFeedbackChannel::Quiet,
-        )
-        .unwrap();
+        );
 
         let result = run_upgrade(&config).await;
         assert!(result.is_ok());

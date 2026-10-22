@@ -18,7 +18,7 @@ use super::{CrateDistribution, CrateName, CrateVersion};
 ///   `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
 /// - Programmatically creating this config to eliminate ambiguity.
 ///
-/// Use [`Self::try_new()`] to construct this struct.
+/// Use [`Self::new()`] to construct this struct.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in `r3bl.com/versions.jsonc` (e.g.,
@@ -41,41 +41,32 @@ mod impl_self_binary_upgrade_config {
     use super::*;
 
     impl SelfBinaryUpgradeConfig {
-        /// Creates a new [`SelfBinaryUpgradeConfig`], validating that `current_version`
-        /// is a valid semantic version (`MAJOR.MINOR.PATCH`).
+        /// Creates a new [`SelfBinaryUpgradeConfig`].
         ///
         /// # Arguments
         ///
         /// * `crate_name` - The crate name as registered in `r3bl.com/versions.jsonc`
         ///   (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`).
-        /// * `current_version` - Semantic version string of the running binary, typically
-        ///   from `env!("CARGO_PKG_VERSION")`.
+        /// * `current_version` - Semantic version of the running binary, typically
+        ///   parsed from `env!("CARGO_PKG_VERSION")` via [`CrateVersion::try_from`].
         /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
         ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
-        ///
-        /// # Errors
-        ///
-        /// Returns [`UpgradeError::InvalidVersion`] if `current_version` cannot be parsed
-        /// as a valid [`CrateVersion`].
-        pub fn try_new(
+        pub fn new(
             crate_name: impl Into<CrateName>,
-            current_version: &str,
+            current_version: CrateVersion,
             maybe_update_behavior: Option<UpdateBehavior>,
             user_feedback_channel: UserFeedbackChannel,
-        ) -> Result<Self, UpgradeError> {
-            let current_version = CrateVersion::try_from(current_version)
-                .map_err(UpgradeError::InvalidVersion)?;
-
+        ) -> Self {
             let update_behavior = maybe_update_behavior.unwrap_or_default();
 
-            Ok(Self {
+            Self {
                 crate_name: crate_name.into(),
                 current_version,
                 update_behavior,
                 user_feedback_channel,
-            })
+            }
         }
     }
 }
@@ -257,10 +248,6 @@ mod impl_upgrade_check_result {
 /// Errors that can occur during strategy resolution or upgrade execution.
 #[derive(Debug, thiserror::Error)]
 pub enum UpgradeError {
-    /// Invalid semantic version string (`MAJOR.MINOR.PATCH` required).
-    #[error("Invalid version string '{0}'")]
-    InvalidVersion(String),
-
     /// Neither GitHub release binaries nor a viable local source build toolchain are
     /// available.
     #[error(
@@ -321,13 +308,16 @@ mod tests {
     #[test]
     fn test_self_binary_upgrade_config_behavior_resolution() {
         let make_config = |maybe_behavior| {
-            SelfBinaryUpgradeConfig::try_new(
+            SelfBinaryUpgradeConfig::new(
                 "r3bl-cmdr",
-                "0.0.1",
+                CrateVersion {
+                    major: 0,
+                    minor: 0,
+                    patch: 1,
+                },
                 maybe_behavior,
                 UserFeedbackChannel::Stdout,
             )
-            .unwrap()
         };
 
         // 1. Explicit CLI override always wins.
@@ -354,17 +344,6 @@ mod tests {
         // 2. When no CLI override is provided (None), falls back to universal default
         //    Auto.
         assert_eq2!(make_config(None).update_behavior, UpdateBehavior::Auto);
-    }
-
-    #[test]
-    fn test_self_binary_upgrade_config_invalid_version() {
-        let result = SelfBinaryUpgradeConfig::try_new(
-            "r3bl-cmdr",
-            "invalid-version",
-            None,
-            UserFeedbackChannel::Stdout,
-        );
-        assert!(matches!(result, Err(UpgradeError::InvalidVersion(_))));
     }
 
     #[test]
