@@ -28,14 +28,13 @@ mod github_api;
 mod http_client;
 mod package_manager;
 mod permissions;
-mod temp_dir;
 #[cfg(any(test, doc))]
-pub mod auto_update;
+pub mod self_update;
 #[cfg(not(any(test, doc)))]
-mod auto_update;
+mod self_update;
+mod temp_dir;
 
 // Re-export.
-pub use auto_update::*;
 pub use command_impl::*;
 pub use crates_api::*;
 pub use directory_change::*;
@@ -49,6 +48,7 @@ pub use github_api::*;
 pub use http_client::*;
 pub use package_manager::*;
 pub use permissions::*;
+pub use self_update::*;
 pub use temp_dir::*;
 
 pub const SCRIPT_MOD_DEBUG: bool = true;

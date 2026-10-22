@@ -146,38 +146,38 @@
 //!                                      └─────────────┘
 //! ```
 //!
-//! [`check_version_against_manifest`]: crate::core::script::auto_update::check_version_against_manifest
-//! [`CrateDistribution::ClosedSource`]: crate::core::script::auto_update::CrateDistribution::ClosedSource
-//! [`CrateDistribution::OpenSource`]: crate::core::script::auto_update::CrateDistribution::OpenSource
-//! [`CrateDistribution`]: crate::core::script::auto_update::CrateDistribution
+//! [`check_version_against_manifest`]: crate::core::script::self_update::check_version_against_manifest
+//! [`CrateDistribution::ClosedSource`]: crate::core::script::self_update::CrateDistribution::ClosedSource
+//! [`CrateDistribution::OpenSource`]: crate::core::script::self_update::CrateDistribution::OpenSource
+//! [`CrateDistribution`]: crate::core::script::self_update::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
-//! [`execute_upgrade_with_metadata`]: crate::core::script::auto_update::execute_upgrade_with_metadata
-//! [`handle_upgrade_at_exit_sync`]: crate::core::script::auto_update::handle_upgrade_at_exit_sync
-//! [`handle_upgrade_at_exit`]: crate::core::script::auto_update::handle_upgrade_at_exit
+//! [`execute_upgrade_with_metadata`]: crate::core::script::self_update::execute_upgrade_with_metadata
+//! [`handle_upgrade_at_exit_sync`]: crate::core::script::self_update::handle_upgrade_at_exit_sync
+//! [`handle_upgrade_at_exit`]: crate::core::script::self_update::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::auto_update::pure_evaluator::evaluate_upgrade_source_pure
-//! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::auto_update::R3BL_BINARIES_RELEASE_BASE_URL
-//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
-//! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::auto_update::run_upgrade_cli_arg_interceptor_sync
-//! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::auto_update::run_upgrade_cli_arg_interceptor
-//! [`run_upgrade_sync`]: crate::core::script::auto_update::run_upgrade_sync
+//! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::self_update::pure_evaluator::evaluate_upgrade_source_pure
+//! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::self_update::R3BL_BINARIES_RELEASE_BASE_URL
+//! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+//! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::self_update::run_upgrade_cli_arg_interceptor_sync
+//! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::self_update::run_upgrade_cli_arg_interceptor
+//! [`run_upgrade_sync`]: crate::core::script::self_update::run_upgrade_sync
 //! [`SCRIPT_MOD_DEBUG`]: crate::core::script::SCRIPT_MOD_DEBUG
-//! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::auto_update::SelfBinaryUpgradeConfig::current_version
+//! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::self_update::SelfBinaryUpgradeConfig::current_version
 //! [`SemVer`]: https://semver.org/
-//! [`start_background_version_check_sync`]: crate::core::script::auto_update::start_background_version_check_sync
-//! [`start_background_version_check`]: crate::core::script::auto_update::start_background_version_check
+//! [`start_background_version_check_sync`]: crate::core::script::self_update::start_background_version_check_sync
+//! [`start_background_version_check`]: crate::core::script::self_update::start_background_version_check
 //! [`stderr`]: std::io::stderr
-//! [`UpdateBehavior`]: crate::core::script::auto_update::UpdateBehavior
-//! [`UpgradeCheckCache::get`]: crate::core::script::auto_update::UpgradeCheckCache::get
-//! [`UpgradeCheckCache`]: crate::core::script::auto_update::UpgradeCheckCache
-//! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::auto_update::UpgradeCheckStatus::CheckFailed
-//! [`UpgradeCheckStatus`]: crate::core::script::auto_update::UpgradeCheckStatus
-//! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::auto_update::UpgradeSource::try_fallback_to_source
-//! [`UpgradeSource::try_resolve`]: crate::core::script::auto_update::UpgradeSource::try_resolve
-//! [`UpgradeSource`]: crate::core::script::auto_update::UpgradeSource
-//! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::auto_update::VersionsManifest::try_parse_jsonc
-//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::auto_update::VersionsManifest::try_update_crate_in_jsonc
-//! [`VersionsManifest`]: crate::core::script::auto_update::VersionsManifest
+//! [`UpdateBehavior`]: crate::core::script::self_update::UpdateBehavior
+//! [`UpgradeCheckCache::get`]: crate::core::script::self_update::UpgradeCheckCache::get
+//! [`UpgradeCheckCache`]: crate::core::script::self_update::UpgradeCheckCache
+//! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::self_update::UpgradeCheckStatus::CheckFailed
+//! [`UpgradeCheckStatus`]: crate::core::script::self_update::UpgradeCheckStatus
+//! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::self_update::UpgradeSource::try_fallback_to_source
+//! [`UpgradeSource::try_resolve`]: crate::core::script::self_update::UpgradeSource::try_resolve
+//! [`UpgradeSource`]: crate::core::script::self_update::UpgradeSource
+//! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::self_update::VersionsManifest::try_parse_jsonc
+//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::self_update::VersionsManifest::try_update_crate_in_jsonc
+//! [`VersionsManifest`]: crate::core::script::self_update::VersionsManifest
 //! [JSONC parser]: mod@jsonc_parser
 
 // Private submodules.

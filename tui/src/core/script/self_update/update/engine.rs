@@ -17,12 +17,12 @@ use std::time::Duration;
 /// # Error Handling
 ///
 /// This check is opportunistic and fails silently when offline or when the manifest
-/// is unreachable. See the [`auto_update`] module documentation for details on
+/// is unreachable. See the [`self_update`] module documentation for details on
 /// invocation modes and error handling.
 ///
-/// [`auto_update`]: mod@crate::core::script::auto_update
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
-/// [`UpgradeCheckCache`]: crate::core::script::auto_update::UpgradeCheckCache
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+/// [`self_update`]: mod@crate::core::script::self_update
+/// [`UpgradeCheckCache`]: crate::core::script::self_update::UpgradeCheckCache
 pub async fn check_version_against_manifest(
     config: &SelfBinaryUpgradeConfig,
 ) -> UpgradeCheckStatus {
@@ -72,7 +72,7 @@ pub async fn check_version_against_manifest(
 
 /// Network query and manifest parsing for [`R3BL_VERSIONS_JSON_URL`].
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 pub mod manifest_query {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -88,9 +88,9 @@ pub mod manifest_query {
     /// Returns an error if the JSONC is malformed or if `crate_name` is not present in
     /// `crates_map`.
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
-    /// [`VersionsManifest`]: crate::core::script::auto_update::VersionsManifest
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+    /// [`VersionsManifest`]: crate::core::script::self_update::VersionsManifest
     pub fn parse_crate_metadata_from_versions_json_str(
         json_str: &str,
         crate_name: &str,
@@ -114,8 +114,8 @@ pub mod manifest_query {
     /// Returns an error if the HTTP request fails, times out, returns a non-2xx status,
     /// or if the crate is missing from `versions.jsonc`.
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     pub async fn try_get_crate_metadata_from_r3bl_versions_json(
         crate_name: &str,
     ) -> miette::Result<CrateVersionMetadata> {
@@ -130,8 +130,8 @@ pub mod manifest_query {
     /// Returns an error if the HTTP request fails, times out, returns a non-2xx status,
     /// or if the crate is missing from the manifest.
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     pub async fn try_get_crate_metadata_from_url(
         url: &str,
         crate_name: &str,

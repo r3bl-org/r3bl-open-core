@@ -63,22 +63,22 @@ use std::sync::LazyLock;
 /// [`OutputDevice`] or [`Readline`]) when querying the upgrade status during UI
 /// drawing or application shutdown.
 ///
-/// [`check_version_against_manifest`]: crate::core::script::auto_update::check_version_against_manifest
-/// [`handle_upgrade_at_exit`]: crate::core::script::auto_update::handle_upgrade_at_exit
+/// [`check_version_against_manifest`]: crate::core::script::self_update::check_version_against_manifest
+/// [`handle_upgrade_at_exit`]: crate::core::script::self_update::handle_upgrade_at_exit
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`PanicOnSpecificLockNesting`]: crate::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 /// [`Readline`]: crate::Readline
 /// [`ScopedMutex`]: crate::ScopedMutex
 /// [`SPECIFIC`]: crate::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
-/// [`start_background_version_check_sync`]: crate::core::script::auto_update::start_background_version_check_sync
-/// [`start_background_version_check`]: crate::core::script::auto_update::start_background_version_check
-/// [`UpgradeCheckCache::get`]: crate::core::script::auto_update::UpgradeCheckCache::get
-/// [`UpgradeCheckCache::is_upgrade_available`]: crate::core::script::auto_update::UpgradeCheckCache::is_upgrade_available
-/// [`UpgradeCheckCache::set`]: crate::core::script::auto_update::UpgradeCheckCache::set
-/// [`UpgradeCheckCache::try_get_crate_metadata`]: crate::core::script::auto_update::UpgradeCheckCache::try_get_crate_metadata
-/// [`UpgradeCheckCache`]: crate::core::script::auto_update::UpgradeCheckCache
-/// [`UpgradeCheckStatus`]: crate::core::script::auto_update::UpgradeCheckStatus
+/// [`start_background_version_check_sync`]: crate::core::script::self_update::start_background_version_check_sync
+/// [`start_background_version_check`]: crate::core::script::self_update::start_background_version_check
+/// [`UpgradeCheckCache::get`]: crate::core::script::self_update::UpgradeCheckCache::get
+/// [`UpgradeCheckCache::is_upgrade_available`]: crate::core::script::self_update::UpgradeCheckCache::is_upgrade_available
+/// [`UpgradeCheckCache::set`]: crate::core::script::self_update::UpgradeCheckCache::set
+/// [`UpgradeCheckCache::try_get_crate_metadata`]: crate::core::script::self_update::UpgradeCheckCache::try_get_crate_metadata
+/// [`UpgradeCheckCache`]: crate::core::script::self_update::UpgradeCheckCache
+/// [`UpgradeCheckStatus`]: crate::core::script::self_update::UpgradeCheckStatus
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct UpgradeCheckCache {
     pub status: UpgradeCheckStatus,
@@ -95,7 +95,7 @@ mod impl_upgrade_check_cache {
     impl UpgradeCheckCache {
         /// Returns the current [`UpgradeCheckStatus`] snapshot from the cache.
         ///
-        /// [`UpgradeCheckStatus`]: crate::core::script::auto_update::UpgradeCheckStatus
+        /// [`UpgradeCheckStatus`]: crate::core::script::self_update::UpgradeCheckStatus
         #[must_use]
         pub fn get() -> UpgradeCheckStatus {
             SINGLETON.read(|cache| cache.status.clone())
@@ -103,7 +103,7 @@ mod impl_upgrade_check_cache {
 
         /// Sets the current [`UpgradeCheckStatus`] in the cache.
         ///
-        /// [`UpgradeCheckStatus`]: crate::core::script::auto_update::UpgradeCheckStatus
+        /// [`UpgradeCheckStatus`]: crate::core::script::self_update::UpgradeCheckStatus
         pub fn set(status: UpgradeCheckStatus) {
             SINGLETON.write(|cache| {
                 cache.status = status;
@@ -132,12 +132,12 @@ mod impl_upgrade_check_cache {
         /// Returns `None` if the background check is still in flight, has failed, or if
         /// update checks were disabled via [`UpdateBehavior::Disable`].
         ///
-        /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-        /// [`handle_upgrade_at_exit`]: crate::core::script::auto_update::handle_upgrade_at_exit
-        /// [`resolve_metadata_for_upgrade`]: crate::core::script::auto_update::metadata_resolver::resolve_metadata_for_upgrade
-        /// [`UpdateBehavior::Disable`]: crate::core::script::auto_update::UpdateBehavior::Disable
-        /// [`UpgradeCheckStatus::UpgradeAvailable`]: crate::core::script::auto_update::UpgradeCheckStatus::UpgradeAvailable
-        /// [`UpgradeCheckStatus::UpToDate`]: crate::core::script::auto_update::UpgradeCheckStatus::UpToDate
+        /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+        /// [`handle_upgrade_at_exit`]: crate::core::script::self_update::handle_upgrade_at_exit
+        /// [`resolve_metadata_for_upgrade`]: crate::core::script::self_update::metadata_resolver::resolve_metadata_for_upgrade
+        /// [`UpdateBehavior::Disable`]: crate::core::script::self_update::UpdateBehavior::Disable
+        /// [`UpgradeCheckStatus::UpgradeAvailable`]: crate::core::script::self_update::UpgradeCheckStatus::UpgradeAvailable
+        /// [`UpgradeCheckStatus::UpToDate`]: crate::core::script::self_update::UpgradeCheckStatus::UpToDate
         #[must_use]
         pub fn try_get_crate_metadata() -> Option<CrateVersionMetadata> {
             match Self::get() {
@@ -159,8 +159,8 @@ mod impl_upgrade_check_cache {
 ///
 /// Stores the lifecycle phase and any resolved [`CrateVersionMetadata`].
 ///
-/// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum UpgradeCheckStatus {
     /// Background version check has not yet started.
@@ -174,20 +174,20 @@ pub enum UpgradeCheckStatus {
     /// [`R3BL_VERSIONS_JSON_URL`] version. Carries the remote
     /// [`CrateVersionMetadata`].
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     UpToDate(CrateVersionMetadata),
 
     /// Remote [`R3BL_VERSIONS_JSON_URL`] version is strictly greater than local
     /// binary version. Carries the remote [`CrateVersionMetadata`].
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     UpgradeAvailable(CrateVersionMetadata),
 
     /// Network or parsing error occurred while querying [`R3BL_VERSIONS_JSON_URL`].
     ///
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     CheckFailed,
 }
 

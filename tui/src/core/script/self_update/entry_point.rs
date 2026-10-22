@@ -39,7 +39,7 @@ use std::{env::current_exe, io, sync::Arc, time::Duration};
 /// function returns immediately without spawning any background task or making network
 /// requests.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
     if config.update_behavior == UpdateBehavior::Disable {
         return;
@@ -60,7 +60,7 @@ pub fn start_background_version_check(config: SelfBinaryUpgradeConfig) {
 /// function returns immediately without spawning any thread or making network
 /// requests.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 pub fn start_background_version_check_sync(config: SelfBinaryUpgradeConfig) {
     if config.update_behavior == UpdateBehavior::Disable {
         return;
@@ -651,8 +651,8 @@ pub mod metadata_resolver {
     /// Returns [`UpgradeError::Other`] if [`R3BL_VERSIONS_JSON_URL`] cannot be reached or
     /// parsed.
     ///
-    /// [`CrateVersionMetadata`]: crate::core::script::auto_update::CrateVersionMetadata
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     pub async fn resolve_metadata_for_upgrade(
         config: &SelfBinaryUpgradeConfig,
     ) -> Result<CrateVersionMetadata, UpgradeError> {

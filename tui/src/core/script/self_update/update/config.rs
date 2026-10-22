@@ -16,13 +16,13 @@ use super::{CrateName, CrateVersion};
 ///
 /// Use [`Self::new()`] to construct this struct.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in [`R3BL_VERSIONS_JSON_URL`] (e.g.,
     /// `"r3bl-cmdr"`).
     ///
-    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+    /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     pub crate_name: CrateName,
 
     /// Current version of the binary compiled from `Cargo.toml`
@@ -54,7 +54,7 @@ mod impl_self_binary_upgrade_config {
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
         ///
-        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+        /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
         pub fn new(
             crate_name: impl Into<CrateName>,
             current_version: CrateVersion,

@@ -56,7 +56,7 @@ use std::{borrow::Borrow,
 ///
 /// ```jsonc
 /// // R3BL Centralized Crate Version Manifest
-/// // Schema: `r3bl_tui::core::script::auto_update::VersionsManifest`
+/// // Schema: `r3bl_tui::core::script::self_update::VersionsManifest`
 /// {
 ///   "schema_version": 1,
 ///   "crates": {
@@ -76,8 +76,8 @@ use std::{borrow::Borrow,
 /// }
 /// ```
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
-/// [module-level documentation]: mod@crate::core::script::auto_update
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+/// [module-level documentation]: mod@crate::core::script::self_update
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct VersionsManifest {
     /// Schema version of the `versions.jsonc` manifest (currently
@@ -213,7 +213,7 @@ struct ManifestHeader {
 /// Deserializes as an integer (`1` for [`Self::V1`]) via [`TryFrom<u32>`], rejecting
 /// unknown or future schema versions at deserialization time.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize,
 )]
@@ -303,7 +303,7 @@ mod impl_crate_name {
     /// Constructs a [`CrateName`] from a string slice (e.g., in
     /// [`SelfBinaryUpgradeConfig::new`]).
     ///
-    /// [`SelfBinaryUpgradeConfig::new`]: crate::core::script::auto_update::SelfBinaryUpgradeConfig::new
+    /// [`SelfBinaryUpgradeConfig::new`]: crate::core::script::self_update::SelfBinaryUpgradeConfig::new
     impl From<&str> for CrateName {
         fn from(s: &str) -> Self { Self(s.to_string()) }
     }
@@ -317,8 +317,8 @@ mod impl_crate_name {
 /// Deserialized crate version entry from [`R3BL_VERSIONS_JSON_URL`]. See
 /// [`VersionsManifest`] for the complete JSONC schema specification and example.
 ///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::auto_update::R3BL_VERSIONS_JSON_URL
-/// [`VersionsManifest`]: crate::core::script::auto_update::VersionsManifest
+/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+/// [`VersionsManifest`]: crate::core::script::self_update::VersionsManifest
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct CrateVersionMetadata {
     /// Target semantic version string pinned for the crate (e.g., `"0.0.25"`).
