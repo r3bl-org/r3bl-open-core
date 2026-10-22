@@ -61,12 +61,26 @@
 //!
 //! # Invocation Modes and Error Handling
 //!
-//! Upgrades run in one of two modes:
+//! Self updates & upgrades run in one of two modes:
 //!
 //! 1. Normal execution (startup check + exit handler, silent failure):
-//!    - Checks [`R3BL_VERSIONS_JSON_URL`] in the background on startup
-//!      ([`start_background_version_check`]) and acts on the result before exit
-//!      ([`handle_upgrade_at_exit`]) according to [`UpdateBehavior`].
+//!    - When the binary starts, a check is initiated to determine whether an update is
+//!      available. The result of checking is stored in a shared memory location, so that
+//!      it can be at the time of exit to perform the actual upgrade if needed.
+//!    - There are 2 entry points for this one sync and another async, since this engine
+//!      is agnostic to the binary's async or sync nature:
+//!        - **Async**: spawns [`tokio::task`] ([`start_background_version_check`]) in
+//!          async binaries.
+//!        - **Sync**: spawns dedicated [`std::thread`] with an isolated runtime
+//!          ([`start_background_version_check_sync`]) in synchronous binaries, ensuring 0
+//!          ms user-perceived startup latency.
+//!    - When the spawned task or thread finishes fetching and parsing the manifest, it
+//!      populates the in-memory cache ([`CACHED_CRATE_METADATA`]) and updates the atomic
+//!      status flag ([`UPGRADE_CHECK_STATE`]).
+//!    - At process exit, [`handle_upgrade_at_exit`] checks the atomic state and retrieves
+//!      the resolved version metadata from the in-memory cache via
+//!      [`get_cached_crate_metadata`] with 0 ms latency (no second HTTP round-trip),
+//!      executing actions according to [`UpdateBehavior`].
 //!    - If a crate has not yet been published to the remote manifest, if the remote
 //!      server is down, or if a network timeout or manifest parse error occurs, the
 //!      engine logs at [`tracing::debug!`] (gated behind [`SCRIPT_MOD_DEBUG`]) and marks
@@ -81,11 +95,13 @@
 //!    - If the manifest server is down, unreachable, or cannot be parsed, the failure is
 //!      reported to [`stderr`] and the process exits with status code `1`.
 //!
+//! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
 //! [`check_version_against_manifest`]: crate::core::script::upgrade::check_version_against_manifest
 //! [`CrateDistribution::ClosedSource`]: crate::core::script::upgrade::CrateDistribution::ClosedSource
 //! [`CrateDistribution::OpenSource`]: crate::core::script::upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::core::script::upgrade::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
+//! [`get_cached_crate_metadata`]: crate::core::script::upgrade::get_cached_crate_metadata
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
@@ -93,9 +109,11 @@
 //! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor
 //! [`SCRIPT_MOD_DEBUG`]: crate::core::script::SCRIPT_MOD_DEBUG
 //! [`SelfBinaryUpgradeConfig::current_version`]: crate::core::script::upgrade::SelfBinaryUpgradeConfig::current_version
+//! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
 //! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
 //! [`stderr`]: std::io::stderr
 //! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
+//! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 //! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
 //! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc

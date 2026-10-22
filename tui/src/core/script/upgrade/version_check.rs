@@ -1,12 +1,46 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Centralized version check querying [`R3BL_VERSIONS_JSON_URL`].
+//! Centralized version check for querying [`R3BL_VERSIONS_JSON_URL`].
 //!
 //! Compares versions strictly via `(major, minor, patch)` semantic version tuples
 //! (`remote_version > current_version`) so local development builds ahead of
 //! `versions.jsonc` are never downgraded.
 //!
+//! # Background Version Check & Cache Lifecycle
+//!
+//! To keep application startup instantaneous (0 ms user-perceived latency) while
+//! eliminating redundant network round-trips at shutdown, the upgrade engine uses a
+//! two-phase decoupled lifecycle coordinated through [`UPGRADE_CHECK_STATE`] and
+//! [`CACHED_CRATE_METADATA`]:
+//!
+//! ```text
+//! 1. Binary Startup (0 ms non-blocking):
+//!    ├── start_background_version_check()      ──► Spawns Tokio task (for async binaries)
+//!    └── start_background_version_check_sync() ──► Spawns dedicated OS thread (for sync binaries)
+//!    Main thread immediately proceeds with user CLI/TUI logic
+//!
+//! 2. Concurrent Manifest Query:
+//!    check_version_against_manifest() ───► HTTP GET versions.jsonc
+//!    ├── Parses CrateVersionMetadata
+//!    ├── Stores metadata in CACHED_CRATE_METADATA (set_cached_crate_metadata)
+//!    └── Updates atomic state UPGRADE_CHECK_STATE (UpgradeAvailable | UpToDate | FailedCheck)
+//!
+//! 3. Binary Exit (0 ms in-memory read):
+//!    handle_upgrade_at_exit()
+//!    ├── Checks is_upgrade_available() (atomic load)
+//!    └── Reads cached metadata via get_cached_crate_metadata() (no 2nd HTTP request!)
+//! ```
+//!
+//! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
+//! [`CrateVersionMetadata`]: crate::core::script::upgrade::CrateVersionMetadata
+//! [`get_cached_crate_metadata`]: crate::core::script::upgrade::get_cached_crate_metadata
+//! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
+//! [`is_upgrade_available`]: crate::core::script::upgrade::is_upgrade_available
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+//! [`set_cached_crate_metadata`]: crate::core::script::upgrade::set_cached_crate_metadata
+//! [`start_background_version_check_sync`]: crate::core::script::upgrade::start_background_version_check_sync
+//! [`start_background_version_check`]: crate::core::script::upgrade::start_background_version_check
+//! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 
 use super::{CrateVersion, CrateVersionMetadata, R3BL_VERSIONS_JSON_URL,
             SelfBinaryUpgradeConfig, UpdateBehavior, UpgradeCheckResult,
@@ -25,8 +59,23 @@ const VERSION_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 /// Initialized to `0` ([`UpgradeCheckResult::NotChecked`]).
 pub static UPGRADE_CHECK_STATE: AtomicU8 = AtomicU8::new(0);
 
-/// Thread-safe cache storing the resolved [`CrateVersionMetadata`] from
+/// Thread-safe in-memory cache storing the resolved [`CrateVersionMetadata`] from
 /// `r3bl.com/versions.jsonc`.
+///
+/// # Purpose
+///
+/// Bridges the gap between startup and shutdown without making redundant HTTP requests.
+/// When the background check completes, [`check_version_against_manifest`] stores the
+/// parsed manifest metadata here via [`set_cached_crate_metadata`].
+///
+/// At application exit, [`handle_upgrade_at_exit`] reads the metadata via
+/// [`get_cached_crate_metadata`] in 0 ms without needing to re-fetch or re-parse
+/// `versions.jsonc`.
+///
+/// [`check_version_against_manifest`]: crate::core::script::upgrade::check_version_against_manifest
+/// [`get_cached_crate_metadata`]: crate::core::script::upgrade::get_cached_crate_metadata
+/// [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
+/// [`set_cached_crate_metadata`]: crate::core::script::upgrade::set_cached_crate_metadata
 pub static CACHED_CRATE_METADATA: LazyLock<
     ScopedMutex<Option<CrateVersionMetadata>, { PanicOnSpecificLockNesting }>,
 > = LazyLock::new(|| scoped_mutex!(SPECIFIC, None));
@@ -48,14 +97,40 @@ pub fn is_upgrade_available() -> bool {
     get_upgrade_check_result() == UpgradeCheckResult::UpgradeAvailable
 }
 
-/// Returns a clone of the cached [`CrateVersionMetadata`] if a version check has
-/// resolved it.
+/// Returns a clone of the cached [`CrateVersionMetadata`] if the background version
+/// check has completed successfully.
+///
+/// # Consumers
+///
+/// This function is called by:
+/// - [`handle_upgrade_at_exit`]: to display version notices or execute an automatic
+///   upgrade at shutdown without making a second network call.
+/// - [`resolve_metadata_for_upgrade`]: to reuse existing metadata before falling back to
+///   a direct network query.
+///
+/// Returns `None` if the background check is still in flight, has failed, or if
+/// update checks were disabled via [`UpdateBehavior::Disable`].
+///
+/// [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
+/// [`resolve_metadata_for_upgrade`]: crate::core::script::upgrade::resolve_metadata_for_upgrade
+/// [`UpdateBehavior::Disable`]: crate::core::script::upgrade::UpdateBehavior::Disable
 #[must_use]
 pub fn get_cached_crate_metadata() -> Option<CrateVersionMetadata> {
     CACHED_CRATE_METADATA.read(Clone::clone)
 }
 
-/// Stores the resolved [`CrateVersionMetadata`] in the global cache.
+/// Stores the resolved [`CrateVersionMetadata`] in the global [`CACHED_CRATE_METADATA`].
+///
+/// # Writers
+///
+/// This function is called by:
+/// - [`check_version_against_manifest`]: upon successfully fetching and parsing
+///   `r3bl.com/versions.jsonc`.
+/// - Unit tests: to deterministically inject mock remote version metadata without
+///   requiring internet access or live HTTP requests.
+///
+/// [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
+/// [`check_version_against_manifest`]: crate::core::script::upgrade::check_version_against_manifest
 pub fn set_cached_crate_metadata(metadata: CrateVersionMetadata) {
     CACHED_CRATE_METADATA.write(|slot| {
         *slot = Some(metadata);
@@ -169,8 +244,10 @@ pub async fn check_version_against_manifest(
     match try_get_crate_metadata_from_r3bl_versions_json(config.crate_name.as_str()).await
     {
         Ok(metadata) => {
-            let is_newer =
-                is_remote_version_strictly_newer(metadata.version, config.current_version);
+            let is_newer = is_remote_version_strictly_newer(
+                metadata.version,
+                config.current_version,
+            );
             set_cached_crate_metadata(metadata.clone());
 
             let result = if is_newer {
@@ -278,7 +355,8 @@ mod tests {
             CrateVersion::try_from("0.0.25").unwrap(),
         ));
 
-        // Current version ahead of remote (dev version bumped) -> false (prevents downgrade!)
+        // Current version ahead of remote (dev version bumped) -> false (prevents
+        // downgrade!)
         assert!(!is_remote_version_strictly_newer(
             CrateVersion::try_from("0.0.25").unwrap(),
             CrateVersion::try_from("0.0.26").unwrap(),

@@ -47,8 +47,8 @@ mod impl_self_binary_upgrade_config {
         ///
         /// * `crate_name` - The crate name as registered in `r3bl.com/versions.jsonc`
         ///   (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`).
-        /// * `current_version` - Semantic version of the running binary, typically
-        ///   parsed from `env!("CARGO_PKG_VERSION")` via [`CrateVersion::try_from`].
+        /// * `current_version` - Semantic version of the running binary, typically parsed
+        ///   from `env!("CARGO_PKG_VERSION")` via [`CrateVersion::try_from`].
         /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
         ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
