@@ -72,9 +72,22 @@ mod impl_self_binary_upgrade_config {
 }
 
 /// Resolved execution source for performing the upgrade.
+///
+/// "Resolved" signifies that the upgrade engine has evaluated runtime environment
+/// conditions (host target architecture, remote asset availability on GitHub, crate
+/// distribution model, and local Rust toolchain availability on `$PATH`) to determine
+/// the exact execution path before initiating downloads or builds.
+///
+/// Evaluated by [`resolve_upgrade_strategy`] prior to calling
+/// [`execute_upgrade_with_metadata`].
+///
+/// [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::execute_upgrade_with_metadata
+/// [`resolve_upgrade_strategy`]: crate::core::script::upgrade::resolve_upgrade_strategy
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpgradeSource {
-    /// Pre-compiled binary archive hosted on `https://github.com/r3bl-org/r3bl-binaries`.
+    /// Pre-compiled binary archive hosted on [`R3BL_BINARIES_RELEASE_BASE_URL`].
+    ///
+    /// [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
     GithubReleaseArtifact {
         /// Direct download URL for the `.tar.gz` archive.
         archive_url: String,

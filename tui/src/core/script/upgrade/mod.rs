@@ -100,18 +100,67 @@
 //!    - If the manifest server is down, unreachable, or cannot be parsed, the failure is
 //!      reported to [`stderr`] and the process exits with status code `1`.
 //!
+//! # Upgrade Strategy Resolution (GitHub Release vs. Source Fallback)
+//!
+//! Once the engine determines that an upgrade is available (`remote_version >
+//! current_version`), it must decide *how* to perform the upgrade before downloading or
+//! running build commands. This decision resolves into an [`UpgradeSource`].
+//!
+//! - **Who resolves it**: Evaluated by [`resolve_upgrade_strategy`] (and its pure
+//!   decision function [`resolve_upgrade_strategy_pure`]). If a binary download fails
+//!   mid-stream, [`resolve_source_fallback`] evaluates fallback viability.
+//! - **Where it is called**: Invoked by [`execute_upgrade_with_metadata`] immediately
+//!   before dispatching to download or compilation routines.
+//! - **When it runs**: Right after manifest evaluation confirms that a newer version is
+//!   available, and immediately before any bytes are fetched or child processes spawned.
+//!
+//! ## Resolution Decision Tree
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────┐
+//! │ Remote version is newer (remote > current)             │
+//! └───────────────────────────┬────────────────────────────┘
+//!                             │
+//!                             ▼
+//! ┌────────────────────────────────────────────────────────┐
+//! │ HTTP HEAD probe to GitHub Release asset URL            │
+//! └─────────────┬────────────────────────────┬─────────────┘
+//!               │ Found (200)                │ Network Error / Not Found
+//!               ▼                            ▼
+//! ┌───────────────────────────┐    ┌───────────────────────┐
+//! │ UpgradeSource::           │    │ CrateDistribution?    │
+//! │ GithubReleaseArtifact     │    └───┬───────────────┬───┘
+//! └───────────────────────────┘        │ Closed        │ Open
+//!                                      ▼               ▼
+//!                              ┌───────────────┐ ┌───────────────┐
+//!                              │ Err(NoViable  │ │ Check $PATH   │
+//!                              │ UpgradeSource)│ │ rustup/cargo  │
+//!                              └───────────────┘ └───┬───────┬───┘
+//!                                       rustup found │       │ cargo only
+//!                                                    ▼       ▼
+//!                                      ┌─────────────┐ ┌─────────────┐
+//!                                      │UpgradeSource│ │UpgradeSource│
+//!                                      │::BuildFrom  │ │::BuildFrom  │
+//!                                      │SourceRustup │ │SourceCargo  │
+//!                                      └─────────────┘ └─────────────┘
+//! ```
+//!
 //! [`CACHED_CRATE_METADATA`]: crate::core::script::upgrade::CACHED_CRATE_METADATA
 //! [`check_version_against_manifest`]: crate::core::script::upgrade::check_version_against_manifest
 //! [`CrateDistribution::ClosedSource`]: crate::core::script::upgrade::CrateDistribution::ClosedSource
 //! [`CrateDistribution::OpenSource`]: crate::core::script::upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::core::script::upgrade::CrateDistribution
 //! [`CST`]: jsonc_parser::cst::CstRootNode
+//! [`execute_upgrade_with_metadata`]: crate::core::script::upgrade::execute_upgrade_with_metadata
 //! [`get_cached_crate_metadata`]: crate::core::script::upgrade::get_cached_crate_metadata
 //! [`handle_upgrade_at_exit_sync`]: crate::core::script::upgrade::handle_upgrade_at_exit_sync
 //! [`handle_upgrade_at_exit`]: crate::core::script::upgrade::handle_upgrade_at_exit
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::upgrade::R3BL_BINARIES_RELEASE_BASE_URL
 //! [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::upgrade::R3BL_VERSIONS_JSON_URL
+//! [`resolve_source_fallback`]: crate::core::script::upgrade::resolve_source_fallback
+//! [`resolve_upgrade_strategy_pure`]: crate::core::script::upgrade::resolve_upgrade_strategy_pure
+//! [`resolve_upgrade_strategy`]: crate::core::script::upgrade::resolve_upgrade_strategy
 //! [`run_upgrade_cli_arg_interceptor_sync`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor_sync
 //! [`run_upgrade_cli_arg_interceptor`]: crate::core::script::upgrade::run_upgrade_cli_arg_interceptor
 //! [`run_upgrade_sync`]: crate::core::script::upgrade::run_upgrade_sync
@@ -123,6 +172,7 @@
 //! [`UpdateBehavior`]: crate::core::script::upgrade::UpdateBehavior
 //! [`UPGRADE_CHECK_STATE`]: crate::core::script::upgrade::UPGRADE_CHECK_STATE
 //! [`UpgradeCheckResult::FailedCheck`]: crate::core::script::upgrade::UpgradeCheckResult::FailedCheck
+//! [`UpgradeSource`]: crate::core::script::upgrade::UpgradeSource
 //! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_parse_jsonc
 //! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::upgrade::VersionsManifest::try_update_crate_in_jsonc
 //! [`VersionsManifest`]: crate::core::script::upgrade::VersionsManifest
