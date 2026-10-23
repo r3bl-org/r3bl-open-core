@@ -3,12 +3,14 @@
 #![rustfmt::skip]
 
 // Private submodules.
+mod cli_arg;
 mod config;
 mod engine;
 mod manifest;
 mod state;
 
 // Public barrel re-exports.
+pub use cli_arg::*;
 pub use config::*;
 pub use engine::*;
 pub use manifest::*;

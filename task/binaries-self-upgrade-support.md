@@ -653,6 +653,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       implementation and ensure no regressions.
     - [x] `tui/src/core/script/self_update/constants.rs`
     - [ ] `tui/src/core/script/self_update/update/config.rs`
+    - [ ] `tui/src/core/script/self_update/update/cli_arg.rs`
     - [ ] `tui/src/core/script/self_update/update/manifest.rs`
     - [ ] `tui/src/core/script/self_update/update/state.rs`
     - [ ] `tui/src/core/script/self_update/update/engine.rs`

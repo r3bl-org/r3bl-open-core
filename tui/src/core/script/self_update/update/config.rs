@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CrateName, CrateVersion};
+use super::{CrateName, CrateVersion, UpdateBehavior};
 
 /// Configuration passed to the self-upgrade engine. This is how a binary tells the
 /// upgrade engine how it should do the update & upgrade.
@@ -25,8 +25,11 @@ pub struct SelfBinaryUpgradeConfig {
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
     pub crate_name: CrateName,
 
-    /// Current version of the binary compiled from `Cargo.toml`
-    /// (`env!("CARGO_PKG_VERSION")`).
+    /// Current version of the binary compiled from `Cargo.toml` which you can get from
+    /// [`env!("CARGO_PKG_VERSION")`][env-macro], which returns something like `0.0.25`.
+    /// This is typically parsed into a [`CrateVersion`] via [`CrateVersion::try_from`].
+    ///
+    /// [env-macro]: std::env!
     pub current_version: CrateVersion,
 
     /// Behavior governing background update checks and application exit handling.
@@ -48,13 +51,15 @@ mod impl_self_binary_upgrade_config {
         /// * `crate_name` - The crate name as registered in [`R3BL_VERSIONS_JSON_URL`]
         ///   (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`).
         /// * `current_version` - Semantic version of the running binary, typically parsed
-        ///   from `env!("CARGO_PKG_VERSION")` via [`CrateVersion::try_from`].
+        ///   from [`env!("CARGO_PKG_VERSION")`][env-macro] via
+        ///   [`CrateVersion::try_from`].
         /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
         ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
         ///
         /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+        /// [env-macro]: std::env!
         pub fn new(
             crate_name: impl Into<CrateName>,
             current_version: CrateVersion,
@@ -71,41 +76,6 @@ mod impl_self_binary_upgrade_config {
             }
         }
     }
-}
-
-/// Behavior governing background update checks and application exit handling.
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Default,
-    clap::ValueEnum,
-    serde::Serialize,
-    serde::Deserialize,
-)]
-#[serde(rename_all = "kebab-case")]
-pub enum UpdateBehavior {
-    /// Interactive prompt asking the user (`"Yes, upgrade now"` / `"No, thanks"`) at
-    /// exit if a newer version is available.
-    #[value(name = "prompt-to-upgrade")]
-    PromptToUpgrade,
-
-    /// Automatically downloads and installs the upgrade at exit without prompting if a
-    /// newer version is available. Default behavior for all workspace binaries.
-    #[default]
-    #[value(name = "auto")]
-    Auto,
-
-    /// Prints a one-line notification that a newer version is available without running
-    /// the upgrade. Selected explicitly via `--update-behavior notify-only`.
-    #[value(name = "notify-only")]
-    NotifyOnly,
-
-    /// Suppresses background version checks and exit upgrade handling entirely.
-    #[value(name = "disable")]
-    Disable,
 }
 
 /// Target output channel for upgrade messages, spinners, and progress reporting.
@@ -203,34 +173,5 @@ mod tests {
         // 2. When no CLI override is provided (None), falls back to universal default
         //    Auto.
         assert_eq2!(make_config(None).update_behavior, UpdateBehavior::Auto);
-    }
-
-    #[test]
-    fn test_update_behavior_clap_value_enum() {
-        use clap::ValueEnum;
-
-        let prompt = UpdateBehavior::from_str("prompt-to-upgrade", true).unwrap();
-        assert_eq2!(prompt, UpdateBehavior::PromptToUpgrade);
-
-        let auto = UpdateBehavior::from_str("auto", true).unwrap();
-        assert_eq2!(auto, UpdateBehavior::Auto);
-        assert_eq2!(UpdateBehavior::default(), UpdateBehavior::Auto);
-
-        let notify = UpdateBehavior::from_str("notify-only", true).unwrap();
-        assert_eq2!(notify, UpdateBehavior::NotifyOnly);
-
-        let disable = UpdateBehavior::from_str("disable", true).unwrap();
-        assert_eq2!(disable, UpdateBehavior::Disable);
-
-        // Verify that aliases and obsolete names are rejected to prevent ambiguity.
-        assert!(UpdateBehavior::from_str("prompt", true).is_err());
-        assert!(UpdateBehavior::from_str("interactive", true).is_err());
-        assert!(UpdateBehavior::from_str("interactive-prompt", true).is_err());
-        assert!(UpdateBehavior::from_str("auto-upgrade", true).is_err());
-        assert!(UpdateBehavior::from_str("notify", true).is_err());
-        assert!(UpdateBehavior::from_str("disabled", true).is_err());
-        assert!(UpdateBehavior::from_str("none", true).is_err());
-        assert!(UpdateBehavior::from_str("never", true).is_err());
-        assert!(UpdateBehavior::from_str("off", true).is_err());
     }
 }
