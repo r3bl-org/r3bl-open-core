@@ -19,8 +19,8 @@ use super::{CrateDistribution, CrateName, CrateVersion, CrateVersionMetadata,
             UpgradeCheckStatus, UpgradeSource, UserFeedbackChannel, archive, bin_names,
             check_version_against_manifest, download_and_verify_archive,
             extract_and_apply_archive, manifest_query, prompt_user_to_upgrade,
-            run_source_build_with_spinner, ui_strings, upgrade_cli_args, upgrade_reasons,
-            version_compare};
+            run_source_build_with_spinner, ui_strings, upgrade_cli_args,
+            upgrade_reasons, version_compare};
 use crate::{InlineString, OutputDevice, Spinner, SpinnerStyle, StdMutex,
             TuiAvailability, inline_string, ok, script::temp_dir::try_create_temp_dir};
 use std::{env::current_exe, io, sync::Arc, time::Duration};

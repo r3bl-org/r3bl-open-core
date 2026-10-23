@@ -3,12 +3,10 @@
 use super::{CrateName, CrateVersion, UpdateBehavior};
 
 /// Configuration passed to the self-upgrade engine. This is how a binary tells the
-/// upgrade engine how it should do the update & upgrade.
+/// upgrade engine how it should handle its (self) update & upgrade.
 ///
-/// Unlike tools that implicitly alter their behavior or downgrade actions when `CI=true`,
-/// this engine doesn't have side effects from environment variables: `CI=<bool>` does
-/// **not** influence behavior resolution. All upgrade behaviors are controlled strictly
-/// by either:
+/// This engine doesn't have side effects from environment variables. `CI=<bool>` does
+/// **not** influence its behavior. All upgrade behaviors are controlled by either:
 /// - Explicit CLI flags (such as passing [`UpdateBehavior`] via `--update-behavior`). For
 ///   examples of this, you can look at the `CLIArg` structs in our binary crates like
 ///   `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.

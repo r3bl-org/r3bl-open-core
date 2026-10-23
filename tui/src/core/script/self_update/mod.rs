@@ -100,6 +100,17 @@
 //!    - If the manifest server is down, unreachable, or cannot be parsed, the failure is
 //!      reported to [`stderr`] and the process exits with status code `1`.
 //!
+//! # Command-Line Interface (`CLI`) Integration
+//!
+//! All workspace binaries share a unified command-line interface for upgrades and
+//! update checks by flattening [`UpgradeCLIArgs`] into their top-level argument parser:
+//!
+//! - `--upgrade`: Triggers an immediate self-upgrade and exits.
+//! - `--update-behavior`: Selects the exit check policy ([`UpdateBehavior`]).
+//!
+//! These flags are mutually exclusive to prevent contradictory or silently ignored
+//! arguments. See [`UpgradeCLIArgs`] and [`UpdateBehavior`] for details.
+//!
 //! # Upgrade Strategy Resolution (GitHub Release vs. Source Fallback)
 //!
 //! Once the engine determines that an upgrade is available (`remote_version >
@@ -172,6 +183,7 @@
 //! [`UpgradeCheckCache`]: crate::core::script::self_update::UpgradeCheckCache
 //! [`UpgradeCheckStatus::CheckFailed`]: crate::core::script::self_update::UpgradeCheckStatus::CheckFailed
 //! [`UpgradeCheckStatus`]: crate::core::script::self_update::UpgradeCheckStatus
+//! [`UpgradeCLIArgs`]: crate::core::script::self_update::UpgradeCLIArgs
 //! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::self_update::UpgradeSource::try_fallback_to_source
 //! [`UpgradeSource::try_resolve`]: crate::core::script::self_update::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::core::script::self_update::UpgradeSource
