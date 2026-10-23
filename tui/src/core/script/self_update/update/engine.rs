@@ -1,8 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::R3BL_VERSIONS_JSON_URL, CrateVersion, CrateVersionMetadata,
-            SelfBinaryUpgradeConfig, UpgradeCheckCache, UpgradeCheckStatus,
-            VersionsManifest};
+use super::{super::{CrateVersion, CrateVersionMetadata, JsoncManifest,
+                    R3BL_VERSIONS_JSON_URL},
+            SelfBinaryUpgradeConfig, UpgradeCheckCache, UpgradeCheckStatus};
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
 use std::time::Duration;
@@ -81,7 +81,7 @@ pub mod manifest_query {
     const VERSION_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 
     /// Parses a JSONC string matching the [`R3BL_VERSIONS_JSON_URL`] schema
-    /// ([`VersionsManifest`]) and extracts the [`CrateVersionMetadata`] for `crate_name`.
+    /// ([`JsoncManifest`]) and extracts the [`CrateVersionMetadata`] for `crate_name`.
     ///
     /// # Errors
     ///
@@ -89,13 +89,13 @@ pub mod manifest_query {
     /// `crates_map`.
     ///
     /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
+    /// [`JsoncManifest`]: crate::core::script::self_update::JsoncManifest
     /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
-    /// [`VersionsManifest`]: crate::core::script::self_update::VersionsManifest
     pub fn parse_crate_metadata_from_versions_json_str(
         json_str: &str,
         crate_name: &str,
     ) -> miette::Result<CrateVersionMetadata> {
-        let manifest = VersionsManifest::try_parse_jsonc(json_str)?;
+        let manifest = JsoncManifest::try_parse_jsonc(json_str)?;
 
         manifest.crates_map.get(crate_name).cloned().ok_or_else(|| {
             miette::miette!(
@@ -183,7 +183,7 @@ pub mod version_compare {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::CrateDistribution, *};
+    use super::{super::super::CrateDistribution, *};
     use crate::assert_eq2;
 
     #[test]

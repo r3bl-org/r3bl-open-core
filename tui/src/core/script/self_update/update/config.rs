@@ -1,6 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CrateName, CrateVersion, UpdateBehavior};
+use super::{super::{CrateName, CrateVersion},
+            UpdateBehavior};
 
 /// Configuration passed to the self-upgrade engine. This is how a binary (like `edi` or
 /// `giti`) tells the upgrade engine how it should handle its (self) update & upgrade.

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::CrateVersionMetadata;
+use super::super::CrateVersionMetadata;
 use crate::{DeadlockPreventionPolicy::PanicOnSpecificLockNesting, ScopedMutex,
             scoped_mutex};
 use std::sync::LazyLock;
@@ -197,7 +197,7 @@ pub enum UpgradeCheckStatus {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::{CrateDistribution, CrateVersion},
+    use super::{super::super::{CrateDistribution, CrateVersion},
                 *};
     use crate::assert_eq2;
     use chrono::Utc;

@@ -16,16 +16,16 @@
 //!
 //! 1. Read and Upgrade Path: The client runtime is embedded into product binaries to
 //!    fetch [`R3BL_VERSIONS_JSON_URL`] ([`check_version_against_manifest`]), parse
-//!    [`VersionsManifest::try_parse_jsonc`], and guard against downgrading local dev
-//!    builds (`remote_version > current_version` via
+//!    [`JsoncManifest::try_parse_jsonc`], and guard against downgrading local dev builds
+//!    (`remote_version > current_version` via
 //!    [`SelfBinaryUpgradeConfig::current_version`]). When an upgrade runs, it streams and
 //!    verifies `.tar.gz` and `.sha256` release assets from
 //!    [`R3BL_BINARIES_RELEASE_BASE_URL`], swaps binaries in-place via [`self_replace`]
 //!    (plus any sibling binaries), or falls back to `crates.io`.
 //! 2. Write Path: The shared schema and in-place JSONC mutator (via [`CST`] which is
 //!    provided by the [JSONC parser] crate) is exposed via
-//!    [`VersionsManifest::try_update_crate_in_jsonc`] as a library API so external
-//!    release tooling can losslessly update `versions.jsonc` entries while preserving all
+//!    [`JsoncManifest::try_update_crate_in_jsonc`] as a library API so external release
+//!    tooling can losslessly update `versions.jsonc` entries while preserving all
 //!    existing comments, blank lines, and formatting.
 //!
 //! ## External to this repository: The Release and Distribution Pipeline
@@ -50,7 +50,7 @@
 //!
 //! # Centralized Version Manifest ([`R3BL_VERSIONS_JSON_URL`])
 //!
-//! The version manifest ([`VersionsManifest`]) is the central registry for all R3BL
+//! The version manifest ([`JsoncManifest`]) is the central registry for all R3BL
 //! binary crates. These include `r3bl-cmdr` (`giti`, `edi`, `env-source`),
 //! `r3bl-build-infra`, and `r3bl-rust-analyzer-mcp-server`.
 //!
@@ -165,6 +165,9 @@
 //! [`execute_upgrade_with_metadata`]: crate::core::script::self_update::upgrade_execution::execute_upgrade_with_metadata
 //! [`handle_upgrade_at_exit_sync`]: crate::core::script::self_update::handle_upgrade_at_exit_sync
 //! [`handle_upgrade_at_exit`]: crate::core::script::self_update::handle_upgrade_at_exit
+//! [`JsoncManifest::try_parse_jsonc`]: crate::core::script::self_update::JsoncManifest::try_parse_jsonc
+//! [`JsoncManifest::try_update_crate_in_jsonc`]: crate::core::script::self_update::JsoncManifest::try_update_crate_in_jsonc
+//! [`JsoncManifest`]: crate::core::script::self_update::JsoncManifest
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`pure_evaluator::evaluate_upgrade_source_pure`]: crate::core::script::self_update::pure_evaluator::evaluate_upgrade_source_pure
 //! [`R3BL_BINARIES_RELEASE_BASE_URL`]: crate::core::script::self_update::R3BL_BINARIES_RELEASE_BASE_URL
@@ -187,19 +190,18 @@
 //! [`UpgradeSource::try_fallback_to_source`]: crate::core::script::self_update::UpgradeSource::try_fallback_to_source
 //! [`UpgradeSource::try_resolve`]: crate::core::script::self_update::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::core::script::self_update::UpgradeSource
-//! [`VersionsManifest::try_parse_jsonc`]: crate::core::script::self_update::VersionsManifest::try_parse_jsonc
-//! [`VersionsManifest::try_update_crate_in_jsonc`]: crate::core::script::self_update::VersionsManifest::try_update_crate_in_jsonc
-//! [`VersionsManifest`]: crate::core::script::self_update::VersionsManifest
 //! [JSONC parser]: mod@jsonc_parser
 
 // Private submodules.
 mod constants;
 mod entry_point;
+mod parser;
 mod update;
 mod upgrade;
 
 // Public barrel re-exports.
 pub use constants::*;
 pub use entry_point::*;
+pub use parser::*;
 pub use update::*;
 pub use upgrade::*;
