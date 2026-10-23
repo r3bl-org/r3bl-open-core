@@ -2,8 +2,8 @@
 
 use super::{CrateName, CrateVersion, UpdateBehavior};
 
-/// Configuration passed to the self-upgrade engine. This is how a binary tells the
-/// upgrade engine how it should handle its (self) update & upgrade.
+/// Configuration passed to the self-upgrade engine. This is how a binary (like `edi` or
+/// `giti`) tells the upgrade engine how it should handle its (self) update & upgrade.
 ///
 /// This engine doesn't have side effects from environment variables. `CI=<bool>` does
 /// **not** influence its behavior.
