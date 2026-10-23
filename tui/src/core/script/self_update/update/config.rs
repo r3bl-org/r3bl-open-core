@@ -6,15 +6,28 @@ use super::{CrateName, CrateVersion, UpdateBehavior};
 /// upgrade engine how it should handle its (self) update & upgrade.
 ///
 /// This engine doesn't have side effects from environment variables. `CI=<bool>` does
-/// **not** influence its behavior. All upgrade behaviors are controlled by either:
-/// - Explicit CLI flags (such as passing [`UpdateBehavior`] via `--update-behavior`). For
-///   examples of this, you can look at the `CLIArg` structs in our binary crates like
-///   `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`.
-/// - Programmatically creating this config to eliminate ambiguity.
+/// **not** influence its behavior.
+///
+/// 1. Binaries (such as `giti` or `edi`) always construct this struct via
+///    [`Self::new()`].
+/// 2. To support standard CLI arguments, binaries may include [`UpgradeCLIArgs`] in their
+///    Clap parser via `#[command(flatten)]` to make them top-level flags (and not
+///    sub-commands):
+///    - [`UpgradeCLIArgs::update_behavior`]: The only CLI flag that influences this
+///      config. Its value is passed to [`Self::new()`] as `maybe_update_behavior`
+///      (defaulting to [`UpdateBehavior::Auto`] when omitted).
+///    - [`UpgradeCLIArgs::upgrade`]: Triggers an immediate upgrade and exit; it does not
+///      affect this configuration.
+///
+/// Callers can also construct this struct programmatically with explicit
+/// [`UpdateBehavior`] settings (e.g. in integration tests).
 ///
 /// Use [`Self::new()`] to construct this struct.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
+/// [`UpgradeCLIArgs::update_behavior`]: crate::core::script::self_update::UpgradeCLIArgs::update_behavior
+/// [`UpgradeCLIArgs::upgrade`]: crate::core::script::self_update::UpgradeCLIArgs::upgrade
+/// [`UpgradeCLIArgs`]: crate::core::script::self_update::UpgradeCLIArgs
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in [`R3BL_VERSIONS_JSON_URL`] (e.g.,
