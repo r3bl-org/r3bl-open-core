@@ -72,6 +72,7 @@ mod impl_self_binary_upgrade_config {
         /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
         /// [env-macro]: std::env!
         /// [ub]: crate::core::script::self_update::UpgradeCLIArgs::update_behavior
+        #[must_use]
         pub fn new(
             crate_name: CrateName,
             current_version: CrateVersion,
