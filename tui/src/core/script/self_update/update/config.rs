@@ -8,16 +8,15 @@ use super::{CrateName, CrateVersion, UpdateBehavior};
 /// This engine doesn't have side effects from environment variables. `CI=<bool>` does
 /// **not** influence its behavior.
 ///
-/// 1. Binaries (such as `giti` or `edi`) always construct this struct via
+/// 1. Binaries (such as `giti` or `edi`) **always** construct this struct via
 ///    [`Self::new()`].
 /// 2. To support standard CLI arguments, binaries may include [`UpgradeCLIArgs`] in their
-///    Clap parser via `#[command(flatten)]` to make them top-level flags (and not
+///    [`clap`] parser via `#[command(flatten)]` to make them top-level flags (and not
 ///    sub-commands):
-///    - [`UpgradeCLIArgs::update_behavior`]: The only CLI flag that influences this
-///      config. Its value is passed to [`Self::new()`] as `maybe_update_behavior`
-///      (defaulting to [`UpdateBehavior::Auto`] when omitted).
-///    - [`UpgradeCLIArgs::upgrade`]: Triggers an immediate upgrade and exit; it does not
-///      affect this configuration.
+///    - [`UpgradeCLIArgs::update_behavior`]: This is the only CLI flag that influences
+///      this config. Its value can be passed to [`Self::new()`] as
+///      `maybe_update_behavior` argument.
+///    - [`UpgradeCLIArgs::upgrade`]: Does not affect this configuration.
 ///
 /// Callers can also construct this struct programmatically with explicit
 /// [`UpdateBehavior`] settings (e.g. in integration tests).
