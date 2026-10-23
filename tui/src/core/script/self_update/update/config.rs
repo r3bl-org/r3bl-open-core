@@ -187,4 +187,46 @@ mod tests {
         //    Auto.
         assert_eq2!(make_config(None).update_behavior, UpdateBehavior::Auto);
     }
+
+    #[test]
+    fn test_self_binary_upgrade_config_field_initialization() {
+        let config = SelfBinaryUpgradeConfig::new(
+            "r3bl-cmdr".into(),
+            CrateVersion {
+                major: 1,
+                minor: 2,
+                patch: 3,
+            },
+            Some(UpdateBehavior::Disable),
+            UserFeedbackChannel::Stderr,
+        );
+
+        assert_eq2!(config.crate_name, CrateName::from("r3bl-cmdr"));
+        assert_eq2!(
+            config.current_version,
+            CrateVersion {
+                major: 1,
+                minor: 2,
+                patch: 3,
+            }
+        );
+        assert_eq2!(config.update_behavior, UpdateBehavior::Disable);
+        assert_eq2!(config.user_feedback_channel, UserFeedbackChannel::Stderr);
+    }
+
+    #[test]
+    fn test_user_feedback_channel_dispatch() {
+        let channels = [
+            UserFeedbackChannel::Stdout,
+            UserFeedbackChannel::Stderr,
+            UserFeedbackChannel::Quiet,
+        ];
+
+        for channel in channels {
+            // Exercises Stdout (println!), Stderr (eprintln!), and Quiet (tracing::info!).
+            channel.println("test line");
+            // Exercises Stdout|Stderr (eprintln!) and Quiet (tracing::error!).
+            channel.eprintln("test error line");
+        }
+    }
 }

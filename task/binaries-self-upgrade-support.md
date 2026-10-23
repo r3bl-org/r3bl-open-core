@@ -652,8 +652,8 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [x] `tui/src/core/script/self_update/constants.rs`
-    - [ ] `tui/src/core/script/self_update/update/config.rs`
-    - [ ] `tui/src/core/script/self_update/update/cli_arg.rs`
+    - [x] `tui/src/core/script/self_update/update/config.rs`
+    - [x] `tui/src/core/script/self_update/update/cli_arg.rs`
     - [ ] `tui/src/core/script/self_update/update/manifest.rs`
     - [ ] `tui/src/core/script/self_update/update/state.rs`
     - [ ] `tui/src/core/script/self_update/update/engine.rs`
