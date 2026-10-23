@@ -13,8 +13,8 @@ use super::{CrateName, CrateVersion, UpdateBehavior};
 /// 2. To support standard CLI arguments, binaries may include [`UpgradeCLIArgs`] in their
 ///    [`clap`] parser via `#[command(flatten)]` to make them top-level flags (and not
 ///    sub-commands):
-///    - [`UpgradeCLIArgs::update_behavior`]: This is the only CLI flag that influences
-///      this config. Its value can be passed to [`Self::new()`] as
+///    - [`UpgradeCLIArgs::update_behavior`][ub]: This is the only CLI flag that
+///      influences this config. Its value can be passed to [`Self::new()`] as
 ///      `maybe_update_behavior` argument.
 ///    - [`UpgradeCLIArgs::upgrade`]: Does not affect this configuration.
 ///
@@ -24,9 +24,9 @@ use super::{CrateName, CrateVersion, UpdateBehavior};
 /// Use [`Self::new()`] to construct this struct.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
-/// [`UpgradeCLIArgs::update_behavior`]: crate::core::script::self_update::UpgradeCLIArgs::update_behavior
 /// [`UpgradeCLIArgs::upgrade`]: crate::core::script::self_update::UpgradeCLIArgs::upgrade
 /// [`UpgradeCLIArgs`]: crate::core::script::self_update::UpgradeCLIArgs
+/// [ub]: crate::core::script::self_update::UpgradeCLIArgs::update_behavior
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfBinaryUpgradeConfig {
     /// Name of the crate as registered in [`R3BL_VERSIONS_JSON_URL`] (e.g.,
@@ -63,15 +63,17 @@ mod impl_self_binary_upgrade_config {
         /// * `current_version` - Semantic version of the running binary, typically parsed
         ///   from [`env!("CARGO_PKG_VERSION")`][env-macro] via
         ///   [`CrateVersion::try_from`].
-        /// * `maybe_update_behavior` - Optional override (from CLI args or programmatic
-        ///   configuration). When `None`, falls back to [`UpdateBehavior::Auto`].
+        /// * `maybe_update_behavior` - Optional override (from CLI args
+        ///   ([`UpgradeCLIArgs::update_behavior`][ub]) or programmatic configuration).
+        ///   When `None`, falls back to [`UpdateBehavior::Auto`].
         /// * `user_feedback_channel` - Output channel where upgrade messages, spinners,
         ///   and notices are written.
         ///
         /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
         /// [env-macro]: std::env!
+        /// [ub]: crate::core::script::self_update::UpgradeCLIArgs::update_behavior
         pub fn new(
-            crate_name: impl Into<CrateName>,
+            crate_name: CrateName,
             current_version: CrateVersion,
             maybe_update_behavior: Option<UpdateBehavior>,
             user_feedback_channel: UserFeedbackChannel,
@@ -79,7 +81,7 @@ mod impl_self_binary_upgrade_config {
             let update_behavior = maybe_update_behavior.unwrap_or_default();
 
             Self {
-                crate_name: crate_name.into(),
+                crate_name,
                 current_version,
                 update_behavior,
                 user_feedback_channel,
@@ -148,7 +150,7 @@ mod tests {
     fn test_self_binary_upgrade_config_behavior_resolution() {
         let make_config = |maybe_behavior| {
             SelfBinaryUpgradeConfig::new(
-                "r3bl-cmdr",
+                "r3bl-cmdr".into(),
                 CrateVersion {
                     major: 0,
                     minor: 0,

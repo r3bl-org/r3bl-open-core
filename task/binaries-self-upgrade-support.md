@@ -444,7 +444,7 @@ inspection):
 - [ ] Intercept `--upgrade` at startup in `build-infra/src/bin/cargo-rustdoc-fmt.rs`.
 - [ ] Spawn background version check at startup in `cargo-rustdoc-fmt.rs`.
 - [ ] At exit, invoke `r3bl_tui::handle_upgrade_at_exit()` with
-      `SelfBinaryUpgradeConfig::new("r3bl-build-infra", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`.
+      `SelfBinaryUpgradeConfig::new("r3bl-build-infra".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`.
 - [ ] Release archive for `r3bl-build-infra` on `github.com/r3bl-org/r3bl-binaries`
       bundles `cargo-rustdoc-fmt` (and any future binaries added to `build-infra`, such as
       `spawny` in `task/build-infra-spawny.md`).
@@ -464,7 +464,7 @@ inspection):
 - [ ] Intercept `--upgrade` at startup in `rust-analyzer-mcp-server/src/main.rs`.
 - [ ] Spawn background version check at startup in `main.rs`.
 - [ ] At shutdown/exit, invoke `r3bl_tui::handle_upgrade_at_exit_sync()` with
-      `SelfBinaryUpgradeConfig::new("r3bl-rust-analyzer-mcp-server", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`
+      `SelfBinaryUpgradeConfig::new("r3bl-rust-analyzer-mcp-server".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`
       to guarantee `stdout` JSON-RPC message transport remains 100% uncorrupted.
 - [ ] Release archive for `r3bl-rust-analyzer-mcp-server` on
       `github.com/r3bl-org/r3bl-binaries` bundles `rust-analyzer-mcp-server`.
@@ -705,11 +705,11 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       and `cmdr/src/bin/env-source.rs` to run standalone upgrade and exit.
 - [ ] Refactor `cmdr/src/analytics_client/upgrade_check.rs` and `ui_str.rs` to delegate to
       `r3bl_tui::core::script::self_update::*`: - `giti`:
-      `SelfBinaryUpgradeConfig::new("r3bl-cmdr", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -
+      `SelfBinaryUpgradeConfig::new("r3bl-cmdr".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -
       `edi`:
-      `SelfBinaryUpgradeConfig::new("r3bl-cmdr", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -
+      `SelfBinaryUpgradeConfig::new("r3bl-cmdr".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`. -
       `env-source`:
-      `SelfBinaryUpgradeConfig::new("r3bl-cmdr", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`.
+      `SelfBinaryUpgradeConfig::new("r3bl-cmdr".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`.
 - [ ] Run `cmdr` unit tests and verify `giti`, `edi`, and `env-source` compile and
       function.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -732,7 +732,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
 - [ ] Intercept `--upgrade` at startup in `build-infra/src/bin/cargo-rustdoc-fmt.rs`.
 - [ ] Integrate background check and exit upgrade handler with
-      `SelfBinaryUpgradeConfig::new("r3bl-build-infra", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`.
+      `SelfBinaryUpgradeConfig::new("r3bl-build-infra".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stdout)`.
 - [ ] Ensure `--update-behavior` explicitly controls exit behavior without inspecting
       magic environment variables like `CI`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -751,7 +751,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
       `run_upgrade_sync()`.
 - [ ] Integrate background check (`start_background_version_check`) and shutdown
       upgrade handler (`handle_upgrade_at_exit_sync` with
-      `SelfBinaryUpgradeConfig::new("r3bl-rust-analyzer-mcp-server", CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`).
+      `SelfBinaryUpgradeConfig::new("r3bl-rust-analyzer-mcp-server".into(), CrateVersion::try_from(env!("CARGO_PKG_VERSION")).expect("valid semver"), args.update_behavior, UserFeedbackChannel::Stderr)`).
 - [ ] Ensure `--update-behavior` explicitly controls shutdown behavior without inspecting
       magic environment variables like `CI`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct

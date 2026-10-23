@@ -740,7 +740,7 @@ mod tests {
         UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -762,7 +762,7 @@ mod tests {
         UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -776,7 +776,7 @@ mod tests {
     async fn test_run_upgrade_cli_arg_interceptor_no_flag() {
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -792,7 +792,7 @@ mod tests {
     fn test_run_upgrade_cli_arg_interceptor_sync_no_flag() {
         let version = CrateVersion::try_from("0.0.25").unwrap();
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -815,7 +815,7 @@ mod tests {
         };
         UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -835,7 +835,7 @@ mod tests {
         UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -855,7 +855,7 @@ mod tests {
         UpgradeCheckCache::set(UpgradeCheckStatus::UpToDate(meta));
 
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             version,
             None,
             UserFeedbackChannel::Quiet,
@@ -868,7 +868,7 @@ mod tests {
     fn test_start_background_version_check_disabled() {
         UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             CrateVersion::try_from("0.0.25").unwrap(),
             Some(UpdateBehavior::Disable),
             UserFeedbackChannel::Quiet,
@@ -882,7 +882,7 @@ mod tests {
     fn test_start_background_version_check_sync_disabled() {
         UpgradeCheckCache::set(UpgradeCheckStatus::NotChecked);
         let config = SelfBinaryUpgradeConfig::new(
-            "r3bl-cmdr",
+            "r3bl-cmdr".into(),
             CrateVersion::try_from("0.0.25").unwrap(),
             Some(UpdateBehavior::Disable),
             UserFeedbackChannel::Quiet,
