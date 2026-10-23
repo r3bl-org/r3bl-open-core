@@ -41,70 +41,30 @@ mod tests {
         text.replace(CRLF_LINE_ENDING, LF_LINE_ENDING)
     }
 
-    /// Runs `FileProcessor` with default options and the seed registry on `input`,
-    /// writing to a temporary file so the git-tracked fixture on disk is not mutated.
-    fn run_default_processor_on_fixture(
-        file_name: &str,
-        input: &str,
-    ) -> (processor::ProcessingResult, String) {
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join(file_name);
-        fs::write(&test_file, input).unwrap();
-
+    /// Runs `FileProcessor` with default options and the seed registry on `input` in
+    /// memory without touching the filesystem.
+    fn run_default_processor_on_fixture(input: &str) -> (FormatStatus, String) {
         let registry = test_registry();
         let processor =
             processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
-        let result = processor
-            .process_files(std::slice::from_ref(&test_file))
-            .pop()
-            .unwrap();
-
-        assert!(
-            result.errors.is_empty(),
-            "Processing errors for {file_name}: {:?}",
-            result.errors
-        );
-
-        let formatted = fs::read_to_string(&test_file).unwrap();
-        (result, formatted)
+        processor.process_source(input)
     }
 
-    /// Runs `FileProcessor` 3 consecutive times on `input` and asserts that runs 2 and 3
-    /// produce output identical to run 1.
-    fn assert_fixture_idempotent(file_name: &str, input: &str) {
-        let temp_dir = TempDir::new().unwrap();
-        let test_file = temp_dir.path().join(file_name);
-        fs::write(&test_file, input).unwrap();
-
+    /// Runs `FileProcessor` 3 consecutive times on `input` in memory and asserts that
+    /// runs 2 and 3 produce output identical to run 1.
+    fn assert_fixture_idempotent(input: &str) {
         let registry = test_registry();
         let processor =
             processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
 
-        let r1 = processor
-            .process_files(std::slice::from_ref(&test_file))
-            .pop()
-            .unwrap();
-        assert!(
-            r1.errors.is_empty(),
-            "Processing errors for {file_name}: {:?}",
-            r1.errors
-        );
-        let after_run_1 = fs::read_to_string(&test_file).unwrap();
+        let (_r1_status, after_run_1) = processor.process_source(input);
 
-        let r2 = processor
-            .process_files(std::slice::from_ref(&test_file))
-            .pop()
-            .unwrap();
-        assert_eq!(r2.status, FormatStatus::Unchanged);
-        let after_run_2 = fs::read_to_string(&test_file).unwrap();
+        let (r2_status, after_run_2) = processor.process_source(&after_run_1);
+        assert_eq!(r2_status, FormatStatus::Unchanged);
         assert_diff_eq(&after_run_2, &after_run_1);
 
-        let r3 = processor
-            .process_files(std::slice::from_ref(&test_file))
-            .pop()
-            .unwrap();
-        assert_eq!(r3.status, FormatStatus::Unchanged);
-        let after_run_3 = fs::read_to_string(&test_file).unwrap();
+        let (r3_status, after_run_3) = processor.process_source(&after_run_2);
+        assert_eq!(r3_status, FormatStatus::Unchanged);
         assert_diff_eq(&after_run_3, &after_run_2);
     }
 
@@ -136,10 +96,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_complex.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_complex.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(status, FormatStatus::Modified);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -155,10 +114,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_table.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_table.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(status, FormatStatus::Modified);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -174,10 +132,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_links.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_links.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(status, FormatStatus::Modified);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -194,10 +151,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_mixed_comments.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_mixed_comments.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(status, FormatStatus::Modified);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -214,10 +170,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_indented.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_indented.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Modified);
+        assert_eq!(status, FormatStatus::Modified);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -234,10 +189,9 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_no_formatting_needed.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_no_formatting_needed.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
-        assert_eq!(result.status, FormatStatus::Unchanged);
+        assert_eq!(status, FormatStatus::Unchanged);
         assert_diff_eq(&formatted, &expected);
     }
 
@@ -258,8 +212,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_real_world.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_real_world.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Verify heading levels are preserved.
         assert!(
@@ -320,13 +274,12 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_real_world_2.rs"
         )));
 
-        let (result, output) =
-            run_default_processor_on_fixture("sample_real_world_2.rs", input);
+        let (status, output) = run_default_processor_on_fixture(input);
 
         // File SHOULD be modified because rustfmt_skip is decoupled from
         // cargo-rustdoc-fmt.
         assert_eq!(
-            result.status,
+            status,
             FormatStatus::Modified,
             "File with rustfmt_skip should still have its rustdoc comments formatted"
         );
@@ -359,11 +312,10 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_scattered_references.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_scattered_references.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
         assert_eq!(
-            result.status,
+            status,
             FormatStatus::Modified,
             "File should be modified (references need aggregation)"
         );
@@ -416,8 +368,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_html_comments.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_html_comments.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Verify HTML comments are preserved.
         assert!(
@@ -458,11 +410,10 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_code_fence_comma.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_code_fence_comma.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
         assert_eq!(
-            result.status,
+            status,
             FormatStatus::Modified,
             "File should be modified (references need aggregation)"
         );
@@ -526,11 +477,10 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_indented_table.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_indented_table.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
         assert_eq!(
-            result.status,
+            status,
             FormatStatus::Modified,
             "File should be modified (tables need formatting)"
         );
@@ -580,8 +530,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_rrt.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_rrt.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // References with generic type params in backticks should be sorted.
         assert!(
@@ -609,7 +559,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_rrt.rs"
         ));
-        assert_fixture_idempotent("sample_rrt.rs", input);
+        assert_fixture_idempotent(input);
     }
 
     /// Regression test: bracketed escape sequences inside backtick spans (such as
@@ -626,8 +576,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_input_event.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_input_event.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // The escape sequence line must remain intact (not duplicated or mangled).
         assert!(
@@ -670,8 +620,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_rrt_mod.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_rrt_mod.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         assert_diff_eq(&formatted, &expected);
     }
@@ -696,8 +646,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_backtick_inline_link.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_backtick_inline_link.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Unchanged);
 
         // Key regression check: backtick-wrapped inline link must be preserved.
         assert!(
@@ -727,8 +677,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_balanced_parens_url.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_balanced_parens_url.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Key regression check: URL with balanced parens must be captured in full.
         assert!(
@@ -758,8 +708,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_nested_bracket_refs.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_nested_bracket_refs.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Key regression check: no blank line between reference definitions.
         assert!(
@@ -790,8 +740,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_resilient_reactor.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_resilient_reactor.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Verify text diagrams are preserved.
         assert!(
@@ -844,8 +794,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_readline_async.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_readline_async.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Verify image link is preserved.
         assert!(
@@ -877,7 +827,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_readline_async.rs"
         ));
-        assert_fixture_idempotent("sample_readline_async.rs", input);
+        assert_fixture_idempotent(input);
     }
 
     /// Verifies every seed term is correctly handled across three states: bare
@@ -895,8 +845,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_seed_term_coverage.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_seed_term_coverage.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Bare terms should be linkified.
         for term in [
@@ -1123,7 +1073,7 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/input/sample_seed_term_coverage.rs"
         ));
-        assert_fixture_idempotent("sample_seed_term_coverage.rs", input);
+        assert_fixture_idempotent(input);
     }
 
     /// Regression test: multi-line plain (non-backticked) reference definitions
@@ -1148,8 +1098,8 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_pty_types.rs"
         )));
 
-        let (_result, formatted) =
-            run_default_processor_on_fixture("sample_pty_types.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
+        assert_eq!(status, FormatStatus::Modified);
 
         // Key regression check: multi-line plain ref def must be preserved.
         assert!(
@@ -1200,11 +1150,7 @@ mod tests {
             let name = entry.file_name();
             let name = name.to_string_lossy();
             let input = fs::read_to_string(entry.path()).unwrap();
-            let temp_dir = TempDir::new().unwrap();
-            let temp_file = temp_dir.path().join(name.as_ref());
-            fs::write(&temp_file, &input).unwrap();
-            let _results = proc.process_files(std::slice::from_ref(&temp_file));
-            let output = fs::read_to_string(&temp_file).unwrap();
+            let (_status, output) = proc.process_source(&input);
             fs::write(output_dir.join(name.as_ref()), &output).unwrap();
             eprintln!("Regenerated: {name}");
         }
@@ -1221,11 +1167,10 @@ mod tests {
             "/src/cargo_rustdoc_fmt/validation_tests/test_data/complete_file/expected_output/sample_fence_normalizer.rs"
         )));
 
-        let (result, formatted) =
-            run_default_processor_on_fixture("sample_fence_normalizer.rs", input);
+        let (status, formatted) = run_default_processor_on_fixture(input);
 
         assert_eq!(
-            result.status,
+            status,
             FormatStatus::Modified,
             "File should be modified when redundant rust fence tags are stripped"
         );
@@ -1235,5 +1180,28 @@ mod tests {
         assert!(formatted.contains("//! ```no_run"));
         assert!(formatted.contains("//! ```text"));
         assert_diff_eq(&formatted, &expected);
+    }
+
+    /// End-to-end integration test verifying that `FileProcessor::process_files`
+    /// correctly processes, formats, and writes files directly on disk.
+    #[test]
+    fn test_file_processor_end_to_end_on_disk() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test_file_processor_disk.rs");
+        let input =
+            "/// | Header A | Header B |\n/// |---|---|\n/// | 1 | 2 |\nfn main() {}\n";
+        fs::write(&test_file, input).unwrap();
+
+        let registry = test_registry();
+        let processor =
+            processor::FileProcessor::new(FormatOptions::default(), Some(&registry));
+        let results = processor.process_files(std::slice::from_ref(&test_file));
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].status, FormatStatus::Modified);
+        assert!(results[0].errors.is_empty());
+
+        let formatted = fs::read_to_string(&test_file).unwrap();
+        assert!(formatted.contains("/// | Header A | Header B |"));
     }
 }
