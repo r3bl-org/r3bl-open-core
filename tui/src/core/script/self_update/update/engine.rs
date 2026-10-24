@@ -86,7 +86,7 @@ pub mod manifest_query {
     /// # Errors
     ///
     /// Returns an error if the JSONC is malformed or if `crate_name` is not present in
-    /// `crates_map`.
+    /// `crates`.
     ///
     /// [`CrateVersionMetadata`]: crate::core::script::self_update::CrateVersionMetadata
     /// [`JsoncManifest`]: crate::core::script::self_update::JsoncManifest
@@ -97,11 +97,11 @@ pub mod manifest_query {
     ) -> miette::Result<CrateVersionMetadata> {
         let manifest = JsoncManifest::try_parse_jsonc(json_str)?;
 
-        manifest.crates_map.get(crate_name).cloned().ok_or_else(|| {
+        manifest.crates.get(crate_name).cloned().ok_or_else(|| {
             miette::miette!(
                 "Crate '{}' not found in versions.jsonc (available: {:?})",
                 crate_name,
-                manifest.crates_map.keys().collect::<Vec<_>>()
+                manifest.crates.keys().collect::<Vec<_>>()
             )
         })
     }

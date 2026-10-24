@@ -69,9 +69,8 @@ use serde::Deserialize;
 /// [module-level documentation]: mod@crate::core::script::self_update
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct JsoncManifest {
-    /// Map of crate names (e.g., `"r3bl-cmdr"`) to their pinned [`CrateVersionMetadata`].
-    #[serde(rename = "crates")]
-    pub crates_map: HashMap<CrateName, CrateVersionMetadata>,
+    /// Map of crate names (e.g., `"r3bl-cmdr"`) to their [`CrateVersionMetadata`].
+    pub crates: HashMap<CrateName, CrateVersionMetadata>,
 }
 
 mod impl_jsonc_manifest {
@@ -101,63 +100,77 @@ mod impl_jsonc_manifest {
                 .map_err(|e| miette::miette!("Failed to parse versions.jsonc: {e}"))
         }
 
-        /// Updates (or inserts) a crate's [`CrateVersionMetadata`] inside an existing
-        /// JSONC document string using [`jsonc_parser`]'s Concrete Syntax Tree
-        /// ([`CstRootNode`]), preserving 100% of existing comments, blank lines, and
-        /// formatting.
+        /// Primary write entry point: updates an existing crate's
+        /// [`CrateVersionMetadata`] in-place inside a JSONC document string using
+        /// [`jsonc_parser`]'s Concrete Syntax Tree ([`CstRootNode`]).
+        ///
+        /// # Workflow
+        ///
+        /// New crate entries in `versions.jsonc` are initially authored by hand (with
+        /// their descriptive comments and formatting). When publishing a new release of
+        /// an existing crate, release tooling calls this function to update that crate's
+        /// data in place (while preserving all existing comments, blank lines, and
+        /// formatting) by updating these values:
+        /// 1. `"version"`.
+        /// 2. `"crate_distribution"`.
+        /// 3. `"released_on"`.
         ///
         /// # Returns
         ///
-        /// Returns the complete, updated JSONC document as an owned [`String`],
-        /// preserving all existing comments, blank lines, and formatting.
+        /// Returns the complete, updated JSONC document as an owned [`String`].
         ///
         /// # Errors
         ///
-        /// Returns an error if `jsonc_str` cannot be parsed as valid JSONC.
+        /// Returns an error if `jsonc_str` is not valid JSONC or does not contain an
+        /// existing valid entry for `crate_name`.
         pub fn try_update_crate_in_jsonc(
             jsonc_str: &str,
-            crate_name: &str,
+            crate_name: &CrateName,
             metadata: &CrateVersionMetadata,
         ) -> miette::Result<String> {
             let root =
                 CstRootNode::parse(jsonc_str, &ParseOptions::default()).map_err(|e| {
                     miette::miette!("Failed to parse versions.jsonc CST: {e}")
                 })?;
-            let root_obj = root.object_value_or_set();
 
-            let crates_obj = root_obj.object_value_or_set(versions_manifest_keys::CRATES);
+            let root_obj = root.object_value().ok_or_else(|| {
+                miette::miette!("versions.jsonc root must be a JSON object")
+            })?;
+            let crates_obj = root_obj
+                .object_value(versions_manifest_keys::CRATES)
+                .ok_or_else(|| {
+                    miette::miette!(
+                        "Missing '{}' object in versions.jsonc",
+                        versions_manifest_keys::CRATES
+                    )
+                })?;
+            let crate_obj = crates_obj.object_value(crate_name).ok_or_else(|| {
+                miette::miette!("Crate '{crate_name}' not found in versions.jsonc")
+            })?;
+
+            let version_str = metadata.version.to_string();
+            let distribution_str = metadata.crate_distribution.to_string();
             let released_on_str = metadata
                 .released_on
                 .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-            let distribution_str = metadata.crate_distribution.to_string();
 
-            let version_str = metadata.version.to_string();
-            let crate_obj = crates_obj.object_value_or_set(crate_name);
-
-            if let Some(prop) = crate_obj.get(versions_manifest_keys::VERSION) {
-                prop.set_value(json!(version_str.as_str()));
-            } else {
-                crate_obj
-                    .append(versions_manifest_keys::VERSION, json!(version_str.as_str()));
-            }
-
-            if let Some(prop) = crate_obj.get(versions_manifest_keys::CRATE_DISTRIBUTION)
-            {
-                prop.set_value(json!(distribution_str.as_str()));
-            } else {
-                crate_obj.append(
+            for (key, val) in [
+                (versions_manifest_keys::VERSION, version_str.as_str()),
+                (
                     versions_manifest_keys::CRATE_DISTRIBUTION,
-                    json!(distribution_str.as_str()),
-                );
-            }
-
-            if let Some(prop) = crate_obj.get(versions_manifest_keys::RELEASED_ON) {
-                prop.set_value(json!(released_on_str.as_str()));
-            } else {
-                crate_obj.append(
+                    distribution_str.as_str(),
+                ),
+                (
                     versions_manifest_keys::RELEASED_ON,
-                    json!(released_on_str.as_str()),
-                );
+                    released_on_str.as_str(),
+                ),
+            ] {
+                let prop = crate_obj.get(key).ok_or_else(|| {
+                    miette::miette!(
+                        "Missing '{key}' property for crate '{crate_name}' in versions.jsonc"
+                    )
+                })?;
+                prop.set_value(json!(val));
             }
 
             ok!(root.to_string())
@@ -193,14 +206,14 @@ mod tests {
 
         let manifest = JsoncManifest::try_parse_jsonc(jsonc)
             .expect("Failed to parse JSONC manifest");
-        assert_eq2!(manifest.crates_map.len(), 2);
+        assert_eq2!(manifest.crates.len(), 2);
 
-        let cmdr = &manifest.crates_map["r3bl-cmdr"];
+        let cmdr = &manifest.crates["r3bl-cmdr"];
         assert_eq2!(cmdr.version, CrateVersion::try_from("0.0.25").unwrap());
         assert_eq2!(cmdr.crate_distribution, CrateDistribution::OpenSource);
         assert_eq2!(cmdr.released_on.to_rfc3339(), "2026-10-17T00:00:00+00:00");
 
-        let closed = &manifest.crates_map["r3bl-closed-source-product"];
+        let closed = &manifest.crates["r3bl-closed-source-product"];
         assert_eq2!(closed.version, CrateVersion::try_from("1.2.0").unwrap());
         assert_eq2!(closed.crate_distribution, CrateDistribution::ClosedSource);
     }
@@ -221,9 +234,9 @@ mod tests {
         let manifest = JsoncManifest::try_parse_jsonc(future_jsonc).expect(
             "Expected unknown future fields to be ignored for forward compatibility",
         );
-        assert_eq2!(manifest.crates_map.len(), 1);
+        assert_eq2!(manifest.crates.len(), 1);
         assert_eq2!(
-            manifest.crates_map["r3bl-cmdr"].version,
+            manifest.crates["r3bl-cmdr"].version,
             CrateVersion::try_from("0.0.25").unwrap()
         );
     }
@@ -251,7 +264,7 @@ mod tests {
 
         let updated_jsonc = JsoncManifest::try_update_crate_in_jsonc(
             original_jsonc,
-            "r3bl-cmdr",
+            &"r3bl-cmdr".into(),
             &updated_meta,
         )
         .expect("CST update failed");
@@ -265,11 +278,11 @@ mod tests {
         // Verify the updated JSONC re-parses cleanly with the new version.
         let reparsed = JsoncManifest::try_parse_jsonc(&updated_jsonc).unwrap();
         assert_eq2!(
-            reparsed.crates_map["r3bl-cmdr"].version,
+            reparsed.crates["r3bl-cmdr"].version,
             CrateVersion::try_from("0.0.26").unwrap()
         );
         assert_eq2!(
-            reparsed.crates_map["r3bl-cmdr"].released_on.to_rfc3339(),
+            reparsed.crates["r3bl-cmdr"].released_on.to_rfc3339(),
             "2026-10-18T15:30:00+00:00"
         );
     }

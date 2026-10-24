@@ -23,7 +23,7 @@ mod impl_crate_name {
     }
 
     /// Enables looking up `HashMap<CrateName, ...>` entries directly with `&str` keys
-    /// (e.g., `manifest.crates_map.get("r3bl-cmdr")`).
+    /// (e.g., `manifest.crates.get("r3bl-cmdr")`).
     impl Borrow<str> for CrateName {
         fn borrow(&self) -> &str { &self.0 }
     }
