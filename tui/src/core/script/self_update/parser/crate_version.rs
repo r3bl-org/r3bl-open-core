@@ -174,7 +174,6 @@ mod tests {
 
         // Malformed version in JSONC is rejected at deserialization time.
         let bad_jsonc = r#"{
-            "schema_version": 1,
             "crates": {
                 "r3bl-cmdr": {
                     "version": "not-a-semver",

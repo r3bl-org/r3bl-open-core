@@ -228,7 +228,6 @@ mod tests {
     fn test_parse_crate_metadata_from_versions_json_str() {
         let jsonc = r#"{
             // R3BL versions.jsonc manifest
-            "schema_version": 1,
             "crates": {
                 "r3bl-cmdr": {
                     "version": "0.0.25",

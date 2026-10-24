@@ -86,9 +86,6 @@ pub mod archive {
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 pub mod versions_manifest_keys {
-    /// Top-level schema version key (`"schema_version"`).
-    pub const SCHEMA_VERSION: &str = "schema_version";
-
     /// Top-level crates map key (`"crates"`).
     pub const CRATES: &str = "crates";
 

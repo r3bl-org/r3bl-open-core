@@ -109,9 +109,8 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 `r3bl_tui` parses `versions.jsonc` via `jsonc-parser` (`features = ["serde", "cst"]`):
 
 - **Deserialization (`JsoncManifest::try_parse_jsonc`)**: Parses JSONC with `//` line
-  comments, `/* ... */` block comments, and trailing commas, validates
-  `ManifestSchemaVersion` via an intermediate header, and dispatches to the
-  version-specific parser (`ManifestSchemaVersion::V1`).
+  comments, `/* ... */` block comments, and trailing commas, ignoring unknown future
+  fields so additive schema extensions never break older binaries in the wild.
 - **Comment-Preserving Mutation (`JsoncManifest::try_update_crate_in_jsonc`)**: Uses
   `jsonc_parser::cst::CstRootNode` (Concrete Syntax Tree) so release tooling can update a
   crate's version entry in `versions.jsonc` while preserving 100% of existing comments and
@@ -124,8 +123,6 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 
 ```jsonc
 {
-    // Schema version for forward compatibility (`ManifestSchemaVersion`).
-    "schema_version": 1,
     "crates": {
         // Open-source interactive CLI suite (`giti`, `edi`, `env-source`).
         "r3bl-cmdr": {
@@ -150,10 +147,9 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
 ```
 
 - **Schema Fields (defined in [`JsoncManifest`] & [`CrateVersionMetadata`])**:
-    - `schema_version` (`ManifestSchemaVersion` witness enum with `V1 = 1` and
-      `#[serde(try_from = "u32", into = "u32")]`): Validated integer schema version (`1`),
-      rejecting unknown/future schema versions at deserialization time and routing to the
-      version-specific parser in `JsoncManifest::try_parse_jsonc`.
+    - **Additive-Only Forward Compatibility**: Neither `JsoncManifest` nor
+      `CrateVersionMetadata` uses `#[serde(deny_unknown_fields)]`, so any new fields added
+      in the future are safely ignored by existing binaries in the wild.
     - `version` (`CrateVersion` struct with
       `pub major: u16, pub minor: u16, pub patch: u16` and
       `#[serde(try_from = "String", into = "String")]`): Validated semantic version parsed
@@ -303,17 +299,15 @@ inspection):
     - [x] Centralized string constants: `toolchain_binaries` (`rustup`, `cargo`),
           `toolchain_args` (`toolchain`, `install`, `nightly`, `+nightly`, `--version`,
           `--force`), `archive` (`NON_BINARY_EXTENSIONS`, `DEFAULT_ARCHIVE_FILENAME`,
-          `EXTRACTED_DIR_NAME`, `UPGRADE_TMP_SUFFIX`), `manifest_keys` (`schema_version`,
-          `crates`, `version`, `crate_distribution`, `released_on`), and
-          `upgrade_reasons`.
-- [x] `versions_manifest.rs`:
+          `EXTRACTED_DIR_NAME`, `UPGRADE_TMP_SUFFIX`), `manifest_keys` (`crates`,
+          `version`, `crate_distribution`, `released_on`), and `upgrade_reasons`.
+- [x] `parser/`:
     - [x] `JsoncManifest`: Schema for `https://r3bl.com/versions.jsonc`, providing
-          `try_parse_jsonc()` (validating `ManifestSchemaVersion` via `ManifestHeader`
-          before dispatching to the version-specific parser) and comment-preserving
-          `try_update_crate_in_jsonc()` via `jsonc-parser` CST.
-    - [x] Domain newtypes and enums: `ManifestSchemaVersion` (`V1 = 1` witness enum with
-          `#[serde(try_from = "u32", into = "u32")]`), `CrateDistribution` (`OpenSource` /
-          `ClosedSource`, `#[serde(rename_all = "kebab-case")]`), `CrateName(pub String)`,
+          `try_parse_jsonc()` (with additive-only forward compatibility ignoring unknown
+          future fields) and comment-preserving `try_update_crate_in_jsonc()` via
+          `jsonc-parser` CST.
+    - [x] Domain newtypes and enums: `CrateDistribution` (`OpenSource` / `ClosedSource`,
+          `#[serde(rename_all = "kebab-case")]`), `CrateName(pub String)`,
           `CrateVersion { pub major: u16, pub minor: u16, pub patch: u16 }` (parsed via
           slice pattern matching with `#[serde(try_from = "String", into = "String")]` and
           explicit tuple `.cmp()` `Ord`).

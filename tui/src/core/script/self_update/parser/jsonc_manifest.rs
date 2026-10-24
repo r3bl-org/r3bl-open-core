@@ -4,7 +4,6 @@ use super::{super::versions_manifest_keys, CrateName, CrateVersionMetadata};
 use crate::{HashMap, ok};
 use jsonc_parser::{ParseOptions, cst::CstRootNode, json, parse_to_serde_value};
 use serde::Deserialize;
-use std::fmt::{Display, Formatter};
 
 /// Schema for the centralized version manifest hosted at [`R3BL_VERSIONS_JSON_URL`].
 ///
@@ -31,21 +30,12 @@ use std::fmt::{Display, Formatter};
 ///   [`jsonc_parser::cst::CstRootNode`] mutates only the target `AST` nodes in-place,
 ///   preserving 100% of existing comments, blank lines, and formatting.
 ///
-/// # Canonical Schema (`schema_version: 1`)
+/// # Forward Compatibility (Additive-Only Schema)
 ///
-/// - **`schema_version`** ([`ManifestSchemaVersion`]): Supported integer schema version
-///   (currently [`ManifestSchemaVersion::V1`] / `1`), validated before routing to the
-///   version-specific parser in [`Self::try_parse_jsonc`].
-/// - **`crates`** (`crates_map: HashMap<CrateName, CrateVersionMetadata>`): Map keyed by
-///   canonical Cargo package name (e.g., `"r3bl-cmdr"`, `"r3bl-build-infra"`,
-///   `"r3bl-rust-analyzer-mcp-server"`). Each entry contains:
-///   - **`version`** ([`CrateVersion`]): Pinned semantic version string
-///     (`"MAJOR.MINOR.PATCH"`).
-///   - **`crate_distribution`** ([`CrateDistribution`]): Domain enum serialized in
-///     `kebab-case` (`"open-source"` for [`CrateDistribution::OpenSource`] or
-///     `"closed-source"` for [`CrateDistribution::ClosedSource`]).
-///   - **`released_on`** ([`chrono::DateTime<chrono::Utc>`]): RFC 3339 / ISO 8601 `UTC`
-///     timestamp (`YYYY-MM-DDTHH:MM:SSZ`) recording when the release was published.
+/// Neither [`JsoncManifest`] nor [`CrateVersionMetadata`] uses
+/// `#[serde(deny_unknown_fields)]`. Any new top-level or per-crate fields added to
+/// `versions.jsonc` in the future are silently ignored by already-deployed binaries in
+/// the wild, ensuring old binaries can always parse the manifest and self-upgrade.
 ///
 /// # Example `versions.jsonc`
 ///
@@ -53,7 +43,6 @@ use std::fmt::{Display, Formatter};
 /// // R3BL Centralized Crate Version Manifest
 /// // Schema: `r3bl_tui::core::script::self_update::JsoncManifest`
 /// {
-///   "schema_version": 1,
 ///   "crates": {
 ///     // Interactive CLI suite (`giti`, `edi`, `env-source`).
 ///     "r3bl-cmdr": {
@@ -71,19 +60,11 @@ use std::fmt::{Display, Formatter};
 /// }
 /// ```
 ///
-/// [`CrateDistribution::ClosedSource`]: crate::core::script::self_update::CrateDistribution::ClosedSource
-/// [`CrateDistribution::OpenSource`]: crate::core::script::self_update::CrateDistribution::OpenSource
-/// [`CrateDistribution`]: crate::core::script::self_update::CrateDistribution
-/// [`CrateVersion`]: crate::core::script::self_update::CrateVersion
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 /// [module-level documentation]: mod@crate::core::script::self_update
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct JsoncManifest {
-    /// Schema version of the `versions.jsonc` manifest (currently
-    /// [`ManifestSchemaVersion::V1`]).
-    pub schema_version: ManifestSchemaVersion,
-
-    /// Map of crate names (e.g., `"r3bl-cmdr"`) to their pinned version metadata.
+    /// Map of crate names (e.g., `"r3bl-cmdr"`) to their pinned [`CrateVersionMetadata`].
     #[serde(rename = "crates")]
     pub crates_map: HashMap<CrateName, CrateVersionMetadata>,
 }
@@ -97,14 +78,13 @@ mod impl_jsonc_manifest {
         /// comments, `/* ... */` block comments, and trailing commas) into a
         /// [`JsoncManifest`].
         ///
-        /// Validates [`ManifestSchemaVersion`] first via an intermediate header before
-        /// dispatching to the version-specific parser.
+        /// Unknown top-level and per-crate fields are ignored so future additive schema
+        /// extensions never break older binaries in the wild.
         ///
         /// # Errors
         ///
-        /// Returns an error if the JSONC syntax is invalid, if `schema_version` is
-        /// unsupported, or if the document does not match the [`JsoncManifest`]
-        /// schema.
+        /// Returns an error if the JSONC syntax is invalid or if required fields do not
+        /// match the [`JsoncManifest`] schema.
         pub fn try_parse_jsonc(jsonc_str: &str) -> miette::Result<Self> {
             let value = parse_to_serde_value::<serde_json::Value>(
                 jsonc_str,
@@ -112,23 +92,14 @@ mod impl_jsonc_manifest {
             )
             .map_err(|e| miette::miette!("Failed to parse versions.jsonc: {e}"))?;
 
-            let header: ManifestHeader =
-                serde_json::from_value(value.clone()).map_err(|e| {
-                    miette::miette!("Invalid versions.jsonc schema header: {e}")
-                })?;
-
-            match header.schema_version {
-                ManifestSchemaVersion::V1 => serde_json::from_value::<Self>(value)
-                    .map_err(|e| {
-                        miette::miette!("Failed to parse v1 versions.jsonc: {e}")
-                    }),
-            }
+            serde_json::from_value::<Self>(value)
+                .map_err(|e| miette::miette!("Failed to parse versions.jsonc: {e}"))
         }
 
         /// Updates (or inserts) a crate's [`CrateVersionMetadata`] inside an existing
         /// JSONC document string using [`jsonc_parser`]'s Concrete Syntax Tree
-        /// ([`CstRootNode`]), preserving 100% of existing comments, blank lines,
-        /// and formatting.
+        /// ([`CstRootNode`]), preserving 100% of existing comments, blank lines, and
+        /// formatting.
         ///
         /// # Returns
         ///
@@ -148,16 +119,6 @@ mod impl_jsonc_manifest {
                     miette::miette!("Failed to parse versions.jsonc CST: {e}")
                 })?;
             let root_obj = root.object_value_or_set();
-
-            if root_obj
-                .get(versions_manifest_keys::SCHEMA_VERSION)
-                .is_none()
-            {
-                root_obj.append(
-                    versions_manifest_keys::SCHEMA_VERSION,
-                    json!(u32::from(ManifestSchemaVersion::default())),
-                );
-            }
 
             let crates_obj = root_obj.object_value_or_set(versions_manifest_keys::CRATES);
             let released_on_str = metadata
@@ -199,67 +160,6 @@ mod impl_jsonc_manifest {
     }
 }
 
-/// Minimal header used to validate and inspect `schema_version` before routing to a
-/// version-specific manifest parser.
-#[derive(Deserialize)]
-struct ManifestHeader {
-    schema_version: ManifestSchemaVersion,
-}
-
-/// Enum representing supported schema versions of the
-/// [`R3BL_VERSIONS_JSON_URL`] manifest.
-///
-/// Deserializes as an integer (`1` for [`Self::V1`]) via [`TryFrom<u32>`], rejecting
-/// unknown or future schema versions at deserialization time.
-///
-/// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize,
-)]
-#[serde(try_from = "u32")]
-pub enum ManifestSchemaVersion {
-    /// Initial schema version (`1`).
-    #[default]
-    V1 = 1,
-}
-
-mod impl_manifest_schema_version {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// Formats the schema version as its integer value (e.g., `"1"`).
-    impl Display for ManifestSchemaVersion {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", u32::from(*self))
-        }
-    }
-
-    /// Invoked by [`serde`] via `#[serde(try_from = "u32")]` during JSONC
-    /// deserialization to validate the integer `schema_version` field.
-    impl TryFrom<u32> for ManifestSchemaVersion {
-        type Error = String;
-
-        fn try_from(value: u32) -> Result<Self, Self::Error> {
-            match value {
-                1 => Ok(Self::V1),
-                other => Err(format!(
-                    "Unsupported versions.jsonc schema_version: {other} (supported: 1)"
-                )),
-            }
-        }
-    }
-
-    /// Converts the enum back to its integer representation for JSONC CST updates
-    /// in [`JsoncManifest::try_update_crate_in_jsonc`] and [`Display`].
-    impl From<ManifestSchemaVersion> for u32 {
-        fn from(version: ManifestSchemaVersion) -> Self {
-            match version {
-                ManifestSchemaVersion::V1 => 1,
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{super::{CrateDistribution, CrateVersion},
@@ -270,7 +170,6 @@ mod tests {
     fn test_jsonc_manifest_deserialization_with_jsonc_comments() {
         let jsonc = r#"{
             // R3BL version manifest (JSONC with comments & trailing commas)
-            "schema_version": 1,
             "crates": {
                 /* Open-source CLI suite */
                 "r3bl-cmdr": {
@@ -289,7 +188,6 @@ mod tests {
 
         let manifest = JsoncManifest::try_parse_jsonc(jsonc)
             .expect("Failed to parse JSONC manifest");
-        assert_eq2!(manifest.schema_version, ManifestSchemaVersion::V1);
         assert_eq2!(manifest.crates_map.len(), 2);
 
         let cmdr = &manifest.crates_map["r3bl-cmdr"];
@@ -303,17 +201,25 @@ mod tests {
     }
 
     #[test]
-    fn test_jsonc_manifest_rejects_unsupported_schema_version() {
-        let unsupported_v2 = r#"{
-            "schema_version": 2,
-            "crates": {}
+    fn test_jsonc_manifest_ignores_unknown_future_fields() {
+        let future_jsonc = r#"{
+            "future_top_level_field": "ignored-by-older-binaries",
+            "crates": {
+                "r3bl-cmdr": {
+                    "version": "0.0.25",
+                    "crate_distribution": "open-source",
+                    "released_on": "2026-10-17T00:00:00Z",
+                    "future_crate_field": { "min_glibc": "2.31" }
+                }
+            }
         }"#;
-        let err = JsoncManifest::try_parse_jsonc(unsupported_v2)
-            .expect_err("Expected schema_version 2 to be rejected");
-        assert!(
-            err.to_string()
-                .contains("Unsupported versions.jsonc schema_version: 2 (supported: 1)"),
-            "Unexpected error message: {err}"
+        let manifest = JsoncManifest::try_parse_jsonc(future_jsonc).expect(
+            "Expected unknown future fields to be ignored for forward compatibility",
+        );
+        assert_eq2!(manifest.crates_map.len(), 1);
+        assert_eq2!(
+            manifest.crates_map["r3bl-cmdr"].version,
+            CrateVersion::try_from("0.0.25").unwrap()
         );
     }
 
@@ -321,7 +227,6 @@ mod tests {
     fn test_jsonc_manifest_cst_update_preserves_comments() {
         let original_jsonc = r#"{
   // Top-level header comment that MUST be preserved
-  "schema_version": 1,
   "crates": {
     // Comment on r3bl-cmdr that MUST be preserved
     "r3bl-cmdr": {

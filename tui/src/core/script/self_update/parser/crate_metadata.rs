@@ -75,8 +75,8 @@ pub struct CrateVersionMetadata {
     /// or `"closed-source"`.
     pub crate_distribution: CrateDistribution,
 
-    /// ISO 8601 UTC timestamp (`YYYY-MM-DDTHH:MM:SSZ`) recording when the release was
-    /// published.
+    /// RFC 3339 / ISO 8601 `UTC` timestamp (`YYYY-MM-DDTHH:MM:SSZ`) recording when the
+    /// release was published.
     pub released_on: DateTime<Utc>,
 }
 
