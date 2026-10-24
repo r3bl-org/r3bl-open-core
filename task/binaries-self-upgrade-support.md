@@ -668,7 +668,7 @@ Manifest (`r3bl.com/versions.jsonc`)**:
     - [x] `tui/src/core/script/self_update/update/config.rs`
     - [x] `tui/src/core/script/self_update/update/cli_arg.rs`
     - [x] `tui/src/core/script/self_update/parser/mod.rs`
-    - [ ] `tui/src/core/script/self_update/parser/jsonc_manifest.rs`
+    - [x] `tui/src/core/script/self_update/parser/jsonc_manifest.rs`
     - [ ] `tui/src/core/script/self_update/parser/crate_metadata.rs`
     - [ ] `tui/src/core/script/self_update/parser/crate_version.rs`
     - [ ] `tui/src/core/script/self_update/update/state.rs`

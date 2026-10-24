@@ -53,12 +53,17 @@ use serde::Deserialize;
 /// }
 /// ```
 ///
-/// # Forward Compatibility (Additive-Only Schema)
+/// # Forward Compatibility & Schema Evolution
 ///
 /// Neither [`JsoncManifest`] nor [`CrateVersionMetadata`] uses
-/// `#[serde(deny_unknown_fields)]`. Any new top-level or per-crate fields added to
-/// `versions.jsonc` in the future are silently ignored by already-deployed binaries in
-/// the wild, ensuring old binaries can always parse the manifest and self-upgrade.
+/// `#[serde(deny_unknown_fields)]`, so we can evolve `versions.jsonc` in the future
+/// without breaking older binaries that users already have installed:
+/// - **Adding new fields**: We can add new fields anywhere in `versions.jsonc`, and older
+///   binaries will simply ignore the fields they don't know about.
+/// - **Changing the schema**: `"crates"` is `V1`. If we ever need a completely new
+///   format, we can add a new `"crates_v2"` section next to `"crates"` in
+///   `versions.jsonc`. Older binaries will keep reading `"crates"` to upgrade themselves,
+///   while newer binaries read `"crates_v2"`.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 /// [module-level documentation]: mod@crate::core::script::self_update
