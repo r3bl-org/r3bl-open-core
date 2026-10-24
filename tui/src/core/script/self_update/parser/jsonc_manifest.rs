@@ -131,47 +131,47 @@ mod impl_jsonc_manifest {
             use versions_manifest_keys::{CRATE_DISTRIBUTION, CRATES, RELEASED_ON,
                                          VERSION};
 
-            // Parse the JSONC string.
+            // Validate that `jsonc_str` conforms to the `JsoncManifest` schema.
+            Self::try_parse_jsonc(jsonc_str)?;
+
+            // Parse the JSONC string into a Concrete Syntax Tree (CST) for
+            // comment-preserving in-place mutation.
             let cst_root_node = CstRootNode::parse(jsonc_str, &ParseOptions::default())
                 .into_diagnostic()?;
 
-            // Create closure to update crate entry, so that `?` can be used to exit
-            // early.
+            // Navigate to `root_object["crates"][crate_name]` and update its fields.
+            // Create this closure so that we can use `?` to return early.
             let maybe_entry_updated = || -> Option<()> {
-                // Get root_object from CST.
-                let root_object = cst_root_node.object_value()?;
+                let crate_entry = cst_root_node
+                    .object_value()?
+                    .object_value(CRATES)?
+                    .object_value(crate_name)?;
 
-                // Get root_object["crates"][crate_name] => crate_object.
-                let crate_object =
-                    root_object.object_value(CRATES)?.object_value(crate_name)?;
+                let version_prop = crate_entry.get(VERSION)?;
+                version_prop.set_value(json!(metadata.version.to_string()));
 
-                // Update crate_object['version'].
-                crate_object
-                    .get(VERSION)?
-                    .set_value(json!(metadata.version.to_string()));
-
-                // Update crate_object['crate_distribution'].
-                crate_object
-                    .get(CRATE_DISTRIBUTION)?
+                let distribution_prop = crate_entry.get(CRATE_DISTRIBUTION)?;
+                distribution_prop
                     .set_value(json!(metadata.crate_distribution.to_string()));
 
-                // Update crate_object['released_on'].
-                crate_object.get(RELEASED_ON)?.set_value(json!(
+                let released_on_prop = crate_entry.get(RELEASED_ON)?;
+                released_on_prop.set_value(json!(
                     metadata
                         .released_on
                         .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
                 ));
-                Some(())
+
+                Some(()) // Means success!
             };
 
-            // If the closure returns `None`, crate entry not found & error out.
+            // If the closure returns `None`, it means the crate was not found, so we
+            // bail.
             let Some(()) = maybe_entry_updated() else {
-                miette::bail!(
-                    "Invalid or missing '{crate_name}' entry in versions.jsonc"
-                );
+                miette::bail!("Crate '{crate_name}' not found in versions.jsonc");
             };
 
-            // Convert CST back to string.
+            // Convert CST back to a formatted String, preserving all comments and
+            // formatting.
             ok!(cst_root_node.to_string())
         }
     }
