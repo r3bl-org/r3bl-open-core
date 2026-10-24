@@ -30,13 +30,6 @@ use serde::Deserialize;
 ///   [`jsonc_parser::cst::CstRootNode`] mutates only the target `AST` nodes in-place,
 ///   preserving 100% of existing comments, blank lines, and formatting.
 ///
-/// # Forward Compatibility (Additive-Only Schema)
-///
-/// Neither [`JsoncManifest`] nor [`CrateVersionMetadata`] uses
-/// `#[serde(deny_unknown_fields)]`. Any new top-level or per-crate fields added to
-/// `versions.jsonc` in the future are silently ignored by already-deployed binaries in
-/// the wild, ensuring old binaries can always parse the manifest and self-upgrade.
-///
 /// # Example `versions.jsonc`
 ///
 /// ```jsonc
@@ -59,6 +52,13 @@ use serde::Deserialize;
 ///   },
 /// }
 /// ```
+///
+/// # Forward Compatibility (Additive-Only Schema)
+///
+/// Neither [`JsoncManifest`] nor [`CrateVersionMetadata`] uses
+/// `#[serde(deny_unknown_fields)]`. Any new top-level or per-crate fields added to
+/// `versions.jsonc` in the future are silently ignored by already-deployed binaries in
+/// the wild, ensuring old binaries can always parse the manifest and self-upgrade.
 ///
 /// [`R3BL_VERSIONS_JSON_URL`]: crate::core::script::self_update::R3BL_VERSIONS_JSON_URL
 /// [module-level documentation]: mod@crate::core::script::self_update
