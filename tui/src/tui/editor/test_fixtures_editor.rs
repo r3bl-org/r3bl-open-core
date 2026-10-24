@@ -2,11 +2,10 @@
 
 #[cfg(any(test, doc))]
 pub mod mock_real_objects_for_editor {
-    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, HudData, OfsBufPool,
-                OutputDevice, OutputDeviceExt, PartialFlexBox, RenderPipeline,
-                VPBoundingBox, VPSize, core::test_fixtures::StdoutMock, vp_col,
-                vp_height, vp_row, vp_width};
-    use rustc_hash::FxHashMap;
+    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, HashMap, HudData,
+                OfsBufPool, OutputDevice, OutputDeviceExt, PartialFlexBox,
+                RenderPipeline, VPBoundingBox, VPSize, core::test_fixtures::StdoutMock,
+                vp_col, vp_height, vp_row, vp_width};
     use std::fmt::Debug;
     use tokio::sync::mpsc;
 
@@ -32,7 +31,7 @@ pub mod mock_real_objects_for_editor {
             output_device,
             ofs_buf_pool,
             hud_data: HudData::default(),
-            memoized_text_widths: FxHashMap::default(),
+            memoized_text_widths: HashMap::default(),
         };
 
         (global_data, stdout_mock)

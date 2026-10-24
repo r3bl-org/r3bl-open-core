@@ -27,9 +27,9 @@ use crate::{GetMemSize, PixelChar, RangeExclusive, VPLength, VPRow, Viewport,
 /// scrolling a line off the top (which is what normal screen apps expect terminal
 /// emulators to do). We initially added vertical scrollback by pairing [`OfsBuf`] with an
 /// external helper struct. However, spreading scrollback logic across multiple components
-/// fragmented state management and violated our Single Source of Truth principles (SSOT).
+/// fragmented state management.
 ///
-/// We introduced [`CanvasStorage`] to establish clean SSOT boundaries. This trait
+/// We introduced [`CanvasStorage`] to establish clean ownership boundaries. This trait
 /// decouples high-level buffer logic (drawing, styling, diffing) from physical memory
 /// layout, letting us plug in [`GrowableBuffer`]. [`GrowableBuffer`] uses a
 /// [`VecDeque`]-backed engine that unifies vertical scrollback history with 2D (Up/Down

@@ -80,8 +80,13 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
 2. **Milestone Stability:** Stop and ask for a review as soon as you achieve any stable
    milestone (e.g., code compiles after a refactor, a sub-module is renamed, or a complex
    regex operation is completed).
-3. **Validation before Review:** Always run `./check.fish --check` or `cargo check`
-   locally BEFORE asking the user for a review. Never present "broken" progress.
+3. **Validation before Review (Fast Checks Only):** Always run `./check.fish --check`
+   (or `cargo check -q --message-format=short`) locally BEFORE asking the user for a review.
+   Never present "broken" progress.
+   - **No Autonomous Heavy Checks:** Do NOT run heavy operations (`./check.fish --test`,
+     `--clippy`, `--quick-doc`, `--doc`, or `--full`) autonomously after routine edits or
+     during interim review pauses. Heavy checks must run ONLY when explicitly requested by
+     the user or when reaching a final pre-commit / pre-PR milestone.
 4. **Attention Signal:** When stopping for a mandatory review point, run `fish -c "beep"`
    to alert the user.
 5. **Mandatory Manual Review:** A task, phase, or sub-phase is not complete until the user
@@ -322,6 +327,12 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
   when asked to process, read, or analyze log files that may contain terminal escape
   codes.
 
+### Communication
+
+- **caveman** - Ultra-terse communication mode. Eliminates conversational filler and
+  pleasantries while keeping code, commands, paths, and technical facts exact. Use via
+  `/caveman`.
+
 ## Available Agents (`.agents/agents/`)
 
 | Agent              | Purpose                                     |
@@ -343,6 +354,7 @@ via autocomplete in the Antigravity CLI.
 | `/audit-task`               | audit-task                                 |
 | `/check-regression`         | analyze-performance                        |
 | `/batch-refactor`           | batch-refactor-with-sub-agents             |
+| `/caveman`                  | caveman                                    |
 | `/check-bounds-safety`      | check-bounds-safety                        |
 | `/check`                    | check-code-quality                         |
 | `/check-test-coverage`      | check-test-coverage                        |
@@ -392,6 +404,17 @@ Commands with **no check.fish equivalent** (run directly):
 - `cargo clippy --all-targets --fix --allow-dirty`: auto-fix lints
 - `cargo fmt --all`: format code
 
+### Verification Hierarchy & Frequency Policy
+
+To keep the development loop fast and prevent long-running commands from bogging down
+routine edits, checks are organized into three tiers:
+
+| Tier | Commands | When to Run | Autonomous Execution Rule |
+| :--- | :--- | :--- | :--- |
+| **Tier 1: Routine / Fast** | `./check.fish --check`<br>`./check.fish --fmt` | After code edits, before asking for review | **Mandatory & autonomous**: Fast typecheck (~1–3s) must always pass before presenting review. |
+| **Tier 2: Targeted Unit Test** | `cargo test -q <test_name>` | When actively adding or modifying a specific test | **Surgical only**: Run *only* the specific test being worked on. Never run the entire workspace test suite autonomously. |
+| **Tier 3: Heavy Suite** | `./check.fish --test`<br>`./check.fish --clippy`<br>`./check.fish --quick-doc`<br>`./check.fish --full` | **Only on explicit user request** or final pre-commit / pre-PR milestone | **Strictly prohibited autonomously**: Never run after minor edits, typo fixes, or routine refactors unless explicitly prompted by the user (e.g. `/check`, `/clippy`, "run tests", "verify docs") or before final task completion. |
+
 ### Non-Blocking Verification via Subagents
 
 Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`,
@@ -410,8 +433,17 @@ blocking the active conversation loop:
 
 ### Output & Context Discipline
 
-- **Terse Communication**: Be terse. Skip greetings, pleasantries, and post-edit narrative
-  summaries. State code changes and 1-line root cause only.
+- **Default Communication Style (Caveman Mode)**: Always communicate in Caveman mode
+  (see `caveman` skill) by default:
+  - **Answer First**: Direct answer, then reason, then next step. No intro or outro.
+  - **Eliminate Ceremony**: No greetings, filler, signoffs, or recaps.
+  - **Payload Verbatim**: Code blocks, diffs, commands, file paths, numbers, and errors
+    remain 100% exact.
+  - **Concise Phrasing**: Short, active sentences. Omit optional filler words.
+  - **Exceptions**: Use full plain English only for critical security warnings or
+    required clarifications.
+  - **Exit Condition**: Revert to normal style only if user explicitly says "normal mode"
+    or "stop caveman".
 - **Cargo Output Hygiene**:
   - Prefer the `./check.fish` wrapper over raw cargo calls.
   - When running raw `cargo check` or `cargo clippy`, always pass `-q --message-format=short`
@@ -459,10 +491,13 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `write-documentation` skill. This keeps rendered docs clean, validates real types on
    Linux, and compiles safely on macOS and Windows.
 
-8. **No `flowchart TD` in Diagrams (Global Rule)**: NEVER use `flowchart TD` (top-down) for
-   Mermaid diagrams in markdown, task files, documentation, or chat responses. It does
-   not work or render properly in the terminal. Prefer `flowchart LR` (left-to-right),
-   Markdown tables, or plain indented text lists instead.
+8. **No Mermaid Diagrams / Use ASCII Art Instead (Global Rule)**: NEVER use Mermaid
+   diagrams (such as ```` ```mermaid ````, `flowchart TD`, `flowchart LR`, `sequenceDiagram`,
+   etc.) anywhere in markdown, task files, documentation, or chat responses. Mermaid
+   diagrams do not render properly in terminal CLI environments (often causing errors like
+   "Diagram exceeds terminal width"). Always use ASCII or Unicode box-drawing diagrams
+   (fenced with text or code blocks, using font-safe glyphs from `docs/boxes.md`), Markdown
+   tables, or plain indented text lists instead.
 
 9. **Physical Keycaps with `<kbd>`**: When documenting physical keyboard input in rustdoc
    or markdown (such as key presses, keyboard shortcuts, or contrasting physical keys with
@@ -470,6 +505,12 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `<kbd>Enter</kbd>`, `<kbd>Alt</kbd>+<kbd>]</kbd>`). Rustdoc has native CSS styling for
    `<kbd>` that renders it as a 3D keycap button, clearly distinguishing physical keys
    from terminal escape code bytes.
+
+10. **No "Source of Truth (SOT)" Buzzwords**: Never use phrases like `"Authoritative Source
+    of Truth (SOT)"`, `"Single Source of Truth (SSOT)"`, `"Source of Truth (SOT)"`, or the
+    acronyms `"SOT"` / `"SSOT"` in documentation, comments, or prose. These are robotic
+    phrases that add no information and are pure noise. State directly what the item is or
+    does in plain human English.
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 

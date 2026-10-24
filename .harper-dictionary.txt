@@ -31,6 +31,7 @@ C1
 C3
 CBOR
 CBT
+CD
 CDE
 CDEFG
 CHA
@@ -94,6 +95,7 @@ DECSTBM
 DECTCEM
 DEFGHI
 DEL
+DI
 DL
 DSLs
 DSR
@@ -137,6 +139,7 @@ EVFILT_READ
 EVFILT_WRITE
 End
 Errno
+EventStream
 F0
 F1
 F10
@@ -160,7 +163,6 @@ FFFFF
 FGHIJ
 FILENO
 FOSS
-FS
 FUNARCH
 Falk
 Fdvcmxk
@@ -209,6 +211,7 @@ InputEvents
 InputSubscriberGuard
 Intelli
 Interbyte
+JSONC
 Jan
 Jetpack
 KB
@@ -395,6 +398,7 @@ antipattern
 anychar
 appender
 arboard
+args
 as-raw-fd
 asciicast
 assert_eq
@@ -496,6 +500,7 @@ delims
 demultiplexing
 deprecations
 depthfrom
+deref
 derivebuilder
 desaturated
 deschedules
@@ -571,6 +576,7 @@ footgun
 formatcp
 fract
 frontmatter
+fs
 fswatch
 fullwidth
 futexes
@@ -682,6 +688,7 @@ linkifying
 linux
 litint
 localpaintedeffect
+losslessly
 machinectl
 malloc
 mandoc
@@ -729,6 +736,7 @@ multiaddr
 multibyte
 multispace
 multithreaded
+mutator
 mworld
 myapp
 nadia
@@ -1034,6 +1042,7 @@ ustring
 utf8
 vcvarsall
 vecs
+ver
 virals
 vppos
 vt

@@ -7,12 +7,12 @@ description: Run clippy linting, enforce comment punctuation rules, format code 
 
 ## When to Use
 
-- After making code changes
-- Fixing clippy warnings
-- Ensuring comment punctuation consistency
-- Enforcing module organization patterns
-- Before creating commits
-- When user says "run clippy", "fix style", "format code", "check lints", etc.
+- When user explicitly invokes `/clippy` or says "run clippy", "fix style", "check lints", etc.
+- Before creating commits or opening pull requests (as part of pre-commit quality check)
+- Fixing clippy warnings after being requested to do so
+
+> [!NOTE]
+> Do NOT run clippy or test suites automatically after routine, isolated code edits unless explicitly instructed.
 
 ## Instructions
 
@@ -122,14 +122,15 @@ If there are issues, invoke the `write-documentation` skill (or use `/fix-intrad
 
 ### Step 5: Run Tests if Needed
 
-If clippy fixes modify behavior or you're unsure about changes:
+If clippy fixes modify behavior, or if the user explicitly requested running tests:
 
 ```bash
 ./check.fish --test
 # (runs: cargo test --all-targets)
 ```
 
-Use the Task tool or `invoke_subagent` with `subagent_type='test-runner'` and `Model: "inherit"` if tests fail.
+> [!TIP]
+> Delegate full test suite runs to a background subagent (`self` with `Model: "inherit"`) to avoid blocking interactive conversation. If only a single test is affected, run that test surgically with `cargo test -q <test_name>` instead.
 
 ### Step 6: Final Code Formatting
 

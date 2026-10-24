@@ -28,6 +28,10 @@ mod github_api;
 mod http_client;
 mod package_manager;
 mod permissions;
+#[cfg(any(test, doc))]
+pub mod self_update;
+#[cfg(not(any(test, doc)))]
+mod self_update;
 mod temp_dir;
 
 // Re-export.
@@ -44,6 +48,7 @@ pub use github_api::*;
 pub use http_client::*;
 pub use package_manager::*;
 pub use permissions::*;
+pub use self_update::*;
 pub use temp_dir::*;
 
 pub const SCRIPT_MOD_DEBUG: bool = true;

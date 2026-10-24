@@ -1,6 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{GCStringOwned, u16};
-use rustc_hash::FxHashMap;
+use crate::{GCStringOwned, HashMap, u16};
 use sha2::{Digest, Sha256};
 use std::{collections::hash_map::Entry,
           fmt::{Display, Formatter},
@@ -18,10 +17,9 @@ use std::{collections::hash_map::Entry,
 ///
 /// # Example
 /// ```
-/// use rustc_hash::FxHashMap;
-/// use r3bl_tui::StringLength;
+/// use r3bl_tui::{HashMap, StringLength};
 /// let input = "\u{1b}[31mfoo\u{1b}[0m";
-/// let mut memoized_len_map = FxHashMap::default();
+/// let mut memoized_len_map = HashMap::default();
 ///
 /// let length = StringLength::StripAnsi.calculate(input, &mut memoized_len_map);
 /// assert_eq!(length, 3);
@@ -35,7 +33,7 @@ pub enum StringLength {
     Unicode,
 }
 
-pub type MemoizedLenMap = FxHashMap<String, u16>;
+pub type MemoizedLenMap = HashMap<String, u16>;
 
 impl StringLength {
     /// If the input can't be found in the memoized map, calculate the length and store

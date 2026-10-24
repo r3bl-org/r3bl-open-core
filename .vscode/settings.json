@@ -13,6 +13,8 @@
     "harper.workspaceDictPath": "./.harper-dictionary.txt",
     "harper.linters.Overall": false,
     "harper.linters.RightClick": false,
+    "harper.linters.ExpandArgument": false,
+    "harper.linters.ExpandDereference": false,
     "harper.linters.PronounKnew": false,
     "harper.linters.ExpandParameter": false,
     "harper.linters.MissingPreposition": false,
