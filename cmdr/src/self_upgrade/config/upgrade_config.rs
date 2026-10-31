@@ -23,8 +23,8 @@ use std::path::PathBuf;
 ///   [`CooldownPolicy::Disabled`] / [`CooldownPolicy::CustomTimestampFilePath`].
 /// - **Typestate narrowing**: [`UpgradeConfig`] stays unchanged across all
 ///   [`UpgradeJourney`] state transitions, while [`UpgradeJourney::start()`] unpacks
-///   [`UpgradePolicy`] into narrowed state witnesses ([`UpgradeStrategy`] in
-///   [`Checking`] and [`UpgradeActionOnExit`] in [`UpgradeAvailable`]).
+///   [`UpgradePolicy`] into narrowed state witnesses ([`UpgradeStrategy`] in [`Checking`]
+///   and [`UpgradeActionOnExit`] in [`UpgradeAvailable`]).
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
 /// [`CooldownPolicy::CustomTimestampFilePath`]: CooldownPolicy::CustomTimestampFilePath
