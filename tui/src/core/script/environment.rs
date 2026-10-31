@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, SCRIPT_MOD_DEBUG, inline_string, ok};
+use crate::{DEBUG_SCRIPT, InlineString, inline_string, ok};
 use miette::IntoDiagnostic;
 use std::{env, path::Path};
 use strum_macros::{Display, EnumString};
@@ -72,7 +72,7 @@ pub fn try_get_path_prefixed(
         OS_SPECIFIC_ENV_PATH_SEPARATOR,
         path
     );
-    SCRIPT_MOD_DEBUG.then(|| {
+    DEBUG_SCRIPT.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "try_get_path_prefixed",

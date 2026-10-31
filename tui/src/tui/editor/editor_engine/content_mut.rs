@@ -2,11 +2,10 @@
 
 use super::{DeleteSelectionWith, scroll_editor_content};
 use crate::{CCaret, CCol, CRow, CWidth, CursorBoundsCheck, CursorPositionBoundsStatus,
-            EditorArgsMut, EditorBuffer, EditorEngine, InlineString, InlineVec,
+            EditorArgsMut, EditorBuffer, EditorEngine, HashMap, InlineString, InlineVec,
             RangeExt, SelectionContainer, SelectionLine, ZeroCopyGapBuffer, c_col,
             c_len, c_row, c_sel_line, c_width, empty_check_early_return, locate_col,
             multiline_disabled_check_early_return, validate_buffer_mut::EditorBufferMut};
-use rustc_hash::FxHashMap;
 
 /// Inserts a single-line string into the editor buffer at the current caret position.
 ///
@@ -842,10 +841,10 @@ mod delete_selected_helper {
     pub fn analyze_selections(
         buffer: &EditorBuffer,
         selection_container: &SelectionContainer,
-    ) -> (InlineVec<CRow>, FxHashMap<CRow, InlineString>) {
+    ) -> (InlineVec<CRow>, HashMap<CRow, InlineString>) {
         let lines = buffer.get_lines();
         let mut vec_row_indices_to_remove = InlineVec::<CRow>::new();
-        let mut map_lines_to_replace = FxHashMap::<CRow, InlineString>::default();
+        let mut map_lines_to_replace = HashMap::<CRow, InlineString>::default();
 
         for selection_line in selection_container.iter() {
             let selected_row_index = selection_line.row;
@@ -956,7 +955,7 @@ mod delete_selected_helper {
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
         mut lines_to_remove: InlineVec<CRow>,
-        lines_to_replace: &FxHashMap<CRow, InlineString>,
+        lines_to_replace: &HashMap<CRow, InlineString>,
     ) {
         // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.

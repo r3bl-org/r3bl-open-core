@@ -16,7 +16,7 @@ use super::STATUS_BAR_HEIGHT;
 use crate::core::pty::pty_mux;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER,
             DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyInputEvent,
-            PtySessionConfigOption, ScrollbackAmount, VPSize, VPWidth,
+            PtySessionConfigToken, ScrollbackAmount, VPSize, VPWidth,
             core::{osc::OscPtyEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
             ok, vp_height};
@@ -436,7 +436,7 @@ impl ProcessManager {
         // Use existing PtySessionBuilder with reduced size.
         let session = PtySessionBuilder::new(&process.command)
             .cli_args(&process.args)
-            .with_config(DefaultPtySessionConfig + PtySessionConfigOption::Size(pty_size))
+            .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(pty_size))
             .start()?;
 
         process.session = Some(session);

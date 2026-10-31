@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+use crate::{ChUnit, CliTextInline, CommonResult, DEBUG_CHOOSE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
             RangeExt, SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
             TermRowDelta, TerminalLibBackend, TuiStyle, VPHeight, ansi_output, c_col,
@@ -135,7 +135,7 @@ mod render_helper {
     }
 
     pub fn log_render_debug_info(state: &State, render_context: &RenderContext) {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::info! {
                 message = "🍎🍎🍎\n render()::state",

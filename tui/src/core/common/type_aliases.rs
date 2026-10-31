@@ -1,5 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+#![allow(clippy::disallowed_types)]
+
 pub use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 
 /// High-performance [`HashMap`] utilizing [`FxHasher`] (~1 CPU cycle lookups). Replaces

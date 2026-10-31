@@ -56,8 +56,7 @@
 //! - Hash cache: 11 strings × average 5 chars = ~55 bytes
 //! - Total: ~4KB of memory for massive performance gains
 
-use crate::{DeadlockPreventionPolicy::OptOut, ScopedMutex, scoped_mutex};
-use rustc_hash::FxHashMap;
+use crate::{DeadlockPreventionPolicy::OptOut, HashMap, ScopedMutex, scoped_mutex};
 use std::{borrow::Cow, sync::LazyLock};
 
 const SPACE_CHAR: char = ' ';
@@ -68,8 +67,8 @@ const HEADING: &str = "#";
 
 /// Static cache for space strings to avoid repeated allocations.
 /// Pre-computes space strings for common lengths (0 to 64 chars).
-static SPACE_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
-    let mut cache = FxHashMap::default();
+static SPACE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
+    let mut cache = HashMap::default();
     for i in 0..=64 {
         cache.insert(i, SPACE.repeat(i));
     }
@@ -78,8 +77,8 @@ static SPACE_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
 
 /// Static cache for horizontal line strings to avoid repeated allocations.
 /// Pre-computes line strings for common lengths (0 to 64 chars).
-static HORIZ_LINE_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
-    let mut cache = FxHashMap::default();
+static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
+    let mut cache = HashMap::default();
     for i in 0..=64 {
         cache.insert(i, LIST_SPACE_DISPLAY.repeat(i));
     }
@@ -132,7 +131,7 @@ static HORIZ_LINE_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
 ///
 /// ### Performance Characteristics
 /// - First access: Allocates and caches (slow)
-/// - Subsequent accesses: [`FxHashMap`] lookup + clone (fast)
+/// - Subsequent accesses: [`HashMap`] lookup + clone (fast)
 /// - Trade-off: Small memory cost for avoiding repeated allocations
 ///
 /// ## Example Usage Pattern
@@ -147,21 +146,21 @@ static HORIZ_LINE_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
 /// [`Box::leak()`]: std::boxed::Box::leak
 /// [`char`]: std::primitive::char
 /// [`DeadlockPreventionPolicy::OptOut`]: variant@crate::DeadlockPreventionPolicy::OptOut
-/// [`FxHashMap`]: rustc_hash::FxHashMap
+/// [`HashMap`]: crate::HashMap
 /// [`OptOut`]: variant@crate::DeadlockPreventionPolicy::OptOut
 /// [`ScopedMutex<_, DeadlockPreventionPolicy::OptOut>`]: crate::ScopedMutex
 /// [`ScopedMutex`]: crate::core::common::ScopedMutex
 /// [`usize`]: std::primitive::usize
 /// [Parameters]: crate::ScopedMutex#parameters
 pub static DYNAMIC_CACHE: LazyLock<
-    ScopedMutex<FxHashMap<(char, usize), String>, { OptOut }>,
-> = LazyLock::new(|| scoped_mutex!(OPT_OUT, FxHashMap::default()));
+    ScopedMutex<HashMap<(char, usize), String>, { OptOut }>,
+> = LazyLock::new(|| scoped_mutex!(OPT_OUT, HashMap::default()));
 
 /// Static cache for heading hash strings to avoid repeated allocations.
 /// Pre-computes heading hash strings for common lengths (0 to 10 chars).
 /// This is used for markdown heading formatting (e.g., "###" for H3).
-static HASH_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
-    let mut cache = FxHashMap::default();
+static HASH_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
+    let mut cache = HashMap::default();
     // Pre-populate cache for common heading levels (0 to 10).
     // Markdown typically supports up to 6 levels, but we cache a bit more.
     for i in 0..=10 {
@@ -174,7 +173,7 @@ static HASH_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
 /// First checks the static cache, then falls back to the dynamic cache for large counts.
 fn get_cached_repeated_string(
     count: usize,
-    static_cache: &'static FxHashMap<usize, String>,
+    static_cache: &'static HashMap<usize, String>,
     char_to_repeat: char,
     str_to_repeat: &str,
 ) -> Cow<'static, str> {
@@ -470,8 +469,8 @@ mod tests {
         // Test the internal function directly.
 
         // Create a static test cache.
-        static TEST_CACHE: LazyLock<FxHashMap<usize, String>> = LazyLock::new(|| {
-            let mut cache = FxHashMap::default();
+        static TEST_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
+            let mut cache = HashMap::default();
             cache.insert(3, "xxx".to_string());
             cache
         });

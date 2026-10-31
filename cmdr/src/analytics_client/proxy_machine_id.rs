@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AnalyticsAction, config_folder, report_analytics};
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use crate::DEBUG_ANALYTICS_CLIENT;
 use r3bl_tui::{InlineString, friendly_random_id,
                into_existing::{read_from_file::try_read_file_path_into_inline_string,
                                write_to_file}};
@@ -29,7 +29,7 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
 
             // Try to read the file directly into InlineString.
             if let Ok(()) = res_read_from_file {
-                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                DEBUG_ANALYTICS_CLIENT.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "Successfully read proxy machine ID from file.",
@@ -47,7 +47,7 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
                             String::new(),
                             AnalyticsAction::MachineIdProxyCreate,
                         );
-                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                        DEBUG_ANALYTICS_CLIENT.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                 message = "Successfully wrote proxy machine ID to file.",

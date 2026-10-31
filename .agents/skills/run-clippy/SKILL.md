@@ -7,12 +7,12 @@ description: Run clippy linting, enforce comment punctuation rules, format code 
 
 ## When to Use
 
-- After making code changes
-- Fixing clippy warnings
-- Ensuring comment punctuation consistency
-- Enforcing module organization patterns
-- Before creating commits
-- When user says "run clippy", "fix style", "format code", "check lints", etc.
+- When user explicitly invokes `/clippy` or says "run clippy", "fix style", "check lints", etc.
+- Before creating commits or opening pull requests (as part of pre-commit quality check)
+- Fixing clippy warnings after being requested to do so
+
+> [!NOTE]
+> Do NOT run clippy or test suites automatically after routine, isolated code edits unless explicitly instructed.
 
 ## Instructions
 
@@ -122,14 +122,15 @@ If there are issues, invoke the `write-documentation` skill (or use `/fix-intrad
 
 ### Step 5: Run Tests if Needed
 
-If clippy fixes modify behavior or you're unsure about changes:
+If clippy fixes modify behavior, or if the user explicitly requested running tests:
 
 ```bash
 ./check.fish --test
 # (runs: cargo test --all-targets)
 ```
 
-Use the Task tool or `invoke_subagent` with `subagent_type='test-runner'` and `Model: "inherit"` if tests fail.
+> [!TIP]
+> Delegate full test suite runs to a background subagent (`self` with `Model: "inherit"`) to avoid blocking interactive conversation. If only a single test is affected, run that test surgically with `cargo test -q <test_name>` instead.
 
 ### Step 6: Final Code Formatting
 
@@ -176,6 +177,56 @@ fn get_char(&self, pos: Pos) -> Option<PixelChar> {
         .and_then(|row| row.get(pos.col_index.as_usize()))
         .copied()
 }
+```
+
+### Step 10: Derive Errors Instead of Writing Manual Error Boilerplate (Mandatory)
+
+1. **Custom Error Types Must Derive `thiserror::Error` and `miette::Diagnostic`**:
+   Do NOT manually implement `std::fmt::Display` or `std::error::Error` for custom error enums or structs. Always derive `thiserror::Error` and `miette::Diagnostic` and annotate variants/structs with `#[error("...")]`.
+2. **Unit Enums Must Use `#[serde(rename_all = "...")]` (or `strum`) Instead of Manual `FromStr` / `TryFrom` Error Boilerplate**:
+   When deserializing unit enums (e.g., `"open-source"` / `"closed-source"`), use `#[derive(Deserialize)]` with `#[serde(rename_all = "kebab-case")]` (or `"snake_case"`, etc.) so `serde` derives the parser and invalid-variant error automatically. Do NOT use `#[serde(try_from = "String")]` + manual `FromStr` / `TryFrom<&str>` / `TryFrom<String>` + custom error boilerplate on unit enums (reserve `#[serde(try_from = "String")]` strictly for composite structs like `CrateVersion { major, minor, patch }`).
+
+**✅ Good:**
+```rust
+// 1. Custom error enum for a composite struct parser:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum VersionParseErrorKind {
+    #[error("Invalid semantic version: expected 'MAJOR.MINOR.PATCH'")]
+    WrongSegmentCount,
+    #[error("Invalid u16 major version segment")]
+    InvalidMajor,
+}
+
+// 2. Unit enum deserialized directly via serde without manual FromStr/TryFrom error boilerplate:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrateDistribution {
+    OpenSource,
+    ClosedSource,
+}
+```
+
+**❌ Bad:**
+```rust
+// ❌ Manual Display & std::error::Error boilerplate:
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VersionParseErrorKind {
+    WrongSegmentCount,
+    InvalidMajor,
+}
+impl std::fmt::Display for VersionParseErrorKind { ... }
+impl std::error::Error for VersionParseErrorKind {}
+
+// ❌ Using #[serde(try_from = "String")] + FromStr/TryFrom boilerplate on a unit enum:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(try_from = "String")]
+pub enum CrateDistribution {
+    OpenSource,
+    ClosedSource,
+}
+impl FromStr for CrateDistribution { ... }
+impl TryFrom<&str> for CrateDistribution { ... }
+impl TryFrom<String> for CrateDistribution { ... }
 ```
 
 ## Reporting Results

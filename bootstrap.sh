@@ -252,6 +252,16 @@ setup_cargo_tools() {
     fi
 }
 
+# Setup Node.js test dependencies for MCP conformance tests
+setup_mcp_test_dependencies() {
+    if command -v npm &>/dev/null; then
+        echo "📦 Installing MCP test harness dependencies in rust-analyzer-mcp-server..."
+        (cd rust-analyzer-mcp-server && npm install)
+    else
+        echo "⚠️  npm not found. Skipping MCP test harness dependencies."
+    fi
+}
+
 # Main function - orchestrates the entire bootstrap process
 main() {
     echo "🚀 Starting r3bl-open-core bootstrap process..."
@@ -287,6 +297,7 @@ main() {
     echo ""
     echo "⚙️  Setting up Rust development tools..."
     setup_cargo_tools
+    setup_mcp_test_dependencies
 
     echo ""
     echo "✅ Bootstrap complete! You can now use 'fish run.fish <command>' for development tasks."

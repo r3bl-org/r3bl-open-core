@@ -162,6 +162,32 @@ sentences in documentation.**
 /// This is the main trait: implement it to add your logic.
 ```
 
+### No "Source of Truth (SOT)" Buzzwords
+
+**Never use phrases like `"Authoritative Source of Truth (SOT)"`, `"Single Source of Truth
+(SSOT)"`, `"Source of Truth (SOT)"`, or the acronyms `"SOT"` / `"SSOT"` in documentation,
+comments, or prose.**
+
+- They are strange robotic phrases, not natural human English.
+- They add zero information and act as pure noise.
+- State directly what the type, constant, or module is in plain English.
+
+```rust
+// ❌ Bad: Robotic noise
+/// Authoritative Source of Truth (SOT) URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Single Source of Truth (SSOT) schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+
+// ✅ Good: Direct human English
+/// URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+```
+
 ### Technical Terminology Precision
 
 **Use precise terms for the code lifecycle and generics to maintain low cognitive load.**
@@ -199,20 +225,35 @@ Rust hex escape syntax.**
 **Exception:** In Rust code, doctests, and byte literals, continue using `\x1B` or
 `0x1B` - that's actual Rust syntax the compiler needs.
 
-### Acronym Formatting: Always Backtick
+### Acronym & Initialism Formatting: Domain/Wire Identifiers vs. General Prose
 
-**All technical acronyms get backticks.** No exceptions - treat them as technical
-identifiers, not prose.
+Distinguish between **domain-specific / wire-level technical identifiers** (which get
+backticks) and **general computing / web / data-format initialisms** (which stay plain
+text). Putting everyday computing vocabulary in code font creates a "ransom-note" effect
+without adding semantic precision.
+
+#### What Gets Backticks: Terminal, Wire-Protocol, & OS Syscall/Signal Identifiers
+
+Backtick acronyms and mnemonics that represent **terminal protocols, escape sequences,
+character/byte encodings, or exact OS/libc/hardware primitives**:
+
+| Category | Examples (Backticked) |
+| :--- | :--- |
+| **Terminal & Escape Sequence Protocols** | `` `ANSI` ``, `` `VT-100` ``, `` `VT-220` ``, `` `CSI` ``, `` `OSC` ``, `` `SGR` ``, `` `ESC` ``, `` `DCS` ``, `` `DSR` ``, `` `SS3` ``, `` `DEC` ``, `` `DECSTBM` ``, `` `DECAWM` ``, `` `DECSC` ``, `` `DECRC` ``, `` `DECTCEM` ``, `` `X10` ``, `` `RXVT` ``, `` `URXVT` `` |
+| **Terminal & Multiplexing Subsystems** | ``[`PTY`]``, ``[`TUI`]``, ``[`VTE`]``, `` `TTY` `` |
+| **Byte / Character / Color Encodings** | `` `UTF-8` ``, `` `ASCII` ``, `` `RGB` ``, `` `EOF` ``, `` `BEL` ``, `` `CR` ``, `` `LF` ``, `` `C0` `` |
+| **OS Signals, Errnos, Termios & Kernel Primitives** | `` `SIGWINCH` ``, `` `SIGINT` ``, `` `EINTR` ``, `` `EIO` ``, `` `EINVAL` ``, `` `POLLIN` ``, `` `EPOLLIN` ``, `` `ICANON` ``, `` `ECHO` ``, `` `VMIN` ``, `` `VTIME` ``, `` `FIFO` ``, `` `IOCP` `` |
+| **Exact Protocol Verbs, Status Codes & Env Vars** | `` `HEAD` ``, `` `GET` ``, `` `302` ``, `` `CI` ``, `` `$PATH` ``, `` `TERM` ``, `` `COLORTERM` ``, `` `NO_COLOR` `` |
 
 ```rust
-// ❌ Bad: Plain text acronyms
+// ❌ Bad: Plain text terminal/wire-protocol acronyms
 /// Uses ANSI escape sequences to parse PTY output via the VTE parser.
 
-// ✅ Good: All acronyms backticked
+// ✅ Good: Terminal/wire-protocol acronyms backticked
 /// Uses `ANSI` escape sequences to parse `PTY` output via the `VTE` parser.
 ```
 
-#### When Linking: Use ``[`ACRONYM`]``
+#### When Linking Backticked Acronyms: Use ``[`ACRONYM`]``
 
 When a backticked acronym has a useful link target, wrap it in `[` `]` to create a
 reference-style intra-doc link. **Prefer local links** when the target is a dependency in
@@ -229,14 +270,22 @@ external URLs (Wikipedia, man pages) only when no local target exists:
 
 Common linked acronyms and their targets:
 
-| Acronym     | Link Target                                                   | Source                 |
-| :---------- | :------------------------------------------------------------ | :--------------------- |
-| ``[`TUI`]`` | `crate::tui::TerminalWindow::main_event_loop`                 | Local (crate item)     |
-| ``[`VTE`]`` | `mod@vte`                                                     | Local (Cargo.toml dep) |
-| ``[`PTY`]`` | `https://en.wikipedia.org/wiki/Pseudoterminal`                | External (OS concept)  |
-| ``[`SSH`]`` | `https://en.wikipedia.org/wiki/Secure_Shell`                  | External (protocol)    |
-| ``[`TCP`]`` | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol` | External (protocol)    |
-| ``[`DCS`]`` | Spec URL or crate path as appropriate                         | Depends on context     |
+| Acronym | Link Target | Source |
+| :--- | :--- | :--- |
+| ``[`TUI`]`` | `crate::tui::TerminalWindow::main_event_loop` | Local (crate item) |
+| ``[`VTE`]`` | `mod@vte` | Local (Cargo.toml dep) |
+| ``[`PTY`]`` | `https://en.wikipedia.org/wiki/Pseudoterminal` | External (OS concept) |
+| ``[`SSH`]`` | `https://en.wikipedia.org/wiki/Secure_Shell` | External (protocol) |
+| ``[`TCP`]`` | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol` | External (protocol) |
+| ``[`DCS`]`` | Spec URL or crate path as appropriate | Depends on context |
+| ``[`RAII`]`` | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
+| ``[`SemVer`]`` | `https://semver.org/` | External (spec) |
+
+> **Pedagogical & Spec Acronym Exception (`[`RAII`]`, `[`SemVer`]`)**: When an acronym
+> represents a specific design pattern or specification that benefits from a hover/click
+> definition for newcomers (see [Pedagogical Links for Inclusivity](#pedagogical-links-for-inclusivity)),
+> wrap it in ``[`...`]`` with a reference link definition. When used unlinked in table
+> cells or `//` comments, keep it as plain text (`RAII`, `SemVer`).
 
 #### Without a Link: Plain Backticks
 
@@ -263,20 +312,29 @@ Software names are technical identifiers and get backticks:
 ```
 
 Common product names: `` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``, `` `GNOME VTE` ``,
-`` `st` `` (suckless terminal).
+`` `st` `` (suckless terminal), `` `glibc` ``.
 
 When linking to an external project: ``[`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte``
 
 #### What Stays Plain Text
 
-Standards body names and specification document identifiers stay as plain text - they are
-citation references, not technical identifiers:
+General English/UI/development initialisms, web/data-format names, general CS/hardware
+terms, time/checksum standards, and specification document identifiers stay as **plain
+text** (not backticked) because they are ordinary prose vocabulary, not wire-protocol or
+code identifiers:
 
-| Category                  | Examples                              |
-| :------------------------ | :------------------------------------ |
-| Spec document identifiers | ECMA-48, ITU-T Rec. T.416, ISO 8613-6 |
+| Category | Examples (Plain Text) |
+| :--- | :--- |
+| **General UI & Dev Initialisms** | CLI, IDE, UI, GUI, API, SDK, REPL, PR, CI/CD |
+| **Web, Networking & Data Formats** | URL, URI, HTTP, HTTPS, CDN, DNS, JSON, JSONC, TOML, YAML, XML, HTML, CSS, CSV |
+| **General CS, Compiler & Design Terms** | AST, CST, LRU, SIMD (plus RAII and SemVer when unlinked) |
+| **General OS, Hardware & Toolchain Terms** | OS, CPU, GPU, RAM, I/O, ABI, FFI, IPC, PID, C, MSVC, POSIX |
+| **Time, Cryptography & Binary Units** | UTC, ISO 8601, RFC 3339, SHA-256, MD5, KiB, MiB, GiB |
+| **Spec Document Identifiers** | ECMA-48, ITU-T Rec. T.416, ISO 8613-6 |
 
-When linking a spec, use descriptive link text: `[ITU-T Rec. T.416]: https://...`
+When linking a multi-word spec or plain-text phrase to an external reference, use
+plain-text link syntax (`[ITU-T Rec. T.416]: https://...` or
+`[design pattern]: https://...`).
 
 #### DEC Private Modes
 
@@ -1070,6 +1128,13 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 # (runs: cargo test --doc)
 ```
 
+> [!IMPORTANT]
+> **Frequency Directive:** Do NOT run `./check.fish --quick-doc` or `./check.fish --test` after minor, isolated doc comment edits.
+> Fast typechecking (`./check.fish --check`) is sufficient for routine edits. Run `--quick-doc` and doctests only when:
+> 1. Explicitly requested by the user (or running `/docs`).
+> 2. Performing a dedicated documentation refactoring pass.
+> 3. At final pre-commit verification before creating a commit or PR.
+
 > [!TIP] **Run in a Subagent:** Building workspace documentation and running doctests can
 > take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) with
 > `Model: "inherit"` so the active conversation with the user is not blocked.
@@ -1293,8 +1358,10 @@ Before committing documentation:
 - [ ] Follow-up sentences use explicit subjects ("This trait...", "This struct...")
 - [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return,
       Check)
-- [ ] Technical acronyms backticked (`` `ANSI` ``, `` `PTY` ``, `` `VTE` ``); linked when
-      target exists (``[`VTE`]``)
+- [ ] Terminal/wire-protocol/encoding/syscall acronyms backticked (`` `ANSI` ``,
+      `` `PTY` ``, `` `VTE` ``, `` `UTF-8` ``) and linked when target exists
+      (``[`VTE`]``); general prose initialisms (CLI, UI, API, URL, HTTP, JSON, JSONC, OS,
+      CPU, ABI, AST, CST, UTC, SHA-256) kept as plain text
 - [ ] Software product names backticked (`` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``)
 - [ ] No dashes, en dashes, or em dashes (`-`, `–`, or `—`, endash/emdash) used to connect
       sentences or clauses (use proper punctuation or separate sentences)

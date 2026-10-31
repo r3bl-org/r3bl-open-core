@@ -347,8 +347,7 @@ use kv_error::KvErrorCouldNot;
 #[cfg(test)]
 mod kv_tests {
     use super::*;
-    use crate::try_create_temp_dir;
-    use rustc_hash::FxHashMap;
+    use crate::{HashMap, try_create_temp_dir};
     use serial_test::serial;
     use std::path::Path;
     use tracing::instrument;
@@ -396,7 +395,7 @@ mod kv_tests {
         );
 
         // Enumerate contents of bucket.
-        let mut map = FxHashMap::default();
+        let mut map = HashMap::default();
         for result_item in bucket.iter() {
             let item = result_item
                 .into_diagnostic()

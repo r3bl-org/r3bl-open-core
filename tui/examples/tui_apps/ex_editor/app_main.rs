@@ -2,7 +2,7 @@
 
 use super::{AppSignal, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
-               ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
+               ComponentRegistryMap, DEBUG_TUI, DialogBuffer, DialogChoice,
                DialogComponent, DialogEngineConfig, DialogEngineMode, EditMode,
                EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
                FlexBox, FlexBoxId, GCStringOwned, GlobalData, HasEditorBuffers,
@@ -47,11 +47,11 @@ mod impl_id {
 pub struct AppMain;
 
 mod constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI_MOD, State};
+    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI, State};
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct ex_rc::AppMain");
             });
@@ -380,7 +380,7 @@ mod modal_dialogs {
             text,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal simple",
@@ -420,7 +420,7 @@ mod modal_dialogs {
             text,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal autocomplete",
@@ -513,7 +513,7 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::Editor);
         has_focus.set_id(id);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -546,7 +546,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
@@ -632,7 +632,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message =
@@ -720,7 +720,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct DialogComponent (autocomplete) [ on_dialog_press ]"

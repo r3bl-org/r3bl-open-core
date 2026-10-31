@@ -2,8 +2,7 @@
 
 use crate::ex_rc::Id;
 use r3bl_tui::{CIndex, ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-               FileExtensionToken, FlexBoxId, HasEditorBuffers, c_index};
-use rustc_hash::FxHashMap;
+               FileExtensionToken, FlexBoxId, HasEditorBuffers, HashMap, c_index};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 pub const FILE_CONTENT_ARRAY: [&str; 3] = [
@@ -24,7 +23,7 @@ pub enum AppSignal {
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
     pub current_slide_index: CIndex,
 }
 
@@ -93,7 +92,7 @@ pub mod state_mutator {
         };
 
         let editor_buffers = {
-            let mut it = FxHashMap::default();
+            let mut it = HashMap::default();
             let id = FlexBoxId::from(Id::Editor);
             it.insert(id, editor_buffer);
             it

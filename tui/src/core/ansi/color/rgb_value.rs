@@ -154,9 +154,10 @@ mod tests {
     }
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`] value 57 = `BlueViolet`
+    ///
+    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model

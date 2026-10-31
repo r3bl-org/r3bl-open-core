@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEVELOPMENT_MODE, OutputDevice, RangeExt, ResizeHint, TERMINAL_LIB_BACKEND,
+use crate::{DEBUG_CHOOSE, OutputDevice, RangeExt, ResizeHint, TERMINAL_LIB_BACKEND,
             TermRowDelta, TerminalLibBackend, VPHeight, VPSize, ansi_output, ok,
             queue_commands, throws};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
@@ -54,7 +54,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// Returns an error if clearing the viewport fails.
     fn clear_viewport_for_resize(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
-            DEVELOPMENT_MODE.then(|| {
+            DEBUG_CHOOSE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🥑🥑🥑 clear viewport for resize",
