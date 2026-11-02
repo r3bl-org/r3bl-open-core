@@ -9,19 +9,21 @@ use std::{fmt::{Display, Formatter},
 
 /// Validated HTTP(S) endpoint URL (manifest URL or binary release archive base URL).
 ///
-/// Encapsulates the remote URL string used for querying `versions.jsonc` (via
-/// [`UpgradeConfig`]) or downloading pre-compiled release archives (via
-/// [`JsoncManifest::binaries_release_base_url`][1]).
+/// Encapsulates the remote URL string used in 2 places:
+/// 1. Querying `versions.jsonc`, via [`UpgradeConfig`].
+/// 2. Downloading pre-compiled release archives, via
+///    [`JsoncManifest::binaries_release_base_url`][1].
 ///
 /// Every [`EndpointUrl`] is validated by [`JsoncScalar::try_parse`] (directly or via
 /// `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]`) to ensure:
-/// 1. Valid WHATWG URL syntax with a non-empty host.
+/// 1. Valid [WHATWG URL] syntax with a non-empty host.
 /// 2. `"https"` or `"http"` scheme (catching typos like `"htps://..."`).
 /// 3. No `?query` or `#fragment` components (which would break release asset URL path
 ///    joining).
 ///
 /// [1]: crate::self_upgrade::JsoncManifest::binaries_release_base_url
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
+/// [WHATWG URL]: https://url.spec.whatwg.org/
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EndpointUrl {
     inner: String,
@@ -85,6 +87,7 @@ impl Deref for EndpointUrl {
     fn deref(&self) -> &Self::Target { &self.inner }
 }
 
+/// Formats the endpoint URL for diagnostic messages and structured tracing logs.
 impl Display for EndpointUrl {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.inner)
@@ -96,8 +99,10 @@ impl Display for EndpointUrl {
 /// [`EndpointUrl::try_parse`]: JsoncScalar::try_parse
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
 pub enum EndpointUrlParseError {
-    /// Failed WHATWG URL parsing (empty string, missing scheme, empty host, bad port,
+    /// Failed [WHATWG URL] parsing (empty string, missing scheme, empty host, bad port,
     /// etc.).
+    ///
+    /// [WHATWG URL]: https://url.spec.whatwg.org/
     #[error("Invalid endpoint URL '{input}': {reason}")]
     InvalidSyntax {
         /// Trimmed input string that failed URL parsing.

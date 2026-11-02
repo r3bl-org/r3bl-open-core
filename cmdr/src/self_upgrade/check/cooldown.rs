@@ -1,37 +1,41 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::super::{CooldownPolicy, UpgradeConfig, check_cooldown_cache};
-use crate::DEBUG_SELF_UPGRADE;
-use dirs::cache_dir;
+use super::super::{CooldownPolicy, UpgradeConfig};
+use crate::{DEBUG_SELF_UPGRADE, try_get_self_upgrade_last_check_file_path};
 use std::{fs::{self, File},
           path::PathBuf,
-          time::{Duration, SystemTime}};
+          time::SystemTime};
 
-/// Result of checking whether a crate's `mtime` cooldown timestamp file is still within
-/// [`DEDICATED_THREAD_CHECK_COOLDOWN`].
+/// Result of checking whether a crate's [`mtime`] cooldown timestamp file is still within
+/// [`DEDICATED_THREAD_CHECK_COOLDOWN`][1].
 ///
-/// [`DEDICATED_THREAD_CHECK_COOLDOWN`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+/// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CooldownStatus {
-    /// Timestamp file exists and its `mtime` age is strictly less than
-    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`]; skip spawning the dedicated check thread.
+    /// Timestamp file exists and its [`mtime`] age is strictly less than
+    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`][1]; skip spawning the dedicated check thread.
     ///
-    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     Active,
 
-    /// Cooldown is disabled, timestamp file does not exist, `mtime` could not be read,
-    /// system clock skewed backwards, or `mtime` age has reached or exceeded
-    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`].
+    /// Cooldown is disabled, timestamp file does not exist, [`mtime`] could not be read,
+    /// system clock skewed backwards, or [`mtime`] age has reached or exceeded
+    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`][1].
     ///
-    /// [`DEDICATED_THREAD_CHECK_COOLDOWN`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     ExpiredOrMissing,
 }
 
-/// Resolves the filesystem path of the 0-byte `mtime` timestamp file for `config`
+/// Resolves the filesystem path of the 0-byte [`mtime`] timestamp file for `config`
 /// according to [`UpgradeConfig::get_cooldown_policy`].
 ///
 /// Returns `None` when the policy is [`CooldownPolicy::Disabled`] or when
 /// [`dirs::cache_dir`] cannot determine a platform cache directory.
+///
+/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 #[must_use]
 pub fn resolve_cooldown_timestamp_file_path(config: &UpgradeConfig) -> Option<PathBuf> {
     match config.get_cooldown_policy() {
@@ -40,45 +44,20 @@ pub fn resolve_cooldown_timestamp_file_path(config: &UpgradeConfig) -> Option<Pa
         #[cfg(any(test, doc))]
         CooldownPolicy::CustomTimestampFilePath(path) => Some(path.clone()),
         CooldownPolicy::DefaultCacheDir => {
-            let base_dir = cache_dir()?;
-            let file_name = format!(
-                "{}.{}",
-                config.get_crate_name(),
-                check_cooldown_cache::LAST_CHECK_FILE_EXT
-            );
-            Some(
-                base_dir
-                    .join(check_cooldown_cache::CACHE_TOP_LEVEL_DIR)
-                    .join(check_cooldown_cache::UPGRADE_CHECK_CACHE_SUBDIR)
-                    .join(file_name),
-            )
+            try_get_self_upgrade_last_check_file_path(config.get_crate_name())
         }
     }
 }
 
-/// Checks whether `config` has a fresh `mtime` cooldown timestamp file within
-/// [`DEDICATED_THREAD_CHECK_COOLDOWN`].
+/// Checks whether `config` has a fresh [`mtime`] cooldown timestamp file within
+/// [`DEDICATED_THREAD_CHECK_COOLDOWN`][1].
 ///
 /// Performs at most a single `stat` syscall (`fs::metadata`) and reads zero file bytes.
 ///
-/// [`DEDICATED_THREAD_CHECK_COOLDOWN`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+/// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 #[must_use]
 pub fn check_cooldown_status(config: &UpgradeConfig) -> CooldownStatus {
-    check_cooldown_status_at(
-        config,
-        SystemTime::now(),
-        config.get_cooldown_policy().cooldown_duration(),
-    )
-}
-
-/// Evaluates cooldown freshness against an explicit `now` timestamp and `cooldown_window`
-/// for deterministic testing without thread sleeps.
-#[must_use]
-pub(crate) fn check_cooldown_status_at(
-    config: &UpgradeConfig,
-    now: SystemTime,
-    cooldown_window: Duration,
-) -> CooldownStatus {
     let Some(timestamp_file_path) = resolve_cooldown_timestamp_file_path(config) else {
         return CooldownStatus::ExpiredOrMissing;
     };
@@ -93,24 +72,25 @@ pub(crate) fn check_cooldown_status_at(
 
     // If `modified > now` (clock skew), `duration_since` returns `Err`, which safely
     // treats the timestamp file as expired rather than permanently suppressing checks.
-    let Ok(elapsed) = now.duration_since(modified) else {
+    let Ok(elapsed) = SystemTime::now().duration_since(modified) else {
         return CooldownStatus::ExpiredOrMissing;
     };
 
-    if elapsed < cooldown_window {
+    if elapsed < config.get_cooldown_policy().cooldown_duration() {
         CooldownStatus::Active
     } else {
         CooldownStatus::ExpiredOrMissing
     }
 }
 
-/// Touches (creates or updates `mtime` on) the 0-byte cooldown timestamp file for
+/// Touches (creates or updates [`mtime`] on) the 0-byte cooldown timestamp file for
 /// `config`.
 ///
 /// Must be called **only** when a check confirms the binary is [`UpToDate`] or after an
 /// upgrade succeeds ([`UpgradeResolution::Upgraded`]). Never call on network/parse
 /// failures or unapplied available upgrades so subsequent invocations retry cleanly.
 ///
+/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 /// [`UpgradeResolution::Upgraded`]: crate::self_upgrade::UpgradeResolution::Upgraded
 /// [`UpToDate`]: crate::self_upgrade::UpToDate
 pub fn record_successful_check(config: &UpgradeConfig) {
@@ -165,7 +145,9 @@ mod tests {
     use super::{super::super::{CrateIdentity, CrateVersion, EndpointUrl, JsoncScalar,
                                UpgradePolicy, UserFeedbackChannel},
                 *};
+    use crate::resolve_self_upgrade_last_check_in_base_dir;
     use r3bl_tui::{assert_eq2, try_create_temp_dir};
+    use std::time::Duration;
 
     fn make_config_with_policy(policy: CooldownPolicy) -> UpgradeConfig {
         UpgradeConfig::new(
@@ -193,8 +175,8 @@ mod tests {
         let config = make_config_with_policy(CooldownPolicy::DefaultCacheDir);
         if let Some(path) = resolve_cooldown_timestamp_file_path(&config) {
             let expected_suffix = PathBuf::from("r3bl")
-                .join("upgrade-check")
-                .join("r3bl-cmdr.last_check");
+                .join("r3bl-cmdr")
+                .join("self_upgrade_last_check");
             assert!(path.ends_with(&expected_suffix));
         }
     }
@@ -202,7 +184,8 @@ mod tests {
     #[test]
     fn test_custom_timestamp_file_lifecycle_missing_active_expired_and_clock_skew() {
         let temp_dir = try_create_temp_dir().unwrap();
-        let timestamp_file_path = temp_dir.join("nested").join("r3bl-cmdr.last_check");
+        let timestamp_file_path =
+            resolve_self_upgrade_last_check_in_base_dir(&temp_dir, "r3bl-cmdr");
         let config = make_config_with_policy(CooldownPolicy::CustomTimestampFilePath(
             timestamp_file_path.clone(),
         ));
@@ -221,27 +204,8 @@ mod tests {
         assert_eq2!(fs::metadata(&timestamp_file_path).unwrap().len(), 0);
         assert_eq2!(check_cooldown_status(&config), CooldownStatus::Active);
 
-        let modified = fs::metadata(&timestamp_file_path)
-            .unwrap()
-            .modified()
-            .unwrap();
-        assert_eq2!(
-            check_cooldown_status_at(
-                &config,
-                modified + Duration::from_secs(3599),
-                window,
-            ),
-            CooldownStatus::Active
-        );
-
-        // 3. Exact boundary (`elapsed == window`) -> ExpiredOrMissing.
-        assert_eq2!(
-            check_cooldown_status_at(&config, modified + window, window),
-            CooldownStatus::ExpiredOrMissing
-        );
-
-        // 4. Backdate real file `mtime` beyond 1h -> ExpiredOrMissing, then re-touch
-        // existing 0-byte timestamp file -> refreshes back to Active.
+        // 3. Backdate real file `mtime` beyond 1h -> ExpiredOrMissing, then re-touch
+        //    existing 0-byte timestamp file -> refreshes back to Active.
         let backdated = SystemTime::now() - (window + Duration::from_secs(10));
         File::open(&timestamp_file_path)
             .unwrap()
@@ -254,9 +218,14 @@ mod tests {
         record_successful_check(&config);
         assert_eq2!(check_cooldown_status(&config), CooldownStatus::Active);
 
-        // 5. Backward clock skew (`now < modified`) -> ExpiredOrMissing.
+        // 4. Future `mtime` (`modified > now` backward clock skew) -> ExpiredOrMissing.
+        let future_mtime = SystemTime::now() + Duration::from_secs(60);
+        File::open(&timestamp_file_path)
+            .unwrap()
+            .set_modified(future_mtime)
+            .unwrap();
         assert_eq2!(
-            check_cooldown_status_at(&config, SystemTime::UNIX_EPOCH, window),
+            check_cooldown_status(&config),
             CooldownStatus::ExpiredOrMissing
         );
     }

@@ -907,6 +907,7 @@ mod tests {
     use super::{super::{CooldownPolicy, CrateIdentity, CrateName, CrateVersion,
                         JsoncScalar, UpgradeCLIArgs, UserFeedbackChannel},
                 *};
+    use crate::resolve_self_upgrade_last_check_in_base_dir;
     use r3bl_tui::{assert_eq2, try_create_temp_dir};
     use serial_test::serial;
     use std::{fs::File,
@@ -1049,7 +1050,8 @@ mod tests {
     fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
         UpgradeCheckStatus::reset_for_testing();
         let temp_dir = try_create_temp_dir().unwrap();
-        let timestamp_file_path = temp_dir.join("r3bl-cmdr.last_check");
+        let timestamp_file_path =
+            resolve_self_upgrade_last_check_in_base_dir(&temp_dir, "r3bl-cmdr");
 
         // Pre-populate an active cooldown timestamp file to verify
         // `UpgradeStrategy::Immediate` (`--upgrade`) bypasses it and still performs the

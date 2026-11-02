@@ -141,13 +141,12 @@ impl UpgradeConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum CooldownPolicy {
     /// Production policy storing a 0-byte [`mtime`] timestamp file at
-    /// `<cache_dir>/`[`r3bl`][1]`/`[`upgrade-check`][2]`/<crate_name>.`[`last_check`][3] via
-    /// [`resolve_cooldown_timestamp_file_path`][4].
+    /// `<cache_dir>/`[`r3bl`][1]`/<crate_name>/`[`self_upgrade_last_check`][2] via
+    /// [`resolve_cooldown_timestamp_file_path`][3].
     ///
-    /// [1]: crate::self_upgrade::check_cooldown_cache::CACHE_TOP_LEVEL_DIR
-    /// [2]: crate::self_upgrade::check_cooldown_cache::UPGRADE_CHECK_CACHE_SUBDIR
-    /// [3]: crate::self_upgrade::check_cooldown_cache::LAST_CHECK_FILE_EXT
-    /// [4]: crate::self_upgrade::check::resolve_cooldown_timestamp_file_path
+    /// [1]: crate::common::r3bl_file_paths::R3BL_TOP_LEVEL_DIR
+    /// [2]: crate::common::r3bl_file_paths::SELF_UPGRADE_LAST_CHECK_FILENAME
+    /// [3]: crate::self_upgrade::check::resolve_cooldown_timestamp_file_path
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     #[default]
     DefaultCacheDir,
@@ -177,7 +176,9 @@ impl CooldownPolicy {
 mod tests {
     use super::{super::super::{JsoncScalar, R3BL_VERSIONS_JSONC_URL},
                 *};
+    use crate::resolve_self_upgrade_last_check_in_base_dir;
     use r3bl_tui::assert_eq2;
+    use std::path::Path;
 
     #[test]
     fn test_upgrade_config_field_initialization() {
@@ -223,7 +224,8 @@ mod tests {
             manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
         );
 
-        let custom_timestamp_file_path = PathBuf::from("/tmp/r3bl-test.last_check");
+        let custom_timestamp_file_path =
+            resolve_self_upgrade_last_check_in_base_dir(Path::new("/tmp"), "r3bl-cmdr");
         let custom_config = UpgradeConfig::new(
             CrateIdentity::new(
                 "r3bl-cmdr",

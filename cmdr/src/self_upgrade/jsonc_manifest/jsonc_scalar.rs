@@ -26,12 +26,16 @@ use serde::{Deserialize, Deserializer};
 /// - [`CrateReleaseDate`].
 /// - [`CrateDistribution`].
 ///
-/// The `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]` attribute is used on
-/// the following fields (which correspond to the types above):
-/// - [`JsoncManifest::binaries_release_base_url`][1].
-/// - [`CrateMetadata::version`][2].
-/// - [`CrateMetadata::released_on`][3].
-/// - [`CrateMetadata::crate_distribution`][4].
+/// Because these types do not implement [`serde::Deserialize`] any struct field of a
+/// [`JsoncScalar`] type must be annotated with `#[serde(deserialize_with =
+/// "JsoncScalar::deserialize_str")]` for it to be deserialized by [`serde`].
+/// 1. This prevents the need for these types to implement [`FromStr`],
+///    [`TryFrom<String>`], or [`TryFrom<&str>`].
+/// 2. You can see this in action in the following fields:
+///    - [`JsoncManifest::binaries_release_base_url`][1].
+///    - [`CrateMetadata::version`][2].
+///    - [`CrateMetadata::released_on`][3].
+///    - [`CrateMetadata::crate_distribution`][4].
 ///
 /// [1]: crate::self_upgrade::JsoncManifest::binaries_release_base_url
 /// [2]: crate::self_upgrade::CrateMetadata::version
@@ -42,11 +46,12 @@ use serde::{Deserialize, Deserializer};
 /// [`CrateVersion`]: crate::self_upgrade::CrateVersion
 /// [`Display`]: std::fmt::Display
 /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
+/// [`FromStr`]: std::str::FromStr
 /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
 /// [How we parse JSONC]: crate::self_upgrade::JsoncManifest#how-we-parse-jsonc
 pub trait JsoncScalar: Sized {
-    /// The associated error type (bounded by [`std::error::Error`]) returned when
-    /// [`Self::try_parse`] fails.
+    /// The associated error type (bounded by the [`std::error::Error`] trait) returned
+    /// when [`Self::try_parse`] fails.
     ///
     /// The [`std::error::Error`] trait bound guarantees:
     /// - [`Display`]: required by [`serde::de::Error::custom`] in
@@ -60,30 +65,22 @@ pub trait JsoncScalar: Sized {
     /// [`Display`]: std::fmt::Display
     type ParseError: std::error::Error;
 
-    /// Parses a string slice `s` to return a validated value of this type.
+    /// Parses a string slice `slice` to return a validated value of this type.
     ///
     /// # Errors
     ///
-    /// Returns [`Self::ParseError`] if `s` is not a valid representation of `Self`.
-    fn try_parse(s: &str) -> Result<Self, Self::ParseError>;
+    /// Returns [`Self::ParseError`] if `slice` is not a valid representation of `Self`.
+    fn try_parse(slice: &str) -> Result<Self, Self::ParseError>;
 
     /// Converts `self` into its canonical JSONC CST node value ([`CstInputValue`]) for
     /// comment-preserving in-place updates in
-    /// [`JsoncManifest::try_update_crate_in_jsonc()`].
+    /// [`JsoncManifest::try_update_crate_in_jsonc()`][1].
     ///
-    /// Keeping wire serialization in [`Self::cst_value()`] (rather than coupling it to
-    /// [`Display`]) preserves separation of concerns between human-facing terminal output
-    /// and the `versions.jsonc` wire format.
-    ///
-    /// [`Display`]: std::fmt::Display
-    /// [`JsoncManifest::try_update_crate_in_jsonc()`]: crate::self_upgrade::JsoncManifest::try_update_crate_in_jsonc
+    /// [1]: crate::self_upgrade::JsoncManifest::try_update_crate_in_jsonc
     fn cst_value(&self) -> CstInputValue;
 
-    /// Deserializes a JSON string into `Self` by delegating to [`Self::try_parse`].
-    ///
-    /// Use with `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]` on struct
-    /// fields so concrete types do not need `TryFrom<String>` or `TryFrom<&str>`
-    /// implementations.
+    /// Deserializes a JSON string into [`JsoncScalar`] by delegating to
+    /// [`Self::try_parse`].
     ///
     /// # Errors
     ///

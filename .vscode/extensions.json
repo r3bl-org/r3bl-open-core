@@ -27,11 +27,11 @@
         "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
         "bmalehorn.vscode-fish", // Fish.
         "perkovec.emoji", // Emoji.
-        "alefragnani.bookmarks", // Bookmarks.
         "esbenp.prettier-vscode" // Prettier.
     ],
     // List of extensions that should not be recommended for users of this workspace.
     "unwantedRecommendations": [
+        "alefragnani.bookmarks", // Bookmarks.
         "elijah-potter.harper", // Harper Grammar & Spell Checker (Rust LSP).
         "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
         "pkief.material-product-icons", // Material "product icon" theme for activity bar, status bar, etc.

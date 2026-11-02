@@ -159,13 +159,13 @@ Because we use **JSONC** (JSON with Comments and trailing commas) across the cod
       release storage without rebuilding binaries.
     - `version` (`CrateVersion` struct with
       `pub major: u16, pub minor: u16, pub patch: u16` and
-      `#[serde(try_from = "String", into = "String")]`): Validated semantic version parsed
-      via slice pattern matching (`[major_str, minor_str, patch_str]`) at deserialization
-      time, with explicit `Ord` / `PartialOrd` comparing
+      `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]`): Validated semantic
+      version parsed via slice pattern matching (`[major_str, minor_str, patch_str]`) at
+      deserialization time, with explicit `Ord` / `PartialOrd` comparing
       `(self.major, self.minor, self.patch)` in SemVer precedence order.
     - `crate_distribution` (`CrateDistribution` with
-      `#[serde(rename_all = "kebab-case")]`): Enum witness indicating distribution and
-      licensing model:
+      `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]`): Enum witness
+      indicating distribution and licensing model:
         - `"open-source"` (`CrateDistribution::OpenSource`): Open-source crates in
           `r3bl-open-core` eligible for `cargo install` source compilation fallback.
         - `"closed-source"` (`CrateDistribution::ClosedSource`): Closed-source R3BL binary
@@ -330,13 +330,16 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
           `crates: HashMap<CrateName, CrateMetadata>`), providing `try_parse_jsonc()`
           (ignoring unknown future fields) and comment-preserving
           `try_update_crate_in_jsonc()` via `jsonc-parser` CST.
+    - [x] `jsonc_scalar.rs`: `JsoncScalar` trait (`try_parse(&str)`, `cst_value(&self)`,
+          and `deserialize_str`) unifying validation, serde deserialization, and lossless
+          CST serialization across manifest scalar types.
     - [x] Domain newtypes and enums: `EndpointUrl` (validated HTTP/HTTPS URL via
-          `#[serde(try_from = "String")]`, `try_parse()`, `default_manifest_url()`, and
-          `EndpointUrlParseError`), `CrateDistribution` (`OpenSource` / `ClosedSource`,
-          `#[serde(rename_all = "kebab-case")]`), `CrateName`,
+          `JsoncScalar`, `default_manifest_url()`, and `EndpointUrlParseError`),
+          `CrateDistribution` (`OpenSource` / `ClosedSource`, via `JsoncScalar` and
+          `CrateDistributionParseError`), `CrateName`,
           `CrateVersion { pub major: u16, pub minor: u16, pub patch: u16 }` (parsed via
-          slice pattern matching with `#[serde(try_from = "String")]` and explicit tuple
-          `.cmp()` `Ord`), `CrateReleaseDate`, and `CrateMetadata`.
+          slice pattern matching with `JsoncScalar` and explicit tuple `.cmp()` `Ord`),
+          `CrateReleaseDate`, and `CrateMetadata`.
 - [x] `config/`:
     - [x] `crate_identity.rs`: `CrateIdentity` (`crate_name: CrateName`,
           `current_version: CrateVersion`).
@@ -1032,7 +1035,7 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
 | **`cmdr/src/self_upgrade/config/upgrade_config.rs`**      | Immutable `UpgradeConfig` (`crate_identity`, `user_feedback_channel`, `upgrade_policy`, URLs, `cooldown_policy`) + `CooldownPolicy` (`DefaultCacheDir`, `CustomTimestampFilePath(PathBuf)`, `Disabled`) constructed via `UpgradeConfig::new()`. `upgrade_config!` macro is deleted.                                                                                        |
 | **`cmdr/src/self_upgrade/check/cooldown.rs`**             | `CooldownStatus` (`Active`, `ExpiredOrMissing`), `check_cooldown_status(&UpgradeConfig)`, and `record_successful_check(&UpgradeConfig)` using `<cache_dir>/r3bl/upgrade-check/<crate_name>.last_check` `mtime`.                                                                                                                                                            |
 | **`cmdr/src/self_upgrade/check/manifest_query.rs`**       | `try_get_jsonc_manifest_from_url(url: &str, timeout: Duration)` parameterized by `UpgradeStrategy::manifest_timeout()`.                                                                                                                                                                                                                                                    |
-| **`cmdr/src/self_upgrade/check/check_entry_point.rs`**    | `check_for_upgrade(journey: UpgradeJourney<Checking>)`, `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`, and pure `extract_crate_metadata_from_manifest_result` preserving full `format!("{err:#}")` diagnostic chains and touching the `1h` stamp on `UpToDate`.                                                                                         |
+| **`cmdr/src/self_upgrade/check/version_check.rs`**        | `check_for_upgrade(journey: UpgradeJourney<Checking>)`, `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`, and pure `extract_crate_metadata_from_manifest_result` preserving full `format!("{err:#}")` diagnostic chains and touching the `1h` stamp on `UpToDate`.                                                                                         |
 | **`cmdr/src/self_upgrade/upgrade/prompt.rs`**             | `PromptUpgradeDecision` (`UpgradeNow`, `DeclinedByUser`, `SkippedNonInteractive`) returned by `prompt_user_to_upgrade` (eliminating boolean blindness on non-interactive terminals).                                                                                                                                                                                       |
 | **`cmdr/src/self_upgrade/upgrade/bin_name.rs`**           | `get_current_bin_name()` (replaces deleted `metadata_resolver.rs` and obsolete `get_remote_crate_metadata()`).                                                                                                                                                                                                                                                             |
 | **`cmdr/src/self_upgrade/upgrade_journey_public_api.rs`** | Hygiene-hardened `upgrade_journey!` macro (with migrated architectural docs), `UpgradeJourney<State>`, 9 typestate structs (`NotStarted` through `Completed`), `pub(super) fn into_*` transitions, `UpgradeResolution`, `ImmediateUpgradeResult`, `StartupOutcome`, `.start(self)` (1 OS thread via `Builder::spawn`), and `Upgrading::execute_action_on_exit`.            |
@@ -1156,22 +1159,23 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
       `"crates"[crate_name]` in-place via CST, leaving `"binaries_release_base_url"`
       untouched during routine crate version bumps while validating its presence via
       `Self::try_parse_jsonc()`.
-2. **Shared Validated `EndpointUrl` Newtype & Uniform `TryParseStr` Contract
+2. **Shared Validated `EndpointUrl` Newtype & Uniform `JsoncScalar` Contract
    (`cmdr/src/self_upgrade/jsonc_manifest/endpoint_url.rs`,
-   `cmdr/src/self_upgrade/jsonc_manifest/try_parse_str.rs`)**:
+   `cmdr/src/self_upgrade/jsonc_manifest/jsonc_scalar.rs`)**:
     - Use a single shared validated wrapper over `String` (`EndpointUrl`) for both
       `UpgradeConfig::jsonc_manifest_url` and `JsoncManifest::binaries_release_base_url`
       to minimize cognitive load (since no struct or constructor holds both URLs
       side-by-side and explicit field/parameter names distinguish them).
-    - Define `TryParseStr` (`pub trait TryParseStr: Sized + Display`) with
-      `fn try_parse(s: &str) -> Result<Self, Self::ParseError>` and a default
+    - Define `JsoncScalar` (`pub trait JsoncScalar: Sized`) with
+      `fn try_parse(s: &str) -> Result<Self, Self::ParseError>`,
+      `fn cst_value(&self) -> CstInputValue`, and a default
       `fn deserialize_str<'de, D>(deserializer: D) -> Result<Self, D::Error>` adapter used
-      via `#[serde(deserialize_with = "TryParseStr::deserialize_str")]` on `JsoncManifest`
-      and `CrateMetadata` fields. This unifies all three fallible manifest scalar types
-      (`EndpointUrl`, `CrateVersion`, and `CrateReleaseDate`) under a single parsing
-      contract and eliminates `FromStr`, `TryFrom<&str>`, and `TryFrom<String>`
-      boilerplate.
-    - Validate `EndpointUrl` via `TryParseStr::try_parse` (`reqwest::Url::parse` +
+      via `#[serde(deserialize_with = "JsoncScalar::deserialize_str")]` on `JsoncManifest`
+      and `CrateMetadata` fields. This unifies all four manifest scalar types
+      (`EndpointUrl`, `CrateVersion`, `CrateReleaseDate`, and `CrateDistribution`) under a
+      single parsing and CST serialization contract and eliminates `FromStr`,
+      `TryFrom<&str>`, and `TryFrom<String>` boilerplate.
+    - Validate `EndpointUrl` via `JsoncScalar::try_parse` (`reqwest::Url::parse` +
       `url_schemes::{HTTP, HTTPS}` + no `?query` or `#fragment`, returning
       `EndpointUrlParseError`), implement `Deref<Target = str>` (matching `CrateName` and
       `CrateReleaseDate`), and provide `EndpointUrl::default_manifest_url()` (rather than
@@ -1190,13 +1194,13 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
                 .expect("R3BL_VERSIONS_JSONC_URL must be a valid HTTP(S) endpoint URL")
         }
     }
-    // Also implements: TryParseStr (Error = EndpointUrlParseError), Deref<Target = str>, Display
+    // Also implements: JsoncScalar (ParseError = EndpointUrlParseError), Deref<Target = str>, Display
     ```
 
     ```rust
     #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
     pub struct JsoncManifest {
-        #[serde(deserialize_with = "TryParseStr::deserialize_str")]
+        #[serde(deserialize_with = "JsoncScalar::deserialize_str")]
         pub binaries_release_base_url: EndpointUrl,
         pub crates: HashMap<CrateName, CrateMetadata>,
     }
@@ -1253,16 +1257,16 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
           `check_release_asset_available`, `execute_release_archive_or_fallback`,
           `download_and_replace_release_archive`), and update all unit tests across
           `self_upgrade/`.
-        - [x] Introduce `TryParseStr` trait
-              (`cmdr/src/self_upgrade/jsonc_manifest/try_parse_str.rs`, re-exported in
-              `jsonc_manifest/mod.rs`) with `try_parse(&str)` and default
-              `deserialize_str`
-              (`#[serde(deserialize_with = "TryParseStr::deserialize_str")]`), implement
-              it on all fallible manifest scalar types (`EndpointUrl`, `CrateVersion`, and
-              `CrateReleaseDate`), remove `FromStr`, `TryFrom<&str>`, `TryFrom<String>`,
-              and unused `Borrow<str>` (on `CrateName`), replace `EndpointUrl::as_str()`
-              with `Deref<Target = str>`, and update all test call sites to use
-              `TryParseStr::try_parse`.
+        - [x] Introduce `JsoncScalar` trait
+              (`cmdr/src/self_upgrade/jsonc_manifest/jsonc_scalar.rs`, re-exported in
+              `jsonc_manifest/mod.rs`) with `try_parse(&str)`, `cst_value(&self)`, and
+              default `deserialize_str`
+              (`#[serde(deserialize_with = "JsoncScalar::deserialize_str")]`), implement
+              it on all manifest scalar types (`EndpointUrl`, `CrateVersion`,
+              `CrateReleaseDate`, and `CrateDistribution`), remove `FromStr`,
+              `TryFrom<&str>`, `TryFrom<String>`, and unused `Borrow<str>` (on
+              `CrateName`), replace `EndpointUrl::as_str()` with `Deref<Target = str>`,
+              and update all test call sites to use `JsoncScalar::try_parse`.
 - [x] **Step 3 — Documentation & Spec Alignment**:
     - [x] Update top-level schema examples and narrative in
           `task/binaries-self-upgrade-support.md` to reflect `"binaries_release_base_url"`
@@ -1275,14 +1279,14 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
     - [x] `cmdr/src/self_upgrade/mod.rs`
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/mod.rs`
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/try_parse_str.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_scalar.rs`
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/endpoint_url.rs`
-    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_distribution.rs`
-    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_metadata.rs`
-    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_name.rs`
+    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_distribution.rs`
+    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_metadata.rs`
+    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_name.rs`
     - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_release_date.rs`
     - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_version.rs`
-    - [x] `cmdr/src/self_upgrade/config/upgrade_config.rs`
+    - [ ] `cmdr/src/self_upgrade/config/upgrade_config.rs`
     - [ ] `cmdr/src/self_upgrade/config/crate_identity.rs`
     - [ ] `cmdr/src/self_upgrade/check/mod.rs`
     - [ ] `cmdr/src/self_upgrade/check/version_check.rs`

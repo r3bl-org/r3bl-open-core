@@ -119,12 +119,12 @@ use serde::Deserialize;
 ///      - Instead, they use `#[derive(Deserialize)]` on the read path, and navigate
 ///        existing [`CstObject`] nodes in-place on the write path, for e.g.,
 ///        [`Self::try_update_crate_in_jsonc()`] delegates leaf updates to
-///        [`CrateMetadata::try_update_cst_object()`].
+///        [`CrateMetadata::try_update_cst_object()`][3].
 ///
 /// [1]: mod@crate::self_upgrade#centralized-version-manifest-r3bl_versions_jsonc_url
 /// [2]: https://serde.rs/container-attrs.html#deny_unknown_fields
+/// [3]: crate::self_upgrade::CrateMetadata::try_update_cst_object
 /// [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
-/// [`CrateMetadata::try_update_cst_object()`]: crate::self_upgrade::CrateMetadata::try_update_cst_object
 /// [`CrateReleaseDate`]: crate::self_upgrade::CrateReleaseDate
 /// [`CrateVersion`]: crate::self_upgrade::CrateVersion
 /// [`CstInputValue`]: jsonc_parser::cst::CstInputValue

@@ -117,30 +117,6 @@ pub mod manifest_timeouts {
     pub const DEDICATED_THREAD_CHECK_COOLDOWN: Duration = Duration::from_hours(1);
 }
 
-/// Directory and filename constants for per-crate [`mtime`] cooldown timestamp files
-/// under [`dirs::cache_dir`].
-///
-/// These timestamp files are stored under [`dirs::cache_dir`] (rather than
-/// [`dirs::config_dir`] via [`config_folder`]) because cooldown timestamps are ephemeral
-/// runtime state and should not be included in `~/.config` backup or restore workflows.
-/// Also they are machine dependent, which we don't want to backup and replicate to other
-/// machines.
-///
-/// [`config_folder`]: mod@crate::analytics_client::config_folder
-/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-pub mod check_cooldown_cache {
-    /// Top-level R3BL cache folder name (`"r3bl"`).
-    pub const CACHE_TOP_LEVEL_DIR: &str = "r3bl";
-
-    /// Subfolder storing per-crate upgrade-check timestamp files (`"upgrade-check"`).
-    pub const UPGRADE_CHECK_CACHE_SUBDIR: &str = "upgrade-check";
-
-    /// File extension for 0-byte [`mtime`] timestamp files (`"<crate_name>.last_check"`).
-    ///
-    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    pub const LAST_CHECK_FILE_EXT: &str = "last_check";
-}
-
 /// OS thread naming constants for the self-upgrade engine.
 pub mod check_thread {
     /// Thread name assigned to the dedicated version-check OS thread.
