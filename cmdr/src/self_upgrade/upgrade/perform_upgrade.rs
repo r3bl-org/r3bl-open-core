@@ -1,57 +1,22 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{UpgradeSource, create_output_device_for_feedback_channel,
+use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
+                    EndpointUrl, UpgradeConfig, archive, upgrade_reasons},
+            UpgradeSource, create_output_device_for_feedback_channel,
             download_and_verify_archive, extract_and_apply_archive,
             format_archive_filename, get_current_bin_name, get_host_target_triple,
-            report_upgrade_source_error, run_source_build_with_spinner, ui_strings,
-            super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
-                    EndpointUrl, UpgradeConfig, archive, upgrade_reasons}};
-use r3bl_tui::{OutputDevice, Spinner, SpinnerStyle, TuiAvailability,
-               try_create_temp_dir};
+            report_upgrade_source_error, run_source_build_with_spinner, ui_strings};
+use r3bl_tui::{OutputDevice, Spinner, SpinnerStyle, TuiAvailability, try_create_temp_dir};
 use std::{io, time::Duration};
-
-/// Errors that can occur during [`UpgradeSource`] resolution or upgrade execution.
-///
-/// [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
-pub enum UpgradeError {
-    /// Neither release binaries nor a viable local source build toolchain are
-    /// available.
-    #[error(
-        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
-    )]
-    NoViableUpgradeSource {
-        crate_name: CrateName,
-        crate_distribution: CrateDistribution,
-        reason: String,
-    },
-
-    /// Host platform or architecture does not have pre-compiled binaries and cannot fall
-    /// back.
-    #[error("Unsupported host target platform: {0}")]
-    UnsupportedPlatform(String),
-
-    /// SHA-256 checksum mismatch on downloaded archive.
-    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
-    ChecksumMismatch { expected: String, actual: String },
-
-    /// User canceled the operation via `Ctrl+C`.
-    #[error("Upgrade cancelled by user")]
-    Cancelled,
-
-    /// General I/O, network, or archive error.
-    #[error("{0}")]
-    Other(String),
-}
 
 /// Executes the resolved upgrade flow for `config`:
 /// 1. Resolves [`UpgradeSource`] via [`UpgradeSource::try_resolve`].
-/// 2. If [`UpgradeSource::ReleaseArchive`], streams the binary archive,
-///    verifies the SHA-256 checksum, and swaps via `self_replace`. If the download
-///    fails mid-stream and [`CrateDistribution::OpenSource`], automatically transitions
-///    to the `crates.io` source compilation fallback (`--version <pinned_ver>`).
-/// 3. If [`UpgradeSource::BuildFromSourceRustup`], runs the [`PTY`]/[`OSC`] source
-///    build pinned to `--version <pinned_ver>`.
+/// 2. If [`UpgradeSource::ReleaseArchive`], streams the binary archive, verifies the
+///    SHA-256 checksum, and swaps via `self_replace`. If the download fails mid-stream
+///    and [`CrateDistribution::OpenSource`], automatically transitions to the `crates.io`
+///    source compilation fallback (`--version <pinned_ver>`).
+/// 3. If [`UpgradeSource::BuildFromSourceRustup`], runs the [`PTY`]/[`OSC`] source build
+///    pinned to `--version <pinned_ver>`.
 ///
 /// # Errors
 ///
@@ -332,4 +297,63 @@ pub async fn download_and_replace_release_archive(
     }
 
     step_result
+}
+
+/// Errors that can occur during [`UpgradeSource`] resolution or upgrade execution.
+///
+/// [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum UpgradeError {
+    /// Neither release binaries nor a viable local source build toolchain are
+    /// available.
+    #[error(
+        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
+    )]
+    NoViableUpgradeSource {
+        crate_name: CrateName,
+        crate_distribution: CrateDistribution,
+        reason: NoViableSourceReason,
+    },
+
+    /// Host platform or architecture does not have pre-compiled binaries and cannot fall
+    /// back.
+    #[error("Unsupported host target platform: {0}")]
+    UnsupportedPlatform(String),
+
+    /// SHA-256 checksum mismatch on downloaded archive.
+    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
+    ChecksumMismatch { expected: String, actual: String },
+
+    /// User canceled the operation via `Ctrl+C`.
+    #[error("Upgrade cancelled by user")]
+    Cancelled,
+
+    /// General I/O, network, or archive error.
+    #[error("{0}")]
+    Other(String),
+}
+
+/// Specific reason why [`UpgradeError::NoViableUpgradeSource`] occurred.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum NoViableSourceReason {
+    /// Pre-compiled release archive server could not be reached for a
+    /// [`CrateDistribution::ClosedSource`] crate.
+    ///
+    /// [`CrateDistribution::ClosedSource`]: crate::self_upgrade::CrateDistribution::ClosedSource
+    #[error("{}", upgrade_reasons::BINARY_RELEASE_UNREACHABLE)]
+    BinaryReleaseUnreachable,
+
+    /// Pre-compiled release archive server was unreachable and no `rustup` toolchain
+    /// was found on `$PATH` for a [`CrateDistribution::OpenSource`] crate.
+    ///
+    /// [`CrateDistribution::OpenSource`]: crate::self_upgrade::CrateDistribution::OpenSource
+    #[error("{}", upgrade_reasons::NO_LOCAL_TOOLCHAIN)]
+    NoLocalToolchain,
+
+    /// Pre-compiled release archive download failed mid-stream for a
+    /// [`CrateDistribution::ClosedSource`] crate.
+    ///
+    /// [`CrateDistribution::ClosedSource`]: crate::self_upgrade::CrateDistribution::ClosedSource
+    #[error("{}", upgrade_reasons::BINARY_DOWNLOAD_FAILED)]
+    BinaryDownloadFailed,
 }

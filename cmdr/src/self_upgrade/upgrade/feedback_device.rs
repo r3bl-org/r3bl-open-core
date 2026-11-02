@@ -55,7 +55,7 @@ pub fn report_upgrade_source_error(
 #[cfg(test)]
 mod tests {
     use super::{super::super::{CooldownPolicy, CrateIdentity, CrateName, CrateVersion,
-                               EndpointUrl, UpgradePolicy},
+                               EndpointUrl, NoViableSourceReason, UpgradePolicy},
                 *};
     use r3bl_tui::assert_eq2;
 
@@ -90,7 +90,7 @@ mod tests {
         let no_source_err = UpgradeError::NoViableUpgradeSource {
             crate_name: CrateName::from("r3bl-cmdr"),
             crate_distribution: CrateDistribution::OpenSource,
-            reason: "test reason".to_string(),
+            reason: NoViableSourceReason::NoLocalToolchain,
         };
 
         // Exercises ClosedSource, OpenSource, and Other branches without panicking.

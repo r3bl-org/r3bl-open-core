@@ -1,12 +1,13 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{CooldownStatus, CrateMetadata, EndpointUrl, ImmediateCheckOutcome,
-            PromptUpgradeDecision, UpgradeActionOnExit, UpgradeCheckStatus,
-            UpgradeConfig, UpgradePolicy, UpgradeStrategy, check_cooldown_status,
-            check_for_immediate_upgrade, check_for_upgrade, check_thread,
-            format_already_up_to_date_msg, format_upgrade_available_notice,
-            format_upgrade_failed_retry_msg, get_current_bin_name, perform_upgrade,
-            prompt_user_to_upgrade, record_successful_check};
+            ManifestCheckError, PromptUpgradeDecision, UpgradeActionOnExit,
+            UpgradeCheckStatus, UpgradeConfig, UpgradeError, UpgradePolicy,
+            UpgradeStrategy, check_cooldown_status, check_for_immediate_upgrade,
+            check_for_upgrade, check_thread, format_already_up_to_date_msg,
+            format_upgrade_available_notice, format_upgrade_failed_retry_msg,
+            get_current_bin_name, perform_upgrade, prompt_user_to_upgrade,
+            record_successful_check};
 use crate::DEBUG_SELF_UPGRADE;
 use r3bl_tui::{TokioRuntimeOutcome, run_in_tokio};
 use std::{any::Any,
@@ -247,8 +248,10 @@ impl UpgradeJourneyStateMarker for UpgradeAvailable {}
 /// failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheckFailed {
-    /// Full diagnostic chain formatted via `format!("{err:#}")`.
-    pub error: String,
+    /// Structured [`ManifestCheckError`] describing why the check failed.
+    ///
+    /// [`ManifestCheckError`]: crate::self_upgrade::ManifestCheckError
+    pub error: ManifestCheckError,
 }
 impl UpgradeJourneyStateMarker for CheckFailed {}
 
@@ -280,8 +283,10 @@ pub enum UpgradeResolution {
     Upgraded,
 
     /// Download, checksum verification, swap, or source compilation failed; carries the
-    /// full `format!("{err:#}")` diagnostic string.
-    UpgradeFailed(String),
+    /// structured [`UpgradeError`].
+    ///
+    /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
+    UpgradeFailed(UpgradeError),
 
     /// User selected `"No, thanks"` or dismissed the interactive prompt.
     DeclinedByUser,
@@ -508,9 +513,12 @@ impl UpgradeJourney<NotStarted> {
                                 UpgradeCheckStatus::set_thread_check_handle(handle);
                             }
                             Err(io_err) => {
-                                let error = format!(
-                                    "Failed to spawn dedicated self-upgrade check thread: {io_err:#}"
-                                );
+                                let error =
+                                    ManifestCheckError::RuntimeOrThreadInitFailed {
+                                        reason: format!(
+                                            "Failed to spawn dedicated self-upgrade check thread: {io_err:#}"
+                                        ),
+                                    };
                                 DEBUG_SELF_UPGRADE.then(|| {
                                     // % is Display, ? is Debug.
                                     tracing::debug!(
@@ -569,8 +577,10 @@ impl UpgradeJourney<NotStarted> {
             match check_for_immediate_upgrade(checking).await {
                 ImmediateCheckOutcome::CheckFailed(failed) => {
                     let bin_name = get_current_bin_name();
-                    let msg =
-                        format_upgrade_failed_retry_msg(&bin_name, &failed.state().error);
+                    let msg = format_upgrade_failed_retry_msg(
+                        &bin_name,
+                        &failed.state().error.to_string(),
+                    );
                     failed.config().get_user_feedback_channel().eprintln(msg);
                     ImmediateUpgradeResult::Failed
                 }
@@ -601,9 +611,8 @@ impl UpgradeJourney<NotStarted> {
                             ImmediateUpgradeResult::Succeeded
                         }
                         Err(err) => {
-                            let completed = upgrading.into_completed(
-                                UpgradeResolution::UpgradeFailed(format!("{err:#}")),
-                            );
+                            let completed = upgrading
+                                .into_completed(UpgradeResolution::UpgradeFailed(err));
                             UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(
                                 completed,
                             ));
@@ -616,21 +625,27 @@ impl UpgradeJourney<NotStarted> {
             TokioRuntimeOutcome::Completed(result) => result,
             TokioRuntimeOutcome::FailedToStart(err)
             | TokioRuntimeOutcome::Panicked(err) => {
-                let error = format!("{err:#}");
+                let error_str = format!("{err:#}");
                 let bin_name = get_current_bin_name();
                 config
                     .get_user_feedback_channel()
-                    .eprintln(format_upgrade_failed_retry_msg(&bin_name, &error));
+                    .eprintln(format_upgrade_failed_retry_msg(&bin_name, &error_str));
 
                 if let UpgradeCheckStatus::Upgrading(upgrading) =
                     UpgradeCheckStatus::get()
                 {
                     UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(
-                        upgrading.into_completed(UpgradeResolution::UpgradeFailed(error)),
+                        upgrading.into_completed(UpgradeResolution::UpgradeFailed(
+                            UpgradeError::Other(error_str),
+                        )),
                     ));
                 } else {
                     UpgradeCheckStatus::set(UpgradeCheckStatus::CheckFailed(
-                        fallback_checking.into_check_failed(error),
+                        fallback_checking.into_check_failed(
+                            ManifestCheckError::RuntimeOrThreadInitFailed {
+                                reason: error_str,
+                            },
+                        ),
                     ));
                 }
                 ImmediateUpgradeResult::Failed
@@ -684,7 +699,10 @@ impl UpgradeJourney<Checking> {
     }
 
     #[must_use]
-    pub(super) fn into_check_failed(self, error: String) -> UpgradeJourney<CheckFailed> {
+    pub(super) fn into_check_failed(
+        self,
+        error: ManifestCheckError,
+    ) -> UpgradeJourney<CheckFailed> {
         UpgradeJourney {
             config: self.config,
             state: CheckFailed { error },
@@ -752,11 +770,13 @@ impl UpgradeJourney<Upgrading> {
                 }) {
                     TokioRuntimeOutcome::Completed(Ok(())) => UpgradeResolution::Upgraded,
                     TokioRuntimeOutcome::Completed(Err(err)) => {
-                        UpgradeResolution::UpgradeFailed(format!("{err:#}"))
+                        UpgradeResolution::UpgradeFailed(err)
                     }
                     TokioRuntimeOutcome::FailedToStart(err)
                     | TokioRuntimeOutcome::Panicked(err) => {
-                        UpgradeResolution::UpgradeFailed(format!("{err:#}"))
+                        UpgradeResolution::UpgradeFailed(UpgradeError::Other(format!(
+                            "{err:#}"
+                        )))
                     }
                 }
             }
@@ -781,16 +801,16 @@ impl UpgradeJourney<Upgrading> {
                             .await
                         {
                             Ok(()) => UpgradeResolution::Upgraded,
-                            Err(err) => {
-                                UpgradeResolution::UpgradeFailed(format!("{err:#}"))
-                            }
+                            Err(err) => UpgradeResolution::UpgradeFailed(err),
                         }
                     }
                 }) {
                     TokioRuntimeOutcome::Completed(res) => res,
                     TokioRuntimeOutcome::FailedToStart(err)
                     | TokioRuntimeOutcome::Panicked(err) => {
-                        UpgradeResolution::UpgradeFailed(format!("{err:#}"))
+                        UpgradeResolution::UpgradeFailed(UpgradeError::Other(format!(
+                            "{err:#}"
+                        )))
                     }
                 }
             }
@@ -858,7 +878,9 @@ where
     match unwind_res {
         Ok(Ok(())) => {}
         Ok(Err(io_err)) => {
-            let error = format!("Failed to build Tokio runtime: {io_err:#}");
+            let error = ManifestCheckError::RuntimeOrThreadInitFailed {
+                reason: format!("Failed to build Tokio runtime: {io_err:#}"),
+            };
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -873,8 +895,9 @@ where
         }
         Err(panic_payload) => {
             let panic_msg = extract_panic_payload_message(panic_payload.as_ref());
-            let error =
-                format!("Dedicated self-upgrade check thread panicked: {panic_msg}");
+            let error = ManifestCheckError::CheckThreadPanicked {
+                panic_message: panic_msg.to_string(),
+            };
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -1168,7 +1191,10 @@ mod tests {
         assert!(!timestamp_file_path.exists());
         match UpgradeCheckStatus::get() {
             UpgradeCheckStatus::CheckFailed(journey) => {
-                assert!(!journey.state().error.is_empty());
+                assert!(matches!(
+                    journey.state().error,
+                    ManifestCheckError::FetchOrParseFailed { ref diagnostic } if !diagnostic.is_empty()
+                ));
             }
             other => panic!("Expected CheckFailed, got {other:?}"),
         }
@@ -1214,7 +1240,9 @@ mod tests {
                 );
                 assert!(matches!(
                     journey.state().resolution,
-                    UpgradeResolution::UpgradeFailed(ref err) if !err.is_empty()
+                    UpgradeResolution::UpgradeFailed(
+                        UpgradeError::NoViableUpgradeSource { .. }
+                    )
                 ));
             }
             other => panic!("Expected Completed(UpgradeFailed), got {other:?}"),
@@ -1371,11 +1399,12 @@ mod tests {
 
         match UpgradeCheckStatus::get() {
             UpgradeCheckStatus::CheckFailed(failed) => {
-                assert!(
-                    failed
-                        .state()
-                        .error
-                        .contains("simulated panic inside dedicated check thread")
+                assert_eq2!(
+                    failed.state().error,
+                    ManifestCheckError::CheckThreadPanicked {
+                        panic_message: "simulated panic inside dedicated check thread"
+                            .to_string(),
+                    }
                 );
             }
             other => panic!("Expected CheckFailed after panic, got {other:?}"),
@@ -1446,7 +1475,9 @@ mod tests {
             UpgradeCheckStatus::Completed(completed) => {
                 assert!(matches!(
                     completed.state().resolution,
-                    UpgradeResolution::UpgradeFailed(ref err) if !err.is_empty()
+                    UpgradeResolution::UpgradeFailed(
+                        UpgradeError::NoViableUpgradeSource { .. }
+                    )
                 ));
             }
             other => panic!("Expected Completed(UpgradeFailed), got {other:?}"),

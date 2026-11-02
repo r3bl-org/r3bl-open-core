@@ -3,7 +3,8 @@
 use super::{check_release_asset_available, format_release_asset_urls,
             get_host_target_triple,
             super::{CrateDistribution, CrateName, CrateVersion, EndpointUrl,
-                    UpgradeError, toolchain_bin, toolchain_cli_args, upgrade_reasons}};
+                    NoViableSourceReason, UpgradeError, toolchain_bin,
+                    toolchain_cli_args}};
 use r3bl_tui::CommandOutputResult;
 
 /// Resolved execution source for performing the upgrade.
@@ -141,7 +142,7 @@ mod impl_upgrade_source {
                 return Err(UpgradeError::NoViableUpgradeSource {
                     crate_name: crate_name.clone(),
                     crate_distribution: CrateDistribution::ClosedSource,
-                    reason: upgrade_reasons::BINARY_DOWNLOAD_FAILED.to_string(),
+                    reason: NoViableSourceReason::BinaryDownloadFailed,
                 });
             }
 
@@ -189,7 +190,7 @@ pub mod pure_evaluator {
             return Err(UpgradeError::NoViableUpgradeSource {
                 crate_name: crate_name.clone(),
                 crate_distribution: CrateDistribution::ClosedSource,
-                reason: upgrade_reasons::BINARY_RELEASE_UNREACHABLE.to_string(),
+                reason: NoViableSourceReason::BinaryReleaseUnreachable,
             });
         }
 
@@ -214,7 +215,7 @@ pub mod pure_evaluator {
             Err(UpgradeError::NoViableUpgradeSource {
                 crate_name: crate_name.clone(),
                 crate_distribution: CrateDistribution::OpenSource,
-                reason: upgrade_reasons::NO_LOCAL_TOOLCHAIN.to_string(),
+                reason: NoViableSourceReason::NoLocalToolchain,
             })
         }
     }

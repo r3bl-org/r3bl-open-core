@@ -271,9 +271,9 @@ impl UpgradeCheckStatus {
 mod tests {
     use super::{super::{CooldownPolicy, CrateDistribution, CrateIdentity,
                         CrateMetadata, CrateReleaseDate, CrateVersion, EndpointUrl,
-                        JsoncScalar, NotStarted, UpgradeActionOnExit, UpgradeConfig,
-                        UpgradePolicy, UpgradeResolution, UpgradeStrategy,
-                        UserFeedbackChannel},
+                        JsoncScalar, ManifestCheckError, NotStarted,
+                        UpgradeActionOnExit, UpgradeConfig, UpgradePolicy,
+                        UpgradeResolution, UpgradeStrategy, UserFeedbackChannel},
                 *};
     use r3bl_tui::assert_eq2;
     use serial_test::serial;
@@ -378,8 +378,10 @@ mod tests {
         );
 
         // 7. CheckFailed.
-        let failed_journey = checking_journey
-            .into_check_failed("connection refused: 127.0.0.1".to_string());
+        let failed_journey =
+            checking_journey.into_check_failed(ManifestCheckError::FetchOrParseFailed {
+                diagnostic: "connection refused: 127.0.0.1".to_string(),
+            });
         UpgradeCheckStatus::set(UpgradeCheckStatus::CheckFailed(failed_journey.clone()));
         assert_eq2!(
             UpgradeCheckStatus::get(),
@@ -416,7 +418,9 @@ mod tests {
         let handle = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(25));
             UpgradeCheckStatus::set(UpgradeCheckStatus::CheckFailed(
-                checking.into_check_failed("late write".to_string()),
+                checking.into_check_failed(ManifestCheckError::FetchOrParseFailed {
+                    diagnostic: "late write".to_string(),
+                }),
             ));
         });
         UpgradeCheckStatus::set_thread_check_handle(handle);

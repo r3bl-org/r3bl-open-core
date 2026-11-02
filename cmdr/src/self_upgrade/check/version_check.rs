@@ -13,8 +13,8 @@ use r3bl_tui::fg_magenta;
 ///
 /// # Errors
 ///
-/// Returns a formatted diagnostic `String` if `res_manifest` is `Err` or if
-/// `crate_name` is absent from [`JsoncManifest::crates`].
+/// Returns [`ManifestCheckError`] if `res_manifest` is `Err` or if `crate_name` is
+/// absent from [`JsoncManifest::crates`].
 ///
 /// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
@@ -25,10 +25,16 @@ pub fn extract_crate_metadata_from_manifest_result(
     res_manifest: miette::Result<JsoncManifest>,
     crate_name: &CrateName,
     manifest_url: &EndpointUrl,
-) -> Result<(CrateMetadata, EndpointUrl), String> {
-    let manifest = res_manifest.map_err(|err| format!("{err:#}"))?;
+) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError> {
+    let manifest =
+        res_manifest.map_err(|err| ManifestCheckError::FetchOrParseFailed {
+            diagnostic: format!("{err:#}"),
+        })?;
     let metadata = manifest.crates.get(crate_name).cloned().ok_or_else(|| {
-        format!("Crate '{crate_name}' not found in manifest at '{manifest_url}'")
+        ManifestCheckError::CrateNotFoundInManifest {
+            crate_name: crate_name.clone(),
+            manifest_url: manifest_url.clone(),
+        }
     })?;
     Ok((metadata, manifest.binaries_release_base_url))
 }
@@ -202,6 +208,47 @@ pub async fn check_for_immediate_upgrade(
     }
 }
 
+/// Failure reason recorded in [`CheckFailed::error`] when a manifest check fails.
+///
+/// [`CheckFailed::error`]: crate::self_upgrade::CheckFailed::error
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum ManifestCheckError {
+    /// Target crate was not present in the remote `versions.jsonc` manifest's `crates`
+    /// map ([`JsoncManifest::crates`]).
+    ///
+    /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
+    #[error("Crate '{crate_name}' not found in manifest at '{manifest_url}'")]
+    CrateNotFoundInManifest {
+        /// Queried crate name.
+        crate_name: CrateName,
+        /// Manifest endpoint URL where `crate_name` was looked up.
+        manifest_url: EndpointUrl,
+    },
+
+    /// Network request or JSONC deserialization failed when fetching the manifest.
+    #[error("{diagnostic}")]
+    FetchOrParseFailed {
+        /// Full [`miette`] diagnostic chain formatted via `format!("{err:#}")`.
+        ///
+        /// [`miette`]: mod@miette
+        diagnostic: String,
+    },
+
+    /// Dedicated `"self-upgrade-check"` OS thread or Tokio runtime failed to initialize.
+    #[error("{reason}")]
+    RuntimeOrThreadInitFailed {
+        /// Underlying OS thread or Tokio runtime initialization failure description.
+        reason: String,
+    },
+
+    /// Dedicated `"self-upgrade-check"` OS thread panicked during execution.
+    #[error("Dedicated self-upgrade check thread panicked: {panic_message}")]
+    CheckThreadPanicked {
+        /// Extracted panic payload message.
+        panic_message: String,
+    },
+}
+
 /// Outcome of [`check_for_immediate_upgrade`] during an explicit `--upgrade`
 /// ([`UpgradeStrategy::Immediate`]) run.
 ///
@@ -284,13 +331,15 @@ mod tests {
                 .wrap_err("GET https://r3bl.com/versions.jsonc failed")
                 .wrap_err("manifest fetch failed");
 
-        let err_str = extract_crate_metadata_from_manifest_result(
+        let err = extract_crate_metadata_from_manifest_result(
             root_err,
             &CrateName::from("r3bl-cmdr"),
             &EndpointUrl::default_manifest_url(),
         )
         .unwrap_err();
 
+        let err_str = err.to_string();
+        assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
         assert!(err_str.contains("manifest fetch failed"));
         assert!(err_str.contains("GET https://r3bl.com/versions.jsonc failed"));
         assert!(err_str.contains("TLS handshake reset by peer"));
@@ -308,8 +357,19 @@ mod tests {
             &example_url,
         )
         .unwrap_err();
-        assert!(missing_err.contains("nonexistent-crate"));
-        assert!(missing_err.contains("https://example.com/versions.jsonc"));
+        assert_eq2!(
+            missing_err,
+            ManifestCheckError::CrateNotFoundInManifest {
+                crate_name: CrateName::from("nonexistent-crate"),
+                manifest_url: example_url.clone(),
+            }
+        );
+        assert!(missing_err.to_string().contains("nonexistent-crate"));
+        assert!(
+            missing_err
+                .to_string()
+                .contains("https://example.com/versions.jsonc")
+        );
 
         let (meta, release_base_url) = extract_crate_metadata_from_manifest_result(
             Ok(manifest),
@@ -343,8 +403,7 @@ mod tests {
             EndpointUrl::try_parse(avail_url.as_str()).unwrap(),
             CooldownPolicy::CustomTimestampFilePath(avail_timestamp_file.clone()),
         );
-        let avail_checking =
-            UpgradeJourney::new(avail_cfg).into_checking(avail_strategy);
+        let avail_checking = UpgradeJourney::new(avail_cfg).into_checking(avail_strategy);
         check_for_upgrade(avail_checking).await;
         assert!(!avail_timestamp_file.exists());
         assert!(matches!(
