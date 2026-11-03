@@ -8,10 +8,7 @@ use std::fmt::{Display, Formatter};
 /// Distribution model of a published R3BL crate, stored in
 /// [`CrateMetadata::crate_distribution`][2].
 ///
-/// Parses from `kebab-case` (`"open-source"` or `"closed-source"`) via
-/// [`JsoncScalar::try_parse()`], converts back into a JSONC CST node via
-/// [`JsoncScalar::cst_value()`] for [`JsoncManifest::try_update_crate_in_jsonc()`][1],
-/// and formats via [`Display`] for UI and logs.
+/// This is either [`OPEN_SOURCE`] or [`CLOSED_SOURCE`].
 ///
 /// See [`CrateMetadata`] and [`JsoncManifest`] for the complete JSONC schema
 /// specification and example. Here's a snippet of JSONC that is deserialized into this

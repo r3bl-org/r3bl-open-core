@@ -54,8 +54,8 @@ pub fn report_upgrade_source_error(
 
 #[cfg(test)]
 mod tests {
-    use super::{super::super::{CooldownPolicy, CrateIdentity, CrateName, CrateVersion,
-                               EndpointUrl, NoViableSourceReason, UpgradePolicy},
+    use super::{super::super::{CooldownPolicy, CrateVersion, EndpointUrl,
+                               NoViableSourceReason, UpgradePolicy},
                 *};
     use r3bl_tui::assert_eq2;
 
@@ -80,7 +80,8 @@ mod tests {
 
         let version = CrateVersion::try_parse("0.0.25").unwrap();
         let config = UpgradeConfig::new(
-            CrateIdentity::new("r3bl-cmdr", version),
+            "r3bl-cmdr",
+            version,
             UserFeedbackChannel::Quiet,
             UpgradePolicy::default(),
             EndpointUrl::default_manifest_url(),
@@ -88,7 +89,7 @@ mod tests {
         );
 
         let no_source_err = UpgradeError::NoViableUpgradeSource {
-            crate_name: CrateName::from("r3bl-cmdr"),
+            crate_name: config.get_crate_name().clone(),
             crate_distribution: CrateDistribution::OpenSource,
             reason: NoViableSourceReason::NoLocalToolchain,
         };

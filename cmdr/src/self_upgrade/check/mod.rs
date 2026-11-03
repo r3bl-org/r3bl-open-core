@@ -3,11 +3,9 @@
 #![rustfmt::skip]
 
 // Private submodules.
-mod version_check;
+mod check_entry_point;
 mod cooldown;
-mod manifest_query;
 
 // Public barrel re-exports.
-pub use version_check::*;
+pub use check_entry_point::*;
 pub use cooldown::*;
-pub use manifest_query::*;

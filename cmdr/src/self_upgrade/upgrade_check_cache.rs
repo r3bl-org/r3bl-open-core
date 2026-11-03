@@ -235,7 +235,7 @@ impl UpgradeCheckStatus {
         // Step 2: Atomically claim `UpgradeAvailable -> Upgrading` inside leaf lock.
         let maybe_upgrading = SINGLETON.write(|state| {
             if let Self::UpgradeAvailable(ref available) = state.status {
-                let action_on_exit = available.state().action_on_exit;
+                let action_on_exit = available.get_state().action_on_exit;
                 let upgrading = available.clone().into_upgrading();
                 state.status = Self::Upgrading(upgrading.clone());
                 Some((upgrading, action_on_exit))
@@ -269,11 +269,11 @@ impl UpgradeCheckStatus {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::{CooldownPolicy, CrateDistribution, CrateIdentity,
-                        CrateMetadata, CrateReleaseDate, CrateVersion, EndpointUrl,
-                        JsoncScalar, ManifestCheckError, NotStarted,
-                        UpgradeActionOnExit, UpgradeConfig, UpgradePolicy,
-                        UpgradeResolution, UpgradeStrategy, UserFeedbackChannel},
+    use super::{super::{CooldownPolicy, CrateDistribution, CrateMetadata,
+                        CrateReleaseDate, CrateVersion, EndpointUrl, JsoncScalar,
+                        ManifestCheckError, NotStarted, UpgradeActionOnExit,
+                        UpgradeConfig, UpgradePolicy, UpgradeResolution,
+                        UpgradeStrategy, UserFeedbackChannel},
                 *};
     use r3bl_tui::assert_eq2;
     use serial_test::serial;
@@ -292,10 +292,8 @@ mod tests {
         policy: UpgradePolicy,
     ) -> UpgradeJourney<NotStarted> {
         let config = UpgradeConfig::new(
-            CrateIdentity::new(
-                "r3bl-cmdr",
-                CrateVersion::try_parse(version_str).unwrap(),
-            ),
+            "r3bl-cmdr",
+            CrateVersion::try_parse(version_str).unwrap(),
             UserFeedbackChannel::Quiet,
             policy,
             EndpointUrl::default_manifest_url(),
@@ -366,7 +364,7 @@ mod tests {
             EndpointUrl::try_parse("https://example.com/releases/download").unwrap(),
         );
         assert_eq2!(
-            available_journey.state().action_on_exit,
+            available_journey.get_state().action_on_exit,
             UpgradeActionOnExit::NotifyOnly
         );
         UpgradeCheckStatus::set(UpgradeCheckStatus::UpgradeAvailable(

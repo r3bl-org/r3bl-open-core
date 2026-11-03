@@ -1,10 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::{CrateName, CrateVersion, EndpointUrl, manifest_timeouts},
-            CrateIdentity, UpgradePolicy, UserFeedbackChannel};
-#[cfg(any(test, doc))]
-use std::path::PathBuf;
-use std::time::Duration;
+use super::{super::{CooldownPolicy, CrateName, CrateVersion, EndpointUrl},
+            UpgradePolicy, UserFeedbackChannel};
 
 /// An immutable configuration for the [`self_upgrade`] engine, held inside
 /// [`UpgradeJourney`].
@@ -12,25 +9,24 @@ use std::time::Duration;
 /// > See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// > [`self_upgrade`] module documentation for the complete typestate lifecycle.
 ///
-/// This engine has no side effects from environment variables (`CI=<bool>` does **not**
-/// influence its behavior):
-/// - **Production binaries** construct this automatically via [`upgrade_journey!`] by
-///   providing CLI args (from the binary) and the desired [`UserFeedbackChannel`].
-///   - This macro converts [`UpgradeCLIArgs`] into [`UpgradePolicy`] and passes the
-///     canonical [`EndpointUrl::default_manifest_url()`] and default [`CooldownPolicy`].
-/// - **Tests and custom callers** construct [`UpgradeConfig::new()`] directly to pass
-///   explicit [`UpgradePolicy`] variants, custom URL overrides, or
-///   [`CooldownPolicy::Disabled`] / [`CooldownPolicy::CustomTimestampFilePath`].
-/// - **Typestate narrowing**: [`UpgradeConfig`] stays unchanged across all
-///   [`UpgradeJourney`] state transitions, while [`UpgradeJourney::start()`] unpacks
-///   [`UpgradePolicy`] into narrowed state witnesses ([`UpgradeStrategy`] in [`Checking`]
-///   and [`UpgradeActionOnExit`] in [`UpgradeAvailable`]).
+/// - This engine has no side effects from environment variables (`CI=<bool>` does **not**
+///   influence its behavior).
+/// - Production binaries construct this struct automatically via [`upgrade_journey!`] by
+///   providing CLI args (from the binary) and the desired [`UserFeedbackChannel`] along
+///   with a bunch of defaults for all the remaining fields to [`UpgradeConfig::new()`].
+/// - Tests construct [`UpgradeConfig::new()`] directly to pass explicit [`UpgradePolicy`]
+///   variants, custom URL overrides, or [`CooldownPolicy::Disabled`] /
+///   [`CooldownPolicy::CustomTimestampFilePath`].
+///
+/// [`UpgradeConfig`] stays unchanged across all [`UpgradeJourney`] state transitions
+/// (typestate narrowing), while [`UpgradeJourney::start()`] unpacks [`UpgradePolicy`]
+/// into narrowed state witnesses ([`UpgradeStrategy`] in [`Checking`] and
+/// [`UpgradeActionOnExit`] in [`UpgradeAvailable`]).
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
 /// [`CooldownPolicy::CustomTimestampFilePath`]: CooldownPolicy::CustomTimestampFilePath
 /// [`CooldownPolicy::Disabled`]: CooldownPolicy::Disabled
 /// [`CooldownPolicy`]: CooldownPolicy
-/// [`EndpointUrl::default_manifest_url()`]: crate::self_upgrade::EndpointUrl::default_manifest_url
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
@@ -44,11 +40,17 @@ use std::time::Duration;
 /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeConfig {
-    /// Identity of the binary (crate name & version).
-    crate_identity: CrateIdentity,
+    /// URL for the centralized JSONC version manifest.
+    jsonc_manifest_url: EndpointUrl,
 
-    /// Channel where progress messages, spinners, and notifications are written.
-    user_feedback_channel: UserFeedbackChannel,
+    /// Name of the crate as registered in [`R3BL_VERSIONS_JSONC_URL`] (e.g.,
+    /// `"r3bl-cmdr"`).
+    ///
+    /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
+    crate_name: CrateName,
+
+    /// Current semantic version of the binary compiled from `Cargo.toml`.
+    current_version: CrateVersion,
 
     /// Self-upgrade policy derived from CLI flags ([`--upgrade`][u],
     /// [`--upgrade-behavior`][ub]).
@@ -57,8 +59,8 @@ pub struct UpgradeConfig {
     /// [ub]: crate::self_upgrade::UpgradeCLIArgs::upgrade_behavior
     upgrade_policy: UpgradePolicy,
 
-    /// URL for the centralized JSONC version manifest.
-    jsonc_manifest_url: EndpointUrl,
+    /// Channel where progress messages, spinners, and notifications are written.
+    user_feedback_channel: UserFeedbackChannel,
 
     /// Cooldown timestamp file policy governing `1h` [`mtime`] version-check caching.
     ///
@@ -67,29 +69,37 @@ pub struct UpgradeConfig {
 }
 
 impl UpgradeConfig {
-    /// Creates a new [`UpgradeConfig`].
+    /// Creates a new [`UpgradeConfig`]. Production code / binaries dont't call this
+    /// directly, but use [`upgrade_journey!`] instead.
     ///
     /// # Arguments
     ///
-    /// * `crate_identity`: The binary's [`CrateIdentity`] (`crate_name` and
-    ///   `current_version`).
+    /// * `crate_name`: Name of the binary's crate as registered in
+    ///   [`R3BL_VERSIONS_JSONC_URL`] (e.g., `"r3bl-cmdr"`).
+    /// * `current_version`: Current [`CrateVersion`] of the running binary.
     /// * `user_feedback_channel`: Output channel where upgrade messages, spinners, and
     ///   notices are written.
     /// * `upgrade_policy`: Resolved [`UpgradePolicy`] governing startup and exit behavior
     ///   for this invocation.
     /// * `jsonc_manifest_url`: Endpoint URL for the centralized JSONC version manifest.
-    /// * `cooldown_policy`: [`CooldownPolicy`] controlling `1h` `mtime` timestamp file
+    /// * `cooldown_policy`: [`CooldownPolicy`] controlling `1h` [`mtime`] timestamp file
     ///   caching.
+    ///
+    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
+    /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
+    /// [`upgrade_journey!`]: crate::upgrade_journey!
     #[must_use]
     pub fn new(
-        crate_identity: CrateIdentity,
+        arg_crate_name: impl Into<CrateName>,
+        current_version: CrateVersion,
         user_feedback_channel: UserFeedbackChannel,
         upgrade_policy: UpgradePolicy,
         jsonc_manifest_url: EndpointUrl,
         cooldown_policy: CooldownPolicy,
     ) -> Self {
         Self {
-            crate_identity,
+            crate_name: arg_crate_name.into(),
+            current_version,
             user_feedback_channel,
             upgrade_policy,
             jsonc_manifest_url,
@@ -99,13 +109,11 @@ impl UpgradeConfig {
 
     /// Name of the binary's crate (e.g., `"r3bl-cmdr"`).
     #[must_use]
-    pub fn get_crate_name(&self) -> &CrateName { &self.crate_identity.crate_name }
+    pub fn get_crate_name(&self) -> &CrateName { &self.crate_name }
 
     /// Current semantic version of the binary.
     #[must_use]
-    pub fn get_current_version(&self) -> CrateVersion {
-        self.crate_identity.current_version
-    }
+    pub fn get_current_version(&self) -> CrateVersion { self.current_version }
 
     /// Channel where progress messages, spinners, and notifications are written.
     #[must_use]
@@ -126,55 +134,9 @@ impl UpgradeConfig {
     pub fn get_cooldown_policy(&self) -> &CooldownPolicy { &self.cooldown_policy }
 }
 
-/// Cooldown timestamp file policy carried by immutable [`UpgradeConfig`].
-///
-/// Controls where (or whether) the `1h` ([`Self::cooldown_duration`]) [`mtime`]
-/// upgrade-check cooldown timestamp file is read and written by
-/// [`check_cooldown_status`] and [`record_successful_check`]. Production binaries use
-/// [`Self::DefaultCacheDir`], whereas unit tests pass [`Self::Disabled`] or
-/// [`Self::CustomTimestampFilePath`] so tests remain completely hermetic and never touch
-/// the developer's user cache directory.
-///
-/// [`check_cooldown_status`]: crate::self_upgrade::check_cooldown_status
-/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-/// [`record_successful_check`]: crate::self_upgrade::record_successful_check
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub enum CooldownPolicy {
-    /// Production policy storing a 0-byte [`mtime`] timestamp file at
-    /// `<cache_dir>/`[`r3bl`][1]`/<crate_name>/`[`self_upgrade_last_check`][2] via
-    /// [`resolve_cooldown_timestamp_file_path`][3].
-    ///
-    /// [1]: crate::common::r3bl_file_paths::R3BL_TOP_LEVEL_DIR
-    /// [2]: crate::common::r3bl_file_paths::SELF_UPGRADE_LAST_CHECK_FILENAME
-    /// [3]: crate::self_upgrade::check::resolve_cooldown_timestamp_file_path
-    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    #[default]
-    DefaultCacheDir,
-
-    /// Custom timestamp file path for isolated filesystem unit tests.
-    #[cfg(any(test, doc))]
-    CustomTimestampFilePath(PathBuf),
-
-    /// Disables disk cooldown reads and writes for deterministic unit tests.
-    #[cfg(any(test, doc))]
-    Disabled,
-}
-
-impl CooldownPolicy {
-    /// Returns the cooldown duration ([`DEDICATED_THREAD_CHECK_COOLDOWN`][1], `1h`)
-    /// before a fresh [`mtime`] timestamp file expires.
-    ///
-    /// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
-    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    #[must_use]
-    pub const fn cooldown_duration(&self) -> Duration {
-        manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{super::super::{JsoncScalar, R3BL_VERSIONS_JSONC_URL},
+    use super::{super::super::{JsoncScalar, R3BL_VERSIONS_JSONC_URL, manifest_timeouts},
                 *};
     use crate::resolve_self_upgrade_last_check_in_base_dir;
     use r3bl_tui::assert_eq2;
@@ -183,18 +145,16 @@ mod tests {
     #[test]
     fn test_upgrade_config_field_initialization() {
         let config = UpgradeConfig::new(
-            CrateIdentity::new(
-                "r3bl-cmdr",
-                CrateVersion {
-                    major: 1,
-                    minor: 2,
-                    patch: 3,
-                },
-            ),
+            "r3bl-cmdr",
+            CrateVersion {
+                major: 1,
+                minor: 2,
+                patch: 3,
+            },
             UserFeedbackChannel::Stderr,
             UpgradePolicy::default(),
             EndpointUrl::default_manifest_url(),
-            CooldownPolicy::DefaultCacheDir,
+            CooldownPolicy::default(),
         );
 
         assert_eq2!(config.get_crate_name(), &CrateName::from("r3bl-cmdr"));
@@ -211,34 +171,28 @@ mod tests {
             UserFeedbackChannel::Stderr
         );
         assert_eq2!(config.get_upgrade_policy(), UpgradePolicy::default());
+        assert_eq2!(&**config.get_jsonc_manifest_url(), R3BL_VERSIONS_JSONC_URL);
+        assert_eq2!(config.get_cooldown_policy(), &CooldownPolicy::default());
         assert_eq2!(
-            &**config.get_jsonc_manifest_url(),
-            R3BL_VERSIONS_JSONC_URL
-        );
-        assert_eq2!(
-            config.get_cooldown_policy(),
-            &CooldownPolicy::DefaultCacheDir
-        );
-        assert_eq2!(
-            config.get_cooldown_policy().cooldown_duration(),
-            manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+            config.get_cooldown_policy().try_get_cooldown_duration(),
+            Some(manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN)
         );
 
-        let custom_timestamp_file_path =
-            resolve_self_upgrade_last_check_in_base_dir(Path::new("/tmp"), "r3bl-cmdr");
+        let custom_timestamp_file_path = resolve_self_upgrade_last_check_in_base_dir(
+            Path::new("/tmp"),
+            config.get_crate_name(),
+        );
         let custom_config = UpgradeConfig::new(
-            CrateIdentity::new(
-                "r3bl-cmdr",
-                CrateVersion {
-                    major: 1,
-                    minor: 2,
-                    patch: 3,
-                },
-            ),
+            config.get_crate_name().clone(),
+            CrateVersion {
+                major: 1,
+                minor: 2,
+                patch: 3,
+            },
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Disabled,
             EndpointUrl::try_parse("https://example.com/custom_manifest.jsonc").unwrap(),
-            CooldownPolicy::CustomTimestampFilePath(custom_timestamp_file_path.clone()),
+            CooldownPolicy::new_custom_path(custom_timestamp_file_path.clone()),
         );
         assert_eq2!(custom_config.get_upgrade_policy(), UpgradePolicy::Disabled);
         assert_eq2!(
@@ -247,7 +201,7 @@ mod tests {
         );
         assert_eq2!(
             custom_config.get_cooldown_policy(),
-            &CooldownPolicy::CustomTimestampFilePath(custom_timestamp_file_path)
+            &CooldownPolicy::new_custom_path(custom_timestamp_file_path)
         );
     }
 }

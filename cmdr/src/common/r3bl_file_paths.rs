@@ -75,6 +75,7 @@
 //!    - If a machine starts fresh without restoring `<cache_dir>/r3bl/`, every file under
 //!      this directory safely regenerates on demand.
 
+use crate::CrateName;
 use dirs::{cache_dir, config_dir};
 use std::path::{Path, PathBuf};
 
@@ -166,7 +167,9 @@ pub fn try_get_proxy_machine_id_file_path() -> Option<PathBuf> {
 ///
 /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 #[must_use]
-pub fn try_get_self_upgrade_last_check_file_path(crate_name: &str) -> Option<PathBuf> {
+pub fn try_get_self_upgrade_last_check_file_path(
+    crate_name: &CrateName,
+) -> Option<PathBuf> {
     Some(resolve_self_upgrade_last_check_in_base_dir(
         &cache_dir()?,
         crate_name,
@@ -179,7 +182,7 @@ pub fn try_get_self_upgrade_last_check_file_path(crate_name: &str) -> Option<Pat
 #[must_use]
 pub fn resolve_self_upgrade_last_check_in_base_dir(
     base_dir: &Path,
-    crate_name: &str,
+    crate_name: &CrateName,
 ) -> PathBuf {
     base_dir
         .join(R3BL_TOP_LEVEL_DIR)
@@ -193,23 +196,27 @@ mod tests {
 
     #[test]
     fn test_config_dir_path_hierarchy() {
+        let crate_name: CrateName = "r3bl-cmdr".into();
+
         if let Some(r3bl_config) = try_get_r3bl_config_dir() {
             assert!(r3bl_config.ends_with(PathBuf::from("r3bl")));
         }
 
-        if let Some(crate_config) = try_get_crate_config_dir("r3bl-cmdr") {
-            let expected = PathBuf::from("r3bl").join("r3bl-cmdr");
+        if let Some(crate_config) = try_get_crate_config_dir(&crate_name) {
+            let expected = PathBuf::from("r3bl").join(&crate_name);
             assert!(crate_config.ends_with(&expected));
         }
 
-        if let Some(bin_config) = try_get_bin_config_file_path("r3bl-cmdr", "edi") {
-            let expected = PathBuf::from("r3bl").join("r3bl-cmdr").join("edi.jsonc");
+        if let Some(bin_config) = try_get_bin_config_file_path(&crate_name, "edi") {
+            let expected = PathBuf::from("r3bl").join(&crate_name).join("edi.jsonc");
             assert!(bin_config.ends_with(&expected));
         }
     }
 
     #[test]
     fn test_cache_dir_path_hierarchy() {
+        let crate_name: CrateName = "r3bl-cmdr".into();
+
         if let Some(r3bl_cache) = try_get_r3bl_cache_dir() {
             assert!(r3bl_cache.ends_with(PathBuf::from("r3bl")));
         }
@@ -219,16 +226,16 @@ mod tests {
             assert!(proxy_id_path.ends_with(&expected));
         }
 
-        if let Some(crate_cache) = try_get_crate_cache_dir("r3bl-cmdr") {
-            let expected = PathBuf::from("r3bl").join("r3bl-cmdr");
+        if let Some(crate_cache) = try_get_crate_cache_dir(&crate_name) {
+            let expected = PathBuf::from("r3bl").join(&crate_name);
             assert!(crate_cache.ends_with(&expected));
         }
 
         if let Some(cooldown_path) =
-            try_get_self_upgrade_last_check_file_path("r3bl-cmdr")
+            try_get_self_upgrade_last_check_file_path(&crate_name)
         {
             let expected = PathBuf::from("r3bl")
-                .join("r3bl-cmdr")
+                .join(&crate_name)
                 .join("self_upgrade_last_check");
             assert!(cooldown_path.ends_with(&expected));
         }

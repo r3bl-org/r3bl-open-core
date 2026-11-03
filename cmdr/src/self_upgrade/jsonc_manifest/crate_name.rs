@@ -2,7 +2,8 @@
 
 use serde::Deserialize;
 use std::{fmt::{Display, Formatter},
-          ops::Deref};
+          ops::Deref,
+          path::Path};
 
 /// Name of a published R3BL crate (e.g., `"r3bl-cmdr"`).
 ///
@@ -16,6 +17,7 @@ use std::{fmt::{Display, Formatter},
 /// "crates": {
 ///     // Interactive CLI suite (`giti`, `edi`, `env-source`).
 ///     "r3bl-cmdr": { ... },
+/// }
 /// ```
 ///
 /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
@@ -42,16 +44,20 @@ impl Display for CrateName {
     }
 }
 
-/// Constructs a [`CrateName`] from a string slice (e.g., in
-/// [`UpgradeConfig::new()`]).
+/// Constructs a [`CrateName`] from a string slice, eg: in [`UpgradeConfig::new`].
 ///
-/// [`UpgradeConfig::new()`]: crate::self_upgrade::UpgradeConfig::new
+/// [`UpgradeConfig::new`]: crate::self_upgrade::UpgradeConfig::new
 impl From<&str> for CrateName {
     fn from(s: &str) -> Self {
         Self {
             inner: s.to_string(),
         }
     }
+}
+
+/// Allows the use of [`CrateName`] as an argument for [`Path::join`].
+impl AsRef<Path> for CrateName {
+    fn as_ref(&self) -> &Path { Path::new(&self.inner) }
 }
 
 #[cfg(test)]
@@ -64,5 +70,9 @@ mod tests {
         let name_from_str = CrateName::from("r3bl-cmdr");
         assert_eq2!(&*name_from_str, "r3bl-cmdr");
         assert_eq2!(name_from_str.to_string(), "r3bl-cmdr");
+        assert_eq2!(
+            Path::new("r3bl").join(&name_from_str),
+            Path::new("r3bl").join("r3bl-cmdr")
+        );
     }
 }

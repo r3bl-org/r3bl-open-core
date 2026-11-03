@@ -8,12 +8,11 @@ use std::{fmt::{Display, Formatter},
           ops::Deref};
 
 /// Release timestamp of a published R3BL crate (UTC RFC 3339 / ISO 8601, e.g.,
-/// `"2026-10-17T00:00:00Z"`).
+/// `"2026-10-17T00:00:00Z"`), stored in [`CrateMetadata::released_on`].
 ///
-/// This struct is stored in [`CrateMetadata::released_on`] and consolidates all
-/// [`chrono`] date/time parsing, comparison, and formatting operations for
-/// `versions.jsonc` in one place so callers do not need to depend on [`chrono`] types or
-/// formatting flags directly.
+/// It consolidates all [`chrono`] date/time parsing, comparison, and formatting
+/// operations for `versions.jsonc` in one place so callers do not need to depend on
+/// [`chrono`] types or formatting flags directly.
 ///
 /// See [`CrateMetadata`] and [`JsoncManifest`] for the complete JSONC schema
 /// specification and example. Here's a snippet of JSONC that is deserialized into this

@@ -243,7 +243,7 @@ mod constants;
 mod jsonc_manifest;
 mod upgrade;
 mod upgrade_check_cache;
-mod upgrade_journey_public_api;
+mod upgrade_journey;
 
 // Public barrel re-exports.
 pub use check::*;
@@ -252,4 +252,4 @@ pub use constants::*;
 pub use jsonc_manifest::*;
 pub use upgrade::*;
 pub use upgrade_check_cache::*;
-pub use upgrade_journey_public_api::*;
+pub use upgrade_journey::*;

@@ -7,17 +7,17 @@ use smallvec::SmallVec;
 use std::{cmp::Ordering,
           fmt::{Display, Formatter}};
 
-/// Semantic version of a published R3BL crate (`MAJOR.MINOR.PATCH`, e.g., `"0.0.25"`).
+/// Semantic version of a published R3BL crate (`MAJOR.MINOR.PATCH`, e.g., `"0.0.25"`),
+/// stored in [`CrateMetadata::version`].
 ///
-/// This struct is stored in [`CrateMetadata::version`] and enforces a strict 3-component
-/// [`SemVer`] format where `major`, `minor`, and `patch` are unsigned 16-bit integers
-/// (`u16`). Pre-release suffixes (such as `"-alpha.1"`), build metadata (such as
-/// `"+build"`), and tag prefixes (such as `"v0.1.0"`) are strictly disallowed in
-/// `versions.jsonc`.
+/// It enforces a strict 3-component [`SemVer`] format where `major`, `minor`, and `patch`
+/// are unsigned 16-bit integers (`u16`). Pre-release suffixes (such as `"-alpha.1"`),
+/// build metadata (such as `"+build"`), and tag prefixes (such as `"v0.1.0"`) are
+/// strictly disallowed in `versions.jsonc`.
 ///
 /// See [`CrateMetadata`] and [`JsoncManifest`] for the complete JSONC schema
-/// specification and example. Here's
-/// a snippet of JSONC that is deserialized into this struct:
+/// specification and example. Here's a snippet of JSONC that is deserialized into this
+/// struct:
 /// ```jsonc
 /// "crates": {
 ///     // Interactive CLI suite (`giti`, `edi`, `env-source`).
@@ -45,28 +45,6 @@ pub struct CrateVersion {
     /// Patch version number (`PATCH` in `MAJOR.MINOR.PATCH`), incremented for
     /// backwards-compatible bug fixes.
     pub patch: u16,
-}
-
-/// Failure reason returned by [`CrateVersion::try_parse`].
-///
-/// [`CrateVersion::try_parse`]: JsoncScalar::try_parse
-#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
-pub enum VersionParseErrorKind {
-    /// Input does not have strictly 3 `'.'`-separated segments (`MAJOR.MINOR.PATCH`).
-    #[error("Invalid semantic version: expected 'MAJOR.MINOR.PATCH'")]
-    WrongSegmentCount,
-
-    /// `MAJOR` segment is not a valid `u16`.
-    #[error("Invalid u16 major version segment")]
-    InvalidMajor,
-
-    /// `MINOR` segment is not a valid `u16`.
-    #[error("Invalid u16 minor version segment")]
-    InvalidMinor,
-
-    /// `PATCH` segment is not a valid `u16` (or contains `-pre` / `+build` suffixes).
-    #[error("Invalid u16 patch version segment")]
-    InvalidPatch,
 }
 
 impl CrateVersion {
@@ -202,6 +180,28 @@ impl Display for CrateVersion {
             self.patch
         )
     }
+}
+
+/// Failure reason returned by [`CrateVersion::try_parse`].
+///
+/// [`CrateVersion::try_parse`]: JsoncScalar::try_parse
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum VersionParseErrorKind {
+    /// Input does not have strictly 3 `'.'`-separated segments (`MAJOR.MINOR.PATCH`).
+    #[error("Invalid semantic version: expected 'MAJOR.MINOR.PATCH'")]
+    WrongSegmentCount,
+
+    /// `MAJOR` segment is not a valid `u16`.
+    #[error("Invalid u16 major version segment")]
+    InvalidMajor,
+
+    /// `MINOR` segment is not a valid `u16`.
+    #[error("Invalid u16 minor version segment")]
+    InvalidMinor,
+
+    /// `PATCH` segment is not a valid `u16` (or contains `-pre` / `+build` suffixes).
+    #[error("Invalid u16 patch version segment")]
+    InvalidPatch,
 }
 
 #[cfg(test)]

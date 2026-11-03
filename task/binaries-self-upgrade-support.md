@@ -23,6 +23,8 @@
     - [Phase 2.1: Move `self_upgrade` from `r3bl_tui` to `r3bl-cmdr`](#phase-21-move-self_upgrade-from-r3bl_tui-to-r3bl-cmdr)
     - [Phase 2.2: Make illegal states unrepresentable (Typestate Pattern + Single Entry Point + `UpgradeCheckStatus` Process-Wide Singleton)](#phase-22-make-illegal-states-unrepresentable-typestate-pattern--single-entry-point--upgradecheckstatus-process-wide-singleton)
     - [Phase 2.3: Consolidate `binaries_release_base_url` into `versions.jsonc` & Introduce `EndpointUrl` Newtype](#phase-23-consolidate-binaries_release_base_url-into-versionsjsonc--introduce-endpointurl-newtype)
+    - [Phase 2.4: Split `upgrade_journey_public_api.rs` into `upgrade_journey/` Module & Extract Per-Typestate Files](#phase-24-split-upgrade_journey_public_apirs-into-upgrade_journey-module--extract-per-typestate-files)
+    - [Phase 2.5: Make Typestate Transitions Explicit & Pure (Decouple Workers from `UpgradeCheckStatus` Singleton)](#phase-25-make-typestate-transitions-explicit--pure-decouple-workers-from-upgradecheckstatus-singleton)
     - [Phase 3: Bootstrap, Manifest & Release Script](#phase-3-bootstrap-manifest--release-script)
     - [Phase 4: Refactor cmdr](#phase-4-refactor-cmdr)
     - [Phase 5: Integrate build-infra](#phase-5-integrate-build-infra)
@@ -341,8 +343,6 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
           slice pattern matching with `JsoncScalar` and explicit tuple `.cmp()` `Ord`),
           `CrateReleaseDate`, and `CrateMetadata`.
 - [x] `config/`:
-    - [x] `crate_identity.rs`: `CrateIdentity` (`crate_name: CrateName`,
-          `current_version: CrateVersion`).
     - [x] `cli_arg.rs`: Opaque `UpgradeCLIArgs` (`--upgrade`, `--upgrade-behavior` backed
           by private `CliUpgradeBehavior`) with `From<UpgradeCLIArgs> for UpgradePolicy`
           at the CLI boundary.
@@ -350,26 +350,27 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
           (`Enabled(UpgradeStrategy)`, `Disabled`), `UpgradeStrategy` (`Immediate`,
           `DedicatedThread(UpgradeActionOnExit)`), and `UpgradeActionOnExit`
           (`PromptToUpgrade`, `Auto`, `NotifyOnly`).
-    - [x] `upgrade_config.rs`: Immutable `UpgradeConfig` (`crate_identity`,
+    - [x] `upgrade_config.rs`: Immutable `UpgradeConfig` (`crate_name`, `current_version`,
           `user_feedback_channel`, `upgrade_policy`, `jsonc_manifest_url: EndpointUrl`,
           `cooldown_policy`) and `CooldownPolicy` (`DefaultCacheDir`,
           `CustomTimestampFilePath(PathBuf)`, `Disabled`).
     - [x] `user_feedback_channel.rs`: `UserFeedbackChannel` (`Stdout`, `Stderr`, `Quiet`).
-- [x] `upgrade_journey_public_api.rs` & `upgrade_check_cache.rs`:
+- [x] `upgrade_journey/` & `upgrade_check_cache.rs`:
     - [x] `upgrade_journey!` macro, `UpgradeJourney<State>` typestate machine across 9
           states (`NotStarted`, `Disabled`, `CooldownSkipped`, `Checking`, `UpToDate`,
-          `UpgradeAvailable`, `CheckFailed`, `Upgrading`, `Completed`), `StartupOutcome`
+          `UpgradeAvailable`, `CheckFailed`, `Upgrading`, `Completed`) in
+          `upgrade_journey/typestates/`, `StartupOutcome`
           (`UpgradedAndExit(ImmediateUpgradeResult)`, `ContinueApplication`,
           `AlreadyStarted`), and `SINGLETON` (`UpgradeCheckStatus` +
           `thread_check_handle: Option<JoinHandle<()>>` with
           `UpgradeCheckStatus::handle_upgrade_on_exit()`).
 - [x] `check/`:
-    - [x] `version_check.rs`: `check_for_upgrade(journey: UpgradeJourney<Checking>)` and
-          `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`.
-    - [x] `manifest_query.rs`:
-          `try_get_jsonc_manifest_from_url(url: &EndpointUrl, timeout)`.
-    - [x] `cooldown.rs`: `1h` `mtime` stamp check and touch helpers
-          (`<cache_dir>/r3bl/upgrade-check/<crate_name>.last_check`).
+    - [x] `fetch_manifest.rs` (refactored from `check_entry_point.rs` in Phase 2.5):
+          `fetch_crate_metadata_from_manifest(manifest_url, crate_name, timeout)` and
+          `ManifestCheckError` (pure HTTP/JSONC manifest fetch & metadata extraction with
+          zero knowledge of `UpgradeJourney` or `UpgradeCheckStatus`).
+    - [x] `cooldown.rs`: `CooldownPolicy`, `CooldownStatus`, and `1h` `mtime` stamp check
+          and touch helpers (`<cache_dir>/r3bl/<crate_name>/self_upgrade_last_check`).
 - [x] `upgrade/`:
     - [x] `target.rs`: `get_host_target_triple()` (`x86_64-unknown-linux-gnu`,
           `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, `aarch64-apple-darwin`,
@@ -1027,20 +1028,19 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
 
 #### Module Organization & File Responsibilities
 
-| File                                                      | Responsibility in Typestate Architecture                                                                                                                                                                                                                                                                                                                                   |
-| :-------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`cmdr/src/self_upgrade/constants.rs`**                  | Defines `upgrade_cli_args::{UPGRADE_ARG_LONG, UPGRADE_BEHAVIOR_ARG_LONG}`, `manifest_timeouts::{IMMEDIATE_MANIFEST_TIMEOUT (5s), DEDICATED_THREAD_MANIFEST_TIMEOUT (2s), DEDICATED_THREAD_CHECK_COOLDOWN (1h)}`, and `check_cooldown_cache`.                                                                                                                               |
-| **`cmdr/src/self_upgrade/config/cli_arg.rs`**             | Opaque `clap` CLI boundary adapter (`UpgradeCLIArgs` with private fields + private `CliUpgradeBehavior`) and `From<UpgradeCLIArgs> for UpgradePolicy`.                                                                                                                                                                                                                     |
-| **`cmdr/src/self_upgrade/config/upgrade_policy.rs`**      | Pure domain model: `UpgradePolicy` (`Enabled(UpgradeStrategy)`, `Disabled`), `UpgradeStrategy` (`Immediate`, `DedicatedThread(UpgradeActionOnExit)` with `manifest_timeout()`), and `UpgradeActionOnExit` (`PromptToUpgrade`, `Auto`, `NotifyOnly`).                                                                                                                       |
-| **`cmdr/src/self_upgrade/config/upgrade_config.rs`**      | Immutable `UpgradeConfig` (`crate_identity`, `user_feedback_channel`, `upgrade_policy`, URLs, `cooldown_policy`) + `CooldownPolicy` (`DefaultCacheDir`, `CustomTimestampFilePath(PathBuf)`, `Disabled`) constructed via `UpgradeConfig::new()`. `upgrade_config!` macro is deleted.                                                                                        |
-| **`cmdr/src/self_upgrade/check/cooldown.rs`**             | `CooldownStatus` (`Active`, `ExpiredOrMissing`), `check_cooldown_status(&UpgradeConfig)`, and `record_successful_check(&UpgradeConfig)` using `<cache_dir>/r3bl/upgrade-check/<crate_name>.last_check` `mtime`.                                                                                                                                                            |
-| **`cmdr/src/self_upgrade/check/manifest_query.rs`**       | `try_get_jsonc_manifest_from_url(url: &str, timeout: Duration)` parameterized by `UpgradeStrategy::manifest_timeout()`.                                                                                                                                                                                                                                                    |
-| **`cmdr/src/self_upgrade/check/version_check.rs`**        | `check_for_upgrade(journey: UpgradeJourney<Checking>)`, `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`, and pure `extract_crate_metadata_from_manifest_result` preserving full `format!("{err:#}")` diagnostic chains and touching the `1h` stamp on `UpToDate`.                                                                                         |
-| **`cmdr/src/self_upgrade/upgrade/prompt.rs`**             | `PromptUpgradeDecision` (`UpgradeNow`, `DeclinedByUser`, `SkippedNonInteractive`) returned by `prompt_user_to_upgrade` (eliminating boolean blindness on non-interactive terminals).                                                                                                                                                                                       |
-| **`cmdr/src/self_upgrade/upgrade/bin_name.rs`**           | `get_current_bin_name()` (replaces deleted `metadata_resolver.rs` and obsolete `get_remote_crate_metadata()`).                                                                                                                                                                                                                                                             |
-| **`cmdr/src/self_upgrade/upgrade_journey_public_api.rs`** | Hygiene-hardened `upgrade_journey!` macro (with migrated architectural docs), `UpgradeJourney<State>`, 9 typestate structs (`NotStarted` through `Completed`), `pub(super) fn into_*` transitions, `UpgradeResolution`, `ImmediateUpgradeResult`, `StartupOutcome`, `.start(self)` (1 OS thread via `Builder::spawn`), and `Upgrading::execute_action_on_exit`.            |
-| **`cmdr/src/self_upgrade/upgrade_check_cache.rs`**        | Private `UpgradeSingletonState` (`status` + `thread_check_handle`), 9-variant `UpgradeCheckStatus` (dead `try_get_crate_metadata` and `is_upgrade_available` removed), atomic single-start claim, deadlock-safe `join()` + `UpgradeAvailable -> Upgrading -> Completed` exit handling, and poison-safe + thread-draining `#[cfg(test)] pub(crate) fn reset_for_testing()`. |
-| **`cmdr/src/self_upgrade/mod.rs`**                        | Module-level narrative and ASCII diagram covering all 3 binary execution paths, Scenario 2a/2b/2c (`thread_check_handle` join + `1h` `mtime` cooldown), `5s` vs. `2s` timeouts, `ImmediateUpgradeResult`, and `StartupOutcome::AlreadyStarted`.                                                                                                                            |
+| File                                                   | Responsibility in Typestate Architecture                                                                                                                                                                                                                                                                                                                                                                           |
+| :----------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`cmdr/src/self_upgrade/constants.rs`**               | Defines `upgrade_cli_args::{UPGRADE_ARG_LONG, UPGRADE_BEHAVIOR_ARG_LONG}`, `manifest_timeouts::{IMMEDIATE_MANIFEST_TIMEOUT (5s), DEDICATED_THREAD_MANIFEST_TIMEOUT (2s), DEDICATED_THREAD_CHECK_COOLDOWN (1h)}`, and `check_cooldown_cache`.                                                                                                                                                                       |
+| **`cmdr/src/self_upgrade/config/cli_arg.rs`**          | Opaque `clap` CLI boundary adapter (`UpgradeCLIArgs` with private fields + private `CliUpgradeBehavior`) and `From<UpgradeCLIArgs> for UpgradePolicy`.                                                                                                                                                                                                                                                             |
+| **`cmdr/src/self_upgrade/config/upgrade_policy.rs`**   | Pure domain model: `UpgradePolicy` (`Enabled(UpgradeStrategy)`, `Disabled`), `UpgradeStrategy` (`Immediate`, `DedicatedThread(UpgradeActionOnExit)` with `manifest_timeout()`), and `UpgradeActionOnExit` (`PromptToUpgrade`, `Auto`, `NotifyOnly`).                                                                                                                                                               |
+| **`cmdr/src/self_upgrade/config/upgrade_config.rs`**   | Immutable `UpgradeConfig` (`crate_name`, `current_version`, `user_feedback_channel`, `upgrade_policy`, `jsonc_manifest_url`, `cooldown_policy`) + `CooldownPolicy` (`DefaultCacheDir`, `CustomTimestampFilePath(PathBuf)`, `Disabled`) constructed via `UpgradeConfig::new()`. `upgrade_config!` macro is deleted.                                                                                                 |
+| **`cmdr/src/self_upgrade/check/cooldown.rs`**          | `CooldownPolicy`, `CooldownStatus` (`Active`, `ExpiredOrMissing`), `CooldownPolicy::status(&CrateName)`, and `CooldownPolicy::touch(&CrateName)` using `<cache_dir>/r3bl/<crate_name>/self_upgrade_last_check` `mtime`.                                                                                                                                                                                            |
+| **`cmdr/src/self_upgrade/check/check_entry_point.rs`** | `check_for_upgrade(journey: UpgradeJourney<Checking>)`, `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`, `try_get_jsonc_manifest_from_url(url: &EndpointUrl, timeout: Duration)` parameterized by `UpgradeStrategy::manifest_timeout()`, and pure `extract_crate_metadata_from_manifest_result` preserving full `format!("{err:#}")` diagnostic chains and touching the `1h` stamp on `UpToDate`. |
+| **`cmdr/src/self_upgrade/upgrade/prompt.rs`**          | `PromptUpgradeDecision` (`UpgradeNow`, `DeclinedByUser`, `SkippedNonInteractive`) returned by `prompt_user_to_upgrade` (eliminating boolean blindness on non-interactive terminals).                                                                                                                                                                                                                               |
+| **`cmdr/src/self_upgrade/upgrade/bin_name.rs`**        | `get_current_bin_name()` (replaces deleted `metadata_resolver.rs` and obsolete `get_remote_crate_metadata()`).                                                                                                                                                                                                                                                                                                     |
+| **`cmdr/src/self_upgrade/upgrade_journey/`**           | Hygiene-hardened `upgrade_journey!` macro (`upgrade_journey_macro.rs`), `UpgradeJourney<State>` (`upgrade_journey_struct.rs`), 9 per-file typestate structs (`typestates/{not_started..completed}.rs`), `pub(in crate::self_upgrade) fn into_*` transitions, `UpgradeResolution`, `ImmediateUpgradeResult`, `StartupOutcome` (`startup_outcome.rs`), `.start(self)`, and `Upgrading::execute_action_on_exit`.      |
+| **`cmdr/src/self_upgrade/upgrade_check_cache.rs`**     | Private `UpgradeSingletonState` (`status` + `thread_check_handle`), 9-variant `UpgradeCheckStatus` (dead `try_get_crate_metadata` and `is_upgrade_available` removed), atomic single-start claim, deadlock-safe `join()` + `UpgradeAvailable -> Upgrading -> Completed` exit handling, and poison-safe + thread-draining `#[cfg(test)] pub(crate) fn reset_for_testing()`.                                         |
+| **`cmdr/src/self_upgrade/mod.rs`**                     | Module-level narrative and ASCII diagram covering all 3 binary execution paths, Scenario 2a/2b/2c (`thread_check_handle` join + `1h` `mtime` cooldown), `5s` vs. `2s` timeouts, `ImmediateUpgradeResult`, and `StartupOutcome::AlreadyStarted`.                                                                                                                                                                    |
 
 #### Implementation Steps for Phase 2.2
 
@@ -1207,7 +1207,8 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct UpgradeConfig {
-        crate_identity: CrateIdentity,
+        crate_name: CrateName,
+        current_version: CrateVersion,
         user_feedback_channel: UserFeedbackChannel,
         upgrade_policy: UpgradePolicy,
         jsonc_manifest_url: EndpointUrl,
@@ -1273,7 +1274,7 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
           in `versions.jsonc` and `R3BL_VERSIONS_JSONC_URL`.
     - [x] Run `./check.fish --check`, `cargo rustdoc-fmt`,
           `cargo doc -p r3bl-cmdr --no-deps`, and targeted `self_upgrade` unit tests.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
+- [x] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [x] `cmdr/src/self_upgrade/constants.rs`
     - [x] `cmdr/src/self_upgrade/mod.rs`
@@ -1281,18 +1282,340 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs`
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_scalar.rs`
     - [x] `cmdr/src/self_upgrade/jsonc_manifest/endpoint_url.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_distribution.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_metadata.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_name.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_release_date.rs`
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/crate_version.rs`
-    - [ ] `cmdr/src/self_upgrade/config/upgrade_config.rs`
-    - [ ] `cmdr/src/self_upgrade/config/crate_identity.rs`
+
+### Phase 2.4: Split `upgrade_journey_public_api.rs` into `upgrade_journey/` Module & Extract Per-Typestate Files
+
+#### Problem Statement
+
+`cmdr/src/self_upgrade/upgrade_journey_public_api.rs` has grown to 1,486 lines, mixing the
+declarative `upgrade_journey!` macro, the `UpgradeJourney<State>` container struct, all 9
+typestate structs and their state-transition/execution `impl` blocks, startup outcome
+types (`StartupOutcome`, `ImmediateUpgradeResult`), Tokio/check-thread runtime helpers,
+and 11 integration/unit tests in a single monolithic file.
+
+#### Selected Design (`cmdr/src/self_upgrade/upgrade_journey/` + `typestates/`)
+
+Replace `cmdr/src/self_upgrade/upgrade_journey_public_api.rs` with a dedicated
+`cmdr/src/self_upgrade/upgrade_journey/` submodule (and a nested `typestates/` directory
+with 1 file per typestate), preserving 100% of the flat public API surface via barrel
+re-exports (`pub use upgrade_journey::*;` in `cmdr/src/self_upgrade/mod.rs`):
+
+```text
+cmdr/src/self_upgrade/
+├── mod.rs                          (replaces `mod upgrade_journey_public_api;` with `mod upgrade_journey;`)
+└── upgrade_journey/
+    ├── mod.rs                      (private submodules + `pub use *;` barrel re-exports + lifecycle `#[cfg(test)] mod tests`)
+    ├── upgrade_journey_macro.rs    (`#[macro_export] macro_rules! upgrade_journey`)
+    ├── upgrade_journey_struct.rs   (`pub struct UpgradeJourney<State: UpgradeJourneyStateMarker>` + `config()` / `state()` accessors)
+    ├── startup_outcome.rs          (`pub enum StartupOutcome`, `pub enum ImmediateUpgradeResult`, `Termination` impl)
+    ├── tokio_thread_runner.rs      (`run_in_tokio_logged`, `run_on_dedicated_check_thread`, `extract_panic_payload_message` + unit tests)
+    └── typestates/
+        ├── mod.rs                  (`pub trait UpgradeJourneyStateMarker {}` + private submodules + `pub use *;` barrel re-exports)
+        ├── not_started.rs          (`pub struct NotStarted;` + `impl UpgradeJourney<NotStarted>` with `new()`, `start()`, `run_immediate_upgrade()`, `log_duplicate_start()`, `into_disabled()`, `into_cooldown_skipped()`, `into_checking()`)
+        ├── disabled.rs             (`pub struct Disabled;` + `impl UpgradeJourneyStateMarker for Disabled`)
+        ├── cooldown_skipped.rs     (`pub struct CooldownSkipped;` + `impl UpgradeJourneyStateMarker for CooldownSkipped`)
+        ├── checking.rs             (`pub struct Checking` + `impl UpgradeJourney<Checking>` with `into_up_to_date()`, `into_upgrade_available()`, `into_upgrading()`, `into_check_failed()`)
+        ├── up_to_date.rs           (`pub struct UpToDate` + `impl UpgradeJourneyStateMarker for UpToDate`)
+        ├── upgrade_available.rs    (`pub struct UpgradeAvailable` + `impl UpgradeJourney<UpgradeAvailable>` with `into_upgrading()`)
+        ├── check_failed.rs         (`pub struct CheckFailed` + `impl UpgradeJourneyStateMarker for CheckFailed`)
+        ├── upgrading.rs            (`pub struct Upgrading` + `impl UpgradeJourney<Upgrading>` with `into_completed()`, `execute_action_on_exit()`)
+        └── completed.rs            (`pub struct Completed`, `pub enum UpgradeResolution`, `impl UpgradeJourneyStateMarker for Completed`)
+```
+
+#### Encapsulation & Visibility Rules (`pub(in crate::self_upgrade)`)
+
+- In `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`:
+    ```rust
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct UpgradeJourney<State: UpgradeJourneyStateMarker> {
+        pub(in crate::self_upgrade) config: UpgradeConfig,
+        pub(in crate::self_upgrade) state: State,
+    }
+    ```
+- In `typestates/{not_started,checking,upgrade_available,upgrading}.rs` and
+  `tokio_thread_runner.rs`:
+    - Mark internal state transition methods (`into_disabled`, `into_cooldown_skipped`,
+      `into_checking`, `into_up_to_date`, `into_upgrade_available`, `into_upgrading`,
+      `into_check_failed`, `into_completed`), `execute_action_on_exit`,
+      `run_in_tokio_logged`, and `run_on_dedicated_check_thread` as
+      `pub(in crate::self_upgrade)`.
+    - This keeps `UpgradeJourney`'s fields and transitions strictly private to
+      `crate::self_upgrade` (impossible for external callers to forge transitions) while
+      allowing `upgrade_journey::typestates::*`, `check::version_entry_point`, and
+      `upgrade_check_cache` to access them cleanly across submodule boundaries.
+
+#### Implementation Steps for Phase 2.4
+
+- [x] Create `cmdr/src/self_upgrade/upgrade_journey/typestates/` with `mod.rs`
+      (`UpgradeJourneyStateMarker`) and 1 file per state (`not_started.rs`, `disabled.rs`,
+      `cooldown_skipped.rs`, `checking.rs`, `up_to_date.rs`, `upgrade_available.rs`,
+      `check_failed.rs`, `upgrading.rs`, `completed.rs`), preserving all rustdoc comments
+      and intra-doc links byte-for-byte.
+- [x] Create `cmdr/src/self_upgrade/upgrade_journey/` files (`upgrade_journey_macro.rs`,
+      `upgrade_journey_struct.rs`, `startup_outcome.rs`, `tokio_thread_runner.rs`, and
+      `mod.rs` with barrel re-exports and lifecycle tests).
+- [x] Update `cmdr/src/self_upgrade/mod.rs` to replace
+      `mod upgrade_journey_public_api; pub use upgrade_journey_public_api::*;` with
+      `mod upgrade_journey; pub use upgrade_journey::*;`, and delete
+      `cmdr/src/self_upgrade/upgrade_journey_public_api.rs`.
+- [x] Run `./check.fish --check` and `./check.fish --fmt` to verify compilation,
+      formatting, and rustdoc links.
+- [x] **Mandatory manual review:** Verify every file modified in this phase for correct
+      implementation and ensure no regressions.
+    - [x] `cmdr/src/self_upgrade/mod.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_distribution.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_metadata.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_name.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_release_date.rs`
+    - [x] `cmdr/src/self_upgrade/jsonc_manifest/crate_version.rs`
+    - [x] `cmdr/src/self_upgrade/config/mod.rs`
+    - [x] `cmdr/src/self_upgrade/check/cooldown.rs`
+    - [x] `cmdr/src/self_upgrade/config/upgrade_config.rs`
+    - [x] `cmdr/src/self_upgrade/check/mod.rs`
+
+### Phase 2.5: Make Typestate Transitions Explicit & Pure (Decouple Workers from `UpgradeCheckStatus` Singleton)
+
+#### Problem Statement
+
+During manual review of Phase 2.4 (`cmdr/src/self_upgrade/check/check_entry_point.rs`),
+three architectural issues were identified in how typestate transitions and the
+`UpgradeCheckStatus` singleton interact:
+
+1. **Hidden State Transitions Swallowed Into Global Singleton**:
+    - `check_for_upgrade(journey: UpgradeJourney<Checking>)` accepts the `Checking`
+      typestate by value and returns `()`, silently mutating
+      `UpgradeCheckStatus::set(...)` internally across its branches instead of returning
+      the transitioned `UpgradeJourney<NextState>` to its caller.
+    - `run_on_dedicated_check_thread` (`tokio_thread_runner.rs`) similarly swallows Tokio
+      runtime initialization errors and panics directly into
+      `UpgradeCheckStatus::set(...)` instead of returning a `CheckFailed` typestate
+      outcome.
+2. **Duplicated Manifest Check Pipeline**:
+    - `check_for_upgrade` and `check_for_immediate_upgrade` in `check_entry_point.rs`
+      duplicate the HTTP manifest fetch, metadata extraction, version comparison, and
+      cooldown `touch()` logic solely because `check_for_upgrade` returned `()` while
+      `check_for_immediate_upgrade` both mutated `UpgradeCheckStatus::set(...)` and
+      returned `ImmediateCheckOutcome`.
+3. **Asymmetric Subsystem Boundaries (`check/` vs. `upgrade/` vs. `typestates/`)**:
+    - Every file in `upgrade/` (`perform_upgrade.rs`, `upgrade_source.rs`, etc.) and
+      `check/cooldown.rs` is pure domain/I/O logic with zero knowledge of
+      `UpgradeJourney<State>` or `UpgradeCheckStatus`, whereas `typestates/<state>.rs`
+      (such as `typestates/upgrading.rs`) owns `impl UpgradeJourney<State>` orchestration.
+    - `check_entry_point.rs` broke this symmetry by mixing free-floating
+      `UpgradeJourney<Checking>` transition functions and `UpgradeCheckStatus::set(...)`
+      mutations with low-level HTTP/JSONC manifest fetching.
+
+#### Selected Design (Direction 1 + Option 1B: Pure Typestate Methods, Strategy-Specific Outcomes, Centralized Singleton Driver)
+
+Enforce a strict architectural invariant across `self_upgrade/`:
+
+- **`check/` and `upgrade/` are pure I/O & domain services**: Never import or touch
+  `UpgradeJourney<State>` or `UpgradeCheckStatus`.
+- **`upgrade_journey/typestates/<state>.rs` owns pure typestate transitions**: Every
+  active execution step on `UpgradeJourney<Checking>` and `UpgradeJourney<Upgrading>` is a
+  `pub(in crate::self_upgrade)` method consuming `self` by value and returning the next
+  typestate (or a strategy-specific outcome enum with zero `unreachable!` branches),
+  **never** calling `UpgradeCheckStatus::set(...)`.
+- **Centralized Singleton Coordination (`not_started.rs` & `upgrade_check_cache.rs`)**:
+  Only the two lifecycle orchestrators (`UpgradeJourney::<NotStarted>::start` and
+  `UpgradeCheckStatus::handle_upgrade_on_exit`) read or write `UpgradeCheckStatus`.
+
+##### 1. Pure Manifest Fetch Service (`cmdr/src/self_upgrade/check/fetch_manifest.rs`)
+
+Rename `cmdr/src/self_upgrade/check/check_entry_point.rs` ->
+`cmdr/src/self_upgrade/check/fetch_manifest.rs` (updating `check/mod.rs`), removing all
+`UpgradeJourney` and `UpgradeCheckStatus` imports and exposing the pure manifest query
+service alongside `ManifestCheckError`:
+
+```rust
+/// Fetches `versions.jsonc` from `manifest_url` within `timeout` and extracts
+/// `(CrateMetadata, EndpointUrl)` for `crate_name`, logging any fetch or parse failure
+/// via [`DEBUG_SELF_UPGRADE`].
+///
+/// Pure manifest I/O service with zero knowledge of [`UpgradeJourney`] or
+/// [`UpgradeCheckStatus`].
+pub async fn fetch_crate_metadata_from_manifest(
+    manifest_url: &EndpointUrl,
+    crate_name: &CrateName,
+    timeout: Duration,
+) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError>
+```
+
+##### 2. Strategy-Specific Check Outcomes & Pure Methods on `UpgradeJourney<Checking>` (`typestates/checking.rs`)
+
+Define exhaustive 3-variant outcome enums (zero `unreachable!` match arms anywhere) and
+move check orchestration onto `impl UpgradeJourney<Checking>` in
+`cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`:
+
+```rust
+/// Exhaustive outcome of [`UpgradeJourney::<Checking>::check_for_dedicated_thread_upgrade`].
+///
+/// Makes `Upgrading` unrepresentable prior to application exit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(in crate::self_upgrade) enum DedicatedCheckOutcome {
+    /// Local binary is already up to date (`remote <= current`); `1h` cooldown
+    /// timestamp file has been touched.
+    UpToDate(UpgradeJourney<UpToDate>),
+
+    /// Newer version found (`remote > current`); awaits exit handling via
+    /// [`UpgradeCheckStatus::handle_upgrade_on_exit`].
+    UpgradeAvailable(UpgradeJourney<UpgradeAvailable>),
+
+    /// Network, parse, or thread/runtime error occurred during the manifest check.
+    CheckFailed(UpgradeJourney<CheckFailed>),
+}
+
+/// Exhaustive outcome of [`UpgradeJourney::<Checking>::check_for_immediate_upgrade`].
+///
+/// Makes `UpgradeAvailable` unrepresentable during an explicit `--upgrade` run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
+    /// Network or manifest lookup failed.
+    CheckFailed(UpgradeJourney<CheckFailed>),
+
+    /// Local binary is already up to date (`remote <= current`); `1h` cooldown
+    /// timestamp file has been touched.
+    UpToDate(UpgradeJourney<UpToDate>),
+
+    /// Newer version found (`remote > current`); ready to run
+    /// [`UpgradeJourney::<Upgrading>::execute_immediate_upgrade`].
+    Upgrading(UpgradeJourney<Upgrading>),
+}
+
+impl UpgradeJourney<Checking> {
+    #[must_use]
+    pub(in crate::self_upgrade) async fn check_for_dedicated_thread_upgrade(
+        self,
+        action_on_exit: UpgradeActionOnExit,
+    ) -> DedicatedCheckOutcome { ... }
+
+    #[must_use]
+    pub(in crate::self_upgrade) async fn check_for_immediate_upgrade(
+        self,
+    ) -> ImmediateCheckOutcome { ... }
+}
+```
+
+> **Encapsulation note**: Keeping `check_for_dedicated_thread_upgrade` and
+> `check_for_immediate_upgrade` `pub(in crate::self_upgrade)` (matching
+> `execute_action_on_exit`) ensures external callers who inspect a cloned
+> `UpgradeCheckStatus::Checking(journey)` via `UpgradeCheckStatus::get()` cannot
+> re-trigger network checks outside the engine.
+
+##### 3. Pure Immediate Upgrade Execution on `UpgradeJourney<Upgrading>` (`typestates/upgrading.rs`)
+
+Add `execute_immediate_upgrade(self)` alongside `execute_action_on_exit(self, ...)` in
+`cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`:
+
+```rust
+impl UpgradeJourney<Upgrading> {
+    /// Executes an immediate (`--upgrade`) installation outside the `SINGLETON` leaf
+    /// lock, touches the `1h` cooldown timestamp file if and only if installation
+    /// succeeded, and consumes `self` into [`UpgradeJourney<Completed>`] paired with
+    /// [`ImmediateUpgradeResult`].
+    #[must_use]
+    pub(in crate::self_upgrade) async fn execute_immediate_upgrade(
+        self,
+    ) -> (UpgradeJourney<Completed>, ImmediateUpgradeResult) { ... }
+}
+```
+
+##### 4. Pure Dedicated Check Thread Runner (`tokio_thread_runner.rs`)
+
+Update `run_on_dedicated_check_thread` so it returns `DedicatedCheckOutcome` directly
+(catching Tokio runtime build failures and panics into
+`DedicatedCheckOutcome::CheckFailed(...)`) with zero `UpgradeCheckStatus` dependency:
+
+```rust
+#[must_use]
+pub(super) fn run_on_dedicated_check_thread<F>(
+    checking: UpgradeJourney<Checking>,
+    async_fn: F,
+) -> DedicatedCheckOutcome
+where
+    F: AsyncFnOnce(UpgradeJourney<Checking>) -> DedicatedCheckOutcome,
+```
+
+##### 5. Centralized Singleton Transitions (`upgrade_check_cache.rs` & `typestates/not_started.rs`)
+
+- Implement `From<DedicatedCheckOutcome> for UpgradeCheckStatus` and
+  `From<ImmediateCheckOutcome> for UpgradeCheckStatus` in `upgrade_check_cache.rs`.
+- In `UpgradeJourney::<NotStarted>::start` (`typestates/not_started.rs`):
+    - **Dedicated thread**:
+        ```rust
+        let outcome = run_on_dedicated_check_thread(
+            spawn_checking,
+            async move |journey| {
+                journey.check_for_dedicated_thread_upgrade(action_on_exit).await
+            },
+        );
+        UpgradeCheckStatus::set(UpgradeCheckStatus::from(outcome));
+        ```
+    - **Immediate (`--upgrade`)**:
+        ```rust
+        let outcome = checking.check_for_immediate_upgrade().await;
+        UpgradeCheckStatus::set(UpgradeCheckStatus::from(outcome.clone()));
+        match outcome {
+            ImmediateCheckOutcome::CheckFailed(failed) => { /* emit retry msg -> Failed */ }
+            ImmediateCheckOutcome::UpToDate(up_to_date) => { /* emit msg -> Succeeded */ }
+            ImmediateCheckOutcome::Upgrading(upgrading) => {
+                let (completed, result) = upgrading.execute_immediate_upgrade().await;
+                UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(completed));
+                result
+            }
+        }
+        ```
+
+#### Implementation Steps for Phase 2.5
+
+- [ ] Rename `cmdr/src/self_upgrade/check/check_entry_point.rs` ->
+      `cmdr/src/self_upgrade/check/fetch_manifest.rs` (and update
+      `cmdr/src/self_upgrade/check/mod.rs`), extracting pure
+      `fetch_crate_metadata_from_manifest` + `ManifestCheckError` with zero
+      `UpgradeJourney` or `UpgradeCheckStatus` imports.
+- [ ] Add `DedicatedCheckOutcome`, `ImmediateCheckOutcome`,
+      `UpgradeJourney::<Checking>::check_for_dedicated_thread_upgrade`, and
+      `UpgradeJourney::<Checking>::check_for_immediate_upgrade` to
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`, along with parallel
+      (non-`#[serial]`, singleton-free) unit tests verifying outcomes and cooldown
+      `touch()` behavior.
+- [ ] Add `UpgradeJourney::<Upgrading>::execute_immediate_upgrade` to
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`.
+- [ ] Update `run_on_dedicated_check_thread` in
+      `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs` to return
+      `DedicatedCheckOutcome` directly without mutating `UpgradeCheckStatus`, and update
+      its panic unit test to assert on the returned `DedicatedCheckOutcome` without
+      `#[serial]`.
+- [ ] Implement `From<DedicatedCheckOutcome> for UpgradeCheckStatus` and
+      `From<ImmediateCheckOutcome> for UpgradeCheckStatus` in
+      `cmdr/src/self_upgrade/upgrade_check_cache.rs`, and update
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs` (and any affected
+      rustdoc links in `cmdr/src/self_upgrade/mod.rs`) so all singleton updates happen
+      explicitly at the top-level orchestrators.
+- [ ] Run `./check.fish --check`, `./check.fish --fmt`, and targeted `self_upgrade` unit
+      tests (`cargo test -p r3bl-cmdr --lib self_upgrade -q --message-format=short`) to
+      verify compilation, formatting, rustdoc links, and test coverage.
+- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
+      implementation and ensure no regressions.
+    - [ ] `cmdr/src/self_upgrade/mod.rs`
     - [ ] `cmdr/src/self_upgrade/check/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/check/version_check.rs`
-    - [ ] `cmdr/src/self_upgrade/check/manifest_query.rs`
-    - [ ] `cmdr/src/self_upgrade/check/cooldown.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey_public_api.rs`
+    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_macro.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/startup_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/journey_integration_tests.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/disabled.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/cooldown_skipped.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/up_to_date.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrade_available.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/upgrade_source.rs`

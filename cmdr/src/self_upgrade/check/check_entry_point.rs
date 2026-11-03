@@ -1,51 +1,20 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::{CheckFailed, Checking, CrateMetadata, CrateName, EndpointUrl,
-                    JsoncManifest, UpToDate, UpgradeCheckStatus, UpgradeJourney,
-                    UpgradeStrategy, Upgrading},
-            record_successful_check, try_get_jsonc_manifest_from_url};
+use super::super::{CheckFailed, Checking, CrateMetadata, CrateName, EndpointUrl,
+                   JsoncManifest, UpToDate, UpgradeCheckStatus, UpgradeJourney,
+                   UpgradeStrategy, Upgrading};
 use crate::DEBUG_SELF_UPGRADE;
-use r3bl_tui::fg_magenta;
-
-/// Extracts [`CrateMetadata`] and [`EndpointUrl`] for `crate_name` from a
-/// [`JsoncManifest`] query result, preserving the full [`miette`] diagnostic chain via
-/// `format!("{err:#}")` on failure.
-///
-/// # Errors
-///
-/// Returns [`ManifestCheckError`] if `res_manifest` is `Err` or if `crate_name` is
-/// absent from [`JsoncManifest::crates`].
-///
-/// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
-/// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
-/// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
-/// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
-/// [`miette`]: mod@miette
-pub fn extract_crate_metadata_from_manifest_result(
-    res_manifest: miette::Result<JsoncManifest>,
-    crate_name: &CrateName,
-    manifest_url: &EndpointUrl,
-) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError> {
-    let manifest =
-        res_manifest.map_err(|err| ManifestCheckError::FetchOrParseFailed {
-            diagnostic: format!("{err:#}"),
-        })?;
-    let metadata = manifest.crates.get(crate_name).cloned().ok_or_else(|| {
-        ManifestCheckError::CrateNotFoundInManifest {
-            crate_name: crate_name.clone(),
-            manifest_url: manifest_url.clone(),
-        }
-    })?;
-    Ok((metadata, manifest.binaries_release_base_url))
-}
+use miette::{Context, IntoDiagnostic};
+use r3bl_tui::{create_client_with_user_agent, fg_magenta, ok};
+use std::time::Duration;
 
 /// Performs a dedicated-thread version check by consuming [`UpgradeJourney<Checking>`],
-/// querying the JSONC manifest with [`UpgradeStrategy::manifest_timeout`],
+/// querying the JSONC manifest with [`UpgradeStrategy::manifest_timeout`][1],
 /// transitioning `journey` into [`UpgradeJourney<UpgradeAvailable>`],
 /// [`UpgradeJourney<UpToDate>`], or [`UpgradeJourney<CheckFailed>`], and updating the
 /// [`UpgradeCheckStatus`] process-wide singleton.
 ///
-/// Touches the `1h` `mtime` cooldown timestamp file via [`record_successful_check`] when
+/// Touches the `1h` `mtime` cooldown timestamp file via [`CooldownPolicy::touch`] when
 /// the binary is verified [`UpToDate`]. Requires an [`UpgradeJourney<Checking>`]
 /// typestate so it is a compile-time error to invoke a network version check when
 /// [`UpgradePolicy::Disabled`] was configured.
@@ -57,10 +26,11 @@ pub fn extract_crate_metadata_from_manifest_result(
 /// [`CheckFailed::error`]. See the [`self_upgrade`] module documentation for details on
 /// invocation modes and error handling.
 ///
+/// [1]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
 /// [`CheckFailed::error`]: crate::self_upgrade::CheckFailed::error
 /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
 /// [`Checking`]: crate::self_upgrade::Checking
-/// [`record_successful_check`]: crate::self_upgrade::record_successful_check
+/// [`CooldownPolicy::touch`]: crate::self_upgrade::CooldownPolicy::touch
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
@@ -69,24 +39,27 @@ pub fn extract_crate_metadata_from_manifest_result(
 /// [`UpgradeJourney<UpgradeAvailable>`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradeJourney<UpToDate>`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-/// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
 /// [`UpToDate`]: crate::self_upgrade::UpToDate
 pub async fn check_for_upgrade(journey: UpgradeJourney<Checking>) {
     // Ensure the singleton reflects `Checking` even when called directly in unit tests.
     UpgradeCheckStatus::set(UpgradeCheckStatus::Checking(journey.clone()));
 
-    let name = journey.config().get_crate_name();
-    let version = journey.config().get_current_version();
-    let manifest_url = journey.config().get_jsonc_manifest_url();
-    let strategy = journey.state().strategy;
+    let config = journey.get_config();
+    let crate_name = config.get_crate_name();
+    let crate_version = config.get_current_version();
+    let manifest_url = config.get_jsonc_manifest_url();
+    let strategy = journey.get_state().strategy;
 
-    let res_manifest =
-        try_get_jsonc_manifest_from_url(manifest_url, strategy.manifest_timeout()).await;
+    let res_manifest = http_req_helpers::try_get_jsonc_manifest_from_url(
+        manifest_url,
+        strategy.manifest_timeout(),
+    )
+    .await;
 
     let (metadata, binaries_release_base_url) =
-        match extract_crate_metadata_from_manifest_result(
+        match http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
             res_manifest,
-            name,
+            crate_name,
             manifest_url,
         ) {
             Err(error) => {
@@ -94,7 +67,7 @@ pub async fn check_for_upgrade(journey: UpgradeJourney<Checking>) {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "Failed to resolve crate metadata from versions manifest",
-                        crate_name = %name,
+                        crate_name = %crate_name,
                         url = %fg_magenta(&**manifest_url),
                         error = %error
                     );
@@ -107,13 +80,13 @@ pub async fn check_for_upgrade(journey: UpgradeJourney<Checking>) {
             Ok(pair) => pair,
         };
 
-    let next_status = if metadata.version.is_newer_than(&version) {
+    let next_status = if metadata.version.is_newer_than(&crate_version) {
         DEBUG_SELF_UPGRADE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "Newer version available in versions.jsonc",
-                crate_name = %name,
-                current_version = %version,
+                crate_name = %crate_name,
+                current_version = %crate_version,
                 remote_version = %metadata.version
             );
         });
@@ -130,7 +103,10 @@ pub async fn check_for_upgrade(journey: UpgradeJourney<Checking>) {
             ),
         }
     } else {
-        record_successful_check(journey.config());
+        journey
+            .get_config()
+            .get_cooldown_policy()
+            .touch(journey.get_config().get_crate_name());
         UpgradeCheckStatus::UpToDate(journey.into_up_to_date(metadata))
     };
 
@@ -144,10 +120,10 @@ pub async fn check_for_upgrade(journey: UpgradeJourney<Checking>) {
 ///
 /// Uses [`UpgradeStrategy::manifest_timeout`] (`5s` for
 /// [`UpgradeStrategy::Immediate`]), bypasses cooldown timestamp file reads on entry, and
-/// touches the `1h` cooldown timestamp file via [`record_successful_check`] when the
+/// touches the `1h` cooldown timestamp file via [`CooldownPolicy::touch`] when the
 /// local binary is already [`UpToDate`].
 ///
-/// [`record_successful_check`]: crate::self_upgrade::record_successful_check
+/// [`CooldownPolicy::touch`]: crate::self_upgrade::CooldownPolicy::touch
 /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
@@ -157,15 +133,16 @@ pub async fn check_for_immediate_upgrade(
 ) -> ImmediateCheckOutcome {
     UpgradeCheckStatus::set(UpgradeCheckStatus::Checking(journey.clone()));
 
-    let name = journey.config().get_crate_name();
-    let version = journey.config().get_current_version();
-    let manifest_url = journey.config().get_jsonc_manifest_url();
-    let timeout = journey.state().strategy.manifest_timeout();
+    let name = journey.get_config().get_crate_name();
+    let version = journey.get_config().get_current_version();
+    let manifest_url = journey.get_config().get_jsonc_manifest_url();
+    let timeout = journey.get_state().strategy.manifest_timeout();
 
-    let res_manifest = try_get_jsonc_manifest_from_url(manifest_url, timeout).await;
+    let res_manifest =
+        http_req_helpers::try_get_jsonc_manifest_from_url(manifest_url, timeout).await;
 
     let (metadata, binaries_release_base_url) =
-        match extract_crate_metadata_from_manifest_result(
+        match http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
             res_manifest,
             name,
             manifest_url,
@@ -201,10 +178,101 @@ pub async fn check_for_immediate_upgrade(
         UpgradeCheckStatus::set(UpgradeCheckStatus::Upgrading(upgrading.clone()));
         ImmediateCheckOutcome::Upgrading(upgrading)
     } else {
-        record_successful_check(journey.config());
+        journey
+            .get_config()
+            .get_cooldown_policy()
+            .touch(journey.get_config().get_crate_name());
         let up_to_date = journey.into_up_to_date(metadata);
         UpgradeCheckStatus::set(UpgradeCheckStatus::UpToDate(up_to_date.clone()));
         ImmediateCheckOutcome::UpToDate(up_to_date)
+    }
+}
+
+/// These helper methods make it easier to write unit tests. Even though ergnonomically
+/// they are a bit awkward to use.
+mod http_req_helpers {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Fetches `versions.jsonc` from `url` (typically
+    /// [`EndpointUrl::default_manifest_url`], backed by [`R3BL_VERSIONS_JSONC_URL`])
+    /// within `timeout` and parses it into a [`JsoncManifest`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails, times out after `timeout`, returns a
+    /// non-2xx status, or if the manifest content cannot be parsed as valid JSONC.
+    ///
+    /// [`EndpointUrl::default_manifest_url`]: crate::self_upgrade::EndpointUrl::default_manifest_url
+    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+    /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
+    pub async fn try_get_jsonc_manifest_from_url(
+        url: &EndpointUrl,
+        timeout: Duration,
+    ) -> miette::Result<JsoncManifest> {
+        DEBUG_SELF_UPGRADE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = "Fetching versions manifest",
+                url = %fg_magenta(&**url),
+                timeout_ms = timeout.as_millis()
+            );
+        });
+
+        // Make the HTTP GET request to fetch the `versions.jsonc` file as a string.
+        let http_client = create_client_with_user_agent(None)?;
+        // Closure prevents having to chain `.into_diagnostic()?` multiple times.
+        let fetch_fn = async || -> Result<String, reqwest::Error> {
+            http_client
+                .get(&**url)
+                .timeout(timeout)
+                .send()
+                .await?
+                .error_for_status()?
+                .text()
+                .await
+        };
+        let text = fetch_fn()
+            .await
+            .into_diagnostic()
+            .with_context(|| "Problem getting manifest")?;
+
+        // Parse the `versions.jsonc` string into a JsoncManifest.
+        let manifest = JsoncManifest::try_parse_jsonc(&text)?;
+
+        ok!(manifest)
+    }
+
+    /// Extracts [`CrateMetadata`] and [`EndpointUrl`] for `crate_name` from a
+    /// [`JsoncManifest`] query result, preserving the full [`miette`] diagnostic chain
+    /// via `format!("{err:#}")` on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ManifestCheckError`] if `res_manifest` is `Err` or if `crate_name` is
+    /// absent from [`JsoncManifest::crates`].
+    ///
+    /// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
+    /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
+    /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
+    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+    /// [`miette`]: mod@miette
+    pub fn extract_crate_metadata_from_jsonc_manifest(
+        res_manifest: miette::Result<JsoncManifest>,
+        crate_name: &CrateName,
+        manifest_url: &EndpointUrl,
+    ) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError> {
+        let manifest =
+            res_manifest.map_err(|err| ManifestCheckError::FetchOrParseFailed {
+                diagnostic: format!("{err:#}"),
+            })?;
+        let metadata = manifest.crates.get(crate_name).cloned().ok_or_else(|| {
+            ManifestCheckError::CrateNotFoundInManifest {
+                crate_name: crate_name.clone(),
+                manifest_url: manifest_url.clone(),
+            }
+        })?;
+        Ok((metadata, manifest.binaries_release_base_url))
     }
 }
 
@@ -285,9 +353,9 @@ pub enum ImmediateCheckOutcome {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::super::{CooldownPolicy, CrateDistribution, CrateIdentity,
-                               CrateVersion, JsoncScalar, UpgradeActionOnExit,
-                               UpgradeConfig, UpgradePolicy, UserFeedbackChannel},
+    use super::{super::super::{CooldownPolicy, CrateDistribution, CrateVersion,
+                               JsoncScalar, UpgradeActionOnExit, UpgradeConfig,
+                               UpgradePolicy, UserFeedbackChannel, manifest_timeouts},
                 *};
     use miette::Context;
     use r3bl_tui::{assert_eq2, try_create_temp_dir};
@@ -324,16 +392,29 @@ mod tests {
         format!("http://{addr}/versions.jsonc")
     }
 
+    #[tokio::test]
+    async fn test_try_get_jsonc_manifest_from_invalid_url() {
+        let invalid_url =
+            EndpointUrl::try_parse("http://127.0.0.1:0/nonexistent").unwrap();
+        let result = http_req_helpers::try_get_jsonc_manifest_from_url(
+            &invalid_url,
+            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT,
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
     #[test]
     fn test_extract_crate_metadata_preserves_full_miette_diagnostic_chain() {
+        let crate_name = "r3bl-cmdr".into();
         let root_err: miette::Result<JsoncManifest> =
             Err(miette::miette!("TLS handshake reset by peer"))
                 .wrap_err("GET https://r3bl.com/versions.jsonc failed")
                 .wrap_err("manifest fetch failed");
 
-        let err = extract_crate_metadata_from_manifest_result(
+        let err = http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
             root_err,
-            &CrateName::from("r3bl-cmdr"),
+            &crate_name,
             &EndpointUrl::default_manifest_url(),
         )
         .unwrap_err();
@@ -347,20 +428,22 @@ mod tests {
 
     #[test]
     fn test_extract_crate_metadata_missing_crate_and_success() {
+        let crate_name = "r3bl-cmdr".into();
+        let missing_crate: CrateName = "nonexistent-crate".into();
         let manifest = JsoncManifest::try_parse_jsonc(SAMPLE_MANIFEST_0_0_26).unwrap();
         let example_url =
             EndpointUrl::try_parse("https://example.com/versions.jsonc").unwrap();
 
-        let missing_err = extract_crate_metadata_from_manifest_result(
+        let missing_err = http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
             Ok(manifest.clone()),
-            &CrateName::from("nonexistent-crate"),
+            &missing_crate,
             &example_url,
         )
         .unwrap_err();
         assert_eq2!(
             missing_err,
             ManifestCheckError::CrateNotFoundInManifest {
-                crate_name: CrateName::from("nonexistent-crate"),
+                crate_name: missing_crate,
                 manifest_url: example_url.clone(),
             }
         );
@@ -371,12 +454,13 @@ mod tests {
                 .contains("https://example.com/versions.jsonc")
         );
 
-        let (meta, release_base_url) = extract_crate_metadata_from_manifest_result(
-            Ok(manifest),
-            &CrateName::from("r3bl-cmdr"),
-            &example_url,
-        )
-        .unwrap();
+        let (meta, release_base_url) =
+            http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
+                Ok(manifest),
+                &crate_name,
+                &example_url,
+            )
+            .unwrap();
         assert_eq2!(meta.version, CrateVersion::try_parse("0.0.26").unwrap());
         assert_eq2!(meta.crate_distribution, CrateDistribution::OpenSource);
         assert_eq2!(
@@ -397,11 +481,12 @@ mod tests {
         let avail_strategy =
             UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::NotifyOnly);
         let avail_cfg = UpgradeConfig::new(
-            CrateIdentity::new("r3bl-cmdr", CrateVersion::try_parse("0.0.25").unwrap()),
+            "r3bl-cmdr",
+            CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(avail_strategy),
             EndpointUrl::try_parse(avail_url.as_str()).unwrap(),
-            CooldownPolicy::CustomTimestampFilePath(avail_timestamp_file.clone()),
+            CooldownPolicy::new_custom_path(avail_timestamp_file.clone()),
         );
         let avail_checking = UpgradeJourney::new(avail_cfg).into_checking(avail_strategy);
         check_for_upgrade(avail_checking).await;
@@ -416,11 +501,12 @@ mod tests {
         let fail_url = serve_one_http_response("500 Internal Server Error", "boom");
         let fail_strategy = UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto);
         let fail_cfg = UpgradeConfig::new(
-            CrateIdentity::new("r3bl-cmdr", CrateVersion::try_parse("0.0.25").unwrap()),
+            "r3bl-cmdr",
+            CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(fail_strategy),
             EndpointUrl::try_parse(fail_url.as_str()).unwrap(),
-            CooldownPolicy::CustomTimestampFilePath(fail_timestamp_file.clone()),
+            CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
         );
         let fail_checking = UpgradeJourney::new(fail_cfg).into_checking(fail_strategy);
         check_for_upgrade(fail_checking).await;
@@ -435,11 +521,12 @@ mod tests {
         let ok_url = serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26);
         let ok_strategy = UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto);
         let ok_cfg = UpgradeConfig::new(
-            CrateIdentity::new("r3bl-cmdr", CrateVersion::try_parse("0.0.26").unwrap()),
+            "r3bl-cmdr",
+            CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(ok_strategy),
             EndpointUrl::try_parse(ok_url.as_str()).unwrap(),
-            CooldownPolicy::CustomTimestampFilePath(ok_timestamp_file.clone()),
+            CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
         );
         let ok_checking = UpgradeJourney::new(ok_cfg).into_checking(ok_strategy);
         check_for_upgrade(ok_checking).await;
