@@ -2,7 +2,7 @@
 
 use super::{ClipboardResult, ClipboardService};
 use crate::{ClipboardTarget, DEBUG_TUI_COPY_PASTE, OscSequence, ok};
-use copypasta::{ClipboardContext, ClipboardProvider};
+use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
 use std::io::Write;
 
 /// In-band terminal clipboard service using [`OSC`] 52 escape sequences.
@@ -93,10 +93,10 @@ impl ClipboardService for SystemClipboard {
     /// Returns an error if both the desktop display server and [`Osc52Clipboard`] fail to
     /// write the clipboard content.
     ///
-    /// [`ClipboardContext::new`]: copypasta::ClipboardContext::new
-    /// [`ClipboardProvider::set_contents`]: copypasta::ClipboardProvider::set_contents
-    /// [`copypasta`]: copypasta
-    /// [`set_contents`]: copypasta::ClipboardProvider::set_contents
+    /// [`ClipboardContext::new`]: copypasta_ext::x11_fork::ClipboardContext::new
+    /// [`ClipboardProvider::set_contents`]: copypasta_ext::copypasta::ClipboardProvider::set_contents
+    /// [`copypasta`]: copypasta_ext
+    /// [`set_contents`]: copypasta_ext::copypasta::ClipboardProvider::set_contents
     fn try_to_put_content_into_clipboard(
         &mut self,
         content: String,

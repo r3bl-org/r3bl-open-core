@@ -79,7 +79,7 @@ nom = "8.0.0"
 # http://xion.io/post/code/rust-examples.html
 
 # For clipboard.
-copypasta = "0.10.2"
+copypasta-ext = "0.4.4"
 base64 = "0.22.1"
 
 # Tokio / Tracing / Logging.
