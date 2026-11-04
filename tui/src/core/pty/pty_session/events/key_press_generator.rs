@@ -99,7 +99,7 @@
 
 use super::input::{ControlSequence, CursorKeyMode, PtyInputEvent};
 use crate::{CSI_START, FunctionKey, Key, KeyPress, KeyState, LossyConvertToByte,
-            ModifierKeysMask, NUL, SpecialKey, WideningCastToU32};
+            ModifierKeysMask, NUL, OfsBufVT100, SpecialKey, WideningCastToU32};
 
 /// Clean modifier state representation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -143,19 +143,38 @@ impl ModifierState {
 ///
 /// Instead of 300+ explicit pattern matches, this uses algorithmic generation
 /// based on terminal standards and modifier encoding.
+///
+/// Uses [`CursorKeyMode::default()`] for backward compatibility; prefer
+/// [`convert_keypress`] for mode-aware conversion.
 impl From<KeyPress> for Option<PtyInputEvent> {
     fn from(key: KeyPress) -> Option<PtyInputEvent> {
-        match key {
-            KeyPress::Plain { key } => convert_plain_key(key),
-            KeyPress::WithModifiers { key, mask } => {
-                convert_modified_key(key, ModifierState::from_mask(mask))
-            }
+        convert_keypress(key, CursorKeyMode::default())
+    }
+}
+
+impl OfsBufVT100 {
+    /// Converts a [`KeyPress`] to the [`PtyInputEvent`] the child process expects, given
+    /// the cursor key mode ([`DECCKM`]) that the child has requested on this terminal.
+    ///
+    /// [`DECCKM`]: https://vt100.net/docs/vt510-rm/DECCKM.html
+    #[must_use]
+    pub fn keypress_to_pty_input_event(&self, key: KeyPress) -> Option<PtyInputEvent> {
+        convert_keypress(key, self.get_terminal_mode().cursor_key_mode)
+    }
+}
+
+/// Convert a [`KeyPress`] to a [`PtyInputEvent`] using the given cursor key mode.
+fn convert_keypress(key: KeyPress, mode: CursorKeyMode) -> Option<PtyInputEvent> {
+    match key {
+        KeyPress::Plain { key } => convert_plain_key(key, mode),
+        KeyPress::WithModifiers { key, mask } => {
+            convert_modified_key(key, ModifierState::from_mask(mask), mode)
         }
     }
 }
 
 /// Converts plain (unmodified) keys.
-fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
+fn convert_plain_key(key: Key, mode: CursorKeyMode) -> Option<PtyInputEvent> {
     match key {
         Key::Character(ch) => Some(PtyInputEvent::Write(ch.to_string().into_bytes())),
 
@@ -166,6 +185,7 @@ fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
                 shift: false,
                 alt: false,
             },
+            mode,
         ),
 
         Key::FunctionKey(func) => convert_function_key(
@@ -182,10 +202,10 @@ fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
 }
 
 /// Converts modified keys using algorithmic approach.
-fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEvent> {
+fn convert_modified_key(key: Key, modifiers: ModifierState, mode: CursorKeyMode) -> Option<PtyInputEvent> {
     match key {
         Key::Character(ch) => Some(convert_character_with_modifiers(ch, modifiers)),
-        Key::SpecialKey(special) => convert_special_key(special, modifiers),
+        Key::SpecialKey(special) => convert_special_key(special, modifiers, mode),
         Key::FunctionKey(func) => convert_function_key(func, modifiers),
         Key::KittyKeyboardProtocol(_) => None,
     }
@@ -447,6 +467,7 @@ fn get_ctrl_code_extended(ch: char) -> Option<u8> {
 fn convert_special_key(
     special: SpecialKey,
     modifiers: ModifierState,
+    mode: CursorKeyMode,
 ) -> Option<PtyInputEvent> {
     // Plain special keys (no modifiers).
     if modifiers
@@ -479,27 +500,27 @@ fn convert_special_key(
             )),
             SpecialKey::Up => Some(PtyInputEvent::SendControl(
                 ControlSequence::ArrowUp,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::Down => Some(PtyInputEvent::SendControl(
                 ControlSequence::ArrowDown,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::Right => Some(PtyInputEvent::SendControl(
                 ControlSequence::ArrowRight,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::Left => Some(PtyInputEvent::SendControl(
                 ControlSequence::ArrowLeft,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::Home => Some(PtyInputEvent::SendControl(
                 ControlSequence::Home,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::End => Some(PtyInputEvent::SendControl(
                 ControlSequence::End,
-                CursorKeyMode::default(),
+                mode,
             )),
             SpecialKey::PageUp => Some(PtyInputEvent::SendControl(
                 ControlSequence::PageUp,
@@ -664,6 +685,35 @@ fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> PtyInputEvent {
 #[cfg(test)]
 mod tests {
     use crate::{CursorKeyMode, Key, KeyPress, KeyState, ModifierKeysMask, PtyInputEvent};
+
+    #[test]
+    fn test_home_and_end_follow_the_terminal_cursor_key_mode() {
+        use crate::{OfsBufVT100, SpecialKey, vp_height, vp_width};
+
+        let mut terminal = OfsBufVT100::new_empty(vp_height(5) + vp_width(10));
+        let home = KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Home),
+        };
+        let end = KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::End),
+        };
+        let bytes_of = |terminal: &OfsBufVT100, key| match terminal
+            .keypress_to_pty_input_event(key)
+        {
+            Some(PtyInputEvent::SendControl(ctrl, mode)) => ctrl.to_bytes(mode).to_vec(),
+            other => panic!("Expected SendControl event, got {other:?}"),
+        };
+
+        assert_eq!(bytes_of(&terminal, home), b"\x1b[H");
+        assert_eq!(bytes_of(&terminal, end), b"\x1b[F");
+
+        let _unused = terminal.apply_ansi_bytes("\x1b[?1h");
+        assert_eq!(bytes_of(&terminal, home), b"\x1bOH");
+        assert_eq!(bytes_of(&terminal, end), b"\x1bOF");
+
+        let _unused = terminal.apply_ansi_bytes("\x1b[?1l");
+        assert_eq!(bytes_of(&terminal, home), b"\x1b[H");
+    }
 
     #[test]
     fn test_plain_char_conversion() {
