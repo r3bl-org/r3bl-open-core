@@ -299,7 +299,7 @@ fn make_non_root_box_with_style(
             height_pc,
         },
         maybe_computed_style: maybe_cascaded_style,
-        insertion_pos_for_next_box: None,
+        insertion_pos_for_next_box: Some(origin_pos),
     }
 }
 
