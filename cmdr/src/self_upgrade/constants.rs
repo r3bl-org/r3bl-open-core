@@ -117,9 +117,18 @@ pub mod manifest_timeouts {
     pub const DEDICATED_THREAD_CHECK_COOLDOWN: Duration = Duration::from_hours(1);
 }
 
-/// OS thread naming constants for the self-upgrade engine.
+/// OS thread naming constants for the [`self_upgrade`] [Control Plane] (see [Thread
+/// Model]).
+///
+/// [`self_upgrade`]: mod@crate::self_upgrade
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 pub mod check_thread {
-    /// Thread name assigned to the dedicated version-check OS thread.
+    /// Thread name assigned to the dedicated version-check OS thread spawned by the
+    /// [Control Plane] (see [Thread Model]).
+    ///
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     pub const CHECK_THREAD_NAME: &str = "self-upgrade-check";
 }
 

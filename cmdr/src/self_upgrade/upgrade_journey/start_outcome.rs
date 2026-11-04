@@ -3,7 +3,7 @@
 use std::process::{ExitCode, Termination};
 
 /// Outcome of an explicit `--upgrade` ([`UpgradeStrategy::Immediate`]) run inside
-/// [`StartupOutcome::UpgradedAndExit`].
+/// [`StartOutcome::UpgradedAndExit`].
 ///
 /// Uses a `Copy` domain enum instead of `miette::Result<()>` so [`UserFeedbackChannel`]
 /// remains the single output emitter (preventing `miette`'s `Termination` handler from
@@ -47,7 +47,7 @@ impl Termination for ImmediateUpgradeResult {
 ///
 /// [start]: crate::self_upgrade::UpgradeJourney::start
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StartupOutcome {
+pub enum StartOutcome {
     /// `--upgrade` ([`UpgradeStrategy::Immediate`]) executed; `main()` should exit with
     /// [`ImmediateUpgradeResult::exit_code`] (`0` on [`Succeeded`], `1` on [`Failed`]).
     ///

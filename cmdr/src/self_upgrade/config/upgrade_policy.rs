@@ -1,5 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::super::super::manifest_timeouts;
+use std::time::Duration;
+
 /// A self-upgrade policy for a binary invocation, stored in [`UpgradeConfig`].
 ///
 /// 1. CLI binaries convert [`UpgradeCLIArgs`] into [`UpgradePolicy`] at the
@@ -80,8 +83,7 @@ pub enum UpgradeStrategy {
 
 mod impl_upgrade_strategy {
     #[allow(clippy::wildcard_imports)]
-    use super::{super::super::manifest_timeouts, *};
-    use std::time::Duration;
+    use super::*;
 
     impl Default for UpgradeStrategy {
         fn default() -> Self { Self::DedicatedThread(UpgradeActionOnExit::default()) }
@@ -113,7 +115,7 @@ mod impl_upgrade_strategy {
 /// [`Checking`] and unpacked into [`UpgradeAvailable`] once `remote_version >
 /// local_version` is verified. Because [`UpgradePolicy::Disabled`] and
 /// [`UpgradeStrategy::Immediate`][2] are handled earlier in the [`UpgradeJourney`]
-/// typestate pipeline, neither is representable at application exit.
+/// typestate state machine, neither is representable at application exit.
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// [`self_upgrade`] module documentation.

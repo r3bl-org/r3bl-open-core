@@ -1,21 +1,46 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// Convenience macro to construct an [`UpgradeJourney<NotStarted>`]. It creates an
-/// [`UpgradeConfig`]:
-/// 1. Automatically captures the calling crate's compile-time identity via
-///    [`env!("CARGO_PKG_NAME")`][env] and `env!("CARGO_PKG_VERSION_*")`.
-/// 2. Converts [`UpgradeCLIArgs`] into [`UpgradePolicy`].
-/// 3. Passes [`EndpointUrl::default_manifest_url()`] for the manifest URL (so
-///    [`UpgradeConfig::new()`] defaults to [`R3BL_VERSIONS_JSONC_URL`]).
-/// 4. Passes [`CooldownPolicy::default()`].
+/// Convenience macro to construct an [`UpgradeJourney`] in its initial [`NotStarted`]
+/// typestate, which serves as the main entry point for the self-upgrade process.
 ///
-/// For full explicit control (such as custom URL overrides or
-/// [`CooldownPolicy::Disabled`] / [`CooldownPolicy::CustomTimestampFilePath`] in unit
-/// tests), construct [`UpgradeConfig::new()`] (with an explicit [`UpgradePolicy`]) and
-/// pass it to [`UpgradeJourney::new()`] directly.
+/// It does the following:
+/// 1. Accepts a [`UserFeedbackChannel`] and [`UpgradeCLIArgs`] which are passed to it by
+///    the caller (binary crate `main()` function).
+/// 2. Then it creates an [`UpgradeConfig`] from:
+///    - the passed [`UserFeedbackChannel`],
+///    - an [`UpgradePolicy`] converted from [`UpgradeCLIArgs`],
+///    - the calling crate's compile-time package identity, and
+///    - the default [`EndpointUrl`] and [`CooldownPolicy`].
+/// 3. And finally returns an [`UpgradeJourney<NotStarted>`] ready to [`.start()`].
+///
+/// For custom overrides (in tests to pass custom URLs or [`CooldownPolicy`]), construct
+/// [`UpgradeConfig::new()`] and pass it to [`UpgradeJourney::new()`] directly.
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// [`self_upgrade`] module documentation.
+///
+/// # Examples
+///
+/// ```
+/// use clap::Parser;
+/// use r3bl_cmdr::{UpgradeActionOnExit, UpgradeCLIArgs, UpgradePolicy, UpgradeStrategy,
+///                 UserFeedbackChannel, upgrade_journey};
+///
+/// // In production, a binary flattens `UpgradeCLIArgs` into its `CLIArg` struct,
+/// // by calling `let cli_arg = CLIArg::parse()`, then passes `cli_arg.upgrade_args`
+/// // into `upgrade_journey!`.
+/// // In this doctest (where there are no OS CLI args), we call `parse_from`
+/// // directly on `UpgradeCLIArgs` to simulate what clap produces:
+/// let upgrade_args =
+///     UpgradeCLIArgs::parse_from(["my-binary", "--upgrade-behavior", "prompt-to-upgrade"]);
+/// let journey = upgrade_journey!(UserFeedbackChannel::Stderr, upgrade_args);
+/// assert_eq!(
+///     journey.get_config().get_upgrade_policy(),
+///     UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+///         UpgradeActionOnExit::PromptToUpgrade
+///     ))
+/// );
+/// ```
 ///
 /// # Why provide a declarative macro instead of a constructor?
 ///
@@ -34,40 +59,15 @@
 ///    user runs the compiled binary on their machine.
 /// 4. **Compile-time version construction (infallible at runtime)**: Cargo's pre-split
 ///    `CARGO_PKG_VERSION_{MAJOR,MINOR,PATCH,PRE}` variables are converted inside a `const
-///    { ... }` block via [`CrateVersion::from_cargo_parts`], so any pre-release or
+///    { ... }` block via [`CrateVersion::from_cargo_parts`][1], so any pre-release or
 ///    out-of-range `Cargo.toml` version fails at compile time (`cargo check` / `cargo
 ///    build`) and [`upgrade_journey!`] can never panic or fail at runtime.
 ///
-/// # Examples
-///
-/// ```
-/// use clap::Parser;
-/// use r3bl_cmdr::{UpgradeActionOnExit, UpgradeCLIArgs, UpgradePolicy, UpgradeStrategy,
-///                 UserFeedbackChannel, upgrade_journey};
-///
-/// // In production, a binary flattens `UpgradeCLIArgs` into its `CLIArg` struct,
-/// // by calling `let cli_arg = CLIArg::parse()`, then passes `cli_arg.upgrade_args`
-/// // into `upgrade_journey!`.
-/// // In this doctest (where there are no OS CLI args), we call `parse_from`
-/// // directly on `UpgradeCLIArgs` to simulate what clap produces:
-/// let upgrade_args =
-///     UpgradeCLIArgs::parse_from(["my-binary", "--upgrade-behavior", "prompt-to-upgrade"]);
-/// let journey = upgrade_journey!(UserFeedbackChannel::Stderr, upgrade_args);
-/// assert_eq!(
-///     journey.config().get_upgrade_policy(),
-///     UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
-///         UpgradeActionOnExit::PromptToUpgrade
-///     ))
-/// );
-/// ```
-///
-/// [`CooldownPolicy::CustomTimestampFilePath`]: crate::self_upgrade::CooldownPolicy::CustomTimestampFilePath
-/// [`CooldownPolicy::default()`]: crate::self_upgrade::CooldownPolicy::default
-/// [`CooldownPolicy::Disabled`]: crate::self_upgrade::CooldownPolicy::Disabled
-/// [`CrateVersion::from_cargo_parts`]: crate::self_upgrade::CrateVersion::from_cargo_parts
-/// [`EndpointUrl::default_manifest_url()`]: crate::self_upgrade::EndpointUrl::default_manifest_url
+/// [1]: crate::self_upgrade::CrateVersion::from_cargo_parts
+/// [`.start()`]: crate::self_upgrade::UpgradeJourney::start
+/// [`CooldownPolicy`]: crate::self_upgrade::CooldownPolicy
+/// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
-/// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs
@@ -75,30 +75,42 @@
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
 /// [`UpgradeJourney::new()`]: crate::self_upgrade::UpgradeJourney::new
 /// [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
+/// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
+/// [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
 /// [env]: std::env!
 /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
 #[macro_export]
 macro_rules! upgrade_journey {
-    ($user_feedback_channel:expr, $upgrade_cli_args:expr) => {
-        $crate::UpgradeJourney::<$crate::NotStarted>::new($crate::UpgradeConfig::new(
-            ::core::env!("CARGO_PKG_NAME"),
-            // This const block ensures that from_cargo_parts is evaluated at compile
-            // time; without it, this expression would evaluate at runtime.
-            const {
-                $crate::CrateVersion::from_cargo_parts(
-                    ::core::env!("CARGO_PKG_VERSION_MAJOR"),
-                    ::core::env!("CARGO_PKG_VERSION_MINOR"),
-                    ::core::env!("CARGO_PKG_VERSION_PATCH"),
-                    ::core::env!("CARGO_PKG_VERSION_PRE"),
-                )
-            },
+    ($user_feedback_channel:expr, $upgrade_cli_args:expr) => {{
+        let crate_name = ::core::env!("CARGO_PKG_NAME");
+
+        // This const block ensures that from_cargo_parts is evaluated at compile
+        // time; without it, this expression would evaluate at runtime.
+        let current_version = const {
+            $crate::CrateVersion::from_cargo_parts(
+                ::core::env!("CARGO_PKG_VERSION_MAJOR"),
+                ::core::env!("CARGO_PKG_VERSION_MINOR"),
+                ::core::env!("CARGO_PKG_VERSION_PATCH"),
+                ::core::env!("CARGO_PKG_VERSION_PRE"),
+            )
+        };
+
+        let upgrade_policy = $crate::UpgradePolicy::from($upgrade_cli_args);
+        let manifest_url = $crate::EndpointUrl::default_manifest_url();
+        let cooldown_policy = $crate::CooldownPolicy::default();
+
+        let config = $crate::UpgradeConfig::new(
+            crate_name,
+            current_version,
             $user_feedback_channel,
-            $crate::UpgradePolicy::from($upgrade_cli_args),
-            $crate::EndpointUrl::default_manifest_url(),
-            $crate::CooldownPolicy::default(),
-        ))
-    };
+            upgrade_policy,
+            manifest_url,
+            cooldown_policy,
+        );
+
+        $crate::UpgradeJourney::<$crate::NotStarted>::new(config)
+    }};
 }
 
 #[cfg(test)]

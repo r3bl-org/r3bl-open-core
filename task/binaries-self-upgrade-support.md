@@ -359,7 +359,7 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
     - [x] `upgrade_journey!` macro, `UpgradeJourney<State>` typestate machine across 9
           states (`NotStarted`, `Disabled`, `CooldownSkipped`, `Checking`, `UpToDate`,
           `UpgradeAvailable`, `CheckFailed`, `Upgrading`, `Completed`) in
-          `upgrade_journey/typestates/`, `StartupOutcome`
+          `upgrade_journey/typestates/`, `StartOutcome`
           (`UpgradedAndExit(ImmediateUpgradeResult)`, `ContinueApplication`,
           `AlreadyStarted`), and `SINGLETON` (`UpgradeCheckStatus` +
           `thread_check_handle: Option<JoinHandle<()>>` with
@@ -406,7 +406,7 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
       `env-source` (`cmdr/src/env_source/clap_config.rs`).
 - [ ] Invoke `upgrade_journey!(channel, cli_arg.upgrade_args).start()` at startup in
       `cmdr/src/bin/giti.rs`, `cmdr/src/bin/edi.rs`, and `cmdr/src/bin/env-source.rs`
-      (exiting immediately on `StartupOutcome::UpgradedAndExit`), and invoke
+      (exiting immediately on `StartOutcome::UpgradedAndExit`), and invoke
       `UpgradeCheckStatus::handle_upgrade_on_exit()` before exit.
 - [ ] **Output routing & latency for `env-source`**:
     - [ ] `env-source` is a synchronous shell startup tool whose `stdout` is piped into
@@ -441,7 +441,7 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
       `strip_cargo_subcommand_injection()`).
 - [ ] Start `upgrade_journey!(UserFeedbackChannel::Stdout, cli_arg.upgrade_args).start()`
       in `build-infra/src/bin/cargo-rustdoc-fmt.rs` (handling
-      `StartupOutcome::UpgradedAndExit`) and call
+      `StartOutcome::UpgradedAndExit`) and call
       `UpgradeCheckStatus::handle_upgrade_on_exit()` before exit.
 - [ ] Release archive for `r3bl-build-infra` on `github.com/r3bl-org/r3bl-binaries`
       bundles `cargo-rustdoc-fmt` (and any future binaries added to `build-infra`, such as
@@ -463,7 +463,7 @@ external R3BL binary crates) depend on both `r3bl_tui` and `r3bl-cmdr`:
       `--upgrade` is passed).
 - [ ] Start `upgrade_journey!(UserFeedbackChannel::Stderr, cli_arg.upgrade_args).start()`
       in `rust-analyzer-mcp-server/src/main.rs` (handling
-      `StartupOutcome::UpgradedAndExit`), and invoke
+      `StartOutcome::UpgradedAndExit`), and invoke
       `UpgradeCheckStatus::handle_upgrade_on_exit()` at shutdown to guarantee `stdout`
       JSON-RPC message transport remains 100% uncorrupted.
 - [ ] Release archive for `r3bl-rust-analyzer-mcp-server` on
@@ -915,14 +915,14 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
 
 3. **Single Entry Point (`UpgradeJourney::<NotStarted>::start`) & Coordinated
    `SINGLETON`**:
-    - Calling `.start(self) -> StartupOutcome` atomically claims `SINGLETON` if its status
+    - Calling `.start(self) -> StartOutcome` atomically claims `SINGLETON` if its status
       is `UpgradeCheckStatus::NotStarted`. Any subsequent `.start()` call in the same
       process leaves `SINGLETON` untouched, spawns zero threads, logs via
-      `DEBUG_SELF_UPGRADE`, and returns `StartupOutcome::AlreadyStarted`.
-    - `StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult)` returns a `Copy` domain
-      enum (`Succeeded | Failed`, with `exit_code(self) -> std::process::ExitCode`)
-      instead of `miette::Result<()>` so `UserFeedbackChannel` remains the single output
-      emitter (preventing duplicate `stderr` errors and `Quiet` leaks in
+      `DEBUG_SELF_UPGRADE`, and returns `StartOutcome::AlreadyStarted`.
+    - `StartOutcome::UpgradedAndExit(ImmediateUpgradeResult)` returns a `Copy` domain enum
+      (`Succeeded | Failed`, with `exit_code(self) -> std::process::ExitCode`) instead of
+      `miette::Result<()>` so `UserFeedbackChannel` remains the single output emitter
+      (preventing duplicate `stderr` errors and `Quiet` leaks in
       `fn main() -> CommonResult`):
 
         ```rust
@@ -933,7 +933,7 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
         }
 
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        pub enum StartupOutcome {
+        pub enum StartOutcome {
             /// `--upgrade` executed; `main()` exits (`0` on `Succeeded`, `1` on `Failed`).
             UpgradedAndExit(ImmediateUpgradeResult),
             /// Normal startup (`DedicatedThread` or `Disabled`); `main()` continues.
@@ -994,10 +994,10 @@ SINGLETON starts at: UpgradeCheckStatus::NotStarted (thread_check_handle: None)
   │
   ▼
 let journey = upgrade_journey!(UserFeedbackChannel::Stdout, cli_arg.upgrade_args);
-let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeeded | Failed)
+let outcome = journey.start(); // handle StartOutcome::UpgradedAndExit(Succeeded | Failed)
   │
   ├── [Duplicate .start() when SINGLETON != NotStarted]
-  │     └── 0 threads spawned, SINGLETON unchanged ──► StartupOutcome::AlreadyStarted
+  │     └── 0 threads spawned, SINGLETON unchanged ──► StartOutcome::AlreadyStarted
   │
   ├── Path 1: <bin> --upgrade (UpgradePolicy::Enabled(UpgradeStrategy::Immediate), 5s timeout, bypasses cooldown)
   │     └── SINGLETON = Checking(Immediate) ──► manifest check via run_in_tokio:
@@ -1037,9 +1037,9 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
 | **`cmdr/src/self_upgrade/check/check_entry_point.rs`** | `check_for_upgrade(journey: UpgradeJourney<Checking>)`, `check_for_immediate_upgrade(journey: UpgradeJourney<Checking>)`, `try_get_jsonc_manifest_from_url(url: &EndpointUrl, timeout: Duration)` parameterized by `UpgradeStrategy::manifest_timeout()`, and pure `extract_crate_metadata_from_manifest_result` preserving full `format!("{err:#}")` diagnostic chains and touching the `1h` stamp on `UpToDate`. |
 | **`cmdr/src/self_upgrade/upgrade/prompt.rs`**          | `PromptUpgradeDecision` (`UpgradeNow`, `DeclinedByUser`, `SkippedNonInteractive`) returned by `prompt_user_to_upgrade` (eliminating boolean blindness on non-interactive terminals).                                                                                                                                                                                                                               |
 | **`cmdr/src/self_upgrade/upgrade/bin_name.rs`**        | `get_current_bin_name()` (replaces deleted `metadata_resolver.rs` and obsolete `get_remote_crate_metadata()`).                                                                                                                                                                                                                                                                                                     |
-| **`cmdr/src/self_upgrade/upgrade_journey/`**           | Hygiene-hardened `upgrade_journey!` macro (`upgrade_journey_macro.rs`), `UpgradeJourney<State>` (`upgrade_journey_struct.rs`), 9 per-file typestate structs (`typestates/{not_started..completed}.rs`), `pub(in crate::self_upgrade) fn into_*` transitions, `UpgradeResolution`, `ImmediateUpgradeResult`, `StartupOutcome` (`startup_outcome.rs`), `.start(self)`, and `Upgrading::execute_action_on_exit`.      |
+| **`cmdr/src/self_upgrade/upgrade_journey/`**           | Hygiene-hardened `upgrade_journey!` macro (`upgrade_journey_macro.rs`), `UpgradeJourney<State>` (`upgrade_journey_struct.rs`), 9 per-file typestate structs (`typestates/{not_started..completed}.rs`), `pub(in crate::self_upgrade) fn into_*` transitions, `UpgradeResolution`, `ImmediateUpgradeResult`, `StartOutcome` (`start_outcome.rs`), `.start(self)`, and `Upgrading::execute_action_on_exit`.          |
 | **`cmdr/src/self_upgrade/upgrade_check_cache.rs`**     | Private `UpgradeSingletonState` (`status` + `thread_check_handle`), 9-variant `UpgradeCheckStatus` (dead `try_get_crate_metadata` and `is_upgrade_available` removed), atomic single-start claim, deadlock-safe `join()` + `UpgradeAvailable -> Upgrading -> Completed` exit handling, and poison-safe + thread-draining `#[cfg(test)] pub(crate) fn reset_for_testing()`.                                         |
-| **`cmdr/src/self_upgrade/mod.rs`**                     | Module-level narrative and ASCII diagram covering all 3 binary execution paths, Scenario 2a/2b/2c (`thread_check_handle` join + `1h` `mtime` cooldown), `5s` vs. `2s` timeouts, `ImmediateUpgradeResult`, and `StartupOutcome::AlreadyStarted`.                                                                                                                                                                    |
+| **`cmdr/src/self_upgrade/mod.rs`**                     | Module-level narrative and ASCII diagram covering all 3 binary execution paths, Scenario 2a/2b/2c (`thread_check_handle` join + `1h` `mtime` cooldown), `5s` vs. `2s` timeouts, `ImmediateUpgradeResult`, and `StartOutcome::AlreadyStarted`.                                                                                                                                                                      |
 
 #### Implementation Steps for Phase 2.2
 
@@ -1083,7 +1083,7 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
     - Expand `UpgradeJourney<State>` and `UpgradeCheckStatus` to 9 states (`NotStarted`,
       `Disabled`, `CooldownSkipped`, `Checking`, `UpToDate`, `UpgradeAvailable`,
       `CheckFailed`, `Upgrading`, `Completed`) with `pub(super)` `into_*` transitions,
-      `ImmediateUpgradeResult`, and `StartupOutcome::AlreadyStarted`.
+      `ImmediateUpgradeResult`, and `StartOutcome::AlreadyStarted`.
     - Migrate architectural rustdoc + hygiene-hardened `::core::env!` expansion onto
       `upgrade_journey!`.
     - Delete dead `try_get_crate_metadata()` and `is_upgrade_available()` from
@@ -1103,7 +1103,7 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
       (`# Main Entry Point: [UpgradeJourney] & Typestate Lifecycle` and intra-doc links)
       to document all 3 binary execution paths, Scenario 2a/2b/2c (`thread_check_handle`
       join + `1h` `mtime` cooldown), `5s` vs. `2s` timeouts, `ImmediateUpgradeResult`, and
-      `StartupOutcome::AlreadyStarted`.
+      `StartOutcome::AlreadyStarted`.
 - [x] Consolidate `UpgradePolicy` into immutable `UpgradeConfig` (Variant 2A):
     - Move `upgrade_policy: UpgradePolicy` + `get_upgrade_policy(&self) -> UpgradePolicy`
       into `UpgradeConfig` (`cmdr/src/self_upgrade/config/upgrade_config.rs`) and update
@@ -1289,8 +1289,8 @@ let outcome = journey.start(); // handle StartupOutcome::UpgradedAndExit(Succeed
 `cmdr/src/self_upgrade/upgrade_journey_public_api.rs` has grown to 1,486 lines, mixing the
 declarative `upgrade_journey!` macro, the `UpgradeJourney<State>` container struct, all 9
 typestate structs and their state-transition/execution `impl` blocks, startup outcome
-types (`StartupOutcome`, `ImmediateUpgradeResult`), Tokio/check-thread runtime helpers,
-and 11 integration/unit tests in a single monolithic file.
+types (`StartOutcome`, `ImmediateUpgradeResult`), Tokio/check-thread runtime helpers, and
+11 integration/unit tests in a single monolithic file.
 
 #### Selected Design (`cmdr/src/self_upgrade/upgrade_journey/` + `typestates/`)
 
@@ -1306,7 +1306,7 @@ cmdr/src/self_upgrade/
     ├── mod.rs                      (private submodules + `pub use *;` barrel re-exports + lifecycle `#[cfg(test)] mod tests`)
     ├── upgrade_journey_macro.rs    (`#[macro_export] macro_rules! upgrade_journey`)
     ├── upgrade_journey_struct.rs   (`pub struct UpgradeJourney<State: UpgradeJourneyStateMarker>` + `config()` / `state()` accessors)
-    ├── startup_outcome.rs          (`pub enum StartupOutcome`, `pub enum ImmediateUpgradeResult`, `Termination` impl)
+    ├── start_outcome.rs          (`pub enum StartOutcome`, `pub enum ImmediateUpgradeResult`, `Termination` impl)
     ├── tokio_thread_runner.rs      (`run_in_tokio_logged`, `run_on_dedicated_check_thread`, `extract_panic_payload_message` + unit tests)
     └── typestates/
         ├── mod.rs                  (`pub trait UpgradeJourneyStateMarker {}` + private submodules + `pub use *;` barrel re-exports)
@@ -1351,7 +1351,7 @@ cmdr/src/self_upgrade/
       `check_failed.rs`, `upgrading.rs`, `completed.rs`), preserving all rustdoc comments
       and intra-doc links byte-for-byte.
 - [x] Create `cmdr/src/self_upgrade/upgrade_journey/` files (`upgrade_journey_macro.rs`,
-      `upgrade_journey_struct.rs`, `startup_outcome.rs`, `tokio_thread_runner.rs`, and
+      `upgrade_journey_struct.rs`, `start_outcome.rs`, `tokio_thread_runner.rs`, and
       `mod.rs` with barrel re-exports and lifecycle tests).
 - [x] Update `cmdr/src/self_upgrade/mod.rs` to replace
       `mod upgrade_journey_public_api; pub use upgrade_journey_public_api::*;` with
@@ -1416,15 +1416,19 @@ Plane**) across `self_upgrade/`:
   `UpgradeJourney<State>` is active, never import or touch `UpgradeJourney` or
   `UpgradeCheckStatus`, and take only the configuration and metadata parameters they need
   (`&UpgradeConfig`, `&EndpointUrl`, `&CrateMetadata`).
-- **Control Plane (Typestate Orchestration: `upgrade_journey/typestates/<state>.rs`)**:
-  Every active execution step on `UpgradeJourney<Checking>` and
-  `UpgradeJourney<Upgrading>` is a `pub(in crate::self_upgrade)` method consuming `self`
-  by value and returning the next typestate (or a strategy-specific outcome enum with zero
-  `unreachable!` branches), **never** calling `UpgradeCheckStatus::set(...)`.
-- **Control Plane (Centralized Singleton Lifecycle: `not_started.rs` &
-  `upgrade_check_cache.rs`)**: Only the two lifecycle orchestrators
-  (`UpgradeJourney::<NotStarted>::start` and `UpgradeCheckStatus::handle_upgrade_on_exit`)
-  read or write `UpgradeCheckStatus`.
+- **Control Plane (Typestate Orchestration, Lifecycle & Threading: `upgrade_journey/` &
+  `upgrade_check_cache.rs`)**:
+  - **Typestate Orchestration (`upgrade_journey/typestates/<state>.rs`)**: Every active
+    execution step on `UpgradeJourney<Checking>` and `UpgradeJourney<Upgrading>` is a
+    `pub(in crate::self_upgrade)` method consuming `self` by value and returning the next
+    typestate (or a strategy-specific outcome enum with zero `unreachable!` branches),
+    **never** calling `UpgradeCheckStatus::set(...)`.
+  - **Centralized Singleton Lifecycle & Threading (`not_started.rs`,
+    `tokio_thread_runner.rs` & `upgrade_check_cache.rs`)**: Only the two lifecycle
+    orchestrators (`UpgradeJourney::<NotStarted>::start` and
+    `UpgradeCheckStatus::handle_upgrade_on_exit`) read or write `UpgradeCheckStatus`,
+    and coordinate dedicated check-thread spawning, Tokio runtime execution, and joining
+    via `UpgradeSingletonState::thread_check_handle`.
 
 ##### 1. Pure Manifest Fetch Service (`cmdr/src/self_upgrade/check/fetch_manifest.rs`)
 
@@ -1579,7 +1583,7 @@ where
 
 - Add `## Control Plane vs. Execution Plane` in `cmdr/src/self_upgrade/mod.rs` separating
   **deciding what to do** from **doing the work**:
-    - **Control Plane (State Machine & Lifecycle)**: `upgrade_journey/` and
+    - **Control Plane (State Machine, Lifecycle & Threading)**: `upgrade_journey/` and
       `upgrade_check_cache.rs`.
     - **Execution Plane (Network, Disk & Build Operations)**: `check/` and `upgrade/`.
 - Add upward rustdoc links (using `[Control Plane]` and `[Execution Plane]` reference
@@ -1629,36 +1633,46 @@ where
       tests (`cargo test -p r3bl-cmdr --lib self_upgrade -q --message-format=short`) to
       verify compilation, formatting, rustdoc links, and test coverage.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [ ] `cmdr/src/self_upgrade/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/check/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
-    - [ ] `cmdr/src/self_upgrade/check/cooldown.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_macro.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/startup_outcome.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/journey_integration_tests.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/disabled.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/cooldown_skipped.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/up_to_date.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrade_available.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/prompt.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/upgrade_source.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/release.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/target.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/ui_strings.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/feedback_device.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_check_cache.rs`
+      implementation and ensure no regressions (ordered top-down: Control Plane ->
+      Execution Plane).
+    - [x] `cmdr/src/self_upgrade/mod.rs`
+    - **Step A: Entry Point, Config & Struct Envelope (Control Plane)**
+        - [x] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
+        - [x] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_macro.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`
+        - [ ] `cmdr/src/self_upgrade/config/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/config/upgrade_config.rs`
+        - [ ] `cmdr/src/self_upgrade/config/upgrade_policy.rs`
+        - [ ] `cmdr/src/self_upgrade/config/cli_arg.rs`
+        - [ ] `cmdr/src/self_upgrade/config/user_feedback_channel.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs`
+    - **Step B: Core Orchestrator & Active Typestates (Control Plane)**
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_check_cache.rs`
+    - **Step C: Leaf Typestates & Journey Integration Tests (Control Plane)**
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/disabled.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/cooldown_skipped.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/up_to_date.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrade_available.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/journey_integration_tests.rs`
+    - **Step D: Stateless Services & Value Types (Execution Plane)**
+        - [ ] `cmdr/src/self_upgrade/check/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+        - [ ] `cmdr/src/self_upgrade/check/cooldown.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/prompt.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/upgrade_source.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/release.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/target.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/ui_strings.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/feedback_device.rs`
     - [ ] `task/binaries-self-upgrade-support.md`
 
 ### Phase 3: Bootstrap, Manifest & Release Script
@@ -1691,7 +1705,7 @@ where
       `env-source` (`cmdr/src/env_source/clap_config.rs`).
 - [ ] Start `upgrade_journey!` at startup in `cmdr/src/bin/giti.rs`,
       `cmdr/src/bin/edi.rs`, and `cmdr/src/bin/env-source.rs` (exiting on
-      `StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult)`), and invoke
+      `StartOutcome::UpgradedAndExit(ImmediateUpgradeResult)`), and invoke
       `UpgradeCheckStatus::handle_upgrade_on_exit()` before exit:
     - `giti`:
       `upgrade_journey!(UserFeedbackChannel::Stdout, cli_arg.upgrade_args).start()`
@@ -1723,7 +1737,7 @@ where
       `build-infra/src/cargo_rustdoc_fmt/cli_arg.rs`.
 - [ ] Start `upgrade_journey!(UserFeedbackChannel::Stdout, cli_arg.upgrade_args).start()`
       in `build-infra/src/bin/cargo-rustdoc-fmt.rs` (exiting on
-      `StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult)`) and call
+      `StartOutcome::UpgradedAndExit(ImmediateUpgradeResult)`) and call
       `UpgradeCheckStatus::handle_upgrade_on_exit()` before exit.
 - [ ] Ensure `--upgrade-behavior` explicitly controls exit behavior without inspecting
       magic environment variables like `CI`.
@@ -1742,7 +1756,7 @@ where
       `rust-analyzer-mcp-server/src/cli_arg.rs`.
 - [ ] Start `upgrade_journey!(UserFeedbackChannel::Stderr, cli_arg.upgrade_args).start()`
       at startup in `rust-analyzer-mcp-server/src/main.rs` (exiting on
-      `StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult)`) and invoke
+      `StartOutcome::UpgradedAndExit(ImmediateUpgradeResult)`) and invoke
       `UpgradeCheckStatus::handle_upgrade_on_exit()` at shutdown.
 - [ ] Ensure `--upgrade-behavior` explicitly controls shutdown behavior without inspecting
       magic environment variables like `CI`.

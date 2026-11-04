@@ -6,13 +6,16 @@ use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, ManifestCheckError,
             UpgradeActionOnExit, UpgradeCheckStatus, UpgradeJourney, UpgradeStrategy,
             fetch_crate_metadata_from_manifest};
 
-/// Typestate while querying [`R3BL_VERSIONS_JSONC_URL`] (either synchronously via
-/// [`UpgradeStrategy::Immediate`] or on the dedicated check thread via
-/// [`UpgradeStrategy::DedicatedThread`]).
+/// Typestate while querying [`R3BL_VERSIONS_JSONC_URL`] (either synchronously on the
+/// current thread via [`UpgradeStrategy::Immediate`] or on the dedicated check thread via
+/// [`UpgradeStrategy::DedicatedThread`]). This type is part of the [Control Plane] (see
+/// [Thread Model]).
 ///
 /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
 /// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Checking {
     /// Active [`UpgradeStrategy`] (`Immediate` or
@@ -78,8 +81,9 @@ impl UpgradeJourney<Checking> {
         }
     }
 
-    /// Consumes `self` on the dedicated version-check thread, queries the JSONC manifest
-    /// via [`fetch_crate_metadata_from_manifest`] using
+    /// Consumes `self` on the dedicated version-check thread (in the [Control Plane]; see
+    /// [Thread Model]), queries the JSONC manifest via
+    /// [`fetch_crate_metadata_from_manifest`] (in the [Execution Plane]) using
     /// [`UpgradeStrategy::manifest_timeout`], touches the `1h` cooldown timestamp file
     /// when [`UpToDate`], and returns [`DedicatedCheckOutcome`] without mutating
     /// [`UpgradeCheckStatus`].
@@ -88,6 +92,9 @@ impl UpgradeJourney<Checking> {
     /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
     pub(in crate::self_upgrade) async fn check_for_dedicated_thread_upgrade(
         self,
@@ -126,18 +133,21 @@ impl UpgradeJourney<Checking> {
         }
     }
 
-    /// Consumes `self` synchronously during an explicit `--upgrade`
-    /// ([`UpgradeStrategy::Immediate`]) run, queries the JSONC manifest via
-    /// [`fetch_crate_metadata_from_manifest`] using
-    /// [`UpgradeStrategy::manifest_timeout`], touches the `1h` cooldown timestamp file
-    /// when [`UpToDate`], and returns [`ImmediateCheckOutcome`] without mutating
-    /// [`UpgradeCheckStatus`].
+    /// Consumes `self` synchronously on the current thread during an explicit `--upgrade`
+    /// ([`UpgradeStrategy::Immediate`]) run (in the [Control Plane]; see [Thread Model]),
+    /// queries the JSONC manifest via [`fetch_crate_metadata_from_manifest`] (in the
+    /// [Execution Plane]) using [`UpgradeStrategy::manifest_timeout`], touches the `1h`
+    /// cooldown timestamp file when [`UpToDate`], and returns [`ImmediateCheckOutcome`]
+    /// without mutating [`UpgradeCheckStatus`].
     ///
     /// [`fetch_crate_metadata_from_manifest`]: crate::self_upgrade::fetch_crate_metadata_from_manifest
     /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
     /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
     pub(in crate::self_upgrade) async fn check_for_immediate_upgrade(
         self,

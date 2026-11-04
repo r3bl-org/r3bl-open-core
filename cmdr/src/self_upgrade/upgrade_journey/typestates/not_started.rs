@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::{ImmediateUpgradeResult, StartupOutcome,
+use super::{super::{ImmediateUpgradeResult, StartOutcome,
                     tokio_thread_runner::{run_in_tokio_logged,
                                           run_on_dedicated_check_thread}},
             Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome,
@@ -16,9 +16,9 @@ use r3bl_tui::TokioRuntimeOutcome;
 ///
 /// # Thread Model
 ///
-/// Depending on the active [`UpgradeStrategy`], state transitions in [`SINGLETON`] are
-/// driven either across a dedicated check thread and the current thread, or entirely on
-/// the current thread:
+/// As part of the [Control Plane], depending on the active [`UpgradeStrategy`], state
+/// transitions in [`SINGLETON`] are driven either across a dedicated check thread and the
+/// current thread, or entirely on the current thread:
 ///
 /// ## Deferred Upgrade on Exit
 ///
@@ -53,7 +53,7 @@ use r3bl_tui::TokioRuntimeOutcome;
 ///
 /// Under [`UpgradeStrategy::Immediate`] (`--upgrade`), no dedicated check thread is
 /// spawned; the **Current Thread** runs both the check and the upgrade inside
-/// [`UpgradeJourney::start`] before returning [`StartupOutcome::UpgradedAndExit`]:
+/// [`UpgradeJourney::start`] before returning [`StartOutcome::UpgradedAndExit`]:
 ///
 /// ```text
 /// CURRENT THREAD (inside journey.start() -> Self::run_immediate_upgrade())
@@ -70,17 +70,18 @@ use r3bl_tui::TokioRuntimeOutcome;
 ///    and sets SINGLETON = Completed
 ///    via UpgradeCheckStatus::set(Completed)
 ///    │
-/// 4. Returns StartupOutcome::UpgradedAndExit(Succeeded | Failed) to caller,
+/// 4. Returns StartOutcome::UpgradedAndExit(Succeeded | Failed) to caller,
 ///    and the binary exits immediately.
 /// ```
 ///
 /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-/// [`StartupOutcome::UpgradedAndExit`]: crate::self_upgrade::StartupOutcome::UpgradedAndExit
+/// [`StartOutcome::UpgradedAndExit`]: crate::self_upgrade::StartOutcome::UpgradedAndExit
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct NotStarted;
 impl UpgradeJourneyStateMarker for NotStarted {}
@@ -111,12 +112,12 @@ impl UpgradeJourney<NotStarted> {
     ///
     /// 1. **Duplicate `.start()` calls**:
     ///    - Leaves [`SINGLETON`] untouched, spawns zero threads, logs via
-    ///      [`DEBUG_SELF_UPGRADE`], and returns [`StartupOutcome::AlreadyStarted`].
+    ///      [`DEBUG_SELF_UPGRADE`], and returns [`StartOutcome::AlreadyStarted`].
     ///
     /// 2. **Immediate upgrade ([`UpgradeStrategy::Immediate`], `--upgrade`)**:
     ///    - Checks the manifest (`5s` timeout, bypassing the `1h` cooldown) and runs
     ///      [`perform_upgrade`] on the current thread if a newer version exists,
-    ///      returning [`StartupOutcome::UpgradedAndExit`].
+    ///      returning [`StartOutcome::UpgradedAndExit`].
     ///
     /// 3. **Deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
     ///   `--upgrade-behavior`)**:
@@ -125,11 +126,11 @@ impl UpgradeJourney<NotStarted> {
     ///      [`UpgradeCheckStatus::CooldownSkipped`], or if expired, spawns the dedicated
     ///      `"self-upgrade-check"` thread for
     ///      [`UpgradeCheckStatus::handle_upgrade_on_exit`] and returns
-    ///      [`StartupOutcome::ContinueApplication`].
+    ///      [`StartOutcome::ContinueApplication`].
     ///
     /// 4. **Disabled ([`UpgradePolicy::Disabled`], `--upgrade-behavior disable`)**:
     ///    - Records [`UpgradeCheckStatus::Disabled`][disabled] with zero threads and zero
-    ///      I/O, returning [`StartupOutcome::ContinueApplication`].
+    ///      I/O, returning [`StartOutcome::ContinueApplication`].
     ///
     /// See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
     /// diagram, and [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
@@ -148,7 +149,7 @@ impl UpgradeJourney<NotStarted> {
     /// [status]: crate::self_upgrade::CooldownPolicy::check_status
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
-    pub fn start(self) -> StartupOutcome {
+    pub fn start(self) -> StartOutcome {
         match self.config.get_upgrade_policy() {
             UpgradePolicy::Disabled => {
                 let config_for_log = self.config.clone();
@@ -158,7 +159,7 @@ impl UpgradeJourney<NotStarted> {
                 ) {
                     return log_duplicate_start(&config_for_log);
                 }
-                StartupOutcome::ContinueApplication
+                StartOutcome::ContinueApplication
             }
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate) => {
                 let config_for_log = self.config.clone();
@@ -168,7 +169,7 @@ impl UpgradeJourney<NotStarted> {
                 ) {
                     return log_duplicate_start(&config_for_log);
                 }
-                StartupOutcome::UpgradedAndExit(Self::run_immediate_upgrade(checking))
+                StartOutcome::UpgradedAndExit(Self::run_immediate_upgrade(checking))
             }
             UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(action_on_exit)) => {
                 let config_for_log = self.config.clone();
@@ -184,7 +185,7 @@ impl UpgradeJourney<NotStarted> {
                         ) {
                             return log_duplicate_start(&config_for_log);
                         }
-                        StartupOutcome::ContinueApplication
+                        StartOutcome::ContinueApplication
                     }
                     CooldownStatus::ExpiredOrMissing => {
                         let checking = self.into_checking(
@@ -236,7 +237,7 @@ impl UpgradeJourney<NotStarted> {
                             }
                         }
 
-                        StartupOutcome::ContinueApplication
+                        StartOutcome::ContinueApplication
                     }
                 }
             }
@@ -343,7 +344,7 @@ impl UpgradeJourney<NotStarted> {
     }
 }
 
-fn log_duplicate_start(config: &UpgradeConfig) -> StartupOutcome {
+fn log_duplicate_start(config: &UpgradeConfig) -> StartOutcome {
     DEBUG_SELF_UPGRADE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
@@ -351,5 +352,5 @@ fn log_duplicate_start(config: &UpgradeConfig) -> StartupOutcome {
             crate_name = %config.get_crate_name(),
         );
     });
-    StartupOutcome::AlreadyStarted
+    StartOutcome::AlreadyStarted
 }

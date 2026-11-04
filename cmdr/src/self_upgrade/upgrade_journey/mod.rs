@@ -3,14 +3,14 @@
 #![rustfmt::skip]
 
 // Private submodules.
-mod startup_outcome;
+mod start_outcome;
 mod tokio_thread_runner;
 mod typestates;
 mod upgrade_journey_macro;
 mod upgrade_journey_struct;
 
 // Public barrel re-exports.
-pub use startup_outcome::*;
+pub use start_outcome::*;
 pub use typestates::*;
 pub use upgrade_journey_struct::*;
 

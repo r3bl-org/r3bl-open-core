@@ -8,13 +8,16 @@ use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnEx
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
 use r3bl_tui::TokioRuntimeOutcome;
 
-/// Typestate while an upgrade or interactive exit prompt is actively executing after the
-/// `SINGLETON` leaf lock has been released (`Checking -> Upgrading` for
-/// [`UpgradeStrategy::Immediate`]; `UpgradeAvailable -> Upgrading` for
-/// [`UpgradeStrategy::DedicatedThread`]).
+/// Typestate while an upgrade or interactive exit prompt is actively executing on the
+/// current thread after the `SINGLETON` leaf lock has been released (`Checking ->
+/// Upgrading` for [`UpgradeStrategy::Immediate`]; `UpgradeAvailable -> Upgrading` for
+/// [`UpgradeStrategy::DedicatedThread`]). This type is part of the [Control Plane] (see
+/// [Thread Model]).
 ///
 /// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Upgrading {
     /// Verified remote [`CrateMetadata`] being installed or presented to the user.

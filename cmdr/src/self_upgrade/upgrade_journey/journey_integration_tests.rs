@@ -87,7 +87,7 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
 
     let disabled_config = make_config(UpgradePolicy::Disabled);
     let first = UpgradeJourney::new(disabled_config.clone());
-    assert_eq2!(first.start(), StartupOutcome::ContinueApplication);
+    assert_eq2!(first.start(), StartOutcome::ContinueApplication);
 
     let expected_status = UpgradeCheckStatus::Disabled(
         UpgradeJourney::new(disabled_config).into_disabled(),
@@ -99,14 +99,14 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
     let dup_immediate = UpgradeJourney::new(make_config(UpgradePolicy::Enabled(
         UpgradeStrategy::Immediate,
     )));
-    assert_eq2!(dup_immediate.start(), StartupOutcome::AlreadyStarted);
+    assert_eq2!(dup_immediate.start(), StartOutcome::AlreadyStarted);
     assert_eq2!(UpgradeCheckStatus::get(), expected_status);
 
     // Duplicate DedicatedThread call must also return AlreadyStarted with 0 threads.
     let dup_thread = UpgradeJourney::new(make_config(UpgradePolicy::Enabled(
         UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto),
     )));
-    assert_eq2!(dup_thread.start(), StartupOutcome::AlreadyStarted);
+    assert_eq2!(dup_thread.start(), StartOutcome::AlreadyStarted);
     assert_eq2!(UpgradeCheckStatus::get(), expected_status);
 }
 
@@ -147,7 +147,7 @@ fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
 
     assert_eq2!(
         outcome,
-        StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
+        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
     );
     assert_eq2!(
         ImmediateUpgradeResult::Succeeded.exit_code(),
@@ -193,7 +193,7 @@ async fn test_path1_immediate_up_to_date_async() {
 
     assert_eq2!(
         outcome,
-        StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
+        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
     );
     assert!(matches!(
         UpgradeCheckStatus::get(),
@@ -227,7 +227,7 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
 
     assert_eq2!(
         fail_outcome,
-        StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
+        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
     );
     assert_eq2!(
         ImmediateUpgradeResult::Failed.exit_code(),
@@ -275,7 +275,7 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
 
     assert_eq2!(
         upg_fail_outcome,
-        StartupOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
+        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
     );
     assert!(!timestamp_file_path.exists());
     match UpgradeCheckStatus::get() {
@@ -318,7 +318,7 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
         .touch(active_cfg.get_crate_name());
 
     let skip_outcome = UpgradeJourney::new(active_cfg).start();
-    assert_eq2!(skip_outcome, StartupOutcome::ContinueApplication);
+    assert_eq2!(skip_outcome, StartOutcome::ContinueApplication);
     assert!(matches!(
         UpgradeCheckStatus::get(),
         UpgradeCheckStatus::CooldownSkipped(_)
@@ -355,7 +355,7 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
     );
 
     let run_outcome = UpgradeJourney::new(expired_cfg.clone()).start();
-    assert_eq2!(run_outcome, StartupOutcome::ContinueApplication);
+    assert_eq2!(run_outcome, StartOutcome::ContinueApplication);
 
     UpgradeCheckStatus::handle_upgrade_on_exit();
     server_handle.join().unwrap();
@@ -396,7 +396,7 @@ fn test_path2_scenario_2c_exit_joins_inflight_check_thread_and_completes() {
     );
 
     let outcome = UpgradeJourney::new(config).start();
-    assert_eq2!(outcome, StartupOutcome::ContinueApplication);
+    assert_eq2!(outcome, StartOutcome::ContinueApplication);
 
     // Immediately invoke exit handler while manifest check is still in flight.
     UpgradeCheckStatus::handle_upgrade_on_exit();
@@ -430,7 +430,7 @@ async fn test_path3_disabled_async_and_sync() {
         CooldownPolicy::Disabled,
     );
     let outcome = UpgradeJourney::new(config.clone()).start();
-    assert_eq2!(outcome, StartupOutcome::ContinueApplication);
+    assert_eq2!(outcome, StartOutcome::ContinueApplication);
     assert_eq2!(
         UpgradeCheckStatus::get(),
         UpgradeCheckStatus::Disabled(UpgradeJourney::new(config).into_disabled())
@@ -470,7 +470,7 @@ fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_co
     );
 
     let outcome = UpgradeJourney::new(config).start();
-    assert_eq2!(outcome, StartupOutcome::ContinueApplication);
+    assert_eq2!(outcome, StartOutcome::ContinueApplication);
 
     UpgradeCheckStatus::handle_upgrade_on_exit();
     server_handle.join().unwrap();

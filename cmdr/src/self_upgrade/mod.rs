@@ -14,13 +14,15 @@
 //!
 //! ## Included in this module: The Engine
 //!
-//! 1. Read and Upgrade Path: Embedded into product binaries via [`upgrade_journey!`] to
-//!    fetch [`R3BL_VERSIONS_JSONC_URL`], check if a newer release exists, and upgrade the
-//!    running binary in-place from pre-compiled release archives (or fall back to
-//!    `crates.io`).
-//! 2. Write Path: Exposes [`JsoncManifest::try_update_crate_in_jsonc`][update-jsonc] so
-//!    external release tooling can update [`R3BL_VERSIONS_JSONC_URL`] entries in-place
-//!    while preserving existing comments and formatting.
+//! 1. Read and Upgrade Path:
+//!    - Embedded into product binaries via [`upgrade_journey!`] to fetch
+//!      [`R3BL_VERSIONS_JSONC_URL`], check if a newer release exists, and upgrade the
+//!      running binary in-place from pre-compiled release archives (or fall back to
+//!      `crates.io`).
+//! 2. Write Path:
+//!    - Exposes [`JsoncManifest::try_update_crate_in_jsonc`][update-jsonc] so external
+//!      release tooling can update [`R3BL_VERSIONS_JSONC_URL`] entries in-place while
+//!      preserving existing comments and formatting.
 //!
 //! ## External to this repository: The Release and Distribution Pipeline
 //!
@@ -56,114 +58,104 @@
 //! # Main Entry Point: [`UpgradeJourney`] & Typestate Lifecycle
 //!
 //! To make illegal states unrepresentable and unify startup, dedicated-thread checks, and
-//! shutdown under a single compiler-verified pipeline, the [`self_upgrade`] engine is
-//! built around three pillars:
+//! shutdown under a single compiler-verified state machine, the [`self_upgrade`] engine
+//! is built around three pillars:
 //!
-//! 1. CLI-to-Domain Boundary ([`UpgradeCLIArgs`] -> [`UpgradePolicy`] ->
-//!    [`UpgradeStrategy`] -> [`UpgradeActionOnExit`]):
-//!    - [`UpgradeCLIArgs`] is an opaque [`clap`] adapter at the CLI edge whose private
-//!      fields prevent invalid flag combinations from being constructed in Rust code.
-//!      Binaries flatten [`UpgradeCLIArgs`] (mutually exclusive [`--upgrade`][u] or
-//!      [`--upgrade-behavior`][ub]) into their argument parser and pass it to
-//!      [`upgrade_journey!`], which converts it at the boundary via
-//!      [`UpgradePolicy::from()`][policy-from] into the pure domain model:
-//!      - [`--upgrade`][u] -> [`UpgradePolicy::Enabled`] wrapping
-//!        [`UpgradeStrategy::Immediate`].
-//!      - [`--upgrade-behavior`][ub] `auto` (default when omitted), `prompt-to-upgrade`,
-//!        or `notify-only` -> [`UpgradePolicy::Enabled`] wrapping
-//!        [`UpgradeStrategy::DedicatedThread`] (carrying the corresponding
-//!        [`UpgradeActionOnExit`]).
-//!      - [`--upgrade-behavior`][ub] `disable` -> [`UpgradePolicy::Disabled`] (where no
-//!        [`UpgradeStrategy`] exists).
-//! 2. [Typestate Pattern] ([`UpgradeJourney<State>`]):
-//!    - [`UpgradeJourney<State>`] encodes the 9-state upgrade machine ([`NotStarted`],
-//!      [`Disabled`], [`CooldownSkipped`], [`Checking`], [`UpToDate`],
-//!      [`UpgradeAvailable`], [`CheckFailed`], [`Upgrading`], and [`Completed`]) in the
-//!      type system by holding immutable [`UpgradeConfig`] alongside `State:
-//!      `[`UpgradeJourneyStateMarker`].
-//!    - Binaries construct [`UpgradeJourney<NotStarted>`] via [`upgrade_journey!`] and
-//!      call [`.start()`], which atomically claims the process-wide singleton (returning
-//!      [`StartupOutcome::AlreadyStarted`] on duplicate calls), or returns
-//!      [`StartupOutcome::UpgradedAndExit`] (carrying [`ImmediateUpgradeResult`]) vs.
-//!      [`StartupOutcome::ContinueApplication`].
-//! 3. Coordinated Process-Wide Singleton ([`UpgradeCheckStatus`]):
-//!    - [`UpgradeCheckStatus`] pairs the active [`UpgradeJourney<State>`] with the
-//!      optional [`JoinHandle<()>`][jh] of the [`CHECK_THREAD_NAME`] OS thread inside a
-//!      leaf [`ScopedMutex`].
-//!    - At shutdown, [`UpgradeCheckStatus::handle_upgrade_on_exit`][9] takes and joins
-//!      any in-flight check thread after releasing the mutex (preventing deadlock and
-//!      ensuring short-lived invocations wait up to
-//!      [`DEDICATED_THREAD_MANIFEST_TIMEOUT`][2] when the
-//!      [`DEDICATED_THREAD_CHECK_COOLDOWN`][1] timestamp file was expired), then
-//!      atomically transitions [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for
-//!      one-shot exit handling.
+//! 1. CLI-to-Domain Boundary
+//!   - [`UpgradeCLIArgs`] is an opaque [`clap`] adapter at the CLI edge whose private
+//!     fields prevent invalid flag combinations from being constructed in Rust code.
+//!   - [`UpgradePolicy`] is the pure domain model for upgrade behavior.
+//!   - Binaries flatten [`UpgradeCLIArgs`] (mutually exclusive [`--upgrade`][u] or
+//!     [`--upgrade-behavior`][ub]) into their argument parser and pass it to
+//!     [`upgrade_journey!`], which converts it at the boundary into [`UpgradePolicy`] via
+//!     [`UpgradePolicy::from()`][policy-from].
 //!
-//! ```text
-//! upgrade_journey!(channel, cli_args).start()
-//! │
-//! ├─ Duplicate .start() ───────────────────────────► AlreadyStarted (no-op)
-//! │
-//! ├─ Disabled (--upgrade-behavior disable)
-//! │  └─ Disabled ──────────────────────────────────► ContinueApplication (no-op at exit)
-//! │
-//! ├─ Enabled(Immediate) (--upgrade)
-//! │  └─ Checking (5s timeout, bypasses 1h cooldown)
-//! │     ├─ UpToDate ──► touch timestamp file ──────► UpgradedAndExit(Succeeded)
-//! │     ├─ CheckFailed ────────────────────────────► UpgradedAndExit(Failed)
-//! │     └─ Upgrading ──► perform_upgrade()
-//! │        ├─ Completed(Upgraded) ──► touch file ──► UpgradedAndExit(Succeeded)
-//! │        └─ Completed(UpgradeFailed) ────────────► UpgradedAndExit(Failed)
-//! │
-//! └─ Enabled(DedicatedThread(action)) (default: Auto | PromptToUpgrade | NotifyOnly)
-//!    ├─ Active 1h cooldown ──► CooldownSkipped ────► ContinueApplication (no-op at exit)
-//!    └─ Expired/missing timestamp file ──► spawns check thread (2s timeout) ──► ContinueApplication
-//!       │
-//!       └─ At exit: UpgradeCheckStatus::handle_upgrade_on_exit()
-//!          1. Joins check thread outside lock (waits <= 2s if still Checking)
-//!          2. UpToDate | CheckFailed ──────────────► silent no-op
-//!          3. UpgradeAvailable ──► Upgrading ──► runs Auto / PromptToUpgrade / NotifyOnly
-//!                                               └──► Completed (touches timestamp file if Upgraded)
-//! ```
+//! 2. [Typestate Pattern]
+//!   - [`UpgradeJourney<State>`] encodes the 9-state upgrade machine in the type system.
+//!     It holds an immutable [`UpgradeConfig`] alongside a `State` generic type that
+//!     implements [`UpgradeJourneyStateMarker`], and each transition consumes
+//!     `UpgradeJourney<PrevState>` by value to return `UpgradeJourney<NextState>`.
+//!     - Here are the states: [`NotStarted`], [`Disabled`], [`CooldownSkipped`],
+//!       [`Checking`], [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`],
+//!       [`Upgrading`], and [`Completed`] (see [State Machine & Lifecycle Flow] on
+//!       [`UpgradeJourney`]).
+//!     - State transitions are driven exclusively by the [Control Plane] on the
+//!       caller/current/main thread and a dedicated check thread; see [Thread Model] for
+//!       details. The [Execution Plane] performs stateless network/disk work.
+//!   - Binaries construct [`UpgradeJourney<NotStarted>`] via [`upgrade_journey!`] and
+//!     call [`.start()`], which atomically claims the process-wide singleton:
+//!     - It returns [`StartOutcome::AlreadyStarted`] on duplicate calls
+//!     - Or it returns [`StartOutcome::UpgradedAndExit`], carrying
+//!       [`ImmediateUpgradeResult`], or [`StartOutcome::ContinueApplication`].
+//!
+//! 3. Coordinated Process-Wide Singleton
+//!   - [`SINGLETON`] holds [`UpgradeSingletonState`] inside a leaf [`ScopedMutex`],
+//!     pairing [`UpgradeCheckStatus`] (which wraps the active [`UpgradeJourney<State>`])
+//!     with the optional [`JoinHandle<()>`][jh] of the [`CHECK_THREAD_NAME`] OS thread.
+//!   - At shutdown, [`UpgradeCheckStatus::handle_upgrade_on_exit`][9] takes the
+//!     [`JoinHandle<()>`][jh] from [`SINGLETON`], releases the mutex, and joins any
+//!     in-flight check thread (preventing deadlock and ensuring short-lived invocations
+//!     wait up to [`DEDICATED_THREAD_MANIFEST_TIMEOUT`][2] when the
+//!     [`DEDICATED_THREAD_CHECK_COOLDOWN`][1] timestamp file was expired), then
+//!     atomically transitions [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for
+//!     one-shot exit handling.
 //!
 //! ## Control Plane vs. Execution Plane
 //!
 //! [`self_upgrade`] separates **deciding what to do** from **doing the work**:
 //!
-//! - **Control Plane (State Machine & Lifecycle)**:
-//!   - [`UpgradeJourney`] and [`UpgradeCheckStatus`] (which is a process singleton)
-//!     decide *whether* and *when* to check or perform the upgrade.
-//!   - They own the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
-//!     check-thread spawning and joining, and all reads and writes to the process-wide
-//!     [`UpgradeCheckStatus`] singleton.
-//!   - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
-//!     flow across a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
-//!     dedicated check thread + current thread) and an immediate upgrade
-//!     ([`UpgradeStrategy::Immediate`], current thread only).
-//! - **Execution Plane (Network, Disk & Build Operations, etc.)**:
-//!   - [`check/`][manifest] and [`upgrade/`][`perform_upgrade`] perform the actual HTTP
-//!     manifest fetch ([`fetch_crate_metadata_from_manifest`]), [`mtime`] timestamp file
-//!     reads/writes ([`CooldownPolicy`]), archive download, SHA-256 check, binary swap,
-//!     [`PTY`] source build ([`perform_upgrade`]), and user prompt
-//!     ([`prompt_user_to_upgrade`]).
-//!   - These functions are stateless with respect to the state machine: they don't know
-//!     or care which [`UpgradeJourney<State>`] is active, and they never import or touch
-//!     [`UpgradeJourney`] or [`UpgradeCheckStatus`]. Instead, they take only the
-//!     configuration and metadata parameters they need (`&`[`UpgradeConfig`],
-//!     `&`[`EndpointUrl`], `&`[`CrateMetadata`]) and return a result.
+//! 1. Control Plane (State Machine, Lifecycle & Threading)
+//!    - [`UpgradeJourney`] and [`UpgradeCheckStatus`] (which is a process singleton)
+//!      decide *whether* and *when* to check or perform the upgrade.
+//!    - They own the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
+//!      check-thread spawning and joining, and all reads and writes to the process-wide
+//!      [`UpgradeCheckStatus`] singleton.
+//!    - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
+//!      flow across a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
+//!      dedicated check thread + current thread) and an immediate upgrade
+//!      ([`UpgradeStrategy::Immediate`], current thread only).
+//!
+//! 2. Execution Plane (Network, Disk & Build Operations, etc.)
+//!    - [`check/`][manifest] and [`upgrade/`][`perform_upgrade`] perform the actual HTTP
+//!      manifest fetch ([`fetch_crate_metadata_from_manifest`]), [`mtime`] timestamp file
+//!      reads/writes ([`CooldownPolicy`]), archive download, SHA-256 check, binary swap,
+//!      [`PTY`] source build ([`perform_upgrade`]), and user prompt
+//!      ([`prompt_user_to_upgrade`]).
+//!    - These functions are stateless with respect to the state machine: they don't know
+//!      or care which [`UpgradeJourney<State>`] is active, and they never import or touch
+//!      [`UpgradeJourney`] or [`UpgradeCheckStatus`]. Instead, they take only the
+//!      configuration and metadata parameters they need (`&`[`UpgradeConfig`],
+//!      `&`[`EndpointUrl`], `&`[`CrateMetadata`]) and return a result.
 //!
 //! # Error Handling Policy
 //!
-//! - **Deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`], fails silently)**:
-//!   If a dedicated-thread version check fails (for example, while offline or when the
-//!   manifest URL cannot be reached), the running binary is never interrupted and nothing
-//!   is printed to the terminal. The engine records [`UpgradeCheckStatus::CheckFailed`],
-//!   logs the error when [`DEBUG_SELF_UPGRADE`] is enabled, and leaves the `1h` cooldown
-//!   timestamp file untouched so the next run can try again.
-//! - **Immediate upgrade ([`UpgradeStrategy::Immediate`], fails loudly)**: When the user
-//!   explicitly passes `--upgrade`, any check or upgrade failure prints a clear message
-//!   and retry hint on [`UserFeedbackChannel`] and returns
-//!   [`StartupOutcome::UpgradedAndExit`] with [`ImmediateUpgradeResult::Failed`] so the
-//!   binary exits with status code `1`.
+//! How the engine handles network or installation errors depends on which
+//! [`UpgradeStrategy`] is active, specifically, whether the upgrade runs
+//! opportunistically in the background during normal application use or was explicitly
+//! requested by the user:
+//!
+//! 1. When running a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`]),
+//!    errors never interrupt the user's workflow or alter the binary's exit code:
+//!    - In this default mode ([`auto`], [`prompt-to-upgrade`], or [`notify-only`]), the
+//!      user invoked the binary to do their normal work rather than to upgrade.
+//!    - If the background version check fails (for example, while offline or when the
+//!      manifest URL cannot be reached), nothing is printed to the terminal. The engine
+//!      records [`UpgradeCheckStatus::CheckFailed`], logs the error when
+//!      [`DEBUG_SELF_UPGRADE`] is enabled, and leaves the `1h` cooldown timestamp file
+//!      untouched so the next run can try again.
+//!    - If a newer version was found and the exit upgrade itself fails during
+//!      [`UpgradeCheckStatus::handle_upgrade_on_exit`][9], the error is reported on
+//!      [`UserFeedbackChannel`] and recorded as [`UpgradeResolution::UpgradeFailed`]
+//!      without failing the application's own exit status.
+//!
+//! 2. When running an immediate upgrade ([`UpgradeStrategy::Immediate`]), errors are
+//!    reported loudly and cause the process to exit with status code `1`:
+//!    - Because the user explicitly passed [`--upgrade`][u] with the sole intent of
+//!      upgrading the binary right away, any failure must be surfaced immediately.
+//!    - Any manifest check or installation failure prints a clear diagnostic and retry
+//!      hint on [`UserFeedbackChannel`], leaves the `1h` cooldown timestamp file
+//!      untouched, and returns [`StartOutcome::UpgradedAndExit`] with
+//!      [`ImmediateUpgradeResult::Failed`].
 //!
 //! # Upgrade Source Resolution (Release Archive vs. Source Fallback)
 //!
@@ -171,14 +163,17 @@
 //! current_version`), it must decide *how* to perform the upgrade before downloading or
 //! running build commands. This decision resolves into an [`UpgradeSource`].
 //!
-//! - **Who resolves it**: Evaluated by [`UpgradeSource::try_resolve`] (and its pure
-//!   decision function [`pure_evaluator::evaluate_upgrade_source_pure`]). If a binary
-//!   download fails mid-stream, [`UpgradeSource::try_fallback_to_source`][10] evaluates
-//!   fallback viability.
-//! - **Where it is called**: Invoked by [`perform_upgrade`] immediately before
-//!   dispatching to download or compilation routines.
-//! - **When it runs**: Right after manifest evaluation confirms that a newer version is
-//!   available, and immediately before any bytes are fetched or child processes spawned.
+//! - Who resolves it:
+//!   - Evaluated by [`UpgradeSource::try_resolve`] (and its pure decision function
+//!     [`pure_evaluator::evaluate_upgrade_source_pure`]). If a binary download fails
+//!     mid-stream, [`UpgradeSource::try_fallback_to_source`][10] evaluates fallback
+//!     viability.
+//! - Where it is called:
+//!   - Invoked by [`perform_upgrade`] immediately before dispatching to download or
+//!     compilation routines.
+//! - When it runs:
+//!   - Right after manifest evaluation confirms that a newer version is available, and
+//!     immediately before any bytes are fetched or child processes spawned.
 //!
 //! ## Resolution Decision Tree
 //!
@@ -198,17 +193,17 @@
 //! │ ReleaseArchive            │    └───┬───────────────┬───┘
 //! └───────────────────────────┘        │ Closed        │ Open
 //!                                      │               │
-//!                              ┌───────▼───────┐ ┌─────▼────────────┐
-//!                              │ Err(NoViable  │ │ Check $PATH for  │
-//!                              │ UpgradeSource)│ │ rustup           │
-//!                              └───────────────┘ └───┬──────────┬───┘
-//!                                        rustup found│          │ missing
+//!                             ┌───────▼────────┐ ┌─────▼────────────┐
+//!                             │ Err(NoViable   │ │ Check $PATH for  │
+//!                             │ UpgradeSource) │ │ rustup           │
+//!                             └────────────────┘ └───┬──────────┬───┘
+//!                                       rustup found │          │ missing
 //!                                                    │          │
-//!                                       ┌────────────▼┐  ┌──────▼────────┐
-//!                                       │UpgradeSource│  │ Err(NoViable  │
-//!                                       │::BuildFrom  │  │ UpgradeSource)│
-//!                                       │SourceRustup │  └───────────────┘
-//!                                       └─────────────┘
+//!                                      ┌─────────────▼─┐  ┌─────▼──────────┐
+//!                                      │ UpgradeSource │  │ Err(NoViable   │
+//!                                      │ ::BuildFrom   │  │ UpgradeSource) │
+//!                                      │ SourceRustup  │  └────────────────┘
+//!                                      └───────────────┘
 //! ```
 //!
 //! [10]: crate::self_upgrade::UpgradeSource::try_fallback_to_source
@@ -216,6 +211,7 @@
 //! [2]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
 //! [9]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
 //! [`.start()`]: crate::self_upgrade::UpgradeJourney::start
+//! [`auto`]: crate::self_upgrade::UpgradeActionOnExit::Auto
 //! [`CHECK_THREAD_NAME`]: crate::self_upgrade::check_thread::CHECK_THREAD_NAME
 //! [`CheckFailed`]: crate::self_upgrade::CheckFailed
 //! [`Checking`]: crate::self_upgrade::Checking
@@ -229,19 +225,26 @@
 //! [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 //! [`Disabled`]: crate::self_upgrade::Disabled
 //! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
+//! [`ImmediateUpgradeResult::Failed`]: crate::self_upgrade::ImmediateUpgradeResult::Failed
 //! [`ImmediateUpgradeResult`]: crate::self_upgrade::ImmediateUpgradeResult
 //! [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
 //! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
+//! [`notify-only`]: crate::self_upgrade::UpgradeActionOnExit::NotifyOnly
 //! [`NotStarted`]: crate::self_upgrade::NotStarted
 //! [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
+//! [`prompt-to-upgrade`]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
 //! [`prompt_user_to_upgrade`]: crate::self_upgrade::prompt_user_to_upgrade
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
 //! [`ScopedMutex`]: r3bl_tui::ScopedMutex
 //! [`self_upgrade`]: mod@crate::self_upgrade
+//! [`SINGLETON`]: crate::self_upgrade::SINGLETON
+//! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
+//! [`StartOutcome::ContinueApplication`]: crate::self_upgrade::StartOutcome::ContinueApplication
+//! [`StartOutcome::UpgradedAndExit`]: crate::self_upgrade::StartOutcome::UpgradedAndExit
 //! [`upgrade_journey!`]: crate::upgrade_journey
-//! [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
 //! [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
+//! [`UpgradeCheckStatus::CheckFailed`]: crate::self_upgrade::UpgradeCheckStatus::CheckFailed
 //! [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
 //! [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs
 //! [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
@@ -249,19 +252,23 @@
 //! [`UpgradeJourney<State>`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradeJourneyStateMarker`]: crate::self_upgrade::UpgradeJourneyStateMarker
-//! [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-//! [`UpgradePolicy::Enabled`]: crate::self_upgrade::UpgradePolicy::Enabled
 //! [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
+//! [`UpgradeResolution::UpgradeFailed`]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [`UpgradeSingletonState`]: crate::self_upgrade::UpgradeSingletonState
 //! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
+//! [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
 //! [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 //! [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
 //! [`Upgrading`]: crate::self_upgrade::Upgrading
 //! [`UpToDate`]: crate::self_upgrade::UpToDate
 //! [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
+//! [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+//! [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 //! [jh]: std::thread::JoinHandle
 //! [manifest]: crate::self_upgrade::fetch_crate_metadata_from_manifest
 //! [policy-from]: crate::self_upgrade::UpgradePolicy::from
+//! [State Machine & Lifecycle Flow]: crate::self_upgrade::UpgradeJourney#state-machine--lifecycle-flow
 //! [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 //! [Typestate Pattern]: https://stanford-cs242.github.io/f19/lectures/08-2-typestate.html
 //! [u]: crate::self_upgrade::upgrade_cli_args::UPGRADE_ARG_LONG

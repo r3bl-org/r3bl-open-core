@@ -201,11 +201,14 @@ impl UpgradeCheckStatus {
     /// [`UpgradeSingletonState::status`] (so a fast check thread that already wrote its
     /// terminal status before this call is never overwritten).
     ///
-    /// Called on the current thread by [`UpgradeJourney::start`] during a deferred
-    /// upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1]).
+    /// Called on the current thread by [`UpgradeJourney::start`] (in the [Control Plane])
+    /// during a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1]; see
+    /// [Thread Model]).
     ///
     /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     pub(in crate::self_upgrade) fn set_thread_check_handle(handle: JoinHandle<()>) {
         SINGLETON.write(|state| {
             state.thread_check_handle = Some(handle);
@@ -289,9 +292,12 @@ impl UpgradeCheckStatus {
 
 /// Pairs the [`UpgradeCheckStatus`] with the [`JoinHandle`] of the dedicated check thread
 /// (when one is spawned by [`UpgradeJourney::start`]). [`SINGLETON`] makes this struct a
-/// global process singleton.
+/// global process singleton. This type is part of the [Control Plane] (see [Thread
+/// Model]).
 ///
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[derive(Debug)]
 pub struct UpgradeSingletonState {
     /// Current [`UpgradeCheckStatus`] of the [`self_upgrade`] engine.
@@ -320,6 +326,10 @@ impl UpgradeSingletonState {
 
 /// Process-wide singleton instance of [`UpgradeSingletonState`], lazily initialized on
 /// first access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`].
+/// This static is part of the [Control Plane] (see [Thread Model]).
+///
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 pub static SINGLETON: LazyLock<
     ScopedMutex<UpgradeSingletonState, { PanicOnSpecificLockNesting }>,
 > = LazyLock::new(|| scoped_mutex!(SPECIFIC, UpgradeSingletonState::new()));

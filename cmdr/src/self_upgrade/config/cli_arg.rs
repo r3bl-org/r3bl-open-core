@@ -22,9 +22,8 @@ use clap::{Parser, ValueEnum};
 /// Both the fields of this struct are private to prevent contradictory flag combinations
 /// from being constructed in Rust code, in our domain. [`UpgradeCLIArgs`] is constructed
 /// exclusively by [`clap`], which enforces mutual exclusivity (`conflicts_with`) between
-/// [`--upgrade`][u] and [`--upgrade-behavior`][ub] and converts cleanly into the
-/// three-level domain hierarchy ([`UpgradePolicy`] -> [`UpgradeStrategy`] ->
-/// [`UpgradeActionOnExit`]):
+/// [`--upgrade`][u] and [`--upgrade-behavior`][ub] and converts cleanly into
+/// [`UpgradePolicy`] (which nests [`UpgradeStrategy`] and [`UpgradeActionOnExit`]):
 ///
 /// ```text
 /// Our Domain                                 │ ◄── CLI Args passed to `<bin> --upgrade` or

@@ -24,7 +24,4 @@ pub use up_to_date::*;
 pub use upgrade_available::*;
 pub use upgrading::*;
 
-/// Marker trait implemented by all valid typestates of [`UpgradeJourney`].
-///
-/// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
-pub trait UpgradeJourneyStateMarker {}
+use super::UpgradeJourneyStateMarker;

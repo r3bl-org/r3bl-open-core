@@ -8,6 +8,11 @@ use std::{any::Any,
 
 /// Wrapper around [`run_in_tokio`] that logs runtime startup or panic failures via
 /// [`DEBUG_SELF_UPGRADE`].
+///
+/// Part of the [Control Plane] threading and runtime orchestration (see [Thread Model]).
+///
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 pub(in crate::self_upgrade) fn run_in_tokio_logged<T: Send, F: Send + AsyncFnOnce() -> T>(
     config: &UpgradeConfig,
     async_fn: F,
@@ -33,7 +38,11 @@ pub(in crate::self_upgrade) fn run_in_tokio_logged<T: Send, F: Send + AsyncFnOnc
 /// second OS thread while guaranteeing [`DedicatedCheckOutcome::CheckFailed`] on runtime
 /// initialization failure or panic without mutating [`UpgradeCheckStatus`].
 ///
+/// Part of the [Control Plane] dedicated check-thread orchestration (see [Thread Model]).
+///
 /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[must_use]
 pub(in crate::self_upgrade) fn run_on_dedicated_check_thread<F>(
     checking: UpgradeJourney<Checking>,
