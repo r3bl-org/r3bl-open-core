@@ -8,6 +8,7 @@ mod core;
 mod accessors;
 mod active_buffer_routing;
 mod config;
+mod resize;
 
 // Re-export (Public).
 
