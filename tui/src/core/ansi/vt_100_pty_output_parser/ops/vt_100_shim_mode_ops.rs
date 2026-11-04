@@ -59,13 +59,14 @@
 //! [module-level documentation]: self
 //! [ops module]: vt_100_pty_output_parser::ops
 
-use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer};
+use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerformer,
+                   modes::terminal_mode_state_todo};
 #[allow(unused_imports, reason = "Allows flat link ref defs in rustdocs")]
 use crate::core::ansi::vt_100_pty_output_parser;
-use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorKeyMode, CursorVisibilityMode,
-            DEBUG_TUI_VT100_PARSER, LossyConvertToByte, MouseTrackingFormat,
-            MouseTrackingMode, RequestedScreenMode, URXVT_MOUSE_EXTENSION,
-            UTF8_MOUSE_EXTENSION, WideningCastToU16,
+use crate::{AutoWrapMode, CursorKeyMode, CursorVisibilityMode, DEBUG_TUI_VT100_PARSER,
+            LossyConvertToByte, MouseTrackingFormat, MouseTrackingMode,
+            RequestedScreenMode, URXVT_MOUSE_EXTENSION, UTF8_MOUSE_EXTENSION,
+            WideningCastToU16,
             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
 use vte::Params;
 
@@ -141,11 +142,21 @@ pub fn set_mode(
                     .ofs_buf_vt_100
                     .set_mouse_tracking_format(MouseTrackingFormat::Sgr);
             }
-            // Safely suppress/ignore other modern TUI extensions (like bracketed
-            // paste). Currently, the multiplexer does not support
-            // routing rich input events back into the PTY.
+            PrivateModeType::FocusEvents => {
+                performer.ofs_buf_vt_100.set_focus_events_mode(true);
+            }
+            PrivateModeType::BracketedPaste => {
+                performer
+                    .ofs_buf_vt_100
+                    .get_terminal_mode_mut()
+                    .bracketed_paste =
+                    terminal_mode_state_todo::BracketedPasteMode::Enabled;
+            }
+            // Safely suppress/ignore other modern TUI extensions.
+            // Downgrading to debug prevents heavy log spam from interactive
+            // TUIs (like hx/gitui).
             PrivateModeType::Other(
-                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
+                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(
@@ -237,11 +248,21 @@ pub fn reset_mode(
                     .ofs_buf_vt_100
                     .set_mouse_tracking_format(MouseTrackingFormat::X10);
             }
-            // Safely suppress/ignore other modern TUI extensions (like bracketed
-            // paste). Currently, the multiplexer does not support
-            // routing rich input events back into the PTY.
+            PrivateModeType::FocusEvents => {
+                performer.ofs_buf_vt_100.set_focus_events_mode(false);
+            }
+            PrivateModeType::BracketedPaste => {
+                performer
+                    .ofs_buf_vt_100
+                    .get_terminal_mode_mut()
+                    .bracketed_paste =
+                    terminal_mode_state_todo::BracketedPasteMode::Disabled;
+            }
+            // Safely suppress/ignore other modern TUI extensions.
+            // Downgrading to debug prevents heavy log spam from interactive
+            // TUIs (like hx/gitui).
             PrivateModeType::Other(
-                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
+                UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION,
             ) => {
                 DEBUG_TUI_VT100_PARSER.then(|| {
                     tracing::debug!(

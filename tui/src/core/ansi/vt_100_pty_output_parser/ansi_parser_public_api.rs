@@ -761,4 +761,16 @@ mod tests {
             .apply_ansi_bytes(format!("{CSI_START}1{DA_DEVICE_ATTRIBUTES}"));
         assert_eq!(responses4.len(), 0);
     }
+
+    #[test]
+    fn test_bracketed_paste_mode_is_tracked() {
+        let mut ofs_buf_vt_100 = create_test_ofs_buf_10r_by_10c();
+        assert!(!ofs_buf_vt_100.get_terminal_mode().is_bracketed_paste_enabled());
+
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes("\x1b[?2004h");
+        assert!(ofs_buf_vt_100.get_terminal_mode().is_bracketed_paste_enabled());
+
+        let _unused = ofs_buf_vt_100.apply_ansi_bytes("\x1b[?2004l");
+        assert!(!ofs_buf_vt_100.get_terminal_mode().is_bracketed_paste_enabled());
+    }
 }

@@ -129,7 +129,6 @@ pub mod terminal_mode_state_todo {
     ///
     /// [`Bracketed paste`]: https://en.wikipedia.org/wiki/Bracketed-paste
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    #[allow(dead_code)]
     pub enum BracketedPasteMode {
         /// [`Bracketed paste`] mode enabled.
         ///
