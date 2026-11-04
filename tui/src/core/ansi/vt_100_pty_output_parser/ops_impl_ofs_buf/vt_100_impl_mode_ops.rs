@@ -65,6 +65,13 @@ impl OfsBufVT100 {
         self.get_terminal_mode_mut().mouse_tracking_format = format;
     }
 
+    /// Set focus event reporting mode.
+    /// When enabled (by `CSI ? 1004 h`), the PTY child will receive
+    /// `CSI I` / `CSI O` focus events from the terminal multiplexer.
+    pub fn set_focus_events_mode(&mut self, enabled: bool) {
+        self.get_terminal_mode_mut().focus_events = enabled;
+    }
+
     /// Toggle between the primary and alternate screen buffers.
     ///
     /// When switching to the alternate screen buffer:
