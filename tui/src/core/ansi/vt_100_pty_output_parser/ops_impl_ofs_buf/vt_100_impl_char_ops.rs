@@ -36,6 +36,20 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, OfsBufVT100, Pi
             ok, vp_col, vp_width};
 
 impl OfsBufVT100 {
+    /// The cell that `ICH`, `DCH` and `ECH` leave blank.
+    ///
+    /// With a background color set, it is a space that keeps that color (see
+    /// [`Self::create_empty_pixel_char()`]), so a bar painted with a background and
+    /// cleared with `ECH` stays colored. Otherwise it is a plain
+    /// [`PixelChar::Spacer`], which looks the same as a space with no style.
+    fn create_blank_pixel_char(&self) -> PixelChar {
+        if self.get_parser_global_state().current_style.color_bg.is_none() {
+            PixelChar::Spacer
+        } else {
+            self.create_empty_pixel_char()
+        }
+    }
+
     /// Insert blank characters at cursor position (for `ICH` - Insert Character).
     ///
     /// - Characters at and after the cursor shift right by `how_many`.
@@ -68,6 +82,7 @@ impl OfsBufVT100 {
     /// fails.
     pub fn insert_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
+        let empty_char = self.create_blank_pixel_char();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
@@ -122,7 +137,7 @@ impl OfsBufVT100 {
         // Fill the cursor position with blanks using type-safe range clamping.
         let fill_end_col = copy_dest_start_col;
         let fill_range = (at.col_index..fill_end_col).clamp_range_to(max_width);
-        line[fill_range.as_usize_range()].fill(PixelChar::Spacer);
+        line[fill_range.as_usize_range()].fill(empty_char);
 
         ok!()
     }
@@ -159,6 +174,7 @@ impl OfsBufVT100 {
     /// fails.
     pub fn delete_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
+        let empty_char = self.create_blank_pixel_char();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
@@ -203,7 +219,7 @@ impl OfsBufVT100 {
         // Convert to exclusive range for fill operation.
         let fill_range = fill_range_inclusive.to_exclusive();
         let fill_range_vp = fill_range.start..fill_range.end;
-        active_buf.fill_char_range(at.row_index, fill_range_vp, PixelChar::Spacer)?;
+        active_buf.fill_char_range(at.row_index, fill_range_vp, empty_char)?;
 
         ok!()
     }
@@ -239,6 +255,7 @@ impl OfsBufVT100 {
     /// fails.
     pub fn clear_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
+        let empty_char = self.create_blank_pixel_char();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
@@ -267,7 +284,7 @@ impl OfsBufVT100 {
         let fill_end_col = cursor_col + how_many_clamped;
         let erase_range = (cursor_col..fill_end_col).clamp_range_to(max_width);
         let erase_range_vp = erase_range.start..erase_range.end;
-        active_buf.fill_char_range(at.row_index, erase_range_vp, PixelChar::Spacer)
+        active_buf.fill_char_range(at.row_index, erase_range_vp, empty_char)
     }
 
     /// Applies the deferred pending wrap by performing a carriage return and line feed.
@@ -403,6 +420,102 @@ mod tests_shifting_ops {
                     create_test_char(ch),
                 );
             }
+        }
+    }
+
+    /// Selects a blue background (with a red foreground and bold, which blanks must
+    /// not keep) and returns the cell a blank is expected to be under it.
+    fn select_blue_background(buffer: &mut OfsBufVT100) -> PixelChar {
+        use crate::{TuiStyleAttribs, tui_color, tui_style_attrib};
+
+        buffer.get_parser_global_state_mut().current_style = TuiStyle {
+            color_bg: Some(tui_color!(blue)),
+            color_fg: Some(tui_color!(red)),
+            attribs: TuiStyleAttribs {
+                bold: Some(tui_style_attrib::Bold),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        PixelChar::PlainText {
+            display_char: ' ',
+            style: TuiStyle {
+                color_bg: Some(tui_color!(blue)),
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn test_clear_chars_keeps_background_color() {
+        let mut buffer = create_test_buffer();
+        let test_row = vp_row(1);
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+        let blank = select_blue_background(&mut buffer);
+
+        buffer.set_cursor_pos(test_row + vp_col(2));
+        assert!(buffer.clear_chars(vp_len(2)).is_ok());
+
+        let expected = [
+            create_test_char('A'),
+            create_test_char('B'),
+            blank,
+            blank,
+            create_test_char('E'),
+            create_test_char('F'),
+        ];
+        for (col, expected_char) in expected.into_iter().enumerate() {
+            let actual = buffer.get_char(test_row + vp_col(col.as_u16_narrowing()));
+            assert_eq!(actual, Some(expected_char), "column {col}");
+        }
+    }
+
+    #[test]
+    fn test_delete_chars_keeps_background_color() {
+        let mut buffer = create_test_buffer();
+        let test_row = vp_row(1);
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+        let blank = select_blue_background(&mut buffer);
+
+        buffer.set_cursor_pos(test_row + vp_col(2));
+        assert!(buffer.delete_chars(vp_len(2)).is_ok());
+
+        // The vacated cells at the end of the line are the blanks.
+        let expected = [
+            create_test_char('A'),
+            create_test_char('B'),
+            create_test_char('E'),
+            create_test_char('F'),
+            blank,
+            blank,
+        ];
+        for (col, expected_char) in expected.into_iter().enumerate() {
+            let actual = buffer.get_char(test_row + vp_col(col.as_u16_narrowing()));
+            assert_eq!(actual, Some(expected_char), "column {col}");
+        }
+    }
+
+    #[test]
+    fn test_insert_chars_keeps_background_color() {
+        let mut buffer = create_test_buffer();
+        let test_row = vp_row(1);
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+        let blank = select_blue_background(&mut buffer);
+
+        buffer.set_cursor_pos(test_row + vp_col(2));
+        assert!(buffer.insert_chars(vp_len(2)).is_ok());
+
+        let expected = [
+            create_test_char('A'),
+            create_test_char('B'),
+            blank,
+            blank,
+            create_test_char('C'),
+            create_test_char('D'),
+        ];
+        for (col, expected_char) in expected.into_iter().enumerate() {
+            let actual = buffer.get_char(test_row + vp_col(col.as_u16_narrowing()));
+            assert_eq!(actual, Some(expected_char), "column {col}");
         }
     }
 
