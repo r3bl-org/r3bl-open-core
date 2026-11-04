@@ -4,7 +4,7 @@ use super::super::CanvasStorage;
 use crate::{CPos, CRow, CanvasRangeExt, GetMemSize, PixelChar, PixelCharLine,
             RangeBoundsResult, RangeExclusive, RangeValidityStatus, ScrollbackAmount,
             ShiftLinesDirection, StorageLineLimit, VPLength, VPRow, VPSize, Viewport,
-            ViewportToCanvasExt, ok, scrollback_amount, vp_height};
+            ViewportToCanvasExt, c_row, ok, scrollback_amount, vp_height, vp_row};
 use std::{cmp::{max, min},
           collections::VecDeque};
 
@@ -204,6 +204,62 @@ impl GrowableBuffer {
         let abs_row_index = scrollback_amt.to_c_row(&self.viewport, row_index);
         let line_mut = self.lines.get_mut(abs_row_index.as_usize())?;
         Some(&mut line_mut.pixel_chars)
+    }
+
+    /// Resizes the viewport to `new_size`, keeping the scrollback history and the
+    /// cursor's line in view. Returns the cursor's row in the resized viewport.
+    ///
+    /// Every line, history included, is cut or padded with `fill_char` to the new
+    /// width. A shorter viewport moves the lines above the cursor into the history (only
+    /// as many as needed to keep the cursor's line visible) and drops the lines below
+    /// it. A taller viewport brings lines back from the history first, then adds blank
+    /// lines at the bottom.
+    ///
+    /// This method is specific to [`GrowableBuffer`] and is not part of the
+    /// [`CanvasStorage`] trait, since a fixed-size grid like [`Flat2DArray`] has no
+    /// history to move lines into or bring them back from.
+    ///
+    /// [`CanvasStorage`]: crate::CanvasStorage
+    /// [`Flat2DArray`]: crate::core::Flat2DArray
+    pub fn resize(
+        &mut self,
+        new_size: VPSize,
+        cursor_row: VPRow,
+        fill_char: PixelChar,
+    ) -> VPRow {
+        let new_width = new_size.col_width.as_usize();
+        let new_height = new_size.row_height.as_usize();
+        let old_height = self.viewport.get_height().as_usize();
+        let mut history_len = self.viewport.get_history_len();
+        let mut cursor_row = cursor_row.as_usize();
+
+        for line in &mut self.lines {
+            line.pixel_chars.resize(new_width, fill_char);
+        }
+
+        if new_height < old_height {
+            let shift = (cursor_row + 1).saturating_sub(new_height);
+            history_len += shift;
+            cursor_row = cursor_row.saturating_sub(shift);
+        } else {
+            let pulled = min(new_height - old_height, history_len);
+            history_len -= pulled;
+            cursor_row += pulled;
+        }
+
+        let line_count = history_len + new_height;
+        self.lines.truncate(line_count);
+        while self.lines.len() < line_count {
+            self.lines
+                .push_back(PixelCharLine::new_empty(new_size.col_width, fill_char));
+        }
+
+        self.viewport
+            .set_origin_pos(|pos| pos.row_index = c_row(history_len));
+        self.viewport.set_size(|size| *size = new_size);
+        self.trim_lines_to_storage_line_limit();
+
+        vp_row(min(cursor_row, new_height.saturating_sub(1)))
     }
 
     /// Enforce the storage line limit by popping lines from the top if necessary.
