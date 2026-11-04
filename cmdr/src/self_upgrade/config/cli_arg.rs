@@ -36,7 +36,7 @@ use clap::{Parser, ValueEnum};
 /// ├─ Enabled(UpgradeStrategy)                │ Immediate upgrade at startup & exit
 /// │  ├─ Immediate                            │ ◄── `<bin> --upgrade`
 /// │  │                                       │
-/// │  └─ DedicatedThread(UpgradeActionOnExit) │ Background check & action on exit
+/// │  └─ DedicatedThread(UpgradeActionOnExit) │ Deferred upgrade on exit
 /// │     ├─ Auto (default)                    │ ◄── `<bin>` or `<bin> --upgrade-behavior auto`
 /// │     ├─ PromptToUpgrade                   │ ◄── `<bin> --upgrade-behavior prompt-to-upgrade`
 /// │     └─ NotifyOnly                        │ ◄── `<bin> --upgrade-behavior notify-only`

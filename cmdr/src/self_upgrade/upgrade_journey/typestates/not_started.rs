@@ -3,18 +3,84 @@
 use super::{super::{ImmediateUpgradeResult, StartupOutcome,
                     tokio_thread_runner::{run_in_tokio_logged,
                                           run_on_dedicated_check_thread}},
-            Checking, CooldownSkipped, Disabled, UpgradeJourneyStateMarker,
-            UpgradeResolution};
-use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ImmediateCheckOutcome,
-            ManifestCheckError, UpgradeCheckStatus, UpgradeConfig, UpgradeError,
-            UpgradeJourney, UpgradePolicy, UpgradeStrategy, check_for_immediate_upgrade,
-            check_for_upgrade, check_thread, format_already_up_to_date_msg,
-            format_upgrade_failed_retry_msg, get_current_bin_name, perform_upgrade};
+            Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome,
+            UpgradeJourneyStateMarker, UpgradeResolution};
+use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeCheckStatus,
+            UpgradeConfig, UpgradeError, UpgradeJourney, UpgradePolicy, UpgradeStrategy,
+            check_thread, format_already_up_to_date_msg,
+            format_upgrade_failed_retry_msg, get_current_bin_name};
 use r3bl_tui::TokioRuntimeOutcome;
 
-/// Initial typestate before [`UpgradeJourney::start`] is called.
+/// Initial typestate of [`UpgradeJourney<NotStarted>`] before [`UpgradeJourney::start`]
+/// is called.
 ///
+/// # Thread Model
+///
+/// Depending on the active [`UpgradeStrategy`], state transitions in [`SINGLETON`] are
+/// driven either across a dedicated check thread and the current thread, or entirely on
+/// the current thread:
+///
+/// ## Deferred Upgrade on Exit
+///
+/// Under [`UpgradeStrategy::DedicatedThread`] (`--upgrade-behavior`), the **Current
+/// Thread** starts the check and finishes the upgrade at exit, while the **Dedicated
+/// Check Thread** (`"self-upgrade-check"`) checks the manifest while the app runs:
+///
+/// ```text
+/// CURRENT THREAD                                  DEDICATED CHECK THREAD ("self-upgrade-check")
+/// ──────────────                                  ─────────────────────────────────────────────
+/// 1. Calls journey.start()
+///    • If 1h cooldown active:
+///      claims SINGLETON = CooldownSkipped & returns
+///    • Otherwise: claims SINGLETON = Checking
+///      and spawns "self-upgrade-check" ─────────► 2. Calls checking
+///    │                                                 .check_for_dedicated_thread_upgrade()
+///    ▼                                                 .await (2s timeout)
+///    Returns ContinueApplication                     and sets SINGLETON =
+///    (App runs normal TUI / CLI work)                  UpToDate | UpgradeAvailable | CheckFailed
+///    │                                               via UpgradeCheckStatus::set(...)
+///    ▼                                               │
+/// 3. At exit, calls                                  │
+///    UpgradeCheckStatus::handle_upgrade_on_exit()    │
+///    • Joins check thread (outside lock) ◄───────────┘
+///    • If UpgradeAvailable: claims Upgrading,
+///      calls upgrading.execute_action_on_exit(),
+///      and sets SINGLETON = Completed
+///      via UpgradeCheckStatus::set(Completed)
+/// ```
+///
+/// ## Immediate Upgrade
+///
+/// Under [`UpgradeStrategy::Immediate`] (`--upgrade`), no dedicated check thread is
+/// spawned; the **Current Thread** runs both the check and the upgrade inside
+/// [`UpgradeJourney::start`] before returning [`StartupOutcome::UpgradedAndExit`]:
+///
+/// ```text
+/// CURRENT THREAD (inside journey.start() -> Self::run_immediate_upgrade())
+/// ────────────────────────────────────────────────────────────────────────
+/// 1. Claims SINGLETON = Checking
+///    via try_claim_not_started(Checking)
+///    │
+/// 2. Calls checking.check_for_immediate_upgrade().await (5s timeout)
+///    and sets SINGLETON = UpToDate | CheckFailed | Upgrading
+///    via UpgradeCheckStatus::set(outcome.into_check_status())
+///    │
+/// 3. If Upgrading:
+///    Calls upgrading.execute_immediate_upgrade().await
+///    and sets SINGLETON = Completed
+///    via UpgradeCheckStatus::set(Completed)
+///    │
+/// 4. Returns StartupOutcome::UpgradedAndExit(Succeeded | Failed) to caller,
+///    and the binary exits immediately.
+/// ```
+///
+/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+/// [`StartupOutcome::UpgradedAndExit`]: crate::self_upgrade::StartupOutcome::UpgradedAndExit
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+/// [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
+/// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+/// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+/// [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct NotStarted;
 impl UpgradeJourneyStateMarker for NotStarted {}
@@ -37,55 +103,50 @@ impl UpgradeJourney<NotStarted> {
         }
     }
 
-    /// Single entry point for the self-upgrade engine. Atomically claims
-    /// [`UpgradeCheckStatus::NotStarted`] and dispatches based on
-    /// [`UpgradeConfig::get_upgrade_policy()`]:
+    /// This method is called by `main()` at startup to launch the [`self_upgrade`]
+    /// engine. This is part of the [Control Plane].
     ///
-    /// - **Duplicate `.start()` call**: Leaves [`UpgradeCheckStatus`] untouched, spawns
-    ///   zero threads, logs via [`DEBUG_SELF_UPGRADE`], and returns
-    ///   [`StartupOutcome::AlreadyStarted`].
-    /// - **`UpgradePolicy::Enabled(UpgradeStrategy::Immediate)`** (`--upgrade`): Queries
-    ///   the manifest with a `5s` timeout (bypassing the `1h` cooldown), runs
-    ///   [`perform_upgrade`] if a newer version exists, updates [`UpgradeCheckStatus`]
-    ///   through [`Checking`] -> [`UpToDate`] / [`CheckFailed`] / [`Upgrading`] ->
-    ///   [`Completed`], touches the `1h` cooldown timestamp file on [`UpToDate`] or
-    ///   [`UpgradeResolution::Upgraded`], and returns
-    ///   [`StartupOutcome::UpgradedAndExit`].
-    /// - **`UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(action_on_exit))`**:
-    ///   Checks the `1h` `mtime` cooldown timestamp file via
-    ///   [`CooldownPolicy::check_status`]. If active, records
-    ///   [`UpgradeCheckStatus::CooldownSkipped`] with zero threads and returns
-    ///   [`StartupOutcome::ContinueApplication`]. Otherwise records
-    ///   [`UpgradeCheckStatus::Checking`], spawns a single `"self-upgrade-check"` OS
-    ///   thread (storing its `JoinHandle` for
-    ///   [`UpgradeCheckStatus::handle_upgrade_on_exit`]), and returns
-    ///   [`StartupOutcome::ContinueApplication`].
-    /// - **[`UpgradePolicy::Disabled`]** (`--upgrade-behavior disable`): Records
-    ///   [`UpgradeCheckStatus::Disabled`] with zero threads and zero I/O, returning
-    ///   [`StartupOutcome::ContinueApplication`].
+    /// Atomically claims [`UpgradeCheckStatus::NotStarted`] in [`SINGLETON`] and
+    /// dispatches based on [`UpgradeConfig::get_upgrade_policy()`]:
     ///
-    /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
+    /// 1. **Duplicate `.start()` calls**:
+    ///    - Leaves [`SINGLETON`] untouched, spawns zero threads, logs via
+    ///      [`DEBUG_SELF_UPGRADE`], and returns [`StartupOutcome::AlreadyStarted`].
+    ///
+    /// 2. **Immediate upgrade ([`UpgradeStrategy::Immediate`], `--upgrade`)**:
+    ///    - Checks the manifest (`5s` timeout, bypassing the `1h` cooldown) and runs
+    ///      [`perform_upgrade`] on the current thread if a newer version exists,
+    ///      returning [`StartupOutcome::UpgradedAndExit`].
+    ///
+    /// 3. **Deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
+    ///   `--upgrade-behavior`)**:
+    ///    - Checks the `1h` cooldown timestamp file via
+    ///      [`CooldownPolicy::check_status`][status]; if active, records
+    ///      [`UpgradeCheckStatus::CooldownSkipped`], or if expired, spawns the dedicated
+    ///      `"self-upgrade-check"` thread for
+    ///      [`UpgradeCheckStatus::handle_upgrade_on_exit`] and returns
+    ///      [`StartupOutcome::ContinueApplication`].
+    ///
+    /// 4. **Disabled ([`UpgradePolicy::Disabled`], `--upgrade-behavior disable`)**:
+    ///    - Records [`UpgradeCheckStatus::Disabled`][disabled] with zero threads and zero
+    ///      I/O, returning [`StartupOutcome::ContinueApplication`].
+    ///
+    /// See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
+    /// diagram, and [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
     /// [`self_upgrade`] module documentation.
     ///
-    /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
-    /// [`Checking`]: crate::self_upgrade::Checking
-    /// [`Completed`]: crate::self_upgrade::Completed
-    /// [`CooldownPolicy::check_status`]: crate::self_upgrade::CooldownPolicy::check_status
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
     /// [`self_upgrade`]: mod@crate::self_upgrade
-    /// [`UpgradeCheckStatus::Checking`]: crate::self_upgrade::UpgradeCheckStatus::Checking
-    /// [`UpgradeCheckStatus::CooldownSkipped`]: crate::self_upgrade::UpgradeCheckStatus::CooldownSkipped
-    /// [`UpgradeCheckStatus::Disabled`]: crate::self_upgrade::UpgradeCheckStatus::Disabled
-    /// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
-    /// [`UpgradeCheckStatus::NotStarted`]: crate::self_upgrade::UpgradeCheckStatus::NotStarted
-    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
-    /// [`UpgradeConfig::get_upgrade_policy()`]: crate::self_upgrade::UpgradeConfig::get_upgrade_policy
+    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-    /// [`UpgradeResolution::Upgraded`]: crate::self_upgrade::UpgradeResolution::Upgraded
-    /// [`Upgrading`]: crate::self_upgrade::Upgrading
-    /// [`UpToDate`]: crate::self_upgrade::UpToDate
+    /// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+    /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [disabled]: crate::self_upgrade::UpgradeCheckStatus::Disabled
     /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
+    /// [status]: crate::self_upgrade::CooldownPolicy::check_status
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
     pub fn start(self) -> StartupOutcome {
         match self.config.get_upgrade_policy() {
@@ -110,10 +171,6 @@ impl UpgradeJourney<NotStarted> {
                 StartupOutcome::UpgradedAndExit(Self::run_immediate_upgrade(checking))
             }
             UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(action_on_exit)) => {
-                if !UpgradeCheckStatus::is_not_started() {
-                    return log_duplicate_start(&self.config);
-                }
-
                 let config_for_log = self.config.clone();
                 match self
                     .config
@@ -143,10 +200,17 @@ impl UpgradeJourney<NotStarted> {
                         match std::thread::Builder::new()
                             .name(check_thread::CHECK_THREAD_NAME.to_string())
                             .spawn(move || {
-                                run_on_dedicated_check_thread(
+                                let outcome = run_on_dedicated_check_thread(
                                     spawn_checking,
-                                    check_for_upgrade,
+                                    async move |journey| {
+                                        journey
+                                            .check_for_dedicated_thread_upgrade(
+                                                action_on_exit,
+                                            )
+                                            .await
+                                    },
                                 );
+                                UpgradeCheckStatus::set(outcome.into_check_status());
                             }) {
                             Ok(handle) => {
                                 UpgradeCheckStatus::set_thread_check_handle(handle);
@@ -215,7 +279,10 @@ impl UpgradeJourney<NotStarted> {
         let fallback_checking = checking.clone();
 
         match run_in_tokio_logged(&config, async move || -> ImmediateUpgradeResult {
-            match check_for_immediate_upgrade(checking).await {
+            let outcome = checking.check_for_immediate_upgrade().await;
+            UpgradeCheckStatus::set(outcome.clone().into_check_status());
+
+            match outcome {
                 ImmediateCheckOutcome::CheckFailed(failed) => {
                     let bin_name = get_current_bin_name();
                     let msg = format_upgrade_failed_retry_msg(
@@ -238,34 +305,9 @@ impl UpgradeJourney<NotStarted> {
                     ImmediateUpgradeResult::Succeeded
                 }
                 ImmediateCheckOutcome::Upgrading(upgrading) => {
-                    match perform_upgrade(
-                        upgrading.get_config(),
-                        &upgrading.get_state().metadata,
-                        &upgrading.get_state().binaries_release_base_url,
-                    )
-                    .await
-                    {
-                        Ok(()) => {
-                            upgrading
-                                .get_config()
-                                .get_cooldown_policy()
-                                .touch(upgrading.get_config().get_crate_name());
-                            let completed =
-                                upgrading.into_completed(UpgradeResolution::Upgraded);
-                            UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(
-                                completed,
-                            ));
-                            ImmediateUpgradeResult::Succeeded
-                        }
-                        Err(err) => {
-                            let completed = upgrading
-                                .into_completed(UpgradeResolution::UpgradeFailed(err));
-                            UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(
-                                completed,
-                            ));
-                            ImmediateUpgradeResult::Failed
-                        }
-                    }
+                    let (completed, result) = upgrading.execute_immediate_upgrade().await;
+                    UpgradeCheckStatus::set(UpgradeCheckStatus::Completed(completed));
+                    result
                 }
             }
         }) {

@@ -18,12 +18,26 @@ use std::{io, time::Duration};
 /// 3. If [`UpgradeSource::BuildFromSourceRustup`], runs the [`PTY`]/[`OSC`] source build
 ///    pinned to `--version <pinned_ver>`.
 ///
+/// This function is called by the [`Upgrading`] typestate in the [Control Plane] (either
+/// during an immediate upgrade via [`UpgradeJourney::start`] or during a deferred
+/// upgrade on exit via [`UpgradeCheckStatus::handle_upgrade_on_exit`]) to resolve the
+/// transition into [`Completed`]. This is part of the [Execution Plane]: it never
+/// imports or touches [`UpgradeJourney`] or [`UpgradeCheckStatus`].
+///
 /// # Errors
 ///
 /// Returns [`UpgradeError`] if all viable upgrade paths fail or are canceled.
 ///
+/// [`Completed`]: crate::self_upgrade::Completed
 /// [`OSC`]: r3bl_tui::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
+/// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+/// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
+/// [`Upgrading`]: crate::self_upgrade::Upgrading
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 pub async fn perform_upgrade(
     config: &UpgradeConfig,
     metadata: &CrateMetadata,

@@ -7,56 +7,29 @@ use r3bl_tui::{DeadlockPreventionPolicy::PanicOnSpecificLockNesting, ScopedMutex
                scoped_mutex};
 use std::{sync::LazyLock, thread::JoinHandle};
 
-/// Internal state protected by `SINGLETON`, pairing the [`UpgradeCheckStatus`] snapshot
-/// with the non-`Clone` [`JoinHandle`] of the dedicated version-check thread (when one
-/// was spawned by [`UpgradeJourney::start`]).
-///
-/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Default)]
-struct UpgradeSingletonState {
-    status: UpgradeCheckStatus,
-    thread_check_handle: Option<JoinHandle<()>>,
-}
-
-/// Process-wide singleton instance of [`UpgradeSingletonState`], lazily initialized on
-/// first access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`].
-static SINGLETON: LazyLock<
-    ScopedMutex<UpgradeSingletonState, { PanicOnSpecificLockNesting }>,
-> = LazyLock::new(|| scoped_mutex!(SPECIFIC, UpgradeSingletonState::default()));
-
-/// Process-wide lifecycle status singleton for the [`self_upgrade`] engine.
+/// Process-wide lifecycle status for the [`self_upgrade`] engine, stored in
+/// [`UpgradeSingletonState::status`] inside [`SINGLETON`]. This type is part of the
+/// [Control Plane].
 ///
 /// Starts at [`UpgradeCheckStatus::NotStarted`] and tracks the active
 /// [`UpgradeJourney<State>`] typestate across all [`UpgradePolicy`] modes:
-/// - **[`UpgradeStrategy::Immediate`] (`--upgrade`)**: [`NotStarted`] -> [`Checking`] ->
-///   [`UpToDate`], [`CheckFailed`], or [`Upgrading`] -> [`Completed`].
-/// - **[`UpgradeStrategy::DedicatedThread`] (`--upgrade-behavior`)**: [`NotStarted`] ->
-///   [`CooldownSkipped`] or [`Checking`] -> [`UpToDate`], [`CheckFailed`], or
-///   [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`].
-/// - **[`UpgradePolicy::Disabled`] (`--upgrade-behavior disable`)**: [`NotStarted`] ->
-///   [`Disabled`].
+/// - **Immediate upgrade ([`UpgradeStrategy::Immediate`], `--upgrade`)**: [`NotStarted`]
+///   -> [`Checking`] -> [`UpToDate`], [`CheckFailed`], or [`Upgrading`] -> [`Completed`].
+/// - **Deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
+///   `--upgrade-behavior`)**: [`NotStarted`] -> [`CooldownSkipped`] or [`Checking`] ->
+///   [`UpToDate`], [`CheckFailed`], or [`UpgradeAvailable`] -> [`Upgrading`] ->
+///   [`Completed`].
+/// - **Disabled ([`UpgradePolicy::Disabled`], `--upgrade-behavior disable`)**:
+///   [`NotStarted`] -> [`Disabled`].
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
-/// [`self_upgrade`] module documentation for the complete lifecycle diagram.
-///
-/// # Singleton & Exit Join Coordination
-///
-/// The active status and optional dedicated check thread `JoinHandle<()>` are stored
-/// together inside a module-private `SINGLETON` static
-/// (`LazyLock<ScopedMutex<UpgradeSingletonState, ...>>`).
-///
-/// At application shutdown, [`UpgradeCheckStatus::handle_upgrade_on_exit`]:
-/// 1. Atomically takes `thread_check_handle.take()` and **releases `SINGLETON`** before
-///    calling `handle.join()`, preventing lock-order deadlock and ensuring short-lived
-///    CLI invocations wait up to [`DEDICATED_THREAD_MANIFEST_TIMEOUT`] (`2s`) when the
-///    `1h` `mtime` cooldown was expired.
-/// 2. Atomically transitions [`UpgradeCheckStatus::UpgradeAvailable`] into
-///    [`UpgradeCheckStatus::Upgrading`] inside `SINGLETON.write` before releasing the
-///    lock to execute the exit action, guaranteeing one-shot idempotent exit handling.
+/// [`self_upgrade`] module documentation for the complete lifecycle diagram,
+/// [`UpgradeJourney::start`] for startup transitions, and
+/// [`Self::handle_upgrade_on_exit`] for shutdown join and exit handling.
 ///
 /// # Deadlock Prevention Policy: [`PanicOnSpecificLockNesting`] ([`SPECIFIC`])
 ///
-/// `SINGLETON` is strictly a leaf lock: its `read` and `write` closures only perform
+/// [`SINGLETON`] is strictly a leaf lock: its `read` and `write` closures only perform
 /// memory moves/clones and never acquire other locks, perform I/O, or join threads. We
 /// use [`SPECIFIC`] rather than `ANY` because caller threads may already hold
 /// component-level locks (such as [`OutputDevice`] or [`Readline`]) when querying the
@@ -66,7 +39,6 @@ static SINGLETON: LazyLock<
 /// [`Checking`]: Self::Checking
 /// [`Completed`]: Self::Completed
 /// [`CooldownSkipped`]: Self::CooldownSkipped
-/// [`DEDICATED_THREAD_MANIFEST_TIMEOUT`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
 /// [`Disabled`]: Self::Disabled
 /// [`NotStarted`]: Self::NotStarted
 /// [`OutputDevice`]: r3bl_tui::OutputDevice
@@ -76,10 +48,8 @@ static SINGLETON: LazyLock<
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`SPECIFIC`]: r3bl_tui::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
 /// [`UpgradeAvailable`]: Self::UpgradeAvailable
-/// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: Self::handle_upgrade_on_exit
 /// [`UpgradeCheckStatus::NotStarted`]: Self::NotStarted
-/// [`UpgradeCheckStatus::UpgradeAvailable`]: Self::UpgradeAvailable
-/// [`UpgradeCheckStatus::Upgrading`]: Self::Upgrading
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [`UpgradeJourney<State>`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
 /// [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
@@ -87,6 +57,7 @@ static SINGLETON: LazyLock<
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`Upgrading`]: Self::Upgrading
 /// [`UpToDate`]: Self::UpToDate
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum UpgradeCheckStatus {
@@ -143,7 +114,7 @@ pub enum UpgradeCheckStatus {
     CheckFailed(UpgradeJourney<CheckFailed>),
 
     /// Immediate upgrade (`--upgrade`) or exit upgrade action (`Auto`,
-    /// `PromptToUpgrade`, or `NotifyOnly`) is actively executing with `SINGLETON`
+    /// `PromptToUpgrade`, or `NotifyOnly`) is actively executing with [`SINGLETON`]
     /// released. Carries [`UpgradeJourney<Upgrading>`].
     ///
     /// [`UpgradeJourney<Upgrading>`]: crate::self_upgrade::UpgradeJourney
@@ -160,26 +131,61 @@ pub enum UpgradeCheckStatus {
 }
 
 impl UpgradeCheckStatus {
-    /// Returns a cloned snapshot of the current [`UpgradeCheckStatus`] from the
-    /// process-wide `SINGLETON`.
-    #[must_use]
-    pub fn get() -> Self { SINGLETON.read(|state| state.status.clone()) }
-
-    /// Returns `true` if `SINGLETON` is still at [`Self::NotStarted`].
-    #[must_use]
-    pub(super) fn is_not_started() -> bool {
-        SINGLETON.read(|state| matches!(state.status, Self::NotStarted))
+    /// Writes `upgrade_singleton_state` into [`SINGLETON`]
+    /// [`UpgradeSingletonState::status`] field without altering
+    /// [`UpgradeSingletonState::thread_check_handle`] field.
+    ///
+    /// Called only by the two [Control Plane] entry points to commit state transitions
+    /// after [`Self::try_claim_not_started`]:
+    /// - **During a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1])**:
+    ///   [`UpgradeJourney::start`], in [`NotStarted`], spawns a dedicated check thread
+    ///   which calls [`Self::set`] once the manifest check finishes. The main (current)
+    ///   thread continues running the application and at some later time calls
+    ///   [`Self::handle_upgrade_on_exit`] at shutdown (which calls [`Self::set`]).
+    /// - **During an immediate upgrade ([`UpgradeStrategy::Immediate`][2],
+    ///   `--upgrade`)**: No dedicated thread is spawned; [`UpgradeJourney::start`] runs
+    ///   the entire check and installation on the current thread, calling [`Self::set`]
+    ///   after each step before the binary exits.
+    ///
+    /// See [Thread Model] on [`NotStarted`] for the full thread-by-thread state
+    /// transition diagram.
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+    /// [2]: crate::self_upgrade::UpgradeStrategy::Immediate
+    /// [`NotStarted`]: crate::self_upgrade::NotStarted
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
+    pub(in crate::self_upgrade) fn set(upgrade_singleton_state: Self) {
+        SINGLETON.write(|state| {
+            state.status = upgrade_singleton_state;
+        });
     }
 
-    /// Atomically claims `SINGLETON` if and only if its current status is
+    /// Returns a cloned snapshot of the current [`UpgradeCheckStatus`] from the
+    /// process-wide [`SINGLETON`].
+    #[must_use]
+    pub fn get() -> Self {
+        SINGLETON.read(|upgrade_singleton_state| upgrade_singleton_state.status.clone())
+    }
+
+    /// Atomically claims [`SINGLETON`] if and only if its current status is
     /// [`Self::NotStarted`], replacing it with `initial_status` and returning `true`.
     ///
-    /// Returns `false` without mutating `SINGLETON` if [`UpgradeJourney::start`] was
-    /// already called earlier in this process.
+    /// # Preventing [`TOCTOU`] Race Conditions at Startup
     ///
+    /// Checking [`Self::get`] and then calling [`Self::set`] in two separate lock
+    /// acquisitions would create a Time-of-Check to Time-of-Use ([`TOCTOU`]) race if
+    /// [`UpgradeJourney::start`] were called concurrently. Performing both the
+    /// [`Self::NotStarted`] check and the assignment inside a single `SINGLETON.write`
+    /// lock acquisition guarantees that at most one caller claims the engine, returning
+    /// `false` to any duplicate caller without spawning extra threads or network calls.
+    ///
+    /// [`Self::NotStarted`]: Self::NotStarted
+    /// [`TOCTOU`]: https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     #[must_use]
-    pub(super) fn try_claim_not_started(initial_status: Self) -> bool {
+    pub(in crate::self_upgrade) fn try_claim_not_started(initial_status: Self) -> bool {
         SINGLETON.write(|state| {
             if matches!(state.status, Self::NotStarted) {
                 state.status = initial_status;
@@ -190,33 +196,48 @@ impl UpgradeCheckStatus {
         })
     }
 
-    /// Writes `status` into `SINGLETON` without altering `thread_check_handle`.
-    pub(super) fn set(status: Self) {
-        SINGLETON.write(|state| {
-            state.status = status;
-        });
-    }
-
-    /// Stores the [`JoinHandle`] of the dedicated version-check thread without altering
-    /// `status` (so a fast check thread that already wrote its terminal status before
-    /// this call is never overwritten).
-    pub(super) fn set_thread_check_handle(handle: JoinHandle<()>) {
+    /// Stores the [`JoinHandle`] of the dedicated version-check thread into
+    /// [`UpgradeSingletonState::thread_check_handle`] without altering
+    /// [`UpgradeSingletonState::status`] (so a fast check thread that already wrote its
+    /// terminal status before this call is never overwritten).
+    ///
+    /// Called on the current thread by [`UpgradeJourney::start`] during a deferred
+    /// upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1]).
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    pub(in crate::self_upgrade) fn set_thread_check_handle(handle: JoinHandle<()>) {
         SINGLETON.write(|state| {
             state.thread_check_handle = Some(handle);
         });
     }
 
-    /// Joins any in-flight dedicated version-check thread and executes the configured
-    /// exit upgrade action if [`Self::get`] resolves to [`Self::UpgradeAvailable`].
+    /// This method is called by `main()` at shutdown on the main thread to complete a
+    /// deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1]). This is part
+    /// of the [Control Plane].
     ///
-    /// Works in both async and sync contexts:
-    /// 1. Takes `thread_check_handle.take()` inside `SINGLETON.write` and drops the lock
-    ///    **before** calling `handle.join()`, preventing deadlock when the check thread
-    ///    writes its terminal status to `SINGLETON`.
+    /// If [`UpgradeJourney::start`] spawned a dedicated check thread, the main thread
+    /// first waits for that thread to finish, and then runs the configured
+    /// [`UpgradeActionOnExit`] on the main thread if an upgrade is available
+    /// ([`Self::UpgradeAvailable`]):
+    /// 1. Takes [`UpgradeSingletonState::thread_check_handle`] inside `SINGLETON.write`
+    ///    and drops the lock **before** calling `handle.join()`, preventing deadlock when
+    ///    the check thread writes its terminal status to [`SINGLETON`].
     /// 2. Atomically transitions [`Self::UpgradeAvailable`] into [`Self::Upgrading`]
-    ///    inside `SINGLETON.write` before executing the exit action, ensuring idempotent
-    ///    one-shot behavior if called more than once.
-    /// 3. Stores [`Self::Completed`] once the exit action finishes.
+    ///    inside a single `SINGLETON.write` lock acquisition before releasing the lock,
+    ///    preventing a [`TOCTOU`] race and guaranteeing one-shot idempotent behavior if
+    ///    called more than once.
+    /// 3. Delegates to `UpgradeJourney::<Upgrading>::execute_action_on_exit` outside the
+    ///    lock (which invokes the [Execution Plane] to prompt or install the upgrade) and
+    ///    commits the returned [`UpgradeJourney<Completed>`] via `Self::set`.
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+    /// [`TOCTOU`]: https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use
+    /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    /// [`UpgradeJourney<Completed>`]: crate::self_upgrade::UpgradeJourney
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     pub fn handle_upgrade_on_exit() {
         // Step 1: Loud lock release before joining the dedicated check thread.
         let maybe_handle = SINGLETON.write(|state| state.thread_check_handle.take());
@@ -251,21 +272,57 @@ impl UpgradeCheckStatus {
         }
     }
 
-    /// Drains any in-flight dedicated check thread and resets `SINGLETON` back to
-    /// [`Self::NotStarted`] with `thread_check_handle: None`, recovering cleanly even if
-    /// a prior test poisoned the mutex.
+    /// Drains any in-flight dedicated check thread and resets [`SINGLETON`] back to
+    /// [`UpgradeSingletonState::new`] ([`Self::NotStarted`] with
+    /// [`UpgradeSingletonState::thread_check_handle`] set to `None`).
     #[cfg(test)]
     pub(crate) fn reset_for_testing() {
-        let maybe_handle =
-            SINGLETON.lock_raw_poison_safe(|state| state.thread_check_handle.take());
+        let maybe_handle = SINGLETON.write(|state| state.thread_check_handle.take());
         if let Some(handle) = maybe_handle {
             drop(handle.join());
         }
-        SINGLETON.lock_raw_poison_safe(|state| {
-            *state = UpgradeSingletonState::default();
+        SINGLETON.write(|state| {
+            *state = UpgradeSingletonState::new();
         });
     }
 }
+
+/// Pairs the [`UpgradeCheckStatus`] with the [`JoinHandle`] of the dedicated check thread
+/// (when one is spawned by [`UpgradeJourney::start`]). [`SINGLETON`] makes this struct a
+/// global process singleton.
+///
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+#[derive(Debug)]
+pub struct UpgradeSingletonState {
+    /// Current [`UpgradeCheckStatus`] of the [`self_upgrade`] engine.
+    ///
+    /// [`self_upgrade`]: mod@crate::self_upgrade
+    pub status: UpgradeCheckStatus,
+
+    /// [`JoinHandle`] of the dedicated check thread spawned by [`UpgradeJourney::start`]
+    /// during a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`][1]), or
+    /// `None` if no thread was spawned or it has already been joined by
+    /// [`UpgradeCheckStatus::handle_upgrade_on_exit`].
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    pub thread_check_handle: Option<JoinHandle<()>>,
+}
+
+impl UpgradeSingletonState {
+    const fn new() -> Self {
+        Self {
+            status: UpgradeCheckStatus::NotStarted,
+            thread_check_handle: None,
+        }
+    }
+}
+
+/// Process-wide singleton instance of [`UpgradeSingletonState`], lazily initialized on
+/// first access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`].
+pub static SINGLETON: LazyLock<
+    ScopedMutex<UpgradeSingletonState, { PanicOnSpecificLockNesting }>,
+> = LazyLock::new(|| scoped_mutex!(SPECIFIC, UpgradeSingletonState::new()));
 
 #[cfg(test)]
 mod tests {
@@ -308,7 +365,6 @@ mod tests {
         UpgradeCheckStatus::reset_for_testing();
 
         // 1. NotStarted + atomic claim behavior.
-        assert!(UpgradeCheckStatus::is_not_started());
         assert_eq2!(UpgradeCheckStatus::get(), UpgradeCheckStatus::NotStarted);
 
         // 2. Disabled claims NotStarted; second claim fails without mutating SINGLETON.
@@ -317,7 +373,6 @@ mod tests {
         assert!(UpgradeCheckStatus::try_claim_not_started(
             UpgradeCheckStatus::Disabled(disabled_journey.clone())
         ));
-        assert!(!UpgradeCheckStatus::is_not_started());
         assert!(!UpgradeCheckStatus::try_claim_not_started(
             UpgradeCheckStatus::NotStarted
         ));

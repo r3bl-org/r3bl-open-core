@@ -3,9 +3,9 @@
 #![rustfmt::skip]
 
 // Private submodules.
-mod check_entry_point;
 mod cooldown;
+mod fetch_manifest;
 
 // Public barrel re-exports.
-pub use check_entry_point::*;
 pub use cooldown::*;
+pub use fetch_manifest::*;

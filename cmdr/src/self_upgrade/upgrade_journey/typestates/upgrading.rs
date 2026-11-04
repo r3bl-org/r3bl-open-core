@@ -1,7 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{Completed, UpgradeJourneyStateMarker, UpgradeResolution,
-            super::tokio_thread_runner::run_in_tokio_logged};
+            super::{ImmediateUpgradeResult,
+                    tokio_thread_runner::run_in_tokio_logged}};
 use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnExit,
             UpgradeError, UpgradeJourney, format_upgrade_available_notice,
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
@@ -38,6 +39,41 @@ impl UpgradeJourney<Upgrading> {
                 metadata: self.state.metadata,
                 resolution,
             },
+        }
+    }
+
+    /// Executes an immediate (`--upgrade`) installation via [`perform_upgrade`] outside
+    /// the `SINGLETON` leaf lock, touches the `1h` cooldown timestamp file if and only if
+    /// installation succeeded, and consumes `self` into [`UpgradeJourney<Completed>`]
+    /// paired with [`ImmediateUpgradeResult`] without mutating [`UpgradeCheckStatus`].
+    ///
+    /// [`ImmediateUpgradeResult`]: crate::self_upgrade::ImmediateUpgradeResult
+    /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
+    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
+    #[must_use]
+    pub(in crate::self_upgrade) async fn execute_immediate_upgrade(
+        self,
+    ) -> (UpgradeJourney<Completed>, ImmediateUpgradeResult) {
+        match perform_upgrade(
+            &self.config,
+            &self.state.metadata,
+            &self.state.binaries_release_base_url,
+        )
+        .await
+        {
+            Ok(()) => {
+                self.config
+                    .get_cooldown_policy()
+                    .touch(self.config.get_crate_name());
+                (
+                    self.into_completed(UpgradeResolution::Upgraded),
+                    ImmediateUpgradeResult::Succeeded,
+                )
+            }
+            Err(err) => (
+                self.into_completed(UpgradeResolution::UpgradeFailed(err)),
+                ImmediateUpgradeResult::Failed,
+            ),
         }
     }
 

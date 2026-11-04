@@ -56,8 +56,8 @@
 //! # Main Entry Point: [`UpgradeJourney`] & Typestate Lifecycle
 //!
 //! To make illegal states unrepresentable and unify startup, dedicated-thread checks, and
-//! shutdown under a single compiler-verified pipeline, the self-upgrade engine is built
-//! around three pillars:
+//! shutdown under a single compiler-verified pipeline, the [`self_upgrade`] engine is
+//! built around three pillars:
 //!
 //! 1. CLI-to-Domain Boundary ([`UpgradeCLIArgs`] -> [`UpgradePolicy`] ->
 //!    [`UpgradeStrategy`] -> [`UpgradeActionOnExit`]):
@@ -125,14 +125,40 @@
 //!                                               └──► Completed (touches timestamp file if Upgraded)
 //! ```
 //!
+//! ## Control Plane vs. Execution Plane
+//!
+//! [`self_upgrade`] separates **deciding what to do** from **doing the work**:
+//!
+//! - **Control Plane (State Machine & Lifecycle)**:
+//!   - [`UpgradeJourney`] and [`UpgradeCheckStatus`] (which is a process singleton)
+//!     decide *whether* and *when* to check or perform the upgrade.
+//!   - They own the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
+//!     check-thread spawning and joining, and all reads and writes to the process-wide
+//!     [`UpgradeCheckStatus`] singleton.
+//!   - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
+//!     flow across a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
+//!     dedicated check thread + current thread) and an immediate upgrade
+//!     ([`UpgradeStrategy::Immediate`], current thread only).
+//! - **Execution Plane (Network, Disk & Build Operations, etc.)**:
+//!   - [`check/`][manifest] and [`upgrade/`][`perform_upgrade`] perform the actual HTTP
+//!     manifest fetch ([`fetch_crate_metadata_from_manifest`]), [`mtime`] timestamp file
+//!     reads/writes ([`CooldownPolicy`]), archive download, SHA-256 check, binary swap,
+//!     [`PTY`] source build ([`perform_upgrade`]), and user prompt
+//!     ([`prompt_user_to_upgrade`]).
+//!   - These functions are stateless with respect to the state machine: they don't know
+//!     or care which [`UpgradeJourney<State>`] is active, and they never import or touch
+//!     [`UpgradeJourney`] or [`UpgradeCheckStatus`]. Instead, they take only the
+//!     configuration and metadata parameters they need (`&`[`UpgradeConfig`],
+//!     `&`[`EndpointUrl`], `&`[`CrateMetadata`]) and return a result.
+//!
 //! # Error Handling Policy
 //!
-//! - **Background check ([`UpgradeStrategy::DedicatedThread`], fails silently)**: If a
-//!   background version check fails (for example, while offline or when the manifest URL
-//!   cannot be reached), the running binary is never interrupted and nothing is printed
-//!   to the terminal. The engine records [`UpgradeCheckStatus::CheckFailed`], logs the
-//!   error when [`DEBUG_SELF_UPGRADE`] is enabled, and leaves the `1h` cooldown timestamp
-//!   file untouched so the next run can try again.
+//! - **Deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`], fails silently)**:
+//!   If a dedicated-thread version check fails (for example, while offline or when the
+//!   manifest URL cannot be reached), the running binary is never interrupted and nothing
+//!   is printed to the terminal. The engine records [`UpgradeCheckStatus::CheckFailed`],
+//!   logs the error when [`DEBUG_SELF_UPGRADE`] is enabled, and leaves the `1h` cooldown
+//!   timestamp file untouched so the next run can try again.
 //! - **Immediate upgrade ([`UpgradeStrategy::Immediate`], fails loudly)**: When the user
 //!   explicitly passes `--upgrade`, any check or upgrade failure prints a clear message
 //!   and retry hint on [`UserFeedbackChannel`] and returns
@@ -195,19 +221,24 @@
 //! [`Checking`]: crate::self_upgrade::Checking
 //! [`clap`]: mod@clap
 //! [`Completed`]: crate::self_upgrade::Completed
+//! [`CooldownPolicy`]: crate::self_upgrade::CooldownPolicy
 //! [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
 //! [`CrateDistribution::OpenSource`]: crate::self_upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
+//! [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 //! [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 //! [`Disabled`]: crate::self_upgrade::Disabled
-//! [`ImmediateUpgradeResult::Failed`]: crate::self_upgrade::ImmediateUpgradeResult::Failed
+//! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 //! [`ImmediateUpgradeResult`]: crate::self_upgrade::ImmediateUpgradeResult
 //! [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+//! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 //! [`NotStarted`]: crate::self_upgrade::NotStarted
 //! [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
+//! [`prompt_user_to_upgrade`]: crate::self_upgrade::prompt_user_to_upgrade
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
 //! [`ScopedMutex`]: r3bl_tui::ScopedMutex
+//! [`self_upgrade`]: mod@crate::self_upgrade
 //! [`upgrade_journey!`]: crate::upgrade_journey
 //! [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
 //! [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
@@ -223,14 +254,15 @@
 //! [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
 //! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
-//! [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
 //! [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 //! [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
 //! [`Upgrading`]: crate::self_upgrade::Upgrading
 //! [`UpToDate`]: crate::self_upgrade::UpToDate
 //! [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
 //! [jh]: std::thread::JoinHandle
+//! [manifest]: crate::self_upgrade::fetch_crate_metadata_from_manifest
 //! [policy-from]: crate::self_upgrade::UpgradePolicy::from
+//! [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 //! [Typestate Pattern]: https://stanford-cs242.github.io/f19/lectures/08-2-typestate.html
 //! [u]: crate::self_upgrade::upgrade_cli_args::UPGRADE_ARG_LONG
 //! [ub]: crate::self_upgrade::upgrade_cli_args::UPGRADE_BEHAVIOR_ARG_LONG

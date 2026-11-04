@@ -18,7 +18,7 @@
 /// UpgradePolicy
 /// ├─ Enabled(UpgradeStrategy)
 /// │  ├─ Immediate                               (immediate upgrade at startup & exit)
-/// │  └─ DedicatedThread(UpgradeActionOnExit)    (background check & action on exit)
+/// │  └─ DedicatedThread(UpgradeActionOnExit)    (deferred upgrade on exit)
 /// │     ├─ Auto (default)
 /// │     ├─ PromptToUpgrade
 /// │     └─ NotifyOnly
@@ -62,14 +62,15 @@ mod impl_upgrade_policy {
 /// [`UpgradePolicy::Enabled`]: crate::self_upgrade::UpgradePolicy::Enabled
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpgradeStrategy {
-    /// Checks the remote manifest and performs the upgrade synchronously during
-    /// [`UpgradeJourney::start()`][start], then exits.
+    /// Immediate upgrade (`--upgrade`): checks the remote manifest and performs the
+    /// upgrade synchronously during [`UpgradeJourney::start()`][start], then exits.
     ///
     /// [start]: crate::self_upgrade::UpgradeJourney::start
     Immediate,
 
-    /// Spawns a dedicated check thread during [`UpgradeJourney::start()`][start] (unless
-    /// skipped by cooldown) and runs the [`UpgradeActionOnExit`] in
+    /// Deferred upgrade on exit (`--upgrade-behavior`): spawns a dedicated check thread
+    /// during [`UpgradeJourney::start()`][start] (unless skipped by cooldown) and defers
+    /// the [`UpgradeActionOnExit`] until
     /// [`UpgradeCheckStatus::handle_upgrade_on_exit()`][exit].
     ///
     /// [exit]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit

@@ -1,14 +1,14 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Checking, UpgradeJourney};
-use crate::{DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeCheckStatus, UpgradeConfig};
+use super::{Checking, DedicatedCheckOutcome, UpgradeJourney};
+use crate::{DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeConfig};
 use r3bl_tui::{TokioRuntimeOutcome, run_in_tokio};
 use std::{any::Any,
           panic::{AssertUnwindSafe, catch_unwind}};
 
 /// Wrapper around [`run_in_tokio`] that logs runtime startup or panic failures via
 /// [`DEBUG_SELF_UPGRADE`].
-pub(super) fn run_in_tokio_logged<T: Send, F: Send + AsyncFnOnce() -> T>(
+pub(in crate::self_upgrade) fn run_in_tokio_logged<T: Send, F: Send + AsyncFnOnce() -> T>(
     config: &UpgradeConfig,
     async_fn: F,
 ) -> TokioRuntimeOutcome<T> {
@@ -30,26 +30,28 @@ pub(super) fn run_in_tokio_logged<T: Send, F: Send + AsyncFnOnce() -> T>(
 
 /// Runs `async_fn` directly on the dedicated `"self-upgrade-check"` OS thread using a
 /// single-threaded Tokio runtime inside [`catch_unwind`], avoiding spawning a nested
-/// second OS thread while guaranteeing [`UpgradeCheckStatus::CheckFailed`] on runtime
-/// initialization failure or panic.
-pub(super) fn run_on_dedicated_check_thread<F>(
+/// second OS thread while guaranteeing [`DedicatedCheckOutcome::CheckFailed`] on runtime
+/// initialization failure or panic without mutating [`UpgradeCheckStatus`].
+///
+/// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
+#[must_use]
+pub(in crate::self_upgrade) fn run_on_dedicated_check_thread<F>(
     checking: UpgradeJourney<Checking>,
     async_fn: F,
-) where
-    F: AsyncFnOnce(UpgradeJourney<Checking>),
+) -> DedicatedCheckOutcome
+where
+    F: AsyncFnOnce(UpgradeJourney<Checking>) -> DedicatedCheckOutcome,
 {
     let fallback_checking = checking.clone();
     let unwind_res = catch_unwind(AssertUnwindSafe(|| {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .map(|runtime| {
-                runtime.block_on(async_fn(checking));
-            })
+            .map(|runtime| runtime.block_on(async_fn(checking)))
     }));
 
     match unwind_res {
-        Ok(Ok(())) => {}
+        Ok(Ok(outcome)) => outcome,
         Ok(Err(io_err)) => {
             let error = ManifestCheckError::RuntimeOrThreadInitFailed {
                 reason: format!("Failed to build Tokio runtime: {io_err:#}"),
@@ -62,9 +64,7 @@ pub(super) fn run_on_dedicated_check_thread<F>(
                     error = %error
                 );
             });
-            UpgradeCheckStatus::set(UpgradeCheckStatus::CheckFailed(
-                fallback_checking.into_check_failed(error),
-            ));
+            DedicatedCheckOutcome::CheckFailed(fallback_checking.into_check_failed(error))
         }
         Err(panic_payload) => {
             let panic_msg = extract_panic_payload_message(panic_payload.as_ref());
@@ -79,9 +79,7 @@ pub(super) fn run_on_dedicated_check_thread<F>(
                     error = %error
                 );
             });
-            UpgradeCheckStatus::set(UpgradeCheckStatus::CheckFailed(
-                fallback_checking.into_check_failed(error),
-            ));
+            DedicatedCheckOutcome::CheckFailed(fallback_checking.into_check_failed(error))
         }
     }
 }
@@ -104,12 +102,9 @@ mod tests {
     use crate::{CooldownPolicy, CrateVersion, EndpointUrl, JsoncScalar,
                 UpgradeActionOnExit, UpgradePolicy, UpgradeStrategy, UserFeedbackChannel};
     use r3bl_tui::assert_eq2;
-    use serial_test::serial;
 
     #[test]
-    #[serial]
-    fn test_run_on_dedicated_check_thread_panic_sets_check_failed() {
-        UpgradeCheckStatus::reset_for_testing();
+    fn test_run_on_dedicated_check_thread_panic_returns_check_failed() {
         let config = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
@@ -121,12 +116,12 @@ mod tests {
         let checking = UpgradeJourney::new(config)
             .into_checking(UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto));
 
-        run_on_dedicated_check_thread(checking, async |_journey| {
+        let outcome = run_on_dedicated_check_thread(checking, async |_journey| {
             panic!("simulated panic inside dedicated check thread");
         });
 
-        match UpgradeCheckStatus::get() {
-            UpgradeCheckStatus::CheckFailed(failed) => {
+        match outcome {
+            DedicatedCheckOutcome::CheckFailed(failed) => {
                 assert_eq2!(
                     failed.get_state().error,
                     ManifestCheckError::CheckThreadPanicked {

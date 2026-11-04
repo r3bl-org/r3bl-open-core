@@ -48,7 +48,19 @@ impl PromptUpgradeDecision {
 /// upgrade now.
 ///
 /// Returns [`PromptUpgradeDecision::SkippedNonInteractive`] immediately if the terminal
-/// is non-interactive (e.g., running in a `CI` pipeline or headless script).
+/// is non-interactive (for example, running in a `CI` pipeline or headless script).
+///
+/// This function is called by the [`Upgrading`] typestate in the [Control Plane] during
+/// [`UpgradeCheckStatus::handle_upgrade_on_exit`] when
+/// [`UpgradeActionOnExit::PromptToUpgrade`] is configured, resolving into
+/// [`Completed`]. This is part of the [Execution Plane].
+///
+/// [`Completed`]: crate::self_upgrade::Completed
+/// [`UpgradeActionOnExit::PromptToUpgrade`]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
+/// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
+/// [`Upgrading`]: crate::self_upgrade::Upgrading
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 #[must_use]
 pub async fn prompt_user_to_upgrade(
     crate_name: &str,

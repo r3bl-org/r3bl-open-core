@@ -6,17 +6,32 @@ use std::{fs::{self, File},
           path::PathBuf,
           time::{Duration, SystemTime}};
 
-/// Cooldown timestamp file policy governing version-check caching.
+/// Cooldown [`mtime`] timestamp file policy governing version-check caching.
 ///
-/// Controls where (or whether) the cooldown timestamp file is stored on disk and
-/// read via [`Self::check_status`] and updated via [`Self::touch`].
+/// Controls where (or whether) the cooldown timestamp file is stored on disk, read via
+/// [`Self::check_status`], and updated via [`Self::touch`]. This type is part of the
+/// [Execution Plane] and is called by the [Control Plane]:
+/// - [`Self::check_status`] is called by [`UpgradeJourney::start`] to gate [`NotStarted`]
+///   into [`CooldownSkipped`] vs. [`Checking`].
+/// - [`Self::touch`] is called only when [`Checking`] resolves to [`UpToDate`] or when
+///   [`Upgrading`] resolves to [`Completed`] with [`UpgradeResolution::Upgraded`].
 ///
 /// Production binaries use [`Self::DefaultCacheDir`], whereas unit tests pass
 /// [`Self::Disabled`] or [`Self::CustomTimestampFilePath`] so tests remain completely
 /// hermetic and never touch the filesystem cache directory on the machine in which
 /// the tests run.
 ///
+/// [`Checking`]: crate::self_upgrade::Checking
+/// [`Completed`]: crate::self_upgrade::Completed
+/// [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
 /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
+/// [`NotStarted`]: crate::self_upgrade::NotStarted
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+/// [`UpgradeResolution::Upgraded`]: crate::self_upgrade::UpgradeResolution::Upgraded
+/// [`Upgrading`]: crate::self_upgrade::Upgrading
+/// [`UpToDate`]: crate::self_upgrade::UpToDate
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CooldownPolicy {
     /// Production policy storing a 0-byte [`mtime`] timestamp file at
