@@ -214,7 +214,7 @@ impl UpgradeJourney<NotStarted> {
                                 UpgradeCheckStatus::set(outcome.into_check_status());
                             }) {
                             Ok(handle) => {
-                                UpgradeCheckStatus::set_thread_check_handle(handle);
+                                UpgradeCheckStatus::set_dedicated_thread_handle(handle);
                             }
                             Err(io_err) => {
                                 let error =

@@ -133,7 +133,7 @@ pub enum UpgradeCheckStatus {
 impl UpgradeCheckStatus {
     /// Writes `upgrade_singleton_state` into [`SINGLETON`]
     /// [`UpgradeSingletonState::status`] field without altering
-    /// [`UpgradeSingletonState::thread_check_handle`] field.
+    /// [`UpgradeSingletonState::dedicated_thread_handle`] field.
     ///
     /// Called only by the two [Control Plane] entry points to commit state transitions
     /// after [`Self::try_claim_not_started`]:
@@ -197,7 +197,7 @@ impl UpgradeCheckStatus {
     }
 
     /// Stores the [`JoinHandle`] of the dedicated version-check thread into
-    /// [`UpgradeSingletonState::thread_check_handle`] without altering
+    /// [`UpgradeSingletonState::dedicated_thread_handle`] without altering
     /// [`UpgradeSingletonState::status`] (so a fast check thread that already wrote its
     /// terminal status before this call is never overwritten).
     ///
@@ -209,9 +209,9 @@ impl UpgradeCheckStatus {
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-    pub(in crate::self_upgrade) fn set_thread_check_handle(handle: JoinHandle<()>) {
+    pub(in crate::self_upgrade) fn set_dedicated_thread_handle(handle: JoinHandle<()>) {
         SINGLETON.write(|state| {
-            state.thread_check_handle = Some(handle);
+            state.dedicated_thread_handle = Some(handle);
         });
     }
 
@@ -223,9 +223,10 @@ impl UpgradeCheckStatus {
     /// first waits for that thread to finish, and then runs the configured
     /// [`UpgradeActionOnExit`] on the main thread if an upgrade is available
     /// ([`Self::UpgradeAvailable`]):
-    /// 1. Takes [`UpgradeSingletonState::thread_check_handle`] inside `SINGLETON.write`
-    ///    and drops the lock **before** calling `handle.join()`, preventing deadlock when
-    ///    the check thread writes its terminal status to [`SINGLETON`].
+    /// 1. Takes [`UpgradeSingletonState::dedicated_thread_handle`] inside
+    ///    `SINGLETON.write` and drops the lock **before** calling `handle.join()`,
+    ///    preventing deadlock when the check thread writes its terminal status to
+    ///    [`SINGLETON`].
     /// 2. Atomically transitions [`Self::UpgradeAvailable`] into [`Self::Upgrading`]
     ///    inside a single `SINGLETON.write` lock acquisition before releasing the lock,
     ///    preventing a [`TOCTOU`] race and guaranteeing one-shot idempotent behavior if
@@ -242,19 +243,8 @@ impl UpgradeCheckStatus {
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     pub fn handle_upgrade_on_exit() {
-        // Step 1: Loud lock release before joining the dedicated check thread.
-        let maybe_handle = SINGLETON.write(|state| state.thread_check_handle.take());
-        if let Some(handle) = maybe_handle
-            && let Err(panic_payload) = handle.join()
-        {
-            DEBUG_SELF_UPGRADE.then(|| {
-                // % is Display, ? is Debug.
-                tracing::debug!(
-                    message = "Dedicated self-upgrade check thread panicked outside catch_unwind",
-                    panic = ?panic_payload
-                );
-            });
-        }
+        // Step 1: Join the dedicated check thread outside the leaf lock (if spawned).
+        Self::join_dedicated_thread_if_running();
 
         // Step 2: Atomically claim `UpgradeAvailable -> Upgrading` inside leaf lock.
         let maybe_upgrading = SINGLETON.write(|state| {
@@ -275,15 +265,33 @@ impl UpgradeCheckStatus {
         }
     }
 
+    /// Takes [`UpgradeSingletonState::dedicated_thread_handle`] inside `SINGLETON.write`,
+    /// drops the lock, and joins the dedicated check thread if one was spawned.
+    fn join_dedicated_thread_if_running() {
+        // Loud lock release: take the handle inside `SINGLETON.write` so the lock is
+        // dropped before `handle.join()` blocks on the check thread.
+        let Some(handle) = SINGLETON.write(|state| state.dedicated_thread_handle.take())
+        else {
+            return;
+        };
+
+        if let Err(panic_payload) = handle.join() {
+            DEBUG_SELF_UPGRADE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "Dedicated self-upgrade check thread panicked outside catch_unwind",
+                    panic = ?panic_payload
+                );
+            });
+        }
+    }
+
     /// Drains any in-flight dedicated check thread and resets [`SINGLETON`] back to
     /// [`UpgradeSingletonState::new`] ([`Self::NotStarted`] with
-    /// [`UpgradeSingletonState::thread_check_handle`] set to `None`).
+    /// [`UpgradeSingletonState::dedicated_thread_handle`] set to `None`).
     #[cfg(test)]
     pub(crate) fn reset_for_testing() {
-        let maybe_handle = SINGLETON.write(|state| state.thread_check_handle.take());
-        if let Some(handle) = maybe_handle {
-            drop(handle.join());
-        }
+        Self::join_dedicated_thread_if_running();
         SINGLETON.write(|state| {
             *state = UpgradeSingletonState::new();
         });
@@ -312,14 +320,14 @@ pub struct UpgradeSingletonState {
     ///
     /// [1]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    pub thread_check_handle: Option<JoinHandle<()>>,
+    pub dedicated_thread_handle: Option<JoinHandle<()>>,
 }
 
 impl UpgradeSingletonState {
     const fn new() -> Self {
         Self {
             status: UpgradeCheckStatus::NotStarted,
-            thread_check_handle: None,
+            dedicated_thread_handle: None,
         }
     }
 }
@@ -336,12 +344,11 @@ pub static SINGLETON: LazyLock<
 
 #[cfg(test)]
 mod tests {
-    use super::{super::{CooldownPolicy, CrateDistribution, CrateMetadata,
-                        CrateReleaseDate, CrateVersion, EndpointUrl, JsoncScalar,
-                        ManifestCheckError, NotStarted, UpgradeActionOnExit,
-                        UpgradeConfig, UpgradePolicy, UpgradeResolution,
-                        UpgradeStrategy, UserFeedbackChannel},
-                *};
+    use super::*;
+    use crate::{CooldownPolicy, CrateDistribution, CrateMetadata, CrateReleaseDate,
+                CrateVersion, EndpointUrl, JsoncScalar, ManifestCheckError, NotStarted,
+                UpgradeActionOnExit, UpgradeConfig, UpgradePolicy, UpgradeResolution,
+                UpgradeStrategy, UserFeedbackChannel};
     use r3bl_tui::assert_eq2;
     use serial_test::serial;
     use std::time::Duration;
@@ -486,7 +493,7 @@ mod tests {
                 }),
             ));
         });
-        UpgradeCheckStatus::set_thread_check_handle(handle);
+        UpgradeCheckStatus::set_dedicated_thread_handle(handle);
 
         // `reset_for_testing` must join `handle` first, then reset to `NotStarted`.
         UpgradeCheckStatus::reset_for_testing();

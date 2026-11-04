@@ -8,11 +8,13 @@ mod tokio_thread_runner;
 mod typestates;
 mod upgrade_journey_macro;
 mod upgrade_journey_struct;
+mod upgrade_singleton;
 
 // Public barrel re-exports.
 pub use start_outcome::*;
 pub use typestates::*;
 pub use upgrade_journey_struct::*;
+pub use upgrade_singleton::*;
 
 #[cfg(test)]
 mod journey_integration_tests;

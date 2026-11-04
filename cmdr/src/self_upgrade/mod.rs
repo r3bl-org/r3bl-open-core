@@ -105,8 +105,9 @@
 //! [`self_upgrade`] separates **deciding what to do** from **doing the work**:
 //!
 //! 1. Control Plane (State Machine, Lifecycle & Threading)
-//!    - [`UpgradeJourney`] and [`UpgradeCheckStatus`] (which is a process singleton)
-//!      decide *whether* and *when* to check or perform the upgrade.
+//!    - [`upgrade_journey/`][`UpgradeJourney`] ([`UpgradeJourney`],
+//!      [`UpgradeCheckStatus`], [`UpgradeSingletonState`], and [`SINGLETON`]) decides
+//!      *whether* and *when* to check or perform the upgrade.
 //!    - They own the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
 //!      check-thread spawning and joining, and all reads and writes to the process-wide
 //!      [`UpgradeCheckStatus`] singleton.
@@ -281,7 +282,6 @@ mod config;
 mod constants;
 mod jsonc_manifest;
 mod upgrade;
-mod upgrade_check_cache;
 mod upgrade_journey;
 
 // Public barrel re-exports.
@@ -290,5 +290,4 @@ pub use config::*;
 pub use constants::*;
 pub use jsonc_manifest::*;
 pub use upgrade::*;
-pub use upgrade_check_cache::*;
 pub use upgrade_journey::*;
