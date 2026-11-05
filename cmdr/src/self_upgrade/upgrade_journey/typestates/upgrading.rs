@@ -1,20 +1,18 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{Completed, UpgradeJourneyStateMarker, UpgradeResolution,
-            super::{ImmediateUpgradeResult,
-                    tokio_thread_runner::run_in_tokio_logged}};
+            super::tokio_thread_runner::run_in_tokio_logged};
 use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnExit,
             UpgradeError, UpgradeJourney, format_upgrade_available_notice,
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
 use r3bl_tui::TokioRuntimeOutcome;
 
 /// Typestate while an upgrade or interactive exit prompt is actively executing on the
-/// current thread after the `SINGLETON` leaf lock has been released (`Checking ->
-/// Upgrading` for [`UpgradeStrategy::Immediate`]; `UpgradeAvailable -> Upgrading` for
-/// [`UpgradeStrategy::DedicatedThread`]). This type is part of the [Control Plane] (see
-/// [Thread Model]).
+/// current thread (`Checking -> Upgrading` for [`UpgradeStrategy::Immediate`];
+/// `UpgradeAvailable -> Upgrading` for [`UpgradeStrategy::Deferred`]). This type
+/// is part of the [Control Plane] (see [Thread Model]).
 ///
-/// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
@@ -45,18 +43,15 @@ impl UpgradeJourney<Upgrading> {
         }
     }
 
-    /// Executes an immediate (`--upgrade`) installation via [`perform_upgrade`] outside
-    /// the `SINGLETON` leaf lock, touches the `1h` cooldown timestamp file if and only if
-    /// installation succeeded, and consumes `self` into [`UpgradeJourney<Completed>`]
-    /// paired with [`ImmediateUpgradeResult`] without mutating [`UpgradeCheckStatus`].
+    /// Executes an immediate (`--upgrade`) installation via [`perform_upgrade`], touches
+    /// the `1h` cooldown timestamp file if and only if installation succeeded, and
+    /// consumes `self` into [`UpgradeJourney<Completed>`].
     ///
-    /// [`ImmediateUpgradeResult`]: crate::self_upgrade::ImmediateUpgradeResult
     /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
-    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
     #[must_use]
     pub(in crate::self_upgrade) async fn execute_immediate_upgrade(
         self,
-    ) -> (UpgradeJourney<Completed>, ImmediateUpgradeResult) {
+    ) -> UpgradeJourney<Completed> {
         match perform_upgrade(
             &self.config,
             &self.state.metadata,
@@ -68,15 +63,9 @@ impl UpgradeJourney<Upgrading> {
                 self.config
                     .get_cooldown_policy()
                     .touch(self.config.get_crate_name());
-                (
-                    self.into_completed(UpgradeResolution::Upgraded),
-                    ImmediateUpgradeResult::Succeeded,
-                )
+                self.into_completed(UpgradeResolution::Upgraded)
             }
-            Err(err) => (
-                self.into_completed(UpgradeResolution::UpgradeFailed(err)),
-                ImmediateUpgradeResult::Failed,
-            ),
+            Err(err) => self.into_completed(UpgradeResolution::UpgradeFailed(err)),
         }
     }
 

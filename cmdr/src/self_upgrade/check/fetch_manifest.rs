@@ -13,7 +13,7 @@ use std::time::Duration;
 /// resolve the transition into [`UpToDate`], [`UpgradeAvailable`], [`Upgrading`], or
 /// [`CheckFailed`]. This is part of the [Execution Plane]: it logs any fetch or parse
 /// failure via [`DEBUG_SELF_UPGRADE`], and never imports or touches [`UpgradeJourney`]
-/// or [`UpgradeCheckStatus`].
+/// or [`SINGLETON`].
 ///
 /// # Errors
 ///
@@ -28,8 +28,8 @@ use std::time::Duration;
 /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
+/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
-/// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [`UpToDate`]: crate::self_upgrade::UpToDate
@@ -178,16 +178,16 @@ pub enum ManifestCheckError {
         diagnostic: String,
     },
 
-    /// Dedicated `"self-upgrade-check"` OS thread or Tokio runtime failed to initialize.
+    /// Dedicated `"self-upgrade"` OS thread or Tokio runtime failed to initialize.
     #[error("{reason}")]
     RuntimeOrThreadInitFailed {
         /// Underlying OS thread or Tokio runtime initialization failure description.
         reason: String,
     },
 
-    /// Dedicated `"self-upgrade-check"` OS thread panicked during execution.
-    #[error("Dedicated self-upgrade check thread panicked: {panic_message}")]
-    CheckThreadPanicked {
+    /// Dedicated `"self-upgrade"` OS thread panicked during a deferred check.
+    #[error("Deferred self-upgrade check thread panicked: {panic_message}")]
+    DeferredCheckThreadPanicked {
         /// Extracted panic payload message.
         panic_message: String,
     },
@@ -238,7 +238,7 @@ mod tests {
             EndpointUrl::try_parse("http://127.0.0.1:0/nonexistent").unwrap();
         let result = http_req_helpers::try_get_jsonc_manifest_from_url(
             &invalid_url,
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT,
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await;
         assert!(result.is_err());
@@ -316,7 +316,7 @@ mod tests {
         let (meta, release_url) = fetch_crate_metadata_from_manifest(
             &ok_url,
             &crate_name,
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT,
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap();
@@ -330,7 +330,7 @@ mod tests {
         let err = fetch_crate_metadata_from_manifest(
             &err_url,
             &crate_name,
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT,
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap_err();

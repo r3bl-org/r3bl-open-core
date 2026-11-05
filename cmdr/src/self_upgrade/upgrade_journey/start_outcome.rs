@@ -1,11 +1,46 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::process::{ExitCode, Termination};
+use super::{CheckFailed, Checking, Completed, CooldownSkipped, Disabled, UpToDate,
+            UpgradeJourney};
+
+/// Outcome returned by [`UpgradeJourney::<NotStarted>::start`][start], telling the
+/// binary's `main()` whether upgrade checks are disabled, `--upgrade` executed
+/// immediately, a deferred upgrade was scheduled for exit, or `start()` was already
+/// called earlier in this process.
+///
+/// [start]: crate::self_upgrade::UpgradeJourney::start
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StartOutcome {
+    /// `--upgrade-behavior disable` ([`UpgradePolicy::Disabled`]): upgrade checks are
+    /// disabled; `main()` discards this value and continues running the application.
+    ///
+    /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
+    Disabled(UpgradeJourney<Disabled>),
+
+    /// `--upgrade` ([`UpgradeStrategy::Immediate`]) executed; `main()` should exit
+    /// immediately without running normal application logic.
+    ///
+    /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+    ImmediateUpgrade(ImmediateUpgradeOutcome),
+
+    /// Deferred upgrade on exit ([`UpgradeStrategy::Deferred`]); `main()` discards this
+    /// value and continues running the application.
+    ///
+    /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
+    DeferredUpgrade(DeferredUpgradeOutcome),
+
+    /// [`UpgradeJourney::start`] was already called earlier in this process; the
+    /// duplicate call spawned zero threads and left [`SINGLETON`] unchanged.
+    ///
+    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    AlreadyStarted,
+}
 
 /// Outcome of an explicit `--upgrade` ([`UpgradeStrategy::Immediate`]) run inside
-/// [`StartOutcome::UpgradedAndExit`].
+/// [`StartOutcome::ImmediateUpgrade`].
 ///
-/// Uses a `Copy` domain enum instead of `miette::Result<()>` so [`UserFeedbackChannel`]
+/// Uses a pure domain enum instead of `miette::Result<()>` so [`UserFeedbackChannel`]
 /// remains the single output emitter (preventing `miette`'s `Termination` handler from
 /// printing duplicate `Error:` diagnostics on [`stderr`] or leaking output when
 /// [`UserFeedbackChannel::Quiet`] is configured).
@@ -14,59 +49,48 @@ use std::process::{ExitCode, Termination};
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`UserFeedbackChannel::Quiet`]: crate::self_upgrade::UserFeedbackChannel::Quiet
 /// [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ImmediateUpgradeResult {
-    /// Binary was already up to date or upgraded cleanly (`exit 0`).
-    Succeeded,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImmediateUpgradeOutcome {
+    /// Local binary was already up to date (`remote <= current`).
+    UpToDate(UpgradeJourney<UpToDate>),
 
-    /// Manifest check or binary installation failed (`exit 1`); user-facing retry
-    /// feedback has already been emitted via [`UserFeedbackChannel`].
+    /// Manifest check or Tokio runtime initialization failed; user-facing retry feedback
+    /// has already been emitted via [`UserFeedbackChannel`].
     ///
     /// [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
-    Failed,
+    CheckFailed(UpgradeJourney<CheckFailed>),
+
+    /// Upgrade ran and finished with [`UpgradeResolution::Upgraded`] or
+    /// [`UpgradeResolution::UpgradeFailed`].
+    ///
+    /// [`UpgradeResolution::Upgraded`]: crate::self_upgrade::UpgradeResolution::Upgraded
+    /// [`UpgradeResolution::UpgradeFailed`]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+    Completed(UpgradeJourney<Completed>),
 }
 
-impl ImmediateUpgradeResult {
-    /// Maps this result to the corresponding process [`ExitCode`] (`0` for
-    /// [`Self::Succeeded`], `1` for [`Self::Failed`]).
-    pub const fn exit_code(self) -> ExitCode {
-        match self {
-            Self::Succeeded => ExitCode::SUCCESS,
-            Self::Failed => ExitCode::FAILURE,
-        }
-    }
-}
-
-impl Termination for ImmediateUpgradeResult {
-    fn report(self) -> ExitCode { self.exit_code() }
-}
-
-/// Outcome returned by [`UpgradeJourney::<NotStarted>::start`][start], telling the
-/// binary's `main()` whether `--upgrade` executed immediately, normal application
-/// execution should continue, or `start()` was already called earlier in this process.
+/// Startup state when [`UpgradeJourney::start`] returns
+/// [`StartOutcome::DeferredUpgrade`].
 ///
-/// [start]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StartOutcome {
-    /// `--upgrade` ([`UpgradeStrategy::Immediate`]) executed; `main()` should exit with
-    /// [`ImmediateUpgradeResult::exit_code`] (`0` on [`Succeeded`], `1` on [`Failed`]).
-    ///
-    /// [`Failed`]: ImmediateUpgradeResult::Failed
-    /// [`Succeeded`]: ImmediateUpgradeResult::Succeeded
-    /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
-    UpgradedAndExit(ImmediateUpgradeResult),
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeferredUpgradeOutcome {
+    /// Deferred check was skipped because the `1h` cooldown timestamp file is still
+    /// active.
+    CooldownSkipped(UpgradeJourney<CooldownSkipped>),
 
-    /// Normal startup ([`UpgradeStrategy::DedicatedThread`] or
-    /// [`UpgradePolicy::Disabled`]); `main()` should continue running the application.
+    /// Dedicated thread was spawned with [`UpgradeJourney<Checking>`] and its
+    /// [`JoinHandle<DeferredCheckOutcome>`][jh] was stored in [`SINGLETON`] for
+    /// [`handle_upgrade_on_exit`].
     ///
-    /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-    /// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
-    ContinueApplication,
+    /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+    /// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
+    /// [jh]: std::thread::JoinHandle
+    DeferredCheckSpawned(UpgradeJourney<Checking>),
 
-    /// [`UpgradeJourney::start`] was already called earlier in this process; the
-    /// duplicate call spawned zero threads and left [`UpgradeCheckStatus`] unchanged.
+    /// Dedicated OS thread failed to spawn; transitioned to
+    /// [`UpgradeJourney<CheckFailed>`].
     ///
-    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
-    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    AlreadyStarted,
+    /// [`UpgradeJourney<CheckFailed>`]: crate::self_upgrade::UpgradeJourney
+    DeferredCheckSpawnFailed(UpgradeJourney<CheckFailed>),
 }

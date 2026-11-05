@@ -36,7 +36,7 @@
 /// let journey = upgrade_journey!(UserFeedbackChannel::Stderr, upgrade_args);
 /// assert_eq!(
 ///     journey.get_config().get_upgrade_policy(),
-///     UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+///     UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
 ///         UpgradeActionOnExit::PromptToUpgrade
 ///     ))
 /// );

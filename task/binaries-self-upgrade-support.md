@@ -1547,27 +1547,35 @@ where
     F: AsyncFnOnce(UpgradeJourney<Checking>) -> DedicatedCheckOutcome,
 ```
 
-##### 5. Streamlined `SINGLETON` (`JoinHandle<DedicatedCheckOutcome>`) & Typed Startup/Exit Outcomes (`start_outcome.rs`, `upgrade_singleton.rs`, & `typestates/not_started.rs`)
+##### 5. Streamlined `SINGLETON` (`JoinHandle<DeferredCheckOutcome>`) & Typed Startup/Exit Outcomes (`start_outcome.rs`, `upgrade_singleton.rs`, & `typestates/not_started.rs`)
 
 - **Delete the 9-variant `UpgradeCheckStatus` enum completely**:
     - `SINGLETON` holds
-      `UpgradeSingletonState { started: bool, dedicated_thread_handle: Option<JoinHandle<DedicatedCheckOutcome>> }`.
+      `UpgradeSingletonState { start_status: SingletonStartStatus, deferred_check_handle: Option<JoinHandle<DeferredCheckOutcome>> }`.
     - In `UpgradeJourney::<NotStarted>::start`:
-        - Atomically claims `UpgradeSingletonState::try_claim_start()` once at the top of
-          `start(self) -> StartOutcome` (returning `StartOutcome::AlreadyStarted` on
-          duplicate calls).
-        - For `UpgradeStrategy::DedicatedThread`, spawns the dedicated thread named
+        - Atomically claims
+          `UpgradeSingletonState::try_claim_start() -> SingletonStartStatus` once at the
+          top of `start(self) -> StartOutcome` (returning `StartOutcome::AlreadyStarted`
+          on duplicate calls when `SingletonStartStatus::AlreadyStarted` is observed).
+        - For `UpgradeStrategy::Deferred`, spawns the dedicated thread named
           `dedicated_thread::DEDICATED_THREAD_NAME` (`"self-upgrade"`) returning
-          `DedicatedCheckOutcome` directly via `JoinHandle<DedicatedCheckOutcome>`, and
-          stores the handle via
-          `UpgradeSingletonState::set_dedicated_thread_handle(handle)` (so the dedicated
-          thread never accesses `SINGLETON`).
+          `DeferredCheckOutcome` directly via `JoinHandle<DeferredCheckOutcome>`, and
+          stores the handle via `UpgradeSingletonState::set_deferred_check_handle(handle)`
+          (so the dedicated thread never accesses `SINGLETON`).
 - **Return typed `UpgradeJourney<State>` directly from `.start()` and
   `handle_upgrade_on_exit()`**:
     - In `start_outcome.rs` (pure domain types with zero `ExitCode` or `Termination`
       boilerplate):
 
         ```rust
+        #[derive(Debug, Clone, PartialEq, Eq)]
+        pub enum StartOutcome {
+            Disabled(UpgradeJourney<Disabled>),
+            ImmediateUpgrade(ImmediateUpgradeOutcome),
+            DeferredUpgrade(DeferredUpgradeOutcome),
+            AlreadyStarted,
+        }
+
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum ImmediateUpgradeOutcome {
             UpToDate(UpgradeJourney<UpToDate>),
@@ -1576,18 +1584,10 @@ where
         }
 
         #[derive(Debug, Clone, PartialEq, Eq)]
-        pub enum ContinueOutcome {
-            Disabled(UpgradeJourney<Disabled>),
+        pub enum DeferredUpgradeOutcome {
             CooldownSkipped(UpgradeJourney<CooldownSkipped>),
-            DedicatedThreadSpawned(UpgradeJourney<Checking>),
-            DedicatedThreadSpawnFailed(UpgradeJourney<CheckFailed>),
-        }
-
-        #[derive(Debug, Clone, PartialEq, Eq)]
-        pub enum StartOutcome {
-            UpgradedAndExit(ImmediateUpgradeOutcome),
-            ContinueApplication(ContinueOutcome),
-            AlreadyStarted,
+            DeferredCheckSpawned(UpgradeJourney<Checking>),
+            DeferredCheckSpawnFailed(UpgradeJourney<CheckFailed>),
         }
         ```
 
@@ -1596,13 +1596,73 @@ where
         ```rust
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum ExitOutcome {
-            NoDedicatedThreadRunning,
+            NoDeferredCheckRunning,
             UpToDate(UpgradeJourney<UpToDate>),
             CheckFailed(UpgradeJourney<CheckFailed>),
             Completed(UpgradeJourney<Completed>),
         }
 
         pub fn handle_upgrade_on_exit() -> ExitOutcome { ... }
+        ```
+
+    - **State Machine & Lifecycle Flow diagram (`upgrade_journey_struct.rs`)**:
+
+        ```text
+        1. At startup: upgrade_journey!(channel, cli_args) ──► <NotStarted>.start()
+        ┌─────────────────────────────────────────────────────────────────────────┘
+        ├─ 1st .start() (claims SINGLETON.start_status; branches on UpgradePolicy):
+        │  │
+        │  ├─ UpgradePolicy::Disabled (--upgrade-behavior disable)
+        │  │  └─► <Disabled> ──► StartOutcome::Disabled(<Disabled>)
+        │  │
+        │  ├─ UpgradePolicy::Enabled(Immediate) (--upgrade)
+        │  │  │ (Runs entire lifecycle inside .start(); main() exits immediately)
+        │  │  └─► <Checking> (fetches versions.jsonc, 5s timeout; bypasses 1h cooldown)
+        │  │      ├─► <CheckFailed> (network/parse error)
+        │  │      │   └─► ImmediateUpgrade(CheckFailed(<CheckFailed>))
+        │  │      ├─► <UpToDate> (remote <= current) ──► touch timestamp file
+        │  │      │   └─► ImmediateUpgrade(UpToDate(<UpToDate>))
+        │  │      └─► <Upgrading> (remote > current) ──► perform_upgrade()
+        │  │          ├─► <Completed(Upgraded)> ──► touch timestamp file
+        │  │          │   └─► ImmediateUpgrade(Completed(<Completed>))
+        │  │          └─► <Completed(UpgradeFailed)>
+        │  │              └─► ImmediateUpgrade(Completed(<Completed>))
+        │  │
+        │  └─ UpgradePolicy::Enabled(Deferred(action))
+        │     │ (Returns DeferredUpgrade immediately; handle_upgrade_on_exit() later
+        │     │  takes and joins JoinHandle<DeferredCheckOutcome> from SINGLETON)
+        │     ├─ Active 1h cooldown ──► <CooldownSkipped>
+        │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
+        │     └─ Expired/missing timestamp file ──► <Checking>
+        │        ├─► Main thread: DeferredUpgrade(DeferredCheckSpawned(<Checking>))
+        │        └─► Dedicated thread (2s timeout; returns DeferredCheckOutcome):
+        │            ├─► DeferredCheckOutcome::UpToDate(<UpToDate>) ──► touch file
+        │            ├─► DeferredCheckOutcome::CheckFailed(<CheckFailed>)
+        │            └─► DeferredCheckOutcome::UpgradeAvailable(<UpgradeAvailable>)
+        │
+        └─ 2nd+ .start() (SINGLETON.start_status == AlreadyStarted)
+           └─► StartOutcome::AlreadyStarted (no-op)
+
+        2. At exit: handle_upgrade_on_exit() ──► ExitOutcome
+        ┌──────────────────────────────────────────────────┘
+        ├─ Step 1: Takes JoinHandle<DeferredCheckOutcome> from SINGLETON, drops lock,
+        │          and joins dedicated thread (waits <= 2s)
+        │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
+        │     └─► ExitOutcome::NoDeferredCheckRunning
+        └─ Step 2: Inspects DeferredCheckOutcome returned by dedicated thread:
+           ├─ UpToDate(<UpToDate>) ──────► ExitOutcome::UpToDate(<UpToDate>)
+           ├─ CheckFailed(<CheckFailed>) ► ExitOutcome::CheckFailed(<CheckFailed>)
+           └─ UpgradeAvailable(<UpgradeAvailable>) ──► <Upgrading>
+              ├─ Executes UpgradeActionOnExit:
+              │  ├─ Auto ────────────► perform_upgrade()
+              │  ├─ PromptToUpgrade ─► prompt user ──► perform_upgrade()
+              │  └─ NotifyOnly ──────► print notification
+              └─► ExitOutcome::Completed(<Completed>) (touches file if Upgraded)
+
+        Legend:
+        - <State>              = UpgradeJourney<State> (e.g. <NotStarted>)
+        - DeferredUpgrade(..)  = StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::..)
+        - ImmediateUpgrade(..) = StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::..)
         ```
 
 ##### 6. Control Plane vs. Execution Plane Documentation & Upward Rustdoc Links
@@ -1661,23 +1721,23 @@ where
 - [x] Run `./check.fish --check`, `./check.fish --fmt`, and targeted `self_upgrade` unit
       tests (`cargo test -p r3bl-cmdr --lib self_upgrade -q --message-format=short`) to
       verify compilation, formatting, rustdoc links, and test coverage.
-- [ ] Eliminate the 9-variant `UpgradeCheckStatus` enum, return `DedicatedCheckOutcome`
+- [x] Eliminate the 9-variant `UpgradeCheckStatus` enum, return `DedicatedCheckOutcome`
       directly via `JoinHandle<DedicatedCheckOutcome>`, return typed
       `UpgradeJourney<State>` outcomes from `.start()` and `handle_upgrade_on_exit()`, and
       standardize naming on "dedicated thread":
-    - [ ] **Step 1 (`constants.rs` & `check/fetch_manifest.rs`)**:
+    - [x] **Step 1 (`constants.rs` & `check/fetch_manifest.rs`)**:
         - Rename `pub mod check_thread` -> `pub mod dedicated_thread` and
           `CHECK_THREAD_NAME` -> `DEDICATED_THREAD_NAME = "self-upgrade"` in
           `cmdr/src/self_upgrade/constants.rs`.
         - Rename `ManifestCheckError::CheckThreadPanicked` ->
           `ManifestCheckError::DedicatedThreadPanicked` and remove `UpgradeCheckStatus`
           from rustdoc in `cmdr/src/self_upgrade/check/fetch_manifest.rs`.
-    - [ ] **Step 2 (`tokio_thread_runner.rs`)**:
+    - [x] **Step 2 (`tokio_thread_runner.rs`)**:
         - Rename `run_on_dedicated_check_thread` -> `run_on_dedicated_thread` in
           `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs`, construct
           `ManifestCheckError::DedicatedThreadPanicked`, remove `UpgradeCheckStatus` from
           rustdoc, and update unit test naming.
-    - [ ] **Step 3 (`typestates/checking.rs` & `typestates/upgrading.rs`)**:
+    - [x] **Step 3 (`typestates/checking.rs` & `typestates/upgrading.rs`)**:
         - In `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`: make
           `pub enum DedicatedCheckOutcome` public, delete
           `DedicatedCheckOutcome::into_check_status()` and
@@ -1686,7 +1746,7 @@ where
         - In `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`: simplify
           `execute_immediate_upgrade(self)` to return `UpgradeJourney<Completed>` directly
           (instead of a tuple with `ImmediateUpgradeResult`).
-    - [ ] **Step 4 (`start_outcome.rs`)**:
+    - [x] **Step 4 (`start_outcome.rs`)**:
         - Replace `ImmediateUpgradeResult` (and its `ExitCode` / `Termination` impls) with
           pure domain enum `ImmediateUpgradeOutcome`
           (`UpToDate(UpgradeJourney<UpToDate>)`,
@@ -1698,13 +1758,15 @@ where
           `DedicatedThreadSpawnFailed(UpgradeJourney<CheckFailed>)`) and update
           `StartOutcome` (`UpgradedAndExit(ImmediateUpgradeOutcome)`,
           `ContinueApplication(ContinueOutcome)`, `AlreadyStarted`).
-    - [ ] **Step 5 (`upgrade_singleton.rs`)**:
+    - [x] **Step 5 (`upgrade_singleton.rs`)**:
         - Delete `pub enum UpgradeCheckStatus` completely from
           `cmdr/src/self_upgrade/upgrade_journey/upgrade_singleton.rs`.
-        - Update `UpgradeSingletonState` to hold `pub started: bool` and
+        - Add witness enum `pub enum SingletonStartStatus` (`#[default] NotStarted`,
+          `AlreadyStarted`) and update `UpgradeSingletonState` to hold
+          `pub start_status: SingletonStartStatus` and
           `pub dedicated_thread_handle: Option<JoinHandle<DedicatedCheckOutcome>>` with
-          `try_claim_start()`, `set_dedicated_thread_handle(...)`, and
-          `#[cfg(test)] pub(crate) fn reset_for_testing()`.
+          `try_claim_start() -> SingletonStartStatus`, `set_dedicated_thread_handle(...)`,
+          and `#[cfg(test)] pub(crate) fn reset_for_testing()`.
         - Add `pub enum ExitOutcome` (`NoDedicatedThreadRunning`,
           `UpToDate(UpgradeJourney<UpToDate>)`,
           `CheckFailed(UpgradeJourney<CheckFailed>)`,
@@ -1714,7 +1776,7 @@ where
           `UpgradeAvailable -> Upgrading -> Completed` directly on the stack.
         - Update unit tests in `upgrade_singleton.rs` to test `try_claim_start()`,
           `reset_for_testing()`, and `handle_upgrade_on_exit() -> ExitOutcome`.
-    - [ ] **Step 6 (`typestates/not_started.rs`)**:
+    - [x] **Step 6 (`typestates/not_started.rs`)**:
         - Call `UpgradeSingletonState::try_claim_start()` once at the top of
           `UpgradeJourney::<NotStarted>::start(self) -> StartOutcome`.
         - Spawn the dedicated thread (`dedicated_thread::DEDICATED_THREAD_NAME`) returning
@@ -1724,7 +1786,7 @@ where
         - Update `run_immediate_upgrade` to return `ImmediateUpgradeOutcome` directly on
           the stack with zero `SINGLETON` access, and update the `# Thread Model` rustdoc
           diagrams.
-    - [ ] **Step 7 (Rustdocs & `journey_integration_tests.rs`)**:
+    - [x] **Step 7 (Rustdocs & `journey_integration_tests.rs`)**:
         - Update rustdoc links and prose across `cmdr/src/self_upgrade/mod.rs`,
           `upgrade_journey_struct.rs`, `typestates/upgrade_available.rs`,
           `config/upgrade_policy.rs`, `upgrade/perform_upgrade.rs`, and
@@ -1736,14 +1798,42 @@ where
         - Run `./check.fish --check`, `./check.fish --fmt`, and targeted `self_upgrade`
           unit tests
           (`cargo test -p r3bl-cmdr --lib self_upgrade -q --message-format=short`).
+    - [x] **Step 8 (`Deferred` vs. `Immediate` Domain Naming Alignment)**:
+        - Rename `UpgradeStrategy::DedicatedThread` -> `UpgradeStrategy::Deferred`,
+          `IMMEDIATE_MANIFEST_TIMEOUT` -> `IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT`,
+          `DEDICATED_THREAD_MANIFEST_TIMEOUT` ->
+          `DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`,
+          `DEDICATED_THREAD_CHECK_COOLDOWN` -> `DEFERRED_CHECK_COOLDOWN_DELAY`, and
+          `ManifestCheckError::DedicatedThreadPanicked` ->
+          `ManifestCheckError::DeferredCheckThreadPanicked` across `constants.rs`,
+          `config/{upgrade_policy,cli_arg,upgrade_config}.rs`, and
+          `check/{cooldown,fetch_manifest}.rs`.
+        - Rename `DedicatedCheckOutcome` -> `DeferredCheckOutcome` and
+          `UpgradeJourney::<Checking>::check_for_dedicated_thread_upgrade` ->
+          `check_for_deferred_upgrade` in `typestates/checking.rs` and
+          `tokio_thread_runner.rs`.
+        - Update `StartOutcome` in `start_outcome.rs` to promote
+          `StartOutcome::Disabled(UpgradeJourney<Disabled>)` to the top level alongside
+          `StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome)`,
+          `StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome)` (with `CooldownSkipped`,
+          `DeferredCheckSpawned`, `DeferredCheckSpawnFailed`), and
+          `StartOutcome::AlreadyStarted`.
+        - Rename `dedicated_thread_handle` -> `deferred_check_handle`,
+          `set_dedicated_thread_handle` -> `set_deferred_check_handle`, and
+          `ExitOutcome::NoDedicatedThreadRunning` -> `ExitOutcome::NoDeferredCheckRunning`
+          in `upgrade_singleton.rs`, move `upgrade_journey/upgrade_journey_struct.rs` ->
+          `upgrade_journey/typestates/state_machine.rs`, and update `not_started.rs`,
+          `typestates/state_machine.rs`, `upgrade_journey_macro.rs`,
+          `journey_integration_tests.rs`, and `cmdr/src/self_upgrade/mod.rs`.
+    - [ ] **Step 9**: TODO
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions (ordered top-down: Control Plane ->
       Execution Plane).
     - [ ] `cmdr/src/self_upgrade/mod.rs`
     - **Step A: Entry Point, Config & Struct Envelope (Control Plane)**
-        - [ ] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
+        - [x] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
         - [x] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_macro.rs`
-        - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`
         - [ ] `cmdr/src/self_upgrade/config/mod.rs`
         - [ ] `cmdr/src/self_upgrade/config/upgrade_config.rs`
         - [ ] `cmdr/src/self_upgrade/config/upgrade_policy.rs`

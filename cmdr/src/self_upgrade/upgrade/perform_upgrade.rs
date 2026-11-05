@@ -20,19 +20,19 @@ use std::{io, time::Duration};
 ///
 /// This function is called by the [`Upgrading`] typestate in the [Control Plane] (either
 /// during an immediate upgrade via [`UpgradeJourney::start`] or during a deferred
-/// upgrade on exit via [`UpgradeCheckStatus::handle_upgrade_on_exit`]) to resolve the
-/// transition into [`Completed`]. This is part of the [Execution Plane]: it never
-/// imports or touches [`UpgradeJourney`] or [`UpgradeCheckStatus`].
+/// upgrade on exit via [`handle_upgrade_on_exit`]) to resolve the transition into
+/// [`Completed`]. This is part of the [Execution Plane]: it never imports or touches
+/// [`UpgradeJourney`] or [`SINGLETON`].
 ///
 /// # Errors
 ///
 /// Returns [`UpgradeError`] if all viable upgrade paths fail or are canceled.
 ///
 /// [`Completed`]: crate::self_upgrade::Completed
+/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
 /// [`OSC`]: r3bl_tui::osc_codes::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
-/// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
+/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`Upgrading`]: crate::self_upgrade::Upgrading

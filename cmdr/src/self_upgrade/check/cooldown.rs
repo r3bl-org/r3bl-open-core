@@ -55,7 +55,7 @@ pub enum CooldownPolicy {
 
 impl Default for CooldownPolicy {
     fn default() -> Self {
-        Self::DefaultCacheDir(manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN)
+        Self::DefaultCacheDir(manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY)
     }
 }
 
@@ -67,7 +67,7 @@ impl CooldownPolicy {
     pub fn new_custom_path(arg_path: impl Into<PathBuf>) -> Self {
         Self::CustomTimestampFilePath(
             arg_path.into(),
-            manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN,
+            manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY,
         )
     }
 
@@ -220,25 +220,25 @@ impl CooldownPolicy {
 }
 
 /// Result of checking whether a crate's [`mtime`] cooldown timestamp file is still within
-/// [`DEDICATED_THREAD_CHECK_COOLDOWN`][1].
+/// [`DEFERRED_CHECK_COOLDOWN_DELAY`][1].
 ///
-/// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+/// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
 /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CooldownStatus {
     /// Timestamp file exists, is a regular file, and its [`mtime`] age is strictly less
-    /// than [`DEDICATED_THREAD_CHECK_COOLDOWN`][1]; skip spawning the dedicated check
+    /// than [`DEFERRED_CHECK_COOLDOWN_DELAY`][1]; skip spawning the dedicated check
     /// thread.
     ///
-    /// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     Active,
 
     /// Cooldown is disabled, timestamp file does not exist, not a regular file, [`mtime`]
     /// could not be read, system clock skewed backwards, or [`mtime`] age has reached or
-    /// exceeded [`DEDICATED_THREAD_CHECK_COOLDOWN`][1].
+    /// exceeded [`DEFERRED_CHECK_COOLDOWN_DELAY`][1].
     ///
-    /// [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
+    /// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     ExpiredOrMissing,
 }

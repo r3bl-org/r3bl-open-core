@@ -102,19 +102,21 @@ pub mod manifest_timeouts {
     /// ([`UPGRADE_ARG_LONG`]) runs.
     ///
     /// [`UPGRADE_ARG_LONG`]: crate::self_upgrade::upgrade_cli_args::UPGRADE_ARG_LONG
-    pub const IMMEDIATE_MANIFEST_TIMEOUT: Duration = Duration::from_secs(5);
+    pub const IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT: Duration =
+        Duration::from_secs(5);
 
-    /// HTTP timeout (`2s`) when fetching `versions.jsonc` on the dedicated check thread
-    /// configured via `--upgrade-behavior` ([`UPGRADE_BEHAVIOR_ARG_LONG`]).
+    /// HTTP timeout (`2s`) when fetching `versions.jsonc` during a deferred upgrade
+    /// check configured via `--upgrade-behavior` ([`UPGRADE_BEHAVIOR_ARG_LONG`]).
     ///
     /// [`UPGRADE_BEHAVIOR_ARG_LONG`]: crate::self_upgrade::upgrade_cli_args::UPGRADE_BEHAVIOR_ARG_LONG
-    pub const DEDICATED_THREAD_MANIFEST_TIMEOUT: Duration = Duration::from_secs(2);
+    pub const DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT: Duration =
+        Duration::from_secs(2);
 
     /// Cooldown window (`1h`) after a verified [`UpToDate`] check or completed upgrade
-    /// before the dedicated check thread queries `versions.jsonc` again.
+    /// before a deferred upgrade check queries `versions.jsonc` again.
     ///
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
-    pub const DEDICATED_THREAD_CHECK_COOLDOWN: Duration = Duration::from_hours(1);
+    pub const DEFERRED_CHECK_COOLDOWN_DELAY: Duration = Duration::from_hours(1);
 }
 
 /// OS thread naming constants for the [`self_upgrade`] [Control Plane] (see [Thread
@@ -123,13 +125,13 @@ pub mod manifest_timeouts {
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-pub mod check_thread {
+pub mod dedicated_thread {
     /// Thread name assigned to the dedicated version-check OS thread spawned by the
     /// [Control Plane] (see [Thread Model]).
     ///
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-    pub const CHECK_THREAD_NAME: &str = "self-upgrade-check";
+    pub const DEDICATED_THREAD_NAME: &str = "self-upgrade";
 }
 
 /// File extensions, delimiters, and network timeouts for pre-compiled release archives

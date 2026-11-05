@@ -80,40 +80,41 @@
 //!       [`Upgrading`], and [`Completed`] (see [State Machine & Lifecycle Flow] on
 //!       [`UpgradeJourney`]).
 //!     - State transitions are driven exclusively by the [Control Plane] on the
-//!       caller/current/main thread and a dedicated check thread; see [Thread Model] for
+//!       caller/current/main thread and a dedicated thread; see [Thread Model] for
 //!       details. The [Execution Plane] performs stateless network/disk work.
 //!   - Binaries construct [`UpgradeJourney<NotStarted>`] via [`upgrade_journey!`] and
 //!     call [`.start()`], which atomically claims the process-wide singleton:
 //!     - It returns [`StartOutcome::AlreadyStarted`] on duplicate calls
-//!     - Or it returns [`StartOutcome::UpgradedAndExit`], carrying
-//!       [`ImmediateUpgradeResult`], or [`StartOutcome::ContinueApplication`].
+//!     - Or it returns [`StartOutcome::Disabled`], [`StartOutcome::ImmediateUpgrade`]
+//!       (carrying [`ImmediateUpgradeOutcome`]), or [`StartOutcome::DeferredUpgrade`]
+//!       (carrying [`DeferredUpgradeOutcome`]).
 //!
 //! 3. Coordinated Process-Wide Singleton
 //!   - [`SINGLETON`] holds [`UpgradeSingletonState`] inside a leaf [`ScopedMutex`],
-//!     pairing [`UpgradeCheckStatus`] (which wraps the active [`UpgradeJourney<State>`])
-//!     with the optional [`JoinHandle<()>`][jh] of the [`CHECK_THREAD_NAME`] OS thread.
-//!   - At shutdown, [`UpgradeCheckStatus::handle_upgrade_on_exit`][9] takes the
-//!     [`JoinHandle<()>`][jh] from [`SINGLETON`], releases the mutex, and joins any
-//!     in-flight check thread (preventing deadlock and ensuring short-lived invocations
-//!     wait up to [`DEDICATED_THREAD_MANIFEST_TIMEOUT`][2] when the
-//!     [`DEDICATED_THREAD_CHECK_COOLDOWN`][1] timestamp file was expired), then
-//!     atomically transitions [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for
-//!     one-shot exit handling.
+//!     pairing [`SingletonStartStatus`] with the optional
+//!     [`JoinHandle<DeferredCheckOutcome>`][jh] of the [`DEDICATED_THREAD_NAME`] OS
+//!     thread.
+//!   - At shutdown, [`handle_upgrade_on_exit`][9] takes the
+//!     [`JoinHandle<DeferredCheckOutcome>`][jh] from [`SINGLETON`], releases the mutex,
+//!     and joins any in-flight dedicated thread (preventing deadlock and ensuring
+//!     short-lived invocations wait up to
+//!     [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
+//!     [`DEFERRED_CHECK_COOLDOWN_DELAY`][1] timestamp file was expired), then transitions
+//!     [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for one-shot exit handling.
 //!
 //! ## Control Plane vs. Execution Plane
 //!
 //! [`self_upgrade`] separates **deciding what to do** from **doing the work**:
 //!
 //! 1. Control Plane (State Machine, Lifecycle & Threading)
-//!    - [`upgrade_journey/`][`UpgradeJourney`] ([`UpgradeJourney`],
-//!      [`UpgradeCheckStatus`], [`UpgradeSingletonState`], and [`SINGLETON`]) decides
-//!      *whether* and *when* to check or perform the upgrade.
-//!    - They own the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
-//!      check-thread spawning and joining, and all reads and writes to the process-wide
-//!      [`UpgradeCheckStatus`] singleton.
+//!    - [`upgrade_journey/`][`UpgradeJourney`] ([`UpgradeJourney`], [`StartOutcome`],
+//!      [`ExitOutcome`], [`UpgradeSingletonState`], and [`SINGLETON`]) decides *whether*
+//!      and *when* to check or perform the upgrade.
+//!    - It owns the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
+//!      dedicated-thread spawning and joining, and the process-wide [`SINGLETON`].
 //!    - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
-//!      flow across a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`],
-//!      dedicated check thread + current thread) and an immediate upgrade
+//!      flow across a deferred upgrade on exit ([`UpgradeStrategy::Deferred`], dedicated
+//!      thread + current thread) and an immediate upgrade
 //!      ([`UpgradeStrategy::Immediate`], current thread only).
 //!
 //! 2. Execution Plane (Network, Disk & Build Operations, etc.)
@@ -124,9 +125,9 @@
 //!      ([`prompt_user_to_upgrade`]).
 //!    - These functions are stateless with respect to the state machine: they don't know
 //!      or care which [`UpgradeJourney<State>`] is active, and they never import or touch
-//!      [`UpgradeJourney`] or [`UpgradeCheckStatus`]. Instead, they take only the
-//!      configuration and metadata parameters they need (`&`[`UpgradeConfig`],
-//!      `&`[`EndpointUrl`], `&`[`CrateMetadata`]) and return a result.
+//!      [`UpgradeJourney`] or [`SINGLETON`]. Instead, they take only the configuration
+//!      and metadata parameters they need (`&`[`UpgradeConfig`], `&`[`EndpointUrl`],
+//!      `&`[`CrateMetadata`]) and return a result.
 //!
 //! # Error Handling Policy
 //!
@@ -135,19 +136,19 @@
 //! opportunistically in the background during normal application use or was explicitly
 //! requested by the user:
 //!
-//! 1. When running a deferred upgrade on exit ([`UpgradeStrategy::DedicatedThread`]),
-//!    errors never interrupt the user's workflow or alter the binary's exit code:
+//! 1. When running a deferred upgrade on exit ([`UpgradeStrategy::Deferred`]), errors
+//!    never interrupt the user's workflow or alter the binary's exit code:
 //!    - In this default mode ([`auto`], [`prompt-to-upgrade`], or [`notify-only`]), the
 //!      user invoked the binary to do their normal work rather than to upgrade.
 //!    - If the background version check fails (for example, while offline or when the
 //!      manifest URL cannot be reached), nothing is printed to the terminal. The engine
-//!      records [`UpgradeCheckStatus::CheckFailed`], logs the error when
-//!      [`DEBUG_SELF_UPGRADE`] is enabled, and leaves the `1h` cooldown timestamp file
-//!      untouched so the next run can try again.
+//!      transitions to [`CheckFailed`], logs the error when [`DEBUG_SELF_UPGRADE`] is
+//!      enabled, and leaves the `1h` cooldown timestamp file untouched so the next run
+//!      can try again.
 //!    - If a newer version was found and the exit upgrade itself fails during
-//!      [`UpgradeCheckStatus::handle_upgrade_on_exit`][9], the error is reported on
-//!      [`UserFeedbackChannel`] and recorded as [`UpgradeResolution::UpgradeFailed`]
-//!      without failing the application's own exit status.
+//!      [`handle_upgrade_on_exit`][9], the error is reported on [`UserFeedbackChannel`]
+//!      and recorded as [`UpgradeResolution::UpgradeFailed`] without failing the
+//!      application's own exit status.
 //!
 //! 2. When running an immediate upgrade ([`UpgradeStrategy::Immediate`]), errors are
 //!    reported loudly and cause the process to exit with status code `1`:
@@ -155,8 +156,9 @@
 //!      upgrading the binary right away, any failure must be surfaced immediately.
 //!    - Any manifest check or installation failure prints a clear diagnostic and retry
 //!      hint on [`UserFeedbackChannel`], leaves the `1h` cooldown timestamp file
-//!      untouched, and returns [`StartOutcome::UpgradedAndExit`] with
-//!      [`ImmediateUpgradeResult::Failed`].
+//!      untouched, and returns [`StartOutcome::ImmediateUpgrade`] with
+//!      [`ImmediateUpgradeOutcome::CheckFailed`] or
+//!      [`ImmediateUpgradeOutcome::Completed`].
 //!
 //! # Upgrade Source Resolution (Release Archive vs. Source Fallback)
 //!
@@ -208,12 +210,11 @@
 //! ```
 //!
 //! [10]: crate::self_upgrade::UpgradeSource::try_fallback_to_source
-//! [1]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN
-//! [2]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
-//! [9]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
+//! [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
+//! [2]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
+//! [9]: crate::self_upgrade::handle_upgrade_on_exit
 //! [`.start()`]: crate::self_upgrade::UpgradeJourney::start
 //! [`auto`]: crate::self_upgrade::UpgradeActionOnExit::Auto
-//! [`CHECK_THREAD_NAME`]: crate::self_upgrade::check_thread::CHECK_THREAD_NAME
 //! [`CheckFailed`]: crate::self_upgrade::CheckFailed
 //! [`Checking`]: crate::self_upgrade::Checking
 //! [`clap`]: mod@clap
@@ -224,10 +225,15 @@
 //! [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
 //! [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 //! [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
+//! [`DEDICATED_THREAD_NAME`]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
+//! [`DeferredCheckOutcome`]: crate::self_upgrade::DeferredCheckOutcome
+//! [`DeferredUpgradeOutcome`]: crate::self_upgrade::DeferredUpgradeOutcome
 //! [`Disabled`]: crate::self_upgrade::Disabled
 //! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
-//! [`ImmediateUpgradeResult::Failed`]: crate::self_upgrade::ImmediateUpgradeResult::Failed
-//! [`ImmediateUpgradeResult`]: crate::self_upgrade::ImmediateUpgradeResult
+//! [`ExitOutcome`]: crate::self_upgrade::ExitOutcome
+//! [`ImmediateUpgradeOutcome::CheckFailed`]: crate::self_upgrade::ImmediateUpgradeOutcome::CheckFailed
+//! [`ImmediateUpgradeOutcome::Completed`]: crate::self_upgrade::ImmediateUpgradeOutcome::Completed
+//! [`ImmediateUpgradeOutcome`]: crate::self_upgrade::ImmediateUpgradeOutcome
 //! [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
 //! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 //! [`notify-only`]: crate::self_upgrade::UpgradeActionOnExit::NotifyOnly
@@ -240,13 +246,14 @@
 //! [`ScopedMutex`]: r3bl_tui::ScopedMutex
 //! [`self_upgrade`]: mod@crate::self_upgrade
 //! [`SINGLETON`]: crate::self_upgrade::SINGLETON
+//! [`SingletonStartStatus`]: crate::self_upgrade::SingletonStartStatus
 //! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
-//! [`StartOutcome::ContinueApplication`]: crate::self_upgrade::StartOutcome::ContinueApplication
-//! [`StartOutcome::UpgradedAndExit`]: crate::self_upgrade::StartOutcome::UpgradedAndExit
+//! [`StartOutcome::DeferredUpgrade`]: crate::self_upgrade::StartOutcome::DeferredUpgrade
+//! [`StartOutcome::Disabled`]: crate::self_upgrade::StartOutcome::Disabled
+//! [`StartOutcome::ImmediateUpgrade`]: crate::self_upgrade::StartOutcome::ImmediateUpgrade
+//! [`StartOutcome`]: crate::self_upgrade::StartOutcome
 //! [`upgrade_journey!`]: crate::upgrade_journey
 //! [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
-//! [`UpgradeCheckStatus::CheckFailed`]: crate::self_upgrade::UpgradeCheckStatus::CheckFailed
-//! [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
 //! [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs
 //! [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
 //! [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
@@ -258,7 +265,7 @@
 //! [`UpgradeSingletonState`]: crate::self_upgrade::UpgradeSingletonState
 //! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
-//! [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+//! [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 //! [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 //! [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
 //! [`Upgrading`]: crate::self_upgrade::Upgrading

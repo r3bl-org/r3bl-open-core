@@ -9,6 +9,7 @@ mod completed;
 mod cooldown_skipped;
 mod disabled;
 mod not_started;
+mod state_machine;
 mod up_to_date;
 mod upgrade_available;
 mod upgrading;
@@ -20,8 +21,7 @@ pub use completed::*;
 pub use cooldown_skipped::*;
 pub use disabled::*;
 pub use not_started::*;
+pub use state_machine::*;
 pub use up_to_date::*;
 pub use upgrade_available::*;
 pub use upgrading::*;
-
-use super::UpgradeJourneyStateMarker;

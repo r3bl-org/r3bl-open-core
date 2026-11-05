@@ -14,8 +14,8 @@ use crate::UpgradeConfig;
 ///   methods are module-private (`pub(in crate::self_upgrade)`), code in other modules
 ///   cannot forge state transitions.
 /// - The [Control Plane] drives each transition across the caller/current/main thread and
-///   the dedicated check thread (see [Thread Model]) by consuming
-///   `UpgradeJourney<PrevState>` by value to produce `UpgradeJourney<NextState>`.
+///   the dedicated thread (see [Thread Model]) by consuming `UpgradeJourney<PrevState>`
+///   by value to produce `UpgradeJourney<NextState>`.
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// [`self_upgrade`] module documentation for how the CLI-to-domain boundary, typestate
@@ -28,47 +28,59 @@ use crate::UpgradeConfig;
 /// ```text
 /// 1. At startup: upgrade_journey!(channel, cli_args) ──► <NotStarted>.start()
 /// ┌─────────────────────────────────────────────────────────────────────────┘
-/// ├─ 1st .start() (claims SINGLETON; transitions from <NotStarted> based on UpgradePolicy):
+/// ├─ 1st .start() (claims SINGLETON.start_status; branches on UpgradePolicy):
 /// │  │
 /// │  ├─ UpgradePolicy::Disabled (--upgrade-behavior disable)
-/// │  │  └─► <Disabled> ───────────────────────────────────────► StartOutcome::ContinueApplication
+/// │  │  └─► <Disabled> ──► StartOutcome::Disabled(<Disabled>)
 /// │  │
 /// │  ├─ UpgradePolicy::Enabled(Immediate) (--upgrade)
-/// │  │  │ ( Runs entire lifecycle inside .start(); main() exits with result.exit_code() )
-/// │  │  └─► <Checking> (fetches versions.jsonc with 5s timeout; bypasses 1h cooldown)
-/// │  │      ├─► <CheckFailed> (network/parse error) ──────────► StartOutcome::UpgradedAndExit(Failed)
-/// │  │      ├─► <UpToDate> (remote <= current) ─► touch file ─► StartOutcome::UpgradedAndExit(Succeeded)
-/// │  │      └─► <Upgrading> (remote > current) ─► perform_upgrade()
-/// │  │          ├─► <Completed(Upgraded)> ─► touch file ──────► StartOutcome::UpgradedAndExit(Succeeded)
-/// │  │          └─► <Completed(UpgradeFailed)> ───────────────► StartOutcome::UpgradedAndExit(Failed)
+/// │  │  │ (Runs entire lifecycle inside .start(); main() exits immediately)
+/// │  │  └─► <Checking> (fetches versions.jsonc, 5s timeout; bypasses 1h cooldown)
+/// │  │      ├─► <CheckFailed> (network/parse error)
+/// │  │      │   └─► ImmediateUpgrade(CheckFailed(<CheckFailed>))
+/// │  │      ├─► <UpToDate> (remote <= current) ──► touch timestamp file
+/// │  │      │   └─► ImmediateUpgrade(UpToDate(<UpToDate>))
+/// │  │      └─► <Upgrading> (remote > current) ──► perform_upgrade()
+/// │  │          ├─► <Completed(Upgraded)> ──► touch timestamp file
+/// │  │          │   └─► ImmediateUpgrade(Completed(<Completed>))
+/// │  │          └─► <Completed(UpgradeFailed)>
+/// │  │              └─► ImmediateUpgrade(Completed(<Completed>))
 /// │  │
-/// │  └─ UpgradePolicy::Enabled(DedicatedThread(action))
-/// │     │ ( Returns ContinueApplication immediately: main() discards the return value and
-/// │     │   continues running; handle_upgrade_on_exit() later reads the active state and
-/// │     │   JoinHandle directly from SINGLETON )
-/// │     ├─ Active 1h cooldown ──► <CooldownSkipped> ──────────► StartOutcome::ContinueApplication
-/// │     └─ Expired/missing timestamp file ──► <Checking> ─────► StartOutcome::ContinueApplication
-/// │        │
-/// │        └─ Dedicated check thread (fetches versions.jsonc with 2s timeout):
-/// │           ├─► <UpToDate> (remote <= current) ──► touch file
-/// │           ├─► <CheckFailed> (network/parse error)
-/// │           └─► <UpgradeAvailable> (remote > current)
+/// │  └─ UpgradePolicy::Enabled(Deferred(action))
+/// │     │ (Returns DeferredUpgrade immediately; handle_upgrade_on_exit() later
+/// │     │  takes and joins JoinHandle<DeferredCheckOutcome> from SINGLETON)
+/// │     ├─ Active 1h cooldown ──► <CooldownSkipped>
+/// │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
+/// │     └─ Expired/missing timestamp file ──► <Checking>
+/// │        ├─► Main thread: DeferredUpgrade(DeferredCheckSpawned(<Checking>))
+/// │        └─► Dedicated thread (2s timeout; returns DeferredCheckOutcome):
+/// │            ├─► DeferredCheckOutcome::UpToDate(<UpToDate>) ──► touch file
+/// │            ├─► DeferredCheckOutcome::CheckFailed(<CheckFailed>)
+/// │            └─► DeferredCheckOutcome::UpgradeAvailable(<UpgradeAvailable>)
 /// │
-/// └─ 2nd+ .start() (SINGLETON already claimed) ───────────────► StartOutcome::AlreadyStarted (no-op)
+/// └─ 2nd+ .start() (SINGLETON.start_status == AlreadyStarted)
+///    └─► StartOutcome::AlreadyStarted (no-op)
 ///
-/// 2. At exit: UpgradeCheckStatus::handle_upgrade_on_exit()
-/// ┌──────────────────────────────────────────────────────┘
-/// ├─ Step 1: Takes JoinHandle from SINGLETON, drops lock, and joins dedicated check thread (waits <= 2s)
-/// └─ Step 2: Inspects SINGLETON state:
-///    ├─ <Disabled> | <CooldownSkipped> | <UpToDate> | <CheckFailed> | <Completed> ──► silent no-op
-///    └─ <UpgradeAvailable> ──► <Upgrading> ──► executes UpgradeActionOnExit:
-///                              │               ├─ Auto ────────────► perform_upgrade()
-///                              │               ├─ PromptToUpgrade ─► prompt user ──► perform_upgrade()
-///                              │               └─ NotifyOnly ──────► print notification
-///                              └──► <Completed> (touches timestamp file if Upgraded)
+/// 2. At exit: handle_upgrade_on_exit() ──► ExitOutcome
+/// ┌──────────────────────────────────────────────────┘
+/// ├─ Step 1: Takes JoinHandle<DeferredCheckOutcome> from SINGLETON, drops lock,
+/// │          and joins dedicated thread (waits <= 2s)
+/// │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
+/// │     └─► ExitOutcome::NoDeferredCheckRunning
+/// └─ Step 2: Inspects DeferredCheckOutcome returned by dedicated thread:
+///    ├─ UpToDate(<UpToDate>) ──────► ExitOutcome::UpToDate(<UpToDate>)
+///    ├─ CheckFailed(<CheckFailed>) ► ExitOutcome::CheckFailed(<CheckFailed>)
+///    └─ UpgradeAvailable(<UpgradeAvailable>) ──► <Upgrading>
+///       ├─ Executes UpgradeActionOnExit:
+///       │  ├─ Auto ────────────► perform_upgrade()
+///       │  ├─ PromptToUpgrade ─► prompt user ──► perform_upgrade()
+///       │  └─ NotifyOnly ──────► print notification
+///       └─► ExitOutcome::Completed(<Completed>) (touches file if Upgraded)
 ///
-/// Legend: <State> denotes the UpgradeJourney<State> typestate stored in SINGLETON.
-///         So, <NotStarted> is UpgradeJourney<NotStarted>.
+/// Legend:
+/// - <State>              = UpgradeJourney<State> (e.g. <NotStarted>)
+/// - DeferredUpgrade(..)  = StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::..)
+/// - ImmediateUpgrade(..) = StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::..)
 /// ```
 ///
 /// [`.start()`]: crate::self_upgrade::UpgradeJourney::start

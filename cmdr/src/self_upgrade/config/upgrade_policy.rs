@@ -20,12 +20,12 @@ use std::time::Duration;
 /// ```text
 /// UpgradePolicy
 /// ├─ Enabled(UpgradeStrategy)
-/// │  ├─ Immediate                               (immediate upgrade at startup & exit)
-/// │  └─ DedicatedThread(UpgradeActionOnExit)    (deferred upgrade on exit)
+/// │  ├─ Immediate                       (immediate upgrade at startup & exit)
+/// │  └─ Deferred(UpgradeActionOnExit)   (deferred upgrade on exit)
 /// │     ├─ Auto (default)
 /// │     ├─ PromptToUpgrade
 /// │     └─ NotifyOnly
-/// └─ Disabled                                   (suppressed: 0 threads, 0 I/O)
+/// └─ Disabled                           (suppressed: 0 threads, 0 I/O)
 /// ```
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
@@ -71,14 +71,13 @@ pub enum UpgradeStrategy {
     /// [start]: crate::self_upgrade::UpgradeJourney::start
     Immediate,
 
-    /// Deferred upgrade on exit (`--upgrade-behavior`): spawns a dedicated check thread
+    /// Deferred upgrade on exit (`--upgrade-behavior`): spawns a dedicated thread
     /// during [`UpgradeJourney::start()`][start] (unless skipped by cooldown) and defers
-    /// the [`UpgradeActionOnExit`] until
-    /// [`UpgradeCheckStatus::handle_upgrade_on_exit()`][exit].
+    /// the [`UpgradeActionOnExit`] until [`handle_upgrade_on_exit()`][exit].
     ///
-    /// [exit]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
+    /// [exit]: crate::self_upgrade::handle_upgrade_on_exit
     /// [start]: crate::self_upgrade::UpgradeJourney::start
-    DedicatedThread(UpgradeActionOnExit),
+    Deferred(UpgradeActionOnExit),
 }
 
 mod impl_upgrade_strategy {
@@ -86,22 +85,24 @@ mod impl_upgrade_strategy {
     use super::*;
 
     impl Default for UpgradeStrategy {
-        fn default() -> Self { Self::DedicatedThread(UpgradeActionOnExit::default()) }
+        fn default() -> Self { Self::Deferred(UpgradeActionOnExit::default()) }
     }
 
     impl UpgradeStrategy {
         /// Returns the manifest HTTP request timeout for this upgrade strategy
-        /// ([`IMMEDIATE_MANIFEST_TIMEOUT`] for [`Self::Immediate`],
-        /// [`DEDICATED_THREAD_MANIFEST_TIMEOUT`] for [`Self::DedicatedThread`]).
+        /// ([`IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] for [`Self::Immediate`],
+        /// [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][1] for [`Self::Deferred`]).
         ///
-        /// [`DEDICATED_THREAD_MANIFEST_TIMEOUT`]: crate::self_upgrade::manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
-        /// [`IMMEDIATE_MANIFEST_TIMEOUT`]: crate::self_upgrade::manifest_timeouts::IMMEDIATE_MANIFEST_TIMEOUT
+        /// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
+        /// [2]: crate::self_upgrade::manifest_timeouts::IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT
         #[must_use]
         pub const fn manifest_timeout(self) -> Duration {
             match self {
-                Self::Immediate => manifest_timeouts::IMMEDIATE_MANIFEST_TIMEOUT,
-                Self::DedicatedThread(_) => {
-                    manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
+                Self::Immediate => {
+                    manifest_timeouts::IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT
+                }
+                Self::Deferred(_) => {
+                    manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
                 }
             }
         }
@@ -109,9 +110,9 @@ mod impl_upgrade_strategy {
 }
 
 /// The upgrade action executed at application exit when
-/// [`UpgradeStrategy::DedicatedThread`][map] finds a newer version.
+/// [`UpgradeStrategy::Deferred`][map] finds a newer version.
 ///
-/// This enum is carried inside [`UpgradeStrategy::DedicatedThread`][map] during
+/// This enum is carried inside [`UpgradeStrategy::Deferred`][map] during
 /// [`Checking`] and unpacked into [`UpgradeAvailable`] once `remote_version >
 /// local_version` is verified. Because [`UpgradePolicy::Disabled`] and
 /// [`UpgradeStrategy::Immediate`][2] are handled earlier in the [`UpgradeJourney`]
@@ -127,7 +128,7 @@ mod impl_upgrade_strategy {
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
 /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
-/// [map]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+/// [map]: crate::self_upgrade::UpgradeStrategy::Deferred
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum UpgradeActionOnExit {
     /// Automatically downloads and installs the upgrade at exit without prompting if a
@@ -153,13 +154,11 @@ mod tests {
     fn test_upgrade_policy_and_strategy_defaults() {
         assert_eq2!(
             UpgradeStrategy::default(),
-            UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto)
+            UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)
         );
         assert_eq2!(
             UpgradePolicy::default(),
-            UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
-                UpgradeActionOnExit::Auto
-            ))
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto))
         );
     }
 
@@ -167,22 +166,20 @@ mod tests {
     fn test_upgrade_strategy_manifest_timeout() {
         assert_eq2!(
             UpgradeStrategy::Immediate.manifest_timeout(),
-            manifest_timeouts::IMMEDIATE_MANIFEST_TIMEOUT
+            manifest_timeouts::IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT
         );
         assert_eq2!(
-            UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto)
-                .manifest_timeout(),
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
+            UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto).manifest_timeout(),
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
         );
         assert_eq2!(
-            UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::PromptToUpgrade)
+            UpgradeStrategy::Deferred(UpgradeActionOnExit::PromptToUpgrade)
                 .manifest_timeout(),
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
         );
         assert_eq2!(
-            UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::NotifyOnly)
-                .manifest_timeout(),
-            manifest_timeouts::DEDICATED_THREAD_MANIFEST_TIMEOUT
+            UpgradeStrategy::Deferred(UpgradeActionOnExit::NotifyOnly).manifest_timeout(),
+            manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
         );
     }
 }

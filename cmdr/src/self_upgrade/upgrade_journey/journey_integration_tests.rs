@@ -6,15 +6,14 @@
 
 use super::*;
 use crate::{CooldownPolicy, CooldownStatus, CrateName, CrateVersion, EndpointUrl,
-            JsoncScalar, ManifestCheckError, UpgradeActionOnExit, UpgradeCheckStatus,
-            UpgradeConfig, UpgradeError, UpgradePolicy, UpgradeStrategy,
-            UserFeedbackChannel, resolve_self_upgrade_last_check_in_base_dir};
+            JsoncScalar, ManifestCheckError, UpgradeActionOnExit, UpgradeConfig,
+            UpgradeError, UpgradePolicy, UpgradeStrategy, UserFeedbackChannel,
+            resolve_self_upgrade_last_check_in_base_dir};
 use r3bl_tui::{assert_eq2, try_create_temp_dir};
 use serial_test::serial;
 use std::{fs::File,
           io::{Read, Write},
           net::TcpListener,
-          process::{ExitCode, Termination},
           time::{Duration, SystemTime}};
 
 fn format_manifest_json(version: &str, distribution: &str) -> String {
@@ -72,7 +71,7 @@ fn spawn_one_shot_http_server(
 #[test]
 #[serial]
 fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
 
     let make_config = |policy: UpgradePolicy| {
         UpgradeConfig::new(
@@ -87,12 +86,10 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
 
     let disabled_config = make_config(UpgradePolicy::Disabled);
     let first = UpgradeJourney::new(disabled_config.clone());
-    assert_eq2!(first.start(), StartOutcome::ContinueApplication);
-
-    let expected_status = UpgradeCheckStatus::Disabled(
-        UpgradeJourney::new(disabled_config).into_disabled(),
+    assert_eq2!(
+        first.start(),
+        StartOutcome::Disabled(UpgradeJourney::new(disabled_config).into_disabled())
     );
-    assert_eq2!(UpgradeCheckStatus::get(), expected_status);
 
     // Duplicate Immediate call must return AlreadyStarted and leave SINGLETON
     // untouched.
@@ -100,20 +97,22 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
         UpgradeStrategy::Immediate,
     )));
     assert_eq2!(dup_immediate.start(), StartOutcome::AlreadyStarted);
-    assert_eq2!(UpgradeCheckStatus::get(), expected_status);
 
-    // Duplicate DedicatedThread call must also return AlreadyStarted with 0 threads.
+    // Duplicate Deferred call must also return AlreadyStarted with 0 threads.
     let dup_thread = UpgradeJourney::new(make_config(UpgradePolicy::Enabled(
-        UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto),
+        UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto),
     )));
     assert_eq2!(dup_thread.start(), StartOutcome::AlreadyStarted);
-    assert_eq2!(UpgradeCheckStatus::get(), expected_status);
+    assert_eq2!(
+        handle_upgrade_on_exit(),
+        ExitOutcome::NoDeferredCheckRunning
+    );
 }
 
 #[test]
 #[serial]
 fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let crate_name: CrateName = "r3bl-cmdr".into();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path =
@@ -145,21 +144,9 @@ fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
     let outcome = UpgradeJourney::new(config).start();
     server_handle.join().unwrap();
 
-    assert_eq2!(
-        outcome,
-        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
-    );
-    assert_eq2!(
-        ImmediateUpgradeResult::Succeeded.exit_code(),
-        ExitCode::SUCCESS
-    );
-    assert_eq2!(
-        ImmediateUpgradeResult::Succeeded.report(),
-        ExitCode::SUCCESS
-    );
     assert!(matches!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::UpToDate(_)
+        outcome,
+        StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::UpToDate(_))
     ));
 
     // Verify the timestamp file `mtime` was refreshed by the live `UpToDate` check.
@@ -173,7 +160,7 @@ fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
 #[tokio::test]
 #[serial]
 async fn test_path1_immediate_up_to_date_async() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let (url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
         format_manifest_json("0.0.25", "open-source"),
@@ -191,24 +178,20 @@ async fn test_path1_immediate_up_to_date_async() {
     let outcome = UpgradeJourney::new(config).start();
     server_handle.join().unwrap();
 
-    assert_eq2!(
-        outcome,
-        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Succeeded)
-    );
     assert!(matches!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::UpToDate(_)
+        outcome,
+        StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::UpToDate(_))
     ));
 }
 
 #[test]
 #[serial]
 fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("failed.last_check");
 
-    // 1. Manifest HTTP 500 -> CheckFailed + Failed exit code, no cooldown timestamp file.
+    // 1. Manifest HTTP 500 -> CheckFailed, no cooldown timestamp file.
     let (bad_url, bad_handle) = spawn_one_shot_http_server(
         "500 Internal Server Error",
         "server error".to_string(),
@@ -225,29 +208,21 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
     let fail_outcome = UpgradeJourney::new(fail_cfg).start();
     bad_handle.join().unwrap();
 
-    assert_eq2!(
-        fail_outcome,
-        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
-    );
-    assert_eq2!(
-        ImmediateUpgradeResult::Failed.exit_code(),
-        ExitCode::FAILURE
-    );
     assert!(!timestamp_file_path.exists());
-    match UpgradeCheckStatus::get() {
-        UpgradeCheckStatus::CheckFailed(journey) => {
+    match fail_outcome {
+        StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::CheckFailed(journey)) => {
             assert!(matches!(
                 journey.get_state().error,
                 ManifestCheckError::FetchOrParseFailed { ref diagnostic } if !diagnostic.is_empty()
             ));
         }
-        other => panic!("Expected CheckFailed, got {other:?}"),
+        other => panic!("Expected ImmediateUpgrade(CheckFailed), got {other:?}"),
     }
 
     // 2. Newer ClosedSource version + unreachable release archive server ->
     // transitions Checking -> Upgrading -> Completed(UpgradeFailed), no timestamp
     // file.
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let closed_release_listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let closed_release_addr = closed_release_listener.local_addr().unwrap();
     drop(closed_release_listener);
@@ -273,13 +248,9 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
     let upg_fail_outcome = UpgradeJourney::new(upg_fail_cfg).start();
     newer_handle.join().unwrap();
 
-    assert_eq2!(
-        upg_fail_outcome,
-        StartOutcome::UpgradedAndExit(ImmediateUpgradeResult::Failed)
-    );
     assert!(!timestamp_file_path.exists());
-    match UpgradeCheckStatus::get() {
-        UpgradeCheckStatus::Completed(journey) => {
+    match upg_fail_outcome {
+        StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::Completed(journey)) => {
             assert_eq2!(
                 journey.get_state().metadata.version,
                 CrateVersion::try_parse("9.9.9").unwrap()
@@ -291,14 +262,16 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
                 )
             ));
         }
-        other => panic!("Expected Completed(UpgradeFailed), got {other:?}"),
+        other => {
+            panic!("Expected ImmediateUpgrade(Completed(UpgradeFailed)), got {other:?}")
+        }
     }
 }
 
 #[test]
 #[serial]
-fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
-    UpgradeCheckStatus::reset_for_testing();
+fn test_path2_deferred_cooldown_skip_and_expiry() {
+    UpgradeSingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("cooldown.last_check");
 
@@ -307,7 +280,7 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
-        UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+        UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
             UpgradeActionOnExit::Auto,
         )),
         EndpointUrl::try_parse("http://127.0.0.1:0/never_called.jsonc").unwrap(),
@@ -318,20 +291,18 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
         .touch(active_cfg.get_crate_name());
 
     let skip_outcome = UpgradeJourney::new(active_cfg).start();
-    assert_eq2!(skip_outcome, StartOutcome::ContinueApplication);
     assert!(matches!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::CooldownSkipped(_)
+        skip_outcome,
+        StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::CooldownSkipped(_))
     ));
-    UpgradeCheckStatus::handle_upgrade_on_exit();
-    assert!(matches!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::CooldownSkipped(_)
-    ));
+    assert_eq2!(
+        handle_upgrade_on_exit(),
+        ExitOutcome::NoDeferredCheckRunning
+    );
 
-    // 2. Expired timestamp file (`now - 2h`) -> spawns check thread, queries server,
+    // 2. Expired timestamp file (`now - 2h`) -> spawns dedicated thread, queries server,
     //    refreshes timestamp file.
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let expired_time = SystemTime::now() - Duration::from_secs(7200);
     File::open(&timestamp_file_path)
         .unwrap()
@@ -347,7 +318,7 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
-        UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+        UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
             UpgradeActionOnExit::Auto,
         )),
         EndpointUrl::try_parse(url.as_str()).unwrap(),
@@ -355,15 +326,15 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
     );
 
     let run_outcome = UpgradeJourney::new(expired_cfg.clone()).start();
-    assert_eq2!(run_outcome, StartOutcome::ContinueApplication);
+    assert!(matches!(
+        run_outcome,
+        StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::DeferredCheckSpawned(_))
+    ));
 
-    UpgradeCheckStatus::handle_upgrade_on_exit();
+    let exit_outcome = handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
-    assert!(matches!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::UpToDate(_)
-    ));
+    assert!(matches!(exit_outcome, ExitOutcome::UpToDate(_)));
     assert_eq2!(
         expired_cfg
             .get_cooldown_policy()
@@ -374,11 +345,11 @@ fn test_path2_dedicated_thread_cooldown_skip_and_expiry() {
 
 #[test]
 #[serial]
-fn test_path2_scenario_2c_exit_joins_inflight_check_thread_and_completes() {
-    UpgradeCheckStatus::reset_for_testing();
+fn test_path2_scenario_2c_exit_joins_inflight_dedicated_thread_and_completes() {
+    UpgradeSingletonState::reset_for_testing();
 
     // Simulate Scenario 2c: short-lived CLI reaches `handle_upgrade_on_exit()` while
-    // the `self-upgrade-check` thread is still awaiting the HTTP response (`50ms`).
+    // the `self-upgrade` dedicated thread is still awaiting the HTTP response (`50ms`).
     let (url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
         format_manifest_json("0.0.26", "open-source"),
@@ -388,7 +359,7 @@ fn test_path2_scenario_2c_exit_joins_inflight_check_thread_and_completes() {
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
-        UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+        UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
             UpgradeActionOnExit::NotifyOnly,
         )),
         EndpointUrl::try_parse(url.as_str()).unwrap(),
@@ -396,14 +367,17 @@ fn test_path2_scenario_2c_exit_joins_inflight_check_thread_and_completes() {
     );
 
     let outcome = UpgradeJourney::new(config).start();
-    assert_eq2!(outcome, StartOutcome::ContinueApplication);
+    assert!(matches!(
+        outcome,
+        StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::DeferredCheckSpawned(_))
+    ));
 
     // Immediately invoke exit handler while manifest check is still in flight.
-    UpgradeCheckStatus::handle_upgrade_on_exit();
+    let exit_outcome = handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
-    match UpgradeCheckStatus::get() {
-        UpgradeCheckStatus::Completed(journey) => {
+    match exit_outcome {
+        ExitOutcome::Completed(journey) => {
             assert_eq2!(
                 journey.get_state().metadata.version,
                 CrateVersion::try_parse("0.0.26").unwrap()
@@ -420,7 +394,7 @@ fn test_path2_scenario_2c_exit_joins_inflight_check_thread_and_completes() {
 #[tokio::test]
 #[serial]
 async fn test_path3_disabled_async_and_sync() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let config = UpgradeConfig::new(
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
@@ -430,18 +404,20 @@ async fn test_path3_disabled_async_and_sync() {
         CooldownPolicy::Disabled,
     );
     let outcome = UpgradeJourney::new(config.clone()).start();
-    assert_eq2!(outcome, StartOutcome::ContinueApplication);
     assert_eq2!(
-        UpgradeCheckStatus::get(),
-        UpgradeCheckStatus::Disabled(UpgradeJourney::new(config).into_disabled())
+        outcome,
+        StartOutcome::Disabled(UpgradeJourney::new(config).into_disabled())
     );
-    UpgradeCheckStatus::handle_upgrade_on_exit();
+    assert_eq2!(
+        handle_upgrade_on_exit(),
+        ExitOutcome::NoDeferredCheckRunning
+    );
 }
 
 #[test]
 #[serial]
 fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_cooldown() {
-    UpgradeCheckStatus::reset_for_testing();
+    UpgradeSingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("auto_fail.last_check");
 
@@ -462,7 +438,7 @@ fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_co
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
-        UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+        UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
             UpgradeActionOnExit::Auto,
         )),
         EndpointUrl::try_parse(manifest_url.as_str()).unwrap(),
@@ -470,14 +446,17 @@ fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_co
     );
 
     let outcome = UpgradeJourney::new(config).start();
-    assert_eq2!(outcome, StartOutcome::ContinueApplication);
+    assert!(matches!(
+        outcome,
+        StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::DeferredCheckSpawned(_))
+    ));
 
-    UpgradeCheckStatus::handle_upgrade_on_exit();
+    let exit_outcome = handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
     assert!(!timestamp_file_path.exists());
-    match UpgradeCheckStatus::get() {
-        UpgradeCheckStatus::Completed(completed) => {
+    match exit_outcome {
+        ExitOutcome::Completed(completed) => {
             assert!(matches!(
                 completed.get_state().resolution,
                 UpgradeResolution::UpgradeFailed(

@@ -3,16 +3,15 @@
 use super::{UpgradeJourneyStateMarker, Upgrading};
 use crate::{CrateMetadata, EndpointUrl, UpgradeActionOnExit, UpgradeJourney};
 
-/// Typestate when an [`UpgradeStrategy::DedicatedThread`] check found
-/// `remote_version > local_version` and awaits
-/// [`UpgradeCheckStatus::handle_upgrade_on_exit`].
+/// Typestate when an [`UpgradeStrategy::Deferred`] check found
+/// `remote_version > local_version` and awaits [`handle_upgrade_on_exit`].
 ///
 /// [`UpgradeStrategy::Immediate`] transitions directly from [`Checking`] to
 /// [`Upgrading`], so `Immediate` is unrepresentable at application exit.
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
-/// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
-/// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 #[derive(Debug, Clone, PartialEq, Eq)]

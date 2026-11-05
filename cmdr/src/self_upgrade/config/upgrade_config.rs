@@ -175,7 +175,7 @@ mod tests {
         assert_eq2!(config.get_cooldown_policy(), &CooldownPolicy::default());
         assert_eq2!(
             config.get_cooldown_policy().try_get_cooldown_duration(),
-            Some(manifest_timeouts::DEDICATED_THREAD_CHECK_COOLDOWN)
+            Some(manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY)
         );
 
         let custom_timestamp_file_path = resolve_self_upgrade_last_check_in_base_dir(

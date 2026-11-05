@@ -26,22 +26,22 @@ use clap::{Parser, ValueEnum};
 /// [`UpgradePolicy`] (which nests [`UpgradeStrategy`] and [`UpgradeActionOnExit`]):
 ///
 /// ```text
-/// Our Domain                                 │ ◄── CLI Args passed to `<bin> --upgrade` or
-///                                            │     `<bin> --upgrade-behavior
-///                                            │            <disable|auto|
-///                                            │             notify-only|prompt-to-upgrade>`
-/// ───────────────────────────────────────────┼──────────────────────────────────────────────
-/// UpgradePolicy                              │
-/// ├─ Enabled(UpgradeStrategy)                │ Immediate upgrade at startup & exit
-/// │  ├─ Immediate                            │ ◄── `<bin> --upgrade`
-/// │  │                                       │
-/// │  └─ DedicatedThread(UpgradeActionOnExit) │ Deferred upgrade on exit
-/// │     ├─ Auto (default)                    │ ◄── `<bin>` or `<bin> --upgrade-behavior auto`
-/// │     ├─ PromptToUpgrade                   │ ◄── `<bin> --upgrade-behavior prompt-to-upgrade`
-/// │     └─ NotifyOnly                        │ ◄── `<bin> --upgrade-behavior notify-only`
-/// │                                          │
-/// │                                          │ Suppressed: 0 threads, 0 I/O
-/// └─ Disabled                                │ ◄── `<bin> --upgrade-behavior disable`
+/// Our Domain                          │ ◄── CLI Args passed to `<bin> --upgrade` or
+///                                     │     `<bin> --upgrade-behavior
+///                                     │            <disable|auto|
+///                                     │             notify-only|prompt-to-upgrade>`
+/// ────────────────────────────────────┼──────────────────────────────────────────────
+/// UpgradePolicy                       │
+/// ├─ Enabled(UpgradeStrategy)         │ Immediate upgrade at startup & exit
+/// │  ├─ Immediate                     │ ◄── `<bin> --upgrade`
+/// │  │                                │
+/// │  └─ Deferred(UpgradeActionOnExit) │ Deferred upgrade on exit
+/// │     ├─ Auto (default)             │ ◄── `<bin>` or `<bin> --upgrade-behavior auto`
+/// │     ├─ PromptToUpgrade            │ ◄── `<bin> --upgrade-behavior prompt-to-upgrade`
+/// │     └─ NotifyOnly                 │ ◄── `<bin> --upgrade-behavior notify-only`
+/// │                                   │
+/// │                                   │ Suppressed: 0 threads, 0 I/O
+/// └─ Disabled                         │ ◄── `<bin> --upgrade-behavior disable`
 /// ```
 ///
 /// <div class="warning">
@@ -140,17 +140,17 @@ impl From<UpgradeCLIArgs> for UpgradePolicy {
 
             // (no flags) or --upgrade-behavior auto
             (None, None | Some(CliUpgradeBehavior::Auto)) => {
-                Self::Enabled(UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::Auto))
+                Self::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto))
             }
 
             // --upgrade-behavior prompt-to-upgrade
             (None, Some(CliUpgradeBehavior::PromptToUpgrade)) => Self::Enabled(
-                UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::PromptToUpgrade),
+                UpgradeStrategy::Deferred(UpgradeActionOnExit::PromptToUpgrade),
             ),
 
             // --upgrade-behavior notify-only
             (None, Some(CliUpgradeBehavior::NotifyOnly)) => Self::Enabled(
-                UpgradeStrategy::DedicatedThread(UpgradeActionOnExit::NotifyOnly),
+                UpgradeStrategy::Deferred(UpgradeActionOnExit::NotifyOnly),
             ),
 
             // --upgrade-behavior disable
@@ -180,9 +180,7 @@ mod tests {
     fn test_cli_args_parse_and_convert_to_upgrade_policy() {
         assert_eq2!(
             parse_policy(&["test-bin"]),
-            UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
-                UpgradeActionOnExit::Auto
-            ))
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto))
         );
         assert_eq2!(
             parse_policy(&["test-bin", "--upgrade"]),
@@ -190,19 +188,17 @@ mod tests {
         );
         assert_eq2!(
             parse_policy(&["test-bin", "--upgrade-behavior", "auto"]),
-            UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
-                UpgradeActionOnExit::Auto
-            ))
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto))
         );
         assert_eq2!(
             parse_policy(&["test-bin", "--upgrade-behavior", "prompt-to-upgrade"]),
-            UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::PromptToUpgrade
             ))
         );
         assert_eq2!(
             parse_policy(&["test-bin", "--upgrade-behavior", "notify-only"]),
-            UpgradePolicy::Enabled(UpgradeStrategy::DedicatedThread(
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::NotifyOnly
             ))
         );

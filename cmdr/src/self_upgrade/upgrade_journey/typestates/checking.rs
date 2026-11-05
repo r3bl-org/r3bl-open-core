@@ -3,23 +3,23 @@
 use super::{CheckFailed, UpToDate, UpgradeAvailable, UpgradeJourneyStateMarker,
             Upgrading};
 use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, ManifestCheckError,
-            UpgradeActionOnExit, UpgradeCheckStatus, UpgradeJourney, UpgradeStrategy,
+            UpgradeActionOnExit, UpgradeJourney, UpgradeStrategy,
             fetch_crate_metadata_from_manifest};
 
 /// Typestate while querying [`R3BL_VERSIONS_JSONC_URL`] (either synchronously on the
-/// current thread via [`UpgradeStrategy::Immediate`] or on the dedicated check thread via
-/// [`UpgradeStrategy::DedicatedThread`]). This type is part of the [Control Plane] (see
+/// current thread via [`UpgradeStrategy::Immediate`] or on the dedicated thread via
+/// [`UpgradeStrategy::Deferred`]). This type is part of the [Control Plane] (see
 /// [Thread Model]).
 ///
 /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
-/// [`UpgradeStrategy::DedicatedThread`]: crate::self_upgrade::UpgradeStrategy::DedicatedThread
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Checking {
     /// Active [`UpgradeStrategy`] (`Immediate` or
-    /// `DedicatedThread(UpgradeActionOnExit)`).
+    /// `Deferred(UpgradeActionOnExit)`).
     ///
     /// [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
     pub strategy: UpgradeStrategy,
@@ -81,26 +81,24 @@ impl UpgradeJourney<Checking> {
         }
     }
 
-    /// Consumes `self` on the dedicated version-check thread (in the [Control Plane]; see
-    /// [Thread Model]), queries the JSONC manifest via
-    /// [`fetch_crate_metadata_from_manifest`] (in the [Execution Plane]) using
-    /// [`UpgradeStrategy::manifest_timeout`], touches the `1h` cooldown timestamp file
-    /// when [`UpToDate`], and returns [`DedicatedCheckOutcome`] without mutating
-    /// [`UpgradeCheckStatus`].
+    /// Consumes `self` on the dedicated thread (in the [Control Plane]; see [Thread
+    /// Model]), queries the JSONC manifest via [`fetch_crate_metadata_from_manifest`] (in
+    /// the [Execution Plane]) using [`UpgradeStrategy::manifest_timeout`], touches the
+    /// `1h` cooldown timestamp file when [`UpToDate`], and returns
+    /// [`DeferredCheckOutcome`].
     ///
     /// [`fetch_crate_metadata_from_manifest`]: crate::self_upgrade::fetch_crate_metadata_from_manifest
-    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
-    pub(in crate::self_upgrade) async fn check_for_dedicated_thread_upgrade(
+    pub(in crate::self_upgrade) async fn check_for_deferred_upgrade(
         self,
         action_on_exit: UpgradeActionOnExit,
-    ) -> DedicatedCheckOutcome {
-        let timeout = UpgradeStrategy::DedicatedThread(action_on_exit).manifest_timeout();
+    ) -> DeferredCheckOutcome {
+        let timeout = UpgradeStrategy::Deferred(action_on_exit).manifest_timeout();
         let (metadata, binaries_release_base_url) =
             match fetch_crate_metadata_from_manifest(
                 self.config.get_jsonc_manifest_url(),
@@ -111,7 +109,7 @@ impl UpgradeJourney<Checking> {
             {
                 Ok(pair) => pair,
                 Err(error) => {
-                    return DedicatedCheckOutcome::CheckFailed(
+                    return DeferredCheckOutcome::CheckFailed(
                         self.into_check_failed(error),
                     );
                 }
@@ -122,14 +120,14 @@ impl UpgradeJourney<Checking> {
             .is_newer_than(&self.config.get_current_version())
         {
             self.log_newer_version_available(&metadata);
-            DedicatedCheckOutcome::UpgradeAvailable(self.into_upgrade_available(
+            DeferredCheckOutcome::UpgradeAvailable(self.into_upgrade_available(
                 action_on_exit,
                 metadata,
                 binaries_release_base_url,
             ))
         } else {
             self.touch_cooldown_on_up_to_date();
-            DedicatedCheckOutcome::UpToDate(self.into_up_to_date(metadata))
+            DeferredCheckOutcome::UpToDate(self.into_up_to_date(metadata))
         }
     }
 
@@ -137,11 +135,9 @@ impl UpgradeJourney<Checking> {
     /// ([`UpgradeStrategy::Immediate`]) run (in the [Control Plane]; see [Thread Model]),
     /// queries the JSONC manifest via [`fetch_crate_metadata_from_manifest`] (in the
     /// [Execution Plane]) using [`UpgradeStrategy::manifest_timeout`], touches the `1h`
-    /// cooldown timestamp file when [`UpToDate`], and returns [`ImmediateCheckOutcome`]
-    /// without mutating [`UpgradeCheckStatus`].
+    /// cooldown timestamp file when [`UpToDate`], and returns [`ImmediateCheckOutcome`].
     ///
     /// [`fetch_crate_metadata_from_manifest`]: crate::self_upgrade::fetch_crate_metadata_from_manifest
-    /// [`UpgradeCheckStatus`]: crate::self_upgrade::UpgradeCheckStatus
     /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
@@ -203,40 +199,28 @@ impl UpgradeJourney<Checking> {
 }
 
 /// Exhaustive outcome of
-/// [`UpgradeJourney::<Checking>::check_for_dedicated_thread_upgrade`].
+/// [`UpgradeJourney::<Checking>::check_for_deferred_upgrade`].
 ///
-/// Makes [`Upgrading`] unrepresentable prior to application exit.
+/// Returned directly via `JoinHandle<DeferredCheckOutcome>` from the dedicated thread
+/// to [`handle_upgrade_on_exit`]. Makes [`Upgrading`] unrepresentable prior to
+/// application exit.
 ///
+/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(in crate::self_upgrade) enum DedicatedCheckOutcome {
+pub enum DeferredCheckOutcome {
     /// Local binary is already up to date (`remote <= current`); `1h` cooldown timestamp
     /// file has been touched.
     UpToDate(UpgradeJourney<UpToDate>),
 
     /// Newer version found (`remote > current`); awaits exit handling via
-    /// [`UpgradeCheckStatus::handle_upgrade_on_exit`].
+    /// [`handle_upgrade_on_exit`].
     ///
-    /// [`UpgradeCheckStatus::handle_upgrade_on_exit`]: crate::self_upgrade::UpgradeCheckStatus::handle_upgrade_on_exit
+    /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
     UpgradeAvailable(UpgradeJourney<UpgradeAvailable>),
 
     /// Network, parse, or thread/runtime error occurred during the manifest check.
     CheckFailed(UpgradeJourney<CheckFailed>),
-}
-
-impl DedicatedCheckOutcome {
-    /// Converts this dedicated-thread check outcome into its corresponding
-    /// [`UpgradeCheckStatus`] variant by value.
-    #[must_use]
-    pub(in crate::self_upgrade) fn into_check_status(self) -> UpgradeCheckStatus {
-        match self {
-            Self::UpToDate(journey) => UpgradeCheckStatus::UpToDate(journey),
-            Self::UpgradeAvailable(journey) => {
-                UpgradeCheckStatus::UpgradeAvailable(journey)
-            }
-            Self::CheckFailed(journey) => UpgradeCheckStatus::CheckFailed(journey),
-        }
-    }
 }
 
 /// Exhaustive outcome of [`UpgradeJourney::<Checking>::check_for_immediate_upgrade`].
@@ -248,9 +232,6 @@ impl DedicatedCheckOutcome {
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
-    /// Network or manifest lookup failed.
-    CheckFailed(UpgradeJourney<CheckFailed>),
-
     /// Local binary is already up to date (`remote <= current`); `1h` cooldown timestamp
     /// file has been touched.
     UpToDate(UpgradeJourney<UpToDate>),
@@ -258,19 +239,9 @@ pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
     /// Newer version found (`remote > current`); ready to run
     /// [`UpgradeJourney::<Upgrading>::execute_immediate_upgrade`].
     Upgrading(UpgradeJourney<Upgrading>),
-}
 
-impl ImmediateCheckOutcome {
-    /// Converts this immediate check outcome into its corresponding
-    /// [`UpgradeCheckStatus`] variant by value.
-    #[must_use]
-    pub(in crate::self_upgrade) fn into_check_status(self) -> UpgradeCheckStatus {
-        match self {
-            Self::CheckFailed(journey) => UpgradeCheckStatus::CheckFailed(journey),
-            Self::UpToDate(journey) => UpgradeCheckStatus::UpToDate(journey),
-            Self::Upgrading(journey) => UpgradeCheckStatus::Upgrading(journey),
-        }
-    }
+    /// Network or manifest lookup failed.
+    CheckFailed(UpgradeJourney<CheckFailed>),
 }
 
 #[cfg(test)]
@@ -312,14 +283,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_dedicated_thread_check_transitions_and_touches_cooldown_only_on_up_to_date()
-     {
+    async fn test_deferred_check_transitions_and_touches_cooldown_only_on_up_to_date() {
         let temp_dir = try_create_temp_dir().unwrap();
 
         // 1. UpgradeAvailable (`remote 0.0.26 > local 0.0.25`) must NOT touch cooldown.
         let avail_timestamp_file = temp_dir.join("avail.last_check");
         let avail_action = UpgradeActionOnExit::NotifyOnly;
-        let avail_strategy = UpgradeStrategy::DedicatedThread(avail_action);
+        let avail_strategy = UpgradeStrategy::Deferred(avail_action);
         let avail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
@@ -330,11 +300,11 @@ mod tests {
         );
         let avail_outcome = UpgradeJourney::new(avail_cfg)
             .into_checking(avail_strategy)
-            .check_for_dedicated_thread_upgrade(avail_action)
+            .check_for_deferred_upgrade(avail_action)
             .await;
         assert!(!avail_timestamp_file.exists());
         match avail_outcome {
-            DedicatedCheckOutcome::UpgradeAvailable(journey) => {
+            DeferredCheckOutcome::UpgradeAvailable(journey) => {
                 assert_eq2!(journey.get_state().action_on_exit, avail_action);
                 assert_eq2!(
                     journey.get_state().metadata.version,
@@ -347,7 +317,7 @@ mod tests {
         // 2. CheckFailed (`500 Internal Server Error`) must NOT touch cooldown.
         let fail_timestamp_file = temp_dir.join("fail.last_check");
         let fail_action = UpgradeActionOnExit::Auto;
-        let fail_strategy = UpgradeStrategy::DedicatedThread(fail_action);
+        let fail_strategy = UpgradeStrategy::Deferred(fail_action);
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
@@ -358,18 +328,18 @@ mod tests {
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(fail_strategy)
-            .check_for_dedicated_thread_upgrade(fail_action)
+            .check_for_deferred_upgrade(fail_action)
             .await;
         assert!(!fail_timestamp_file.exists());
         assert!(matches!(
             fail_outcome,
-            DedicatedCheckOutcome::CheckFailed(_)
+            DeferredCheckOutcome::CheckFailed(_)
         ));
 
         // 3. UpToDate (`remote 0.0.26 <= local 0.0.26`) MUST touch cooldown.
         let ok_timestamp_file = temp_dir.join("uptodate.last_check");
         let ok_action = UpgradeActionOnExit::Auto;
-        let ok_strategy = UpgradeStrategy::DedicatedThread(ok_action);
+        let ok_strategy = UpgradeStrategy::Deferred(ok_action);
         let ok_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.26").unwrap(),
@@ -380,10 +350,10 @@ mod tests {
         );
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(ok_strategy)
-            .check_for_dedicated_thread_upgrade(ok_action)
+            .check_for_deferred_upgrade(ok_action)
             .await;
         assert!(ok_timestamp_file.exists());
-        assert!(matches!(ok_outcome, DedicatedCheckOutcome::UpToDate(_)));
+        assert!(matches!(ok_outcome, DeferredCheckOutcome::UpToDate(_)));
     }
 
     #[tokio::test]
