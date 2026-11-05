@@ -3,23 +3,39 @@
 use super::{CheckFailed, Completed, DeferredCheckOutcome, UpToDate, UpgradeJourney};
 use crate::DEBUG_SELF_UPGRADE;
 use r3bl_tui::{DeadlockPreventionPolicy::PanicOnSpecificLockNesting, ScopedMutex,
-               scoped_mutex};
+               TokioRuntimeOutcome, scoped_mutex};
 use std::{sync::LazyLock, thread::JoinHandle};
 
-/// Process-wide singleton instance of [`UpgradeSingletonState`], lazily initialized on
-/// first access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`].
-/// This static is part of the [Control Plane] (see [Thread Model]).
+/// [`JoinHandle`] of the dedicated thread spawned via
+/// [`StdThreadTokioRunner::run_non_blocking`] during a deferred upgrade check
+/// ([`UpgradeStrategy::Deferred`]).
 ///
-/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-pub static SINGLETON: LazyLock<
-    ScopedMutex<UpgradeSingletonState, { PanicOnSpecificLockNesting }>,
-> = LazyLock::new(|| scoped_mutex!(SPECIFIC, UpgradeSingletonState::new()));
+/// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
+pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>;
 
-/// Process-wide state stored inside [`SINGLETON`], pairing the single-start witness
-/// ([`SingletonStartStatus`]) with the [`JoinHandle<DeferredCheckOutcome>`][jh] of the
-/// dedicated thread (when spawned by [`UpgradeJourney::start`]). This type is part of the
-/// [Control Plane] (see [Thread Model]).
+/// Witness returned by [`SingletonState::try_claim_start`] indicating whether
+/// [`UpgradeJourney::start`] claimed [`SINGLETON`] or observed a prior start.
+///
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartClaimStatus {
+    /// [`SINGLETON`] was [`SingletonState::NotStarted`] and has now transitioned to
+    /// [`SingletonState::Started(None)`][SingletonState::Started].
+    Claimed,
+
+    /// [`SINGLETON`] was already [`SingletonState::Started`]; caller must return
+    /// [`StartOutcome::AlreadyStarted`].
+    ///
+    /// [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
+    AlreadyStarted,
+}
+
+/// Process-wide state stored inside [`SINGLETON`], encoding the single-start guard and
+/// the optional [`DeferredCheckHandle`] of the dedicated thread (when spawned by
+/// [`UpgradeJourney::start`]) as a 2-variant enum so [`NotStarted`][Self::NotStarted] +
+/// `Some(handle)` is unrepresentable. This type is part of the [Control Plane] (see
+/// [Thread Model]).
 ///
 /// # Deadlock Prevention Policy: [`PanicOnSpecificLockNesting`] ([`SPECIFIC`])
 ///
@@ -36,114 +52,100 @@ pub static SINGLETON: LazyLock<
 /// [`SPECIFIC`]: r3bl_tui::DeadlockPreventionPolicy::PanicOnSpecificLockNesting
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-/// [jh]: std::thread::JoinHandle
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 #[derive(Debug, Default)]
-pub struct UpgradeSingletonState {
-    /// Single-start witness tracking whether
-    /// [`UpgradeJourney::<NotStarted>::start`][start] has claimed [`SINGLETON`] in this
-    /// process.
-    ///
-    /// [start]: crate::self_upgrade::UpgradeJourney::start
-    pub start_status: SingletonStartStatus,
-
-    /// [`JoinHandle`] of the dedicated thread spawned by [`UpgradeJourney::start`]
-    /// during a deferred upgrade on exit ([`UpgradeStrategy::Deferred`][1]),
-    /// returning [`DeferredCheckOutcome`] when joined by [`handle_upgrade_on_exit`], or
-    /// `None` if no thread was spawned or it has already been joined.
-    ///
-    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
-    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    pub deferred_check_handle: Option<JoinHandle<DeferredCheckOutcome>>,
-}
-
-impl UpgradeSingletonState {
-    const fn new() -> Self {
-        Self {
-            start_status: SingletonStartStatus::NotStarted,
-            deferred_check_handle: None,
-        }
-    }
-
-    /// Atomically transitions [`Self::start_status`] to
-    /// [`SingletonStartStatus::AlreadyStarted`] and returns the prior
-    /// [`SingletonStartStatus`].
-    ///
-    /// # Preventing [`TOCTOU`] Race Conditions at Startup
-    ///
-    /// Performing [`std::mem::replace`] inside a single `SINGLETON.write` lock
-    /// acquisition guarantees that at most one caller observes
-    /// [`SingletonStartStatus::NotStarted`], while any duplicate caller observes
-    /// [`SingletonStartStatus::AlreadyStarted`] without spawning extra threads or network
-    /// calls.
-    ///
-    /// [`TOCTOU`]: https://en.wikipedia.org/wiki/Time-of-check-to-time-of-use
-    #[must_use]
-    pub(in crate::self_upgrade) fn try_claim_start() -> SingletonStartStatus {
-        SINGLETON.write(|state| {
-            std::mem::replace(
-                &mut state.start_status,
-                SingletonStartStatus::AlreadyStarted,
-            )
-        })
-    }
-
-    /// Stores the [`JoinHandle<DeferredCheckOutcome>`][jh] of the dedicated thread into
-    /// [`Self::deferred_check_handle`].
-    ///
-    /// Called on the current thread by [`UpgradeJourney::start`] (in the [Control Plane])
-    /// during a deferred upgrade on exit ([`UpgradeStrategy::Deferred`][1]; see
-    /// [Thread Model]).
-    ///
-    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
-    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-    /// [jh]: std::thread::JoinHandle
-    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-    pub(in crate::self_upgrade) fn set_deferred_check_handle(
-        handle: JoinHandle<DeferredCheckOutcome>,
-    ) {
-        SINGLETON.write(|state| {
-            state.deferred_check_handle = Some(handle);
-        });
-    }
-
-    /// Drains any in-flight dedicated thread and resets [`SINGLETON`] back to
-    /// [`Self::new`] (`start_status: NotStarted`, `deferred_check_handle: None`).
-    #[cfg(test)]
-    pub(crate) fn reset_for_testing() {
-        let maybe_handle = SINGLETON.write(|state| state.deferred_check_handle.take());
-        if let Some(handle) = maybe_handle {
-            drop(handle.join());
-        }
-        SINGLETON.write(|state| {
-            *state = Self::new();
-        });
-    }
-}
-
-/// Single-start witness stored in [`UpgradeSingletonState::start_status`] and returned by
-/// [`UpgradeSingletonState::try_claim_start`].
-///
-/// Tracks whether [`UpgradeJourney::start`] has already claimed [`SINGLETON`] in this
-/// process.
-///
-/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum SingletonStartStatus {
+pub enum SingletonState {
     /// [`UpgradeJourney::start`] has not yet claimed [`SINGLETON`] in this process.
     ///
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     #[default]
     NotStarted,
 
-    /// [`UpgradeJourney::start`] has already claimed [`SINGLETON`] in this process; any
-    /// subsequent `.start()` call must return [`StartOutcome::AlreadyStarted`].
+    /// [`UpgradeJourney::start`] has claimed [`SINGLETON`] in this process, optionally
+    /// holding the [`DeferredCheckHandle`] of the dedicated thread spawned during a
+    /// deferred upgrade check ([`UpgradeStrategy::Deferred`]) until
+    /// [`handle_upgrade_on_exit`] takes and joins it.
     ///
-    /// [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    AlreadyStarted,
+    /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
+    Started(Option<DeferredCheckHandle>),
 }
+
+impl SingletonState {
+    /// Atomically transitions [`SINGLETON`] from [`Self::NotStarted`] to
+    /// [`Self::Started(None)`][Self::Started], returning [`StartClaimStatus::Claimed`] to
+    /// the first caller and [`StartClaimStatus::AlreadyStarted`] to any duplicate caller.
+    ///
+    /// # Preventing [`TOCTOU`] Race Conditions at Startup
+    ///
+    /// Performing both the [`Self::NotStarted`] check and the transition inside a single
+    /// `SINGLETON.write` lock acquisition guarantees that at most one caller claims the
+    /// engine without spawning extra threads or network calls.
+    ///
+    /// [`TOCTOU`]: https://en.wikipedia.org/wiki/Time-of-check-to-time-of-use
+    #[must_use]
+    pub(in crate::self_upgrade) fn try_claim_start() -> StartClaimStatus {
+        SINGLETON.write(|state| match state {
+            Self::NotStarted => {
+                *state = Self::Started(None);
+                StartClaimStatus::Claimed
+            }
+            Self::Started(_) => StartClaimStatus::AlreadyStarted,
+        })
+    }
+
+    /// Stores the [`DeferredCheckHandle`] of the dedicated thread into
+    /// [`Self::Started(Some(handle))`][Self::Started].
+    ///
+    /// Called on the current thread by `spawn_deferred_check_thread` (in the [Control
+    /// Plane]) during a deferred upgrade on exit ([`UpgradeStrategy::Deferred`][1]; see
+    /// [Thread Model]).
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
+    pub(in crate::self_upgrade) fn set_deferred_check_handle(
+        handle: DeferredCheckHandle,
+    ) {
+        SINGLETON.write(|state| {
+            *state = Self::Started(Some(handle));
+        });
+    }
+
+    /// Takes the in-flight [`DeferredCheckHandle`] out of [`Self::Started`], leaving
+    /// [`Self::Started(None)`][Self::Started] in place so [`SINGLETON`] remains claimed.
+    #[must_use]
+    pub(in crate::self_upgrade) fn take_deferred_check_handle()
+    -> Option<DeferredCheckHandle> {
+        SINGLETON.write(|state| match state {
+            Self::NotStarted => None,
+            Self::Started(slot) => slot.take(),
+        })
+    }
+
+    /// Drains any in-flight dedicated thread and resets [`SINGLETON`] back to
+    /// [`Self::NotStarted`].
+    #[cfg(test)]
+    pub(crate) fn reset_for_testing() {
+        let maybe_handle = Self::take_deferred_check_handle();
+        if let Some(handle) = maybe_handle {
+            drop(handle.join());
+        }
+        SINGLETON.write(|state| {
+            *state = Self::NotStarted;
+        });
+    }
+}
+
+/// Process-wide singleton instance of [`SingletonState`], lazily initialized on first
+/// access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`]. This
+/// static is part of the [Control Plane] (see [Thread Model]).
+///
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
+pub static SINGLETON: LazyLock<
+    ScopedMutex<SingletonState, { PanicOnSpecificLockNesting }>,
+> = LazyLock::new(|| scoped_mutex!(SPECIFIC, SingletonState::NotStarted));
 
 /// Outcome returned by [`handle_upgrade_on_exit`] when completing a deferred upgrade on
 /// exit ([`UpgradeStrategy::Deferred`]).
@@ -153,8 +155,8 @@ pub enum SingletonStartStatus {
 pub enum ExitOutcome {
     /// No deferred check was running (either [`UpgradeJourney::start`] was not called,
     /// policy was [`UpgradePolicy::Disabled`] / [`UpgradeStrategy::Immediate`] /
-    /// [`CooldownSkipped`], OS thread spawn failed, or [`handle_upgrade_on_exit`] was
-    /// already called earlier).
+    /// [`CooldownSkipped`], OS thread spawn or Tokio runtime initialization failed, or
+    /// [`handle_upgrade_on_exit`] was already called earlier).
     ///
     /// [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
@@ -166,8 +168,7 @@ pub enum ExitOutcome {
     /// file was touched).
     UpToDate(UpgradeJourney<UpToDate>),
 
-    /// Dedicated thread failed (network error, parse error, runtime init error, or
-    /// panic).
+    /// Dedicated thread failed during the manifest check (network or parse error).
     CheckFailed(UpgradeJourney<CheckFailed>),
 
     /// Dedicated thread found `remote > current` ([`UpgradeAvailable`]), transitioned
@@ -188,13 +189,15 @@ pub enum ExitOutcome {
 /// that thread to finish and receive its [`DeferredCheckOutcome`], then runs the
 /// configured [`UpgradeActionOnExit`] on the main thread if an upgrade is available
 /// ([`DeferredCheckOutcome::UpgradeAvailable`]):
-/// 1. Takes [`UpgradeSingletonState::deferred_check_handle`] inside `SINGLETON.write` and
-///    drops the lock **before** calling `handle.join()`, guaranteeing one-shot idempotent
-///    behavior if called more than once.
-/// 2. If `handle.join()` returns [`DeferredCheckOutcome::UpgradeAvailable`], transitions
-///    into [`Upgrading`] and delegates to
-///    `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which invokes the [Execution
-///    Plane] to prompt or install the upgrade), returning [`ExitOutcome::Completed`].
+/// 1. Takes the [`DeferredCheckHandle`] via
+///    [`SingletonState::take_deferred_check_handle`] (releasing `SINGLETON.write`
+///    **before** calling `handle.join()`), guaranteeing one-shot idempotent behavior if
+///    called more than once.
+/// 2. If `handle.join()` returns [`TokioRuntimeOutcome::Completed`] with
+///    [`DeferredCheckOutcome::UpgradeAvailable`], transitions into [`Upgrading`] and
+///    delegates to `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which invokes
+///    the [Execution Plane] to prompt or install the upgrade), returning
+///    [`ExitOutcome::Completed`].
 ///
 /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
 /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
@@ -203,14 +206,27 @@ pub enum ExitOutcome {
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 pub fn handle_upgrade_on_exit() -> ExitOutcome {
-    // Step 1: Loud lock release — take `deferred_check_handle` inside `SINGLETON.write`
+    // Step 1: Loud lock release — take `DeferredCheckHandle` inside `SINGLETON.write`
     // so the lock is dropped before `handle.join()` blocks on the dedicated thread.
-    let Some(handle) = SINGLETON.write(|state| state.deferred_check_handle.take()) else {
+    let Some(handle) = SingletonState::take_deferred_check_handle() else {
         return ExitOutcome::NoDeferredCheckRunning;
     };
 
     let outcome = match handle.join() {
-        Ok(outcome) => outcome,
+        Ok(TokioRuntimeOutcome::Completed(outcome)) => outcome,
+        Ok(
+            TokioRuntimeOutcome::FailedToStart(report)
+            | TokioRuntimeOutcome::Panicked(report),
+        ) => {
+            DEBUG_SELF_UPGRADE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "Dedicated self-upgrade thread runtime failed or panicked",
+                    error = ?report
+                );
+            });
+            return ExitOutcome::NoDeferredCheckRunning;
+        }
         Err(panic_payload) => {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
@@ -242,8 +258,8 @@ mod tests {
     use crate::{CooldownPolicy, CrateDistribution, CrateMetadata, CrateReleaseDate,
                 CrateVersion, EndpointUrl, JsoncScalar, ManifestCheckError, NotStarted,
                 UpgradeActionOnExit, UpgradeConfig, UpgradePolicy, UpgradeResolution,
-                UpgradeStrategy, UserFeedbackChannel};
-    use r3bl_tui::assert_eq2;
+                UpgradeStrategy, UserFeedbackChannel, dedicated_thread};
+    use r3bl_tui::{StdThreadTokioRunner, assert_eq2};
     use serial_test::serial;
     use std::time::Duration;
 
@@ -273,44 +289,48 @@ mod tests {
     #[test]
     #[serial]
     fn test_try_claim_start_single_claim_and_reset() {
-        UpgradeSingletonState::reset_for_testing();
+        SingletonState::reset_for_testing();
 
         assert_eq2!(
-            UpgradeSingletonState::try_claim_start(),
-            SingletonStartStatus::NotStarted
+            SingletonState::try_claim_start(),
+            StartClaimStatus::Claimed
         );
         assert_eq2!(
-            UpgradeSingletonState::try_claim_start(),
-            SingletonStartStatus::AlreadyStarted
+            SingletonState::try_claim_start(),
+            StartClaimStatus::AlreadyStarted
         );
 
-        UpgradeSingletonState::reset_for_testing();
+        SingletonState::reset_for_testing();
         assert_eq2!(
-            UpgradeSingletonState::try_claim_start(),
-            SingletonStartStatus::NotStarted
+            SingletonState::try_claim_start(),
+            StartClaimStatus::Claimed
         );
     }
 
     #[test]
     #[serial]
     fn test_reset_for_testing_drains_inflight_thread_before_reset() {
-        UpgradeSingletonState::reset_for_testing();
+        SingletonState::reset_for_testing();
 
         let checking = make_test_journey("0.1.0", UpgradePolicy::default())
             .into_checking(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto));
 
-        let handle = std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(25));
-            DeferredCheckOutcome::CheckFailed(checking.into_check_failed(
-                ManifestCheckError::FetchOrParseFailed {
-                    diagnostic: "late outcome".to_string(),
-                },
-            ))
-        });
-        UpgradeSingletonState::set_deferred_check_handle(handle);
+        let handle = StdThreadTokioRunner::run_non_blocking(
+            dedicated_thread::DEDICATED_THREAD_NAME,
+            async move || {
+                tokio::time::sleep(Duration::from_millis(25)).await;
+                DeferredCheckOutcome::CheckFailed(checking.into_check_failed(
+                    ManifestCheckError::FetchOrParseFailed {
+                        diagnostic: "late outcome".to_string(),
+                    },
+                ))
+            },
+        )
+        .unwrap();
+        SingletonState::set_deferred_check_handle(handle);
 
         // `reset_for_testing` must join `handle` first, then reset `SINGLETON`.
-        UpgradeSingletonState::reset_for_testing();
+        SingletonState::reset_for_testing();
         assert_eq2!(
             handle_upgrade_on_exit(),
             ExitOutcome::NoDeferredCheckRunning
@@ -320,7 +340,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_handle_upgrade_on_exit_one_shot_idempotency() {
-        UpgradeSingletonState::reset_for_testing();
+        SingletonState::reset_for_testing();
 
         // 1. With no deferred check handle, returns `NoDeferredCheckRunning`.
         assert_eq2!(
@@ -348,9 +368,12 @@ mod tests {
             .into_upgrading()
             .into_completed(UpgradeResolution::NotifiedOnly);
 
-        let handle =
-            std::thread::spawn(move || DeferredCheckOutcome::UpgradeAvailable(available));
-        UpgradeSingletonState::set_deferred_check_handle(handle);
+        let handle = StdThreadTokioRunner::run_non_blocking(
+            dedicated_thread::DEDICATED_THREAD_NAME,
+            async move || DeferredCheckOutcome::UpgradeAvailable(available),
+        )
+        .unwrap();
+        SingletonState::set_deferred_check_handle(handle);
 
         assert_eq2!(
             handle_upgrade_on_exit(),

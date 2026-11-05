@@ -71,7 +71,7 @@ fn spawn_one_shot_http_server(
 #[test]
 #[serial]
 fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
 
     let make_config = |policy: UpgradePolicy| {
         UpgradeConfig::new(
@@ -112,7 +112,7 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
 #[test]
 #[serial]
 fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let crate_name: CrateName = "r3bl-cmdr".into();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path =
@@ -160,7 +160,7 @@ fn test_path1_immediate_up_to_date_sync_touches_and_bypasses_cooldown() {
 #[tokio::test]
 #[serial]
 async fn test_path1_immediate_up_to_date_async() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let (url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
         format_manifest_json("0.0.25", "open-source"),
@@ -187,7 +187,7 @@ async fn test_path1_immediate_up_to_date_async() {
 #[test]
 #[serial]
 fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("failed.last_check");
 
@@ -222,7 +222,7 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
     // 2. Newer ClosedSource version + unreachable release archive server ->
     // transitions Checking -> Upgrading -> Completed(UpgradeFailed), no timestamp
     // file.
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let closed_release_listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let closed_release_addr = closed_release_listener.local_addr().unwrap();
     drop(closed_release_listener);
@@ -271,7 +271,7 @@ fn test_path1_immediate_check_failed_and_upgrade_failed_transitions() {
 #[test]
 #[serial]
 fn test_path2_deferred_cooldown_skip_and_expiry() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("cooldown.last_check");
 
@@ -302,7 +302,7 @@ fn test_path2_deferred_cooldown_skip_and_expiry() {
 
     // 2. Expired timestamp file (`now - 2h`) -> spawns dedicated thread, queries server,
     //    refreshes timestamp file.
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let expired_time = SystemTime::now() - Duration::from_secs(7200);
     File::open(&timestamp_file_path)
         .unwrap()
@@ -346,7 +346,7 @@ fn test_path2_deferred_cooldown_skip_and_expiry() {
 #[test]
 #[serial]
 fn test_path2_scenario_2c_exit_joins_inflight_dedicated_thread_and_completes() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
 
     // Simulate Scenario 2c: short-lived CLI reaches `handle_upgrade_on_exit()` while
     // the `self-upgrade` dedicated thread is still awaiting the HTTP response (`50ms`).
@@ -394,7 +394,7 @@ fn test_path2_scenario_2c_exit_joins_inflight_dedicated_thread_and_completes() {
 #[tokio::test]
 #[serial]
 async fn test_path3_disabled_async_and_sync() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let config = UpgradeConfig::new(
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
@@ -417,7 +417,7 @@ async fn test_path3_disabled_async_and_sync() {
 #[test]
 #[serial]
 fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_cooldown() {
-    UpgradeSingletonState::reset_for_testing();
+    SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("auto_fail.last_check");
 

@@ -184,13 +184,6 @@ pub enum ManifestCheckError {
         /// Underlying OS thread or Tokio runtime initialization failure description.
         reason: String,
     },
-
-    /// Dedicated `"self-upgrade"` OS thread panicked during a deferred check.
-    #[error("Deferred self-upgrade check thread panicked: {panic_message}")]
-    DeferredCheckThreadPanicked {
-        /// Extracted panic payload message.
-        panic_message: String,
-    },
 }
 
 #[cfg(test)]

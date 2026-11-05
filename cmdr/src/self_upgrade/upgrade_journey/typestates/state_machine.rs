@@ -28,7 +28,7 @@ use crate::UpgradeConfig;
 /// ```text
 /// 1. At startup: upgrade_journey!(channel, cli_args) ──► <NotStarted>.start()
 /// ┌─────────────────────────────────────────────────────────────────────────┘
-/// ├─ 1st .start() (claims SINGLETON.start_status; branches on UpgradePolicy):
+/// ├─ 1st .start() (claims SINGLETON -> Started; branches on UpgradePolicy):
 /// │  │
 /// │  ├─ UpgradePolicy::Disabled (--upgrade-behavior disable)
 /// │  │  └─► <Disabled> ──► StartOutcome::Disabled(<Disabled>)
@@ -48,7 +48,7 @@ use crate::UpgradeConfig;
 /// │  │
 /// │  └─ UpgradePolicy::Enabled(Deferred(action))
 /// │     │ (Returns DeferredUpgrade immediately; handle_upgrade_on_exit() later
-/// │     │  takes and joins JoinHandle<DeferredCheckOutcome> from SINGLETON)
+/// │     │  takes and joins DeferredCheckHandle from SINGLETON)
 /// │     ├─ Active 1h cooldown ──► <CooldownSkipped>
 /// │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
 /// │     └─ Expired/missing timestamp file ──► <Checking>
@@ -58,12 +58,12 @@ use crate::UpgradeConfig;
 /// │            ├─► DeferredCheckOutcome::CheckFailed(<CheckFailed>)
 /// │            └─► DeferredCheckOutcome::UpgradeAvailable(<UpgradeAvailable>)
 /// │
-/// └─ 2nd+ .start() (SINGLETON.start_status == AlreadyStarted)
+/// └─ 2nd+ .start() (SINGLETON already SingletonState::Started)
 ///    └─► StartOutcome::AlreadyStarted (no-op)
 ///
 /// 2. At exit: handle_upgrade_on_exit() ──► ExitOutcome
 /// ┌──────────────────────────────────────────────────┘
-/// ├─ Step 1: Takes JoinHandle<DeferredCheckOutcome> from SINGLETON, drops lock,
+/// ├─ Step 1: Takes DeferredCheckHandle from SINGLETON, drops lock,
 /// │          and joins dedicated thread (waits <= 2s)
 /// │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
 /// │     └─► ExitOutcome::NoDeferredCheckRunning

@@ -79,13 +79,13 @@ pub enum DeferredUpgradeOutcome {
     CooldownSkipped(UpgradeJourney<CooldownSkipped>),
 
     /// Dedicated thread was spawned with [`UpgradeJourney<Checking>`] and its
-    /// [`JoinHandle<DeferredCheckOutcome>`][jh] was stored in [`SINGLETON`] for
+    /// [`DeferredCheckHandle`] was stored in [`SINGLETON`] for
     /// [`handle_upgrade_on_exit`].
     ///
+    /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
     /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
     /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
     /// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
-    /// [jh]: std::thread::JoinHandle
     DeferredCheckSpawned(UpgradeJourney<Checking>),
 
     /// Dedicated OS thread failed to spawn; transitioned to

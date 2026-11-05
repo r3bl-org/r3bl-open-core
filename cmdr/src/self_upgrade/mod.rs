@@ -90,14 +90,12 @@
 //!       (carrying [`DeferredUpgradeOutcome`]).
 //!
 //! 3. Coordinated Process-Wide Singleton
-//!   - [`SINGLETON`] holds [`UpgradeSingletonState`] inside a leaf [`ScopedMutex`],
-//!     pairing [`SingletonStartStatus`] with the optional
-//!     [`JoinHandle<DeferredCheckOutcome>`][jh] of the [`DEDICATED_THREAD_NAME`] OS
-//!     thread.
-//!   - At shutdown, [`handle_upgrade_on_exit`][9] takes the
-//!     [`JoinHandle<DeferredCheckOutcome>`][jh] from [`SINGLETON`], releases the mutex,
-//!     and joins any in-flight dedicated thread (preventing deadlock and ensuring
-//!     short-lived invocations wait up to
+//!   - [`SINGLETON`] holds the 2-variant [`SingletonState`] enum inside a leaf
+//!     [`ScopedMutex`], encoding the single-start guard alongside the optional
+//!     [`DeferredCheckHandle`] of the [`DEDICATED_THREAD_NAME`] OS thread.
+//!   - At shutdown, [`handle_upgrade_on_exit`][9] takes the [`DeferredCheckHandle`] from
+//!     [`SINGLETON`], releases the mutex, and joins any in-flight dedicated thread
+//!     (preventing deadlock and ensuring short-lived invocations wait up to
 //!     [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
 //!     [`DEFERRED_CHECK_COOLDOWN_DELAY`][1] timestamp file was expired), then transitions
 //!     [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for one-shot exit handling.
@@ -108,8 +106,8 @@
 //!
 //! 1. Control Plane (State Machine, Lifecycle & Threading)
 //!    - [`upgrade_journey/`][`UpgradeJourney`] ([`UpgradeJourney`], [`StartOutcome`],
-//!      [`ExitOutcome`], [`UpgradeSingletonState`], and [`SINGLETON`]) decides *whether*
-//!      and *when* to check or perform the upgrade.
+//!      [`ExitOutcome`], [`SingletonState`], and [`SINGLETON`]) decides *whether* and
+//!      *when* to check or perform the upgrade.
 //!    - It owns the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
 //!      dedicated-thread spawning and joining, and the process-wide [`SINGLETON`].
 //!    - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
@@ -226,6 +224,7 @@
 //! [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 //! [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 //! [`DEDICATED_THREAD_NAME`]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
+//! [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
 //! [`DeferredCheckOutcome`]: crate::self_upgrade::DeferredCheckOutcome
 //! [`DeferredUpgradeOutcome`]: crate::self_upgrade::DeferredUpgradeOutcome
 //! [`Disabled`]: crate::self_upgrade::Disabled
@@ -246,7 +245,7 @@
 //! [`ScopedMutex`]: r3bl_tui::ScopedMutex
 //! [`self_upgrade`]: mod@crate::self_upgrade
 //! [`SINGLETON`]: crate::self_upgrade::SINGLETON
-//! [`SingletonStartStatus`]: crate::self_upgrade::SingletonStartStatus
+//! [`SingletonState`]: crate::self_upgrade::SingletonState
 //! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
 //! [`StartOutcome::DeferredUpgrade`]: crate::self_upgrade::StartOutcome::DeferredUpgrade
 //! [`StartOutcome::Disabled`]: crate::self_upgrade::StartOutcome::Disabled
@@ -262,7 +261,6 @@
 //! [`UpgradeJourneyStateMarker`]: crate::self_upgrade::UpgradeJourneyStateMarker
 //! [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
 //! [`UpgradeResolution::UpgradeFailed`]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
-//! [`UpgradeSingletonState`]: crate::self_upgrade::UpgradeSingletonState
 //! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve
 //! [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
 //! [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred

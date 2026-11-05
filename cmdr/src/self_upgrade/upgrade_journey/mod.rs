@@ -3,16 +3,16 @@
 #![rustfmt::skip]
 
 // Private submodules.
+mod singleton;
 mod start_outcome;
-mod tokio_thread_runner;
+mod thread_runner;
 mod typestates;
 mod upgrade_journey_macro;
-mod upgrade_singleton;
 
 // Public barrel re-exports.
+pub use singleton::*;
 pub use start_outcome::*;
 pub use typestates::*;
-pub use upgrade_singleton::*;
 
 #[cfg(test)]
 mod journey_integration_tests;

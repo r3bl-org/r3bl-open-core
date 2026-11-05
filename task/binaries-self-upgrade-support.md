@@ -1531,37 +1531,39 @@ impl UpgradeJourney<Upgrading> {
 }
 ```
 
-##### 4. Pure Dedicated Thread Runner (`tokio_thread_runner.rs`)
+##### 4. Dedicated Thread Spawning via `StdThreadTokioRunner` (`tui/src/core/common/std_thread_tokio_runner.rs` & `thread_runner.rs`)
 
-Update `run_on_dedicated_thread` so it returns `DedicatedCheckOutcome` directly (catching
-Tokio runtime build failures into `ManifestCheckError::RuntimeOrThreadInitFailed` and
-panics into `ManifestCheckError::DedicatedThreadPanicked`):
+Encapsulate blocking and non-blocking single-threaded Tokio runtime execution inside a
+dedicated `std::thread` on `StdThreadTokioRunner` (`::run_blocking` and
+`::run_non_blocking`) in `tui/src/core/common/std_thread_tokio_runner.rs`, and delegate
+to it in `run_blocking_logged` and `spawn_deferred_check_thread` inside
+`cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`:
 
 ```rust
 #[must_use]
-pub(in crate::self_upgrade) fn run_on_dedicated_thread<F>(
+pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
     checking: UpgradeJourney<Checking>,
-    async_fn: F,
-) -> DedicatedCheckOutcome
-where
-    F: AsyncFnOnce(UpgradeJourney<Checking>) -> DedicatedCheckOutcome,
+    action_on_exit: UpgradeActionOnExit,
+) -> DeferredUpgradeOutcome { ... }
 ```
 
-##### 5. Streamlined `SINGLETON` (`JoinHandle<DeferredCheckOutcome>`) & Typed Startup/Exit Outcomes (`start_outcome.rs`, `upgrade_singleton.rs`, & `typestates/not_started.rs`)
+##### 5. Streamlined `SINGLETON` (`SingletonState` + `DeferredCheckHandle`) & Typed Startup/Exit Outcomes (`start_outcome.rs`, `singleton.rs`, & `typestates/not_started.rs`)
 
 - **Delete the 9-variant `UpgradeCheckStatus` enum completely**:
-    - `SINGLETON` holds
-      `UpgradeSingletonState { start_status: SingletonStartStatus, deferred_check_handle: Option<JoinHandle<DeferredCheckOutcome>> }`.
+    - `SINGLETON` holds the 2-variant
+      `SingletonState { NotStarted, Started(Option<DeferredCheckHandle>) }` (where
+      `pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>`).
     - In `UpgradeJourney::<NotStarted>::start`:
         - Atomically claims
-          `UpgradeSingletonState::try_claim_start() -> SingletonStartStatus` once at the
-          top of `start(self) -> StartOutcome` (returning `StartOutcome::AlreadyStarted`
-          on duplicate calls when `SingletonStartStatus::AlreadyStarted` is observed).
+          `SingletonState::try_claim_start() -> StartClaimStatus` once at the top of
+          `start(self) -> StartOutcome` (returning `StartOutcome::AlreadyStarted` on
+          duplicate calls when `StartClaimStatus::AlreadyStarted` is observed).
         - For `UpgradeStrategy::Deferred`, spawns the dedicated thread named
-          `dedicated_thread::DEDICATED_THREAD_NAME` (`"self-upgrade"`) returning
-          `DeferredCheckOutcome` directly via `JoinHandle<DeferredCheckOutcome>`, and
-          stores the handle via `UpgradeSingletonState::set_deferred_check_handle(handle)`
-          (so the dedicated thread never accesses `SINGLETON`).
+          `dedicated_thread::DEDICATED_THREAD_NAME` (`"self-upgrade"`) via
+          `StdThreadTokioRunner::run_non_blocking` in `spawn_deferred_check_thread`,
+          storing the `DeferredCheckHandle` via
+          `SingletonState::set_deferred_check_handle(handle)` (so the dedicated thread
+          never accesses `SINGLETON`).
 - **Return typed `UpgradeJourney<State>` directly from `.start()` and
   `handle_upgrade_on_exit()`**:
     - In `start_outcome.rs` (pure domain types with zero `ExitCode` or `Termination`
@@ -1591,7 +1593,7 @@ where
         }
         ```
 
-    - In `upgrade_singleton.rs`:
+    - In `singleton.rs`:
 
         ```rust
         #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1605,12 +1607,12 @@ where
         pub fn handle_upgrade_on_exit() -> ExitOutcome { ... }
         ```
 
-    - **State Machine & Lifecycle Flow diagram (`upgrade_journey_struct.rs`)**:
+    - **State Machine & Lifecycle Flow diagram (`typestates/state_machine.rs`)**:
 
         ```text
         1. At startup: upgrade_journey!(channel, cli_args) ──► <NotStarted>.start()
         ┌─────────────────────────────────────────────────────────────────────────┘
-        ├─ 1st .start() (claims SINGLETON.start_status; branches on UpgradePolicy):
+        ├─ 1st .start() (claims SINGLETON -> Started; branches on UpgradePolicy):
         │  │
         │  ├─ UpgradePolicy::Disabled (--upgrade-behavior disable)
         │  │  └─► <Disabled> ──► StartOutcome::Disabled(<Disabled>)
@@ -1630,7 +1632,7 @@ where
         │  │
         │  └─ UpgradePolicy::Enabled(Deferred(action))
         │     │ (Returns DeferredUpgrade immediately; handle_upgrade_on_exit() later
-        │     │  takes and joins JoinHandle<DeferredCheckOutcome> from SINGLETON)
+        │     │  takes and joins DeferredCheckHandle from SINGLETON)
         │     ├─ Active 1h cooldown ──► <CooldownSkipped>
         │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
         │     └─ Expired/missing timestamp file ──► <Checking>
@@ -1640,12 +1642,12 @@ where
         │            ├─► DeferredCheckOutcome::CheckFailed(<CheckFailed>)
         │            └─► DeferredCheckOutcome::UpgradeAvailable(<UpgradeAvailable>)
         │
-        └─ 2nd+ .start() (SINGLETON.start_status == AlreadyStarted)
+        └─ 2nd+ .start() (SINGLETON already SingletonState::Started)
            └─► StartOutcome::AlreadyStarted (no-op)
 
         2. At exit: handle_upgrade_on_exit() ──► ExitOutcome
         ┌──────────────────────────────────────────────────┘
-        ├─ Step 1: Takes JoinHandle<DeferredCheckOutcome> from SINGLETON, drops lock,
+        ├─ Step 1: Takes DeferredCheckHandle from SINGLETON, drops lock,
         │          and joins dedicated thread (waits <= 2s)
         │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
         │     └─► ExitOutcome::NoDeferredCheckRunning
@@ -1670,7 +1672,7 @@ where
 - Add `## Control Plane vs. Execution Plane` in `cmdr/src/self_upgrade/mod.rs` separating
   **deciding what to do** from **doing the work**:
     - **Control Plane (State Machine, Lifecycle & Threading)**: `upgrade_journey/`
-      (including `upgrade_singleton.rs`, `tokio_thread_runner.rs`, and `typestates/`).
+      (including `singleton.rs`, `thread_runner.rs`, and `typestates/`).
     - **Execution Plane (Network, Disk & Build Operations)**: `check/` and `upgrade/`.
 - Add upward rustdoc links (using `[Control Plane]` and `[Execution Plane]` reference
   links pointing to `mod@crate::self_upgrade#control-plane-vs-execution-plane`, plus
@@ -1802,8 +1804,8 @@ where
         - Rename `UpgradeStrategy::DedicatedThread` -> `UpgradeStrategy::Deferred`,
           `IMMEDIATE_MANIFEST_TIMEOUT` -> `IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT`,
           `DEDICATED_THREAD_MANIFEST_TIMEOUT` ->
-          `DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`,
-          `DEDICATED_THREAD_CHECK_COOLDOWN` -> `DEFERRED_CHECK_COOLDOWN_DELAY`, and
+          `DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`, `DEDICATED_THREAD_CHECK_COOLDOWN`
+          -> `DEFERRED_CHECK_COOLDOWN_DELAY`, and
           `ManifestCheckError::DedicatedThreadPanicked` ->
           `ManifestCheckError::DeferredCheckThreadPanicked` across `constants.rs`,
           `config/{upgrade_policy,cli_arg,upgrade_config}.rs`, and
@@ -1825,7 +1827,51 @@ where
           `upgrade_journey/typestates/state_machine.rs`, and update `not_started.rs`,
           `typestates/state_machine.rs`, `upgrade_journey_macro.rs`,
           `journey_integration_tests.rs`, and `cmdr/src/self_upgrade/mod.rs`.
-    - [ ] **Step 9**: TODO
+    - [x] **Step 9 (`StdThreadTokioRunner`, `thread_runner.rs`, `singleton.rs`, &
+          2-Variant `enum SingletonState`)**:
+        - **Step 9a (`run_in_tokio.rs` ->
+          `tui/src/core/common/std_thread_tokio_runner.rs`)**:
+            - Rename `tui/src/core/common/run_in_tokio.rs` ->
+              `tui/src/core/common/std_thread_tokio_runner.rs` (and update
+              `tui/src/core/common/mod.rs`).
+            - Introduce `pub struct StdThreadTokioRunner` with
+              `StdThreadTokioRunner::run_blocking` and
+              `StdThreadTokioRunner::run_non_blocking`, sharing private
+              `execute_in_current_thread_runtime`, plus unit tests for both blocking and
+              non-blocking execution.
+        - **Step 9b (`upgrade_singleton.rs` ->
+          `cmdr/src/self_upgrade/upgrade_journey/singleton.rs`)**:
+            - Rename `cmdr/src/self_upgrade/upgrade_journey/upgrade_singleton.rs` ->
+              `cmdr/src/self_upgrade/upgrade_journey/singleton.rs` (and update
+              `cmdr/src/self_upgrade/upgrade_journey/mod.rs`).
+            - Define
+              `pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>`.
+            - Replace `SingletonStartStatus` + `struct UpgradeSingletonState` with the
+              2-variant
+              `pub enum SingletonState { #[default] NotStarted, Started(Option<DeferredCheckHandle>) }`
+              (making `NotStarted + Some(handle)` unrepresentable) and update
+              `try_claim_start()`, `set_deferred_check_handle(...)`,
+              `take_deferred_check_handle()`, `reset_for_testing()`, and
+              `handle_upgrade_on_exit()`.
+        - **Step 9c (`tokio_thread_runner.rs` -> `thread_runner.rs`)**:
+            - Rename `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs` ->
+              `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs` (and update
+              `cmdr/src/self_upgrade/upgrade_journey/mod.rs`).
+            - Delete `run_on_dedicated_thread` and `extract_panic_payload_message` (all
+              `tokio::runtime::Builder` and `catch_unwind` logic now lives in
+              `r3bl_tui::StdThreadTokioRunner`), rename `run_in_tokio_logged` ->
+              `run_blocking_logged`, and add
+              `spawn_deferred_check_thread(checking, action_on_exit) -> DeferredUpgradeOutcome`.
+        - **Step 9d (`typestates/not_started.rs` & `check/fetch_manifest.rs`)**:
+            - Simplify `CooldownStatus::ExpiredOrMissing` in
+              `UpgradeJourney::<NotStarted>::start` to delegate directly to
+              `spawn_deferred_check_thread(checking, action_on_exit)`.
+            - Remove unused `ManifestCheckError::DeferredCheckThreadPanicked` from
+              `cmdr/src/self_upgrade/check/fetch_manifest.rs` and update diagrams/rustdocs
+              in `not_started.rs` and `typestates/state_machine.rs`.
+        - **Step 9e (Verification)**:
+            - Run `cargo fmt --all`, `cargo rustdoc-fmt`, `./check.fish --check`, and unit
+              tests for `std_thread_tokio_runner` and `self_upgrade`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions (ordered top-down: Control Plane ->
       Execution Plane).
@@ -1840,12 +1886,13 @@ where
         - [ ] `cmdr/src/self_upgrade/config/cli_arg.rs`
         - [ ] `cmdr/src/self_upgrade/config/user_feedback_channel.rs`
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
-        - [ ] `cmdr/src/self_upgrade/upgrade_journey/tokio_thread_runner.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`
+        - [ ] `tui/src/core/common/std_thread_tokio_runner.rs`
     - **Step B: Core Orchestrator & Active Typestates (Control Plane)**
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
-        - [ ] `cmdr/src/self_upgrade/upgrade_journey/upgrade_singleton.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/singleton.rs`
     - **Step C: Leaf Typestates & Journey Integration Tests (Control Plane)**
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
         - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/disabled.rs`
