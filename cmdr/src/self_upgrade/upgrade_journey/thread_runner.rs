@@ -1,8 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DEBUG_SELF_UPGRADE, UpgradeConfig, dedicated_thread};
-use r3bl_tui::{StdThreadTokioRunner, TokioRuntimeOutcome};
-use std::{io, thread::JoinHandle};
+use r3bl_tui::{StdThreadTokioJoinHandle, StdThreadTokioRunner, TokioRuntimeOutcome};
+use std::io;
 
 /// Marker struct that wraps [`StdThreadTokioRunner`] with
 /// logging ([`DEBUG_SELF_UPGRADE`]) and naming the spawned dedicated thread
@@ -11,7 +11,7 @@ use std::{io, thread::JoinHandle};
 /// Part of the [Control Plane] threading and runtime orchestration (see [Thread Model]).
 ///
 /// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
-/// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+/// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 /// [`StdThreadTokioRunner`]: r3bl_tui::StdThreadTokioRunner
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
@@ -23,7 +23,7 @@ impl ThreadRunner {
     /// or panic failures via [`DEBUG_SELF_UPGRADE`].
     ///
     /// [1]: r3bl_tui::StdThreadTokioRunner::run_blocking
-    /// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+    /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     pub(in crate::self_upgrade) fn run_blocking<T: Send, F: Send + AsyncFnOnce() -> T>(
         config: &UpgradeConfig,
         async_fn: F,
@@ -50,14 +50,14 @@ impl ThreadRunner {
     ///
     /// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
-    /// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+    /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     pub(in crate::self_upgrade) fn run_non_blocking<
         T: Send + 'static,
         F: Send + 'static + AsyncFnOnce() -> T,
     >(
         config: &UpgradeConfig,
         async_fn: F,
-    ) -> io::Result<JoinHandle<TokioRuntimeOutcome<T>>> {
+    ) -> io::Result<StdThreadTokioJoinHandle<T>> {
         let result = StdThreadTokioRunner::run_non_blocking(
             dedicated_thread::DEDICATED_THREAD_NAME,
             async_fn,

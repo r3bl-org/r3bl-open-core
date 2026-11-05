@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::UpgradeJourneyStateMarker;
+use super::StateMarker;
 use crate::{CrateMetadata, UpgradeError};
 
 /// Terminal outcome recorded inside [`Completed`] after an immediate upgrade or exit
@@ -43,4 +43,4 @@ pub struct Completed {
     /// Terminal [`UpgradeResolution`] describing how the upgrade flow concluded.
     pub resolution: UpgradeResolution,
 }
-impl UpgradeJourneyStateMarker for Completed {}
+impl StateMarker for Completed {}

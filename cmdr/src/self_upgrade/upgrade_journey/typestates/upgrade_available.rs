@@ -1,16 +1,16 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{UpgradeJourneyStateMarker, Upgrading};
+use super::{StateMarker, Upgrading};
 use crate::{CrateMetadata, EndpointUrl, UpgradeActionOnExit, UpgradeJourney};
 
 /// Typestate when an [`UpgradeStrategy::Deferred`] check found
-/// `remote_version > local_version` and awaits [`handle_upgrade_on_exit`].
+/// `remote_version > local_version` and awaits [`StartOutcome::handle_upgrade_on_exit`].
 ///
 /// [`UpgradeStrategy::Immediate`] transitions directly from [`Checking`] to
 /// [`Upgrading`], so `Immediate` is unrepresentable at application exit.
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
-/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
@@ -28,7 +28,7 @@ pub struct UpgradeAvailable {
     /// Base URL for downloading pre-compiled binary release archives from the manifest.
     pub binaries_release_base_url: EndpointUrl,
 }
-impl UpgradeJourneyStateMarker for UpgradeAvailable {}
+impl StateMarker for UpgradeAvailable {}
 
 impl UpgradeJourney<UpgradeAvailable> {
     #[must_use]

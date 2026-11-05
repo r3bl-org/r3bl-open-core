@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::UpgradeJourneyStateMarker;
+use super::StateMarker;
 use crate::ManifestCheckError;
 
 /// Typestate when the manifest check encountered a network, parse, or thread/runtime
@@ -12,4 +12,4 @@ pub struct CheckFailed {
     /// [`ManifestCheckError`]: crate::self_upgrade::ManifestCheckError
     pub error: ManifestCheckError,
 }
-impl UpgradeJourneyStateMarker for CheckFailed {}
+impl StateMarker for CheckFailed {}

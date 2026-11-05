@@ -102,9 +102,10 @@ fn test_duplicate_start_returns_already_started_without_mutating_singleton() {
     let dup_thread = UpgradeJourney::new(make_config(UpgradePolicy::Enabled(
         UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto),
     )));
-    assert_eq2!(dup_thread.start(), StartOutcome::AlreadyStarted);
+    let dup_outcome = dup_thread.start();
+    assert_eq2!(dup_outcome, StartOutcome::AlreadyStarted);
     assert_eq2!(
-        handle_upgrade_on_exit(),
+        dup_outcome.handle_upgrade_on_exit(),
         ExitOutcome::NoDeferredCheckRunning
     );
 }
@@ -296,7 +297,7 @@ fn test_path2_deferred_cooldown_skip_and_expiry() {
         StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::CooldownSkipped(_))
     ));
     assert_eq2!(
-        handle_upgrade_on_exit(),
+        skip_outcome.handle_upgrade_on_exit(),
         ExitOutcome::NoDeferredCheckRunning
     );
 
@@ -331,7 +332,7 @@ fn test_path2_deferred_cooldown_skip_and_expiry() {
         StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::DeferredCheckSpawned(_))
     ));
 
-    let exit_outcome = handle_upgrade_on_exit();
+    let exit_outcome = run_outcome.handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
     assert!(matches!(exit_outcome, ExitOutcome::UpToDate(_)));
@@ -348,8 +349,9 @@ fn test_path2_deferred_cooldown_skip_and_expiry() {
 fn test_path2_scenario_2c_exit_joins_inflight_dedicated_thread_and_completes() {
     SingletonState::reset_for_testing();
 
-    // Simulate Scenario 2c: short-lived CLI reaches `handle_upgrade_on_exit()` while
-    // the `self-upgrade` dedicated thread is still awaiting the HTTP response (`50ms`).
+    // Simulate Scenario 2c: short-lived CLI reaches
+    // `StartOutcome::handle_upgrade_on_exit()` while the `self-upgrade` dedicated
+    // thread is still awaiting the HTTP response (`50ms`).
     let (url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
         format_manifest_json("0.0.26", "open-source"),
@@ -373,7 +375,7 @@ fn test_path2_scenario_2c_exit_joins_inflight_dedicated_thread_and_completes() {
     ));
 
     // Immediately invoke exit handler while manifest check is still in flight.
-    let exit_outcome = handle_upgrade_on_exit();
+    let exit_outcome = outcome.handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
     match exit_outcome {
@@ -409,7 +411,7 @@ async fn test_path3_disabled_async_and_sync() {
         StartOutcome::Disabled(UpgradeJourney::new(config).into_disabled())
     );
     assert_eq2!(
-        handle_upgrade_on_exit(),
+        outcome.handle_upgrade_on_exit(),
         ExitOutcome::NoDeferredCheckRunning
     );
 }
@@ -451,7 +453,7 @@ fn test_execute_action_on_exit_auto_upgrade_failure_records_completed_without_co
         StartOutcome::DeferredUpgrade(DeferredUpgradeOutcome::DeferredCheckSpawned(_))
     ));
 
-    let exit_outcome = handle_upgrade_on_exit();
+    let exit_outcome = outcome.handle_upgrade_on_exit();
     server_handle.join().unwrap();
 
     assert!(!timestamp_file_path.exists());

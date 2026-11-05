@@ -73,9 +73,9 @@ pub enum UpgradeStrategy {
 
     /// Deferred upgrade on exit (`--upgrade-behavior`): spawns a dedicated thread
     /// during [`UpgradeJourney::start()`][start] (unless skipped by cooldown) and defers
-    /// the [`UpgradeActionOnExit`] until [`handle_upgrade_on_exit()`][exit].
+    /// the [`UpgradeActionOnExit`] until [`StartOutcome::handle_upgrade_on_exit()`][exit].
     ///
-    /// [exit]: crate::self_upgrade::handle_upgrade_on_exit
+    /// [exit]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
     /// [start]: crate::self_upgrade::UpgradeJourney::start
     Deferred(UpgradeActionOnExit),
 }

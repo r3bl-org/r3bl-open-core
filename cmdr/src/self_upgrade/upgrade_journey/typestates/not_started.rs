@@ -2,8 +2,7 @@
 
 use super::{super::{DeferredUpgradeOutcome, ImmediateUpgradeOutcome, SingletonState,
                     StartClaimStatus, StartOutcome, ThreadRunner},
-            Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome,
-            UpgradeJourneyStateMarker};
+            Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome, StateMarker};
 use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeActionOnExit,
             UpgradeConfig, UpgradeJourney, UpgradePolicy, UpgradeStrategy,
             format_already_up_to_date_msg, format_upgrade_failed_retry_msg,
@@ -46,7 +45,7 @@ use r3bl_tui::TokioRuntimeOutcome;
 ///    │                                                 │
 ///    ▼                                                 │
 /// 3. At exit, calls                                    │
-///    handle_upgrade_on_exit()                          │
+///    start_outcome.handle_upgrade_on_exit()            │
 ///    • Takes DeferredCheckHandle from SINGLETON        │
 ///      (drops lock) and joins dedicated thread ◄───────┘
 ///    • If UpgradeAvailable: transitions to Upgrading,
@@ -89,7 +88,7 @@ use r3bl_tui::TokioRuntimeOutcome;
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct NotStarted;
-impl UpgradeJourneyStateMarker for NotStarted {}
+impl StateMarker for NotStarted {}
 
 impl UpgradeJourney<NotStarted> {
     /// Constructs a new [`UpgradeJourney<NotStarted>`] from immutable [`UpgradeConfig`].
@@ -131,8 +130,9 @@ impl UpgradeJourney<NotStarted> {
     ///      [`DeferredUpgradeOutcome::CooldownSkipped`], or if expired, spawns the
     ///      dedicated `"self-upgrade"` thread via
     ///      [`StdThreadTokioRunner::run_non_blocking`] (storing its
-    ///      [`DeferredCheckHandle`] in [`SINGLETON`] for [`handle_upgrade_on_exit`]) and
-    ///      returns [`DeferredUpgradeOutcome::DeferredCheckSpawned`].
+    ///      [`DeferredCheckHandle`] in [`SINGLETON`] for
+    ///      [`StartOutcome::handle_upgrade_on_exit`]) and returns
+    ///      [`DeferredUpgradeOutcome::DeferredCheckSpawned`].
     ///
     /// 4. **Disabled ([`UpgradePolicy::Disabled`], `--upgrade-behavior disable`)**:
     ///    - Transitions to [`UpgradeJourney<Disabled>`] with zero threads and zero I/O,
@@ -144,10 +144,10 @@ impl UpgradeJourney<NotStarted> {
     ///
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-    /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
     /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
     /// [`self_upgrade`]: mod@crate::self_upgrade
     /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
     /// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`UpgradeJourney<Disabled>`]: crate::self_upgrade::UpgradeJourney
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled

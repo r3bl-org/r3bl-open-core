@@ -1,7 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Completed, UpgradeJourneyStateMarker, UpgradeResolution,
-            super::ThreadRunner};
+use super::{Completed, StateMarker, UpgradeResolution, super::ThreadRunner};
 use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnExit,
             UpgradeError, UpgradeJourney, format_upgrade_available_notice,
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
@@ -26,7 +25,7 @@ pub struct Upgrading {
     /// Base URL for downloading pre-compiled binary release archives from the manifest.
     pub binaries_release_base_url: EndpointUrl,
 }
-impl UpgradeJourneyStateMarker for Upgrading {}
+impl StateMarker for Upgrading {}
 
 impl UpgradeJourney<Upgrading> {
     #[must_use]

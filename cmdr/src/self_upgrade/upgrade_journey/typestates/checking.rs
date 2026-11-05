@@ -1,7 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CheckFailed, UpToDate, UpgradeAvailable, UpgradeJourneyStateMarker,
-            Upgrading};
+use super::{CheckFailed, StateMarker, UpToDate, UpgradeAvailable, Upgrading};
 use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, ManifestCheckError,
             UpgradeActionOnExit, UpgradeJourney, UpgradeStrategy,
             fetch_crate_metadata_from_manifest};
@@ -24,7 +23,7 @@ pub struct Checking {
     /// [`UpgradeStrategy`]: crate::self_upgrade::UpgradeStrategy
     pub strategy: UpgradeStrategy,
 }
-impl UpgradeJourneyStateMarker for Checking {}
+impl StateMarker for Checking {}
 
 impl UpgradeJourney<Checking> {
     #[must_use]
@@ -201,11 +200,12 @@ impl UpgradeJourney<Checking> {
 /// Exhaustive outcome of
 /// [`UpgradeJourney::<Checking>::check_for_deferred_upgrade`].
 ///
-/// Returned directly via `JoinHandle<DeferredCheckOutcome>` from the dedicated thread
-/// to [`handle_upgrade_on_exit`]. Makes [`Upgrading`] unrepresentable prior to
+/// Returned directly via [`DeferredCheckHandle`] from the dedicated thread to
+/// [`StartOutcome::handle_upgrade_on_exit`]. Makes [`Upgrading`] unrepresentable prior to
 /// application exit.
 ///
-/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+/// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
+/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeferredCheckOutcome {
@@ -214,9 +214,9 @@ pub enum DeferredCheckOutcome {
     UpToDate(UpgradeJourney<UpToDate>),
 
     /// Newer version found (`remote > current`); awaits exit handling via
-    /// [`handle_upgrade_on_exit`].
+    /// [`StartOutcome::handle_upgrade_on_exit`].
     ///
-    /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
     UpgradeAvailable(UpgradeJourney<UpgradeAvailable>),
 
     /// Network, parse, or thread/runtime error occurred during the manifest check.

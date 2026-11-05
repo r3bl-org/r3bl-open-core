@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::UpgradeJourneyStateMarker;
+use super::StateMarker;
 use crate::CrateMetadata;
 
 /// Typestate when the remote manifest was checked and `remote_version <= local_version`.
@@ -12,4 +12,4 @@ pub struct UpToDate {
     /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
     pub metadata: CrateMetadata,
 }
-impl UpgradeJourneyStateMarker for UpToDate {}
+impl StateMarker for UpToDate {}

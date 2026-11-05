@@ -73,7 +73,7 @@
 //! 2. [Typestate Pattern]
 //!   - [`UpgradeJourney<State>`] encodes the 9-state upgrade machine in the type system.
 //!     It holds an immutable [`UpgradeConfig`] alongside a `State` generic type that
-//!     implements [`UpgradeJourneyStateMarker`], and each transition consumes
+//!     implements [`StateMarker`], and each transition consumes
 //!     `UpgradeJourney<PrevState>` by value to return `UpgradeJourney<NextState>`.
 //!     - Here are the states: [`NotStarted`], [`Disabled`], [`CooldownSkipped`],
 //!       [`Checking`], [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`],
@@ -93,10 +93,10 @@
 //!   - [`SINGLETON`] holds the 2-variant [`SingletonState`] enum inside a leaf
 //!     [`ScopedMutex`], encoding the single-start guard alongside the optional
 //!     [`DeferredCheckHandle`] of the [`DEDICATED_THREAD_NAME`] OS thread.
-//!   - At shutdown, [`handle_upgrade_on_exit`] takes the [`DeferredCheckHandle`] from
-//!     [`SINGLETON`], releases the mutex, and joins any in-flight dedicated thread
-//!     (preventing deadlock and ensuring short-lived invocations wait up to
-//!     [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
+//!   - At shutdown, [`StartOutcome::handle_upgrade_on_exit`] takes the
+//!     [`DeferredCheckHandle`] from [`SINGLETON`], releases the mutex, and joins any
+//!     in-flight dedicated thread (preventing deadlock and ensuring short-lived
+//!     invocations wait up to [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
 //!     [`DEFERRED_CHECK_COOLDOWN_DELAY`][1] timestamp file was expired), then transitions
 //!     [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for one-shot exit handling.
 //!
@@ -144,9 +144,9 @@
 //!      enabled, and leaves the `1h` cooldown timestamp file untouched so the next run
 //!      can try again.
 //!    - If a newer version was found and the exit upgrade itself fails during
-//!      [`handle_upgrade_on_exit`], the error is reported on [`UserFeedbackChannel`] and
-//!      recorded as [`UpgradeResolution::UpgradeFailed`] without failing the
-//!      application's own exit status.
+//!      [`StartOutcome::handle_upgrade_on_exit`], the error is reported on
+//!      [`UserFeedbackChannel`] and recorded as [`UpgradeResolution::UpgradeFailed`]
+//!      without failing the application's own exit status.
 //!
 //! 2. When running an immediate upgrade ([`UpgradeStrategy::Immediate`]), errors are
 //!    reported loudly and cause the process to exit with status code `1`:
@@ -229,7 +229,6 @@
 //! [`Disabled`]: crate::self_upgrade::Disabled
 //! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 //! [`ExitOutcome`]: crate::self_upgrade::ExitOutcome
-//! [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
 //! [`ImmediateUpgradeOutcome::CheckFailed`]: crate::self_upgrade::ImmediateUpgradeOutcome::CheckFailed
 //! [`ImmediateUpgradeOutcome::Completed`]: crate::self_upgrade::ImmediateUpgradeOutcome::Completed
 //! [`ImmediateUpgradeOutcome`]: crate::self_upgrade::ImmediateUpgradeOutcome
@@ -249,8 +248,10 @@
 //! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
 //! [`StartOutcome::DeferredUpgrade`]: crate::self_upgrade::StartOutcome::DeferredUpgrade
 //! [`StartOutcome::Disabled`]: crate::self_upgrade::StartOutcome::Disabled
+//! [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 //! [`StartOutcome::ImmediateUpgrade`]: crate::self_upgrade::StartOutcome::ImmediateUpgrade
 //! [`StartOutcome`]: crate::self_upgrade::StartOutcome
+//! [`StateMarker`]: crate::self_upgrade::StateMarker
 //! [`upgrade_journey!`]: crate::upgrade_journey
 //! [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 //! [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs
@@ -258,7 +259,6 @@
 //! [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradeJourney<State>`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
-//! [`UpgradeJourneyStateMarker`]: crate::self_upgrade::UpgradeJourneyStateMarker
 //! [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
 //! [`UpgradeResolution::UpgradeFailed`]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
 //! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve

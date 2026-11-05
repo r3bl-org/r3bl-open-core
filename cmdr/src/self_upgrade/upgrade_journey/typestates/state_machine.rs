@@ -2,24 +2,31 @@
 
 use crate::UpgradeConfig;
 
-/// State machine for the self-upgrade lifecycle using the [Typestate Pattern].
+/// Core state machine of the [Control Plane] that orchestrates the self-upgrade
+/// lifecycle, using the [Typestate Pattern].
 ///
-/// This struct holds an immutable [`UpgradeConfig`] alongside the current `State`,
-/// which can be one of [`NotStarted`], [`Disabled`], [`CooldownSkipped`], [`Checking`],
+/// This struct holds an immutable [`UpgradeConfig`] alongside the current `State`, which
+/// can be one of [`NotStarted`], [`Disabled`], [`CooldownSkipped`], [`Checking`],
 /// [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`], [`Upgrading`], or [`Completed`].
 ///
-/// - External callers (code in other modules) can only construct
-///   [`UpgradeJourney<NotStarted>`], via [`UpgradeJourney::new`] or [`upgrade_journey!`],
-///   and call [`.start()`]. Because `config`, `state`, and all `into_*` transition
-///   methods are module-private (`pub(in crate::self_upgrade)`), code in other modules
-///   cannot forge state transitions.
-/// - The [Control Plane] drives each transition across the caller/current/main thread and
-///   the dedicated thread (see [Thread Model]) by consuming `UpgradeJourney<PrevState>`
-///   by value to produce `UpgradeJourney<NextState>`.
+/// # How it is used
 ///
-/// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
-/// [`self_upgrade`] module documentation for how the CLI-to-domain boundary, typestate
-/// machine, and process-wide singleton fit together.
+/// External callers (code in other modules) can only construct
+/// [`UpgradeJourney<NotStarted>`], via [`UpgradeJourney::new`] or [`upgrade_journey!`],
+/// and call [`.start()`]. And nothing else, by design. Because `config` and `state` are
+/// restricted to `pub(super)` (`typestates/`) and all `into_*` transition methods are
+/// module-private (`pub(in crate::self_upgrade)`), code in other modules cannot forge
+/// state transitions. This gives us compile-time (witness) proof that the state
+/// transitions are legit - so we don't need to perform runtime validation.
+///
+/// As the [Control Plane] state machine, it drives each transition across the
+/// caller/current/main thread and the dedicated thread (see [Thread Model]) by consuming
+/// `UpgradeJourney<PrevState>` by value to produce `UpgradeJourney<NextState>`, while
+/// delegating network, disk, and build I/O to the [Execution Plane].
+///
+/// > See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
+/// > [`self_upgrade`] module documentation for how the CLI-to-domain boundary, typestate
+/// > machine, and process-wide singleton fit together.
 ///
 /// # State Machine & Lifecycle Flow
 ///
@@ -47,8 +54,9 @@ use crate::UpgradeConfig;
 /// │  │              └─► ImmediateUpgrade(Completed(<Completed>))
 /// │  │
 /// │  └─ UpgradePolicy::Enabled(Deferred(action))
-/// │     │ (Returns DeferredUpgrade immediately; handle_upgrade_on_exit() later
-/// │     │  takes and joins DeferredCheckHandle from SINGLETON)
+/// │     │ (Returns DeferredUpgrade immediately;
+/// │     │  start_outcome.handle_upgrade_on_exit() later takes and joins
+/// │     │  DeferredCheckHandle from SINGLETON)
 /// │     ├─ Active 1h cooldown ──► <CooldownSkipped>
 /// │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
 /// │     └─ Expired/missing timestamp file ──► <Checking>
@@ -61,8 +69,8 @@ use crate::UpgradeConfig;
 /// └─ 2nd+ .start() (SINGLETON already SingletonState::Started)
 ///    └─► StartOutcome::AlreadyStarted (no-op)
 ///
-/// 2. At exit: handle_upgrade_on_exit() ──► ExitOutcome
-/// ┌──────────────────────────────────────────────────┘
+/// 2. At exit: start_outcome.handle_upgrade_on_exit() ──► ExitOutcome
+/// ┌──────────────────────────────────────────────────────────────────┘
 /// ├─ Step 1: Takes DeferredCheckHandle from SINGLETON, drops lock,
 /// │          and joins dedicated thread (waits <= 2s)
 /// │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
@@ -91,13 +99,12 @@ use crate::UpgradeConfig;
 /// [`SINGLETON`], checking [`UpgradePolicy`], and verifying cooldown or manifest
 /// versions).
 ///
-/// Because Rust makes every `impl From<A> for B` unconditionally `pub` whenever `A`
-/// and `B` are `pub`, implementing [`From`] for state transitions would expose unguarded
-/// public constructors — allowing external callers to forge states (such as
-/// `let forged: UpgradeJourney<Disabled> = journey.into();`) without calling
-/// [`.start()`]. This would defeat the typesafety afforded by the typestate machine.
-/// Using `pub(in crate::self_upgrade) fn into_*` seals transitions inside
-/// [`self_upgrade`].
+/// Because Rust makes every `impl From<A> for B` unconditionally `pub` whenever `A` and
+/// `B` are `pub`, implementing [`From`] for state transitions would expose unguarded
+/// public constructors — allowing external callers to forge states (such as `let forged:
+/// UpgradeJourney<Disabled> = journey.into();`) without calling [`.start()`]. This would
+/// defeat the typesafety afforded by the typestate machine. Using `pub(in
+/// crate::self_upgrade) fn into_*` seals transitions inside [`self_upgrade`].
 ///
 /// [`.start()`]: crate::self_upgrade::UpgradeJourney::start
 /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
@@ -108,7 +115,7 @@ use crate::UpgradeConfig;
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-/// [`State`]: super::UpgradeJourneyStateMarker
+/// [`State`]: super::StateMarker
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
@@ -125,12 +132,12 @@ use crate::UpgradeConfig;
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 /// [Typestate Pattern]: https://stanford-cs242.github.io/f19/lectures/08-2-typestate.html
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UpgradeJourney<State: UpgradeJourneyStateMarker> {
-    pub(in crate::self_upgrade) config: UpgradeConfig,
-    pub(in crate::self_upgrade) state: State,
+pub struct UpgradeJourney<State: StateMarker> {
+    pub(super) config: UpgradeConfig,
+    pub(super) state: State,
 }
 
-impl<State: UpgradeJourneyStateMarker> UpgradeJourney<State> {
+impl<State: StateMarker> UpgradeJourney<State> {
     /// Returns a reference to the immutable [`UpgradeConfig`] for this journey.
     ///
     /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
@@ -145,4 +152,4 @@ impl<State: UpgradeJourneyStateMarker> UpgradeJourney<State> {
 /// Marker trait implemented by all valid typestates of [`UpgradeJourney`].
 ///
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
-pub trait UpgradeJourneyStateMarker {}
+pub trait StateMarker {}

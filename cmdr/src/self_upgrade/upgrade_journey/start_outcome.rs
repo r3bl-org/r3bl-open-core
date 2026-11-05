@@ -1,18 +1,24 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CheckFailed, Checking, Completed, CooldownSkipped, Disabled, UpToDate,
-            UpgradeJourney};
+use super::{CheckFailed, Checking, Completed, CooldownSkipped, DeferredCheckOutcome,
+            Disabled, ExitOutcome, SingletonState, UpToDate, UpgradeJourney};
+use crate::DEBUG_SELF_UPGRADE;
+use r3bl_tui::TokioRuntimeOutcome;
 
 /// Outcome returned by [`UpgradeJourney::<NotStarted>::start`][start], telling the
 /// binary's `main()` whether upgrade checks are disabled, `--upgrade` executed
 /// immediately, a deferred upgrade was scheduled for exit, or `start()` was already
 /// called earlier in this process.
 ///
+/// At application exit, call [`Self::handle_upgrade_on_exit`] on this value to join any
+/// in-flight dedicated thread and complete the deferred upgrade lifecycle.
+///
 /// [start]: crate::self_upgrade::UpgradeJourney::start
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StartOutcome {
     /// `--upgrade-behavior disable` ([`UpgradePolicy::Disabled`]): upgrade checks are
-    /// disabled; `main()` discards this value and continues running the application.
+    /// disabled; calling [`Self::handle_upgrade_on_exit`] at exit is a no-op returning
+    /// [`ExitOutcome::NoDeferredCheckRunning`].
     ///
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
     Disabled(UpgradeJourney<Disabled>),
@@ -23,8 +29,8 @@ pub enum StartOutcome {
     /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
     ImmediateUpgrade(ImmediateUpgradeOutcome),
 
-    /// Deferred upgrade on exit ([`UpgradeStrategy::Deferred`]); `main()` discards this
-    /// value and continues running the application.
+    /// Deferred upgrade on exit ([`UpgradeStrategy::Deferred`]); `main()` continues
+    /// running the application and calls [`Self::handle_upgrade_on_exit`] at shutdown.
     ///
     /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
     DeferredUpgrade(DeferredUpgradeOutcome),
@@ -35,6 +41,70 @@ pub enum StartOutcome {
     /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     AlreadyStarted,
+}
+
+impl StartOutcome {
+    /// Called by `main()` at shutdown on the main thread to complete a deferred upgrade
+    /// on exit ([`UpgradeStrategy::Deferred`][1]). This is part of the [Control Plane].
+    ///
+    /// If [`UpgradeJourney::start`] spawned a dedicated thread, the main thread waits for
+    /// that thread to finish and receive its [`DeferredCheckOutcome`], then runs the
+    /// configured [`UpgradeActionOnExit`] on the main thread if an upgrade is available
+    /// ([`DeferredCheckOutcome::UpgradeAvailable`]):
+    /// 1. Takes the [`DeferredCheckHandle`] via
+    ///    [`SingletonState::take_deferred_check_handle`] (releasing `SINGLETON.write`
+    ///    **before** calling `handle.join()`), guaranteeing one-shot idempotent behavior
+    ///    if called more than once.
+    /// 2. If `handle.join()` returns [`TokioRuntimeOutcome::Completed`] with
+    ///    [`DeferredCheckOutcome::UpgradeAvailable`], transitions into [`Upgrading`] and
+    ///    delegates to `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which
+    ///    invokes the [Execution Plane] to prompt or install the upgrade), returning
+    ///    [`ExitOutcome::Completed`].
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
+    /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
+    /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    /// [`Upgrading`]: crate::self_upgrade::Upgrading
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    #[must_use]
+    pub fn handle_upgrade_on_exit(&self) -> ExitOutcome {
+        // Step 1: Loud lock release — take `DeferredCheckHandle` inside `SINGLETON.write`
+        // so the lock is dropped before `handle.join()` blocks on the dedicated thread.
+        let Some(handle) = SingletonState::take_deferred_check_handle() else {
+            return ExitOutcome::NoDeferredCheckRunning;
+        };
+
+        let outcome = match handle.join() {
+            TokioRuntimeOutcome::Completed(outcome) => outcome,
+            TokioRuntimeOutcome::FailedToStart(report)
+            | TokioRuntimeOutcome::Panicked(report) => {
+                DEBUG_SELF_UPGRADE.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug!(
+                        message = "Dedicated self-upgrade thread runtime failed or panicked",
+                        error = ?report
+                    );
+                });
+                return ExitOutcome::NoDeferredCheckRunning;
+            }
+        };
+
+        // Step 2: Transition the `DeferredCheckOutcome` returned directly by the thread.
+        match outcome {
+            DeferredCheckOutcome::UpToDate(up_to_date) => {
+                ExitOutcome::UpToDate(up_to_date)
+            }
+            DeferredCheckOutcome::CheckFailed(failed) => ExitOutcome::CheckFailed(failed),
+            DeferredCheckOutcome::UpgradeAvailable(available) => {
+                let action_on_exit = available.get_state().action_on_exit;
+                let upgrading = available.into_upgrading();
+                let completed = upgrading.execute_action_on_exit(action_on_exit);
+                ExitOutcome::Completed(completed)
+            }
+        }
+    }
 }
 
 /// Outcome of an explicit `--upgrade` ([`UpgradeStrategy::Immediate`]) run inside
@@ -80,11 +150,11 @@ pub enum DeferredUpgradeOutcome {
 
     /// Dedicated thread was spawned with [`UpgradeJourney<Checking>`] and its
     /// [`DeferredCheckHandle`] was stored in [`SINGLETON`] for
-    /// [`handle_upgrade_on_exit`].
+    /// [`StartOutcome::handle_upgrade_on_exit`].
     ///
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-    /// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
     /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
     /// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
     DeferredCheckSpawned(UpgradeJourney<Checking>),
 

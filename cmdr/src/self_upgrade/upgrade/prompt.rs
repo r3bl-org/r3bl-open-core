@@ -51,11 +51,11 @@ impl PromptUpgradeDecision {
 /// is non-interactive (for example, running in a `CI` pipeline or headless script).
 ///
 /// This function is called by the [`Upgrading`] typestate in the [Control Plane] during
-/// [`handle_upgrade_on_exit`] when [`UpgradeActionOnExit::PromptToUpgrade`] is
-/// configured, resolving into [`Completed`]. This is part of the [Execution Plane].
+/// [`StartOutcome::handle_upgrade_on_exit`] when [`UpgradeActionOnExit::PromptToUpgrade`]
+/// is configured, resolving into [`Completed`]. This is part of the [Execution Plane].
 ///
 /// [`Completed`]: crate::self_upgrade::Completed
-/// [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
+/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 /// [`UpgradeActionOnExit::PromptToUpgrade`]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane

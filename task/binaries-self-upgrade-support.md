@@ -509,10 +509,10 @@ Manifest (`r3bl.com/versions.jsonc`)**:
 
 - [ ] **Crate READMEs & `lib.rs` Modules**: Each binary crate (`cmdr`, `build-infra`,
       `rust-analyzer-mcp-server`, and root `r3bl-open-core`) provides:
-    - [ ]   1. Primary: 1-line bootstrap script (`https://r3bl.com/install.sh` /
-           `https://r3bl.com/install.ps1`).
-    - [ ]   2. Feature docs & `--upgrade` / `--upgrade-behavior` CLI flag instructions.
-    - [ ]   3. End-of-file fallback instructions: `cargo install <crate> --force`.
+    - [ ] 1. Primary: 1-line bootstrap script (`https://r3bl.com/install.sh` /
+          `https://r3bl.com/install.ps1`).
+    - [ ] 2. Feature docs & `--upgrade` / `--upgrade-behavior` CLI flag instructions.
+    - [ ] 3. End-of-file fallback instructions: `cargo install <crate> --force`.
 - [ ] **R3BL Website (`r3bl.com` in `../r3bl_website/`)**:
     - [ ] Host `versions.jsonc`, `install.sh`, and `install.ps1` at the root of
           `../r3bl_website/` so they are served at
@@ -840,37 +840,37 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
       methods are `pub(super)` so external crates cannot forge state transitions:
 
     ```rust
-    pub trait UpgradeJourneyStateMarker {}
+    pub trait StateMarker {}
 
     #[derive(Debug, Clone, PartialEq, Eq)]
-    pub struct UpgradeJourney<State: UpgradeJourneyStateMarker> {
+    pub struct UpgradeJourney<State: StateMarker> {
         config: UpgradeConfig,
         state: State,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     pub struct NotStarted;
-    impl UpgradeJourneyStateMarker for NotStarted {}
+    impl StateMarker for NotStarted {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Disabled;
-    impl UpgradeJourneyStateMarker for Disabled {}
+    impl StateMarker for Disabled {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CooldownSkipped;
-    impl UpgradeJourneyStateMarker for CooldownSkipped {}
+    impl StateMarker for CooldownSkipped {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct Checking {
         pub strategy: UpgradeStrategy,
     }
-    impl UpgradeJourneyStateMarker for Checking {}
+    impl StateMarker for Checking {}
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct UpToDate {
         pub metadata: CrateMetadata,
     }
-    impl UpgradeJourneyStateMarker for UpToDate {}
+    impl StateMarker for UpToDate {}
 
     /// Only entered on `UpgradeStrategy::DedicatedThread`; `UpgradeStrategy::Immediate` transitions
     /// directly from `Checking` to `Upgrading` so `Immediate` is unrepresentable at exit.
@@ -879,14 +879,14 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
         pub action_on_exit: UpgradeActionOnExit,
         pub metadata: CrateMetadata,
     }
-    impl UpgradeJourneyStateMarker for UpgradeAvailable {}
+    impl StateMarker for UpgradeAvailable {}
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct CheckFailed {
         /// Full diagnostic chain formatted via `format!("{err:#}")`.
         pub error: String,
     }
-    impl UpgradeJourneyStateMarker for CheckFailed {}
+    impl StateMarker for CheckFailed {}
 
     /// Active upgrade or interactive exit prompt in progress after `SINGLETON` leaf lock
     /// is released (`Checking -> Upgrading` in Path 1; `UpgradeAvailable -> Upgrading` in Path 2).
@@ -894,7 +894,7 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
     pub struct Upgrading {
         pub metadata: CrateMetadata,
     }
-    impl UpgradeJourneyStateMarker for Upgrading {}
+    impl StateMarker for Upgrading {}
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum UpgradeResolution {
@@ -910,7 +910,7 @@ We unify the entire self-upgrade lifecycle around **three core pillars**:
         pub metadata: CrateMetadata,
         pub resolution: UpgradeResolution,
     }
-    impl UpgradeJourneyStateMarker for Completed {}
+    impl StateMarker for Completed {}
     ```
 
 3. **Single Entry Point (`UpgradeJourney::<NotStarted>::start`) & Coordinated
@@ -1305,20 +1305,20 @@ cmdr/src/self_upgrade/
 └── upgrade_journey/
     ├── mod.rs                      (private submodules + `pub use *;` barrel re-exports + lifecycle `#[cfg(test)] mod tests`)
     ├── upgrade_journey_macro.rs    (`#[macro_export] macro_rules! upgrade_journey`)
-    ├── upgrade_journey_struct.rs   (`pub struct UpgradeJourney<State: UpgradeJourneyStateMarker>` + `config()` / `state()` accessors)
+    ├── upgrade_journey_struct.rs   (`pub struct UpgradeJourney<State: StateMarker>` + `config()` / `state()` accessors)
     ├── start_outcome.rs          (`pub enum StartOutcome`, `pub enum ImmediateUpgradeResult`, `Termination` impl)
     ├── tokio_thread_runner.rs      (`run_in_tokio_logged`, `run_on_dedicated_check_thread`, `extract_panic_payload_message` + unit tests)
     └── typestates/
-        ├── mod.rs                  (`pub trait UpgradeJourneyStateMarker {}` + private submodules + `pub use *;` barrel re-exports)
+        ├── mod.rs                  (`pub trait StateMarker {}` + private submodules + `pub use *;` barrel re-exports)
         ├── not_started.rs          (`pub struct NotStarted;` + `impl UpgradeJourney<NotStarted>` with `new()`, `start()`, `run_immediate_upgrade()`, `log_duplicate_start()`, `into_disabled()`, `into_cooldown_skipped()`, `into_checking()`)
-        ├── disabled.rs             (`pub struct Disabled;` + `impl UpgradeJourneyStateMarker for Disabled`)
-        ├── cooldown_skipped.rs     (`pub struct CooldownSkipped;` + `impl UpgradeJourneyStateMarker for CooldownSkipped`)
+        ├── disabled.rs             (`pub struct Disabled;` + `impl StateMarker for Disabled`)
+        ├── cooldown_skipped.rs     (`pub struct CooldownSkipped;` + `impl StateMarker for CooldownSkipped`)
         ├── checking.rs             (`pub struct Checking` + `impl UpgradeJourney<Checking>` with `into_up_to_date()`, `into_upgrade_available()`, `into_upgrading()`, `into_check_failed()`)
-        ├── up_to_date.rs           (`pub struct UpToDate` + `impl UpgradeJourneyStateMarker for UpToDate`)
+        ├── up_to_date.rs           (`pub struct UpToDate` + `impl StateMarker for UpToDate`)
         ├── upgrade_available.rs    (`pub struct UpgradeAvailable` + `impl UpgradeJourney<UpgradeAvailable>` with `into_upgrading()`)
-        ├── check_failed.rs         (`pub struct CheckFailed` + `impl UpgradeJourneyStateMarker for CheckFailed`)
+        ├── check_failed.rs         (`pub struct CheckFailed` + `impl StateMarker for CheckFailed`)
         ├── upgrading.rs            (`pub struct Upgrading` + `impl UpgradeJourney<Upgrading>` with `into_completed()`, `execute_action_on_exit()`)
-        └── completed.rs            (`pub struct Completed`, `pub enum UpgradeResolution`, `impl UpgradeJourneyStateMarker for Completed`)
+        └── completed.rs            (`pub struct Completed`, `pub enum UpgradeResolution`, `impl StateMarker for Completed`)
 ```
 
 #### Encapsulation & Visibility Rules (`pub(in crate::self_upgrade)`)
@@ -1326,7 +1326,7 @@ cmdr/src/self_upgrade/
 - In `cmdr/src/self_upgrade/upgrade_journey/upgrade_journey_struct.rs`:
     ```rust
     #[derive(Debug, Clone, PartialEq, Eq)]
-    pub struct UpgradeJourney<State: UpgradeJourneyStateMarker> {
+    pub struct UpgradeJourney<State: StateMarker> {
         pub(in crate::self_upgrade) config: UpgradeConfig,
         pub(in crate::self_upgrade) state: State,
     }
@@ -1346,7 +1346,7 @@ cmdr/src/self_upgrade/
 #### Implementation Steps for Phase 2.4
 
 - [x] Create `cmdr/src/self_upgrade/upgrade_journey/typestates/` with `mod.rs`
-      (`UpgradeJourneyStateMarker`) and 1 file per state (`not_started.rs`, `disabled.rs`,
+      (`StateMarker`) and 1 file per state (`not_started.rs`, `disabled.rs`,
       `cooldown_skipped.rs`, `checking.rs`, `up_to_date.rs`, `upgrade_available.rs`,
       `check_failed.rs`, `upgrading.rs`, `completed.rs`), preserving all rustdoc comments
       and intra-doc links byte-for-byte.
@@ -1535,8 +1535,8 @@ impl UpgradeJourney<Upgrading> {
 
 Encapsulate blocking and non-blocking single-threaded Tokio runtime execution inside a
 dedicated `std::thread` on `StdThreadTokioRunner` (`::run_blocking` and
-`::run_non_blocking`) in `tui/src/core/common/std_thread_tokio_runner.rs`, and delegate
-to it in `run_blocking_logged` and `spawn_deferred_check_thread` inside
+`::run_non_blocking`) in `tui/src/core/common/std_thread_tokio_runner.rs`, and delegate to
+it in `run_blocking_logged` and `spawn_deferred_check_thread` inside
 `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`:
 
 ```rust
@@ -1552,12 +1552,12 @@ pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
 - **Delete the 9-variant `UpgradeCheckStatus` enum completely**:
     - `SINGLETON` holds the 2-variant
       `SingletonState { NotStarted, Started(Option<DeferredCheckHandle>) }` (where
-      `pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>`).
+      `pub type DeferredCheckHandle = StdThreadTokioJoinHandle<DeferredCheckOutcome>`).
     - In `UpgradeJourney::<NotStarted>::start`:
-        - Atomically claims
-          `SingletonState::try_claim_start() -> StartClaimStatus` once at the top of
-          `start(self) -> StartOutcome` (returning `StartOutcome::AlreadyStarted` on
-          duplicate calls when `StartClaimStatus::AlreadyStarted` is observed).
+        - Atomically claims `SingletonState::try_claim_start() -> StartClaimStatus` once
+          at the top of `start(self) -> StartOutcome` (returning
+          `StartOutcome::AlreadyStarted` on duplicate calls when
+          `StartClaimStatus::AlreadyStarted` is observed).
         - For `UpgradeStrategy::Deferred`, spawns the dedicated thread named
           `dedicated_thread::DEDICATED_THREAD_NAME` (`"self-upgrade"`) via
           `StdThreadTokioRunner::run_non_blocking` in `spawn_deferred_check_thread`,
@@ -1834,7 +1834,8 @@ pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
             - Rename `tui/src/core/common/run_in_tokio.rs` ->
               `tui/src/core/common/std_thread_tokio_runner.rs` (and update
               `tui/src/core/common/mod.rs`).
-            - Introduce `pub struct StdThreadTokioRunner` with
+            - Introduce `pub struct StdThreadTokioRunner` and
+              `pub struct StdThreadTokioJoinHandle<T>` with
               `StdThreadTokioRunner::run_blocking` and
               `StdThreadTokioRunner::run_non_blocking`, sharing private
               `execute_in_current_thread_runtime`, plus unit tests for both blocking and
@@ -1845,7 +1846,7 @@ pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
               `cmdr/src/self_upgrade/upgrade_journey/singleton.rs` (and update
               `cmdr/src/self_upgrade/upgrade_journey/mod.rs`).
             - Define
-              `pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>`.
+              `pub type DeferredCheckHandle = StdThreadTokioJoinHandle<DeferredCheckOutcome>`.
             - Replace `SingletonStartStatus` + `struct UpgradeSingletonState` with the
               2-variant
               `pub enum SingletonState { #[default] NotStarted, Started(Option<DeferredCheckHandle>) }`
@@ -1872,6 +1873,11 @@ pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
         - **Step 9e (Verification)**:
             - Run `cargo fmt --all`, `cargo rustdoc-fmt`, `./check.fish --check`, and unit
               tests for `std_thread_tokio_runner` and `self_upgrade`.
+    - [x] **Step 10 (Rename `UpgradeJourneyStateMarker` -> `StateMarker`)**:
+        - Rename `pub trait UpgradeJourneyStateMarker` -> `pub trait StateMarker` in
+          `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`, across all
+          9 typestate files in `cmdr/src/self_upgrade/upgrade_journey/typestates/`, and in
+          `cmdr/src/self_upgrade/mod.rs`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions (ordered top-down: Control Plane ->
       Execution Plane).
