@@ -6,30 +6,15 @@ use r3bl_tui::{DeadlockPreventionPolicy::PanicOnSpecificLockNesting, ScopedMutex
                TokioRuntimeOutcome, scoped_mutex};
 use std::{sync::LazyLock, thread::JoinHandle};
 
-/// [`JoinHandle`] of the dedicated thread spawned via
-/// [`StdThreadTokioRunner::run_non_blocking`] during a deferred upgrade check
-/// ([`UpgradeStrategy::Deferred`]).
+/// Process-wide singleton instance of [`SingletonState`], lazily initialized on first
+/// access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`]. This
+/// static is part of the [Control Plane] (see [Thread Model]).
 ///
-/// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
-/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
-pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>;
-
-/// Witness returned by [`SingletonState::try_claim_start`] indicating whether
-/// [`UpgradeJourney::start`] claimed [`SINGLETON`] or observed a prior start.
-///
-/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StartClaimStatus {
-    /// [`SINGLETON`] was [`SingletonState::NotStarted`] and has now transitioned to
-    /// [`SingletonState::Started(None)`][SingletonState::Started].
-    Claimed,
-
-    /// [`SINGLETON`] was already [`SingletonState::Started`]; caller must return
-    /// [`StartOutcome::AlreadyStarted`].
-    ///
-    /// [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
-    AlreadyStarted,
-}
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
+pub static SINGLETON: LazyLock<
+    ScopedMutex<SingletonState, { PanicOnSpecificLockNesting }>,
+> = LazyLock::new(|| scoped_mutex!(SPECIFIC, SingletonState::NotStarted));
 
 /// Process-wide state stored inside [`SINGLETON`], encoding the single-start guard and
 /// the optional [`DeferredCheckHandle`] of the dedicated thread (when spawned by
@@ -84,7 +69,7 @@ impl SingletonState {
     ///
     /// [`TOCTOU`]: https://en.wikipedia.org/wiki/Time-of-check-to-time-of-use
     #[must_use]
-    pub(in crate::self_upgrade) fn try_claim_start() -> StartClaimStatus {
+    pub fn try_claim_start() -> StartClaimStatus {
         SINGLETON.write(|state| match state {
             Self::NotStarted => {
                 *state = Self::Started(None);
@@ -104,9 +89,7 @@ impl SingletonState {
     /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-    pub(in crate::self_upgrade) fn set_deferred_check_handle(
-        handle: DeferredCheckHandle,
-    ) {
+    pub fn set_deferred_check_handle(handle: DeferredCheckHandle) {
         SINGLETON.write(|state| {
             *state = Self::Started(Some(handle));
         });
@@ -115,8 +98,7 @@ impl SingletonState {
     /// Takes the in-flight [`DeferredCheckHandle`] out of [`Self::Started`], leaving
     /// [`Self::Started(None)`][Self::Started] in place so [`SINGLETON`] remains claimed.
     #[must_use]
-    pub(in crate::self_upgrade) fn take_deferred_check_handle()
-    -> Option<DeferredCheckHandle> {
+    pub fn take_deferred_check_handle() -> Option<DeferredCheckHandle> {
         SINGLETON.write(|state| match state {
             Self::NotStarted => None,
             Self::Started(slot) => slot.take(),
@@ -137,15 +119,30 @@ impl SingletonState {
     }
 }
 
-/// Process-wide singleton instance of [`SingletonState`], lazily initialized on first
-/// access and protected by a [`ScopedMutex`] with [`PanicOnSpecificLockNesting`]. This
-/// static is part of the [Control Plane] (see [Thread Model]).
+/// [`JoinHandle`] of the dedicated thread spawned via
+/// [`StdThreadTokioRunner::run_non_blocking`] during a deferred upgrade check
+/// ([`UpgradeStrategy::Deferred`]).
 ///
-/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-pub static SINGLETON: LazyLock<
-    ScopedMutex<SingletonState, { PanicOnSpecificLockNesting }>,
-> = LazyLock::new(|| scoped_mutex!(SPECIFIC, SingletonState::NotStarted));
+/// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
+pub type DeferredCheckHandle = JoinHandle<TokioRuntimeOutcome<DeferredCheckOutcome>>;
+
+/// Witness returned by [`SingletonState::try_claim_start`] indicating whether
+/// [`UpgradeJourney::start`] claimed [`SINGLETON`] or observed a prior start.
+///
+/// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartClaimStatus {
+    /// [`SINGLETON`] was [`SingletonState::NotStarted`] and has now transitioned to
+    /// [`SingletonState::Started(None)`][SingletonState::Started].
+    Claimed,
+
+    /// [`SINGLETON`] was already [`SingletonState::Started`]; caller must return
+    /// [`StartOutcome::AlreadyStarted`].
+    ///
+    /// [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
+    AlreadyStarted,
+}
 
 /// Outcome returned by [`handle_upgrade_on_exit`] when completing a deferred upgrade on
 /// exit ([`UpgradeStrategy::Deferred`]).
@@ -205,6 +202,7 @@ pub enum ExitOutcome {
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+#[must_use]
 pub fn handle_upgrade_on_exit() -> ExitOutcome {
     // Step 1: Loud lock release — take `DeferredCheckHandle` inside `SINGLETON.write`
     // so the lock is dropped before `handle.join()` blocks on the dedicated thread.
@@ -291,20 +289,14 @@ mod tests {
     fn test_try_claim_start_single_claim_and_reset() {
         SingletonState::reset_for_testing();
 
-        assert_eq2!(
-            SingletonState::try_claim_start(),
-            StartClaimStatus::Claimed
-        );
+        assert_eq2!(SingletonState::try_claim_start(), StartClaimStatus::Claimed);
         assert_eq2!(
             SingletonState::try_claim_start(),
             StartClaimStatus::AlreadyStarted
         );
 
         SingletonState::reset_for_testing();
-        assert_eq2!(
-            SingletonState::try_claim_start(),
-            StartClaimStatus::Claimed
-        );
+        assert_eq2!(SingletonState::try_claim_start(), StartClaimStatus::Claimed);
     }
 
     #[test]

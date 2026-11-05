@@ -12,6 +12,7 @@ mod upgrade_journey_macro;
 // Public barrel re-exports.
 pub use singleton::*;
 pub use start_outcome::*;
+pub use thread_runner::*;
 pub use typestates::*;
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{Completed, UpgradeJourneyStateMarker, UpgradeResolution,
-            super::thread_runner::run_blocking_logged};
+            super::ThreadRunner};
 use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnExit,
             UpgradeError, UpgradeJourney, format_upgrade_available_notice,
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
@@ -96,7 +96,7 @@ impl UpgradeJourney<Upgrading> {
                 let config = &self.config;
                 let metadata = &self.state.metadata;
                 let binaries_release_base_url = &self.state.binaries_release_base_url;
-                match run_blocking_logged(config, || {
+                match ThreadRunner::run_blocking(config, || {
                     perform_upgrade(config, metadata, binaries_release_base_url)
                 }) {
                     TokioRuntimeOutcome::Completed(Ok(())) => UpgradeResolution::Upgraded,
@@ -115,27 +115,34 @@ impl UpgradeJourney<Upgrading> {
                 let config = &self.config;
                 let metadata = &self.state.metadata;
                 let binaries_release_base_url = &self.state.binaries_release_base_url;
-                match run_blocking_logged(config, async || match prompt_user_to_upgrade(
-                    config.get_crate_name(),
-                    &remote_version_str,
-                )
-                .await
-                {
-                    PromptUpgradeDecision::SkippedNonInteractive => {
-                        UpgradeResolution::SkippedNonInteractive
-                    }
-                    PromptUpgradeDecision::DeclinedByUser => {
-                        UpgradeResolution::DeclinedByUser
-                    }
-                    PromptUpgradeDecision::UpgradeNow => {
-                        match perform_upgrade(config, metadata, binaries_release_base_url)
-                            .await
-                        {
-                            Ok(()) => UpgradeResolution::Upgraded,
-                            Err(err) => UpgradeResolution::UpgradeFailed(err),
+                match ThreadRunner::run_blocking(
+                    config,
+                    async || match prompt_user_to_upgrade(
+                        config.get_crate_name(),
+                        &remote_version_str,
+                    )
+                    .await
+                    {
+                        PromptUpgradeDecision::SkippedNonInteractive => {
+                            UpgradeResolution::SkippedNonInteractive
                         }
-                    }
-                }) {
+                        PromptUpgradeDecision::DeclinedByUser => {
+                            UpgradeResolution::DeclinedByUser
+                        }
+                        PromptUpgradeDecision::UpgradeNow => {
+                            match perform_upgrade(
+                                config,
+                                metadata,
+                                binaries_release_base_url,
+                            )
+                            .await
+                            {
+                                Ok(()) => UpgradeResolution::Upgraded,
+                                Err(err) => UpgradeResolution::UpgradeFailed(err),
+                            }
+                        }
+                    },
+                ) {
                     TokioRuntimeOutcome::Completed(res) => res,
                     TokioRuntimeOutcome::FailedToStart(err)
                     | TokioRuntimeOutcome::Panicked(err) => {

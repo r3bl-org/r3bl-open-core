@@ -78,6 +78,29 @@ use clap::{Parser, ValueEnum};
 /// );
 /// ```
 ///
+/// # Why a meta-action flag and not a domain verb subcommand?
+///
+/// We chose `<bin> --upgrade` (flag) over `<bin> upgrade` (subcommand). Both
+/// are common patterns used by CLI programs.
+///
+/// | CLI Arg    | Type        | Meaning      |
+/// | :--------- | :---------- | :----------- |
+/// | --upgrade  | flag        | meta-action  |
+/// | upgrade    | subcommand  | domain verb  |
+///
+/// 1. A meta-action acts on the binary itself. These instruct the binary to inspect or
+///    mutate its own state (e.g., `mv --help`), rather than executing its domain workload
+///    (e.g., `mv src/ dest/`).
+/// 2. Using a meta-action avoids positional collisions. For binaries that accept file
+///    paths (such as `edi`), a subcommand would collide with a file named `upgrade` (`edi
+///    upgrade`). A flag (`edi --upgrade`) avoids corrupting positional arguments.
+/// 3. This meta-action allows flattening across diverse CLIs with ease.
+///    [`UpgradeCLIArgs`] can be flattened via `#[command(flatten)]` into single-purpose
+///    tools (`edi`, `env-source`, `rust-analyzer-mcp-server`) and subcommand-driven tools
+///    (`giti`) alike, without a subcommand architecture. Adding a subcommand would force
+///    single purpose tools like `edi` to introduce subcommand enums with dispatch logic
+///    in its `main()` function, instead of just being able to simply use flattening.
+///
 /// [`clap`]: mod@clap
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`Stderr`]: crate::self_upgrade::UserFeedbackChannel::Stderr
@@ -149,9 +172,9 @@ impl From<UpgradeCLIArgs> for UpgradePolicy {
             ),
 
             // --upgrade-behavior notify-only
-            (None, Some(CliUpgradeBehavior::NotifyOnly)) => Self::Enabled(
-                UpgradeStrategy::Deferred(UpgradeActionOnExit::NotifyOnly),
-            ),
+            (None, Some(CliUpgradeBehavior::NotifyOnly)) => {
+                Self::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::NotifyOnly))
+            }
 
             // --upgrade-behavior disable
             (None, Some(CliUpgradeBehavior::Disable)) => Self::Disabled,

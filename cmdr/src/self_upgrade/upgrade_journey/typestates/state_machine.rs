@@ -83,6 +83,22 @@ use crate::UpgradeConfig;
 /// - ImmediateUpgrade(..) = StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::..)
 /// ```
 ///
+/// # Why Not to Use `impl From`
+///
+/// In the [Typestate Pattern], an [`UpgradeJourney<State>`] value is a witness, or
+/// compile-time proof, that the [Control Plane] verified the preconditions and
+/// orchestrated the required [Execution Plane] work to reach [`State`] (e.g., claiming
+/// [`SINGLETON`], checking [`UpgradePolicy`], and verifying cooldown or manifest
+/// versions).
+///
+/// Because Rust makes every `impl From<A> for B` unconditionally `pub` whenever `A`
+/// and `B` are `pub`, implementing [`From`] for state transitions would expose unguarded
+/// public constructors — allowing external callers to forge states (such as
+/// `let forged: UpgradeJourney<Disabled> = journey.into();`) without calling
+/// [`.start()`]. This would defeat the typesafety afforded by the typestate machine.
+/// Using `pub(in crate::self_upgrade) fn into_*` seals transitions inside
+/// [`self_upgrade`].
+///
 /// [`.start()`]: crate::self_upgrade::UpgradeJourney::start
 /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
 /// [`Checking`]: crate::self_upgrade::Checking
@@ -91,16 +107,21 @@ use crate::UpgradeConfig;
 /// [`Disabled`]: crate::self_upgrade::Disabled
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
 /// [`self_upgrade`]: mod@crate::self_upgrade
+/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+/// [`State`]: super::UpgradeJourneyStateMarker
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
 /// [`UpgradeJourney::new`]: crate::self_upgrade::UpgradeJourney::new
 /// [`UpgradeJourney<NotStarted>`]: crate::self_upgrade::UpgradeJourney
+/// [`UpgradeJourney<State>`]: crate::self_upgrade::UpgradeJourney
+/// [`UpgradePolicy`]: crate::self_upgrade::UpgradePolicy
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [`UpToDate`]: crate::self_upgrade::UpToDate
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
 /// [ex]: crate::upgrade_journey!#examples
+/// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
 /// [Typestate Pattern]: https://stanford-cs242.github.io/f19/lectures/08-2-typestate.html
 #[derive(Debug, Clone, PartialEq, Eq)]

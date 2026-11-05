@@ -3,16 +3,29 @@
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           thread::JoinHandle};
 
-/// Spawns a dedicated [`std::thread`] with its own single-threaded
-/// ([`current_thread`][ct]) Tokio runtime to execute an `async_fn`, either:
-/// - **Blocking** ([`Self::run_blocking`]): uses a scoped OS thread
-///   ([`std::thread::scope`]) and joins it immediately before returning
-///   [`TokioRuntimeOutcome<T>`].
-/// - **Non-blocking** ([`Self::run_non_blocking`]): spawns a named OS thread
-///   ([`std::thread::Builder::spawn`]) and returns
-///   [`JoinHandle<TokioRuntimeOutcome<T>>`][jh] immediately so the caller can continue
-///   running and join it later.
+/// Marker struct that spawns a dedicated [`std::thread`] running its own single-threaded
+/// Tokio runtime, [`current_thread`][ct], to execute a given [`async_fn`][af], in either
+/// mode:
+/// - [Blocking][`Self::run_blocking`]
+///   - Uses a scoped OS thread ([`std::thread::scope`]) and joins it immediately before
+///     returning [`TokioRuntimeOutcome<T>`].
+/// - [Non-blocking][`Self::run_non_blocking`]
+///   - Spawns a named OS thread ([`std::thread::Builder::spawn`]) and returns
+///     [`JoinHandle<TokioRuntimeOutcome<T>>`][jh] immediately so the caller can continue
+///     running and join it later.
 ///
+/// # Use cases
+///
+/// In some cases you might have the same logic that you need to run in a synchronous
+/// context as well as an asynchronous context. This happens a lot in callers of
+/// `self_upgrade` module (in `r3bl-cmdr` crate) which are typically the `main()` function
+/// of a binary. This `main()` function can be sync or async (depending on the binary) and
+/// this struct allows the same logic to be run in both contexts, without writing it
+/// twice, just by wrapping the logic in [`StdThreadTokioRunner::run_blocking`] or
+/// [`StdThreadTokioRunner::run_non_blocking`] depending on whether you want blocking or
+/// non-blocking behavior.
+///
+/// [af]: std::ops::AsyncFnOnce
 /// [ct]: tokio::runtime::Builder::new_current_thread
 /// [jh]: std::thread::JoinHandle
 #[derive(Debug)]

@@ -93,7 +93,7 @@
 //!   - [`SINGLETON`] holds the 2-variant [`SingletonState`] enum inside a leaf
 //!     [`ScopedMutex`], encoding the single-start guard alongside the optional
 //!     [`DeferredCheckHandle`] of the [`DEDICATED_THREAD_NAME`] OS thread.
-//!   - At shutdown, [`handle_upgrade_on_exit`][9] takes the [`DeferredCheckHandle`] from
+//!   - At shutdown, [`handle_upgrade_on_exit`] takes the [`DeferredCheckHandle`] from
 //!     [`SINGLETON`], releases the mutex, and joins any in-flight dedicated thread
 //!     (preventing deadlock and ensuring short-lived invocations wait up to
 //!     [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
@@ -144,8 +144,8 @@
 //!      enabled, and leaves the `1h` cooldown timestamp file untouched so the next run
 //!      can try again.
 //!    - If a newer version was found and the exit upgrade itself fails during
-//!      [`handle_upgrade_on_exit`][9], the error is reported on [`UserFeedbackChannel`]
-//!      and recorded as [`UpgradeResolution::UpgradeFailed`] without failing the
+//!      [`handle_upgrade_on_exit`], the error is reported on [`UserFeedbackChannel`] and
+//!      recorded as [`UpgradeResolution::UpgradeFailed`] without failing the
 //!      application's own exit status.
 //!
 //! 2. When running an immediate upgrade ([`UpgradeStrategy::Immediate`]), errors are
@@ -210,7 +210,6 @@
 //! [10]: crate::self_upgrade::UpgradeSource::try_fallback_to_source
 //! [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
 //! [2]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT
-//! [9]: crate::self_upgrade::handle_upgrade_on_exit
 //! [`.start()`]: crate::self_upgrade::UpgradeJourney::start
 //! [`auto`]: crate::self_upgrade::UpgradeActionOnExit::Auto
 //! [`CheckFailed`]: crate::self_upgrade::CheckFailed
@@ -230,6 +229,7 @@
 //! [`Disabled`]: crate::self_upgrade::Disabled
 //! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 //! [`ExitOutcome`]: crate::self_upgrade::ExitOutcome
+//! [`handle_upgrade_on_exit`]: crate::self_upgrade::handle_upgrade_on_exit
 //! [`ImmediateUpgradeOutcome::CheckFailed`]: crate::self_upgrade::ImmediateUpgradeOutcome::CheckFailed
 //! [`ImmediateUpgradeOutcome::Completed`]: crate::self_upgrade::ImmediateUpgradeOutcome::Completed
 //! [`ImmediateUpgradeOutcome`]: crate::self_upgrade::ImmediateUpgradeOutcome

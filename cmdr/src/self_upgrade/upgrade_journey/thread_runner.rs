@@ -1,86 +1,77 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Checking, DeferredUpgradeOutcome, SingletonState, UpgradeJourney};
-use crate::{DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeActionOnExit, UpgradeConfig,
-            dedicated_thread};
+use crate::{DEBUG_SELF_UPGRADE, UpgradeConfig, dedicated_thread};
 use r3bl_tui::{StdThreadTokioRunner, TokioRuntimeOutcome};
+use std::{io, thread::JoinHandle};
 
-/// Wrapper around [`StdThreadTokioRunner::run_blocking`] that logs runtime startup or
-/// panic failures via [`DEBUG_SELF_UPGRADE`].
+/// Marker struct that wraps [`StdThreadTokioRunner`] with
+/// logging ([`DEBUG_SELF_UPGRADE`]) and naming the spawned dedicated thread
+/// ([`DEDICATED_THREAD_NAME`][1]).
 ///
 /// Part of the [Control Plane] threading and runtime orchestration (see [Thread Model]).
 ///
+/// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
+/// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+/// [`StdThreadTokioRunner`]: r3bl_tui::StdThreadTokioRunner
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-pub(in crate::self_upgrade) fn run_blocking_logged<
-    T: Send,
-    F: Send + AsyncFnOnce() -> T,
->(
-    config: &UpgradeConfig,
-    async_fn: F,
-) -> TokioRuntimeOutcome<T> {
-    let outcome = StdThreadTokioRunner::run_blocking(async_fn);
-    if let TokioRuntimeOutcome::FailedToStart(ref report)
-    | TokioRuntimeOutcome::Panicked(ref report) = outcome
-    {
-        DEBUG_SELF_UPGRADE.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug!(
-                message = "run_blocking_logged: Tokio runtime execution failed",
-                crate_name = %config.get_crate_name(),
-                error = ?report
-            );
-        });
-    }
-    outcome
-}
+#[derive(Debug)]
+pub struct ThreadRunner;
 
-/// Spawns the dedicated `"self-upgrade"` thread via
-/// [`StdThreadTokioRunner::run_non_blocking`] to run
-/// [`UpgradeJourney::<Checking>::check_for_deferred_upgrade`], stores its
-/// [`DeferredCheckHandle`] inside [`SINGLETON`], and returns [`DeferredUpgradeOutcome`].
-///
-/// Part of the [Control Plane] dedicated thread orchestration (see [Thread Model]).
-///
-/// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-/// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-#[must_use]
-pub(in crate::self_upgrade) fn spawn_deferred_check_thread(
-    checking: UpgradeJourney<Checking>,
-    action_on_exit: UpgradeActionOnExit,
-) -> DeferredUpgradeOutcome {
-    let spawn_checking = checking.clone();
-    match StdThreadTokioRunner::run_non_blocking(
-        dedicated_thread::DEDICATED_THREAD_NAME,
-        async move || {
-            spawn_checking
-                .check_for_deferred_upgrade(action_on_exit)
-                .await
-        },
-    ) {
-        Ok(handle) => {
-            SingletonState::set_deferred_check_handle(handle);
-            DeferredUpgradeOutcome::DeferredCheckSpawned(checking)
-        }
-        Err(io_err) => {
-            let error = ManifestCheckError::RuntimeOrThreadInitFailed {
-                reason: format!(
-                    "Failed to spawn dedicated self-upgrade thread: {io_err:#}"
-                ),
-            };
+impl ThreadRunner {
+    /// Wrapper around [`StdThreadTokioRunner::run_blocking`][1] that logs runtime startup
+    /// or panic failures via [`DEBUG_SELF_UPGRADE`].
+    ///
+    /// [1]: r3bl_tui::StdThreadTokioRunner::run_blocking
+    /// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+    pub(in crate::self_upgrade) fn run_blocking<T: Send, F: Send + AsyncFnOnce() -> T>(
+        config: &UpgradeConfig,
+        async_fn: F,
+    ) -> TokioRuntimeOutcome<T> {
+        let outcome = StdThreadTokioRunner::run_blocking(async_fn);
+        if let TokioRuntimeOutcome::FailedToStart(ref report)
+        | TokioRuntimeOutcome::Panicked(ref report) = outcome
+        {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
-                    message = "Could not spawn dedicated self-upgrade thread",
-                    crate_name = %checking.get_config().get_crate_name(),
-                    error = %error
+                    message = "ThreadRunner::run_blocking: Tokio runtime execution failed",
+                    crate_name = %config.get_crate_name(),
+                    error = ?report
                 );
             });
-            DeferredUpgradeOutcome::DeferredCheckSpawnFailed(
-                checking.into_check_failed(error),
-            )
         }
+        outcome
+    }
+
+    /// Wrapper around [`StdThreadTokioRunner::run_non_blocking`][2] that spawns the
+    /// dedicated thread (named [`DEDICATED_THREAD_NAME`][1]) and logs thread spawn
+    /// failures via [`DEBUG_SELF_UPGRADE`].
+    ///
+    /// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
+    /// [2]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
+    /// [`DEBUG_SELF_UPGRADE`]: crate::self_upgrade::DEBUG_SELF_UPGRADE
+    pub(in crate::self_upgrade) fn run_non_blocking<
+        T: Send + 'static,
+        F: Send + 'static + AsyncFnOnce() -> T,
+    >(
+        config: &UpgradeConfig,
+        async_fn: F,
+    ) -> io::Result<JoinHandle<TokioRuntimeOutcome<T>>> {
+        let result = StdThreadTokioRunner::run_non_blocking(
+            dedicated_thread::DEDICATED_THREAD_NAME,
+            async_fn,
+        );
+        if let Err(ref io_err) = result {
+            DEBUG_SELF_UPGRADE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "ThreadRunner::run_non_blocking: Could not spawn dedicated self-upgrade thread",
+                    crate_name = %config.get_crate_name(),
+                    error = ?io_err
+                );
+            });
+        }
+        result
     }
 }

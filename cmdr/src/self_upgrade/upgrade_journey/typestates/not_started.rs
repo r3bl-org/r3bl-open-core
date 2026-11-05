@@ -1,12 +1,11 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{super::{DeferredUpgradeOutcome, ImmediateUpgradeOutcome, SingletonState,
-                    StartClaimStatus, StartOutcome,
-                    thread_runner::{run_blocking_logged, spawn_deferred_check_thread}},
+                    StartClaimStatus, StartOutcome, ThreadRunner},
             Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome,
             UpgradeJourneyStateMarker};
-use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeConfig,
-            UpgradeJourney, UpgradePolicy, UpgradeStrategy,
+use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeActionOnExit,
+            UpgradeConfig, UpgradeJourney, UpgradePolicy, UpgradeStrategy,
             format_already_up_to_date_msg, format_upgrade_failed_retry_msg,
             get_current_bin_name};
 use r3bl_tui::TokioRuntimeOutcome;
@@ -126,7 +125,7 @@ impl UpgradeJourney<NotStarted> {
     ///      returning [`StartOutcome::ImmediateUpgrade`].
     ///
     /// 3. **Deferred upgrade on exit ([`UpgradeStrategy::Deferred`],
-    ///   `--upgrade-behavior`)**:
+    ///    `--upgrade-behavior`)**:
     ///    - Checks the `1h` cooldown timestamp file via
     ///      [`CooldownPolicy::check_status`][status]; if active, returns
     ///      [`DeferredUpgradeOutcome::CooldownSkipped`], or if expired, spawns the
@@ -160,17 +159,26 @@ impl UpgradeJourney<NotStarted> {
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
     pub fn start(self) -> StartOutcome {
+        // Early return if another instance is already running.
         if SingletonState::try_claim_start() == StartClaimStatus::AlreadyStarted {
             return log_duplicate_start(&self.config);
         }
 
-        match self.config.get_upgrade_policy() {
+        let upgrade_policy = self.config.get_upgrade_policy();
+        match upgrade_policy {
+            // Upgrade Disabled.
             UpgradePolicy::Disabled => StartOutcome::Disabled(self.into_disabled()),
-            UpgradePolicy::Enabled(UpgradeStrategy::Immediate) => {
-                let checking = self.into_checking(UpgradeStrategy::Immediate);
+
+            // Enabled - Immediate Upgrade.
+            UpgradePolicy::Enabled(strategy @ UpgradeStrategy::Immediate) => {
+                let checking = self.into_checking(strategy);
                 StartOutcome::ImmediateUpgrade(Self::run_immediate_upgrade(checking))
             }
-            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(action_on_exit)) => {
+
+            // Enabled - Deferred Upgrade.
+            UpgradePolicy::Enabled(
+                strategy @ UpgradeStrategy::Deferred(action_on_exit),
+            ) => {
                 match self
                     .config
                     .get_cooldown_policy()
@@ -182,9 +190,8 @@ impl UpgradeJourney<NotStarted> {
                         ),
                     ),
                     CooldownStatus::ExpiredOrMissing => {
-                        let checking =
-                            self.into_checking(UpgradeStrategy::Deferred(action_on_exit));
-                        StartOutcome::DeferredUpgrade(spawn_deferred_check_thread(
+                        let checking = self.into_checking(strategy);
+                        StartOutcome::DeferredUpgrade(Self::run_deferred_upgrade(
                             checking,
                             action_on_exit,
                         ))
@@ -229,35 +236,41 @@ impl UpgradeJourney<NotStarted> {
         let config = checking.get_config().clone();
         let fallback_checking = checking.clone();
 
-        match run_blocking_logged(&config, async move || -> ImmediateUpgradeOutcome {
-            match checking.check_for_immediate_upgrade().await {
-                ImmediateCheckOutcome::CheckFailed(failed) => {
-                    let bin_name = get_current_bin_name();
-                    let msg = format_upgrade_failed_retry_msg(
-                        &bin_name,
-                        &failed.get_state().error.to_string(),
-                    );
-                    failed
-                        .get_config()
-                        .get_user_feedback_channel()
-                        .eprintln(msg);
-                    ImmediateUpgradeOutcome::CheckFailed(failed)
+        match ThreadRunner::run_blocking(
+            &config,
+            async move || -> ImmediateUpgradeOutcome {
+                match checking.check_for_immediate_upgrade().await {
+                    ImmediateCheckOutcome::CheckFailed(failed) => {
+                        let bin_name = get_current_bin_name();
+                        let msg = format_upgrade_failed_retry_msg(
+                            &bin_name,
+                            &failed.get_state().error.to_string(),
+                        );
+                        failed
+                            .get_config()
+                            .get_user_feedback_channel()
+                            .eprintln(msg);
+                        ImmediateUpgradeOutcome::CheckFailed(failed)
+                    }
+                    ImmediateCheckOutcome::UpToDate(up_to_date) => {
+                        up_to_date.get_config().get_user_feedback_channel().println(
+                            format_already_up_to_date_msg(
+                                up_to_date.get_config().get_crate_name(),
+                                &up_to_date
+                                    .get_config()
+                                    .get_current_version()
+                                    .to_string(),
+                            ),
+                        );
+                        ImmediateUpgradeOutcome::UpToDate(up_to_date)
+                    }
+                    ImmediateCheckOutcome::Upgrading(upgrading) => {
+                        let completed = upgrading.execute_immediate_upgrade().await;
+                        ImmediateUpgradeOutcome::Completed(completed)
+                    }
                 }
-                ImmediateCheckOutcome::UpToDate(up_to_date) => {
-                    up_to_date.get_config().get_user_feedback_channel().println(
-                        format_already_up_to_date_msg(
-                            up_to_date.get_config().get_crate_name(),
-                            &up_to_date.get_config().get_current_version().to_string(),
-                        ),
-                    );
-                    ImmediateUpgradeOutcome::UpToDate(up_to_date)
-                }
-                ImmediateCheckOutcome::Upgrading(upgrading) => {
-                    let completed = upgrading.execute_immediate_upgrade().await;
-                    ImmediateUpgradeOutcome::Completed(completed)
-                }
-            }
-        }) {
+            },
+        ) {
             TokioRuntimeOutcome::Completed(outcome) => outcome,
             TokioRuntimeOutcome::FailedToStart(err)
             | TokioRuntimeOutcome::Panicked(err) => {
@@ -270,6 +283,33 @@ impl UpgradeJourney<NotStarted> {
                 ImmediateUpgradeOutcome::CheckFailed(fallback_checking.into_check_failed(
                     ManifestCheckError::RuntimeOrThreadInitFailed { reason: error_str },
                 ))
+            }
+        }
+    }
+
+    fn run_deferred_upgrade(
+        checking: UpgradeJourney<Checking>,
+        action_on_exit: UpgradeActionOnExit,
+    ) -> DeferredUpgradeOutcome {
+        let spawn_checking = checking.clone();
+        match ThreadRunner::run_non_blocking(checking.get_config(), async move || {
+            spawn_checking
+                .check_for_deferred_upgrade(action_on_exit)
+                .await
+        }) {
+            Ok(handle) => {
+                SingletonState::set_deferred_check_handle(handle);
+                DeferredUpgradeOutcome::DeferredCheckSpawned(checking)
+            }
+            Err(io_err) => {
+                let error = ManifestCheckError::RuntimeOrThreadInitFailed {
+                    reason: format!(
+                        "Failed to spawn dedicated self-upgrade thread: {io_err:#}"
+                    ),
+                };
+                DeferredUpgradeOutcome::DeferredCheckSpawnFailed(
+                    checking.into_check_failed(error),
+                )
             }
         }
     }

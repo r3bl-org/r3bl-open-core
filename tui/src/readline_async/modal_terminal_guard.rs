@@ -109,9 +109,9 @@ impl Drop for ModalTerminalGuard<'_> {
     }
 }
 
-// XMARK: Witness token usage to restrict access of a method w/out making it private
+// XMARK: Witness token (compile-time proof) to restrict access to a pub method
 
-/// A [witness token] that proves a [`ModalTerminalGuard`] is held.
+/// A [witness token] (compile-time proof) that proves a [`ModalTerminalGuard`] is held.
 ///
 /// ## Proof and Lifecycle Chain
 ///

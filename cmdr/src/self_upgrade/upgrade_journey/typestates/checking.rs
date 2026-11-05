@@ -94,7 +94,7 @@ impl UpgradeJourney<Checking> {
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
     #[must_use]
-    pub(in crate::self_upgrade) async fn check_for_deferred_upgrade(
+    pub async fn check_for_deferred_upgrade(
         self,
         action_on_exit: UpgradeActionOnExit,
     ) -> DeferredCheckOutcome {
