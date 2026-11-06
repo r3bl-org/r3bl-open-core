@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::thread::JoinHandle;
+use std::thread::{JoinHandle, ScopedJoinHandle};
 
 /// Marker struct that spawns a dedicated [`std::thread`] running its own single-threaded
 /// Tokio runtime, [`current_thread`][ct], to execute a given [`async_fn`][af], in either
@@ -147,13 +147,8 @@ impl StdThreadTokioRunner {
 
             // Return the result from the join handle.
             match res_join_handle {
-                Ok(join_handle) => match join_handle.join() {
-                    Ok(execution) => execution,
-                    Err(panic_payload) => {
-                        TokioRuntimeOutcome::panicked(SCOPED_THREAD_NAME, &panic_payload)
-                    }
-                },
-                Err(err) => TokioRuntimeOutcome::failed_to_start(err),
+                Ok(join_handle) => TokioRuntimeOutcome::from(join_handle),
+                Err(err) => TokioRuntimeOutcome::from(err),
             }
         })
     }
@@ -218,11 +213,8 @@ impl StdThreadTokioRunner {
             .enable_all()
             .build();
         match res_runtime_create {
-            Ok(runtime) => {
-                let outcome = runtime.block_on(async_fn());
-                TokioRuntimeOutcome::Completed(outcome)
-            }
-            Err(err) => TokioRuntimeOutcome::failed_to_start(err),
+            Ok(runtime) => TokioRuntimeOutcome::Completed(runtime.block_on(async_fn())),
+            Err(err) => TokioRuntimeOutcome::from(err),
         }
     }
 }
@@ -237,14 +229,7 @@ pub struct StdThreadTokioJoinHandle<T>(JoinHandle<TokioRuntimeOutcome<T>>);
 
 impl<T> StdThreadTokioJoinHandle<T> {
     /// Waits for the spawned OS thread to finish and returns its [`TokioRuntimeOutcome`].
-    pub fn join(self) -> TokioRuntimeOutcome<T> {
-        match self.0.join() {
-            Ok(execution) => execution,
-            Err(panic_payload) => {
-                TokioRuntimeOutcome::panicked(UNSCOPED_THREAD_NAME, &panic_payload)
-            }
-        }
-    }
+    pub fn join(self) -> TokioRuntimeOutcome<T> { TokioRuntimeOutcome::from(self.0) }
 }
 
 /// Outcome of executing an async closure on a [`std::thread`]'s Tokio runtime via
@@ -263,32 +248,62 @@ pub enum TokioRuntimeOutcome<T> {
     Panicked(miette::Report),
 }
 
-impl<T> TokioRuntimeOutcome<T> {
-    /// Wraps a Tokio runtime initialization [`std::io::Error`] into
-    /// [`Self::FailedToStart`].
-    fn failed_to_start(err: std::io::Error) -> Self {
-        let report =
-            miette::Report::from_err(err).wrap_err("Failed to create tokio runtime");
-        Self::FailedToStart(report)
+mod convert_errors {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl<T> From<std::io::Error> for TokioRuntimeOutcome<T> {
+        /// Wraps a thread or Tokio runtime initialization [`std::io::Error`] into
+        /// [`Self::FailedToStart`].
+        fn from(err: std::io::Error) -> Self {
+            let report =
+                miette::Report::from_err(err).wrap_err("Failed to create tokio runtime");
+            Self::FailedToStart(report)
+        }
     }
 
-    /// Formats the panic payload caught by `join()` on `thread_name` into
-    /// [`Self::Panicked`].
-    fn panicked(
-        thread_name: &str,
-        panic_payload: &Box<dyn std::any::Any + Send + 'static>,
-    ) -> Self {
-        let panic_msg = match (
-            panic_payload.downcast_ref::<&str>(),
-            panic_payload.downcast_ref::<String>(),
-        ) {
-            (Some(&s), _) => s,
-            (_, Some(s)) => s.as_str(),
-            (None, None) => "unknown panic payload",
-        };
+    impl<'scope, T> From<ScopedJoinHandle<'scope, TokioRuntimeOutcome<T>>>
+        for TokioRuntimeOutcome<T>
+    {
+        /// Joins the scoped OS thread and maps any caught panic payload into
+        /// [`Self::Panicked`].
+        fn from(join_handle: ScopedJoinHandle<'scope, TokioRuntimeOutcome<T>>) -> Self {
+            Self::from_join_result(SCOPED_THREAD_NAME, join_handle.join())
+        }
+    }
 
-        let report = miette::miette!("{thread_name} panicked: {panic_msg}");
-        Self::Panicked(report)
+    impl<T> From<JoinHandle<TokioRuntimeOutcome<T>>> for TokioRuntimeOutcome<T> {
+        /// Joins the unscoped (regular) OS thread and maps any caught panic payload into
+        /// [`Self::Panicked`].
+        fn from(join_handle: JoinHandle<TokioRuntimeOutcome<T>>) -> Self {
+            Self::from_join_result(UNSCOPED_THREAD_NAME, join_handle.join())
+        }
+    }
+
+    impl<T> TokioRuntimeOutcome<T> {
+        /// Flattens the [`std::thread::Result`] returned by `join()` on `thread_name`
+        /// into [`Self`], formatting any caught panic payload into [`Self::Panicked`].
+        fn from_join_result(
+            thread_name: &str,
+            join_result: std::thread::Result<Self>,
+        ) -> Self {
+            match join_result {
+                Ok(outcome) => outcome,
+                Err(panic_payload) => {
+                    let panic_msg = match (
+                        panic_payload.downcast_ref::<&str>(),
+                        panic_payload.downcast_ref::<String>(),
+                    ) {
+                        (Some(&s), _) => s,
+                        (_, Some(s)) => s.as_str(),
+                        (None, None) => "unknown panic payload",
+                    };
+
+                    let report = miette::miette!("{thread_name} panicked: {panic_msg}");
+                    Self::Panicked(report)
+                }
+            }
+        }
     }
 }
 
@@ -386,7 +401,7 @@ mod tests {
     fn test_failed_to_start() {
         let io_err = std::io::Error::other("simulated runtime init failure");
 
-        let outcome = TokioRuntimeOutcome::<()>::failed_to_start(io_err);
+        let outcome = TokioRuntimeOutcome::<()>::from(io_err);
 
         match outcome {
             TokioRuntimeOutcome::FailedToStart(report) => {
