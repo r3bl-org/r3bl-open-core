@@ -106,7 +106,6 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
-- [ ] [remove-tokio.md](remove-tokio.md)
 - [ ] [replace-expect-with-rust-perf.md](replace-expect-with-rust-perf.md)
 - [ ] [telemetry-server.md](telemetry-server.md)
 - [ ] [r3bl-cmdr-prompty.md](r3bl-cmdr-prompty.md)
@@ -117,8 +116,15 @@ _Meta Task: Prepare v0.8.0 Release_
 
 # [TODO] Unify rendering
 
-- [ ] [unify the interactive entry points to alternate screen](task_refactor_interactive_apis_to_alternate_screen.md)
 - [ ] [unify styling](task_unify_cli_and_styled_text.md)
+    - Extends `TuiStyledText` with builder methods so `RenderOps` can be used cleanly in
+      CLI prompts
+- [ ] [unify 3 entry pts](task_refactor_interactive_apis_to_alternate_screen.md)
+    - Consolidates `choose` and `readline` onto Full TUI `Component`/`App` primitives on
+      alternate screen, eliminating legacy cursor engines
+- [ ] [remove tokio from tui](remove-tokio.md)
+    - With all UI consolidated on `TerminalWindow`, convert `TerminalWindow` &
+      `InputDevice` to sync and drop Tokio completely from `tui`
 
 # [TODO] Clean up tasks
 
