@@ -1356,7 +1356,7 @@
 //! > line (to put the terminal back into "cooked mode") which is a bad user experience.
 //!
 //! To achieve this, this crate uses architectural patterns that guarantee terminal
-//! restoration through [`RAII`] (Resource Acquisition Is Initialization) and poison-safe
+//! restoration through [RAII] (Resource Acquisition Is Initialization) and poison-safe
 //! cleanup. This section details how we handle the interplay between panic handling,
 //! resource cleanup via [`Drop`], and mutex poison-safety.
 //!
@@ -1381,7 +1381,7 @@
 //! 3. The [`OutputDevice`] mutex is now **poisoned** because Thread A was holding it when
 //!    it started to panic.
 //! 4. The panic triggers stack unwinding **on Thread A**, calling `drop()` on other
-//!    **[`RAII`] guards** that were created by the application and are still in scope.
+//!    **[RAII] guards** that were created by the application and are still in scope.
 //! 5. These `drop()` implementations (for components like **[`Readline`]** or
 //!    **[`RawModeGuard`]**) must write to the terminal to restore it. Tasks include:
 //!    moving the cursor to the left margin (done by [`Readline`]), showing the cursor if
@@ -1405,7 +1405,7 @@
 //! terminal unusable.
 //!
 //! To ensure this, we follow these rules:
-//! 1. **[`RAII`] for Terminal State**: We use guards like [`RawModeGuard`] that implement
+//! 1. **[RAII] for Terminal State**: We use guards like [`RawModeGuard`] that implement
 //!    [`Drop`] to automatically disable [raw mode].
 //! 2. **Poison-Safe Cleanup**: Mutexes used during cleanup (like those protecting the
 //!    terminal output device) must be "poison-safe".
@@ -1986,7 +1986,7 @@
 //!   raw mode calls to [`terminal_raw_mode`] and writes [`ANSI`] mode-setting bytes
 //!   directly.
 //! - **Panic-Safety**: Global setups like `enter_raw_mode` and alternate screen are
-//!   wrapped in [`RAII`] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
+//!   wrapped in [RAII] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
 //!   to ensure the terminal state is always correctly restored upon exit or panic.
 //!
 //! ## [`CliTextInline`]: Styled Text Fragments
@@ -3335,7 +3335,7 @@
 //! [`PtyTestContext`]: crate::PtyTestContext
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 //! [`r3bl_redux`]: https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
 //! [`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
 //! [`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within

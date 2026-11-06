@@ -33,13 +33,13 @@ pub trait TerminalModeController {
     /// sequences directly.
     ///
     /// This method returns a [`RawModeGuard`]. When this guard is dropped, it will
-    /// automatically disable raw mode and restore normal terminal behavior ([`RAII`]).
+    /// automatically disable raw mode and restore normal terminal behavior ([RAII]).
     /// This way we don't need a corresponding `exit_raw_mode()`.
     ///
     /// # Errors
     /// Returns an error if the platform's raw mode API fails.
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     fn enter_raw_mode(&self) -> miette::Result<RawModeGuard>;
 
     /// Switches to alternate screen buffer for full-screen applications.

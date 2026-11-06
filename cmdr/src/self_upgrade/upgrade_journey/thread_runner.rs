@@ -1,16 +1,14 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_SELF_UPGRADE, UpgradeConfig, dedicated_thread};
+use crate::{DEBUG_SELF_UPGRADE, UpgradeConfig};
 use r3bl_tui::{StdThreadTokioJoinHandle, StdThreadTokioRunner, TokioRuntimeOutcome};
 use std::io;
 
 /// Marker struct that wraps [`StdThreadTokioRunner`] with
-/// logging ([`DEBUG_SELF_UPGRADE`]) and naming the spawned dedicated thread
-/// ([`DEDICATED_THREAD_NAME`][1]).
+/// logging ([`DEBUG_SELF_UPGRADE`]).
 ///
 /// Part of the [Control Plane] threading and runtime orchestration (see [Thread Model]).
 ///
-/// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
 /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 /// [`StdThreadTokioRunner`]: r3bl_tui::StdThreadTokioRunner
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
@@ -45,10 +43,8 @@ impl ThreadRunner {
     }
 
     /// Wrapper around [`StdThreadTokioRunner::run_non_blocking`][2] that spawns the
-    /// dedicated thread (named [`DEDICATED_THREAD_NAME`][1]) and logs thread spawn
-    /// failures via [`DEBUG_SELF_UPGRADE`].
+    /// dedicated thread and logs thread spawn failures via [`DEBUG_SELF_UPGRADE`].
     ///
-    /// [1]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     pub(in crate::self_upgrade) fn run_non_blocking<
@@ -58,10 +54,7 @@ impl ThreadRunner {
         config: &UpgradeConfig,
         async_fn: F,
     ) -> io::Result<StdThreadTokioJoinHandle<T>> {
-        let result = StdThreadTokioRunner::run_non_blocking(
-            dedicated_thread::DEDICATED_THREAD_NAME,
-            async_fn,
-        );
+        let result = StdThreadTokioRunner::run_non_blocking(async_fn);
         if let Err(ref io_err) = result {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.

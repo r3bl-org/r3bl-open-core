@@ -187,8 +187,7 @@ mod tests {
     use crate::{CooldownPolicy, CrateDistribution, CrateMetadata, CrateReleaseDate,
                 CrateVersion, EndpointUrl, JsoncScalar, ManifestCheckError, NotStarted,
                 StartOutcome, UpgradeActionOnExit, UpgradeConfig, UpgradePolicy,
-                UpgradeResolution, UpgradeStrategy, UserFeedbackChannel,
-                dedicated_thread};
+                UpgradeResolution, UpgradeStrategy, UserFeedbackChannel};
     use r3bl_tui::{StdThreadTokioRunner, assert_eq2};
     use serial_test::serial;
     use std::time::Duration;
@@ -239,17 +238,14 @@ mod tests {
         let checking = make_test_journey("0.1.0", UpgradePolicy::default())
             .into_checking(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto));
 
-        let handle = StdThreadTokioRunner::run_non_blocking(
-            dedicated_thread::DEDICATED_THREAD_NAME,
-            async move || {
-                tokio::time::sleep(Duration::from_millis(25)).await;
-                DeferredCheckOutcome::CheckFailed(checking.into_check_failed(
-                    ManifestCheckError::FetchOrParseFailed {
-                        diagnostic: "late outcome".to_string(),
-                    },
-                ))
-            },
-        )
+        let handle = StdThreadTokioRunner::run_non_blocking(async move || {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+            DeferredCheckOutcome::CheckFailed(checking.into_check_failed(
+                ManifestCheckError::FetchOrParseFailed {
+                    diagnostic: "late outcome".to_string(),
+                },
+            ))
+        })
         .unwrap();
         SingletonState::set_deferred_check_handle(handle);
 
@@ -293,10 +289,9 @@ mod tests {
             .into_upgrading()
             .into_completed(UpgradeResolution::NotifiedOnly);
 
-        let handle = StdThreadTokioRunner::run_non_blocking(
-            dedicated_thread::DEDICATED_THREAD_NAME,
-            async move || DeferredCheckOutcome::UpgradeAvailable(available),
-        )
+        let handle = StdThreadTokioRunner::run_non_blocking(async move || {
+            DeferredCheckOutcome::UpgradeAvailable(available)
+        })
         .unwrap();
         SingletonState::set_deferred_check_handle(handle);
 

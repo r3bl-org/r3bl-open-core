@@ -219,14 +219,14 @@ impl OutputDevice {
     }
 }
 
-/// An [`RAII`] guard that tears down the TUI environment when dropped.
+/// An [RAII] guard that tears down the TUI environment when dropped.
 ///
 /// This is returned by [`OutputDevice::setup_full_screen_tui()`] and ensures that the
 /// terminal is properly restored (cursor shown, alternate screen exited, mouse and
 /// bracketed paste tracking disabled) even if a panic occurs or the future returns early,
 /// avoiding a [Double Panic Abort].
 ///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [Double Panic Abort]: crate#the-double-panic-abort-risk
 #[must_use = "The full screen TUI mode guard must be held as long as the TUI is active."]
 #[allow(missing_debug_implementations)]

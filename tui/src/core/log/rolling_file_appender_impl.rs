@@ -98,7 +98,7 @@ pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
     Ok(non_blocking_rolling_file_appender)
 }
 
-/// [`RAII`] sentinel that flushes the non-blocking log file writer on drop.
+/// [RAII] sentinel that flushes the non-blocking log file writer on drop.
 ///
 /// This struct is a zero-cost sentinel — constructing it does nothing, and its [`Drop`]
 /// just reaches into the static. If no file appender was created (e.g.,
@@ -113,7 +113,7 @@ pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
 /// [`try_initialize_logging_thread_local`].
 ///
 /// [`DisplayPreference::Stdout`]: crate::log::DisplayPreference::Stdout
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`try_initialize_logging_global`]: crate::log::try_initialize_logging_global
 /// [`try_initialize_logging_thread_local`]:
 ///     crate::log::try_initialize_logging_thread_local

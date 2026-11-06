@@ -5,7 +5,7 @@
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
 
-/// An [`RAII`] guard that grants exclusive access to the terminal devices
+/// An [RAII] guard that grants exclusive access to the terminal devices
 /// ([`OutputDevice`] and [`InputDevice`]) by temporarily suspending [`Readline`]
 /// operations.
 ///
@@ -51,7 +51,7 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// [`PauseState::PausedByBoth`]: crate::PauseState::PausedByBoth
 /// [`PauseState::PausedByModal`]: crate::PauseState::PausedByModal
 /// [`PauseState::PausedBySpinner`]: crate::PauseState::PausedBySpinner
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline`]: crate::Readline
 /// [`ReadlineLockManager`]: crate::ReadlineLockManager
 /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern

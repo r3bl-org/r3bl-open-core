@@ -6,12 +6,12 @@ use std::thread::JoinHandle;
 /// Tokio runtime, [`current_thread`][ct], to execute a given [`async_fn`][af], in either
 /// mode:
 /// - [Blocking][`Self::run_blocking`]
-///   - Uses a scoped OS thread ([`std::thread::scope`]) and joins it immediately before
+///   - Spawns a scoped OS thread ([`std::thread::scope`]) and joins it immediately before
 ///     returning [`TokioRuntimeOutcome<T>`].
 /// - [Non-blocking][`Self::run_non_blocking`]
-///   - Spawns a named OS thread ([`std::thread::Builder::spawn`]) and returns
-///     [`StdThreadTokioJoinHandle<T>`][jh] immediately so the caller can continue running
-///     and join it later.
+///   - Spawns an unscoped (regular) OS thread ([`std::thread::Builder::spawn`]) and
+///     returns [`StdThreadTokioJoinHandle<T>`][jh] immediately so the caller can continue
+///     running and join it later.
 ///
 /// # Use Cases
 ///
@@ -20,9 +20,36 @@ use std::thread::JoinHandle;
 /// `r3bl-cmdr` crate), which are typically the `main()` function of a binary. Because
 /// `main()` can be either synchronous (`fn main()`) or asynchronous (`#[tokio::main]
 /// async fn main()`), this struct allows the exact same self-upgrade entry points
-/// (`UpgradeJourney::start` and `StartOutcome::handle_upgrade_on_exit`) to be called
-/// from both contexts without writing the logic twice or exposing [`async`] "function
+/// (`UpgradeJourney::start` and `StartOutcome::handle_upgrade_on_exit`) to be called from
+/// both contexts without writing the logic twice or exposing [`async`] "function
 /// coloring" at the API boundary.
+///
+/// # Why [`AsyncFnOnce`][af] Instead of a Sync Closure?
+///
+/// The closure passed to [`Self::run_blocking`] and [`Self::run_non_blocking`] is an
+/// [`AsyncFnOnce`][af] (rather than a synchronous [`FnOnce`]) because the work it
+/// orchestrates typically depends on async building blocks from this crate and Tokio that
+/// require an active Tokio reactor, such as:
+/// - **[`Spinner`]** (spawns a background animation task driven by
+///   [`tokio::time::interval`]).
+/// - **[`choose`]** and **[`ReadlineAsyncContext`]** (drive async terminal input
+///   streams).
+/// - **[`PtySessionBuilder::start_async`]** (streams child-process [`PTY`] output over
+///   async channels).
+/// - **Async I/O, timers, and signal handling** (such as [`reqwest::Client`],
+///   [`tokio::time::timeout`], and [`tokio::signal::ctrl_c`] via [`tokio::select!`]).
+///
+/// ## Note on Terminal State at Application Exit (TUI Apps like `edi` and `giti`)
+///
+/// When executing logic that runs on exit using [`Self::run_blocking`], after a TUI
+/// application finishes, the main UI loop ([`TerminalWindow::main_event_loop`],
+/// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
+/// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
+/// this way so that the following can work interoperably with full TUI apps:
+/// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
+///    prompts and restore [cooked mode] afterward.
+/// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
+///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
 ///
 /// # Why a Dedicated OS Thread + [`current_thread`][ct] Tokio Runtime?
 ///
@@ -53,68 +80,34 @@ use std::thread::JoinHandle;
 ///        executes and returns a [`StdThreadTokioJoinHandle`][jh] to be joined at
 ///        application exit.
 ///
-/// # Why [`AsyncFnOnce`][af] Instead of a Sync Closure?
-///
-/// The closure passed to [`Self::run_blocking`] and [`Self::run_non_blocking`] is an
-/// [`AsyncFnOnce`][af] (rather than a synchronous [`FnOnce`]) because the underlying
-/// operations orchestrated by callers like `self_upgrade` depend on `r3bl_tui` and Tokio
-/// building blocks that require an active Tokio reactor:
-/// 1. **[`Spinner::try_start`]** and **[`Spinner::await_shutdown`]** (spawns a background
-///    animation task via [`tokio::spawn`] driven by [`tokio::time::interval`]).
-/// 2. **[`choose`]** in `prompt_user_to_upgrade` (drives an async [`EventStream`] loop
-///    via [`enter_event_loop_async`]).
-/// 3. **[`PtySessionBuilder::start_async`]** in `run_cargo_install_with_progress` and
-///    `run_rustup_update` (spawns [`tokio::task::spawn_blocking`] bridges over
-///    [`tokio::sync::mpsc`] channels and races output against [`tokio::signal::ctrl_c`]
-///    via [`tokio::select!`]).
-/// 4. **[`reqwest::Client`]** + **[`tokio::time::timeout`]** + **[`tokio::select!`]** in
-///    `download.rs` and `fetch_manifest.rs` (streams HTTP chunks and races against
-///    [`tokio::signal::ctrl_c`] for cooperative cancellation).
-///
-/// > **Note on Terminal State at Application Exit (TUI Apps like `edi` and `giti`)**:
-/// > When running exit work via [`Self::run_blocking`] after a TUI application finishes,
-/// > the main UI loop ([`TerminalWindow::main_event_loop`], [`ReadlineAsyncContext`], or
-/// > [`choose`]) has already dropped its RAII guards and restored the terminal from
-/// > [raw mode] back to [cooked mode]. This is required so that:
-/// > - [`choose`] can cleanly bracket its own temporary [raw mode] session for modal
-/// > prompts and restore [cooked mode] afterward.
-/// > - Standalone [`Spinner`] output and [`tokio::signal::ctrl_c`] work normally in
-/// > [cooked mode] (where the OS terminal driver's `ISIG` flag translates `Ctrl+C`
-/// > into [`SIGINT`] and `OPOST`/`ONLCR` formats newlines).
-///
 /// [`Arc`]: std::sync::Arc
 /// [`async`]: https://doc.rust-lang.org/std/keyword.async.html
 /// [`choose`]: crate::choose
-/// [`enter_event_loop_async`]: crate::enter_event_loop_async
-/// [`EventStream`]: crossterm::event::EventStream
 /// [`Handle::block_on`]: tokio::runtime::Handle::block_on
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtySessionBuilder::start_async`]: crate::core::pty::PtySessionBuilder::start_async
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`reqwest::Client`]: reqwest::Client
 /// [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
-/// [`Spinner::await_shutdown`]: crate::Spinner::await_shutdown
-/// [`Spinner::try_start`]: crate::Spinner::try_start
 /// [`Spinner`]: crate::Spinner
 /// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal::ctrl_c`]: tokio::signal::ctrl_c
-/// [`tokio::spawn`]: tokio::spawn
-/// [`tokio::sync::mpsc`]: tokio::sync::mpsc
 /// [`tokio::task::block_in_place`]: tokio::task::block_in_place
-/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
 /// [`tokio::time::interval`]: tokio::time::interval
 /// [`tokio::time::timeout`]: tokio::time::timeout
 /// [af]: std::ops::AsyncFnOnce
 /// [bo]: tokio::runtime::Runtime::block_on
-/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [ct]: tokio::runtime::Builder::new_current_thread
 /// [jh]: StdThreadTokioJoinHandle
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[derive(Debug)]
 pub struct StdThreadTokioRunner;
 
 impl StdThreadTokioRunner {
-    /// Creates a dedicated [scoped OS thread][st], starts a [`current_thread`][ct] Tokio
+    /// Spawns a dedicated [scoped OS thread][st], starts a [`current_thread`][ct] Tokio
     /// runtime on it, and blocks until `async_fn` executes to completion.
     ///
     /// # Thread Bounds (`Send` vs. `!Send`)
@@ -157,14 +150,14 @@ impl StdThreadTokioRunner {
         })
     }
 
-    /// Spawns a named OS thread, starts a [`current_thread`][ct] Tokio runtime on it, and
-    /// executes `async_fn` to completion in the background, returning a
-    /// [`StdThreadTokioJoinHandle<T>`][jh] immediately without blocking the caller.
+    /// Spawns an unscoped (regular) OS thread, starts a [`current_thread`][ct] Tokio
+    /// runtime on it, and executes `async_fn` to completion in the background, returning
+    /// a [`StdThreadTokioJoinHandle<T>`][jh] immediately without blocking the caller.
     ///
-    /// Unlike [`Self::run_blocking`] (which uses [`std::thread::scope`] and immediately
-    /// joins the scoped thread), `run_non_blocking` returns immediately so the
-    /// caller can continue running and join the [`StdThreadTokioJoinHandle`][jh] later
-    /// (for example, at application exit).
+    /// Unlike [`Self::run_blocking`] (which spawns a scoped thread via
+    /// [`std::thread::scope`] and joins it immediately), `run_non_blocking` returns
+    /// immediately so the caller can continue running and join the
+    /// [`StdThreadTokioJoinHandle`][jh] later (for example, at application exit).
     ///
     /// # Thread Bounds (`'static` + `Send` vs. `!Send`)
     ///
@@ -179,14 +172,13 @@ impl StdThreadTokioRunner {
     ///
     /// # Errors
     ///
-    /// Returns [`std::io::Error`] if the operating system fails to spawn the named OS
-    /// thread via [`std::thread::Builder::spawn`].
+    /// Returns [`std::io::Error`] if the operating system fails to spawn the OS thread
+    /// via [`std::thread::Builder::spawn`].
     ///
     /// [co]: TokioRuntimeOutcome::Completed
     /// [ct]: tokio::runtime::Builder::new_current_thread
     /// [jh]: StdThreadTokioJoinHandle
     pub fn run_non_blocking<T, F>(
-        thread_name: impl Into<String>,
         async_fn: F,
     ) -> std::io::Result<StdThreadTokioJoinHandle<T>>
     where
@@ -194,7 +186,7 @@ impl StdThreadTokioRunner {
         F: Send + 'static + AsyncFnOnce() -> T,
     {
         std::thread::Builder::new()
-            .name(thread_name.into())
+            .name(UNSCOPED_THREAD_NAME.into())
             .spawn(move || Self::execute_in_current_thread_runtime(async_fn))
             .map(StdThreadTokioJoinHandle)
     }
@@ -237,16 +229,10 @@ pub struct StdThreadTokioJoinHandle<T>(JoinHandle<TokioRuntimeOutcome<T>>);
 impl<T> StdThreadTokioJoinHandle<T> {
     /// Waits for the spawned OS thread to finish and returns its [`TokioRuntimeOutcome`].
     pub fn join(self) -> TokioRuntimeOutcome<T> {
-        let thread_name = self
-            .0
-            .thread()
-            .name()
-            .unwrap_or(UNSCOPED_THREAD_NAME)
-            .to_string();
         match self.0.join() {
             Ok(execution) => execution,
             Err(panic_payload) => {
-                TokioRuntimeOutcome::panicked(&thread_name, &panic_payload)
+                TokioRuntimeOutcome::panicked(UNSCOPED_THREAD_NAME, &panic_payload)
             }
         }
     }
@@ -269,12 +255,16 @@ pub enum TokioRuntimeOutcome<T> {
 }
 
 impl<T> TokioRuntimeOutcome<T> {
+    /// Wraps a Tokio runtime initialization [`std::io::Error`] into
+    /// [`Self::FailedToStart`].
     fn failed_to_start(err: std::io::Error) -> Self {
         let report =
             miette::Report::from_err(err).wrap_err("Failed to create tokio runtime");
         Self::FailedToStart(report)
     }
 
+    /// Formats the panic payload caught by `join()` on `thread_name` into
+    /// [`Self::Panicked`].
     fn panicked(
         thread_name: &str,
         panic_payload: &Box<dyn std::any::Any + Send + 'static>,
@@ -293,7 +283,12 @@ impl<T> TokioRuntimeOutcome<T> {
     }
 }
 
+/// Thread name and diagnostic label used by [`StdThreadTokioRunner::run_blocking`] for
+/// its scoped OS thread.
 const SCOPED_THREAD_NAME: &str = "Scoped OS thread";
+
+/// Thread name and diagnostic label used by [`StdThreadTokioRunner::run_non_blocking`]
+/// for its unscoped (regular) OS thread.
 const UNSCOPED_THREAD_NAME: &str = "Unscoped OS thread";
 
 #[cfg(test)]
@@ -343,12 +338,11 @@ mod tests {
 
     #[test]
     fn test_run_non_blocking_completed() {
-        let handle =
-            StdThreadTokioRunner::run_non_blocking("test-run-non-blocking", async || {
-                tokio::task::yield_now().await;
-                42
-            })
-            .unwrap();
+        let handle = StdThreadTokioRunner::run_non_blocking(async || {
+            tokio::task::yield_now().await;
+            42
+        })
+        .unwrap();
 
         let outcome = handle.join();
         assert!(matches!(outcome, TokioRuntimeOutcome::Completed(42)));
@@ -356,19 +350,16 @@ mod tests {
 
     #[test]
     fn test_run_non_blocking_panicked() {
-        let handle = StdThreadTokioRunner::run_non_blocking(
-            "test-non-blocking-panic",
-            async || -> u32 {
-                panic!("simulated panic inside run_non_blocking");
-            },
-        )
+        let handle = StdThreadTokioRunner::run_non_blocking(async || -> u32 {
+            panic!("simulated panic inside run_non_blocking");
+        })
         .unwrap();
 
         let outcome = handle.join();
         match outcome {
             TokioRuntimeOutcome::Panicked(report) => {
                 let msg = report.to_string();
-                assert!(msg.contains("test-non-blocking-panic panicked"));
+                assert!(msg.contains(&format!("{UNSCOPED_THREAD_NAME} panicked")));
                 assert!(msg.contains("simulated panic inside run_non_blocking"));
             }
             _ => panic!("Expected TokioRuntimeOutcome::Panicked"),
