@@ -88,7 +88,6 @@ use std::thread::JoinHandle;
 /// [`PtySessionBuilder::start_async`]: crate::core::pty::PtySessionBuilder::start_async
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`reqwest::Client`]: reqwest::Client
-/// [`SIGINT`]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGINT
 /// [`Spinner`]: crate::Spinner
 /// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`tokio::select!`]: tokio::select
@@ -98,11 +97,12 @@ use std::thread::JoinHandle;
 /// [`tokio::time::timeout`]: tokio::time::timeout
 /// [af]: std::ops::AsyncFnOnce
 /// [bo]: tokio::runtime::Runtime::block_on
+/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [ct]: tokio::runtime::Builder::new_current_thread
 /// [jh]: StdThreadTokioJoinHandle
-/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [standalone mode]: crate::Spinner#standalone-mode
 #[derive(Debug)]
 pub struct StdThreadTokioRunner;
 
