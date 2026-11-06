@@ -22,6 +22,7 @@
     - [Phase 6: Downstream Integration in `cmdr` & `build-infra` (`edi`, `giti`, `self_upgrade`, `cargo-rustdoc-fmt`)](#phase-6-downstream-integration-in-cmdr--build-infra-edi-giti-self_upgrade-cargo-rustdoc-fmt)
     - [Phase 7: Tests, Validation, and Documentation](#phase-7-tests-validation-and-documentation)
 - [Success Criteria](#success-criteria)
+- [Future-Proofing Note: Multi-Socket Servers (`Unix`, `TCP`, `UDP`) via `RRT` + `mio` (Zero Tokio)](#future-proofing-note-multi-socket-servers-unix-tcp-udp-via-rrt--mio-zero-tokio)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -452,9 +453,19 @@ impl<T> std::future::Future for ThreadJoinFuture<T> {
       client (`ureq` with `rustls` and `json`).
     - Convert `length_prefix_protocol.rs` to use `std::io::{Read, Write}` instead of
       `tokio::io`.
-- [ ] **Step 5.4: Remove Tokio & Async Crates from `tui/Cargo.toml`**
-    - Remove `tokio`, `futures-util`, `futures-core`, `async-stream`, and `reqwest`, and
-      drop the `"event-stream"` feature from `crossterm`.
+- [ ] **Step 5.4: Move `tokio` to `[dev-dependencies]` & Remove Async Crates from `[dependencies]` in `tui/Cargo.toml`**
+    - Remove `tokio`, `futures-util`, `futures-core`, `async-stream`, and `reqwest` from
+      production `[dependencies]`, and drop the `"event-stream"` feature from `crossterm`.
+    - Add a minimal `tokio` entry to `[dev-dependencies]` in `tui/Cargo.toml`:
+      ```toml
+      tokio = { version = "1.48.0", default-features = false, features = ["rt", "rt-multi-thread", "macros"] }
+      ```
+      Using `default-features = false` with only `["rt", "rt-multi-thread", "macros"]`
+      (instead of `"full"`) keeps test compilation fast while allowing integration tests
+      and doctests to empirically verify our pure-`std` async adapters (`ThreadJoinFuture`,
+      `recv_async()`, `InputDevice::next_async()`) against a real Tokio runtime (`tokio::select!`,
+      `tokio::spawn`, `current_thread`, and `multi_thread`). (`[dev-dependencies]` are
+      never downloaded or compiled by downstream consumers of `r3bl_tui`.)
     - Verify no external channel crate (`crossbeam-channel`) is added.
 - [ ] **Step 5.5: Fast Local Verification**
     - Run `./check.fish --check`.
@@ -506,14 +517,18 @@ impl<T> std::future::Future for ThreadJoinFuture<T> {
 
 ### Phase 7: Tests, Validation, and Documentation
 
-- [ ] **Step 7.1: Migrate Integration Tests & Add Async Adapter Tests**
-    - Convert tests using `#[tokio::test]` to standard `#[test]`.
-    - Add unit/integration tests verifying `ThreadJoinFuture` and `recv_async()` work with
-      a minimal `std::task::Waker` / async executor harness.
+- [ ] **Step 7.1: Migrate Sync Integration Tests & Add Real Tokio `[dev-dependencies]` Adapter Tests**
+    - Convert synchronous TUI/RRT tests from `#[tokio::test]` to standard `#[test]`.
+    - Using `tokio` in `[dev-dependencies]`, add dedicated async adapter integration tests
+      (`#[tokio::test]` in both `current_thread` and `multi_thread` flavors) verifying that
+      `StdThreadRunner::run_async` (`ThreadJoinFuture`), `SyncBroadcastReceiver::recv_async()`,
+      `InputDevice::next_async()`, and `main_thread_channel_sender` work inside real
+      `tokio::select!` and `tokio::spawn` workflows.
 - [ ] **Step 7.2: Documentation & Link Updates**
     - Update rustdoc comments referencing Tokio in `tui/src/lib.rs`, `tui/README.md`, and
       `cmdr/README.md`, and document how async customers (`tokio`, `smol`, `async-std`)
-      use the pure-`std` `Future` adapters and `main_thread_channel_sender`.
+      use the pure-`std` `Future` adapters and `main_thread_channel_sender` (with runnable
+      doctests using `[dev-dependencies]` `tokio`).
     - Run `cargo rustdoc-fmt`.
 - [ ] **Step 7.3: Full Quality Check**
     - Run `./check.fish --fmt`
@@ -529,10 +544,12 @@ impl<T> std::future::Future for ThreadJoinFuture<T> {
 
 ## Success Criteria
 
-1. **Zero Tokio Across All Workspace Crates (`tui`, `cmdr`, `build-infra`, `rust-analyzer-mcp-server`)**:
+1. **Zero Production Tokio Across All Workspace Crates (`tui`, `cmdr`, `build-infra`, `rust-analyzer-mcp-server`)**:
    `tokio`, `futures-util`, `futures-core`, and `async-stream` are completely removed from
-   `Cargo.toml` files, and all channels/futures use 100% pure `std` (`std::sync::mpsc`,
-   `std::thread`, `std::future::Future`, `std::task::Waker`).
+   production `[dependencies]` in all `Cargo.toml` files, and all internal channels/futures
+   use 100% pure `std` (`std::sync::mpsc`, `std::thread`, `std::future::Future`,
+   `std::task::Waker`). (`tokio` remains **only** in `tui`'s `[dev-dependencies]` to test
+   the async adapters against a real Tokio runtime.)
 2. **Runtime-Agnostic Async Support**: Customers using `tokio`, `smol`, `async-std`, or
    any `std::future::Future` executor can `.await` TUI entry points (`ThreadJoinFuture`),
    `.await` input events (`next_async`), and send `TerminalWindowMainThreadSignal`s from
@@ -544,3 +561,64 @@ impl<T> std::future::Future for ThreadJoinFuture<T> {
    `Spinner` operates with identical responsiveness and zero-latency ESC key handling.
 5. **Clean Quality Gate**: `./check.fish --check`, `./check.fish --clippy`, and all
    unit/PTY tests pass.
+
+---
+
+## Future-Proofing Note: Multi-Socket Servers (`Unix`, `TCP`, `UDP`) via `RRT` + `mio` (Zero Tokio)
+
+If future R3BL applications or TUI hosts need to embed in-process servers (exposing Unix
+domain sockets, TCP listeners/streams, or UDP sockets) **without tying up 1 OS thread per
+socket**, we **still do not need Tokio** outside of `[dev-dependencies]`:
+
+1. **What `std::net` Provides Alone**:
+   - `std::net::{TcpListener, TcpStream, UdpSocket}` and
+     `std::os::unix::net::{UnixListener, UnixStream}` support `.set_nonblocking(true)`,
+     but `std` does not expose an OS readiness selector (`epoll` / `kqueue` / `IOCP`).
+   - For 1–5 local IPC connections (e.g., an MCP server or local CLI daemon), standard
+     blocking `std::net` with 1 OS thread per connection is already tiny (~8 KB kernel
+     stack while sleeping in `read(2)`).
+
+2. **How `RRT` + `mio` Multiplexes 10 to 10,000+ Sockets on 1 Thread**:
+   - `r3bl_tui` **already** depends on [`mio`] (`mio::Poll`, `mio::Registry`,
+     `mio::Waker`), which is the foundational synchronous wrapper over `epoll(7)` (Linux),
+     `kqueue(2)` (macOS), and `IOCP` (Windows) that powers [`ResilientReactorThread` (RRT)].
+   - By enabling `mio`'s `"net"` feature (`mio::net::{TcpListener, TcpStream, UdpSocket,
+     UnixListener, UnixStream}`), a **single** [`RRTWorker`] thread can multiplex a
+     listener socket and thousands of connected client sockets simultaneously at **0% idle
+     CPU**:
+
+```text
+                       ONE RRT OS Thread
+┌─────────────────────────────────────────────────────────────┐
+│ mio::Poll::poll(&mut events, None)   (blocks at 0% CPU)     │
+│   ├─ Token(0): MioSoftwareInterrupt  (waker / shutdown)     │
+│   ├─ Token(1): UnixListener / TcpListener (accepts clients) │
+│   ├─ Token(2): UdpSocket                                    │
+│   ├─ Token(3): Client #1 (UnixStream / TcpStream)           │
+│   ├─ Token(4): Client #2 (UnixStream / TcpStream)           │
+│   └─ Token(N): Client #N ...                                │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ broadcasts parsed messages
+                               ▼
+              SyncBroadcastSender (std::sync::mpsc)
+                               │
+                               ▼
+                 TerminalWindow::main_event_loop
+```
+
+   - **Workflow inside the `RRTWorker`**:
+     1. `poll.poll(&mut events, None)` sleeps in the kernel until *any* registered socket
+        or the `MioSoftwareInterrupt` waker is ready.
+     2. When `Token(1)` (the listener) is ready, `.accept()` yields a non-blocking
+        `UnixStream` / `TcpStream`, assigns it `Token(next_id)`, and registers it on the
+        **same** `poll.registry()`.
+     3. When `Token(client_id)` is ready, available bytes are read into that client's
+        frame buffer, decoded (e.g., via `length_prefix_protocol.rs`), and broadcast to
+        the TUI via `SyncBroadcastSender` (`std::sync::mpsc`).
+     4. Dropping the `SubscriberGuard` triggers `MioSoftwareInterrupt` (`mio::Waker`),
+        waking `poll.poll()` immediately for clean, deterministic RAII teardown.
+
+**Conclusion**: Between `std::net` (for simple 1:1 pipes), `RRT` + `mio` (for 1:N
+non-blocking socket multiplexing on a single OS thread), and `std::future::Future` +
+`std::task::Waker` (for downstream async callers), **there is never a need to re-introduce
+Tokio as a production dependency.**
