@@ -45,7 +45,8 @@ pub enum StartOutcome {
 
 impl StartOutcome {
     /// Called by `main()` at shutdown on the main thread to complete a deferred upgrade
-    /// on exit ([`UpgradeStrategy::Deferred`][1]). This is part of the [Control Plane].
+    /// on exit ([`UpgradeStrategy::Deferred`][1]). The TUI teardown must be complete
+    /// before this is called. This is part of the [Control Plane].
     ///
     /// If [`UpgradeJourney::start`] spawned a dedicated thread, the main thread waits for
     /// that thread to finish and receive its [`DeferredCheckOutcome`], then runs the
@@ -61,13 +62,36 @@ impl StartOutcome {
     ///    invokes the [Execution Plane] to prompt or install the upgrade), returning
     ///    [`ExitOutcome::Completed`].
     ///
+    /// # Terminal State at Exit
+    ///
+    /// When executing logic that runs on exit using
+    /// [`StdThreadTokioRunner::run_blocking`], after a TUI application (like `giti` or
+    /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
+    /// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
+    /// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
+    /// this way so that the following can work interoperably with full TUI apps:
+    /// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
+    ///    prompts and restore [cooked mode] afterward.
+    /// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
+    ///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
+    ///
     /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
+    /// [`choose`]: r3bl_tui::choose
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
+    /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
+    /// [`Spinner`]: r3bl_tui::Spinner
+    /// [`StdThreadTokioRunner::run_blocking`]:
+    ///     r3bl_tui::StdThreadTokioRunner::run_blocking
+    /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
     /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     /// [`Upgrading`]: crate::self_upgrade::Upgrading
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [cooked mode]: mod@r3bl_tui::terminal_raw_mode#raw-mode-vs-cooked-mode
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [raw mode]: mod@r3bl_tui::terminal_raw_mode#raw-mode-vs-cooked-mode
+    /// [standalone mode]: r3bl_tui::Spinner#standalone-mode
     #[must_use]
     pub fn handle_upgrade_on_exit(&self) -> ExitOutcome {
         // Step 1: Loud lock release — take `DeferredCheckHandle` inside `SINGLETON.write`

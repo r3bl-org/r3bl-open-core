@@ -39,18 +39,6 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 /// - **Async I/O, timers, and signal handling** (such as [`reqwest::Client`],
 ///   [`tokio::time::timeout`], and [`tokio::signal::ctrl_c`] via [`tokio::select!`]).
 ///
-/// ## Note on Terminal State at Application Exit (TUI Apps like `edi` and `giti`)
-///
-/// When executing logic that runs on exit using [`Self::run_blocking`], after a TUI
-/// application finishes, the main UI loop ([`TerminalWindow::main_event_loop`],
-/// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
-/// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
-/// this way so that the following can work interoperably with full TUI apps:
-/// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
-///    prompts and restore [cooked mode] afterward.
-/// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
-///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
-///
 /// # Why a Dedicated OS Thread + [`current_thread`][ct] Tokio Runtime?
 ///
 /// Spawning an isolated [`std::thread`] with its own single-threaded
@@ -89,7 +77,6 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`reqwest::Client`]: reqwest::Client
 /// [`Spinner`]: crate::Spinner
-/// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal::ctrl_c`]: tokio::signal::ctrl_c
 /// [`tokio::task::block_in_place`]: tokio::task::block_in_place
@@ -97,12 +84,8 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 /// [`tokio::time::timeout`]: tokio::time::timeout
 /// [af]: std::ops::AsyncFnOnce
 /// [bo]: tokio::runtime::Runtime::block_on
-/// [cooked mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [ct]: tokio::runtime::Builder::new_current_thread
 /// [jh]: StdThreadTokioJoinHandle
-/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
-/// [standalone mode]: crate::Spinner#standalone-mode
 #[derive(Debug)]
 pub struct StdThreadTokioRunner;
 
