@@ -361,9 +361,9 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        use rustc_hash::FxHashSet;
+        use crate::HashSet;
 
-        let mut set = FxHashSet::default();
+        let mut set = HashSet::default();
         let index1 = byte_index(42);
         let index2 = byte_index(42);
         let index3 = byte_index(24);

@@ -16,7 +16,7 @@ When writing code that involves string building, formatting, or rendering (espec
 
 ## Core Strategy
 
-Read the full Source of Truth at `mod@crate::core::common::fast_strings#string-allocation-performance-strategy` for detailed architectural constraints.
+Read the full documentation at `mod@crate::core::common::fast_strings#string-allocation-performance-strategy` for detailed architectural constraints.
 
 ### Performance Hierarchy (Fastest to Slowest)
 

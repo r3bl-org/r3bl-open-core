@@ -90,9 +90,9 @@ use std::io::Write;
 /// [`SharedWriter`]) hold their own cloned [`OutputDevice`] handle and write to it
 /// directly (they do not go through [`ReadlineLockManager`]).
 ///
-/// # Why use [`RAII`] instead of Typestate pattern?
+/// # Why use [RAII] instead of Typestate pattern?
 ///
-/// We chose an [`RAII`] Guard pattern ([`ModalTerminalGuard`]) combined with this dual
+/// We chose an [RAII] Guard pattern ([`ModalTerminalGuard`]) combined with this dual
 /// lock hierarchy rather than a strict typestate pattern by value, due to the extreme
 /// complexities of async terminal programming. A pure typestate approach struggles with
 /// the following realities of an **async** [`readline`]:
@@ -109,7 +109,7 @@ use std::io::Write;
 ///    multiple threads might write [`ANSI`] escape codes concurrently. A central lock
 ///    manager prevents this more reliably.
 /// 4. **Clean Shutdowns & Panics:** If the async executor panics halfway through,
-///    [`RAII`] `Drop` guarantees the terminal is safely restored from raw mode back to
+///    [RAII] `Drop` guarantees the terminal is safely restored from raw mode back to
 ///    cooked mode, which typestates by value cannot natively guarantee on early returns.
 ///
 /// # The Lifetime Tether Pattern
@@ -138,7 +138,7 @@ use std::io::Write;
 /// [`MutexGuard`]: std::sync::MutexGuard
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`process_line_control_signal`]: crate::process_line_control_signal
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline::readline`]: crate::Readline::readline
 /// [`readline`]: https://manpages.debian.org/readline.3
 /// [`ReadlineLockManager`]: Self

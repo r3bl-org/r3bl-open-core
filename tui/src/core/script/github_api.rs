@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{SCRIPT_MOD_DEBUG, fg_magenta, ok, script::http_client};
+use crate::{DEBUG_SCRIPT, fg_magenta, ok, script::http_client};
 use miette::IntoDiagnostic;
 
 mod constants {
@@ -28,7 +28,7 @@ pub async fn try_get_latest_release_tag_from_github(
         .replace("{org}", org)
         .replace("{repo}", repo);
 
-    SCRIPT_MOD_DEBUG.then(|| {
+    DEBUG_SCRIPT.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "Fetching latest release tag from GitHub",

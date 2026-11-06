@@ -77,7 +77,7 @@ Present at least two (ideally three) alternative approaches. For each alternativ
 
 - Which alternative was chosen and why.
 - Exact Rust API signatures, type changes, struct definitions, and target file paths so implementation steps can be executed deterministically.
-- Visual diagram (if applicable, using ASCII or `flowchart LR` Mermaid).
+- Visual diagram (if applicable, using ASCII or Unicode box-drawing art, never Mermaid).
 - Threading, lock, and lifecycle impact analysis.
 
 #### 5. Implementation Plan

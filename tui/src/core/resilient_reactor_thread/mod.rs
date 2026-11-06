@@ -102,7 +102,7 @@
 //! See [`RRT`]'s [Thread Lifecycle] for the step-by-step shutdown sequence.
 //!
 //! **Thread cleanup** - When the [thread] self-terminates, your [`RRTWorker`] trait
-//! implementation goes out of scope, triggering [`RAII`] cleanup via [`Drop`] on the OS
+//! implementation goes out of scope, triggering [RAII] cleanup via [`Drop`] on the OS
 //! resources it owns (like [`fds`]). If new subscribers have appeared [in the meantime],
 //! RRT reuses the existing [thread] generation. Then [`TerminationGuard`] transitions the
 //! [`ThreadState`] to [`Stopped`] and calls [`notify_all()`] on the [`Condvar`], waking
@@ -216,7 +216,7 @@
 //! | :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 //! | **Resilient** | [Thread] can stop or crash and be relaunched with [generation] tracking; [`RestartPolicy`] for self-healing restarts; [`broadcast channel`] isolates async consumers from [Thread Lifecycle] |
 //! | **Reactor**   | Reacts to I/O readiness on [`fds`] ([`stdin`], [`sockets`], [`signals`]) via any blocking backend (e.g., [`mio`]/[`epoll`]) with a matching [`RRTSoftwareInterrupt`]                         |
-//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTSoftwareInterrupt`] & [`RAII`] cleanup via [`Drop`] on thread exit                                                      |
+//! | **Thread**    | Dedicated [thread] for [blocking I/O]; cooperative shutdown via [`RRTSoftwareInterrupt`] & [RAII] cleanup via [`Drop`] on thread exit                                                      |
 //!
 //! ## Mental Model for Web Developers
 //!
@@ -246,7 +246,7 @@
 //!   [`try_subscribe()`].
 //!
 //! - **Lifecycle**: [Web Workers] require manual cleanup (`terminate()` or
-//!   `self.close()`); RRT uses [`RAII`] via [`SubscriberGuard`] - the thread
+//!   `self.close()`); RRT uses [RAII] via [`SubscriberGuard`] - the thread
 //!   self-terminates when all guards are dropped.
 //!
 //! - **Communication**: [Web Workers] use serialized `postMessage`; RRT uses a type-safe
@@ -941,7 +941,7 @@
 //! [`pollable`]: https://manpages.debian.org/poll.2
 //! [`PTY` pair]: crate::pty_engine::pty_pair::PtyPair
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`read(2)`]: https://manpages.debian.org/read.2
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`Receiver::recv()`]: tokio::sync::broadcast::Receiver::recv

@@ -130,6 +130,8 @@ mod impl_windows_conpty {
     use miette::miette;
     use std::io::{Cursor, Read, Write};
 
+    // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
+
     /// Performs the Windows [`ConPTY`] initialization handshake.
     ///
     /// When [`portable_pty`] allocates a pseudoconsole with

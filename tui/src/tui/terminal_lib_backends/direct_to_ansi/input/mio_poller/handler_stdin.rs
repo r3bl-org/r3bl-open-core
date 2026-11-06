@@ -60,7 +60,7 @@ use tokio::sync::broadcast::Sender;
 /// 1. In [`MioPollWorker::create_and_register_os_sources()`] we actually set non-blocking
 ///    mode explicitly on [`stdin`], using [`O_NONBLOCK`]. The original [`stdin`] flags
 ///    are saved to [`original_stdin_flags`] and restored in the [`Drop`] implementation
-///    ([`RAII`] guard) to prevent breaking the terminal.
+///    ([RAII] guard) to prevent breaking the terminal.
 /// 1. In this file, we use the non-blocking mode [`stdin`], to ensure that if the
 ///    [`stdin`] [`fd`] is empty, [`.read()`] returns immediately with
 ///    [`ErrorKind::WouldBlock`]. This allows the loop to break and yield back to the
@@ -106,7 +106,7 @@ use tokio::sync::broadcast::Sender;
 /// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 /// [`original_stdin_flags`]: field@super::MioPollWorker::original_stdin_flags
 /// [`poll`]: mio::Poll::poll
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTWorker`]: crate::RRTWorker
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout

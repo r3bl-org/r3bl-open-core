@@ -11,9 +11,10 @@
       - [Canonical examples](#canonical-examples)
       - [Crate-specific notes](#crate-specific-notes)
   - [Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)](#community-sharing--social-channels-hacker-news-reddit-linkedin)
-    - [Reddit (r/rust)](#1-reddit-rrust)
-    - [Hacker News (Show HN / Link)](#2-hacker-news-show-hn--link)
-    - [LinkedIn & Social Media](#3-linkedin--social-media)
+    - [Reddit (r/rust, r/madeinrust, r/commandline)](#1-reddit-rrust-rmadeinrust-rcommandline)
+    - [Rust Users Forum (users.rust-lang.org)](#2-rust-users-forum-usersrust-langorg)
+    - [Hacker News (Show HN / Link)](#3-hacker-news-show-hn--link)
+    - [LinkedIn & Social Media](#4-linkedin--social-media)
   - [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -237,15 +238,31 @@ After publishing a release, share the release announcement using the standalone 
 `docs/release-notes/<crate>/vX.Y.Z.md` (which already contain standardized discoverability intro
 blocks, value propositions, code samples, benchmark metrics, and deep-dive links).
 
-### 1. Reddit (`r/rust`)
+### 1. Reddit (`r/rust`, `r/madeinrust`, `r/commandline`)
 
-- **Title format**: `[Release] <crate_name> vX.Y.Z: <Catchy One-Line Summary>`
-  - Example: `[Release] r3bl_tui v0.8.0: Async TUI library with 2D Canvas/Viewport coords, Flat2DArray SIMD layout, and 0ms ESC handling`
-- **Body content**: Copy the content from `docs/release-notes/<crate>/vX.Y.Z.md` (including the
-  standardized discoverability intro block, migration guide, performance uplift stats, and links to
-  articles/videos on `developerlife.com`).
+- **`r/rust` (Primary Announcement)**:
+  - **Rule 2 (Descriptive Titles)**: Avoid generic prefix tags like `[Release]`. Write an
+    informative title describing what the crate does:
+    - Example: `Announcing r3bl_tui 0.8.0: Async, reactive terminal UI framework with flexbox layouts, PTY orchestration, and modern web ergonomics`
+  - **Rule 6 (Self-Promotion Limit)**: At most 1 self-promotion post per week.
+  - **Flair**: Tag post with `Project` flair.
+  - **Body Content**: Use a curated high-signal executive summary (hook, 4 interaction
+    primitives, top v0.8.0 highlights, demo GIF). Do **not** dump the entire release notes
+    file (exceeds Reddit's 40,000-character limit and causes reader fatigue). Link to the full
+    GitHub release notes and migration guide.
+- **`r/madeinrust` (Showcase)**:
+  - Dedicated showcase subreddit for Rust projects. Share visual demos, screenshots, and
+    instructions to test drive interactive examples (`cargo run --example <name>`).
+- **`r/commandline` (Optional CLI Showcase)**:
+  - Showcase real terminal tools and applications built with the framework (e.g., `edi`, `giti`).
 
-### 2. Hacker News (Show HN / Link)
+### 2. Rust Users Forum (`users.rust-lang.org`)
+
+- Post in the **Announcements** category.
+- Welcoming, zero-toxicity community of core Rustaceans and library authors.
+- Share the curated summary, benchmark highlights, and link to GitHub release notes.
+
+### 3. Hacker News (Show HN / Link)
 
 - **Title format**: `Show HN: <crate_name> vX.Y.Z - <Concise Value Proposition>`
   - Example: `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
@@ -253,7 +270,7 @@ blocks, value propositions, code samples, benchmark metrics, and deep-dive links
   (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/vX.Y.Z-<crate>`) or architectural
   deep-dive article on `developerlife.com`.
 
-### 3. LinkedIn & Social Media
+### 4. LinkedIn & Social Media
 
 - Share high-signal highlights:
   - Key performance metrics (e.g., 2.3x rendering speedup, +-98% jitter elimination).

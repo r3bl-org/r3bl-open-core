@@ -8,6 +8,8 @@ unsafe extern "system" {
     fn TerminateProcess(hProcess: RawHandle, uExitCode: u32) -> i32;
 }
 
+// XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
+
 /// Windows process killer that directly invokes the Win32 [`TerminateProcess`] API on an
 /// independent, duplicated process handle.
 ///
@@ -23,8 +25,7 @@ unsafe extern "system" {
 /// handle and managing termination directly, this struct ensures that termination
 /// succeeds reliably without waiting for an upstream release.
 ///
-/// [`TerminateProcess`]:
-///     https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
+/// [`TerminateProcess`]: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
 /// [wezterm PR 7709]: https://github.com/wezterm/wezterm/pull/7709
 #[derive(Debug)]
 pub struct WindowsProcessKiller(pub OwnedHandle);
