@@ -106,6 +106,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
+- [ ] [remove-tokio.md](remove-tokio.md)
 - [ ] [replace-expect-with-rust-perf.md](replace-expect-with-rust-perf.md)
 - [ ] [telemetry-server.md](telemetry-server.md)
 - [ ] [r3bl-cmdr-prompty.md](r3bl-cmdr-prompty.md)

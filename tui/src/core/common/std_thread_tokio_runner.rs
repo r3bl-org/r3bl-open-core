@@ -107,8 +107,9 @@ use std::thread::JoinHandle;
 pub struct StdThreadTokioRunner;
 
 impl StdThreadTokioRunner {
-    /// Spawns a dedicated [scoped OS thread][st], starts a [`current_thread`][ct] Tokio
-    /// runtime on it, and blocks until `async_fn` executes to completion.
+    /// Spawns a dedicated [scoped OS thread][st] (named [`SCOPED_THREAD_NAME`]), starts a
+    /// [`current_thread`][ct] Tokio runtime on it, and blocks until `async_fn` executes
+    /// to completion.
     ///
     /// # Thread Bounds (`Send` vs. `!Send`)
     ///
@@ -124,35 +125,43 @@ impl StdThreadTokioRunner {
     ///
     /// - [`TokioRuntimeOutcome::Completed`]: The `current_thread` Tokio runtime
     ///   initialized and ran `async_fn` to completion, returning its output `T`.
-    /// - [`TokioRuntimeOutcome::FailedToStart`]: Building the `current_thread` Tokio
-    ///   runtime failed before `async_fn` could run.
+    /// - [`TokioRuntimeOutcome::FailedToStart`]: Spawning the scoped OS thread or
+    ///   building the `current_thread` Tokio runtime failed before `async_fn` could run.
     /// - [`TokioRuntimeOutcome::Panicked`]: The Tokio runtime started, but `async_fn`
     ///   panicked during execution.
     ///
     /// [co]: TokioRuntimeOutcome::Completed
     /// [ct]: tokio::runtime::Builder::new_current_thread
-    /// [st]: std::thread::scope
+    /// [st]: std::thread::Builder::spawn_scoped
     pub fn run_blocking<T: Send, F: Send + AsyncFnOnce() -> T>(
         async_fn: F,
     ) -> TokioRuntimeOutcome<T> {
         std::thread::scope(|scoped_thread| {
-            // Spawn a new thread and execute the async function in a new Tokio runtime.
-            let join_handle =
-                scoped_thread.spawn(|| Self::execute_in_current_thread_runtime(async_fn));
+            // Spawn a named scoped thread and execute the async function in a new Tokio
+            // runtime.
+            let res_join_handle = std::thread::Builder::new()
+                .name(SCOPED_THREAD_NAME.into())
+                .spawn_scoped(scoped_thread, || {
+                    Self::execute_in_current_thread_runtime(async_fn)
+                });
 
             // Return the result from the join handle.
-            match join_handle.join() {
-                Ok(execution) => execution,
-                Err(panic_payload) => {
-                    TokioRuntimeOutcome::panicked(SCOPED_THREAD_NAME, &panic_payload)
-                }
+            match res_join_handle {
+                Ok(join_handle) => match join_handle.join() {
+                    Ok(execution) => execution,
+                    Err(panic_payload) => {
+                        TokioRuntimeOutcome::panicked(SCOPED_THREAD_NAME, &panic_payload)
+                    }
+                },
+                Err(err) => TokioRuntimeOutcome::failed_to_start(err),
             }
         })
     }
 
-    /// Spawns an unscoped (regular) OS thread, starts a [`current_thread`][ct] Tokio
-    /// runtime on it, and executes `async_fn` to completion in the background, returning
-    /// a [`StdThreadTokioJoinHandle<T>`][jh] immediately without blocking the caller.
+    /// Spawns an unscoped (regular) OS thread (named [`UNSCOPED_THREAD_NAME`]), starts a
+    /// [`current_thread`][ct] Tokio runtime on it, and executes `async_fn` to completion
+    /// in the background, returning a [`StdThreadTokioJoinHandle<T>`][jh] immediately
+    /// without blocking the caller.
     ///
     /// Unlike [`Self::run_blocking`] (which spawns a scoped thread via
     /// [`std::thread::scope`] and joins it immediately), `run_non_blocking` returns
@@ -298,13 +307,19 @@ mod tests {
 
     #[test]
     fn test_run_blocking_completed_from_sync_context() {
-        let outcome = StdThreadTokioRunner::run_blocking(async || 42);
+        let outcome = StdThreadTokioRunner::run_blocking(async || {
+            assert_eq!(std::thread::current().name(), Some(SCOPED_THREAD_NAME));
+            42
+        });
         assert!(matches!(outcome, TokioRuntimeOutcome::Completed(42)));
     }
 
     #[tokio::test]
     async fn test_run_blocking_completed_from_async_context() {
-        let outcome = StdThreadTokioRunner::run_blocking(async || 42);
+        let outcome = StdThreadTokioRunner::run_blocking(async || {
+            assert_eq!(std::thread::current().name(), Some(SCOPED_THREAD_NAME));
+            42
+        });
         assert!(matches!(outcome, TokioRuntimeOutcome::Completed(42)));
     }
 
@@ -339,6 +354,7 @@ mod tests {
     #[test]
     fn test_run_non_blocking_completed() {
         let handle = StdThreadTokioRunner::run_non_blocking(async || {
+            assert_eq!(std::thread::current().name(), Some(UNSCOPED_THREAD_NAME));
             tokio::task::yield_now().await;
             42
         })
