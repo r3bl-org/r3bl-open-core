@@ -94,7 +94,7 @@ impl StartOutcome {
     /// [standalone mode]: r3bl_tui::Spinner#standalone-mode
     #[must_use]
     pub fn handle_upgrade_on_exit(&self) -> ExitOutcome {
-        // Step 1: Loud lock release — take `DeferredCheckHandle` inside `SINGLETON.write`
+        // Step 1: Loud lock release: take `DeferredCheckHandle` inside `SINGLETON.write`
         // so the lock is dropped before `handle.join()` blocks on the dedicated thread.
         let Some(handle) = SingletonState::take_deferred_check_handle() else {
             return ExitOutcome::NoDeferredCheckRunning;

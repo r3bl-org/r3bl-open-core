@@ -8,7 +8,7 @@
 //! [Control Plane]).
 //!
 //! This module exercises the full [`UpgradeJourney::start`] ->
-//! [`StartOutcome::handle_upgrade_on_exit`][2] lifecycle end-to-end—spanning both the
+//! [`StartOutcome::handle_upgrade_on_exit`][2] lifecycle end-to-end, spanning both the
 //! [Control Plane] and [Execution Plane] across three test files:
 //!
 //! 1. **[`primary_tests`]**: In-process tests (`#[serial]`) covering the single-start guard
@@ -16,12 +16,12 @@
 //!    cooldown timestamp file creation/[`mtime`] refresh/preservation on failure, and
 //!    [`UpgradePolicy::Disabled`].
 //! 2. **[`self_replace_test`]**: Isolated subprocess test verifying
-//!    [`UpgradeSource::ReleaseArchive`][4] end-to-end—streaming a `.tar.gz` archive and
+//!    [`UpgradeSource::ReleaseArchive`][4] end-to-end: streaming a `.tar.gz` archive and
 //!    `.sha256` checksum from a local HTTP server, verifying the SHA-256 digest,
 //!    replacing the copied executable in-place via [`self_replace`], and installing
 //!    sibling binaries (`edi`, `env-source`).
 //! 3. **[`cargo_install_rustup_test`]**: Isolated subprocess test verifying
-//!    [`UpgradeSource::BuildFromSourceRustup`][5] end-to-end—falling back when the
+//!    [`UpgradeSource::BuildFromSourceRustup`][5] end-to-end: falling back when the
 //!    release archive server is unreachable and driving stub `rustup` and `cargo`
 //!    binaries (emitting [`OscSequence`] `9;4` progress events) through
 //!    [`PtySessionBuilder`].
