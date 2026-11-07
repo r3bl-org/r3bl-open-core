@@ -1,23 +1,96 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
 - [Release Guide](#release-guide)
-  - [Full workflow](#full-workflow)
-  - [Overview of the release process](#overview-of-the-release-process)
+- [Full workflow](#full-workflow)
+- [1. Update version in Cargo.toml (for self) and this file](#1-update-version-in-cargotoml-for-self-and-this-file)
+- [2. Update CHANGELOG.md (don't forget to update TOC)](#2-update-changelogmd-dont-forget-to-update-toc)
+- [3. Run "Dependi: Update All dependencies to the latest version" in vscode](#3-run-dependi-update-all-dependencies-to-the-latest-version-in-vscode)
+- [ w/ the Cargo.toml file open. Don't use `cargo-edit`](#w-the-cargotoml-file-open-dont-use-cargo-edit)
+- [ <https://github.com/killercup/cargo-edit> and `cargo upgrade`.](#httpsgithubcomkillercupcargo-edit-and-cargo-upgrade)
+- [Generate the crates.io landing page for this crate](#generate-the-cratesio-landing-page-for-this-crate)
+- [1. Update version in Cargo.toml (for self, optionally for dep: `r3bl_analytics_schema`)](#1-update-version-in-cargotoml-for-self-optionally-for-dep-r3bl_analytics_schema)
+- [ and this file](#and-this-file)
+- [2. Update CHANGELOG.md (don't forget to update TOC)](#2-update-changelogmd-dont-forget-to-update-toc-1)
+- [3. Run "Dependi: Update All dependencies to the latest version" in vscode](#3-run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-1)
+- [ w/ the Cargo.toml file open. Don't use `cargo-edit`](#w-the-cargotoml-file-open-dont-use-cargo-edit-1)
+- [ <https://github.com/killercup/cargo-edit> and `cargo upgrade`.](#httpsgithubcomkillercupcargo-edit-and-cargo-upgrade-1)
+- [Generate the crates.io landing page for this crate](#generate-the-cratesio-landing-page-for-this-crate-1)
+- [1. Update version in Cargo.toml (for self, optionally for deps: `r3bl_tui`, `r3bl_analytics_schema`)](#1-update-version-in-cargotoml-for-self-optionally-for-deps-r3bl_tui-r3bl_analytics_schema)
+- [ and this file](#and-this-file-1)
+- [2. Update CHANGELOG.md (don't forget to update TOC)](#2-update-changelogmd-dont-forget-to-update-toc-2)
+- [3. Run "Dependi: Update All dependencies to the latest version" in vscode](#3-run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-2)
+- [ w/ the Cargo.toml file open. Don't use `cargo-edit`](#w-the-cargotoml-file-open-dont-use-cargo-edit-2)
+- [ <https://github.com/killercup/cargo-edit> and `cargo upgrade`.](#httpsgithubcomkillercupcargo-edit-and-cargo-upgrade-2)
+- [Generate the crates.io landing page for this crate](#generate-the-cratesio-landing-page-for-this-crate-2)
+- [TODO: Test release on clean machine with `spawny r3bl-cmdr` (see task/pending/build_infra_spawny.md)](#todo-test-release-on-clean-machine-with-spawny-r3bl-cmdr-see-taskpendingbuild_infra_spawnymd)
+- [1. Update version in Cargo.toml (for self, and for deps: `r3bl_tui`)](#1-update-version-in-cargotoml-for-self-and-for-deps-r3bl_tui)
+- [ and this file](#and-this-file-2)
+- [2. Update CHANGELOG.md (don't forget to update TOC)](#2-update-changelogmd-dont-forget-to-update-toc-3)
+- [3. Run "Dependi: Update All dependencies to the latest version" in vscode](#3-run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-3)
+- [ w/ the Cargo.toml file open. Don't use `cargo-edit`](#w-the-cargotoml-file-open-dont-use-cargo-edit-3)
+- [ <https://github.com/killercup/cargo-edit> and `cargo upgrade`.](#httpsgithubcomkillercupcargo-edit-and-cargo-upgrade-3)
+- [Generate the crates.io landing page for this crate](#generate-the-cratesio-landing-page-for-this-crate-3)
+- [TODO: Test release on clean machine with `spawny r3bl-build-infra` (see task/pending/build_infra_spawny.md)](#todo-test-release-on-clean-machine-with-spawny-r3bl-build-infra-see-taskpendingbuild_infra_spawnymd)
+- [Push the git commit and tag to the remote repo](#push-the-git-commit-and-tag-to-the-remote-repo)
+- [Finally, make a GitHub release for each tag that you have created](#finally-make-a-github-release-for-each-tag-that-you-have-created)
+- [and copy the release notes from the CHANGELOG.md file.](#and-copy-the-release-notes-from-the-changelogmd-file)
+- [<https://github.com/r3bl-org/r3bl-open-core/releases/new>](#httpsgithubcomr3bl-orgr3bl-open-corereleasesnew)
+- [Overview of the release process](#overview-of-the-release-process)
     - [Step 1. Build and publish to crates.io](#step-1-build-and-publish-to-cratesio)
     - [Step 2. Make a GitHub release from the tag](#step-2-make-a-github-release-from-the-tag)
-      - [Release notes structure](#release-notes-structure)
-      - [Key elements](#key-elements)
-      - [Canonical examples](#canonical-examples)
-      - [Crate-specific notes](#crate-specific-notes)
-  - [Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)](#community-sharing--social-channels-hacker-news-reddit-linkedin)
-    - [Reddit (r/rust, r/madeinrust, r/commandline)](#1-reddit-rrust-rmadeinrust-rcommandline)
-    - [Rust Users Forum (users.rust-lang.org)](#2-rust-users-forum-usersrust-langorg)
-    - [Hacker News (Show HN / Link)](#3-hacker-news-show-hn--link)
-    - [LinkedIn & Social Media](#4-linkedin--social-media)
-  - [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
+        - [Release notes creation & publication](#release-notes-creation--publication)
+- [vX.Y.Z (YYYY-MM-DD)](#vxyz-yyyy-mm-dd)
+- [Coming Soon 🚀](#coming-soon-🚀)
+- [Full Changelog](#full-changelog)
+    - [Key elements](#key-elements)
+    - [Canonical examples](#canonical-examples)
+    - [Crate-specific notes](#crate-specific-notes)
+    - [URL pinning in CHANGELOG.md](#url-pinning-in-changelogmd)
+- [Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)](#community-sharing--social-channels-hacker-news-reddit-linkedin)
+    - [1. Reddit (`r/rust`, `r/madeinrust`, `r/commandline`)](#1-reddit-rrust-rmadeinrust-rcommandline)
+    - [2. Rust Users Forum (`users.rust-lang.org`)](#2-rust-users-forum-usersrust-langorg)
+    - [3. Hacker News (Show HN / Link)](#3-hacker-news-show-hn--link)
+    - [4. LinkedIn & Social Media](#4-linkedin--social-media)
+- [Deprecated workflow for archived crates](#deprecated-workflow-for-archived-crates)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file)
+- [Update CHANGELOG.md](#update-changelogmd)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-1)
+- [Update CHANGELOG.md](#update-changelogmd-1)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-1)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-1)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-2)
+- [Update CHANGELOG.md](#update-changelogmd-2)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-2)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-2)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-3)
+- [Update CHANGELOG.md](#update-changelogmd-3)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-3)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-3)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-4)
+- [Update CHANGELOG.md](#update-changelogmd-4)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-4)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-4)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-5)
+- [Update CHANGELOG.md](#update-changelogmd-5)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-5)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-5)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-6)
+- [Update CHANGELOG.md](#update-changelogmd-6)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-6)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-6)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-7)
+- [Update CHANGELOG.md](#update-changelogmd-7)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-7)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-7)
+- [Update version in Cargo.toml and this file](#update-version-in-cargotoml-and-this-file-8)
+- [Update CHANGELOG.md](#update-changelogmd-8)
+- [Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open](#run-dependi-update-all-dependencies-to-the-latest-version-in-vscode-w-the-cargotoml-file-open-8)
+- [- instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command](#--instead-of-using-cargo-edit-httpsgithubcomkillercupcargo-edit-and-the-cargo-upgrade-command-8)
+- [Finally, push the git commit and tag to the remote repo](#finally-push-the-git-commit-and-tag-to-the-remote-repo)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Release Guide
 
@@ -112,42 +185,46 @@ git push ; git push --tags
 
 ## Overview of the release process
 
-This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
-the crates in the project. Look at the [full workflow](#full-workflow) section for the imperative
-instructions on how to do this. The steps below are the algorithm that has to be applied repeatedly
-to each crate in the project.
+This is a lengthy and repetitive process. The following steps have to be applied
+repeatedly to all the crates in the project. Look at the [full workflow](#full-workflow)
+section for the imperative instructions on how to do this. The steps below are the
+algorithm that has to be applied repeatedly to each crate in the project.
 
 ### Step 1. Build and publish to crates.io
 
-Starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following steps are
-applied to each crate (`tui`, `cmdr`, `analytics_schema`):
+Starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following
+steps are applied to each crate (`tui`, `cmdr`, `analytics_schema`):
 
 1. Update the version in `Cargo.toml`.
-2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in VSCode for
-   each `Cargo.toml` file in the `~/github/r3bl-open-core/` folder. You can run
+2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in
+   VSCode for each `Cargo.toml` file in the `~/github/r3bl-open-core/` folder. You can run
    `run.nu upgrade-deps` to see which crates need to be updated.
-   - This will update all the dependencies in all the crates in addition to updating all the
-     remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
-   - Run `run.nu full-build` to make sure everything builds.
-3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
-   [semver](https://semver.org/) version number. Eg: `git add -A ; git commit -S -m "vX.Y.Z-core"`.
-4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
-   [semver](https://semver.org/) version number. Eg: `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
+    - This will update all the dependencies in all the crates in addition to updating all
+      the remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
+    - Run `run.nu full-build` to make sure everything builds.
+3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and
+   `vX.Y.Z` is the [semver](https://semver.org/) version number. Eg:
+   `git add -A ; git commit -S -m "vX.Y.Z-core"`.
+4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z`
+   is the [semver](https://semver.org/) version number. Eg:
+   `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
 5. Update the `CHANGELOG.md` with all the new updates.
-6. Run `cargo publish --dry-run --no-verify` in the crate folder. This will perform a dry run of
-   publishing the crate to crates.io. The `--no-verify` flag skips re-compilation of the packaged
-   tarball, which fails with the `wild` linker configured in `.cargo/config.toml`. The actual
-   build/test/clippy checks in step 5 already verify correctness.
-7. Then run `cargo publish --no-verify --allow-dirty` in the crate folder. This will publish the crate to
-   crates.io.
+6. Run `cargo publish --dry-run --no-verify` in the crate folder. This will perform a dry
+   run of publishing the crate to crates.io. The `--no-verify` flag skips re-compilation
+   of the packaged tarball, which fails with the `wild` linker configured in
+   `.cargo/config.toml`. The actual build/test/clippy checks in step 5 already verify
+   correctness.
+7. Then run `cargo publish --no-verify --allow-dirty` in the crate folder. This will
+   publish the crate to crates.io.
 
 ### Step 2. Make a GitHub release from the tag
 
 Then, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
 Finally, for the tag, make a GitHub release using the standalone release note file in
-`docs/release-notes/<crate>/vX.Y.Z.md`. The release notes contain the standardized discoverability
-intro, highlights, migration guides, and a link back to the `CHANGELOG.md` entry.
+`docs/release-notes/<crate>/vX.Y.Z.md`. The release notes contain the standardized
+discoverability intro, highlights, migration guides, and a link back to the `CHANGELOG.md`
+entry.
 
 #### Release notes creation & publication
 
@@ -210,51 +287,53 @@ Use these releases as style guides:
 #### Crate-specific notes
 
 - **cmdr**: Binary crate - include install instructions
-- **tui**: Library crate - no install instructions needed, release is for notification only
+- **tui**: Library crate - no install instructions needed, release is for notification
+  only
 - **build-infra**: Binary crate - include install instructions and Coming Soon section
 
 #### URL pinning in CHANGELOG.md
 
-When writing CHANGELOG.md entries, use SHA-pinned or release-tag-pinned URLs instead of `main`
-branch URLs. URLs pointing to `main` break when files or directories are moved, renamed, or
-deleted in later commits -- but pinned URLs are immutable snapshots that remain valid as a
-historical record.
+When writing CHANGELOG.md entries, use SHA-pinned or release-tag-pinned URLs instead of
+`main` branch URLs. URLs pointing to `main` break when files or directories are moved,
+renamed, or deleted in later commits -- but pinned URLs are immutable snapshots that
+remain valid as a historical record.
 
 - **Tag-pinned** (preferred when a release tag exists):
   `https://github.com/r3bl-org/r3bl-open-core/blob/v0.7.7-tui/tui/README.md`
 - **SHA-pinned** (when no tag is available):
   `https://github.com/r3bl-org/r3bl-open-core/blob/abc1234/path/to/file`
-- **Avoid**:
-  `https://github.com/r3bl-org/r3bl-open-core/blob/main/path/to/file`
+- **Avoid**: `https://github.com/r3bl-org/r3bl-open-core/blob/main/path/to/file`
 
 ## Community Sharing & Social Channels (Hacker News, Reddit, LinkedIn)
 
-> [!NOTE]
-> _This Week in Rust_ (TWiR) no longer accepts crate/library release submissions.
-> Announcements should be shared directly across developer communities: **Reddit (`r/rust`)**,
-> **Hacker News**, and **LinkedIn**.
+> [!NOTE] _This Week in Rust_ (TWiR) no longer accepts crate/library release submissions.
+> Announcements should be shared directly across developer communities: **Reddit
+> (`r/rust`)**, **Hacker News**, and **LinkedIn**.
 
-After publishing a release, share the release announcement using the standalone release notes in
-`docs/release-notes/<crate>/vX.Y.Z.md` (which already contain standardized discoverability intro
-blocks, value propositions, code samples, benchmark metrics, and deep-dive links).
+After publishing a release, share the release announcement using the standalone release
+notes in `docs/release-notes/<crate>/vX.Y.Z.md` (which already contain standardized
+discoverability intro blocks, value propositions, code samples, benchmark metrics, and
+deep-dive links).
 
 ### 1. Reddit (`r/rust`, `r/madeinrust`, `r/commandline`)
 
 - **`r/rust` (Primary Announcement)**:
-  - **Rule 2 (Descriptive Titles)**: Avoid generic prefix tags like `[Release]`. Write an
-    informative title describing what the crate does:
-    - Example: `Announcing r3bl_tui 0.8.0: Async, reactive terminal UI framework with flexbox layouts, PTY orchestration, and modern web ergonomics`
-  - **Rule 6 (Self-Promotion Limit)**: At most 1 self-promotion post per week.
-  - **Flair**: Tag post with `Project` flair.
-  - **Body Content**: Use a curated high-signal executive summary (hook, 4 interaction
-    primitives, top v0.8.0 highlights, demo GIF). Do **not** dump the entire release notes
-    file (exceeds Reddit's 40,000-character limit and causes reader fatigue). Link to the full
-    GitHub release notes and migration guide.
+    - **Rule 2 (Descriptive Titles)**: Avoid generic prefix tags like `[Release]`. Write
+      an informative title describing what the crate does:
+        - Example:
+          `Announcing r3bl_tui 0.8.0: Async, reactive terminal UI framework with flexbox layouts, PTY orchestration, and modern web ergonomics`
+    - **Rule 6 (Self-Promotion Limit)**: At most 1 self-promotion post per week.
+    - **Flair**: Tag post with `Project` flair.
+    - **Body Content**: Use a curated high-signal executive summary (hook, 4 interaction
+      primitives, top v0.8.0 highlights, demo GIF). Do **not** dump the entire release
+      notes file (exceeds Reddit's 40,000-character limit and causes reader fatigue). Link
+      to the full GitHub release notes and migration guide.
 - **`r/madeinrust` (Showcase)**:
-  - Dedicated showcase subreddit for Rust projects. Share visual demos, screenshots, and
-    instructions to test drive interactive examples (`cargo run --example <name>`).
+    - Dedicated showcase subreddit for Rust projects. Share visual demos, screenshots, and
+      instructions to test drive interactive examples (`cargo run --example <name>`).
 - **`r/commandline` (Optional CLI Showcase)**:
-  - Showcase real terminal tools and applications built with the framework (e.g., `edi`, `giti`).
+    - Showcase real terminal tools and applications built with the framework (e.g., `edi`,
+      `giti`).
 
 ### 2. Rust Users Forum (`users.rust-lang.org`)
 
@@ -265,17 +344,18 @@ blocks, value propositions, code samples, benchmark metrics, and deep-dive links
 ### 3. Hacker News (Show HN / Link)
 
 - **Title format**: `Show HN: <crate_name> vX.Y.Z - <Concise Value Proposition>`
-  - Example: `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
+    - Example:
+      `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
 - **URL**: Link to the GitHub Release page
-  (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/vX.Y.Z-<crate>`) or architectural
-  deep-dive article on `developerlife.com`.
+  (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/vX.Y.Z-<crate>`) or
+  architectural deep-dive article on `developerlife.com`.
 
 ### 4. LinkedIn & Social Media
 
 - Share high-signal highlights:
-  - Key performance metrics (e.g., 2.3x rendering speedup, +-98% jitter elimination).
-  - Type-safety research foundations (Stanford CS 242 / FUNARCH typestate patterns).
-  - Links to the `developerlife.com` articles and YouTube video walkthroughs.
+    - Key performance metrics (e.g., 2.3x rendering speedup, +-98% jitter elimination).
+    - Type-safety research foundations (Stanford CS 242 / FUNARCH typestate patterns).
+    - Links to the `developerlife.com` articles and YouTube video walkthroughs.
 
 ## Deprecated workflow for archived crates
 

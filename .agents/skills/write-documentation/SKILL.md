@@ -164,9 +164,9 @@ sentences in documentation.**
 
 ### No "Source of Truth (SOT)" Buzzwords
 
-**Never use phrases like `"Authoritative Source of Truth (SOT)"`, `"Single Source of Truth
-(SSOT)"`, `"Source of Truth (SOT)"`, or the acronyms `"SOT"` / `"SSOT"` in documentation,
-comments, or prose.**
+**Never use phrases like `"Authoritative Source of Truth (SOT)"`,
+`"Single Source of Truth (SSOT)"`, `"Source of Truth (SOT)"`, or the acronyms `"SOT"` /
+`"SSOT"` in documentation, comments, or prose.**
 
 - They are strange robotic phrases, not natural human English.
 - They add zero information and act as pure noise.
@@ -237,13 +237,13 @@ without adding semantic precision.
 Backtick acronyms and mnemonics that represent **terminal protocols, escape sequences,
 character/byte encodings, or exact OS/libc/hardware primitives**:
 
-| Category | Examples (Backticked) |
-| :--- | :--- |
-| **Terminal & Escape Sequence Protocols** | `` `ANSI` ``, `` `VT-100` ``, `` `VT-220` ``, `` `CSI` ``, `` `OSC` ``, `` `SGR` ``, `` `ESC` ``, `` `DCS` ``, `` `DSR` ``, `` `SS3` ``, `` `DEC` ``, `` `DECSTBM` ``, `` `DECAWM` ``, `` `DECSC` ``, `` `DECRC` ``, `` `DECTCEM` ``, `` `X10` ``, `` `RXVT` ``, `` `URXVT` `` |
-| **Terminal & Multiplexing Subsystems** | ``[`PTY`]``, ``[`TUI`]``, ``[`VTE`]``, `` `TTY` `` |
-| **Byte / Character / Color Encodings** | `` `UTF-8` ``, `` `ASCII` ``, `` `RGB` ``, `` `EOF` ``, `` `BEL` ``, `` `CR` ``, `` `LF` ``, `` `C0` `` |
-| **OS Signals, Errnos, Termios & Kernel Primitives** | `` `SIGWINCH` ``, `` `SIGINT` ``, `` `EINTR` ``, `` `EIO` ``, `` `EINVAL` ``, `` `POLLIN` ``, `` `EPOLLIN` ``, `` `ICANON` ``, `` `ECHO` ``, `` `VMIN` ``, `` `VTIME` ``, `` `FIFO` ``, `` `IOCP` `` |
-| **Exact Protocol Verbs, Status Codes & Env Vars** | `` `HEAD` ``, `` `GET` ``, `` `302` ``, `` `CI` ``, `` `$PATH` ``, `` `TERM` ``, `` `COLORTERM` ``, `` `NO_COLOR` `` |
+| Category                                            | Examples (Backticked)                                                                                                                                                                                                                                                          |
+| :-------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Terminal & Escape Sequence Protocols**            | `` `ANSI` ``, `` `VT-100` ``, `` `VT-220` ``, `` `CSI` ``, `` `OSC` ``, `` `SGR` ``, `` `ESC` ``, `` `DCS` ``, `` `DSR` ``, `` `SS3` ``, `` `DEC` ``, `` `DECSTBM` ``, `` `DECAWM` ``, `` `DECSC` ``, `` `DECRC` ``, `` `DECTCEM` ``, `` `X10` ``, `` `RXVT` ``, `` `URXVT` `` |
+| **Terminal & Multiplexing Subsystems**              | ``[`PTY`]``, ``[`TUI`]``, ``[`VTE`]``, `` `TTY` ``                                                                                                                                                                                                                             |
+| **Byte / Character / Color Encodings**              | `` `UTF-8` ``, `` `ASCII` ``, `` `RGB` ``, `` `EOF` ``, `` `BEL` ``, `` `CR` ``, `` `LF` ``, `` `C0` ``                                                                                                                                                                        |
+| **OS Signals, Errnos, Termios & Kernel Primitives** | `` `SIGWINCH` ``, `` `SIGINT` ``, `` `EINTR` ``, `` `EIO` ``, `` `EINVAL` ``, `` `POLLIN` ``, `` `EPOLLIN` ``, `` `ICANON` ``, `` `ECHO` ``, `` `VMIN` ``, `` `VTIME` ``, `` `FIFO` ``, `` `IOCP` ``                                                                           |
+| **Exact Protocol Verbs, Status Codes & Env Vars**   | `` `HEAD` ``, `` `GET` ``, `` `302` ``, `` `CI` ``, `` `$PATH` ``, `` `TERM` ``, `` `COLORTERM` ``, `` `NO_COLOR` ``                                                                                                                                                           |
 
 ```rust
 // ❌ Bad: Plain text terminal/wire-protocol acronyms
@@ -270,22 +270,23 @@ external URLs (Wikipedia, man pages) only when no local target exists:
 
 Common linked acronyms and their targets:
 
-| Acronym | Link Target | Source |
-| :--- | :--- | :--- |
-| ``[`TUI`]`` | `crate::tui::TerminalWindow::main_event_loop` | Local (crate item) |
-| ``[`VTE`]`` | `mod@vte` | Local (Cargo.toml dep) |
-| ``[`PTY`]`` | `https://en.wikipedia.org/wiki/Pseudoterminal` | External (OS concept) |
-| ``[`SSH`]`` | `https://en.wikipedia.org/wiki/Secure_Shell` | External (protocol) |
-| ``[`TCP`]`` | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol` | External (protocol) |
-| ``[`DCS`]`` | Spec URL or crate path as appropriate | Depends on context |
-| ``[`RAII`]`` | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
-| ``[`SemVer`]`` | `https://semver.org/` | External (spec) |
+| Acronym        | Link Target                                                            | Source                         |
+| :------------- | :--------------------------------------------------------------------- | :----------------------------- |
+| ``[`TUI`]``    | `crate::tui::TerminalWindow::main_event_loop`                          | Local (crate item)             |
+| ``[`VTE`]``    | `mod@vte`                                                              | Local (Cargo.toml dep)         |
+| ``[`PTY`]``    | `https://en.wikipedia.org/wiki/Pseudoterminal`                         | External (OS concept)          |
+| ``[`SSH`]``    | `https://en.wikipedia.org/wiki/Secure_Shell`                           | External (protocol)            |
+| ``[`TCP`]``    | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol`          | External (protocol)            |
+| ``[`DCS`]``    | Spec URL or crate path as appropriate                                  | Depends on context             |
+| ``[`RAII`]``   | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
+| ``[`SemVer`]`` | `https://semver.org/`                                                  | External (spec)                |
 
 > **Pedagogical & Spec Acronym Exception (`[`RAII`]`, `[`SemVer`]`)**: When an acronym
 > represents a specific design pattern or specification that benefits from a hover/click
-> definition for newcomers (see [Pedagogical Links for Inclusivity](#pedagogical-links-for-inclusivity)),
-> wrap it in ``[`...`]`` with a reference link definition. When used unlinked in table
-> cells or `//` comments, keep it as plain text (`RAII`, `SemVer`).
+> definition for newcomers (see
+> [Pedagogical Links for Inclusivity](#pedagogical-links-for-inclusivity)), wrap it in
+> ``[`...`]`` with a reference link definition. When used unlinked in table cells or `//`
+> comments, keep it as plain text (`RAII`, `SemVer`).
 
 #### Without a Link: Plain Backticks
 
@@ -323,14 +324,14 @@ terms, time/checksum standards, and specification document identifiers stay as *
 text** (not backticked) because they are ordinary prose vocabulary, not wire-protocol or
 code identifiers:
 
-| Category | Examples (Plain Text) |
-| :--- | :--- |
-| **General UI & Dev Initialisms** | CLI, IDE, UI, GUI, API, SDK, REPL, PR, CI/CD |
-| **Web, Networking & Data Formats** | URL, URI, HTTP, HTTPS, CDN, DNS, JSON, JSONC, TOML, YAML, XML, HTML, CSS, CSV |
-| **General CS, Compiler & Design Terms** | AST, CST, LRU, SIMD (plus RAII and SemVer when unlinked) |
-| **General OS, Hardware & Toolchain Terms** | OS, CPU, GPU, RAM, I/O, ABI, FFI, IPC, PID, C, MSVC, POSIX |
-| **Time, Cryptography & Binary Units** | UTC, ISO 8601, RFC 3339, SHA-256, MD5, KiB, MiB, GiB |
-| **Spec Document Identifiers** | ECMA-48, ITU-T Rec. T.416, ISO 8613-6 |
+| Category                                   | Examples (Plain Text)                                                         |
+| :----------------------------------------- | :---------------------------------------------------------------------------- |
+| **General UI & Dev Initialisms**           | CLI, IDE, UI, GUI, API, SDK, REPL, PR, CI/CD                                  |
+| **Web, Networking & Data Formats**         | URL, URI, HTTP, HTTPS, CDN, DNS, JSON, JSONC, TOML, YAML, XML, HTML, CSS, CSV |
+| **General CS, Compiler & Design Terms**    | AST, CST, LRU, SIMD (plus RAII and SemVer when unlinked)                      |
+| **General OS, Hardware & Toolchain Terms** | OS, CPU, GPU, RAM, I/O, ABI, FFI, IPC, PID, C, MSVC, POSIX                    |
+| **Time, Cryptography & Binary Units**      | UTC, ISO 8601, RFC 3339, SHA-256, MD5, KiB, MiB, GiB                          |
+| **Spec Document Identifiers**              | ECMA-48, ITU-T Rec. T.416, ISO 8613-6                                         |
 
 When linking a multi-word spec or plain-text phrase to an external reference, use
 plain-text link syntax (`[ITU-T Rec. T.416]: https://...` or
@@ -710,6 +711,26 @@ For sub-sections within a `##` heading, use **bold text** (`**bold**`) instead o
 to find it in the sidebar but can't. Bold text is visually similar but sets correct
 expectations.
 
+### Short, Meaningful Headings (Detail in the First Sentence)
+
+Keep headings in both rustdoc (`//!`, `///`) and Markdown files (`task/*.md`, `docs/*.md`)
+short and meaningful (typically 2-5 words). Overly long headings clutter the `cargo doc`
+sidebar and `mktoc` table of contents. Put parenthetical lists, type combinations, or
+extra context into the first sentence immediately following the heading.
+
+```markdown
+<!-- ❌ Bad: Overly long heading that bloats the TOC and sidebar -->
+
+### Algorithm 1: Session / Thread Completion to Future (`StdThreadRunner::run_async` + `ThreadJoinFuture<T>`)
+
+<!-- ✅ Good: Short heading + detail in the first sentence -->
+
+### Algorithm 1: One-Shot Thread Future
+
+Algorithm 1 (`StdThreadRunner::run_async` + `ThreadJoinFuture<T>`) bridges a dedicated OS
+thread or full interactive TUI session completion into a `std::future::Future`.
+```
+
 ### Inverted Pyramid
 
 Structure documentation with high-level concepts at the top, details below:
@@ -917,10 +938,14 @@ For operating system concepts, computer science terminology, or hardware referen
 | Pedagogical terms   | `en.wikipedia.org/wiki/` | `design pattern`, `RAII`, `file descriptor` |
 | Specs/RFCs          | Official spec sites      | ANSI escape codes, UTF-8                    |
 
-> [!IMPORTANT]
-> **Link Checker Safety (`lychee`)**:
-> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g. `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or drops connections for link checkers).
-> - **GNU tools & utilities**: Always link to Wikipedia (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker traffic).
+> [!IMPORTANT] **Link Checker Safety (`lychee`)**:
+>
+> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g.
+>   `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or
+>   drops connections for link checkers).
+> - **GNU tools & utilities**: Always link to Wikipedia
+>   (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker
+>   traffic).
 
 **Key distinction:**
 
@@ -1128,9 +1153,11 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 # (runs: cargo test --doc)
 ```
 
-> [!IMPORTANT]
-> **Frequency Directive:** Do NOT run `./check.fish --quick-doc` or `./check.fish --test` after minor, isolated doc comment edits.
-> Fast typechecking (`./check.fish --check`) is sufficient for routine edits. Run `--quick-doc` and doctests only when:
+> [!IMPORTANT] **Frequency Directive:** Do NOT run `./check.fish --quick-doc` or
+> `./check.fish --test` after minor, isolated doc comment edits. Fast typechecking
+> (`./check.fish --check`) is sufficient for routine edits. Run `--quick-doc` and doctests
+> only when:
+>
 > 1. Explicitly requested by the user (or running `/docs`).
 > 2. Performing a dedicated documentation refactoring pass.
 > 3. At final pre-commit verification before creating a commit or PR.

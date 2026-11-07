@@ -532,7 +532,7 @@ More detailed steps...
 
 - Steps are numbered (Step 0, Step 1, Step 2, etc.)
 - Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
-- Table of contents automatically generated and maintained using `doctoc`
+- Table of contents automatically generated and maintained using `mktoc`
 - Formatting standardized with `prettier`
 
 **Status markers:**

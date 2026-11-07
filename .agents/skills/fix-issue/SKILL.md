@@ -1,8 +1,8 @@
 ---
 name: fix-issue
 description:
-  Guidelines for deeply exploring the problem space first and designing the best solution
-  before implementing.
+    Guidelines for deeply exploring the problem space first and designing the best
+    solution before implementing.
 ---
 
 # Issue Fix Workflow: Deep Exploration and Design
@@ -41,16 +41,23 @@ Before proposing any changes or writing a task file, gather context on the probl
 
 ### Step 2: Design Doc (Task File Creation)
 
-Create the task file under `task/issue-<id>-fix.md` or `task/<name>.md`. 
-Create a new git branch for this task, push it, and open a Draft PR using `gh pr create --draft --fill` to track the work.
+Create the task file under `task/issue-<id>-fix.md` or `task/<name>.md` (if including a
+table of contents, use `<!-- BEGIN mktoc -->` / `<!-- END mktoc -->` markers and run
+`mktoc <file>`, followed by `prettier --write <file>`). Create a new git branch for this
+task, push it, and open a Draft PR using `gh pr create --draft --fill` to track the work.
 
-> [!TIP]
-> If creating a linked git worktree for the task, always use relative paths (or set `git config --global worktree.useRelativePaths true`) so the worktree remains portable across remote fleet machines (Linux and macOS):
+> [!TIP] If creating a linked git worktree for the task, always use relative paths (or set
+> `git config --global worktree.useRelativePaths true`) so the worktree remains portable
+> across remote fleet machines (Linux and macOS):
+>
 > ```bash
 > git worktree add --relative ../roc-<name> <branch_name>
 > ```
 
-Instead of a simple todo list, format this task file as a **Design Document** with the following sections:
+Instead of a simple todo list, format this task file as a **Design Document** with the
+following sections. Keep all headings short and meaningful (2-5 words) so the document and
+its `mktoc` table of contents stay readable, placing any extra detail or type lists into
+the first sentence immediately following the heading:
 
 #### 1. Overview
 
@@ -76,7 +83,8 @@ Present at least two (ideally three) alternative approaches. For each alternativ
 #### 4. Proposed Design
 
 - Which alternative was chosen and why.
-- Exact Rust API signatures, type changes, struct definitions, and target file paths so implementation steps can be executed deterministically.
+- Exact Rust API signatures, type changes, struct definitions, and target file paths so
+  implementation steps can be executed deterministically.
 - Visual diagram (if applicable, using ASCII or Unicode box-drawing art, never Mermaid).
 - Threading, lock, and lifecycle impact analysis.
 
@@ -99,11 +107,15 @@ Present the newly created task file to the user.
 
 ### Step 4: Iterative Implementation
 
-Only after the design doc is approved, load the task (ideally in a fresh or `/compact`-ed context if Step 1 read many unrelated files) and begin implementation step-by-step:
+Only after the design doc is approved, load the task (ideally in a fresh or `/compact`-ed
+context if Step 1 read many unrelated files) and begin implementation step-by-step:
 
-- Verify each step with `./check.fish --check` (which runs `cargo check -q --message-format=short`) and pause for manual reviews frequently.
+- Verify each step with `./check.fish --check` (which runs
+  `cargo check -q --message-format=short`) and pause for manual reviews frequently.
 
 ### Step 5: Merge & Complete
 
 Once the implementation is fully tested and manually reviewed:
-- Remind the user to run the `/merge-pr` slash command to push the final code and merge the existing Pull Request into `main`.
+
+- Remind the user to run the `/merge-pr` slash command to push the final code and merge
+  the existing Pull Request into `main`.

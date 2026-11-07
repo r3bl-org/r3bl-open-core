@@ -1,46 +1,45 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
 - [Task: Remove Crossterm via Unified RenderOp Architecture](#task-remove-crossterm-via-unified-renderop-architecture)
-  - [Overview](#overview)
+- [Overview](#overview)
     - [Dependency: Requires task_unify_rendering.md Completion](#dependency-requires-task_unify_renderingmd-completion)
     - [Architectural Vision](#architectural-vision)
-      - [Ultimate Architecture Vision](#ultimate-architecture-vision)
-  - [Current Architecture Analysis](#current-architecture-analysis)
+        - [Ultimate Architecture Vision](#ultimate-architecture-vision)
+- [Current Architecture Analysis](#current-architecture-analysis)
     - [Correct Render Pipeline Flow](#correct-render-pipeline-flow)
     - [Where Crossterm is Used Today](#where-crossterm-is-used-today)
     - [Performance Bottleneck](#performance-bottleneck)
-  - [New Unified Architecture](#new-unified-architecture)
+- [New Unified Architecture](#new-unified-architecture)
     - [RenderOp as Universal Language](#renderop-as-universal-language)
     - [Architectural Symmetry](#architectural-symmetry)
     - [Benefits of This Approach](#benefits-of-this-approach)
-  - [Implementation Plan](#implementation-plan)
-  - [Step 0: Prerequisite Setup [COMPLETE]](#step-0-prerequisite-setup-complete)
-  - [Step 1: Extend RenderOp for Incremental Rendering [COMPLETE]](#step-1-extend-renderop-for-incremental-rendering-complete)
+- [Implementation Plan](#implementation-plan)
+- [Step 0: Prerequisite Setup [COMPLETE]](#step-0-prerequisite-setup-complete)
+- [Step 1: Extend RenderOp for Incremental Rendering [COMPLETE]](#step-1-extend-renderop-for-incremental-rendering-complete)
     - [Key Accomplishments:](#key-accomplishments)
-  - [Step 2: Implement DirectAnsi Backend [COMPLETE]](#step-2-implement-directansi-backend-complete)
+- [Step 2: Implement DirectAnsi Backend [COMPLETE]](#step-2-implement-directansi-backend-complete)
     - [Step 2.1: Create DirectAnsi Module Structure [COMPLETE]](#step-21-create-directansi-module-structure-complete)
     - [Step 2.2: Implement AnsiSequenceGenerator [COMPLETE]](#step-22-implement-ansisequencegenerator-complete)
-  - [Step 3: Complete Type System Architecture & DirectAnsi Backend [COMPLETE]](#step-3-complete-type-system-architecture--directansi-backend-complete)
+- [Step 3: Complete Type System Architecture & DirectAnsi Backend [COMPLETE]](#step-3-complete-type-system-architecture--directansi-backend-complete)
     - [Step 3.0: Remove IR Execution Path & Enforce Semantic Boundary [COMPLETE]](#step-30-remove-ir-execution-path--enforce-semantic-boundary-complete)
     - [Step 3.1: Create RenderOpOutput Execution Path [COMPLETE]](#step-31-create-renderopoutput-execution-path-complete)
     - [Step 3.2: Fix OffscreenBufferPaint Trait & RawMode Infrastructure [COMPLETE]](#step-32-fix-offscreenbufferpaint-trait--rawmode-infrastructure-complete)
     - [Step 3.3: Implement RenderOpPaintImplDirectAnsi (DirectAnsi Backend) [COMPLETE]](#step-33-implement-renderoppaintimpldirectansi-directansi-backend-complete)
-  - [Step 4: Linux Validation & Performance Testing [COMPLETE]](#step-4-linux-validation--performance-testing-complete)
+- [Step 4: Linux Validation & Performance Testing [COMPLETE]](#step-4-linux-validation--performance-testing-complete)
     - [Key Findings:](#key-findings)
-  - [Step 5: Performance Validation & Optimization [COMPLETE]](#step-5-performance-validation--optimization-complete)
+- [Step 5: Performance Validation & Optimization [COMPLETE]](#step-5-performance-validation--optimization-complete)
     - [Performance Results](#performance-results)
-      - [Baseline & Results](#baseline--results)
+        - [Baseline & Results](#baseline--results)
     - [Optimizations Implemented](#optimizations-implemented)
-      - [Stack-Allocated Number Formatting [COMPLETE]](#stack-allocated-number-formatting-complete)
-      - [U8_STRINGS Lookup Table for Color Sequences [COMPLETE]](#u8_strings-lookup-table-for-color-sequences-complete)
-      - [SmallVec[16] Optimization [COMPLETE]](#smallvec16-optimization-complete)
-      - [StyleUSSpan[16] Optimization [COMPLETE]](#styleusspan16-optimization-complete)
-  - [Step 6: Cleanup & Architectural Refinement [COMPLETE]](#step-6-cleanup--architectural-refinement-complete)
+        - [Stack-Allocated Number Formatting [COMPLETE]](#stack-allocated-number-formatting-complete)
+        - [U8_STRINGS Lookup Table for Color Sequences [COMPLETE]](#u8_strings-lookup-table-for-color-sequences-complete)
+        - [SmallVec[16] Optimization [COMPLETE]](#smallvec16-optimization-complete)
+        - [StyleUSSpan[16] Optimization [COMPLETE]](#styleusspan16-optimization-complete)
+- [Step 6: Cleanup & Architectural Refinement [COMPLETE]](#step-6-cleanup--architectural-refinement-complete)
     - [6.1: DirectToAnsi Rename [COMPLETE]](#61-directtoansi-rename-complete)
     - [6.2: Remove Termion Backend (Dead Code Removal) [COMPLETE]](#62-remove-termion-backend-dead-code-removal-complete)
     - [6.3: Review `cli_text` and `tui_styled_text` Consistency [COMPLETE]](#63-review-cli_text-and-tui_styled_text-consistency-complete)
-  - [Step 7: Comprehensive RenderOp Integration Test Suite [COMPLETE]](#step-7-comprehensive-renderop-integration-test-suite-complete)
+- [Step 7: Comprehensive RenderOp Integration Test Suite [COMPLETE]](#step-7-comprehensive-renderop-integration-test-suite-complete)
     - [Summary](#summary)
     - [Part A: Color Operations [COMPLETE]](#part-a-color-operations-complete)
     - [Part B: Cursor Movement Operations [COMPLETE]](#part-b-cursor-movement-operations-complete)
@@ -48,50 +47,52 @@
     - [Part D: State Optimization [COMPLETE]](#part-d-state-optimization-complete)
     - [Part E: Text Painting Operations [COMPLETE]](#part-e-text-painting-operations-complete)
     - [Final QA [COMPLETE]](#final-qa-complete)
-  - [Step 8: Implement InputDevice for DirectToAnsi Backend [COMPLETE - Linux]](#step-8-implement-inputdevice-for-directtoansi-backend-complete---linux)
+- [Step 8: Implement InputDevice for DirectToAnsi Backend [COMPLETE - Linux]](#step-8-implement-inputdevice-for-directtoansi-backend-complete---linux)
     - [Architecture](#architecture)
     - [Step 8.0: Reorganize Existing Output Files [COMPLETE]](#step-80-reorganize-existing-output-files-complete)
     - [Step 8.1: Architecture Design [COMPLETE]](#step-81-architecture-design-complete)
     - [Step 8.2: Implement Protocol Layer Parsers [COMPLETE]](#step-82-implement-protocol-layer-parsers-complete)
-      - [Keyboard Parsing [COMPLETE]](#keyboard-parsing-complete)
-      - [SS3 Keyboard Support [COMPLETE]](#ss3-keyboard-support-complete)
-      - [Kitty Keyboard Protocol (CSI u) Support [COMPLETE]](#kitty-keyboard-protocol-csi-u-support-complete)
-      - [Mouse Parsing [COMPLETE]](#mouse-parsing-complete)
-      - [Terminal Events & OSC Parsing [COMPLETE]](#terminal-events--osc-parsing-complete)
-      - [UTF-8 Text Parsing [COMPLETE]](#utf-8-text-parsing-complete)
+        - [Keyboard Parsing [COMPLETE]](#keyboard-parsing-complete)
+        - [SS3 Keyboard Support [COMPLETE]](#ss3-keyboard-support-complete)
+        - [Kitty Keyboard Protocol (CSI u) Support [COMPLETE]](#kitty-keyboard-protocol-csi-u-support-complete)
+        - [Mouse Parsing [COMPLETE]](#mouse-parsing-complete)
+        - [Terminal Events & OSC Parsing [COMPLETE]](#terminal-events--osc-parsing-complete)
+        - [UTF-8 Text Parsing [COMPLETE]](#utf-8-text-parsing-complete)
     - [Step 8.2.1: Crossterm Feature Parity Analysis [COMPLETE]](#step-821-crossterm-feature-parity-analysis-complete)
     - [Step 8.2.2: Architecture Insight - Mio Poller, MaybeMore & Zero-Latency ESC [COMPLETE]](#step-822-architecture-insight---mio-poller-maybemore--zero-latency-esc-complete)
     - [Step 8.3: Backend Device Implementation [COMPLETE]](#step-83-backend-device-implementation-complete)
     - [Step 8.4: Testing & Validation [COMPLETE]](#step-84-testing--validation-complete)
     - [Step 8.5: Migration & Cleanup [COMPLETE]](#step-85-migration--cleanup-complete)
     - [Step 8.6: Resolve TODOs and Stubs [PENDING]](#step-86-resolve-todos-and-stubs-pending)
-  - [Step 9: macOS & Windows Platform Validation & Crossterm Removal [PENDING]](#step-9-macos--windows-platform-validation--crossterm-removal-pending)
+- [Step 9: macOS & Windows Platform Validation & Crossterm Removal [PENDING]](#step-9-macos--windows-platform-validation--crossterm-removal-pending)
     - [macOS Drivers & Testing [PENDING]](#macos-drivers--testing-pending)
     - [Windows Drivers & Testing [PENDING]](#windows-drivers--testing-pending)
     - [Crossterm Dependency Removal [PENDING]](#crossterm-dependency-removal-pending)
-  - [Implementation Checklist](#implementation-checklist)
-  - [Critical Success Factors](#critical-success-factors)
-  - [Effort Summary - Steps 1-7 Implementation](#effort-summary---steps-1-7-implementation)
-  - [Conclusion](#conclusion)
+- [Implementation Checklist](#implementation-checklist)
+- [Critical Success Factors](#critical-success-factors)
+- [Effort Summary - Steps 1-8 Implementation](#effort-summary---steps-1-8-implementation)
+- [Conclusion](#conclusion)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Task: Remove Crossterm via Unified RenderOp Architecture
 
 ## Overview
 
-This document outlines the plan to remove the crossterm dependency by unifying all rendering paths
-around `RenderOp` as a universal terminal rendering language, implementing a DirectAnsi backend
-using `PixelCharRenderer`, and creating a symmetric VT-100 input parser.
+This document outlines the plan to remove the crossterm dependency by unifying all
+rendering paths around `RenderOp` as a universal terminal rendering language, implementing
+a DirectAnsi backend using `PixelCharRenderer`, and creating a symmetric VT-100 input
+parser.
 
-**Key Insight**: Instead of virtualizing crossterm's API, we standardize on `RenderOp` (which we
-already own) as the rendering language for all three paths: Full TUI, choose(), and
-readline_async(). This creates a cleaner architecture with perfect symmetry between output and
-input.
+**Key Insight**: Instead of virtualizing crossterm's API, we standardize on `RenderOp`
+(which we already own) as the rendering language for all three paths: Full TUI, choose(),
+and readline_async(). This creates a cleaner architecture with perfect symmetry between
+output and input.
 
 ### Dependency: Requires task_unify_rendering.md Completion
 
-**This task depends on completion of [task_unify_rendering.md](done/task_unify_rendering.md):**
+**This task depends on completion of
+[task_unify_rendering.md](done/task_unify_rendering.md):**
 
 | Unification Phase      | Output                                                   | Status                                 | Notes                                  |
 | ---------------------- | -------------------------------------------------------- | -------------------------------------- | -------------------------------------- |
@@ -228,14 +229,15 @@ RenderOps → OffscreenBuffer → PixelCharRenderer → ANSI → stdout
 `RenderOp` is already designed as a backend-agnostic abstraction. Instead of creating a
 crossterm-compatible shim, we:
 
-1. **Extend RenderOp** with operations needed by choose()/readline_async() (incremental rendering)
+1. **Extend RenderOp** with operations needed by choose()/readline_async() (incremental
+   rendering)
 2. **Implement DirectAnsi backend** that uses `PixelCharRenderer` for ANSI generation
 3. **Migrate all paths** to speak RenderOps instead of crossterm
 
 **Key advantages:**
 
-- RenderOp is higher-level than crossterm (supports TUI concepts like z-order, relative positioning,
-  styled text)
+- RenderOp is higher-level than crossterm (supports TUI concepts like z-order, relative
+  positioning, styled text)
 - RenderOp already has infrastructure to route to different backends
 - RenderOp is something we own and control
 - No need to maintain crossterm compatibility layer
@@ -254,7 +256,8 @@ Application → RenderOps → DirectAnsi Backend → ANSI bytes → stdout
 stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Application
 ```
 
-**Perfect symmetry**: Output generates ANSI, input parses ANSI. Both sides speak the same protocol.
+**Perfect symmetry**: Output generates ANSI, input parses ANSI. Both sides speak the same
+protocol.
 
 ### Benefits of This Approach
 
@@ -269,7 +272,8 @@ stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Applicatio
 
 ## Step 0: Prerequisite Setup [COMPLETE]
 
-All prerequisites, repository dependencies, and RenderOp design requirements are satisfied.
+All prerequisites, repository dependencies, and RenderOp design requirements are
+satisfied.
 
 ## Step 1: Extend RenderOp for Incremental Rendering [COMPLETE]
 
@@ -291,7 +295,8 @@ All 11 new `RenderOp` variants have been successfully added to
 
 ## Step 2: Implement DirectAnsi Backend [COMPLETE]
 
-**Status**: [COMPLETE] STEPS 1-2 COMPLETE (October 23, 2025) | [WORK_IN_PROGRESS] Step 3 Ready
+**Status**: [COMPLETE] STEPS 1-2 COMPLETE (October 23, 2025) | [WORK_IN_PROGRESS] Step 3
+Ready
 
 ### Step 2.1: Create DirectAnsi Module Structure [COMPLETE]
 
@@ -304,7 +309,8 @@ All 11 new `RenderOp` variants have been successfully added to
 
 - **All 40+ methods implemented** using semantic ANSI generation (not raw format!)
 - **Key Achievement**: Replaced raw `format!()` calls with semantic typed enums
-- **Leveraged VT-100 Infrastructure**: CsiSequence, SgrColorSequence, PrivateModeType enums
+- **Leveraged VT-100 Infrastructure**: CsiSequence, SgrColorSequence, PrivateModeType
+  enums
 - **Type Safety**: All sequences are type-safe with compile-time guarantees
 - **Test Coverage**: [COMPLETE] 33/33 unit tests passing
 
@@ -314,7 +320,8 @@ All 11 new `RenderOp` variants have been successfully added to
 
 ### Step 3.0: Remove IR Execution Path & Enforce Semantic Boundary [COMPLETE]
 
-**Objective**: Delete the direct IR execution path, forcing all operations through the Compositor.
+**Objective**: Delete the direct IR execution path, forcing all operations through the
+Compositor.
 
 ### Step 3.1: Create RenderOpOutput Execution Path [COMPLETE]
 
@@ -323,8 +330,8 @@ infrastructure.
 
 ### Step 3.2: Fix OffscreenBufferPaint Trait & RawMode Infrastructure [COMPLETE]
 
-**Objective**: Fix `OffscreenBufferPaint::render()` to return `RenderOpOutputVec` and update RawMode
-to use the pipeline properly.
+**Objective**: Fix `OffscreenBufferPaint::render()` to return `RenderOpOutputVec` and
+update RawMode to use the pipeline properly.
 
 ### Step 3.3: Implement RenderOpPaintImplDirectAnsi (DirectAnsi Backend) [COMPLETE]
 
@@ -342,8 +349,8 @@ to use the pipeline properly.
 
 **Status**: [COMPLETE] COMPLETE (October 26, 2025)
 
-**Scope**: Linux platform validation and performance benchmarking. macOS and Windows testing
-deferred to Step 9.
+**Scope**: Linux platform validation and performance benchmarking. macOS and Windows
+testing deferred to Step 9.
 
 ### Key Findings:
 
@@ -370,8 +377,8 @@ deferred to Step 9.
 
 **Benchmark Command**: `./run.fish run-examples-flamegraph-fold --benchmark`
 
-**Methodology**: 8-second continuous workload, 999 Hz sampling, scripted input (pangrams, cursor
-movements)
+**Methodology**: 8-second continuous workload, 999 Hz sampling, scripted input (pangrams,
+cursor movements)
 
 #### Baseline & Results
 
@@ -380,7 +387,8 @@ DirectToAnsi vs Crossterm: 107.3M / 122.5M = 0.876
 Result: DirectToAnsi is 12.4% FASTER than Crossterm [COMPLETE]
 ```
 
-**Victory Summary**: DirectToAnsi achieves the goal of matching or exceeding Crossterm performance.
+**Victory Summary**: DirectToAnsi achieves the goal of matching or exceeding Crossterm
+performance.
 
 ### Optimizations Implemented
 
@@ -420,7 +428,8 @@ Total improvement: ~18% faster than Crossterm [COMPLETE][COMPLETE]
 
 **Status**: [COMPLETE] COMPLETE (October 28, 2025)
 
-**Objective**: Polish the codebase after DirectToAnsi integration and remove dead code/debt.
+**Objective**: Polish the codebase after DirectToAnsi integration and remove dead
+code/debt.
 
 ### 6.1: DirectToAnsi Rename [COMPLETE]
 
@@ -439,7 +448,9 @@ The `direct_ansi/` module has already been renamed to `direct_to_ansi/` with:
 
 **Rationale**: Termion was never implemented and was dead code.
 
-**Finding**: Already removed - termion_backend directory and TerminalLibBackend::Termion variant no longer exist in codebase. Only documentation references remain (as a "future possibility" comment).
+**Finding**: Already removed - termion_backend directory and TerminalLibBackend::Termion
+variant no longer exist in codebase. Only documentation references remain (as a "future
+possibility" comment).
 
 ### 6.3: Review `cli_text` and `tui_styled_text` Consistency [COMPLETE]
 
@@ -449,21 +460,23 @@ The `direct_ansi/` module has already been renamed to `direct_to_ansi/` with:
 
 **Rationale**:
 
-1. **Different Abstraction Levels**: `cli_text` is low-level, `tui_styled_text` is high-level
-2. **Different Rendering Paths**: `cli_text` uses direct PixelCharRenderer, `tui_styled_text` uses
-   RenderOp pipeline
+1. **Different Abstraction Levels**: `cli_text` is low-level, `tui_styled_text` is
+   high-level
+2. **Different Rendering Paths**: `cli_text` uses direct PixelCharRenderer,
+   `tui_styled_text` uses RenderOp pipeline
 3. **Different Style APIs**: Consolidating would require unifying style API (out of scope)
 4. **Different Performance Profiles**: Each optimized for its use case
 5. **Intentional Naming**: `cli_text*` vs `tui_styled_text` conveys intended use
 
-**Recommendation**: Keep modules separate due to semantic differences and different rendering paths.
+**Recommendation**: Keep modules separate due to semantic differences and different
+rendering paths.
 
 ## Step 7: Comprehensive RenderOp Integration Test Suite [COMPLETE]
 
 **Status**: [COMPLETE] COMPLETED - October 27, 2025
 
-**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution
-pipeline with DirectToAnsi backend.
+**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp
+execution pipeline with DirectToAnsi backend.
 
 ### Summary
 
@@ -530,11 +543,15 @@ pipeline with DirectToAnsi backend.
 
 ## Step 8: Implement InputDevice for DirectToAnsi Backend [COMPLETE - Linux]
 
-**Status**: [COMPLETE] Linux InputDevice implementation complete with Crossterm feature parity, Kitty CSI u support, OSC handling, MaybeMore stream tracking, and resilient circuit-breaker recovery.
+**Status**: [COMPLETE] Linux InputDevice implementation complete with Crossterm feature
+parity, Kitty CSI u support, OSC handling, MaybeMore stream tracking, and resilient
+circuit-breaker recovery.
 
-**Objective**: Replace `crossterm::event::EventStream` on Linux with native `mio`-based non-blocking stdin polling and a decoupled chunk framer / chunk decoder pipeline.
+**Objective**: Replace `crossterm::event::EventStream` on Linux with native `mio`-based
+non-blocking stdin polling and a decoupled chunk framer / chunk decoder pipeline.
 
-**Rationale**: Completes the DirectToAnsi pipeline on Linux, delivering high-performance, pure-Rust terminal input handling without Crossterm dependency.
+**Rationale**: Completes the DirectToAnsi pipeline on Linux, delivering high-performance,
+pure-Rust terminal input handling without Crossterm dependency.
 
 ### Architecture
 
@@ -563,7 +580,8 @@ Layer 2: Backend I/O & Actor Polling (terminal_lib_backends/direct_to_ansi/input
 
 ### Step 8.0: Reorganize Existing Output Files [COMPLETE]
 
-**Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi backend
+**Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi
+backend
 
 **Status**: [COMPLETE] COMPLETE
 
@@ -589,13 +607,21 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **Approved Architecture**:
 
-- [COMPLETE] **Two-layer separation**: Framing and decoding (pure) separate from I/O polling (mio)
-- [COMPLETE] **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm (pending Step 9)
-- [COMPLETE] **Async I/O**: Dedicated `mio` worker thread polling `/dev/tty` non-blocking with OS pipe / channel dispatch to tokio tasks (replaces problematic `tokio::io::stdin()`)
-- [COMPLETE] **Stream availability**: Evaluated via `MaybeMore` (`KernelDrained` vs `KernelMayHaveMore`) at I/O read boundary
-- [COMPLETE] **ANSI protocols supported**: Keyboard (CSI + SS3 + CSI u Kitty), Mouse (SGR + X10 + RXVT), Focus, Paste, OSC 10-19 color reports, OSC 52 clipboard, UTF-8
-- [COMPLETE] **Resiliency**: Runaway OSC payload protection via `CircuitBreaker` and `DrainState`
-- [COMPLETE] **Naming**: `vt_100_pty_output_parser` (existing) + `vt_100_terminal_input_parser` (new)
+- [COMPLETE] **Two-layer separation**: Framing and decoding (pure) separate from I/O
+  polling (mio)
+- [COMPLETE] **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm
+  (pending Step 9)
+- [COMPLETE] **Async I/O**: Dedicated `mio` worker thread polling `/dev/tty` non-blocking
+  with OS pipe / channel dispatch to tokio tasks (replaces problematic
+  `tokio::io::stdin()`)
+- [COMPLETE] **Stream availability**: Evaluated via `MaybeMore` (`KernelDrained` vs
+  `KernelMayHaveMore`) at I/O read boundary
+- [COMPLETE] **ANSI protocols supported**: Keyboard (CSI + SS3 + CSI u Kitty), Mouse
+  (SGR + X10 + RXVT), Focus, Paste, OSC 10-19 color reports, OSC 52 clipboard, UTF-8
+- [COMPLETE] **Resiliency**: Runaway OSC payload protection via `CircuitBreaker` and
+  `DrainState`
+- [COMPLETE] **Naming**: `vt_100_pty_output_parser` (existing) +
+  `vt_100_terminal_input_parser` (new)
 
 ### Step 8.2: Implement Protocol Layer Parsers [COMPLETE]
 
@@ -603,12 +629,15 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 #### Keyboard Parsing [COMPLETE]
 
-- [COMPLETE] Implemented `parse_keyboard_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)>`
+- [COMPLETE] Implemented
+  `parse_keyboard_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)>`
 - [COMPLETE] Arrow keys: CSI A/B/C/D → KeyCode::Up/Down/Right/Left
 - [COMPLETE] Function keys: CSI <n>~ → KeyCode::Function(1-12)
 - [COMPLETE] Home/End: CSI H/F → KeyCode::Home/End
-- [COMPLETE] Modified Home/End: CSI 1;m H/F → KeyCode::Home/End with modifiers (xterm standard)
-- [COMPLETE] Modified Function keys F1-F4: CSI 1;m P/Q/R/S → KeyCode::Function(1-4) with modifiers
+- [COMPLETE] Modified Home/End: CSI 1;m H/F → KeyCode::Home/End with modifiers (xterm
+  standard)
+- [COMPLETE] Modified Function keys F1-F4: CSI 1;m P/Q/R/S → KeyCode::Function(1-4) with
+  modifiers
 - [COMPLETE] Backtab: CSI Z → KeyCode::BackTab
 - [COMPLETE] Modifier combinations: CSI 1;m final_byte
 - [COMPLETE] All critical keyboard sequences handled and covered by unit/roundtrip tests
@@ -624,8 +653,10 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 - [COMPLETE] Implemented `parse_csi_u()` in `chunk_decoder/keyboard/csi_u.rs`
 - [COMPLETE] Disambiguates `Alt+[` (`ESC [`) from standard CSI sequences
-- [COMPLETE] Decodes Kitty progressive enhancement sequences (`CSI <codepoint> ; <modifiers> u`)
-- [COMPLETE] Terminal mode controller pushes `PushKeyboardEnhancementFlags` on startup and pops on shutdown
+- [COMPLETE] Decodes Kitty progressive enhancement sequences
+  (`CSI <codepoint> ; <modifiers> u`)
+- [COMPLETE] Terminal mode controller pushes `PushKeyboardEnhancementFlags` on startup and
+  pops on shutdown
 - [COMPLETE] Tested with unit and roundtrip tests
 
 #### Mouse Parsing [COMPLETE]
@@ -659,10 +690,12 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 - [COMPLETE] Resize events: CSI 8 ; rows ; cols t
 - [COMPLETE] Focus events: CSI I (gained) / CSI O (lost)
 - [COMPLETE] Bracketed paste: ESC[200~ (start) / ESC[201~ (end)
-- [COMPLETE] OSC Sequence parsing: OSC 10, 11, 12, 13, 14, 17, 19 dynamic color query responses and OSC 52 clipboard transfers
+- [COMPLETE] OSC Sequence parsing: OSC 10, 11, 12, 13, 14, 17, 19 dynamic color query
+  responses and OSC 52 clipboard transfers
 - [COMPLETE] `Alt+]` vs OSC disambiguation via lexical scanning and `MaybeMore`
 - [COMPLETE] `VT100InputEventIR::Ignored` variant for consumed protocol responses
-- [COMPLETE] Circuit breaker and runaway OSC payload protection (1 MiB cap with drain state)
+- [COMPLETE] Circuit breaker and runaway OSC payload protection (1 MiB cap with drain
+  state)
 
 #### UTF-8 Text Parsing [COMPLETE]
 
@@ -708,23 +741,35 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 ### Step 8.2.2: Architecture Insight - Mio Poller, MaybeMore & Zero-Latency ESC [COMPLETE]
 
-**The ESC Key & Escape Collision Problem**: How do we distinguish between an isolated ESC key press and the start of an ANSI sequence (`ESC [`, `ESC O`, `ESC ]`) without adding arbitrary timer delays?
+**The ESC Key & Escape Collision Problem**: How do we distinguish between an isolated ESC
+key press and the start of an ANSI sequence (`ESC [`, `ESC O`, `ESC ]`) without adding
+arbitrary timer delays?
 
 **The Solution: Dedicated Mio Poller + `MaybeMore` + Circuit Breaker**:
 
-1. **Dedicated Worker Thread**: `MioPollWorker` monitors `/dev/tty` with `mio::Poll` using non-blocking reads, multiplexing stdin with OS signals (`SIGWINCH`) and software interrupts.
+1. **Dedicated Worker Thread**: `MioPollWorker` monitors `/dev/tty` with `mio::Poll` using
+   non-blocking reads, multiplexing stdin with OS signals (`SIGWINCH`) and software
+   interrupts.
 2. **Deterministic Stream Availability (`MaybeMore`)**:
-   - Evaluated directly at the I/O read boundary: `MaybeMore::from_read_count(bytes_read, capacity)`.
-   - **`KernelDrained`**: If `bytes_read < capacity`, the kernel read queue is empty. A lone `ESC` byte represents an intentional ESC key press and is emitted immediately (0ms delay, no timeout).
-   - **`KernelMayHaveMore`**: If `bytes_read == capacity`, more packet fragments may be in flight; incomplete prefixes are held in the framer accumulator.
+    - Evaluated directly at the I/O read boundary:
+      `MaybeMore::from_read_count(bytes_read, capacity)`.
+    - **`KernelDrained`**: If `bytes_read < capacity`, the kernel read queue is empty. A
+      lone `ESC` byte represents an intentional ESC key press and is emitted immediately
+      (0ms delay, no timeout).
+    - **`KernelMayHaveMore`**: If `bytes_read == capacity`, more packet fragments may be
+      in flight; incomplete prefixes are held in the framer accumulator.
 3. **Resilient Circuit Breaker & Drain State**:
-   - If an unrecognized or malformed sequence arrives (e.g., unsupported CSI sequence, runaway OSC transfer), the `CircuitBreaker` transitions to `DrainState` or discards the chunk without freezing the input event loop. Subsequent keystrokes are never blocked.
+    - If an unrecognized or malformed sequence arrives (e.g., unsupported CSI sequence,
+      runaway OSC transfer), the `CircuitBreaker` transitions to `DrainState` or discards
+      the chunk without freezing the input event loop. Subsequent keystrokes are never
+      blocked.
 
 ### Step 8.3: Backend Device Implementation [COMPLETE]
 
 **Status**: [COMPLETE] **Step 8.3 FULLY COMPLETE** - All parsers integrated
 
-**Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
+**Location**:
+`tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
 
 **DirectToAnsiInputDevice Structure**:
 
@@ -739,7 +784,8 @@ pub struct DirectToAnsiInputDevice {
 
 - Asynchronous `next(&mut self) -> Option<InputEvent>` reading from subscriber channel
 - Background `MioPollWorker` running dedicated `mio::Poll` on `/dev/tty`
-- Chunk framing, circuit breaking, and protocol decoding performed before channel broadcast
+- Chunk framing, circuit breaking, and protocol decoding performed before channel
+  broadcast
 - Zero-latency ESC key detection and packet fragmentation reassembly via `MaybeMore`
 
 **Parser Integration**: [COMPLETE] **ALL COMPLETE**
@@ -749,7 +795,8 @@ pub struct DirectToAnsiInputDevice {
 - [COMPLETE] Terminal events parser (resize, focus, paste, OSC color & clipboard)
 - [COMPLETE] UTF-8 text parser with 13 tests
 
-**Test Status**: [COMPLETE] **All input parser unit, property, and PTY integration tests passing**
+**Test Status**: [COMPLETE] **All input parser unit, property, and PTY integration tests
+passing**
 
 - [COMPLETE] Input parser unit tests
 - [COMPLETE] PTY integration tests (process isolation)
@@ -790,51 +837,7 @@ pub struct DirectToAnsiInputDevice {
 - [COMPLETE] Remove crossterm `EventStream` usage in DirectToAnsi paths on Linux
 - [COMPLETE] Update documentation and PTY integration tests
 
-### Step 8.6: Resolve TODOs and Stubs [PENDING]
-
-**Objective**: Sweep the codebase for incomplete implementations and TODO markers as final validation before crossterm removal.
-
-**Subtasks**:
-
-- [ ] Search for `TODO:` comments related to DirectToAnsi/RenderOp
-- [ ] Search for `FIXME:` comments in input/output paths
-- [ ] Search for `unimplemented!()` calls in render pipeline
-- [ ] Review all stub functions in DirectToAnsi backend
-- [ ] Either implement or remove each stub
-- [ ] Verify no lingering crossterm references in DirectToAnsi code paths
-- [ ] Run full test suite to ensure no regressions
-
-## Step 9: macOS & Windows Platform Validation & Crossterm Removal [PENDING]
-
-**Status**: [WORK_IN_PROGRESS] PENDING - Linux DirectToAnsi is complete; macOS and Windows native drivers are required to eliminate Crossterm entirely.
-
-**Objective**: Implement native non-Crossterm input and raw-mode drivers for macOS and Windows, validate cross-platform parity, and remove `crossterm` from `Cargo.toml`.
-
-### macOS Drivers & Testing [PENDING]
-
-- [ ] Implement Darwin-compatible tty poller:
-  - Darwin's `kqueue(2)` fails with `EINVAL` on `/dev/tty` / PTY file descriptors.
-  - Implement a `select(2)` / `poll(2)` polling driver (similar to `filedescriptor`).
-- [ ] Implement `SIGWINCH` signal delivery via `signal-hook` with self-pipe trick.
-- [ ] Validate DirectToAnsi rendering operations on macOS fleet.
-- [ ] Validate DirectToAnsi input handling on macOS fleet.
-
-### Windows Drivers & Testing [PENDING]
-
-- [ ] Implement native Windows Console input driver:
-  - Windows lacks `/dev/tty` and POSIX termios.
-  - Implement Win32 console reader using `ReadConsoleInputW` / ConPTY virtual terminal input processing (`ENABLE_VIRTUAL_TERMINAL_INPUT`).
-- [ ] Implement Windows console raw mode toggling via `GetConsoleMode` / `SetConsoleMode`.
-- [ ] Validate DirectToAnsi rendering operations on Windows fleet.
-- [ ] Validate DirectToAnsi input handling on Windows fleet.
-
-### Crossterm Dependency Removal [PENDING]
-
-- [ ] Verify zero remaining `crossterm` usages in the codebase.
-- [ ] Remove `crossterm` dependency from `tui/Cargo.toml`.
-- [ ] Remove `TerminalLibBackend::Crossterm` or retain as optional feature flag.
-- [ ] Update documentation and crate architecture diagrams.
-- [ ] Final validation across all platforms.
+> **Follow-up (macOS & Windows)**: The remaining cross-platform work (Steps 8.6 and 9: macOS/Windows native input & raw-mode drivers, final TODO sweep, and removing `crossterm` from `tui/Cargo.toml`) has been split into [remove_crossterm_mac_win.md](../remove_crossterm_mac_win.md).
 
 ## Implementation Checklist
 
@@ -846,56 +849,55 @@ pub struct DirectToAnsiInputDevice {
 - [x] Step 5: Performance optimization complete
 - [x] Step 6: Cleanup and refinement complete
 - [x] Step 7: Comprehensive test suite complete
-- [x] Step 8: InputDevice implementation for Linux complete
-  - [x] Step 8.0-8.5: Complete
-  - [ ] Step 8.6: Resolve TODOs and Stubs (optional final sweep)
-- [ ] Step 9: macOS & Windows native drivers and Crossterm removal
+- [x] Step 8: InputDevice implementation for Linux complete (Steps 8.0–8.5)
+- [x] Split remaining macOS & Windows work to [remove_crossterm_mac_win.md](../remove_crossterm_mac_win.md)
 
 ## Critical Success Factors
 
 1. **Architecture Soundness**:
-   - [COMPLETE] RenderOp is proven to work for all rendering paths
-   - [COMPLETE] DirectAnsi backend matches Crossterm performance (18% faster)
-   - [COMPLETE] Input/output symmetry via ANSI protocol
-   - [COMPLETE] Decoupled ChunkFramer / ChunkDecoder / CircuitBreaker architecture
+    - [COMPLETE] RenderOp is proven to work for all rendering paths
+    - [COMPLETE] DirectAnsi backend matches Crossterm performance (18% faster)
+    - [COMPLETE] Input/output symmetry via ANSI protocol
+    - [COMPLETE] Decoupled ChunkFramer / ChunkDecoder / CircuitBreaker architecture
 
 2. **Code Quality**:
-   - [COMPLETE] Full test coverage for all major components
-   - [COMPLETE] Clippy compliance across codebase
-   - [COMPLETE] Zero regressions from refactoring
+    - [COMPLETE] Full test coverage for all major components
+    - [COMPLETE] Clippy compliance across codebase
+    - [COMPLETE] Zero regressions from refactoring
 
 3. **Platform Support**:
-   - [COMPLETE] Linux fully validated (RenderOp output + DirectToAnsiInputDevice)
-   - [WORK_IN_PROGRESS] macOS native driver pending (kqueue workaround via select)
-   - [WORK_IN_PROGRESS] Windows native driver pending (Win32 Console / ConPTY)
+    - [COMPLETE] Linux fully validated (RenderOp output + DirectToAnsiInputDevice)
+    - macOS & Windows native drivers tracked in [remove_crossterm_mac_win.md](../remove_crossterm_mac_win.md)
 
 4. **Performance**:
-   - [COMPLETE] DirectAnsi is 18% faster than Crossterm
-   - [COMPLETE] Zero memory leaks
-   - [COMPLETE] Zero-latency ESC key disambiguation (0ms delay) via MaybeMore
+    - [COMPLETE] DirectAnsi is 18% faster than Crossterm
+    - [COMPLETE] Zero memory leaks
+    - [COMPLETE] Zero-latency ESC key disambiguation (0ms delay) via MaybeMore
 
 ## Effort Summary - Steps 1-8 Implementation
 
-| Step      | Component                         | Status                         | Time          | Lines |
-| --------- | --------------------------------- | ------------------------------ | ------------- | ----- |
-| 1         | RenderOp extension                | [COMPLETE] COMPLETE            | 4-5h          | 1242  |
-| 2         | DirectAnsi module + ANSI gen      | [COMPLETE] COMPLETE            | 3-4h          | 600   |
-| 3         | Type system + backend impl        | [COMPLETE] COMPLETE            | 33-46h        | 1300  |
-| 4         | Linux validation                  | [COMPLETE] COMPLETE            | 2-3h          | 0     |
-| 5         | Performance optimization          | [COMPLETE] COMPLETE            | 3-4h          | 150   |
-| 6         | Cleanup & refinement              | [COMPLETE] COMPLETE            | 1-2h          | 50    |
-| 7         | Test suite                        | [COMPLETE] COMPLETE            | 4-6h          | 400   |
-| 8         | InputDevice implementation (Linux)| [COMPLETE] COMPLETE            | 8-12h         | 800+  |
-| 9         | macOS & Windows native drivers    | [WORK_IN_PROGRESS] PENDING     | 10-15h        | TBD   |
-| **TOTAL** | **Steps 1-8**                     | **~60-80 hours**               | **~5500 LOC** |       |
+| Step      | Component                          | Status              | Time          | Lines |
+| --------- | ---------------------------------- | ------------------- | ------------- | ----- |
+| 1         | RenderOp extension                 | [COMPLETE] COMPLETE | 4-5h          | 1242  |
+| 2         | DirectAnsi module + ANSI gen       | [COMPLETE] COMPLETE | 3-4h          | 600   |
+| 3         | Type system + backend impl         | [COMPLETE] COMPLETE | 33-46h        | 1300  |
+| 4         | Linux validation                   | [COMPLETE] COMPLETE | 2-3h          | 0     |
+| 5         | Performance optimization           | [COMPLETE] COMPLETE | 3-4h          | 150   |
+| 6         | Cleanup & refinement               | [COMPLETE] COMPLETE | 1-2h          | 50    |
+| 7         | Test suite                         | [COMPLETE] COMPLETE | 4-6h          | 400   |
+| 8         | InputDevice implementation (Linux) | [COMPLETE] COMPLETE | 8-12h         | 800+  |
+| **TOTAL** | **Steps 1-8**                      | **~60-80 hours**    | **~5500 LOC** |       |
 
 ## Conclusion
 
-The unified RenderOp architecture and DirectToAnsi backend are now production-ready on Linux:
+The unified RenderOp architecture and DirectToAnsi backend are now production-ready on
+Linux:
 
-- [COMPLETE] Output path fully implemented with DirectAnsi backend (18% performance improvement)
+- [COMPLETE] Output path fully implemented with DirectAnsi backend (18% performance
+  improvement)
 - [COMPLETE] Comprehensive test coverage across all RenderOps
-- [COMPLETE] Input protocol parsers complete with Crossterm feature parity, Kitty CSI u, and OSC support
+- [COMPLETE] Input protocol parsers complete with Crossterm feature parity, Kitty CSI u,
+  and OSC support
 - [COMPLETE] Resilient circuit breaker and zero-latency ESC disambiguation via MaybeMore
 - [COMPLETE] Production-ready Linux InputDevice integrated into application event loop
-- [WORK_IN_PROGRESS] Final step is implementing native drivers for macOS (select poller) and Windows (ConPTY) to drop Crossterm from `Cargo.toml`.
+- Remaining macOS & Windows native driver work is tracked in [remove_crossterm_mac_win.md](../remove_crossterm_mac_win.md).

@@ -56,10 +56,16 @@ user: "Are we starting:
 
 Follow this "slow and steady" workflow for all non-trivial changes:
 
-- **Phase 1: Architecture & Task File:** Write the spec/design directly to `task/<name>.md` (via `/plan`, `/fix-issue`, or `/r3bl-task create <name>`) with exact Rust struct/trait definitions and target file paths, or diagnose a root-cause bug. Do not edit source files during planning.
+- **Phase 1: Architecture & Task File:** Write the spec/design directly to
+  `task/<name>.md` (via `/plan`, `/fix-issue`, or `/r3bl-task create <name>`) with exact
+  Rust struct/trait definitions and target file paths, or diagnose a root-cause bug. Do
+  not edit source files during planning.
 - **Manual Review:** Wait for the user to manually review and **explicitly approve** the
   task file before starting implementation.
-- **Phase 2: Iterative Implementation:** In a clean or `/compact`-ed thread, load `task/<name>.md` (using `/r3bl-task update <name>`), write the code, run `./check.fish --check` (which runs `cargo check -q --message-format=short`), and write tests.
+- **Phase 2: Iterative Implementation:** In a clean or `/compact`-ed thread, load
+  `task/<name>.md` (using `/r3bl-task update <name>`), write the code, run
+  `./check.fish --check` (which runs `cargo check -q --message-format=short`), and write
+  tests.
 
 ### 2. Existing Task
 
@@ -68,7 +74,9 @@ Follow this "slow and steady" workflow for all non-trivial changes:
 
 ### 3. One-off Work
 
-- **Simple isolated edits or mid-sized features:** Execute directly without a formal `task/<name>.md` plan first, while still following the Progress & Review Guardrails below.
+- **Simple isolated edits or mid-sized features:** Execute directly without a formal
+  `task/<name>.md` plan first, while still following the Progress & Review Guardrails
+  below.
 
 ## Progress & Review Guardrails (Anti-Hallucination)
 
@@ -80,13 +88,13 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
 2. **Milestone Stability:** Stop and ask for a review as soon as you achieve any stable
    milestone (e.g., code compiles after a refactor, a sub-module is renamed, or a complex
    regex operation is completed).
-3. **Validation before Review (Fast Checks Only):** Always run `./check.fish --check`
-   (or `cargo check -q --message-format=short`) locally BEFORE asking the user for a review.
+3. **Validation before Review (Fast Checks Only):** Always run `./check.fish --check` (or
+   `cargo check -q --message-format=short`) locally BEFORE asking the user for a review.
    Never present "broken" progress.
-   - **No Autonomous Heavy Checks:** Do NOT run heavy operations (`./check.fish --test`,
-     `--clippy`, `--quick-doc`, `--doc`, or `--full`) autonomously after routine edits or
-     during interim review pauses. Heavy checks must run ONLY when explicitly requested by
-     the user or when reaching a final pre-commit / pre-PR milestone.
+    - **No Autonomous Heavy Checks:** Do NOT run heavy operations (`./check.fish --test`,
+      `--clippy`, `--quick-doc`, `--doc`, or `--full`) autonomously after routine edits or
+      during interim review pauses. Heavy checks must run ONLY when explicitly requested
+      by the user or when reaching a final pre-commit / pre-PR milestone.
 4. **Attention Signal:** When stopping for a mandatory review point, run `fish -c "beep"`
    to alert the user.
 5. **Mandatory Manual Review:** A task, phase, or sub-phase is not complete until the user
@@ -103,8 +111,9 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
           and wait for approval.
         - **Option B (IDE Review):**
             1. Ask the user: "choose your ide: 1: code, 2: antigravity-ide, 3: codium, 4:
-               code-insiders, 5: codium-insiders, if you press enter we will default to 1".
-               (Note: if the user types "agy-ide" or similar, map it to "antigravity-ide").
+               code-insiders, 5: codium-insiders, if you press enter we will default to
+               1". (Note: if the user types "agy-ide" or similar, map it to
+               "antigravity-ide").
             2. Then use `<IDE> <file_path>` to open the first file with a checkbox.
             3. Ask the user to manually review it.
             4. Once the user confirms ("good" or similar), check the box in the task file.
@@ -121,11 +130,11 @@ during complex or long-running tasks, you MUST follow these loop-in-the-user rul
 9. **No `git checkout` for mistakes:** If a mistake is made in a file during a refactor or
    edit, do NOT run `git checkout` to revert it. Instead, systematically fix the mistake
    using the built-in native file-editing tools accurately, deliberately, and slowly.
-10. **Git Diff Audit Before Review:** Before asking the user for review or declaring a file
-    edit complete, you MUST run `git diff <file_path>` (or `git diff`) on all modified
-    files. Audit the diff line-by-line to verify that changes are strictly surgical and
-    contain zero unintended collateral modifications (such as altered doctests, lost doc
-    comments, or modified function signatures).
+10. **Git Diff Audit Before Review:** Before asking the user for review or declaring a
+    file edit complete, you MUST run `git diff <file_path>` (or `git diff`) on all
+    modified files. Audit the diff line-by-line to verify that changes are strictly
+    surgical and contain zero unintended collateral modifications (such as altered
+    doctests, lost doc comments, or modified function signatures).
 
 ## Design Philosophy
 
@@ -135,8 +144,8 @@ states unrepresentable. See `design-philosophy` skill for principles and pattern
 ## Tooling & Capabilities
 
 **A. Semantic Rust Tools (AST-Aware MCP):** Priority #1. When connected to the Rust MCP
-server named `rust-analyzer` (running the `rust-analyzer-mcp-server` binary), aggressively use its
-tools for code navigation (`rust_analyzer_definition`, `rust_analyzer_references`,
+server named `rust-analyzer` (running the `rust-analyzer-mcp-server` binary), aggressively
+use its tools for code navigation (`rust_analyzer_definition`, `rust_analyzer_references`,
 `rust_analyzer_hover`, `rust_analyzer_symbols`), quick-fixes
 (`rust_analyzer_code_actions`), and diagnostics (`rust_analyzer_diagnostics`). These
 AST-level operations are the safest way to inspect and modify code.
@@ -149,19 +158,20 @@ correct call sites. Do NOT write Python scripts.
 **C. Bulk Code Modifications:**
 
 1. **Scripts of ANY Kind are STRICTLY PROHIBITED**: You are forbidden from using scripts
-   of any kind (whether shell-based like `perl`, `sed`, `awk`, `python`, `bash`, `fish`, or
-   custom/disposable Rust scripts compiled via `rustc`) to perform file content modifications
-   or bulk find-and-replaces.
+   of any kind (whether shell-based like `perl`, `sed`, `awk`, `python`, `bash`, `fish`,
+   or custom/disposable Rust scripts compiled via `rustc`) to perform file content
+   modifications or bulk find-and-replaces.
     - **NEVER use `sed`** for blind type/variable renaming (it causes massive collateral
       damage to unstaged code and unrelated logic).
     - **NEVER use `awk`** (e.g., `awk '!seen[$0]++'`) for "cleaning up" files or
       deduplicating imports; it will destroy the file by removing all structural duplicate
       lines like `}` or empty lines.
     - **NEVER use disposable Rust or Python scripts** for bulk refactoring; subtle grammar
-      and lexical edge cases (comments, doc tests, strings, shadowing) inevitably cause bugs.
-2. **Native Tooling**: All code refactoring and modifications MUST be performed file-by-file
-   using native file-editing tools (`replace_file_content` and `multi_replace_file_content`)
-   combined with AST-level semantic tools (`rust-analyzer`).
+      and lexical edge cases (comments, doc tests, strings, shadowing) inevitably cause
+      bugs.
+2. **Native Tooling**: All code refactoring and modifications MUST be performed
+   file-by-file using native file-editing tools (`replace_file_content` and
+   `multi_replace_file_content`) combined with AST-level semantic tools (`rust-analyzer`).
 3. **Optional Disposable Staging**: For extensive or multi-file changes, it is permissible
    to create a disposable copy (e.g., via BTRFS reflink `cp --reflink=auto`) where manual
    changes are made and everything is checked for correctness (`./check.fish --check`,
@@ -221,9 +231,10 @@ Some crates have additional instructions in their own `AGENTS.md` files:
   run `cargo install --path build-infra --force`** to update the installed binaries in
   `~/.cargo/bin`. See `build-infra/AGENTS.md` for details.
 
-- **rust-analyzer-mcp-server/**: Provides the `rust-analyzer-mcp-server` MCP binary. **After making code changes, you MUST
-  run `cargo install --path rust-analyzer-mcp-server --force`** to update the installed binary in
-  `~/.cargo/bin`. See `rust-analyzer-mcp-server/AGENTS.md` for details.
+- **rust-analyzer-mcp-server/**: Provides the `rust-analyzer-mcp-server` MCP binary.
+  **After making code changes, you MUST run
+  `cargo install --path rust-analyzer-mcp-server --force`** to update the installed binary
+  in `~/.cargo/bin`. See `rust-analyzer-mcp-server/AGENTS.md` for details.
 
 - **tui/**: Main crate (`r3bl_tui`). For test directory taxonomy, PTY integration test
   conventions, and subprocess isolation patterns, use the `organize-tests` skill.
@@ -249,7 +260,10 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
   clippy -> tests). Use after completing code changes and before creating commits.
     - Supporting file: `reference.md` (detailed cargo command reference)
 
-- **check-test-coverage** - Audit and verify branch-targeted test coverage for a specific file or module, ensuring all custom logic paths and error branches are covered while strictly eliminating dependency test bloat. Supports empirical runtime verification via `cargo-llvm-cov` filtered through the AST model.
+- **check-test-coverage** - Audit and verify branch-targeted test coverage for a specific
+  file or module, ensuring all custom logic paths and error branches are covered while
+  strictly eliminating dependency test bloat. Supports empirical runtime verification via
+  `cargo-llvm-cov` filtered through the AST model.
     - Supporting file: `examples.md` (audit patterns and good vs bad coverage examples)
 
 - **run-clippy** - Clippy linting, comment punctuation, cargo fmt. Use after code changes
@@ -263,7 +277,9 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 - **code-review** - Interactive chunk-by-chunk in-chat code review with explicit approval
   steps. Use when the user requests an interactive code review or runs `/code-review`.
 
-- **test-cross-platform** - Synchronize repository to the fleet (Linux on nazmul-mobile, macOS, Windows) and run the full test suite across all platforms concurrently. Use via `/test-cross-platform`.
+- **test-cross-platform** - Synchronize repository to the fleet (Linux on nazmul-mobile,
+  macOS, Windows) and run the full test suite across all platforms concurrently. Use via
+  `/test-cross-platform`.
 
 ### Documentation
 
@@ -308,9 +324,9 @@ files in that skill's directory (e.g., `patterns.md`, `reference.md`, `examples.
 
 ### Release
 
-- **release-crate** - Full crate release workflow: version bump, changelog, standalone release
-  notes in `docs/release-notes/`, publish to crates.io, git tag, GitHub release. Use when
-  releasing a new version of any workspace crate.
+- **release-crate** - Full crate release workflow: version bump, changelog, standalone
+  release notes in `docs/release-notes/`, publish to crates.io, git tag, GitHub release.
+  Use when releasing a new version of any workspace crate.
 
 - **review-pr** - Create a structured integration and review plan for a Pull Request. Use
   when the user wants to systematically integrate a community PR.
@@ -409,17 +425,17 @@ Commands with **no check.fish equivalent** (run directly):
 To keep the development loop fast and prevent long-running commands from bogging down
 routine edits, checks are organized into three tiers:
 
-| Tier | Commands | When to Run | Autonomous Execution Rule |
-| :--- | :--- | :--- | :--- |
-| **Tier 1: Routine / Fast** | `./check.fish --check`<br>`./check.fish --fmt` | After code edits, before asking for review | **Mandatory & autonomous**: Fast typecheck (~1–3s) must always pass before presenting review. |
-| **Tier 2: Targeted Unit Test** | `cargo test -q <test_name>` | When actively adding or modifying a specific test | **Surgical only**: Run *only* the specific test being worked on. Never run the entire workspace test suite autonomously. |
-| **Tier 3: Heavy Suite** | `./check.fish --test`<br>`./check.fish --clippy`<br>`./check.fish --quick-doc`<br>`./check.fish --full` | **Only on explicit user request** or final pre-commit / pre-PR milestone | **Strictly prohibited autonomously**: Never run after minor edits, typo fixes, or routine refactors unless explicitly prompted by the user (e.g. `/check`, `/clippy`, "run tests", "verify docs") or before final task completion. |
+| Tier                           | Commands                                                                                                | When to Run                                                              | Autonomous Execution Rule                                                                                                                                                                                                          |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tier 1: Routine / Fast**     | `./check.fish --check`<br>`./check.fish --fmt`                                                          | After code edits, before asking for review                               | **Mandatory & autonomous**: Fast typecheck (~1–3s) must always pass before presenting review.                                                                                                                                      |
+| **Tier 2: Targeted Unit Test** | `cargo test -q <test_name>`                                                                             | When actively adding or modifying a specific test                        | **Surgical only**: Run _only_ the specific test being worked on. Never run the entire workspace test suite autonomously.                                                                                                           |
+| **Tier 3: Heavy Suite**        | `./check.fish --test`<br>`./check.fish --clippy`<br>`./check.fish --quick-doc`<br>`./check.fish --full` | **Only on explicit user request** or final pre-commit / pre-PR milestone | **Strictly prohibited autonomously**: Never run after minor edits, typo fixes, or routine refactors unless explicitly prompted by the user (e.g. `/check`, `/clippy`, "run tests", "verify docs") or before final task completion. |
 
 ### Non-Blocking Verification via Subagents
 
 Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`,
-`./check.fish --quick-doc`, and `./check.fish --full`) can take 1 to 2+ minutes. To prevent
-blocking the active conversation loop:
+`./check.fish --quick-doc`, and `./check.fish --full`) can take 1 to 2+ minutes. To
+prevent blocking the active conversation loop:
 
 - **Fast Checks**: Lightweight commands like `./check.fish --check` and
   `./check.fish --fmt` take only a few seconds and may run directly.
@@ -428,27 +444,27 @@ blocking the active conversation loop:
 - **Subagent Model Rule**: Always use `Model: "inherit"` (or omit `Model`) when invoking
   subagents so they inherit whatever model is currently set in `agy-cli`.
 - **Unblocked Collaboration**: While the subagent verifies build, test, or documentation
-  status in the background, the primary agent remains interactive to discuss code,
-  perform reviews, and plan next steps.
+  status in the background, the primary agent remains interactive to discuss code, perform
+  reviews, and plan next steps.
 
 ### Output & Context Discipline
 
-- **Default Communication Style (Caveman Mode)**: Always communicate in Caveman mode
-  (see `caveman` skill) by default:
-  - **Answer First**: Direct answer, then reason, then next step. No intro or outro.
-  - **Eliminate Ceremony**: No greetings, filler, signoffs, or recaps.
-  - **Payload Verbatim**: Code blocks, diffs, commands, file paths, numbers, and errors
-    remain 100% exact.
-  - **Concise Phrasing**: Short, active sentences. Omit optional filler words.
-  - **Exceptions**: Use full plain English only for critical security warnings or
-    required clarifications.
-  - **Exit Condition**: Revert to normal style only if user explicitly says "normal mode"
-    or "stop caveman".
+- **Default Communication Style (Caveman Mode)**: Always communicate in Caveman mode (see
+  `caveman` skill) by default:
+    - **Answer First**: Direct answer, then reason, then next step. No intro or outro.
+    - **Eliminate Ceremony**: No greetings, filler, signoffs, or recaps.
+    - **Payload Verbatim**: Code blocks, diffs, commands, file paths, numbers, and errors
+      remain 100% exact.
+    - **Concise Phrasing**: Short, active sentences. Omit optional filler words.
+    - **Exceptions**: Use full plain English only for critical security warnings or
+      required clarifications.
+    - **Exit Condition**: Revert to normal style only if user explicitly says "normal
+      mode" or "stop caveman".
 - **Cargo Output Hygiene**:
-  - Prefer the `./check.fish` wrapper over raw cargo calls.
-  - When running raw `cargo check` or `cargo clippy`, always pass `-q --message-format=short`
-    (e.g., `cargo check -q --message-format=short`) to prevent compiler stderr/stdout from
-    flooding the agent's context window.
+    - Prefer the `./check.fish` wrapper over raw cargo calls.
+    - When running raw `cargo check` or `cargo clippy`, always pass
+      `-q --message-format=short` (e.g., `cargo check -q --message-format=short`) to
+      prevent compiler stderr/stdout from flooding the agent's context window.
 
 ## Rust Code Guidelines
 
@@ -492,12 +508,12 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    Linux, and compiles safely on macOS and Windows.
 
 8. **No Mermaid Diagrams / Use ASCII Art Instead (Global Rule)**: NEVER use Mermaid
-   diagrams (such as ```` ```mermaid ````, `flowchart TD`, `flowchart LR`, `sequenceDiagram`,
+   diagrams (such as ` ```mermaid `, `flowchart TD`, `flowchart LR`, `sequenceDiagram`,
    etc.) anywhere in markdown, task files, documentation, or chat responses. Mermaid
    diagrams do not render properly in terminal CLI environments (often causing errors like
    "Diagram exceeds terminal width"). Always use ASCII or Unicode box-drawing diagrams
-   (fenced with text or code blocks, using font-safe glyphs from `docs/boxes.md`), Markdown
-   tables, or plain indented text lists instead.
+   (fenced with text or code blocks, using font-safe glyphs from `docs/boxes.md`),
+   Markdown tables, or plain indented text lists instead.
 
 9. **Physical Keycaps with `<kbd>`**: When documenting physical keyboard input in rustdoc
    or markdown (such as key presses, keyboard shortcuts, or contrasting physical keys with
@@ -506,11 +522,11 @@ When writing or modifying rustdoc comments in code, task files, or standalone `.
    `<kbd>` that renders it as a 3D keycap button, clearly distinguishing physical keys
    from terminal escape code bytes.
 
-10. **No "Source of Truth (SOT)" Buzzwords**: Never use phrases like `"Authoritative Source
-    of Truth (SOT)"`, `"Single Source of Truth (SSOT)"`, `"Source of Truth (SOT)"`, or the
-    acronyms `"SOT"` / `"SSOT"` in documentation, comments, or prose. These are robotic
-    phrases that add no information and are pure noise. State directly what the item is or
-    does in plain human English.
+10. **No "Source of Truth (SOT)" Buzzwords**: Never use phrases like
+    `"Authoritative Source of Truth (SOT)"`, `"Single Source of Truth (SSOT)"`,
+    `"Source of Truth (SOT)"`, or the acronyms `"SOT"` / `"SSOT"` in documentation,
+    comments, or prose. These are robotic phrases that add no information and are pure
+    noise. State directly what the item is or does in plain human English.
 
 Don't wait for `check-code-quality` to catch issues - write docs correctly the first time.
 
@@ -518,31 +534,56 @@ Don't wait for `check-code-quality` to catch issues - write docs correctly the f
 
 When designing Rust types in this codebase:
 
-1. **No-Argument Constructors**: If a type requires no arguments for default construction, derive or implement `Default` (`#[derive(Default)]` or `impl Default for MyType`) and do **NOT** create a redundant `pub fn new() -> Self` method. Callers instantiate it via `MyType::default()` or `Default::default()`.
-2. **Parameterized Constructors**: If a constructor requires arguments (e.g., `with_capacity(capacity: usize)` or `new(arg: Type)`), use explicit constructor methods with parameters.
+1. **No-Argument Constructors**: If a type requires no arguments for default construction,
+   derive or implement `Default` (`#[derive(Default)]` or `impl Default for MyType`) and
+   do **NOT** create a redundant `pub fn new() -> Self` method. Callers instantiate it via
+   `MyType::default()` or `Default::default()`.
+2. **Parameterized Constructors**: If a constructor requires arguments (e.g.,
+   `with_capacity(capacity: usize)` or `new(arg: Type)`), use explicit constructor methods
+   with parameters.
 
 ### Mutator Return Conventions: Avoid Boolean Blindness (`Option<T>` / `Option<()>` vs Domain Enums)
 
 When designing mutator methods or functions taking `&mut self` / `&mut T`:
 
-1. **Why `&mut self` Mutators Must Heap-Allocate Text Payloads**:
-   In Rust, a `&mut self` mutator that deletes or replaces text cannot return `Option<&str>` or zero-allocation byte offsets (`DocSeg`), because:
-   - The borrow checker forbids returning a `&str` reference borrowing from `self` across a `&mut self` mutation.
-   - Once deleted from `self`, the text bytes no longer exist in memory, invalidating any borrowed slices or offset metadata.
-   - Therefore, returning deleted/replaced text payload *unavoidably requires* an owned heap allocation (`Option<String>`).
-2. **Returning Removed/Replaced Payloads (`Option<T>`)**:
-   Return a payload `Option<T>` (e.g., `Option<LineMetadata>` for zero-allocation structural metrics, or owned `Option<String>` for text) ONLY when callers genuinely consume the deleted payload.
-3. **Zero-Allocation Fallible Mutators (`Option<()>`: ONLY When Chaining with `?`)**:
-   If a mutator can fail due to preconditions (e.g., out-of-bounds index) and callers do not consume a removed payload, return `Option<()>` (`Some(())` for success, `None` for failure/out-of-bounds) **only when callers short-circuit or chain calls with `?`**.
-4. **Non-Short-Circuiting Mutators (Domain Enums over `Option<()>` and `bool`)**:
-   Using `Option<()>` is an **anti-pattern** when callers do **not** chain calls with `?` (for example, running sequential formatting/transformation passes where every pass must run regardless of whether the previous pass made changes). When both outcomes are valid domain states (such as `FormatStatus::Modified` vs `FormatStatus::Unchanged`), define a self-documenting domain enum instead of `Option<()>` or `bool`. Returning `Option<()>` without `?` forces callers into `.is_some()` checks (boolean blindness in disguise) and falsely models a valid no-op ("unchanged") as failure (`None`).
-5. **No `.is_*() -> bool` Helpers on Domain Enums**:
-   Do **NOT** add `pub fn is_modified(self) -> bool` or similar boolean conversion helpers onto domain enums. Callers must match on the enum or compare directly against the variant (e.g., `status == FormatStatus::Modified`).
-6. **When `bool` Is Acceptable (`std` & Third-Party Compatibility Only)**:
-   Raw `bool` is permitted **solely** when required for compatibility with `std`, `clippy`, or third-party crate contracts:
-   - `std` collection conventions: `pub fn is_empty(&self) -> bool` when paired with `pub fn len(&self)` (enforced by `clippy::len_without_is_empty`).
-   - `std` trait signatures and higher-order closures: implementing `PartialEq::eq` or passing predicate closures to `std` iterator/collection methods (`.filter(...)`, `.any(...)`, `.all(...)`, `.retain(...)`).
-   - Third-party derive macro contracts: struct fields required by derive macros such as `#[derive(clap::Parser)]` CLI switch flags (`#[arg(long)] pub verbose: bool`).
+1. **Why `&mut self` Mutators Must Heap-Allocate Text Payloads**: In Rust, a `&mut self`
+   mutator that deletes or replaces text cannot return `Option<&str>` or zero-allocation
+   byte offsets (`DocSeg`), because:
+    - The borrow checker forbids returning a `&str` reference borrowing from `self` across
+      a `&mut self` mutation.
+    - Once deleted from `self`, the text bytes no longer exist in memory, invalidating any
+      borrowed slices or offset metadata.
+    - Therefore, returning deleted/replaced text payload _unavoidably requires_ an owned
+      heap allocation (`Option<String>`).
+2. **Returning Removed/Replaced Payloads (`Option<T>`)**: Return a payload `Option<T>`
+   (e.g., `Option<LineMetadata>` for zero-allocation structural metrics, or owned
+   `Option<String>` for text) ONLY when callers genuinely consume the deleted payload.
+3. **Zero-Allocation Fallible Mutators (`Option<()>`: ONLY When Chaining with `?`)**: If a
+   mutator can fail due to preconditions (e.g., out-of-bounds index) and callers do not
+   consume a removed payload, return `Option<()>` (`Some(())` for success, `None` for
+   failure/out-of-bounds) **only when callers short-circuit or chain calls with `?`**.
+4. **Non-Short-Circuiting Mutators (Domain Enums over `Option<()>` and `bool`)**: Using
+   `Option<()>` is an **anti-pattern** when callers do **not** chain calls with `?` (for
+   example, running sequential formatting/transformation passes where every pass must run
+   regardless of whether the previous pass made changes). When both outcomes are valid
+   domain states (such as `FormatStatus::Modified` vs `FormatStatus::Unchanged`), define a
+   self-documenting domain enum instead of `Option<()>` or `bool`. Returning `Option<()>`
+   without `?` forces callers into `.is_some()` checks (boolean blindness in disguise) and
+   falsely models a valid no-op ("unchanged") as failure (`None`).
+5. **No `.is_*() -> bool` Helpers on Domain Enums**: Do **NOT** add
+   `pub fn is_modified(self) -> bool` or similar boolean conversion helpers onto domain
+   enums. Callers must match on the enum or compare directly against the variant (e.g.,
+   `status == FormatStatus::Modified`).
+6. **When `bool` Is Acceptable (`std` & Third-Party Compatibility Only)**: Raw `bool` is
+   permitted **solely** when required for compatibility with `std`, `clippy`, or
+   third-party crate contracts:
+    - `std` collection conventions: `pub fn is_empty(&self) -> bool` when paired with
+      `pub fn len(&self)` (enforced by `clippy::len_without_is_empty`).
+    - `std` trait signatures and higher-order closures: implementing `PartialEq::eq` or
+      passing predicate closures to `std` iterator/collection methods (`.filter(...)`,
+      `.any(...)`, `.all(...)`, `.retain(...)`).
+    - Third-party derive macro contracts: struct fields required by derive macros such as
+      `#[derive(clap::Parser)]` CLI switch flags (`#[arg(long)] pub verbose: bool`).
 
 ### Clean Imports over Inline Absolute Paths (Mandatory)
 
@@ -630,10 +671,10 @@ codebase. Standard library maps use `SipHash 1-3` by default to protect against 
 Hash-DoS collision attacks, which is completely unnecessary for local TUI and CLI
 applications.
 
-Instead, always import and use `rustc_hash::FxHashMap` and `rustc_hash::FxHashSet`
-(from the `rustc-hash = "2.1.0"` crate). `FxHasher` runs in ~1 CPU cycle using simple
-arithmetic shifts and multiplications, drastically cutting hashing overhead (up to 87%
-reduction in flamegraphs).
+Instead, always import and use `rustc_hash::FxHashMap` and `rustc_hash::FxHashSet` (from
+the `rustc-hash = "2.1.0"` crate). `FxHasher` runs in ~1 CPU cycle using simple arithmetic
+shifts and multiplications, drastically cutting hashing overhead (up to 87% reduction in
+flamegraphs).
 
 **✅ Good:**
 
@@ -655,19 +696,28 @@ map.insert(key, value);
 
 ### File and Module Naming Conventions
 
-When organizing modules into subfiles, apply the conventions from the `organize-modules` skill:
+When organizing modules into subfiles, apply the conventions from the `organize-modules`
+skill:
 
 1. **Inception Collision Avoidance (`<name>_struct.rs` / `<name>_enum.rs`)**:
-   - If a file inside a module folder would share the exact base name of its parent folder (e.g., `chunk_framer/chunk_framer.rs`), rename it to prevent collisions:
-     - Defines primary struct: `<name>_struct.rs` (e.g., `chunk_framer_struct.rs`, `accumulator_struct.rs`).
-     - Defines primary enum: `<name>_enum.rs` (e.g., `parser_enum.rs`).
-   - Non-colliding files keep their natural descriptive names without `_struct` or `_enum` suffixes (e.g., `unparsed_buffer_action.rs`).
+    - If a file inside a module folder would share the exact base name of its parent
+      folder (e.g., `chunk_framer/chunk_framer.rs`), rename it to prevent collisions:
+        - Defines primary struct: `<name>_struct.rs` (e.g., `chunk_framer_struct.rs`,
+          `accumulator_struct.rs`).
+        - Defines primary enum: `<name>_enum.rs` (e.g., `parser_enum.rs`).
+    - Non-colliding files keep their natural descriptive names without `_struct` or
+      `_enum` suffixes (e.g., `unparsed_buffer_action.rs`).
 
 2. **Standalone Functions Entry Point (`<xyz>_entry_point.rs`)**:
-   - A module file containing only standalone functions (pure functions, pipeline decoders, dispatchers) without primary data structures is named `<xyz>_entry_point.rs` (e.g., `input_parser_entry_point.rs`, `chunk_decoder_entry_point.rs`).
+    - A module file containing only standalone functions (pure functions, pipeline
+      decoders, dispatchers) without primary data structures is named
+      `<xyz>_entry_point.rs` (e.g., `input_parser_entry_point.rs`,
+      `chunk_decoder_entry_point.rs`).
 
 3. **Public API Surface (`<xyz>_public_api.rs`)**:
-   - A module file that encapsulates the public, user-facing API surface separate from internal implementation is named `<xyz>_public_api.rs` (e.g., `engine_public_api.rs`, `ansi_parser_public_api.rs`).
+    - A module file that encapsulates the public, user-facing API surface separate from
+      internal implementation is named `<xyz>_public_api.rs` (e.g.,
+      `engine_public_api.rs`, `ansi_parser_public_api.rs`).
 
 ## Git Workflow
 
@@ -748,8 +798,15 @@ system. All tasks are stored in the `./task/` directory as individual Markdown f
 
 ### Task File Formatting
 
-Always run `prettier --write <file>` on any `task/*.md` files after creating or updating
-them. This ensures markdown is correctly formatted and easy to review in the user's IDE.
+- **Short, Meaningful Headings**: Keep headings concise (typically 2-5 words) so both the
+  document and its `mktoc` table of contents remain scannable. Put parenthetical lists,
+  type signatures, or extra context into the first sentence immediately following the
+  heading instead of stuffing them into the heading itself.
+- **TOC & Prettier**: If a markdown file includes `<!-- BEGIN mktoc -->` /
+  `<!-- END mktoc -->` markers, run `mktoc <file>` to update its table of contents (never
+  use `doctoc`). Always run `prettier --write <file>` on any `task/*.md` files after
+  creating or updating them. This ensures markdown is correctly formatted and easy to
+  review in the user's IDE.
 
 ### Folder Structure
 
