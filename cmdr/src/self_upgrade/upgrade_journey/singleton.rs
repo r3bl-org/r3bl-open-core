@@ -109,7 +109,7 @@ impl SingletonState {
 
     /// Drains any in-flight dedicated thread and resets [`SINGLETON`] back to
     /// [`Self::NotStarted`].
-    #[cfg(test)]
+    #[cfg(any(test, doc))]
     pub(crate) fn reset_for_testing() {
         let maybe_handle = Self::take_deferred_check_handle();
         if let Some(handle) = maybe_handle {

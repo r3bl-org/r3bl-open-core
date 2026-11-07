@@ -1,0 +1,15 @@
+// Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
+//
+// Test scenario: Newer closed-source version (9.9.9 > 0.0.25) is available.
+// Upgrades exclusively from pre-compiled release archives (never falls back to
+// crates.io source compilation).
+{
+  "binaries_release_base_url": "https://example.com/releases/download",
+  "crates": {
+    "r3bl-cmdr": {
+      "version": "9.9.9",
+      "crate_distribution": "closed-source",
+      "released_on": "2026-04-06T12:00:00Z"
+    }
+  }
+}

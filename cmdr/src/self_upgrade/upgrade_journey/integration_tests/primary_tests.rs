@@ -1,142 +1,36 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Subsystem end-to-end integration tests for [`UpgradeJourney`].
+//! Primary state-transition and cooldown integration tests for [`UpgradeJourney`].
 //!
-//! # Test Approach & Rationale
+//! Covers:
+//! 1. Single-start guard ([`StartOutcome::AlreadyStarted`]).
+//! 2. Immediate upgrade ([`UpgradeStrategy::Immediate`]) sync/async `UpToDate`, cooldown
+//!    bypass, `CheckFailed`, and `UpgradeFailed`.
+//! 3. Deferred upgrade on exit ([`UpgradeStrategy::Deferred`]) cooldown skip, expiry,
+//!    in-flight join on exit, and `Auto` failure handling.
+//! 4. Disabled mode ([`UpgradePolicy::Disabled`]).
 //!
-//! Unit tests in sibling modules verify individual state transitions in isolation (in the
-//! [Control Plane]).
-//!
-//! This module exercises the full [`UpgradeJourney::start`] ->
-//! [`StartOutcome::handle_upgrade_on_exit`][2] lifecycle end-to-end—spanning both the
-//! [Control Plane] and [Execution Plane].
-//!
-//! This spans synchronous (`#[test]`) and asynchronous (`#[tokio::test]`) callers using:
-//! - Ephemeral `127.0.0.1:0` HTTP servers (`fixtures::spawn_one_shot_http_server`) to
-//!   simulate manifest responses, latency, and HTTP errors without external network I/O.
-//! - Temporary directories ([`try_create_temp_dir`]) to verify `1h` cooldown timestamp
-//!   file creation, [`mtime`] refreshes, and preservation on failure.
-//! - `#[serial]` execution so tests that claim and drain the process-wide [`SINGLETON`]
-//!   do not race each other.
-//! - Unreachable release-archive URLs (`127.0.0.1:<closed_port>`) with `"closed-source"`
-//!   distribution for `Auto` / `Immediate` upgrade paths so tests exercise
-//!   [`UpgradeSource::try_resolve`] without invoking [`self_replace`] (which would
-//!   overwrite the running `cargo test` binary) or spawning `cargo install`.
-//!
-//! # Coverage Summary
-//!
-//! 1. **Single-start guard ([`StartOutcome::AlreadyStarted`])**: Duplicate
-//!    [`UpgradeJourney::start`] calls across policies leave [`SINGLETON`] untouched and
-//!    spawn zero threads.
-//! 2. **Immediate upgrade ([`UpgradeStrategy::Immediate`])**: Bypasses an active cooldown
-//!    file, refreshes [`mtime`] on [`UpToDate`], succeeds from both sync and async
-//!    contexts, and transitions to [`CheckFailed`] or
-//!    [`UpgradeResolution::UpgradeFailed`][3] without touching the cooldown file when
-//!    manifest fetch or source resolution fails.
-//! 3. **Deferred upgrade on exit ([`UpgradeStrategy::Deferred`])**: Skips thread and
-//!    network work when cooldown is active ([`CooldownSkipped`]), spawns the background
-//!    check when expired, joins in-flight checks at shutdown via
-//!    [`StartOutcome::handle_upgrade_on_exit`][2], and leaves cooldown untouched on exit
-//!    upgrade failure.
-//! 4. **Disabled ([`UpgradePolicy::Disabled`])**: Returns [`StartOutcome::Disabled`] with
-//!    zero threads or network calls and [`ExitOutcome::NoDeferredCheckRunning`][1] at
-//!    exit.
-//!
-//! [1]: crate::self_upgrade::ExitOutcome::NoDeferredCheckRunning
-//! [2]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
-//! [3]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
-//! [`CheckFailed`]: crate::self_upgrade::CheckFailed
-//! [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
-//! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-//! [`self_replace`]: self_replace::self_replace
-//! [`SINGLETON`]: crate::self_upgrade::SINGLETON
 //! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
-//! [`StartOutcome::Disabled`]: crate::self_upgrade::StartOutcome::Disabled
-//! [`try_create_temp_dir`]: r3bl_tui::try_create_temp_dir
-//! [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 //! [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-//! [`UpgradeSource::try_resolve`]: crate::self_upgrade::UpgradeSource::try_resolve
 //! [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 //! [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
-//! [`UpToDate`]: crate::self_upgrade::UpToDate
-//! [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-//! [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 
-use super::*;
+use super::{test_fixtures::*, *};
 use crate::{CooldownPolicy, CooldownStatus, CrateName, CrateVersion, EndpointUrl,
             JsoncScalar, ManifestCheckError, UpgradeActionOnExit, UpgradeConfig,
             UpgradeError, UpgradePolicy, UpgradeStrategy, UserFeedbackChannel,
             resolve_self_upgrade_last_check_in_base_dir};
-use fixtures::{format_manifest_json, format_manifest_json_with_release_url,
-               spawn_one_shot_http_server};
 use r3bl_tui::{assert_eq2, try_create_temp_dir};
+#[cfg(not(doc))]
 use serial_test::serial;
 use std::{fs::File,
           net::TcpListener,
           time::{Duration, SystemTime}};
 
-mod fixtures {
-    use std::{io::{Read, Write},
-              net::TcpListener,
-              time::Duration};
-
-    pub fn format_manifest_json(version: &str, distribution: &str) -> String {
-        format_manifest_json_with_release_url(
-            "https://example.com/releases/download",
-            version,
-            distribution,
-        )
-    }
-
-    pub fn format_manifest_json_with_release_url(
-        release_url: &str,
-        version: &str,
-        distribution: &str,
-    ) -> String {
-        format!(
-            r#"{{
-                "binaries_release_base_url": "{release_url}",
-                "crates": {{
-                    "r3bl-cmdr": {{
-                        "version": "{version}",
-                        "crate_distribution": "{distribution}",
-                        "released_on": "2026-04-06T12:00:00Z"
-                    }}
-                }}
-            }}"#
-        )
-    }
-
-    pub fn spawn_one_shot_http_server(
-        status: &'static str,
-        body: String,
-        delay: Duration,
-    ) -> (String, std::thread::JoinHandle<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        let handle = std::thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut req_buf = [0_u8; 1024];
-                drop(stream.read(&mut req_buf));
-                if !delay.is_zero() {
-                    std::thread::sleep(delay);
-                }
-                let resp = format!(
-                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                drop(stream.write_all(resp.as_bytes()));
-                drop(stream.flush());
-            }
-        });
-        (format!("http://{addr}/versions.jsonc"), handle)
-    }
-}
-
-#[test]
-#[serial]
-fn test_single_start_guard_returns_already_started_without_mutating_singleton() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_single_start_guard_returns_already_started_without_mutating_singleton() {
     SingletonState::reset_for_testing();
 
     let make_config = |policy: UpgradePolicy| {
@@ -176,9 +70,9 @@ fn test_single_start_guard_returns_already_started_without_mutating_singleton() 
     );
 }
 
-#[test]
-#[serial]
-fn test_immediate_upgrade_up_to_date_sync_touches_and_bypasses_cooldown() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_immediate_upgrade_up_to_date_sync_touches_and_bypasses_cooldown() {
     SingletonState::reset_for_testing();
     let crate_name: CrateName = "r3bl-cmdr".into();
     let temp_dir = try_create_temp_dir().unwrap();
@@ -188,11 +82,8 @@ fn test_immediate_upgrade_up_to_date_sync_touches_and_bypasses_cooldown() {
     // Pre-populate an active cooldown timestamp file to verify
     // `UpgradeStrategy::Immediate` (`--upgrade`) bypasses it and still performs the
     // live HTTP check.
-    let (url, server_handle) = spawn_one_shot_http_server(
-        "200 OK",
-        format_manifest_json("0.0.25", "open-source"),
-        Duration::ZERO,
-    );
+    let (url, server_handle) =
+        spawn_one_shot_http_server("200 OK", MANIFEST_UP_TO_DATE_JSONC, Duration::ZERO);
     let config = UpgradeConfig::new(
         crate_name,
         CrateVersion::try_parse("0.0.25").unwrap(),
@@ -224,15 +115,12 @@ fn test_immediate_upgrade_up_to_date_sync_touches_and_bypasses_cooldown() {
     assert!(refreshed_mtime > backdated_within_cooldown);
 }
 
-#[tokio::test]
-#[serial]
-async fn test_immediate_upgrade_up_to_date_async() {
+#[cfg_attr(not(doc), tokio::test)]
+#[cfg_attr(not(doc), serial)]
+pub async fn test_immediate_upgrade_up_to_date_async() {
     SingletonState::reset_for_testing();
-    let (url, server_handle) = spawn_one_shot_http_server(
-        "200 OK",
-        format_manifest_json("0.0.25", "open-source"),
-        Duration::ZERO,
-    );
+    let (url, server_handle) =
+        spawn_one_shot_http_server("200 OK", MANIFEST_UP_TO_DATE_JSONC, Duration::ZERO);
     let config = UpgradeConfig::new(
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
@@ -251,9 +139,9 @@ async fn test_immediate_upgrade_up_to_date_async() {
     ));
 }
 
-#[test]
-#[serial]
-fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
     SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("failed.last_check");
@@ -261,7 +149,7 @@ fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
     // 1. Manifest HTTP 500 -> CheckFailed, no cooldown timestamp file.
     let (bad_url, bad_handle) = spawn_one_shot_http_server(
         "500 Internal Server Error",
-        "server error".to_string(),
+        "server error",
         Duration::ZERO,
     );
     let fail_cfg = UpgradeConfig::new(
@@ -296,10 +184,9 @@ fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
 
     let (newer_url, newer_handle) = spawn_one_shot_http_server(
         "200 OK",
-        format_manifest_json_with_release_url(
+        with_release_base_url(
+            MANIFEST_UPGRADE_AVAILABLE_CLOSED_SOURCE_JSONC,
             &format!("http://{closed_release_addr}/releases/download"),
-            "9.9.9",
-            "closed-source",
         ),
         Duration::ZERO,
     );
@@ -335,9 +222,9 @@ fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
     }
 }
 
-#[test]
-#[serial]
-fn test_deferred_upgrade_cooldown_skip_and_expiry() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_deferred_upgrade_cooldown_skip_and_expiry() {
     SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("cooldown.last_check");
@@ -374,11 +261,8 @@ fn test_deferred_upgrade_cooldown_skip_and_expiry() {
         .set_modified(expired_time)
         .unwrap();
 
-    let (url, server_handle) = spawn_one_shot_http_server(
-        "200 OK",
-        format_manifest_json("0.0.25", "open-source"),
-        Duration::ZERO,
-    );
+    let (url, server_handle) =
+        spawn_one_shot_http_server("200 OK", MANIFEST_UP_TO_DATE_JSONC, Duration::ZERO);
     let expired_cfg = UpgradeConfig::new(
         "r3bl-cmdr",
         CrateVersion::try_parse("0.0.25").unwrap(),
@@ -406,16 +290,16 @@ fn test_deferred_upgrade_cooldown_skip_and_expiry() {
     );
 }
 
-#[test]
-#[serial]
-fn test_deferred_upgrade_exit_joins_inflight_dedicated_thread_and_completes() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_deferred_upgrade_exit_joins_inflight_dedicated_thread_and_completes() {
     SingletonState::reset_for_testing();
 
     // Simulate a short-lived CLI reaching `StartOutcome::handle_upgrade_on_exit()`
     // while the dedicated thread is still awaiting the HTTP response (`50ms`).
     let (url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
-        format_manifest_json("0.0.26", "open-source"),
+        MANIFEST_UPGRADE_AVAILABLE_OPEN_SOURCE_JSONC,
         Duration::from_millis(50),
     );
     let config = UpgradeConfig::new(
@@ -443,7 +327,7 @@ fn test_deferred_upgrade_exit_joins_inflight_dedicated_thread_and_completes() {
         ExitOutcome::Completed(journey) => {
             assert_eq2!(
                 journey.get_state().metadata.version,
-                CrateVersion::try_parse("0.0.26").unwrap()
+                CrateVersion::try_parse("9.9.9").unwrap()
             );
             assert_eq2!(
                 journey.get_state().resolution,
@@ -454,9 +338,9 @@ fn test_deferred_upgrade_exit_joins_inflight_dedicated_thread_and_completes() {
     }
 }
 
-#[test]
-#[serial]
-fn test_deferred_upgrade_exit_auto_failure_records_completed_without_cooldown() {
+#[cfg_attr(not(doc), test)]
+#[cfg_attr(not(doc), serial)]
+pub fn test_deferred_upgrade_exit_auto_failure_records_completed_without_cooldown() {
     SingletonState::reset_for_testing();
     let temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = temp_dir.join("auto_fail.last_check");
@@ -467,10 +351,9 @@ fn test_deferred_upgrade_exit_auto_failure_records_completed_without_cooldown() 
 
     let (manifest_url, server_handle) = spawn_one_shot_http_server(
         "200 OK",
-        format_manifest_json_with_release_url(
+        with_release_base_url(
+            MANIFEST_UPGRADE_AVAILABLE_CLOSED_SOURCE_JSONC,
             &format!("http://{closed_addr}/releases/download"),
-            "9.9.9",
-            "closed-source",
         ),
         Duration::ZERO,
     );
@@ -506,9 +389,9 @@ fn test_deferred_upgrade_exit_auto_failure_records_completed_without_cooldown() 
     }
 }
 
-#[tokio::test]
-#[serial]
-async fn test_disabled_async_and_sync() {
+#[cfg_attr(not(doc), tokio::test)]
+#[cfg_attr(not(doc), serial)]
+pub async fn test_disabled_async_and_sync() {
     SingletonState::reset_for_testing();
     let config = UpgradeConfig::new(
         "r3bl-cmdr",

@@ -15,5 +15,5 @@ pub use start_outcome::*;
 pub use thread_runner::*;
 pub use typestates::*;
 
-#[cfg(test)]
-mod journey_integration_tests;
+#[cfg(any(test, doc))]
+pub mod integration_tests;

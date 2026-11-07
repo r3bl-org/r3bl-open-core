@@ -87,10 +87,10 @@ impl StartOutcome {
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     /// [`Upgrading`]: crate::self_upgrade::Upgrading
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-    /// [cooked mode]: mod@r3bl_tui::terminal_raw_mode#raw-mode-vs-cooked-mode
+    /// [cooked mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-    /// [raw mode]: mod@r3bl_tui::terminal_raw_mode#raw-mode-vs-cooked-mode
+    /// [raw mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
     /// [standalone mode]: r3bl_tui::Spinner#standalone-mode
     #[must_use]
     pub fn handle_upgrade_on_exit(&self) -> ExitOutcome {
