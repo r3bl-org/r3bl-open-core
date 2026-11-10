@@ -104,6 +104,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [revamp-arch-with-cst.md](done/revamp-arch-with-cst.md)
 - [x] [rustdoc-fmt-clean-rust-code-fenced-blocks.md](done/rustdoc-fmt-clean-rust-code-fenced-blocks.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
+- [ ] [http-testing-in-roc.md](http-testing-in-roc.md)
 - [ ] [two-static-meanings-article.md](two-static-meanings-article.md)
 - [ ] [const-expr-witness-token-article.md](const-expr-witness-token-article.md)
 - [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)
