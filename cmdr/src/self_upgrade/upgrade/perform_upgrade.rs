@@ -2,7 +2,7 @@
 
 use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
                     EndpointUrl, UpgradeConfig, archive, upgrade_reasons},
-            ReleaseAsset, ReleaseTarget, UpgradeSource,
+            ReleaseAsset, ReleaseTarget, Sha256Digest, UpgradeSource,
             create_output_device_for_feedback_channel, download_and_verify_archive,
             extract_and_apply_archive, get_current_bin_name,
             report_upgrade_source_error, run_source_build_with_spinner, ui_strings};
@@ -336,7 +336,10 @@ pub enum UpgradeError {
 
     /// SHA-256 checksum mismatch on downloaded archive.
     #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
-    ChecksumMismatch { expected: String, actual: String },
+    ChecksumMismatch {
+        expected: Sha256Digest,
+        actual: Sha256Digest,
+    },
 
     /// User canceled the operation via `Ctrl+C`.
     #[error("Upgrade cancelled by user")]

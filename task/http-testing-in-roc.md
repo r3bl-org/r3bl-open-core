@@ -262,6 +262,7 @@ integration tests) with `mockito`.
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
     - [ ] `cmdr/src/self_upgrade/constants.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/download.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade/release_asset.rs`

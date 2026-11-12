@@ -124,14 +124,14 @@ pub const RELEASES_DOWNLOAD_REQUEST_PATH: &str = formatcp!(
 /// [URL Anatomy]: crate::self_upgrade::ReleaseAsset::format_urls#url-anatomy
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TestReleaseAssets {
-    /// Archive filename (written into the mock `.sha256` checksum body).
+    /// Archive filename (matches the release asset filename on GitHub Releases).
     pub archive_filename: String,
 
     /// Relative URL path for `HEAD` and `GET` archive requests on the mock server.
-    pub archive_path: String,
+    pub archive_url_path: String,
 
     /// Relative URL path for `GET` `.sha256` checksum requests on the mock server.
-    pub sha256_path: String,
+    pub sha256_url_path: String,
 }
 
 impl TestReleaseAssets {
@@ -158,7 +158,7 @@ impl TestReleaseAssets {
         );
 
         // Constants.
-        let (archive_path, sha256_path) = ReleaseAsset::format_urls(
+        let (archive_url_path, sha256_url_path) = ReleaseAsset::format_urls(
             RELEASES_DOWNLOAD_REQUEST_PATH,
             blocks::TEST_CRATE_NAME,
             blocks::TEST_UPGRADE_AVAILABLE_VERSION,
@@ -167,8 +167,8 @@ impl TestReleaseAssets {
 
         Self {
             archive_filename,
-            archive_path,
-            sha256_path,
+            archive_url_path,
+            sha256_url_path,
         }
     }
 }
@@ -194,7 +194,13 @@ mod tests {
             assets.archive_filename,
             format!("r3bl-cmdr-v9.9.9-{target}.tar.gz")
         );
-        assert_eq2!(format!("{host_origin}{}", assets.archive_path), archive_url);
-        assert_eq2!(format!("{host_origin}{}", assets.sha256_path), sha256_url);
+        assert_eq2!(
+            format!("{host_origin}{}", assets.archive_url_path),
+            archive_url
+        );
+        assert_eq2!(
+            format!("{host_origin}{}", assets.sha256_url_path),
+            sha256_url
+        );
     }
 }

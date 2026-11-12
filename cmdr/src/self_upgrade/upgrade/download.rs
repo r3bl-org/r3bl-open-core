@@ -1,9 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::UpgradeError, ui_strings};
-use r3bl_tui::{Spinner, create_client_with_user_agent};
+use super::{super::UpgradeError, Sha256Digest, ui_strings};
 use futures_util::StreamExt;
-use sha2::{Digest, Sha256};
+use r3bl_tui::{Spinner, create_client_with_user_agent};
 use std::{fs::{self, File},
           io::Write,
           path::Path};
@@ -19,6 +18,8 @@ use tokio::signal;
 ///
 /// Returns [`UpgradeError`] on download failure, cancellation, or SHA-256 verification
 /// failure.
+///
+/// [`UpgradeError`]: crate::self_upgrade::UpgradeError
 pub async fn download_and_verify_archive(
     crate_name: &str,
     pinned_version: &str,
@@ -49,7 +50,7 @@ pub async fn download_and_verify_archive(
         ));
     }
 
-    sha256_checksum::verify_file_sha256(archive_path, &expected_sha256)?;
+    sha256_checksum::verify_file_sha256(archive_path, expected_sha256)?;
     Ok(())
 }
 
@@ -57,70 +58,46 @@ pub async fn download_and_verify_archive(
 // Inner Modules (Underlying Implementation & Domain Logic)
 // -------------------------------------------------------------------------------------------------
 
-/// SHA-256 digest calculation, formatting, and file verification.
+/// SHA-256 checksum fetching and file verification.
 pub mod sha256_checksum {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Parses the expected hex SHA-256 digest from the contents of a SHA-256 checksum
-    /// file (handles both `<hex>  <filename>` and plain `<hex>` formats).
-    #[must_use]
-    pub fn parse_sha256_checksum_text(text: &str) -> Option<String> {
-        let token = text.split_whitespace().next()?.trim();
-        if token.len() == 64 && token.chars().all(|c| c.is_ascii_hexdigit()) {
-            Some(token.to_ascii_lowercase())
-        } else {
-            None
-        }
-    }
-
-    /// Computes the lower-case hex SHA-256 digest of a byte slice.
-    #[must_use]
-    pub fn compute_sha256_hex(bytes: &[u8]) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(bytes);
-        let digest = hasher.finalize();
-        let mut hex_str = String::with_capacity(64);
-        for byte in digest {
-            use std::fmt::Write as _;
-            let _unused = write!(hex_str, "{byte:02x}");
-        }
-        hex_str
-    }
-
-    /// Verifies that the SHA-256 digest of `file_path` matches `expected_hex`.
+    /// Verifies that the SHA-256 digest of `file_path` matches `expected`.
     ///
     /// # Errors
     ///
     /// Returns [`UpgradeError::ChecksumMismatch`] if the computed digest differs from
-    /// `expected_hex`, or [`UpgradeError::Other`] on file read failure.
+    /// `expected`, or [`UpgradeError::Other`] on file read failure.
+    ///
+    /// [`UpgradeError::ChecksumMismatch`]: crate::self_upgrade::UpgradeError::ChecksumMismatch
+    /// [`UpgradeError::Other`]: crate::self_upgrade::UpgradeError::Other
     pub fn verify_file_sha256(
         file_path: &Path,
-        expected_hex: &str,
+        expected: Sha256Digest,
     ) -> Result<(), UpgradeError> {
         let bytes =
             fs::read(file_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
-        let actual_hex = compute_sha256_hex(&bytes);
-        let expected_lower = expected_hex.trim().to_ascii_lowercase();
-        if actual_hex != expected_lower {
-            return Err(UpgradeError::ChecksumMismatch {
-                expected: expected_lower,
-                actual: actual_hex,
-            });
+        let actual = Sha256Digest::from_bytes(&bytes);
+        if actual != expected {
+            return Err(UpgradeError::ChecksumMismatch { expected, actual });
         }
         Ok(())
     }
 
-    /// Fetches the expected SHA-256 checksum string from `sha256_url`.
+    /// Fetches and parses the expected [`Sha256Digest`] from `sha256_url`.
     ///
     /// # Errors
     ///
     /// Returns [`UpgradeError`] on network failure, cancellation, or invalid checksum
     /// text.
+    ///
+    /// [`Sha256Digest`]: crate::self_upgrade::Sha256Digest
+    /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
     pub async fn fetch_expected_sha256(
         client: &reqwest::Client,
         sha256_url: &str,
-    ) -> Result<String, UpgradeError> {
+    ) -> Result<Sha256Digest, UpgradeError> {
         let sha_resp = tokio::select! {
             _ = signal::ctrl_c() => return Err(UpgradeError::Cancelled),
             res = client.get(sha256_url).send() => {
@@ -136,7 +113,7 @@ pub mod sha256_checksum {
                 res.map_err(|e| UpgradeError::Other(e.to_string()))?
             }
         };
-        parse_sha256_checksum_text(&sha_text).ok_or_else(|| {
+        Sha256Digest::try_parse_hex(&sha_text).ok_or_else(|| {
             UpgradeError::Other(format!("Invalid .sha256 file format: {sha_text}"))
         })
     }
@@ -225,49 +202,35 @@ mod tests {
     use r3bl_tui::{assert_eq2, try_create_temp_dir};
 
     #[test]
-    fn test_parse_sha256_checksum_text() {
-        let sha_line = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  r3bl-cmdr-v0.0.25-x86_64-unknown-linux-gnu.tar.gz\n";
-        assert_eq2!(
-            sha256_checksum::parse_sha256_checksum_text(sha_line).unwrap(),
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
-
-        let plain_hex =
-            "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
-        assert_eq2!(
-            sha256_checksum::parse_sha256_checksum_text(plain_hex).unwrap(),
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
-
-        assert!(sha256_checksum::parse_sha256_checksum_text("not_a_valid_sha").is_none());
-        assert!(sha256_checksum::parse_sha256_checksum_text("").is_none());
-    }
-
-    #[test]
-    fn test_compute_and_verify_file_sha256() {
+    fn test_verify_file_sha256() {
         let temp_dir = try_create_temp_dir().unwrap();
         let file_path = temp_dir.join("empty.bin");
         fs::write(&file_path, b"").unwrap();
 
-        // Known SHA-256 of empty byte array.
-        let empty_sha =
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        assert_eq2!(sha256_checksum::compute_sha256_hex(b""), empty_sha);
-        assert!(sha256_checksum::verify_file_sha256(&file_path, empty_sha).is_ok());
-        assert!(matches!(
-            sha256_checksum::verify_file_sha256(
-                &file_path,
-                "0000000000000000000000000000000000000000000000000000000000000000"
-            ),
-            Err(UpgradeError::ChecksumMismatch { .. })
-        ));
+        let empty_digest = Sha256Digest::from_bytes(b"");
+        assert!(sha256_checksum::verify_file_sha256(&file_path, empty_digest).is_ok());
+
+        let zero_digest = Sha256Digest::try_parse_hex(
+            "0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        .unwrap();
+        assert_eq2!(
+            sha256_checksum::verify_file_sha256(&file_path, zero_digest),
+            Err(UpgradeError::ChecksumMismatch {
+                expected: zero_digest,
+                actual: empty_digest,
+            })
+        );
     }
 
     #[test]
     fn test_verify_file_sha256_nonexistent_file() {
         let temp_dir = try_create_temp_dir().unwrap();
         let nonexistent = temp_dir.join("nonexistent.bin");
-        let result = sha256_checksum::verify_file_sha256(&nonexistent, "abc");
+        let result = sha256_checksum::verify_file_sha256(
+            &nonexistent,
+            Sha256Digest::from_bytes(b""),
+        );
         assert!(matches!(result, Err(UpgradeError::Other(_))));
     }
 

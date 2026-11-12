@@ -11,7 +11,7 @@
 //! [`self_upgrade`]: mod@crate::self_upgrade
 
 use super::{constants::*, jsonc_golden::*};
-use crate::self_upgrade::{EndpointUrl, sha256_checksum};
+use crate::self_upgrade::{EndpointUrl, Sha256Digest};
 use std::time::Duration;
 
 pub mod manifest_server {
@@ -115,11 +115,11 @@ pub mod archive_server {
     /// 4. `GET /releases/download/.../*.tar.gz` -> raw archive `.tar.gz` bytes
     #[must_use]
     pub fn spawn_success(archive_bytes: Vec<u8>) -> ServerSpawnResult {
-        let archive_sha256 = sha256_checksum::compute_sha256_hex(&archive_bytes);
+        let archive_sha256 = Sha256Digest::from_bytes(&archive_bytes);
         let TestReleaseAssets {
-            archive_filename,
-            archive_path,
-            sha256_path,
+            archive_filename: _,
+            archive_url_path,
+            sha256_url_path,
         } = TestReleaseAssets::for_current_host();
 
         // ServerOpts::default() binds to 127.0.0.1:0 (OS-assigned ephemeral port).
@@ -129,8 +129,8 @@ pub mod archive_server {
         let release_url = placeholder_release_base_url().with_socket_addr(addr);
         let manifest_body = manifest_upgrade_available_open_source(&release_url);
 
-        // Standard sha256sum format: "<hex>  <filename>\n".
-        let sha_body = format!("{archive_sha256}  {archive_filename}\n");
+        // Bare 64-char lowercase hex digest with trailing newline.
+        let sha_body = format!("{archive_sha256}\n");
         let archive_len = archive_bytes.len().to_string();
 
         let manifest_endpoint = server
@@ -142,7 +142,7 @@ pub mod archive_server {
             .create();
 
         let archive_head_endpoint = server
-            .mock(HTTP_METHOD_HEAD, archive_path.as_str())
+            .mock(HTTP_METHOD_HEAD, archive_url_path.as_str())
             .with_status(HTTP_200_OK)
             .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_OCTET_STREAM)
             .with_header(HEADER_CONTENT_LENGTH, &archive_len)
@@ -150,7 +150,7 @@ pub mod archive_server {
             .create();
 
         let checksum_endpoint = server
-            .mock(HTTP_METHOD_GET, sha256_path.as_str())
+            .mock(HTTP_METHOD_GET, sha256_url_path.as_str())
             .with_status(HTTP_200_OK)
             .with_header(HEADER_CONTENT_TYPE, MIME_TEXT_PLAIN)
             .with_body(sha_body)
@@ -158,7 +158,7 @@ pub mod archive_server {
             .create();
 
         let archive_download_endpoint = server
-            .mock(HTTP_METHOD_GET, archive_path.as_str())
+            .mock(HTTP_METHOD_GET, archive_url_path.as_str())
             .with_status(HTTP_200_OK)
             .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_OCTET_STREAM)
             .with_body(archive_bytes)

@@ -121,7 +121,6 @@ const_format = "0.2.35"
 
 # Misc.
 rand = "0.9.1"
-sha2 = "0.10.9"
 strip-ansi = "0.1.0"
 strip-ansi-escapes = "0.2.1"
 

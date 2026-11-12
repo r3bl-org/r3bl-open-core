@@ -1,6 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{GCStringOwned, HashMap, u16};
-use sha2::{Digest, Sha256};
 use std::{collections::hash_map::Entry,
           fmt::{Display, Formatter},
           str::FromStr};
@@ -73,24 +72,6 @@ impl StringLength {
             },
         }
     }
-
-    /// [SHA256] produces a 256-bit (32-byte) hash value, typically rendered as a
-    /// hexadecimal number. However, here we are converting it to a u32. Here's an example
-    /// of how long it takes to run on `foo`: 25.695µs. To provide some perspective of how
-    /// long this is, it takes about the same time to run [`StringLength::Unicode`] on the
-    /// same input, on a 13th Gen Intel® Core™ i5-13600K machine with 64GB of RAM running
-    /// Ubuntu 24.04.
-    ///
-    /// [SHA256]: sha2
-    #[must_use]
-    pub fn calculate_sha256(text: &str) -> u32 {
-        let mut hasher = Sha256::new();
-        hasher.update(text);
-        let result = hasher.finalize();
-        let mut bytes = [0u8; 4];
-        bytes.copy_from_slice(&result[..4]);
-        u32::from_le_bytes(bytes)
-    }
 }
 
 mod impl_to_from_string {
@@ -123,18 +104,6 @@ mod impl_to_from_string {
 mod tests {
     use super::*;
     use crate::timed;
-
-    #[test]
-    fn test_sha256() {
-        let input = "foo";
-        let (hash, duration) = timed!({
-            let hash = StringLength::calculate_sha256(input);
-            assert_eq!(hash, 1_806_968_364);
-            hash
-        });
-        println!("Execution time - string_length(Sha256): {duration:?}");
-        assert_eq!(hash, 1_806_968_364);
-    }
 
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {
