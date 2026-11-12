@@ -37,18 +37,18 @@ mod tests {
     async fn test_fetch_crate_metadata_from_manifest_timeout_returns_fetch_or_parse_failed()
      {
         let crate_name: CrateName = "r3bl-cmdr".into();
-        let server = manifest_server::spawn_delayed_success(
+        let server_spawn_result = manifest_server::spawn_delayed_success(
             manifest_upgrade_available_open_source(&placeholder_release_base_url()),
             Duration::from_millis(100),
         );
 
         let result = fetch_crate_metadata_from_manifest(
-            &server.url,
+            &server_spawn_result.url,
             &crate_name,
             Duration::from_millis(20),
         )
         .await;
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         match result {
             Err(ManifestCheckError::FetchOrParseFailed { ref diagnostic }) => {
@@ -63,13 +63,14 @@ mod tests {
     fn test_deferred_upgrade_exit_joins_inflight_delayed_failure_and_returns_check_failed()
      {
         SingletonState::reset_for_testing();
+
         let temp_dir = try_create_temp_dir().unwrap();
         let timestamp_file_path = temp_dir.join("inflight_fail.last_check");
 
         // Simulate a short-lived CLI reaching `StartOutcome::handle_upgrade_on_exit()`
         // while the dedicated thread is still awaiting a delayed (`50ms`) HTTP 500
         // failure response.
-        let server = manifest_server::spawn_delayed_error(
+        let server_spawn_result = manifest_server::spawn_delayed_error(
             "delayed server failure",
             blocks::HTTP_500_INTERNAL_SERVER_ERROR,
             Duration::from_millis(50),
@@ -81,7 +82,7 @@ mod tests {
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::NotifyOnly,
             )),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -95,7 +96,7 @@ mod tests {
 
         // Immediately invoke exit handler while manifest check is still in flight.
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(!timestamp_file_path.exists());
         match exit_outcome {
@@ -120,14 +121,17 @@ mod tests {
 
         // 1. Manifest HTTP 500 error -> ExitOutcome::CheckFailed, no cooldown file.
         SingletonState::reset_for_testing();
-        let bad_server =
-            manifest_server::spawn_error("server error", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
+
+        let bad_server_spawn_result = manifest_server::spawn_error(
+            "server error",
+            blocks::HTTP_500_INTERNAL_SERVER_ERROR,
+        );
         let http_500_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            bad_server.url,
+            bad_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -139,7 +143,7 @@ mod tests {
             ))
         ));
         let http_500_exit = http_500_start.handle_upgrade_on_exit();
-        bad_server.join_handle.join().unwrap();
+        bad_server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(!timestamp_file_path.exists());
         match http_500_exit {
@@ -157,6 +161,7 @@ mod tests {
         // 2. Connection refused (closed socket) -> ExitOutcome::CheckFailed, no cooldown
         //    file.
         SingletonState::reset_for_testing();
+
         let dead_manifest_url = placeholder_release_base_url().with_closed_socket_addr();
         let refused_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
@@ -235,11 +240,12 @@ mod tests {
     #[serial]
     fn test_deferred_upgrade_exit_auto_failure_records_completed_without_cooldown() {
         SingletonState::reset_for_testing();
+
         let temp_dir = try_create_temp_dir().unwrap();
         let timestamp_file_path = temp_dir.join("auto_fail.last_check");
 
         let dead_url = placeholder_release_base_url().with_closed_socket_addr();
-        let server = manifest_server::spawn_success(
+        let server_spawn_result = manifest_server::spawn_success(
             manifest_upgrade_available_closed_source(&dead_url),
         );
         let config = UpgradeConfig::new(
@@ -247,7 +253,7 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -260,7 +266,7 @@ mod tests {
         ));
 
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(!timestamp_file_path.exists());
         match exit_outcome {

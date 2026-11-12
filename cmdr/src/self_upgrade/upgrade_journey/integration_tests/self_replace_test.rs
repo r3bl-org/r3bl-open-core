@@ -29,7 +29,7 @@
 
 use super::test_fixtures::*;
 use crate::{CooldownPolicy, CooldownStatus, CrateVersion, UpgradeConfig, UpgradePolicy,
-            UpgradeStrategy, UserFeedbackChannel, self_upgrade::*, sha256_checksum};
+            UpgradeStrategy, UserFeedbackChannel, self_upgrade::*};
 use flate2::{Compression, write::GzEncoder};
 use r3bl_tui::{assert_eq2, try_create_temp_dir};
 use std::{env, fs, process::Command};
@@ -91,6 +91,7 @@ fn test_immediate_upgrade_release_archive_downloads_verifies_and_self_replaces()
 
 /// Runs inside the isolated subprocess whose [`std::env::current_exe()`] points to
 /// `temp_dir/bin/<exe_name>`.
+#[cfg(test)]
 fn run_self_replace_worker() {
     SingletonState::reset_for_testing();
 
@@ -103,9 +104,7 @@ fn run_self_replace_worker() {
         .to_string();
 
     let archive_bytes = build_release_tar_gz(&current_exe_name);
-    let archive_sha256 = sha256_checksum::compute_sha256_hex(&archive_bytes);
-
-    let server = archive_server::spawn_success(archive_bytes, archive_sha256);
+    let server_spawn_result = archive_server::spawn_success(archive_bytes);
 
     let cooldown_temp_dir = try_create_temp_dir().unwrap();
     let timestamp_file_path = cooldown_temp_dir.join("self_replace.last_check");
@@ -115,12 +114,12 @@ fn run_self_replace_worker() {
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
         UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-        server.url,
+        server_spawn_result.url.clone(),
         CooldownPolicy::new_custom_path(timestamp_file_path),
     );
 
     let outcome = UpgradeJourney::new(config.clone()).start();
-    server.join_handle.join().unwrap();
+    server_spawn_result.assert_each_endpoint_called_once();
 
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::Completed(journey)) => {

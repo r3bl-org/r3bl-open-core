@@ -135,8 +135,9 @@ const_format = "0.2.35"
 mimalloc = "0.1.48"
 
 [dev-dependencies]
-# For assert_eq2! macro.
+mockito = { version = "1.7", default-features = false }
 serial_test = "3.2.0"
+# For assert_eq2! macro.
 pretty_assertions = "1.4.1"
 test-case = "3.3.1"
 similar = "2.6"

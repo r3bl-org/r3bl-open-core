@@ -248,10 +248,10 @@ pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
 mod tests {
     use super::*;
     use crate::{CooldownPolicy, CrateVersion, JsoncScalar, UpgradeConfig, UpgradePolicy,
-                UserFeedbackChannel};
+                UserFeedbackChannel,
+                self_upgrade::integration_tests::test_fixtures::{blocks,
+                                                                 manifest_server}};
     use r3bl_tui::{assert_eq2, try_create_temp_dir};
-    use std::{io::{Read, Write},
-              net::TcpListener};
 
     const SAMPLE_MANIFEST_0_0_26: &str = r#"{
         "binaries_release_base_url": "https://github.com/r3bl-org/r3bl-binaries/releases/download",
@@ -264,24 +264,6 @@ mod tests {
         }
     }"#;
 
-    fn serve_one_http_response(status: &'static str, body: &'static str) -> EndpointUrl {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        std::thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut req_buf = [0_u8; 1024];
-                drop(stream.read(&mut req_buf));
-                let resp = format!(
-                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                drop(stream.write_all(resp.as_bytes()));
-                drop(stream.flush());
-            }
-        });
-        EndpointUrl::default_manifest_url().with_socket_addr(addr)
-    }
-
     #[tokio::test]
     async fn test_deferred_check_transitions_and_touches_cooldown_only_on_up_to_date() {
         let temp_dir = try_create_temp_dir().unwrap();
@@ -290,18 +272,21 @@ mod tests {
         let avail_timestamp_file = temp_dir.join("avail.last_check");
         let avail_action = UpgradeActionOnExit::NotifyOnly;
         let avail_strategy = UpgradeStrategy::Deferred(avail_action);
+        let avail_server_spawn_result =
+            manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let avail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(avail_strategy),
-            serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26),
+            avail_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(avail_timestamp_file.clone()),
         );
         let avail_outcome = UpgradeJourney::new(avail_cfg)
             .into_checking(avail_strategy)
             .check_for_deferred_upgrade(avail_action)
             .await;
+        avail_server_spawn_result.assert_each_endpoint_called_once();
         assert!(!avail_timestamp_file.exists());
         match avail_outcome {
             DeferredCheckOutcome::UpgradeAvailable(journey) => {
@@ -318,18 +303,21 @@ mod tests {
         let fail_timestamp_file = temp_dir.join("fail.last_check");
         let fail_action = UpgradeActionOnExit::Auto;
         let fail_strategy = UpgradeStrategy::Deferred(fail_action);
+        let fail_server_spawn_result =
+            manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(fail_strategy),
-            serve_one_http_response("500 Internal Server Error", "boom"),
+            fail_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(fail_strategy)
             .check_for_deferred_upgrade(fail_action)
             .await;
+        fail_server_spawn_result.assert_each_endpoint_called_once();
         assert!(!fail_timestamp_file.exists());
         assert!(matches!(
             fail_outcome,
@@ -340,18 +328,21 @@ mod tests {
         let ok_timestamp_file = temp_dir.join("uptodate.last_check");
         let ok_action = UpgradeActionOnExit::Auto;
         let ok_strategy = UpgradeStrategy::Deferred(ok_action);
+        let ok_server_spawn_result =
+            manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let ok_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(ok_strategy),
-            serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26),
+            ok_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
         );
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(ok_strategy)
             .check_for_deferred_upgrade(ok_action)
             .await;
+        ok_server_spawn_result.assert_each_endpoint_called_once();
         assert!(ok_timestamp_file.exists());
         assert!(matches!(ok_outcome, DeferredCheckOutcome::UpToDate(_)));
     }
@@ -362,18 +353,21 @@ mod tests {
 
         // 1. Upgrading (`remote 0.0.26 > local 0.0.25`) must NOT touch cooldown yet.
         let upg_timestamp_file = temp_dir.join("imm_upg.last_check");
+        let upg_server_spawn_result =
+            manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let upg_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26),
+            upg_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(upg_timestamp_file.clone()),
         );
         let upg_outcome = UpgradeJourney::new(upg_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
+        upg_server_spawn_result.assert_each_endpoint_called_once();
         assert!(!upg_timestamp_file.exists());
         match upg_outcome {
             ImmediateCheckOutcome::Upgrading(journey) => {
@@ -387,18 +381,21 @@ mod tests {
 
         // 2. CheckFailed (`500 Internal Server Error`) must NOT touch cooldown.
         let fail_timestamp_file = temp_dir.join("imm_fail.last_check");
+        let fail_server_spawn_result =
+            manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            serve_one_http_response("500 Internal Server Error", "boom"),
+            fail_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
+        fail_server_spawn_result.assert_each_endpoint_called_once();
         assert!(!fail_timestamp_file.exists());
         assert!(matches!(
             fail_outcome,
@@ -407,18 +404,21 @@ mod tests {
 
         // 3. UpToDate (`remote 0.0.26 <= local 0.0.26`) MUST touch cooldown.
         let ok_timestamp_file = temp_dir.join("imm_ok.last_check");
+        let ok_server_spawn_result =
+            manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let ok_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26),
+            ok_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
         );
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
+        ok_server_spawn_result.assert_each_endpoint_called_once();
         assert!(ok_timestamp_file.exists());
         assert!(matches!(ok_outcome, ImmediateCheckOutcome::UpToDate(_)));
     }

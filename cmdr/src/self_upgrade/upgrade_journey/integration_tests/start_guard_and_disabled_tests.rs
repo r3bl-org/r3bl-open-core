@@ -61,6 +61,7 @@ mod tests {
     #[serial]
     async fn test_disabled_async_and_sync() {
         SingletonState::reset_for_testing();
+        
         let config = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),

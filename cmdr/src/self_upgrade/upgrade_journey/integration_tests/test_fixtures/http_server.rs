@@ -1,13 +1,18 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test fixtures for short-lived mock HTTP server fixtures and HTTP/1.1 response
-//! generators.
+//! HTTP server test fixtures for [`self_upgrade`] integration and unit tests. They use
+//! [`mockito`] to create a local HTTP server that's created just for the duration of each
+//! test.
+//!
+//! All `spawn_*` helpers launch the server synchronously via
+//! [`mockito::Server::new_with_opts`] so that these helpers can be called from both
+//! `#[test]` and `#[tokio::test]`. For async tests, [`mockito::Server::new`] will panic.
+//!
+//! [`self_upgrade`]: mod@crate::self_upgrade
 
 use super::{constants::*, jsonc_golden::*};
-use crate::self_upgrade::EndpointUrl;
-use std::{io::{Read, Write},
-          net::{SocketAddr, TcpListener, TcpStream},
-          time::Duration};
+use crate::self_upgrade::{EndpointUrl, sha256_checksum};
+use std::time::Duration;
 
 pub mod manifest_server {
     use super::*;
@@ -17,22 +22,18 @@ pub mod manifest_server {
     pub fn spawn_success(arg_response_body: impl Into<String>) -> ServerSpawnResult {
         spawn_one_shot_http_server_with_options(
             arg_response_body.into(),
-            blocks::HTTP_200_OK.to_string(),
+            blocks::HTTP_200_OK,
             None,
         )
     }
 
-    /// Responds immediately with `arg_status` and `arg_response_body`.
+    /// Responds immediately with `status` and `arg_response_body`.
     #[must_use]
     pub fn spawn_error(
         arg_response_body: impl Into<String>,
-        arg_status: impl Into<String>,
+        status: usize,
     ) -> ServerSpawnResult {
-        spawn_one_shot_http_server_with_options(
-            arg_response_body.into(),
-            arg_status.into(),
-            None,
-        )
+        spawn_one_shot_http_server_with_options(arg_response_body.into(), status, None)
     }
 
     /// Delays for `delay` before responding with [`blocks::HTTP_200_OK`] and
@@ -44,416 +45,177 @@ pub mod manifest_server {
     ) -> ServerSpawnResult {
         spawn_one_shot_http_server_with_options(
             arg_response_body.into(),
-            blocks::HTTP_200_OK.to_string(),
+            blocks::HTTP_200_OK,
             Some(delay),
         )
     }
 
-    /// Delays for `delay` before responding with `arg_status` and `arg_response_body`.
+    /// Delays for `delay` before responding with `status` and `arg_response_body`.
     #[must_use]
     pub fn spawn_delayed_error(
         arg_response_body: impl Into<String>,
-        arg_status: impl Into<String>,
+        status: usize,
         delay: Duration,
     ) -> ServerSpawnResult {
         spawn_one_shot_http_server_with_options(
             arg_response_body.into(),
-            arg_status.into(),
+            status,
             Some(delay),
         )
     }
 
-    /// Spawns a single-request local mock HTTP server with configurable response options.
-    ///
-    /// Binds to an [ephemeral port] on [`LOCALHOST_EPHEMERAL_PORT_BIND_ADDR`], optionally
-    /// sleeps for `maybe_delay`, and responds with `status` and `response_body`.
-    ///
-    /// Returns [`ServerSpawnResult`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if binding to [`LOCALHOST_EPHEMERAL_PORT_BIND_ADDR`] or retrieving the
-    /// local address fails.
-    ///
-    /// [ephemeral port]: https://en.wikipedia.org/wiki/Ephemeral_port
+    /// Spawns a single-request local [`mockito::Server`] serving [`VERSIONS_JSONC_PATH`]
+    /// with configurable status and optional response delay.
     fn spawn_one_shot_http_server_with_options(
         response_body: String,
-        status: String,
+        status: usize,
         maybe_delay: Option<Duration>,
     ) -> ServerSpawnResult {
-        server_common_impl::spawn_ephemeral_server(move |listener, _addr| {
-            let Ok((mut stream, _)) = listener.accept() else {
-                return;
-            };
+        // ServerOpts::default() binds to 127.0.0.1:0 (OS-assigned ephemeral port).
+        let mut server = mockito::Server::new_with_opts(mockito::ServerOpts::default());
+        let addr = server.socket_address();
+        let url = EndpointUrl::default_manifest_url().with_socket_addr(addr);
 
-            let mut req_buf = [0_u8; blocks::HTTP_REQUEST_BUFFER_SIZE];
-            drop(stream.read(&mut req_buf));
-            if let Some(delay) = maybe_delay {
-                std::thread::sleep(delay);
+        let endpoint = server
+            .mock(HTTP_METHOD_GET, VERSIONS_JSONC_PATH)
+            .with_status(status)
+            .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_JSON)
+            .expect(1);
+
+        // Add a delay to the response if specified.
+        let endpoint = match maybe_delay {
+            Some(delay) => {
+                let body_bytes = response_body.into_bytes();
+                endpoint.with_body_from_request(move |_| {
+                    std::thread::sleep(delay);
+                    body_bytes.clone()
+                })
             }
-            let resp = http_response::format_http_response(
-                &status,
-                blocks::MIME_APPLICATION_JSON,
-                &response_body,
-            );
-            drop(stream.write_all(resp.as_bytes()));
-            drop(stream.flush());
-        })
+            None => endpoint.with_body(response_body),
+        }
+        .create();
+
+        ServerSpawnResult {
+            url,
+            server,
+            endpoints: vec![endpoint],
+        }
     }
 }
 
 pub mod archive_server {
     use super::*;
 
-    /// Spawns a local mock HTTP server handling the 4 sequential requests made during a
-    /// release-archive upgrade:
-    /// 1. `GET /versions.jsonc` → manifest JSONC
-    /// 2. `HEAD /releases/download/.../*.tar.gz` → 200 OK header with `Content-Length`
-    /// 3. `GET /releases/download/.../*.tar.gz.sha256` → SHA-256 checksum string
-    /// 4. `GET /releases/download/.../*.tar.gz` → raw archive `.tar.gz` bytes
-    ///
-    /// # Panics
-    ///
-    /// Panics if accepting a connection fails or an unrecognized request is received.
+    /// Spawns a local [`mockito::Server`] handling the 4 sequential requests made during
+    /// a release-archive upgrade:
+    /// 1. `GET /versions.jsonc` -> manifest JSONC
+    /// 2. `HEAD /releases/download/.../*.tar.gz` -> `200 OK` header with `Content-Length`
+    /// 3. `GET /releases/download/.../*.tar.gz.sha256` -> SHA-256 checksum derived from
+    ///    `archive_bytes`
+    /// 4. `GET /releases/download/.../*.tar.gz` -> raw archive `.tar.gz` bytes
     #[must_use]
-    pub fn spawn_success(
-        archive_bytes: Vec<u8>,
-        arg_archive_sha256: impl Into<String>,
-    ) -> ServerSpawnResult {
-        let archive_sha256 = arg_archive_sha256.into();
-        server_common_impl::spawn_ephemeral_server(move |listener, addr| {
-            let release_url = placeholder_release_base_url().with_socket_addr(addr);
-            let manifest_body = manifest_upgrade_available_open_source(&release_url);
+    pub fn spawn_success(archive_bytes: Vec<u8>) -> ServerSpawnResult {
+        let archive_sha256 = sha256_checksum::compute_sha256_hex(&archive_bytes);
+        let TestReleaseAssets {
+            archive_filename,
+            archive_path,
+            sha256_path,
+        } = TestReleaseAssets::for_current_host();
 
-            // Accept the 4 sequential upgrade requests. Panics if accepting fails
-            // or if an unexpected HTTP client request is received. There are no server
-            // errors.
-            for _ in 0..4 {
-                let (mut stream, _addr) = listener
-                    .accept()
-                    .expect("failed to accept connection on test HTTP server");
+        // ServerOpts::default() binds to 127.0.0.1:0 (OS-assigned ephemeral port).
+        let mut server = mockito::Server::new_with_opts(mockito::ServerOpts::default());
+        let addr = server.socket_address();
 
-                let request_line = read_request_line(&mut stream);
-                let request = ArchiveRequest::from_request_line(&request_line);
-                let resp =
-                    request.respond(&manifest_body, &archive_bytes, &archive_sha256);
+        let release_url = placeholder_release_base_url().with_socket_addr(addr);
+        let manifest_body = manifest_upgrade_available_open_source(&release_url);
 
-                write_response(&mut stream, &resp);
-            }
-        })
-    }
+        // Standard sha256sum format: "<hex>  <filename>\n".
+        let sha_body = format!("{archive_sha256}  {archive_filename}\n");
+        let archive_len = archive_bytes.len().to_string();
 
-    /// The 4 distinct HTTP requests expected during an archive upgrade flow.
-    ///
-    /// Each variant corresponds to a sequential step in the release-archive self-upgrade
-    /// journey initiated by `r3bl-cmdr`.
-    #[derive(Debug, PartialEq, Eq)]
-    enum ArchiveRequest {
-        /// Manifest discovery (`GET /versions.jsonc`).
-        Manifest,
-        /// Asset metadata inspection (`HEAD /releases/download/.../*.tar.gz`).
-        ArchiveHeader,
-        /// Checksum verification (`GET /releases/download/.../*.tar.gz.sha256`).
-        Checksum,
-        /// Release binary archive payload (`GET /releases/download/.../*.tar.gz`).
-        ArchiveDownload,
-    }
+        let manifest_endpoint = server
+            .mock(HTTP_METHOD_GET, VERSIONS_JSONC_PATH)
+            .with_status(HTTP_200_OK)
+            .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_JSON)
+            .with_body(manifest_body)
+            .expect(1)
+            .create();
 
-    impl ArchiveRequest {
-        /// Parses an HTTP Request-Line into its corresponding [`ArchiveRequest`] variant.
-        ///
-        /// In the HTTP/1.1 specification ([RFC 9112 §3]), the Request-Line is the first
-        /// line of an incoming request and follows the structure:
-        ///
-        /// ```text
-        /// <METHOD> <REQUEST_TARGET> <HTTP_VERSION>
-        /// ```
-        ///
-        /// This function splits `request_line` by whitespace and pattern-matches the
-        /// method and path components to identify the upgrade step:
-        ///
-        /// | Method | Target Path             | Variant                             | Purpose                   |
-        /// | :----- | :---------------------- | :---------------------------------- | :------------------------ |
-        /// | `GET`  | [`VERSIONS_JSONC_PATH`] | [`ArchiveRequest::Manifest`]        | Download upgrade manifest |
-        /// | `HEAD` | `.../*.tar.gz`          | [`ArchiveRequest::ArchiveHeader`]   | Inspect archive length    |
-        /// | `GET`  | `.../*.tar.gz.sha256`   | [`ArchiveRequest::Checksum`]        | Download checksum file    |
-        /// | `GET`  | `.../*.tar.gz`          | [`ArchiveRequest::ArchiveDownload`] | Download release archive  |
-        ///
-        /// # Panics
-        ///
-        /// Panics if an unrecognized method or path is received by the test server.
-        ///
-        /// [RFC 9112 §3]: https://www.rfc-editor.org/rfc/rfc9112#section-3
-        fn from_request_line(request_line: &str) -> Self {
-            let mut iter = request_line.split_whitespace();
-            match (iter.next(), iter.next()) {
-                // 1. HEAD /.../*.tar.gz
-                (Some(HTTP_METHOD_HEAD), Some(path)) => {
-                    if path.ends_with(TAR_GZ_EXT) {
-                        return Self::ArchiveHeader;
-                    }
-                    panic!("unrecognized HEAD request path on test HTTP server: {path}")
-                }
+        let archive_head_endpoint = server
+            .mock(HTTP_METHOD_HEAD, archive_path.as_str())
+            .with_status(HTTP_200_OK)
+            .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_OCTET_STREAM)
+            .with_header(HEADER_CONTENT_LENGTH, &archive_len)
+            .expect(1)
+            .create();
 
-                // 2. GET /versions.jsonc, /.../*.tar.gz.sha256, or /.../*.tar.gz
-                (Some(HTTP_METHOD_GET), Some(path)) => {
-                    if path == VERSIONS_JSONC_PATH {
-                        return Self::Manifest;
-                    }
-                    if path.ends_with(SHA256_EXT) {
-                        return Self::Checksum;
-                    }
-                    if path.ends_with(TAR_GZ_EXT) {
-                        return Self::ArchiveDownload;
-                    }
-                    panic!("unrecognized GET request path on test HTTP server: {path}")
-                }
+        let checksum_endpoint = server
+            .mock(HTTP_METHOD_GET, sha256_path.as_str())
+            .with_status(HTTP_200_OK)
+            .with_header(HEADER_CONTENT_TYPE, MIME_TEXT_PLAIN)
+            .with_body(sha_body)
+            .expect(1)
+            .create();
 
-                // 3. Anything else is an unrecognized/malformed request
-                (method, path) => {
-                    panic!(
-                        "unrecognized request on test HTTP server: method={method:?}, path={path:?}"
-                    )
-                }
-            }
-        }
+        let archive_download_endpoint = server
+            .mock(HTTP_METHOD_GET, archive_path.as_str())
+            .with_status(HTTP_200_OK)
+            .with_header(HEADER_CONTENT_TYPE, MIME_APPLICATION_OCTET_STREAM)
+            .with_body(archive_bytes)
+            .expect(1)
+            .create();
 
-        /// Generates the wire-format HTTP response bytes for this request variant.
-        fn respond(
-            &self,
-            manifest_body: &str,
-            archive_bytes: &[u8],
-            archive_sha256: &str,
-        ) -> Vec<u8> {
-            match self {
-                Self::Manifest => http_response::format_http_response(
-                    HTTP_200_OK,
-                    MIME_APPLICATION_JSON,
-                    manifest_body,
-                )
-                .into_bytes(),
-                Self::ArchiveHeader => http_response::format_http_header(
-                    HTTP_200_OK,
-                    MIME_APPLICATION_OCTET_STREAM,
-                    archive_bytes.len(),
-                )
-                .into_bytes(),
-                Self::Checksum => {
-                    let sha_body =
-                        http_response::format_sha256_checksum_body(archive_sha256);
-                    http_response::format_http_response(
-                        HTTP_200_OK,
-                        MIME_TEXT_PLAIN,
-                        &sha_body,
-                    )
-                    .into_bytes()
-                }
-                Self::ArchiveDownload => http_response::format_http_binary_response(
-                    HTTP_200_OK,
-                    MIME_APPLICATION_OCTET_STREAM,
-                    archive_bytes,
-                ),
-            }
-        }
-    }
-
-    /// Reads incoming request bytes from `stream` and extracts the first line (the HTTP
-    /// Request-Line).
-    ///
-    /// Here is an example of a typical HTTP request:
-    /// ```text
-    /// GET /versions.jsonc HTTP/1.1\r\n    <─── Line 1 (Kept, Request-Line)
-    /// Host: 127.0.0.1:41235\r\n           <─── Line 2 (Thrown away, Header)
-    /// User-Agent: reqwest/0.12\r\n        <─── Line 3 (Thrown away, Header)
-    /// Accept: */*\r\n                     <─── Line 4 (Thrown away, Header)
-    /// Accept-Encoding: gzip, br\r\n       <─── Line 5 (Thrown away, Header)
-    /// \r\n                                <─── Line 6 (Thrown away, End of Headers)
-    /// ```
-    fn read_request_line(stream: &mut TcpStream) -> String {
-        let mut request_buffer = [0_u8; HTTP_REQUEST_BUFFER_SIZE];
-        let bytes_read = stream.read(&mut request_buffer).unwrap_or(0);
-        let raw_request = String::from_utf8_lossy(&request_buffer[..bytes_read]);
-        raw_request.lines().next().unwrap_or("").to_string()
-    }
-
-    /// Writes the full response byte buffer to `stream` and flushes.
-    fn write_response(stream: &mut TcpStream, response: &[u8]) {
-        drop(stream.write_all(response));
-        drop(stream.flush());
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_archive_request_from_request_line() {
-            assert_eq!(
-                ArchiveRequest::from_request_line("GET /versions.jsonc HTTP/1.1"),
-                ArchiveRequest::Manifest
-            );
-            assert_eq!(
-                ArchiveRequest::from_request_line(
-                    "HEAD /releases/download/v9.9.9/r3bl-cmdr-v9.9.9.tar.gz HTTP/1.1"
-                ),
-                ArchiveRequest::ArchiveHeader
-            );
-            assert_eq!(
-                ArchiveRequest::from_request_line(
-                    "GET /releases/download/v9.9.9/r3bl-cmdr-v9.9.9.tar.gz.sha256 HTTP/1.1"
-                ),
-                ArchiveRequest::Checksum
-            );
-            assert_eq!(
-                ArchiveRequest::from_request_line(
-                    "GET /releases/download/v9.9.9/r3bl-cmdr-v9.9.9.tar.gz HTTP/1.1"
-                ),
-                ArchiveRequest::ArchiveDownload
-            );
-        }
-
-        #[test]
-        #[should_panic(expected = "unrecognized request on test HTTP server")]
-        fn test_archive_request_from_request_line_panics_on_unknown_method() {
-            let _ = ArchiveRequest::from_request_line("POST /invalid HTTP/1.1");
-        }
-
-        #[test]
-        #[should_panic(expected = "unrecognized GET request path on test HTTP server")]
-        fn test_archive_request_from_request_line_panics_on_unknown_get_path() {
-            let _ = ArchiveRequest::from_request_line("GET /unknown/path.txt HTTP/1.1");
-        }
-
-        #[test]
-        #[should_panic(expected = "unrecognized HEAD request path on test HTTP server")]
-        fn test_archive_request_from_request_line_panics_on_unknown_head_path() {
-            let _ = ArchiveRequest::from_request_line("HEAD /unknown/path.txt HTTP/1.1");
+        ServerSpawnResult {
+            url: EndpointUrl::default_manifest_url().with_socket_addr(addr),
+            server,
+            endpoints: vec![
+                manifest_endpoint,
+                archive_head_endpoint,
+                checksum_endpoint,
+                archive_download_endpoint,
+            ],
         }
     }
 }
 
-/// Result of spawning a short-lived mock HTTP server.
+/// Result of spawning a [`mockito::Server`] configured for [`self_upgrade`] tests.
+///
+/// # [RAII] Lifetime Requirement for `server` field
+///
+/// Callers must keep this [`ServerSpawnResult`] bound for the duration of the test
+/// execution.
+/// - Do not discard it with `let _ = ...` or extract only `.url` while dropping the rest
+///   of the struct.
+/// - Dropping `server` [`Self::server`] invokes [`mockito::Server::reset`], which
+///   immediately clears all registered [`Self::endpoints`] before client HTTP requests
+///   can match them.
+///
+/// [`self_upgrade`]: mod@crate::self_upgrade
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[derive(Debug)]
 pub struct ServerSpawnResult {
-    /// Endpoint URL pointing to `versions.jsonc`. This is needed because the server
-    /// binds to a dynamic [ephemeral port] (`127.0.0.1:0`) that tests must target at
-    /// runtime.
+    /// Endpoint URL pointing to `/versions.jsonc` on the local [`mockito::Server`]. This
+    /// is needed because the server binds to a dynamic [ephemeral port] (`127.0.0.1:0`)
+    /// that tests must target at runtime.
     ///
     /// [ephemeral port]: https://en.wikipedia.org/wiki/Ephemeral_port
     pub url: EndpointUrl,
 
-    /// Handle to the spawned thread. Joining it ensures clean teardown without leaked
-    /// threads/sockets and propagates any server panics to the test thread.
-    pub join_handle: std::thread::JoinHandle<()>,
+    /// Owned [`mockito::Server`] RAII guard keeping registered endpoints alive for the
+    /// test scope (dropping [`mockito::Server`] clears all registered endpoints).
+    pub server: mockito::Server,
+
+    /// Registered HTTP endpoints ([`mockito::Mock`]), each configured with `.expect(1)`
+    /// and verified via [`Self::assert_each_endpoint_called_once`].
+    pub endpoints: Vec<mockito::Mock>,
 }
 
-mod server_common_impl {
-    use super::*;
-    // Used for shorter rustdoc link ref defs
-    #[allow(unused_imports)]
-    use r3bl_tui::core::resilient_reactor_thread::RRT;
-
-    /// Spawns a background thread running `worker_fn` with a [`TcpListener`] bound to an
-    /// [ephemeral port] on [`LOCALHOST_EPHEMERAL_PORT_BIND_ADDR`].
-    ///
-    /// Returns a [`ServerSpawnResult`] containing the synthesized manifest URL and the
-    /// thread's [`JoinHandle`].
-    ///
-    /// # Note on `'static` trait bound
-    ///
-    /// - The `'static` bound prevents the `worker_fn` closure from capturing borrowed
-    ///   references (`&`) to the caller's stack frame. Otherwise, these would dangle if
-    ///   the caller returns while the spawned thread is still running. All captured
-    ///   variables must be moved by value, making them fully owned by the spawned thread.
-    /// - This does not mean the thread or closure lives forever. For an in-depth
-    ///   breakdown, see [`RRT`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if binding to [`LOCALHOST_EPHEMERAL_PORT_BIND_ADDR`] or retrieving the
-    /// local address fails.
-    ///
-    /// [`JoinHandle`]: std::thread::JoinHandle
-    /// [`RRT`]: RRT#static-trait-bound-vs-static-lifetime-annotation
-    /// [ephemeral port]: https://en.wikipedia.org/wiki/Ephemeral_port
-    #[must_use]
-    pub fn spawn_ephemeral_server(
-        worker_fn: impl FnOnce(TcpListener, SocketAddr)
-        + Send
-        // Type contains no references shorter than 'static. This does not
-        // mean it lives forever.
-        + 'static,
-    ) -> ServerSpawnResult {
-        // Create a socket listener that binds to an OS assigned port.
-        let listener = match TcpListener::bind(blocks::LOCALHOST_EPHEMERAL_PORT_BIND_ADDR)
-        {
-            Ok(listener) => listener,
-            Err(err) => panic!("failed to bind test HTTP server: {err}"),
-        };
-
-        // Get the local socket address including the OS assigned port number.
-        let addr = match listener.local_addr() {
-            Ok(addr) => addr,
-            Err(err) => {
-                panic!("failed to get local address for test HTTP server: {err}")
-            }
-        };
-
-        // Synthesize the URL pointing to `versions.jsonc` on the test server.
-        let url = EndpointUrl::default_manifest_url().with_socket_addr(addr);
-
-        // Spawn a thread to execute the `worker_fn`.
-        let join_handle = std::thread::spawn(move || worker_fn(listener, addr));
-
-        ServerSpawnResult { url, join_handle }
-    }
-}
-
-mod http_response {
-    use super::*;
-
-    /// Formats an HTTP/1.1 response header string with `Content-Type`, `Content-Length`,
-    /// and `Connection: close`, terminated by `\r\n\r\n`.
-    #[must_use]
-    pub fn format_http_header(
-        status: &str,
-        content_type: &str,
-        content_length: usize,
-    ) -> String {
-        format!(
-            "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {content_length}\r\nConnection: close\r\n\r\n"
-        )
-    }
-
-    /// Formats an HTTP/1.1 response string with `Content-Type`, `Content-Length`, and
-    /// `Connection: close`.
-    #[must_use]
-    pub fn format_http_response(status: &str, content_type: &str, body: &str) -> String {
-        format!(
-            "{}{body}",
-            format_http_header(status, content_type, body.len())
-        )
-    }
-
-    /// Formats an HTTP/1.1 response with `Content-Type`, `Content-Length`, and
-    /// `Connection: close` for binary payload bytes.
-    #[must_use]
-    pub fn format_http_binary_response(
-        status: &str,
-        content_type: &str,
-        body: &[u8],
-    ) -> Vec<u8> {
-        let header = format_http_header(status, content_type, body.len());
-        let mut resp = Vec::with_capacity(header.len() + body.len());
-        resp.extend_from_slice(header.as_bytes());
-        resp.extend_from_slice(body);
-        resp
-    }
-
-    /// Formats the `.sha256` checksum manifest file contents for the test release
-    /// archive.
-    #[must_use]
-    pub fn format_sha256_checksum_body(archive_sha256: &str) -> String {
-        format!("{archive_sha256}  {TEST_ARCHIVE_FILENAME}\n")
+impl ServerSpawnResult {
+    /// Asserts that every registered HTTP endpoint in [`Self::endpoints`] was called
+    /// once during the test.
+    pub fn assert_each_endpoint_called_once(&self) {
+        for endpoint in &self.endpoints {
+            endpoint.assert();
+        }
     }
 }

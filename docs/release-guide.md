@@ -198,10 +198,10 @@ steps are applied to each crate (`tui`, `cmdr`, `analytics_schema`):
 1. Update the version in `Cargo.toml`.
 2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in
    VSCode for each `Cargo.toml` file in the `~/github/r3bl-open-core/` folder. You can run
-   `run.nu upgrade-deps` to see which crates need to be updated.
+   `./run.fish upgrade-deps` to see which crates need to be updated.
     - This will update all the dependencies in all the crates in addition to updating all
-      the remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
-    - Run `run.nu full-build` to make sure everything builds.
+      the remaining `Cargo.toml` in the other crates so that `./run.fish build` runs.
+    - Run `./run.fish build-full` to make sure everything builds.
 3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and
    `vX.Y.Z` is the [semver](https://semver.org/) version number. Eg:
    `git add -A ; git commit -S -m "vX.Y.Z-core"`.

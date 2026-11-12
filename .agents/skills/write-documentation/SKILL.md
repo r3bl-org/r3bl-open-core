@@ -278,10 +278,10 @@ Common linked acronyms and their targets:
 | ``[`SSH`]``    | `https://en.wikipedia.org/wiki/Secure_Shell`                           | External (protocol)            |
 | ``[`TCP`]``    | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol`          | External (protocol)            |
 | ``[`DCS`]``    | Spec URL or crate path as appropriate                                  | Depends on context             |
-| ``[`RAII`]``   | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
+| ``[RAII]``   | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
 | ``[`SemVer`]`` | `https://semver.org/`                                                  | External (spec)                |
 
-> **Pedagogical & Spec Acronym Exception (`[`RAII`]`, `[`SemVer`]`)**: When an acronym
+> **Pedagogical & Spec Acronym Exception (`[RAII]`, `[`SemVer`]`)**: When an acronym
 > represents a specific design pattern or specification that benefits from a hover/click
 > definition for newcomers (see
 > [Pedagogical Links for Inclusivity](#pedagogical-links-for-inclusivity)), wrap it in
@@ -778,16 +778,18 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 
 When deciding local vs external links, follow this priority:
 
-| Priority | Source                   | Link Style     | Example                                          |
-| -------- | ------------------------ | -------------- | ------------------------------------------------ |
-| 1        | Code in this monorepo    | `crate::` path | `[`Foo`]: crate::module::Foo`                    |
-| 2        | Dependency in Cargo.toml | Crate path     | `[`mio`]: mio`                                   |
-| 3        | OS/CS/hardware terms     | External URL   | `[`epoll`]: https://manpages.debian.org/epoll.7` |
-| 4        | Pedagogical/domain terms | Wikipedia URL  | `[design pattern]: https://en.wikipedia.org/...` |
-| 5        | Non-dependency crates    | docs.rs URL    | `[`rayon`]: https://docs.rs/rayon`               |
+| Priority | Source                                        | Link Style     | Example                                          |
+| -------- | --------------------------------------------- | -------------- | ------------------------------------------------ |
+| 1        | Code in this monorepo                         | `crate::` path | `[`Foo`]: crate::module::Foo`                    |
+| 2        | `[dependencies]` in Cargo.toml                | Crate path     | `[`mio`]: mio`                                   |
+| 3        | OS/CS/hardware terms                          | External URL   | `[`epoll`]: https://manpages.debian.org/epoll.7` |
+| 4        | Pedagogical/domain terms                      | Wikipedia URL  | `[design pattern]: https://en.wikipedia.org/...` |
+| 5        | Non-dependency or `[dev-dependencies]` crates | docs.rs URL    | `[`mockito`]: https://docs.rs/mockito`           |
 
-**Key principle:** If it's in Cargo.toml, use local links (validated, offline-capable,
-version-matched).
+**Key principle:** If it's in `[dependencies]` in Cargo.toml, use local links (validated,
+offline-capable, version-matched). Cargo does **not** link `[dev-dependencies]` during
+`cargo doc`, so rustdocs compiled under `cfg(doc)` must link `[dev-dependencies]` via
+`https://docs.rs/<crate>`.
 
 ### Link All Symbols for Refactoring Safety
 
@@ -965,10 +967,10 @@ high.
 ```rust
 // ✅ Good: Links pedagogical terms for inclusivity
 //! This [design pattern] avoids all of this and allows async code to...
-//! Resources are cleaned up via [`RAII`] when the guard is dropped.
+//! Resources are cleaned up via [RAII] when the guard is dropped.
 //!
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 ```rust

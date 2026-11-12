@@ -9,13 +9,16 @@ scenarios.
 
 When deciding between local intra-doc links vs external URLs, follow this priority order:
 
-| Priority | Source Type                | Link Style    | Example                                          |
-| -------- | -------------------------- | ------------- | ------------------------------------------------ |
-| 1        | Code in this monorepo      | Local path    | `[`Foo`]: crate::module::Foo`                    |
-| 2        | Dependency in Cargo.toml   | Crate path    | `[`mio`]: mio`                                   |
-| 3        | OS/CS/hardware terminology | External URL  | `[`epoll`]: https://manpages.debian.org/epoll.7` |
-| 4        | Pedagogical/domain terms   | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
-| 5        | Non-dependency crates      | docs.rs URL   | `[`some_crate`]: https://docs.rs/some_crate`     |
+| Priority | Source Type                                     | Link Style    | Example                                          |
+| -------- | ----------------------------------------------- | ------------- | ------------------------------------------------ |
+| 1        | Code in this monorepo                           | Local path    | `[`Foo`]: crate::module::Foo`                    |
+| 2        | `[dependencies]` in Cargo.toml                  | Crate path    | `[`mio`]: mio`                                   |
+| 3        | OS/CS/hardware terminology                      | External URL  | `[`epoll`]: https://manpages.debian.org/epoll.7` |
+| 4        | Pedagogical/domain terms                        | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
+| 5        | Non-dependency or `[dev-dependencies]` crates\* | docs.rs URL   | `[`mockito`]: https://docs.rs/mockito`           |
+
+\*Cargo does not link `[dev-dependencies]` during `cargo doc`, so crate-path intra-doc links to
+`[dev-dependencies]` fail with broken-link warnings; use `https://docs.rs/<crate>` instead.
 
 **Key principle:** If it's in your Cargo.toml, use local links. This enables:
 
@@ -219,10 +222,10 @@ pub use rrt::*;  // run_worker_loop is now linkable in docs
 Now intra-doc links resolve:
 
 ```rust
-//! Resources are cleaned up via [`RAII`] when [`run_worker_loop()`] returns.
+//! Resources are cleaned up via [RAII] when [`run_worker_loop()`] returns.
 //!
 //! [`run_worker_loop()`]: run_worker_loop
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 **When to use which approach:**

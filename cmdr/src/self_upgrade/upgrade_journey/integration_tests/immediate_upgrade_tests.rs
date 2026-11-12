@@ -28,6 +28,7 @@ mod tests {
     #[serial]
     fn test_immediate_upgrade_up_to_date_sync_touches_and_bypasses_cooldown() {
         SingletonState::reset_for_testing();
+
         let crate_name: CrateName = "r3bl-cmdr".into();
         let temp_dir = try_create_temp_dir().unwrap();
         let timestamp_file_path =
@@ -36,13 +37,13 @@ mod tests {
         // Pre-populate an active cooldown timestamp file to verify
         // `UpgradeStrategy::Immediate` (`--upgrade`) bypasses it and still performs the
         // live HTTP check.
-        let server = manifest_server::spawn_success(manifest_up_to_date());
+        let server_spawn_result = manifest_server::spawn_success(manifest_up_to_date());
         let config = UpgradeConfig::new(
             crate_name,
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         config.get_cooldown_policy().touch(config.get_crate_name());
@@ -53,7 +54,7 @@ mod tests {
             .unwrap();
 
         let outcome = UpgradeJourney::new(config).start();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(matches!(
             outcome,
@@ -72,18 +73,19 @@ mod tests {
     #[serial]
     async fn test_immediate_upgrade_up_to_date_async() {
         SingletonState::reset_for_testing();
-        let server = manifest_server::spawn_success(manifest_up_to_date());
+
+        let server_spawn_result = manifest_server::spawn_success(manifest_up_to_date());
         let config = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::Disabled,
         );
 
         let outcome = UpgradeJourney::new(config).start();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(matches!(
             outcome,
@@ -95,22 +97,25 @@ mod tests {
     #[serial]
     fn test_immediate_upgrade_check_failed_and_upgrade_failed_transitions() {
         SingletonState::reset_for_testing();
+
         let temp_dir = try_create_temp_dir().unwrap();
         let timestamp_file_path = temp_dir.join("failed.last_check");
 
         // 1. Manifest HTTP 500 -> CheckFailed, no cooldown timestamp file.
-        let bad_server =
-            manifest_server::spawn_error("server error", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
+        let bad_server_spawn_result = manifest_server::spawn_error(
+            "server error",
+            blocks::HTTP_500_INTERNAL_SERVER_ERROR,
+        );
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            bad_server.url,
+            bad_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg).start();
-        bad_server.join_handle.join().unwrap();
+        bad_server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(!timestamp_file_path.exists());
         match fail_outcome {
@@ -129,8 +134,9 @@ mod tests {
         // transitions Checking -> Upgrading -> Completed(UpgradeFailed), no timestamp
         // file.
         SingletonState::reset_for_testing();
+
         let dead_url = placeholder_release_base_url().with_closed_socket_addr();
-        let newer_server = manifest_server::spawn_success(
+        let newer_server_spawn_result = manifest_server::spawn_success(
             manifest_upgrade_available_closed_source(&dead_url),
         );
 
@@ -139,11 +145,11 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            newer_server.url,
+            newer_server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         let upg_fail_outcome = UpgradeJourney::new(upg_fail_cfg).start();
-        newer_server.join_handle.join().unwrap();
+        newer_server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(!timestamp_file_path.exists());
         match upg_fail_outcome {

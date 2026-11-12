@@ -2,9 +2,9 @@
 
 use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
                     EndpointUrl, UpgradeConfig, archive, upgrade_reasons},
-            UpgradeSource, create_output_device_for_feedback_channel,
-            download_and_verify_archive, extract_and_apply_archive,
-            format_archive_filename, get_current_bin_name, get_host_target_triple,
+            ReleaseAsset, ReleaseTarget, UpgradeSource,
+            create_output_device_for_feedback_channel, download_and_verify_archive,
+            extract_and_apply_archive, get_current_bin_name,
             report_upgrade_source_error, run_source_build_with_spinner, ui_strings};
 use r3bl_tui::{OutputDevice, Spinner, SpinnerStyle, TuiAvailability, try_create_temp_dir};
 use std::{io, time::Duration};
@@ -267,10 +267,10 @@ pub async fn download_and_replace_release_archive(
     let temp_dir =
         try_create_temp_dir().map_err(|e| UpgradeError::Other(e.to_string()))?;
 
-    let archive_path = temp_dir.join(format_archive_filename(
+    let archive_path = temp_dir.join(ReleaseAsset::format_archive_filename(
         crate_name,
         pinned_version,
-        get_host_target_triple()?,
+        ReleaseTarget::try_from_host()?,
     ));
 
     let res_spinner = Spinner::try_start(

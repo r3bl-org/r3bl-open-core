@@ -43,6 +43,16 @@ pub mod process_isolated_tests;
 pub mod my_module_integration_tests;
 ```
 
+- **Two-Layer Split for `[dev-dependencies]`**: Cargo does **not** link `[dev-dependencies]`
+  (`mockito`, `serial_test`, `test_case`, `pretty_assertions`) during `cargo doc` (`cfg(doc)`
+  without `cfg(test)`). Inside an `#[cfg(any(test, doc))]` module tree:
+  1. Keep outer module shells (`//!` docs) and pure-`[dependencies]` fixture modules (`constants`,
+     golden builders) un-gated so they inherit `#[cfg(any(test, doc))]` and remain linkable in
+     rustdoc (never move test-only constants into production `constants.rs` files).
+  2. Gate executable test bodies (`#[cfg(test)] mod tests`) and any fixture submodule/helper that
+     imports `[dev-dependencies]` behind `#[cfg(test)]` (see `organize-modules` skill ->
+     `[dev-dependencies] Caveat`).
+
 ### 5. Organize Conformance & Golden Test Data (`test_data/`)
 When tests validate external files or assert outputs against golden files, place them in `test_data/` with `input/` and `expected_output/` subdirectories. Use matching basenames (e.g., `input/unix/cargo_env.sh` and `expected_output/unix/cargo_env.fish`) and protect the directory with an `AGENTS.md` file. See [Taxonomy](taxonomy.md) for details.
 

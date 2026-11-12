@@ -52,7 +52,6 @@
         "wayou.vscode-todo-highlight", // Todo Highlight.
         "fabiospampinato.vscode-todo-plus", // Todo+.
         "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
-        "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
         "alefragnani.separators", // [SLOW] Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
         "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
         "ms-azuretools.vscode-containers", // Container tools.

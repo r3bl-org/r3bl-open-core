@@ -129,6 +129,22 @@ _Meta Task: Prepare v0.8.0 Release_
     - With all UI consolidated on `TerminalWindow`, convert `TerminalWindow` &
       `InputDevice` to sync and drop Tokio completely from `tui`
 
+# [TODO] Enhance editor & edi
+
+- [ ] [word wrap on/off in editor & edi](editor-word-wrap.md)
+    - Adds soft word-wrap mode (`WordWrapMode::Off` / `WordWrapMode::On`) to
+      `EditorEngineConfig`, visual line wrapping over 2D `OfsBuf` rasterization, and
+      <kbd>Alt</kbd>+<kbd>Z</kbd> / `--word-wrap` support in `edi`
+- [ ] [multiple carets in editor & edi](editor-multi-caret.md)
+    - Replaces single-caret state with `CaretSet` (`InlineVec<CaretEntry>`), reverse-order
+      batch `ZeroCopyGapBuffer` edits, and multi-caret shortcuts
+      (<kbd>Ctrl</kbd>+<kbd>D</kbd>,
+      <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Up</kbd>/<kbd>Down</kbd>)
+- [ ] [fzf find & search+replace in edi](edi-fuzzy-find-replace.md)
+    - Adds fzf-style fuzzy and exact find (<kbd>Ctrl</kbd>+<kbd>F</kbd>) plus atomic
+      search-and-replace (<kbd>Ctrl</kbd>+<kbd>H</kbd> / <kbd>Ctrl</kbd>+<kbd>R</kbd>)
+      with multi-caret match spawning in `r3bl_tui` and `edi`
+
 # [TODO] Clean up tasks
 
 - [ ] [upgrade-range-for-rust_1_96_0.md](upgrade-range-for-rust_1_96_0.md)

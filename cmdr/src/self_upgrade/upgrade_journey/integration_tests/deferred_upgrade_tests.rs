@@ -23,6 +23,7 @@ mod tests {
     #[serial]
     fn test_deferred_upgrade_cooldown_skip_and_expiry() {
         SingletonState::reset_for_testing();
+        
         let temp_dir = try_create_temp_dir().unwrap();
         let timestamp_file_path = temp_dir.join("cooldown.last_check");
 
@@ -53,19 +54,20 @@ mod tests {
         // 2. Expired timestamp file (`now - 2h`) -> spawns dedicated thread, queries
         //    server, refreshes timestamp file.
         SingletonState::reset_for_testing();
+
         let expired_time = SystemTime::now() - Duration::from_secs(7200);
         File::open(&timestamp_file_path)
             .unwrap()
             .set_modified(expired_time)
             .unwrap();
 
-        let server = manifest_server::spawn_success(manifest_up_to_date());
+        let server_spawn_result = manifest_server::spawn_success(manifest_up_to_date());
         let expired_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -78,7 +80,7 @@ mod tests {
         ));
 
         let exit_outcome = run_outcome.handle_upgrade_on_exit();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         assert!(matches!(exit_outcome, ExitOutcome::UpToDate(_)));
         assert_eq2!(
@@ -96,7 +98,7 @@ mod tests {
 
         // Simulate a short-lived CLI reaching `StartOutcome::handle_upgrade_on_exit()`
         // while the dedicated thread is still awaiting the HTTP response (`50ms`).
-        let server = manifest_server::spawn_delayed_success(
+        let server_spawn_result = manifest_server::spawn_delayed_success(
             manifest_upgrade_available_open_source(&placeholder_release_base_url()),
             Duration::from_millis(50),
         );
@@ -107,7 +109,7 @@ mod tests {
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::NotifyOnly,
             )),
-            server.url,
+            server_spawn_result.url.clone(),
             CooldownPolicy::Disabled,
         );
 
@@ -121,7 +123,7 @@ mod tests {
 
         // Immediately invoke exit handler while manifest check is still in flight.
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server.join_handle.join().unwrap();
+        server_spawn_result.assert_each_endpoint_called_once();
 
         match exit_outcome {
             ExitOutcome::Completed(journey) => {

@@ -189,12 +189,12 @@ pub enum ManifestCheckError {
 #[cfg(test)]
 mod tests {
     use super::{super::super::{CrateDistribution, CrateVersion, JsoncScalar,
+                               integration_tests::test_fixtures::{blocks,
+                                                                  manifest_server},
                                manifest_timeouts},
                 *};
     use miette::Context;
     use r3bl_tui::assert_eq2;
-    use std::{io::{Read, Write},
-              net::TcpListener};
 
     const SAMPLE_MANIFEST_0_0_26: &str = r#"{
         "binaries_release_base_url": "https://github.com/r3bl-org/r3bl-binaries/releases/download",
@@ -206,24 +206,6 @@ mod tests {
             }
         }
     }"#;
-
-    fn serve_one_http_response(status: &'static str, body: &'static str) -> EndpointUrl {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-        std::thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut req_buf = [0_u8; 1024];
-                drop(stream.read(&mut req_buf));
-                let resp = format!(
-                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                drop(stream.write_all(resp.as_bytes()));
-                drop(stream.flush());
-            }
-        });
-        EndpointUrl::default_manifest_url().with_socket_addr(addr)
-    }
 
     #[tokio::test]
     async fn test_try_get_jsonc_manifest_from_invalid_url() {
@@ -305,28 +287,31 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_crate_metadata_from_manifest_success_and_http_error() {
         let crate_name: CrateName = "r3bl-cmdr".into();
-        let ok_url = serve_one_http_response("200 OK", SAMPLE_MANIFEST_0_0_26);
+        let ok_server_spawn_result = manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let (meta, release_url) = fetch_crate_metadata_from_manifest(
-            &ok_url,
+            &ok_server_spawn_result.url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap();
+        ok_server_spawn_result.assert_each_endpoint_called_once();
         assert_eq2!(meta.version, CrateVersion::try_parse("0.0.26").unwrap());
         assert_eq2!(
             &*release_url,
             "https://github.com/r3bl-org/r3bl-binaries/releases/download"
         );
 
-        let err_url = serve_one_http_response("500 Internal Server Error", "boom");
+        let err_server_spawn_result =
+            manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let err = fetch_crate_metadata_from_manifest(
-            &err_url,
+            &err_server_spawn_result.url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap_err();
+        err_server_spawn_result.assert_each_endpoint_called_once();
         assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
     }
 }

@@ -229,6 +229,7 @@ mod tests {
         );
 
         SingletonState::reset_for_testing();
+
         assert_eq2!(SingletonState::try_claim_start(), StartClaimStatus::Claimed);
     }
 
@@ -253,6 +254,7 @@ mod tests {
 
         // `reset_for_testing` must join `handle` first, then reset `SINGLETON`.
         SingletonState::reset_for_testing();
+
         assert_eq2!(
             StartOutcome::AlreadyStarted.handle_upgrade_on_exit(),
             ExitOutcome::NoDeferredCheckRunning
@@ -263,6 +265,7 @@ mod tests {
     #[serial]
     fn test_handle_upgrade_on_exit_one_shot_idempotency() {
         SingletonState::reset_for_testing();
+        
         let outcome = StartOutcome::AlreadyStarted;
 
         // 1. With no deferred check handle, returns `NoDeferredCheckRunning`.

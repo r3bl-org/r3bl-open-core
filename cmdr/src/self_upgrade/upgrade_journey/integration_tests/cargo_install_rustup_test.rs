@@ -95,13 +95,14 @@ fn test_immediate_upgrade_open_source_falls_back_to_rustup_and_cargo_install_pty
 }
 
 /// Runs inside the isolated subprocess with `temp_dir/bin` prepended to `PATH`.
+#[cfg(test)]
 fn run_cargo_install_worker() {
     SingletonState::reset_for_testing();
 
     // Obtain a guaranteed-closed local port so the release archive `HEAD` probe fails
     // and triggers the open-source `rustup` + `cargo install` fallback.
     let dead_url = placeholder_release_base_url().with_closed_socket_addr();
-    let server = manifest_server::spawn_success(
+    let server_spawn_result = manifest_server::spawn_success(
         manifest_upgrade_available_open_source(&dead_url),
     );
 
@@ -113,12 +114,12 @@ fn run_cargo_install_worker() {
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
         UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-        server.url,
+        server_spawn_result.url.clone(),
         CooldownPolicy::new_custom_path(timestamp_file_path),
     );
 
     let outcome = UpgradeJourney::new(config.clone()).start();
-    server.join_handle.join().unwrap();
+    server_spawn_result.assert_each_endpoint_called_once();
 
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::Completed(journey)) => {

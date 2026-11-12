@@ -234,3 +234,54 @@ pub mod url_schemes {
     /// TLS HTTPS scheme (`"https"`, used by production manifest and release endpoints).
     pub const HTTPS: &str = "https";
 }
+
+/// Host OS, CPU architecture, C ABI (`target_env`), and LLVM/Rust target triple constants
+/// used by [`ReleaseTarget`].
+///
+/// [`ReleaseTarget`]: crate::self_upgrade::ReleaseTarget
+pub mod target_platform {
+    /// Linux OS identifier matching [`std::env::consts::OS`].
+    pub const OS_LINUX: &str = "linux";
+
+    /// macOS OS identifier matching [`std::env::consts::OS`].
+    pub const OS_MACOS: &str = "macos";
+
+    /// Windows OS identifier matching [`std::env::consts::OS`].
+    pub const OS_WINDOWS: &str = "windows";
+
+    /// 64-bit x86 CPU architecture identifier matching [`std::env::consts::ARCH`].
+    pub const ARCH_X86_64: &str = "x86_64";
+
+    /// 64-bit ARM CPU architecture identifier matching [`std::env::consts::ARCH`].
+    pub const ARCH_AARCH64: &str = "aarch64";
+
+    /// GNU `glibc` C ABI `target_env` discriminator (`"gnu"`).
+    pub const ABI_GNU: &str = "gnu";
+
+    /// Microsoft Visual C++ `target_env` discriminator (`"msvc"`).
+    pub const ABI_MSVC: &str = "msvc";
+
+    /// `musl` libc `target_env` discriminator (`"musl"`).
+    pub const ABI_MUSL: &str = "musl";
+
+    /// Empty `target_env` discriminator (`""`, e.g., macOS).
+    pub const ABI_NONE: &str = "";
+
+    /// Canonical LLVM/Rust target triple for Linux `x86_64` (`glibc`).
+    pub const TRIPLE_LINUX_X86_64_GNU: &str = "x86_64-unknown-linux-gnu";
+
+    /// Canonical LLVM/Rust target triple for Linux `aarch64` (`glibc`).
+    pub const TRIPLE_LINUX_AARCH64_GNU: &str = "aarch64-unknown-linux-gnu";
+
+    /// Canonical LLVM/Rust target triple for Intel macOS (`x86_64`).
+    pub const TRIPLE_MACOS_X86_64: &str = "x86_64-apple-darwin";
+
+    /// Canonical LLVM/Rust target triple for Apple Silicon macOS (`aarch64`).
+    pub const TRIPLE_MACOS_AARCH64: &str = "aarch64-apple-darwin";
+
+    /// Canonical LLVM/Rust target triple for Windows `x86_64` (MSVC).
+    pub const TRIPLE_WINDOWS_X86_64_MSVC: &str = "x86_64-pc-windows-msvc";
+
+    /// Canonical LLVM/Rust target triple for Windows `aarch64` (MSVC).
+    pub const TRIPLE_WINDOWS_AARCH64_MSVC: &str = "aarch64-pc-windows-msvc";
+}

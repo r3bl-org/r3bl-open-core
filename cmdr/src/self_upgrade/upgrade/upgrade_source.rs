@@ -1,7 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{check_release_asset_available, format_release_asset_urls,
-            get_host_target_triple,
+use super::{ReleaseAsset, ReleaseTarget,
             super::{CrateDistribution, CrateName, CrateVersion, EndpointUrl,
                     NoViableSourceReason, UpgradeError, toolchain_bin,
                     toolchain_cli_args}};
@@ -78,14 +77,15 @@ mod impl_upgrade_source {
             binaries_release_base_url: &EndpointUrl,
         ) -> Result<Self, UpgradeError> {
             let pinned_version_str = pinned_version.to_string();
-            let release_asset_urls = if let Ok(target_triple) = get_host_target_triple() {
-                let (archive_url, sha256_url) = format_release_asset_urls(
+            let release_asset_urls =
+                if let Ok(target_triple) = ReleaseTarget::try_from_host() {
+                let (archive_url, sha256_url) = ReleaseAsset::format_urls(
                     binaries_release_base_url,
                     crate_name,
                     &pinned_version_str,
                     target_triple,
                 );
-                if check_release_asset_available(&archive_url).await {
+                if ReleaseAsset::check_available(&archive_url).await {
                     Some((archive_url, sha256_url))
                 } else {
                     None

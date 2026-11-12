@@ -112,23 +112,24 @@ pub mod http_wire {
 #### Phase 3 (`cmdr/.../test_fixtures/http_server.rs` backed by `mockito`)
 
 ```rust
-/// Result of spawning a `mockito::Server` configured for `self_upgrade` integration tests.
+/// Result of spawning a `mockito::Server` configured for `self_upgrade` tests.
 #[derive(Debug)]
 pub struct ServerSpawnResult {
     /// Endpoint URL pointing to `/versions.jsonc` on the `mockito::Server`.
     pub url: EndpointUrl,
-    /// Owned `mockito::ServerGuard` keeping the local mock server alive for the test
-    /// scope and holding registered [`mockito::Mock`] expectations.
-    pub server: mockito::ServerGuard,
-    /// Registered mocks verified via [`ServerSpawnResult::assert`].
-    pub mocks: Vec<mockito::Mock>,
+    /// Owned `mockito::Server` RAII guard keeping registered endpoints alive for the
+    /// test scope.
+    pub server: mockito::Server,
+    /// Registered HTTP endpoints verified via
+    /// [`ServerSpawnResult::assert_each_endpoint_called_once`].
+    pub endpoints: Vec<mockito::Mock>,
 }
 
 impl ServerSpawnResult {
-    /// Asserts that all registered mocks on this server were called as expected.
-    pub fn assert(&self) {
-        for mock in &self.mocks {
-            mock.assert();
+    /// Asserts that every registered HTTP endpoint on this server was called once.
+    pub fn assert_each_endpoint_called_once(&self) {
+        for endpoint in &self.endpoints {
+            endpoint.assert();
         }
     }
 }
@@ -154,26 +155,33 @@ Extract the domain-agnostic HTTP/1.1 test server and wire formatters into
 `tui/src/core/test_fixtures/http_server_fixtures.rs` and update `r3bl-cmdr` to consume
 them so the reusable module is cleanly separated from `self_upgrade` domain types.
 
-- [ ] Create `tui/src/core/test_fixtures/http_server_fixtures.rs` with `MockHttpServer`,
+- [x] Create `tui/src/core/test_fixtures/http_server_fixtures.rs` with `MockHttpServer`,
       `HttpServerSpawnResult`, `http_wire` helpers (`format_http_header`,
       `format_http_response`, `format_http_binary_response`, `read_request_line`,
       `write_response`), standard HTTP constants (`LOCALHOST_EPHEMERAL_PORT_BIND_ADDR`,
       `HTTP_REQUEST_BUFFER_SIZE`, `HTTP_METHOD_GET`, `HTTP_METHOD_HEAD`, `HTTP_200_OK`,
       `HTTP_500_INTERNAL_SERVER_ERROR`, `MIME_APPLICATION_JSON`,
       `MIME_APPLICATION_OCTET_STREAM`, `MIME_TEXT_PLAIN`), and unit tests.
-- [ ] Export `pub mod http_server_fixtures;` and `pub use http_server_fixtures::*;` in
-      `tui/src/core/test_fixtures/mod.rs`.
-- [ ] Update
+- [x] Export `pub mod http_server_fixtures;` and `pub use http_server_fixtures::*;` in
+      `tui/src/core/test_fixtures/mod.rs`, add module-level rustdocs explaining why
+      `test_fixtures` is compiled unconditionally, rename `retry.rs` ->
+      `retry_fixtures.rs`, and shard inline helpers out of `mod.rs` into
+      `assertion_fixtures.rs` and `isolated_process_fixtures/process_command_helpers.rs`.
+- [x] Update
       `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
       and `constants.rs` so `manifest_server` and `archive_server` delegate to
       `r3bl_tui::MockHttpServer` and `r3bl_tui::http_wire`.
-- [ ] Run `./check.fish --check` to verify both crates compile cleanly.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
+- [x] Run `./check.fish --check` to verify both crates compile cleanly.
+- [x] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [ ] `tui/src/core/test_fixtures/http_server_fixtures.rs`
-    - [ ] `tui/src/core/test_fixtures/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
+    - [x] `tui/src/core/test_fixtures/http_server_fixtures.rs`
+    - [x] `tui/src/core/test_fixtures/retry_fixtures.rs`
+    - [x] `tui/src/core/test_fixtures/assertion_fixtures.rs`
+    - [x] `tui/src/core/test_fixtures/isolated_process_fixtures/process_command_helpers.rs`
+    - [x] `tui/src/core/test_fixtures/isolated_process_fixtures/mod.rs`
+    - [x] `tui/src/core/test_fixtures/mod.rs`
+    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
+    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
 
 ### Phase 2: Archive to `r3bl-open-core-archive`
 
@@ -183,16 +191,16 @@ Move the decoupled `http_server_fixtures.rs` into the `r3bl_test_fixtures` crate
 `tcp_stream_fixtures`) to preserve the zero-dependency `std` implementation, then remove
 the temporary export from `r3bl_tui`.
 
-- [ ] Copy `tui/src/core/test_fixtures/http_server_fixtures.rs` to
+- [x] Copy `tui/src/core/test_fixtures/http_server_fixtures.rs` to
       `/home/nazmul/github/r3bl-open-core-archive/test_fixtures/src/http_server_fixtures.rs`
       (adjusting any `r3bl_tui` doc-link references so it is self-contained inside
       `r3bl_test_fixtures`).
-- [ ] Attach and re-export `pub mod http_server_fixtures;` and
+- [x] Attach and re-export `pub mod http_server_fixtures;` and
       `pub use http_server_fixtures::*;` in
       `/home/nazmul/github/r3bl-open-core-archive/test_fixtures/src/lib.rs`.
-- [ ] Commit `test_fixtures/src/http_server_fixtures.rs` and `test_fixtures/src/lib.rs` in
+- [x] Commit `test_fixtures/src/http_server_fixtures.rs` and `test_fixtures/src/lib.rs` in
       `/home/nazmul/github/r3bl-open-core-archive` and push to `origin`.
-- [ ] Remove `tui/src/core/test_fixtures/http_server_fixtures.rs` and its re-export in
+- [x] Remove `tui/src/core/test_fixtures/http_server_fixtures.rs` and its re-export in
       `tui/src/core/test_fixtures/mod.rs` as part of transitioning `r3bl-open-core` to
       `mockito` in Phase 3.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -206,44 +214,46 @@ the temporary export from `r3bl_tui`.
 Replace all custom `TcpListener` HTTP servers in `r3bl-cmdr` (`self_upgrade` unit and
 integration tests) with `mockito`.
 
-- [ ] Add `mockito = { version = "1.7", default-features = false }` to
+- [x] Add `mockito = { version = "1.7", default-features = false }` to
       `[dev-dependencies]` in `cmdr/Cargo.toml` and `tui/Cargo.toml`.
-- [ ] Add `"assert-json-diff"` to the `cargo-unmaintained` ignore list in root
-      `Cargo.toml`:
+- [x] Add `"assert-json-diff"` to the `cargo-unmaintained` ignore list in root
+      `Cargo.toml` (and prune stale entries no longer in `Cargo.lock`):
 
     ```toml
     [workspace.metadata.unmaintained]
     ignore = [
-        "gethostname",
-        "objs",
-        "home",
-        "proc-macro-error",
-        "wayland-commons",
-        "assert-json-diff", # Transitive dev-dependency from mockito
+      "gethostname",      # Transitive dependency via copypasta -> x11-clipboard -> x11rb (r3bl_tui).
+      "home",             # Transitive dependency via which (r3bl-rust-analyzer-mcp-server).
+      "assert-json-diff", # Transitive dev-dependency via mockito (r3bl-cmdr, r3bl_tui).
     ]
     ```
 
-- [ ] Rewrite
+- [x] Rewrite
       `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
-      to use `mockito::Server::new_with_opts` / `mockito::ServerGuard`:
+      to use `mockito::Server::new_with_opts`:
     - `manifest_server::{spawn_success, spawn_error, spawn_delayed_success, spawn_delayed_error}`
       using `.with_body_from_request` for delayed responses.
     - `archive_server::spawn_success` registering the 4 upgrade route mocks
       (`GET /versions.jsonc`, `HEAD .../*.tar.gz`, `GET .../*.tar.gz.sha256`,
-      `GET .../*.tar.gz`) on a single `mockito::Server`.
-- [ ] Update call sites in `immediate_upgrade_tests.rs`, `deferred_upgrade_tests.rs`,
+      `GET .../*.tar.gz`) on a single `mockito::Server`, backed by
+      `TestReleaseAssets::for_current_host()` in `constants.rs` (delegating directly to
+      `ReleaseAsset::format_archive_filename` and `ReleaseAsset::format_urls` in
+      `release_asset.rs`).
+- [x] Update call sites in `immediate_upgrade_tests.rs`, `deferred_upgrade_tests.rs`,
       `deferred_unhappy_path_tests.rs`, `self_replace_test.rs`, and
-      `cargo_install_rustup_test.rs` to call `server.assert()` instead of
+      `cargo_install_rustup_test.rs` to call
+      `server_spawn_result.assert_each_endpoint_called_once()` instead of
       `server.join_handle.join().unwrap()`.
-- [ ] Replace the inline `serve_one_http_response` `TcpListener` helpers in
+- [x] Replace the inline `serve_one_http_response` `TcpListener` helpers in
       `cmdr/src/self_upgrade/check/fetch_manifest.rs` and
       `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs` with `mockito`.
-- [ ] Run `./check.fish --check` to verify `r3bl-cmdr` compiles cleanly.
+- [x] Run `./check.fish --check` to verify `r3bl-cmdr` compiles cleanly.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `Cargo.toml`
     - [ ] `cmdr/Cargo.toml`
     - [ ] `tui/Cargo.toml`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/mod.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
@@ -251,6 +261,12 @@ integration tests) with `mockito`.
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
+    - [ ] `cmdr/src/self_upgrade/constants.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/release_asset.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/release_target.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/upgrade_source.rs`
     - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
 
