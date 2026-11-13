@@ -6,16 +6,39 @@
 use crate::ok;
 use std::fmt::Formatter;
 
-/// Decodes a single [`ASCII`] hexadecimal byte into its 4-bit value (`0..=15`).
+/// Converts a single [`ASCII`] hexadecimal character byte into its 4-bit nibble value
+/// (`0..=15`), case-insensitively. This is the inverse of [`encode_hex_nibble`].
+///
+/// Valid hexadecimal characters live in three separate contiguous [`ASCII`] byte ranges
+/// (decimal digits, uppercase letters, and lowercase letters):
+///
+/// ```text
+/// ASCII decimal:   48 ... 57  │ 58 ... 64 │  65 ... 70  │ 71 ... 96 │ 97 ... 102
+///                ─────────────┼───────────┼─────────────┼───────────┼─────────────
+/// Character:      '0' ... '9' │  invalid  │ 'A' ... 'F' │  invalid  │ 'a' ... 'f'
+///                      ▼                         ▼                         ▼
+/// Decoded u8:      0  ...  9                10  ... 15                10  ... 15
+/// ```
+///
+/// Subtracting the start of the matched range normalizes the offset to `0..=9` for digits
+/// and `0..=5` for letters (plus `10` to yield `10..=15`). Any byte outside those three
+/// ranges (`< 48`, `58..=64`, `71..=96`, or `> 102`) returns `None`:
+///
+/// | Input `ascii_byte` | [`ASCII`] Decimal | Formula                  | Output          |
+/// | :----------------- | :---------------- | :----------------------- | :-------------- |
+/// | `b'0'..=b'9'`      | `48..=57`         | `ascii_byte - b'0'`      | `Some(0..=9)`   |
+/// | `b'a'..=b'f'`      | `97..=102`        | `ascii_byte - b'a' + 10` | `Some(10..=15)` |
+/// | `b'A'..=b'F'`      | `65..=70`         | `ascii_byte - b'A' + 10` | `Some(10..=15)` |
+/// | Any other byte     | All other `u8`    | `_ => None`              | `None`          |
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 #[must_use]
 #[inline]
-pub const fn decode_hex_nibble(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + constants::HEX_ALPHA_OFFSET),
-        b'A'..=b'F' => Some(byte - b'A' + constants::HEX_ALPHA_OFFSET),
+const fn decode_hex_nibble(ascii_byte: u8) -> Option<u8> {
+    match ascii_byte {
+        b'0'..=b'9' => Some(ascii_byte - b'0'),
+        b'a'..=b'f' => Some(ascii_byte - b'a' + constants::HEX_ALPHA_OFFSET),
+        b'A'..=b'F' => Some(ascii_byte - b'A' + constants::HEX_ALPHA_OFFSET),
         _ => None,
     }
 }
@@ -40,40 +63,66 @@ pub const fn decode_hex_nibble(byte: u8) -> Option<u8> {
 ///    overflow or non-[`ASCII`] output regardless of input).
 /// 2. Add `b'0'` (`48`): values `0..=9` land directly on `'0'..='9'` (`48..=57`), while
 ///    `10..=15` land temporarily on `58..=63`.
-/// 3. Turn `masked >= 10` into `0` or `1` via `u8::from(...)` and multiply by `39`,
-///    adding `0` for digits (`0..=9`) or `39` for letters (`10..=15` -> `97..=102`,
-///    `'a'..='f'`). Because every lane executes the exact same arithmetic steps with no
-///    branching, LLVM can run this across 16 or 32 bytes at once in SIMD registers.
+/// 3. Add `39` when `masked >= 10` (and `0` otherwise), shifting letters (`10..=15`)
+///    across the 39-character gap onto `'a'..='f'` (`97..=102`). Because both arms are
+///    constants, LLVM lowers the `if`/`else` to a branchless `select` and vectorizes
+///    across 16 or 32 bytes at once in SIMD registers.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 #[must_use]
 #[inline]
-pub fn encode_hex_nibble(nibble: u8) -> u8 {
+const fn encode_hex_nibble(nibble: u8) -> u8 {
     let masked = nibble & constants::LOW_NIBBLE_MASK;
-    let is_alpha = u8::from(masked >= constants::HEX_ALPHA_OFFSET);
-    let alpha_jump = is_alpha * constants::HEX_ALPHA_ASCII_SHIFT;
+    let alpha_jump = if masked >= constants::HEX_ALPHA_OFFSET {
+        constants::HEX_ALPHA_ASCII_SHIFT
+    } else {
+        0
+    };
     masked + b'0' + alpha_jump
 }
 
-/// Parses an exact `2 * N`-character hexadecimal string into a stack-allocated `[u8; N]`
-/// array, case-insensitively.
+/// Parses a hexadecimal string directly into a caller-provided byte container `out` (such
+/// as `[u8; N]` or `Vec<u8>`) and returns `Some(out)` on success.
 ///
-/// Returns `None` if `hex_str` does not contain exactly `2 * N` valid [`ASCII`] hex
-/// digits. Callers that allow surrounding whitespace should call [`str::trim_ascii()`]
-/// before calling this function.
+/// Since every byte (`u8`) requires 2 [`ASCII`] hex characters (`"00"`..=`"ff"`),
+/// `hex_str` must be **exactly `2 * out.len()` characters long** (for example, `8`
+/// characters for `[0u8; 4]`, or `64` characters for `[0u8; 32]`). Both lowercase
+/// (`'a'..='f'`) and uppercase (`'A'..='F'`) digits are accepted.
+///
+/// Each 2-character chunk (`hi_hex`, `lo_hex`) decodes its [`ASCII`] nibbles
+/// independently into 4-bit values in bits `3..=0`, then shifts `hi` into the upper
+/// half of the output byte before combining them with bitwise OR, e.g. `"2f"` becomes
+/// `47` (`0x2f`):
+///
+/// ```text
+/// Input str "2f":    hi_hex = b'2' (50)          lo_hex = b'f' (102)
+///                          │                           │
+///                          ▼ decode_hex_nibble         ▼ decode_hex_nibble
+///                    hi = 0b0000_0010 (2)        lo = 0b0000_1111 (15)
+///                          │                           │
+///                          ▼ hi << 4                   │ (already in bits 3..=0)
+///                         0b0010_0000 (32)            0b0000_1111 (15)
+///                          └────────────┬──────────────┘
+///                                       ▼ bitwise OR (|)
+///                         *out_byte = 0b0010_1111 (47 / 0x2f)
+/// ```
+///
+/// Returns `None` if `hex_str` does not contain exact valid [`ASCII`] hex pairs
+/// matching the byte length of `out`. Callers that allow surrounding whitespace should
+/// call [`str::trim_ascii()`] before calling this function.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 #[must_use]
-pub fn try_parse_hex_bytes<const N: usize>(hex_str: &str) -> Option<[u8; N]> {
+pub fn try_parse_hex_bytes<T: AsMut<[u8]>>(hex_str: &str, mut out: T) -> Option<T> {
+    let out_slice = out.as_mut();
     let (pairs, remainder) = hex_str.as_bytes().as_chunks::<2>();
-    if pairs.len() != N || !remainder.is_empty() {
+    if pairs.len() != out_slice.len() || !remainder.is_empty() {
         return None;
     }
-    let mut out = [0u8; N];
-    for (dst, &[hi_hex, lo_hex]) in out.iter_mut().zip(pairs) {
+    for (out_byte, &[hi_hex, lo_hex]) in out_slice.iter_mut().zip(pairs) {
         let hi = decode_hex_nibble(hi_hex)?;
         let lo = decode_hex_nibble(lo_hex)?;
-        *dst = (hi << constants::HIGH_NIBBLE_SHIFT) | lo;
+        *out_byte = (hi << constants::HIGH_NIBBLE_SHIFT) | lo;
     }
     Some(out)
 }
@@ -181,16 +230,20 @@ mod tests {
     #[test]
     fn test_try_parse_hex_bytes() {
         assert_eq2!(
-            try_parse_hex_bytes::<4>("0a1B2cFf"),
+            try_parse_hex_bytes("0a1B2cFf", [0u8; 4]),
             Some([0x0a, 0x1b, 0x2c, 0xff])
         );
-        assert_eq2!(try_parse_hex_bytes::<0>(""), Some([]));
+        assert_eq2!(
+            try_parse_hex_bytes("0a1b", vec![0u8; 2]),
+            Some(vec![0x0a, 0x1b])
+        );
+        assert_eq2!(try_parse_hex_bytes("", [0u8; 0]), Some([]));
         // Wrong length (too short, too long, odd) or non-hex digits fail.
-        assert_eq2!(try_parse_hex_bytes::<4>("0a1b2c"), None);
-        assert_eq2!(try_parse_hex_bytes::<4>("0a1b2cffe0"), None);
-        assert_eq2!(try_parse_hex_bytes::<4>("0a1b2cf"), None);
-        assert_eq2!(try_parse_hex_bytes::<4>("0a1b2cfg"), None);
-        assert_eq2!(try_parse_hex_bytes::<4>(" 0a1b2cff"), None);
+        assert_eq2!(try_parse_hex_bytes("0a1b2c", [0u8; 4]), None);
+        assert_eq2!(try_parse_hex_bytes("0a1b2cffe0", [0u8; 4]), None);
+        assert_eq2!(try_parse_hex_bytes("0a1b2cf", [0u8; 4]), None);
+        assert_eq2!(try_parse_hex_bytes("0a1b2cfg", [0u8; 4]), None);
+        assert_eq2!(try_parse_hex_bytes(" 0a1b2cff", [0u8; 4]), None);
     }
 
     #[test]

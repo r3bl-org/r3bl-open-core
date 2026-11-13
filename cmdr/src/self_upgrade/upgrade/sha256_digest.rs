@@ -44,7 +44,7 @@ impl Sha256Digest {
     pub fn try_parse_hex(checksum_text: &str) -> Option<Self> {
         // Trim leading and trailing whitespace (including `\n` and `\r\n`).
         let hex = checksum_text.trim_ascii();
-        try_parse_hex_bytes::<{ constants::DIGEST_BYTES }>(hex)
+        try_parse_hex_bytes(hex, [0u8; constants::DIGEST_BYTES])
             .map(|inner| Self { inner })
     }
 }

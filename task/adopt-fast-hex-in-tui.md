@@ -57,23 +57,24 @@ via `fast_strings/mod.rs`):
 pub struct HexSlice<'a>(pub &'a [u8]);
 
 /// Stateless associated functions live on `HexSlice<'static>` so callers write
-/// `HexSlice::encode_byte(b)` or `HexSlice::try_parse_bytes::<32>(s)` without
+/// `HexSlice::encode_byte(b)` or `HexSlice::try_parse_bytes(s, [0u8; 32])` without
 /// unconstrained lifetime inference issues.
 impl HexSlice<'static> {
     #[must_use]
     #[inline]
-    pub const fn decode_nibble(byte: u8) -> Option<u8>;
+    pub(crate) const fn decode_nibble(ascii_byte: u8) -> Option<u8>;
 
     #[must_use]
     #[inline]
-    pub fn encode_nibble(nibble: u8) -> u8;
+    const fn encode_nibble(nibble: u8) -> u8;
 
     #[must_use]
     #[inline]
-    pub fn encode_byte(byte: u8) -> [u8; 2];
+    pub const fn encode_byte(byte: u8) -> [u8; 2];
 
     #[must_use]
-    pub fn try_parse_bytes<const N: usize>(hex_str: &str) -> Option<[u8; N]>;
+    #[inline]
+    pub fn try_parse_bytes<T: AsMut<[u8]>>(hex_str: &str, mut out: T) -> Option<T>;
 }
 
 impl std::fmt::Display for HexSlice<'_> {
@@ -105,7 +106,7 @@ Rename `hex.rs` to `hex_slice.rs`, scope all hex helpers under `HexSlice`, and u
       `HexSlice` in the module-level docs.
 - [ ] In `cmdr/src/self_upgrade/upgrade/sha256_digest.rs`, update imports to
       `use r3bl_tui::HexSlice;`, delegate `try_parse_hex` to
-      `HexSlice::try_parse_bytes::<{ constants::DIGEST_BYTES }>(hex)`, and delegate
+      `HexSlice::try_parse_bytes(hex, [0u8; constants::DIGEST_BYTES])`, and delegate
       `Display::fmt` to `HexSlice(&self.inner).fmt(f)`.
 - [ ] Update and expand unit tests in `tui/src/core/common/fast_strings/hex_slice.rs` to
       cover `HexSlice::decode_nibble`, `HexSlice::encode_nibble`, `HexSlice::encode_byte`,
