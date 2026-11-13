@@ -8,7 +8,7 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use crate::{LossyConvertToByte, RgbValue,
+use crate::{HexSlice, LossyConvertToByte, RgbValue,
             core::ansi::constants::{OSC_COLOR_SPEC_CHANNEL_SEPARATOR,
                                     OSC_COLOR_SPEC_HASH_PREFIX,
                                     OSC_COLOR_SPEC_RGB_PREFIX}};
@@ -54,9 +54,15 @@ fn try_parse_rgb_spec_color(payload: &[u8]) -> Option<RgbValue> {
 
 /// Parses 1, 2, 3, or 4 hex digits into an 8-bit color channel (`0..=255`).
 fn try_parse_hex_channel(slice: &[u8]) -> Option<u8> {
-    let hex_str = std::str::from_utf8(slice).ok()?;
-    let value = u16::from_str_radix(hex_str, 16).ok()?;
-    let channel = match hex_str.len() {
+    if !(1..=4).contains(&slice.len()) {
+        return None;
+    }
+    let mut value = 0u16;
+    for &byte in slice {
+        let nibble = u16::from(HexSlice::decode_nibble(byte)?);
+        value = (value << 4) | nibble;
+    }
+    let channel = match slice.len() {
         1 => value * 17, // 4-bit to 8-bit duplication (e.g., 0xF -> 0xFF).
         2 => value,      // 8-bit full value.
         3 => value >> 4, // 12-bit to top 8 bits.
@@ -339,5 +345,8 @@ mod tests {
         assert_eq!(try_parse_color_spec(b""), None);
         // 5 hex digits that parse as u16 but exceed 4-digit channel limit.
         assert_eq!(try_parse_color_spec(b"rgb:00000/00/00"), None);
+        // Leading '+' sign (accepted by u16::from_str_radix) is rejected.
+        assert_eq!(try_parse_color_spec(b"rgb:+f/+f/+f"), None);
+        assert_eq!(try_parse_color_spec(b"#+f0000"), None);
     }
 }

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{fmt_lower_hex_bytes, try_parse_hex_bytes};
+use r3bl_tui::HexSlice;
 use sha2::{Digest, Sha256};
 use std::fmt::{Display, Formatter};
 
@@ -44,7 +44,7 @@ impl Sha256Digest {
     pub fn try_parse_hex(checksum_text: &str) -> Option<Self> {
         // Trim leading and trailing whitespace (including `\n` and `\r\n`).
         let hex = checksum_text.trim_ascii();
-        try_parse_hex_bytes(hex, [0u8; constants::DIGEST_BYTES])
+        HexSlice::try_parse_bytes(hex, [0u8; constants::DIGEST_BYTES])
             .map(|inner| Self { inner })
     }
 }
@@ -52,7 +52,7 @@ impl Sha256Digest {
 /// Formats the 32 byte digest as 64 lowercase hex chars without heap allocation.
 impl Display for Sha256Digest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        fmt_lower_hex_bytes(&self.inner, f)
+        HexSlice(&self.inner).fmt(f)
     }
 }
 

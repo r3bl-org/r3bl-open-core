@@ -4,7 +4,7 @@
 
 use super::{constants::ACCUMULATOR_INITIAL_CAPACITY,
             unparsed_buffer_action::UnparsedBufferAction};
-use crate::{ByteLength, ByteOffset, DEBUG_TUI_SHOW_DIRECT_TO_ANSI};
+use crate::{ByteLength, ByteOffset, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, HexSlice};
 
 /// Dedicated buffer accumulator for terminal input bytes.
 ///
@@ -69,7 +69,7 @@ impl ChunkAccumulator {
             tracing::warn! {
                 message = "ChunkAccumulator::purge_malformed",
                 status = "discarding unrecognized/malformed escape sequence",
-                discarded_hex = %format!("{:02X?}", self.buffer),
+                discarded_hex = %HexSlice(&self.buffer),
                 discarded_str = %String::from_utf8_lossy(&self.buffer),
                 buffer_len = self.buffer.len(),
             };

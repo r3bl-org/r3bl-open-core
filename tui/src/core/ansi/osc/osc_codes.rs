@@ -53,7 +53,7 @@
 //! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
 
 use super::osc_color::try_parse_color_spec;
-use crate::{OSC_PREFIX, Pc, TerminalColorReport, TerminalColorRole,
+use crate::{HexSlice, OSC_PREFIX, Pc, TerminalColorReport, TerminalColorRole,
             core::{ansi::constants::{ANSI_BEL, ANSI_ESC, ANSI_ST_FINAL,
                                      CLIPBOARD_TARGET_CLIPBOARD_CHAR,
                                      CLIPBOARD_TARGET_PRIMARY_CHAR,
@@ -303,15 +303,20 @@ impl FastStringify for OscSequence {
             OscSequence::ColorReport(report) => {
                 acc.push_str(report.role.as_str());
                 acc.push(OSC_DELIMITER);
-                let r = report.color.red;
-                let g = report.color.green;
-                let b = report.color.blue;
-                let prefix = OSC_COLOR_SPEC_RGB_PREFIX;
-                let sep = OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR;
-                let _ = write!(
-                    acc,
-                    "{prefix}{r:02x}{r:02x}{sep}{g:02x}{g:02x}{sep}{b:02x}{b:02x}"
-                );
+                acc.push_str(OSC_COLOR_SPEC_RGB_PREFIX);
+                let channels = [report.color.red, report.color.green, report.color.blue];
+                for (idx, byte) in channels.into_iter().enumerate() {
+                    if idx > 0 {
+                        acc.push(OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR);
+                    }
+                    let [hi, lo] = HexSlice::encode_byte(byte);
+                    let ch_hi = char::from(hi);
+                    let ch_lo = char::from(lo);
+                    acc.push(ch_hi);
+                    acc.push(ch_lo);
+                    acc.push(ch_hi);
+                    acc.push(ch_lo);
+                }
                 OSC_TERMINATOR_ST
             }
         };

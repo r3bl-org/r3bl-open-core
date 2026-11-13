@@ -92,7 +92,7 @@ use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                     maybe_more::MaybeMore},
             csi_scanner::CsiParams,
             osc_scanner::OscScanResult};
-use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OscSequence, byte_offset,
+use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, HexSlice, OscSequence, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR,
                                     ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
@@ -294,7 +294,7 @@ pub mod osc {
                     tracing::warn! {
                         message = "try_disambiguate_or_alt_bracket - parsed OSC sequence from stdin",
                         event = ?event,
-                        raw_osc_hex = %format!("{:02X?}", &chunk[..len]),
+                        raw_osc_hex = %HexSlice(&chunk[..len]),
                         raw_osc_str = %String::from_utf8_lossy(&chunk[..len]),
                         consumed_bytes = len,
                     };
