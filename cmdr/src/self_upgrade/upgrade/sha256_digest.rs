@@ -4,13 +4,14 @@ use r3bl_tui::HexSlice;
 use sha2::{Digest, Sha256};
 use std::fmt::{Display, Formatter};
 
-/// A stack-allocated 32-byte (256-bit) SHA-256 digest, valid upon construction.
+/// A stack-allocated 32-byte (32 * 8-bit = 256-bit) SHA-256 digest, valid upon
+/// construction.
 ///
 /// Once constructed, it doesn't need to be re-validated. You can construct it in two
 /// ways:
 /// 1. Hash a byte slice via [`Self::from_bytes()`].
 /// 2. Parse a string slice containing a 64-character hex SHA-256 digest (e.g., from a
-///    `.sha256` file) via [`Self::try_parse_hex()`].
+///    `.sha256` file) via [`Self::try_parse_hex_str()`].
 ///
 /// Equality comparisons operate directly on the 32 bytes on the stack (`inner` field)
 /// without heap allocation.
@@ -33,18 +34,26 @@ impl Sha256Digest {
         }
     }
 
-    /// Parses a bare 64-character hexadecimal SHA-256 digest from a `.sha256` file.
+    /// Parses a 64-character hexadecimal SHA-256 string (case-insensitively) into a
+    /// [`Sha256Digest`].
     ///
-    /// Expects `<64-hex>` with optional surrounding [`ASCII`] whitespace (for example a
-    /// trailing newline), parsed case-insensitively. Extra tokens such as trailing
-    /// filenames are rejected.
+    /// Leading and trailing [`ASCII`] whitespace (such as spaces, `\n`, or `\r\n`) is
+    /// trimmed before parsing. Returns `None` if the trimmed string is not **exactly** 64
+    /// valid hex digits (`'0'..='9'`, `'a'..='f'`, `'A'..='F'`).
+    ///
+    /// For example:
+    /// - Accepted: `"e3b0c442...7852b855\n"` (64 hex characters, with optional
+    ///   whitespace)
+    /// - Rejected: `"e3b0c442...7852b855  foo.tar.gz"` (includes a filename after the
+    ///   hash, as in `sha256sum` output)
+    /// - Rejected: fewer or more than 64 characters, empty input, or non-hex characters
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[must_use]
-    pub fn try_parse_hex(checksum_text: &str) -> Option<Self> {
+    pub fn try_parse_hex_str(checksum_text: &str) -> Option<Self> {
         // Trim leading and trailing whitespace (including `\n` and `\r\n`).
-        let hex = checksum_text.trim_ascii();
-        HexSlice::try_parse_bytes(hex, [0u8; constants::DIGEST_BYTES])
+        let hex_text = checksum_text.trim_ascii();
+        HexSlice::try_parse_str(hex_text, [0u8; constants::DIGEST_BYTES])
             .map(|inner| Self { inner })
     }
 }
@@ -68,16 +77,16 @@ mod tests {
     use r3bl_tui::assert_eq2;
 
     #[test]
-    fn test_parse_hex() {
+    fn test_parse_hex_str() {
         let expected_hex =
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         let with_newline = format!("{expected_hex}\n");
-        let parsed = Sha256Digest::try_parse_hex(&with_newline).unwrap();
+        let parsed = Sha256Digest::try_parse_hex_str(&with_newline).unwrap();
         assert_eq2!(parsed.to_string(), expected_hex);
 
         let upper_crlf =
             "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855\r\n";
-        let from_upper = Sha256Digest::try_parse_hex(upper_crlf).unwrap();
+        let from_upper = Sha256Digest::try_parse_hex_str(upper_crlf).unwrap();
         assert_eq2!(from_upper, parsed);
         assert_eq2!(from_upper.to_string(), expected_hex);
 
@@ -85,18 +94,18 @@ mod tests {
         let with_filename = format!(
             "{expected_hex}  r3bl-cmdr-v0.0.25-x86_64-unknown-linux-gnu.tar.gz\n"
         );
-        assert!(Sha256Digest::try_parse_hex(&with_filename).is_none());
+        assert!(Sha256Digest::try_parse_hex_str(&with_filename).is_none());
 
-        assert!(Sha256Digest::try_parse_hex("not_a_valid_sha").is_none());
-        assert!(Sha256Digest::try_parse_hex("").is_none());
-        assert!(Sha256Digest::try_parse_hex("   \n").is_none());
+        assert!(Sha256Digest::try_parse_hex_str("not_a_valid_sha").is_none());
+        assert!(Sha256Digest::try_parse_hex_str("").is_none());
+        assert!(Sha256Digest::try_parse_hex_str("   \n").is_none());
         // Odd length (63 and 65 hex characters).
-        assert!(Sha256Digest::try_parse_hex(&expected_hex[..63]).is_none());
-        assert!(Sha256Digest::try_parse_hex(&format!("{expected_hex}a")).is_none());
+        assert!(Sha256Digest::try_parse_hex_str(&expected_hex[..63]).is_none());
+        assert!(Sha256Digest::try_parse_hex_str(&format!("{expected_hex}a")).is_none());
         // 64 characters with a non-hex byte ('g').
         let non_hex_64 =
             "g3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        assert!(Sha256Digest::try_parse_hex(non_hex_64).is_none());
+        assert!(Sha256Digest::try_parse_hex_str(non_hex_64).is_none());
     }
 
     #[test]

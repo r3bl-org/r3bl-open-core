@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter};
 /// Wrapping a byte slice formats it as compact lowercase hexadecimal characters directly
 /// into a [`Formatter`] in 32-byte stack chunks without heap allocation. Stateless
 /// nibble, byte, and fixed-buffer parsing helpers live directly on [`HexSlice<'static>`]
-/// so callers invoke `HexSlice::encode_byte(b)` or `HexSlice::try_parse_bytes(s, [0u8;
+/// so callers invoke `HexSlice::encode_byte(b)` or `HexSlice::try_parse_str(s, [0u8;
 /// 32])` without unconstrained lifetime inference issues.
 ///
 /// [`Display`]: std::fmt::Display
@@ -53,7 +53,7 @@ impl HexSlice<'static> {
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[must_use]
-    pub fn try_parse_bytes<T: AsMut<[u8]>>(
+    pub fn try_parse_str<T: AsMut<[u8]>>(
         in_hex_str: &str,
         mut out_buf: T,
     ) -> Option<T> {
@@ -289,22 +289,22 @@ mod tests {
     }
 
     #[test]
-    fn test_try_parse_bytes() {
+    fn test_try_parse_str() {
         assert_eq2!(
-            HexSlice::try_parse_bytes("0a1B2cFf", [0u8; 4]),
+            HexSlice::try_parse_str("0a1B2cFf", [0u8; 4]),
             Some([0x0a, 0x1b, 0x2c, 0xff])
         );
         assert_eq2!(
-            HexSlice::try_parse_bytes("0a1b", vec![0u8; 2]),
+            HexSlice::try_parse_str("0a1b", vec![0u8; 2]),
             Some(vec![0x0a, 0x1b])
         );
-        assert_eq2!(HexSlice::try_parse_bytes("", [0u8; 0]), Some([]));
+        assert_eq2!(HexSlice::try_parse_str("", [0u8; 0]), Some([]));
         // Wrong length (too short, too long, odd) or non-hex digits fail.
-        assert_eq2!(HexSlice::try_parse_bytes("0a1b2c", [0u8; 4]), None);
-        assert_eq2!(HexSlice::try_parse_bytes("0a1b2cffe0", [0u8; 4]), None);
-        assert_eq2!(HexSlice::try_parse_bytes("0a1b2cf", [0u8; 4]), None);
-        assert_eq2!(HexSlice::try_parse_bytes("0a1b2cfg", [0u8; 4]), None);
-        assert_eq2!(HexSlice::try_parse_bytes(" 0a1b2cff", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_parse_str("0a1b2c", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_parse_str("0a1b2cffe0", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_parse_str("0a1b2cf", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_parse_str("0a1b2cfg", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_parse_str(" 0a1b2cff", [0u8; 4]), None);
     }
 
     #[test]

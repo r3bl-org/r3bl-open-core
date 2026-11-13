@@ -113,7 +113,7 @@ pub mod sha256_checksum {
                 res.map_err(|e| UpgradeError::Other(e.to_string()))?
             }
         };
-        Sha256Digest::try_parse_hex(&sha_text).ok_or_else(|| {
+        Sha256Digest::try_parse_hex_str(&sha_text).ok_or_else(|| {
             UpgradeError::Other(format!("Invalid .sha256 file format: {sha_text}"))
         })
     }
@@ -210,7 +210,7 @@ mod tests {
         let empty_digest = Sha256Digest::from_bytes(b"");
         assert!(sha256_checksum::verify_file_sha256(&file_path, empty_digest).is_ok());
 
-        let zero_digest = Sha256Digest::try_parse_hex(
+        let zero_digest = Sha256Digest::try_parse_hex_str(
             "0000000000000000000000000000000000000000000000000000000000000000",
         )
         .unwrap();
