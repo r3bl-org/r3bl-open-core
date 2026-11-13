@@ -1,6 +1,5 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::ok;
 use sha2::{Digest, Sha256};
 use std::fmt::{Display, Formatter};
 
@@ -69,6 +68,30 @@ impl Sha256Digest {
             _ => None,
         }
     }
+
+    /// Converts a 4-bit value, `0..=15` (decimal), into its lowercase [`ASCII`] hex byte
+    /// representation: `'0'..='9'` or `'a'..='f'`.
+    ///
+    /// In the [`ASCII`] table, the decimal `u8` code values for `'0'..='9'` are `48..=57`,
+    /// followed by 39 other characters (punctuation and uppercase letters, `58..=96`)
+    /// before `'a'..='f'` at `97..=102`. So for any masked value in `0..=15`:
+    /// - Add `b'0'` (`48`): values `0..=9` land directly on `'0'..='9'` (`48..=57`).
+    /// - If the value is `10..=15`, add `39` more so `10` lands on `'a'` (`10 + 48 + 39 =
+    ///   97`) through `'f'` (`15 + 48 + 39 = 102`).
+    ///
+    /// Multiplying `u8::from(masked >= 10)` by `39` performs that jump without an
+    /// `if`/`match` branch or lookup table.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    #[must_use]
+    #[inline]
+    fn encode_hex_nibble(nibble: u8) -> u8 {
+        let masked = nibble & constants::LOW_NIBBLE_MASK;
+        masked
+            + b'0'
+            + u8::from(masked >= constants::HEX_ALPHA_OFFSET)
+                * constants::HEX_ALPHA_ASCII_SHIFT
+    }
 }
 
 /// Formats the 32 byte digest as 64 lowercase hex chars.
@@ -90,31 +113,26 @@ impl Sha256Digest {
 ///       │  '0'  │           │  'a'  │   ──► "{byte:02x}" writes "0a"
 ///       └───────┘           └───────┘
 /// ```
+///
+/// This impl does not incur costs from heap allocations, formatting, `write!()` macro
+/// calls. It just writes the raw bytes to the formatter. And it can be SIMD vectorized by
+/// the compiler.
 impl Display for Sha256Digest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut output_chars: [u8; constants::DIGEST_BYTES * 2] =
-            [b'0'; constants::DIGEST_BYTES * 2];
+        let mut output_bytes = [0u8; constants::DIGEST_BYTES * 2];
 
-        let mut idx = 0;
-        for byte in self.inner {
-            let left_nibble = byte >> 4 /* shift right 4 bits */;
-            let right_nibble = byte & 0b0000_1111 /* mask low 4 bits */;
-            let left_char = constants::ASCII_BYTE_HEX_MAP[left_nibble as usize];
-            let right_char = constants::ASCII_BYTE_HEX_MAP[right_nibble as usize];
-            output_chars[idx] = left_char;
-            output_chars[idx + 1] = right_char;
-            idx += 2;
+        let (pairs, _) = output_bytes.as_chunks_mut::<2>();
+        for ([hi_dst, lo_dst], byte) in pairs.iter_mut().zip(self.inner) {
+            let high_nibble = byte >> constants::HIGH_NIBBLE_SHIFT;
+            let low_nibble = byte & constants::LOW_NIBBLE_MASK;
+            *hi_dst = Self::encode_hex_nibble(high_nibble);
+            *lo_dst = Self::encode_hex_nibble(low_nibble);
         }
 
-        // No heap allocations, no formatting, no `write!()` macro, just write the raw
-        // bytes to the formatter.
-        //
-        // SAFETY: Every byte in `output_chars` comes from `ASCII_BYTE_HEX_MAP` so all 64
-        // bytes are 7-bit ASCII and therefore valid UTF-8.
-        let hex_str = unsafe { std::str::from_utf8_unchecked(&output_chars) };
-        f.write_str(hex_str)?;
-
-        ok!()
+        // SAFETY: Every byte written by `encode_hex_nibble` is 7-bit ASCII
+        // (`'0'..='9'` or `'a'..='f'`), so all 64 bytes are valid UTF-8.
+        let hex_str = unsafe { std::str::from_utf8_unchecked(&output_bytes) };
+        f.write_str(hex_str)
     }
 }
 
@@ -123,14 +141,20 @@ mod constants {
     /// Byte length of a raw SHA-256 digest (`256` bits / `8` bits per byte = `32`).
     pub const DIGEST_BYTES: usize = 32;
 
-    /// Bit shift (`4` bits) for packing the high hexadecimal nibble into a byte.
+    /// Bit shift (`4` bits) for extracting or packing the high hexadecimal nibble.
     pub const HIGH_NIBBLE_SHIFT: u8 = 4;
+
+    /// Bitmask (`0b0000_1111` / `0x0F`) for isolating the low 4-bit hexadecimal nibble.
+    pub const LOW_NIBBLE_MASK: u8 = 0b0000_1111;
 
     /// Decimal value offset (`10`) for hexadecimal digits `'a'..='f'` and `'A'..='F'`.
     pub const HEX_ALPHA_OFFSET: u8 = 10;
 
-    /// Map to convert nibble (decimal) to char (hex formatted).
-    pub const ASCII_BYTE_HEX_MAP: &[u8; 16] = b"0123456789abcdef";
+    /// Extra [`ASCII`] offset (`39`) between `'9' + 1` (`58`) and `'a'` (`97`) for
+    /// nibbles `10..=15`.
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    pub const HEX_ALPHA_ASCII_SHIFT: u8 = b'a' - b'0' - HEX_ALPHA_OFFSET;
 }
 
 #[cfg(test)]
