@@ -1,5 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use r3bl_tui::{fmt_lower_hex_bytes, try_parse_hex_bytes};
 use sha2::{Digest, Sha256};
 use std::fmt::{Display, Formatter};
 
@@ -43,96 +44,15 @@ impl Sha256Digest {
     pub fn try_parse_hex(checksum_text: &str) -> Option<Self> {
         // Trim leading and trailing whitespace (including `\n` and `\r\n`).
         let hex = checksum_text.trim_ascii();
-        let (pairs, remainder) = hex.as_bytes().as_chunks::<2>();
-        if pairs.len() != constants::DIGEST_BYTES || !remainder.is_empty() {
-            return None;
-        }
-        let mut digest = [0u8; constants::DIGEST_BYTES];
-        for (dst, &[hi_hex, lo_hex]) in digest.iter_mut().zip(pairs) {
-            let hi = Self::decode_hex_nibble(hi_hex)?;
-            let lo = Self::decode_hex_nibble(lo_hex)?;
-            *dst = (hi << constants::HIGH_NIBBLE_SHIFT) | lo;
-        }
-        Some(Self { inner: digest })
-    }
-
-    /// Decodes a single [`ASCII`] hexadecimal byte into its 4-bit value (`0..=15`).
-    ///
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    #[must_use]
-    const fn decode_hex_nibble(byte: u8) -> Option<u8> {
-        match byte {
-            b'0'..=b'9' => Some(byte - b'0'),
-            b'a'..=b'f' => Some(byte - b'a' + constants::HEX_ALPHA_OFFSET),
-            b'A'..=b'F' => Some(byte - b'A' + constants::HEX_ALPHA_OFFSET),
-            _ => None,
-        }
-    }
-
-    /// Converts a 4-bit value, `0..=15` (decimal), into its lowercase [`ASCII`] hex byte
-    /// representation: `'0'..='9'` or `'a'..='f'`.
-    ///
-    /// In the [`ASCII`] table, the decimal `u8` code values for `'0'..='9'` are `48..=57`,
-    /// followed by 39 other characters (punctuation and uppercase letters, `58..=96`)
-    /// before `'a'..='f'` at `97..=102`. So for any masked value in `0..=15`:
-    /// - Add `b'0'` (`48`): values `0..=9` land directly on `'0'..='9'` (`48..=57`).
-    /// - If the value is `10..=15`, add `39` more so `10` lands on `'a'` (`10 + 48 + 39 =
-    ///   97`) through `'f'` (`15 + 48 + 39 = 102`).
-    ///
-    /// Multiplying `u8::from(masked >= 10)` by `39` performs that jump without an
-    /// `if`/`match` branch or lookup table.
-    ///
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    #[must_use]
-    #[inline]
-    fn encode_hex_nibble(nibble: u8) -> u8 {
-        let masked = nibble & constants::LOW_NIBBLE_MASK;
-        masked
-            + b'0'
-            + u8::from(masked >= constants::HEX_ALPHA_OFFSET)
-                * constants::HEX_ALPHA_ASCII_SHIFT
+        try_parse_hex_bytes::<{ constants::DIGEST_BYTES }>(hex)
+            .map(|inner| Self { inner })
     }
 }
 
-/// Formats the 32 byte digest as 64 lowercase hex chars.
-///
-/// Each raw `u8` byte (8 bits) splits into two 4-bit nibbles, producing 2 hex characters
-/// (`32 bytes * 2 = 64 chars`), e.g. `10` (dec) becomes `0A`:
-///
-/// ```text
-/// ┌───────────────────────────────────────┐
-/// │          1 raw byte (8 bits)          │           byte      >> 4 = high nibble
-/// │   10 (dec) / 0A (hex) = 0b0000_1010   │           0000_1010 >> 4 = 0000_0000
-/// ├───────────────────┬───────────────────┤                          = 0
-/// │ High nibble (4b)  │  Low nibble (4b)  │
-/// │ bits 7..=4: 0000  │ bits 3..=0: 1010  │           byte & 0x0F      = low nibble
-/// │   byte >> 4 = 0   │ byte & 0x0F = 10  │           0000_1010 & 0x0F = 0000_1010
-/// └─────────┬─────────┴─────────┬─────────┘                            = 10
-///           ▼                   ▼
-///       ┌───────┐           ┌───────┐
-///       │  '0'  │           │  'a'  │   ──► "{byte:02x}" writes "0a"
-///       └───────┘           └───────┘
-/// ```
-///
-/// This impl does not incur costs from heap allocations, formatting, `write!()` macro
-/// calls. It just writes the raw bytes to the formatter. And it can be SIMD vectorized by
-/// the compiler.
+/// Formats the 32 byte digest as 64 lowercase hex chars without heap allocation.
 impl Display for Sha256Digest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut output_bytes = [0u8; constants::DIGEST_BYTES * 2];
-
-        let (pairs, _) = output_bytes.as_chunks_mut::<2>();
-        for ([hi_dst, lo_dst], byte) in pairs.iter_mut().zip(self.inner) {
-            let high_nibble = byte >> constants::HIGH_NIBBLE_SHIFT;
-            let low_nibble = byte & constants::LOW_NIBBLE_MASK;
-            *hi_dst = Self::encode_hex_nibble(high_nibble);
-            *lo_dst = Self::encode_hex_nibble(low_nibble);
-        }
-
-        // SAFETY: Every byte written by `encode_hex_nibble` is 7-bit ASCII
-        // (`'0'..='9'` or `'a'..='f'`), so all 64 bytes are valid UTF-8.
-        let hex_str = unsafe { std::str::from_utf8_unchecked(&output_bytes) };
-        f.write_str(hex_str)
+        fmt_lower_hex_bytes(&self.inner, f)
     }
 }
 
@@ -140,21 +60,6 @@ impl Display for Sha256Digest {
 mod constants {
     /// Byte length of a raw SHA-256 digest (`256` bits / `8` bits per byte = `32`).
     pub const DIGEST_BYTES: usize = 32;
-
-    /// Bit shift (`4` bits) for extracting or packing the high hexadecimal nibble.
-    pub const HIGH_NIBBLE_SHIFT: u8 = 4;
-
-    /// Bitmask (`0b0000_1111` / `0x0F`) for isolating the low 4-bit hexadecimal nibble.
-    pub const LOW_NIBBLE_MASK: u8 = 0b0000_1111;
-
-    /// Decimal value offset (`10`) for hexadecimal digits `'a'..='f'` and `'A'..='F'`.
-    pub const HEX_ALPHA_OFFSET: u8 = 10;
-
-    /// Extra [`ASCII`] offset (`39`) between `'9' + 1` (`58`) and `'a'` (`97`) for
-    /// nibbles `10..=15`.
-    ///
-    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    pub const HEX_ALPHA_ASCII_SHIFT: u8 = b'a' - b'0' - HEX_ALPHA_OFFSET;
 }
 
 #[cfg(test)]

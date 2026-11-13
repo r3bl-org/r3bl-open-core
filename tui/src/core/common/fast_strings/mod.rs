@@ -72,6 +72,11 @@
 
 pub mod fast_stringify;
 pub mod format_no_alloc;
+#[cfg(any(test, doc))]
+pub mod hex;
+#[cfg(not(any(test, doc)))]
+mod hex;
 
 pub use fast_stringify::*;
 pub use format_no_alloc::*;
+pub use hex::*;
