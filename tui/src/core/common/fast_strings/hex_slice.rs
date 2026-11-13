@@ -21,12 +21,12 @@ use std::fmt::{Display, Formatter};
 pub struct HexSlice<'a>(pub &'a [u8]);
 
 impl HexSlice<'static> {
-    /// Parses a hexadecimal string directly into a caller-provided byte container `out`
-    /// (such as `[u8; N]` or `Vec<u8>`) and returns `Some(out)` on success.
+    /// Parses a hexadecimal string directly into a caller-provided byte container
+    /// `out_buf` (such as `[u8; N]` or `Vec<u8>`) and returns `Some(out_buf)` on success.
     ///
     /// Since every byte (`u8`) requires 2 [`ASCII`] hex characters (`"00"`..=`"ff"`),
-    /// `hex_str` must be **exactly `2 * out.len()` characters long** (for example, `8`
-    /// characters for `[0u8; 4]`, or `64` characters for `[0u8; 32]`). Both lowercase
+    /// `hex_str` must be **exactly `2 * out_buf.len()` characters long** (for example,
+    /// `8` characters for `[0u8; 4]`, or `64` characters for `[0u8; 32]`). Both lowercase
     /// (`'a'..='f'`) and uppercase (`'A'..='F'`) digits are accepted.
     ///
     /// Each 2-character chunk (`hi_hex`, `lo_hex`) decodes its [`ASCII`] nibbles
@@ -48,30 +48,44 @@ impl HexSlice<'static> {
     /// ```
     ///
     /// Returns `None` if `hex_str` does not contain exact valid [`ASCII`] hex pairs
-    /// matching the byte length of `out`. Callers that allow surrounding whitespace
+    /// matching the byte length of `out_buf`. Callers that allow surrounding whitespace
     /// should call [`str::trim_ascii()`] before calling this function.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[must_use]
-    pub fn try_parse_bytes<T: AsMut<[u8]>>(hex_str: &str, mut out: T) -> Option<T> {
-        let out_slice = out.as_mut();
-        let (pairs, remainder) = hex_str.as_bytes().as_chunks::<2>();
-        if pairs.len() != out_slice.len() || !remainder.is_empty() {
+    pub fn try_parse_bytes<T: AsMut<[u8]>>(
+        in_hex_str: &str,
+        mut out_buf: T,
+    ) -> Option<T> {
+        let out_buf_mut = out_buf.as_mut();
+
+        // Expect 2 ASCII hex bytes per output byte (e.g., 64 chars -> 32 raw bytes).
+        // Early return if this isn't the case.
+        if in_hex_str.len() != out_buf_mut.len().checked_mul(2)? {
             return None;
         }
-        for (out_byte, &[hi_hex, lo_hex]) in out_slice.iter_mut().zip(pairs) {
-            let hi = codec::decode_nibble(hi_hex)?;
-            let lo = codec::decode_nibble(lo_hex)?;
-            *out_byte = (hi << constants::HIGH_NIBBLE_SHIFT) | lo;
+
+        let (in_hex_pairs, _rem) = in_hex_str.as_bytes().as_chunks::<2>();
+
+        for (out_byte, &[in_hi_hex, in_lo_hex]) in
+            out_buf_mut.iter_mut().zip(in_hex_pairs)
+        {
+            // Decode each hex digit pair, returning None if either byte is invalid ASCII
+            // hex.
+            let hi_nibble = codec::decode_nibble(in_hi_hex)?;
+            let lo_nibble = codec::decode_nibble(in_lo_hex)?;
+            // Pack hi_nibble into upper bits 7..=4 and lo_nibble into lower bits 3..=0 of
+            // out_byte.
+            *out_byte = (hi_nibble << constants::HIGH_NIBBLE_SHIFT) | lo_nibble;
         }
-        Some(out)
+
+        Some(out_buf)
     }
 
     /// Decodes a single [`ASCII`] hexadecimal character byte into its 4-bit nibble value
-    /// (`0..=15`), case-insensitively. See [`codec::decode_nibble`] for range details.
+    /// (`0..=15`), case-insensitively (`'0'..='9'`, `'a'..='f'`, `'A'..='F'`).
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    /// [`codec::decode_nibble`]: codec::decode_nibble
     #[must_use]
     #[inline]
     pub const fn decode_nibble(ascii_byte: u8) -> Option<u8> {
@@ -142,7 +156,7 @@ impl Display for HexSlice<'_> {
 /// Low-level [`ASCII`] hex nibble codec helpers.
 ///
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-mod codec {
+pub mod codec {
     use super::constants;
 
     /// Converts a single [`ASCII`] hexadecimal character byte into its 4-bit nibble value
@@ -205,9 +219,10 @@ mod codec {
     /// 3. Add `39` when `masked >= 10` (and `0` otherwise), shifting letters (`10..=15`)
     ///    across the 39-character gap onto `'a'..='f'` (`97..=102`). Because both arms
     ///    are constants, LLVM lowers the `if`/`else` to a branchless `select` and
-    ///    vectorizes across 16 or 32 bytes at once in SIMD registers.
+    ///    vectorizes across 16 or 32 bytes at once in [SIMD] registers.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
     #[must_use]
     #[inline]
     pub(super) const fn encode_nibble(nibble: u8) -> u8 {
