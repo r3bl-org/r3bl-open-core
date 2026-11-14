@@ -2,7 +2,7 @@
 
 use crate::ex_pitch::state::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 use r3bl_tui::{App, ArrayBoundsCheck, ArrayOverflowResult, BoxedSafeApp, CIndex,
-               CommonResult, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
+               CommonResult, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI,
                EditMode, EditorComponent, EditorEngineConfig, EventPropagation,
                FlexBoxId, GlobalData, HasFocus, InputEvent, Key, KeyPress,
                LayoutDirection, LayoutManagement, LengthOps, ModifierKeysMask,
@@ -46,7 +46,7 @@ mod constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct ex_pitch::AppWithLayout");
             });
@@ -256,7 +256,7 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -293,7 +293,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"

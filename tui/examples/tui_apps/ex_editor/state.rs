@@ -2,8 +2,7 @@
 
 use crate::ex_editor::Id;
 use r3bl_tui::{DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, EditorBuffer, FileExtensionToken,
-               FlexBoxId, HasDialogBuffers, HasEditorBuffers, ok};
-use rustc_hash::FxHashMap;
+               FlexBoxId, HasDialogBuffers, HasEditorBuffers, HashMap, ok};
 use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Provides default content for the editor example.
@@ -26,8 +25,8 @@ fn get_default_editor_content() -> Vec<&'static str> {
 
 #[derive(Clone, PartialEq)]
 pub struct State {
-    pub editor_buffers: FxHashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffers: FxHashMap<FlexBoxId, DialogBuffer>,
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
 }
 
 mod constructor {
@@ -39,7 +38,7 @@ mod constructor {
     }
 
     pub fn get_initial_state() -> State {
-        let editor_buffers: FxHashMap<FlexBoxId, EditorBuffer> = {
+        let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
             let editor_buffer = {
                 let mut editor_buffer =
                     EditorBuffer::new_empty(FileExtensionToken(DEFAULT_SYN_HI_FILE_EXT));
@@ -47,14 +46,14 @@ mod constructor {
                 editor_buffer.init_with(iter);
                 editor_buffer
             };
-            let mut it = FxHashMap::default();
+            let mut it = HashMap::default();
             it.insert(FlexBoxId::from(Id::Editor), editor_buffer);
             it
         };
 
         State {
             editor_buffers,
-            dialog_buffers: FxHashMap::default(),
+            dialog_buffers: HashMap::default(),
         }
     }
 }

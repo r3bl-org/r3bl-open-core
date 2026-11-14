@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use crate::DEBUG_ANALYTICS_CLIENT;
 use r3bl_tui::inline_string;
 use reqwest::{Client, Response};
 
@@ -14,7 +14,7 @@ pub async fn make_get_request(
     let response = client.get(url).send().await?;
     if response.status().is_success() {
         // Handle successful response.
-        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+        DEBUG_ANALYTICS_CLIENT.then(|| {
             tracing::debug!(
                 message = "GET request succeeded.",
                 response = %inline_string!("{response:#?}")
@@ -43,7 +43,7 @@ pub async fn make_post_request(
     let response = client.post(url).json(data).send().await?;
     if response.status().is_success() {
         // Handle successful response.
-        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+        DEBUG_ANALYTICS_CLIENT.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "POST request succeeded.",

@@ -77,9 +77,9 @@ release `r3bl_tui = "0.8.0"`.
       implemented resilient recovery in `StatefulInputParser::advance` that purges
       unrecognized terminated sequences, preventing permanent input event loop lockups.
     - **`MaybeMore` State Machine & Zero-Latency ESC Disambiguation**: Replaced loose
-      booleans with the `MaybeMore` enum (`KernelDrained`, `KernelMayHaveMore`),
-      enabling 0ms zero-latency ESC handling while correctly reassembling multi-packet
-      escape sequences across SSH.
+      booleans with the `MaybeMore` enum (`KernelDrained`, `KernelMayHaveMore`), enabling
+      0ms zero-latency ESC handling while correctly reassembling multi-packet escape
+      sequences across SSH.
     - **OSC Terminal Query Absorption**: Implemented `OscScanState` and
       `scan_osc_sequence` state machine to scan, frame, and absorb terminal query
       responses (OSC 10/11 color queries, OSC 52 clipboard) on `stdin`, preventing text
@@ -176,12 +176,12 @@ Step 2: r3bl-build-infra v0.0.6   Step 3: r3bl-cmdr v0.0.27   Step 4: r3bl-rust-
                            │
 ┌──────────────────────────▼─────────────────────────────┐
 │ Track B (Sequential - After worktree merge):           │
-│ Phase 4: Merge worktree & SSOT documentation sync      │
+│ Phase 4: Merge worktree & documentation sync           │
 │ Phase 5: Release r3bl_tui v0.8.0                       │
 │ Phase 6: Release r3bl-build-infra v0.0.6               │
 │ Phase 7: Release r3bl-cmdr v0.0.27                     │
 │ Phase 8: Release r3bl-rust-analyzer-mcp-server v1.1.5  │
-│ Phase 9: Community visibility & housekeeping           │
+│ Phase 9: Community marketing & housekeeping            │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -471,23 +471,25 @@ Task: make-0.8.0-release.md" ```
     git push origin main
     ```
 
-## Track B: Release Execution (Post-Merge of `fix-shift-home-lockup`)
+## Track B: Release Execution (Post-Merge of `fix-shift-home-lockup` & `binaries`)
 
-_Execute this track once the worktree branch `fix-shift-home-lockup` is fully completed
-and ready to merge._
+_Execute this track once the worktree branch `binaries` (`../roc-binaries`) is fully
+completed and merged into `main`._
 
-### Phase 4: Workspace Merge & Documentation SSOT Sync
+### Phase 4: Workspace Merge & Documentation Sync
 
-- [ ] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
+- [x] Merge worktree branch `fix-shift-home-lockup` (PR #490) into `main` and clean up
+      worktree.
+- [ ] Merge worktree branch `binaries` (`../roc-binaries`) into `main` and clean up
       worktree:
-    - Verify all checks pass on PR #490 and merge via rebase:
+    - Verify all checks pass on PR and merge via rebase:
         ```bash
-        gh pr merge 490 --rebase --delete-branch
+        gh pr merge --rebase --delete-branch
         ```
     - Clean up the local worktree and branch:
         ```bash
-        git worktree remove ../roc-fix-shift-home-lockup
-        git branch -d fix-shift-home-lockup
+        git worktree remove ../roc-binaries
+        git branch -d binaries
         git fetch --prune
         ```
     - On `main` branch, pull latest rebased commits:
@@ -496,7 +498,7 @@ and ready to merge._
         git pull origin main
         git status
         ```
-- [ ] Update `tui/src/lib.rs` (Single Source of Truth under `//! # Why R3BL?`):
+- [ ] Update `tui/src/lib.rs` (under `//! # Why R3BL?`):
     - Add subsection `//! ## Mathematically & Empirically Validated Type Safety` detailing
       FUNARCH 2023 & 2026 academic research, typestate coordinate boundaries, and zero
       runtime penalty (using `//! ##` so rustdoc navigation shows it cleanly and
@@ -601,7 +603,7 @@ and ready to merge._
 ### Phase 6: Release `r3bl-build-infra` v0.0.6 (Tooling Crate)
 
 - [ ] Bump package version in `build-infra/Cargo.toml`: Set `version = "0.0.6"`.
-- [ ] Generate README from SSOT `build-infra/src/lib.rs`:
+- [ ] Generate README from `build-infra/src/lib.rs`:
     ```bash
     cd build-infra && cargo readme > README.md && cd ..
     ```
@@ -645,7 +647,7 @@ and ready to merge._
 ### Phase 7: Release `r3bl-cmdr` v0.0.27 (CLI & Apps Crate)
 
 - [ ] Bump package version in `cmdr/Cargo.toml`: Set `version = "0.0.27"`.
-- [ ] Generate README from SSOT `cmdr/src/lib.rs`:
+- [ ] Generate README from `cmdr/src/lib.rs`:
     ```bash
     cd cmdr && cargo readme > README.md && cd ..
     ```
@@ -732,21 +734,56 @@ and ready to merge._
     - [ ] GitHub release:
           `https://github.com/r3bl-org/r3bl-open-core/releases/tag/v1.1.5-rust-analyzer-mcp-server`
 
-### Phase 9: Community Visibility & Housekeeping
+### Phase 9: Community Marketing & Housekeeping
 
-- [ ] Share release announcements across developer communities following
+- [ ] Execute release marketing and community visibility across channels following
       `docs/release-guide.md`:
-    - [ ] **Reddit (`r/rust`)**: Post
-          `[Release] r3bl_tui v0.8.0: Async TUI library with 2D Canvas/Viewport coords, Flat2DArray SIMD layout, and 0ms ESC handling`
-          with body from `docs/release-notes/r3bl_tui/v0.8.0.md`.
-    - [ ] **Hacker News (Show HN)**: Post
+    - [ ] **Reddit (`r/rust`)** (Primary announcement):
+        - **Subreddit Rules Compliance**:
+            - **Rule 2 (Descriptive title)**: Do not use generic prefixes like `[Release]`.
+              Must explain what the crate does:
+              `Announcing r3bl_tui 0.8.0: Async, reactive terminal UI framework with flexbox layouts, PTY orchestration, and modern web ergonomics`
+            - **Rule 6 (Self-promotion limit)**: At most 1 self-promotion post per week.
+            - **Flair**: Tag post with `Project` flair.
+        - **Format**: Curated high-signal text submission (do **not** copy the full 50KB
+          release notes, which exceeds Reddit's 40,000-character limit and causes reader
+          fatigue).
+        - **Content Outline**:
+            - Quick hook & what it is (modernizing the terminal, React/Elm/flexbox
+              ergonomics in pure Rust, async/non-blocking I/O).
+            - The 4 interaction primitives (`readline_async`, inline `choose`, full-screen
+              TUI, PTY multiplexing).
+            - Key v0.8.0 highlights (dynamic OSC color querying, Flat2DArray SIMD layout,
+              0ms ESC handling, 16 interactive demos).
+            - Media: Embed a demo GIF or screenshot directly into the post body.
+            - Links: GitHub repo, crates.io, docs.rs, and link to the full 900+ line
+              release notes & migration guide on GitHub.
+    - [ ] **Reddit (`r/madeinrust`)** (Showcase sub):
+        - Post a dedicated showcase focusing on what was built with Rust.
+        - Include demo GIFs/screenshots and instructions to test drive the 16 interactive
+          examples (`cargo run --example <name>`).
+    - [ ] **Official Rust Users Forum (`users.rust-lang.org`)** (High-signal & friendly):
+        - Post to the **Announcements** category.
+        - Friendly, zero-toxicity audience of core Rustaceans and crate maintainers.
+        - Include the curated summary, benchmark highlights, and link to GitHub release
+          notes.
+    - [ ] **Reddit (`r/commandline`)** (Optional CLI showcase):
+        - Post showcasing CLI/TUI apps built with `r3bl_tui` (e.g., `edi`, `giti`, or the
+          multi-tab virtual terminal demos).
+    - [ ] **Hacker News (`Show HN`)**:
+        - Title:
           `Show HN: R3BL TUI v0.8.0 - Async Rust TUI with Flat2DArray SIMD layout and zero-cost typestate safety`
-          linking to GitHub release or developerlife.com article.
-    - [ ] **LinkedIn**: Post highlights of the 0.8.0 release family (`r3bl_tui`,
-          `r3bl-cmdr`, `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`) with
-          performance metrics and video links.
-- [ ] Update `task/prepare-v0.8.0-meta-task.md` to reflect publication completion.
+        - URL: Link to the GitHub Release page
+          (`https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.8.0-tui`) or the
+          architectural deep-dive article on `developerlife.com`.
+    - [ ] **LinkedIn & Social Media**:
+        - Post highlights of the 0.8.0 release family (`r3bl_tui`, `r3bl-cmdr`,
+          `r3bl-build-infra`, `r3bl-rust-analyzer-mcp-server`).
+        - Highlight empirical benchmarks (2.3x rendering speedup, ±98% jitter
+          elimination, L1 D-Cache alignment).
+        - Link to `developerlife.com` articles and YouTube video walkthroughs.
+- [ ] Update `task/prepare-v0.8.0-meta-task.md` to reflect publication and marketing completion.
 - [ ] Audit diff via `git diff task/` to verify clean metadata updates.
-- [ ] **Mandatory manual review:** Verify all release tracking tasks are marked complete.
+- [ ] **Mandatory manual review:** Verify all release tracking tasks and community posts are reviewed.
     - [ ] `task/prepare-v0.8.0-meta-task.md`
     - [ ] `task/make-0.8.0-release.md`

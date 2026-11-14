@@ -1,6 +1,6 @@
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 
-# Make sure to keep this in sync with `run` nushell script `$workspace_folders`.
+# Make sure to keep this in sync with `run.fish` `$workspace_folders`.
 [workspace]
 members = [
   "analytics_schema",
@@ -15,7 +15,11 @@ resolver = "3"
 
 # https://github.com/trailofbits/cargo-unmaintained
 [workspace.metadata.unmaintained]
-ignore = ["gethostname", "objs", "home", "proc-macro-error", "wayland-commons"]
+ignore = [
+  "gethostname",      # Transitive dependency via `copypasta` -> `x11-clipboard` -> `x11rb` (r3bl_tui).
+  "home",             # Transitive dependency via `which` (r3bl-rust-analyzer-mcp-server).
+  "assert-json-diff", # Transitive dev-dependency via `mockito` (r3bl-cmdr, r3bl_tui).
+]
 
 # ┌───────────────────────────────────────────────────────────────────────┐
 # │                       RUSTC LINTS SECTION                             │
@@ -104,6 +108,7 @@ comparison_chain = "warn"
 elidable_lifetime_names = "warn"
 wildcard_imports = "warn"
 large_futures = "warn"
+disallowed_types = "warn"
 # ╔══════════════════════════════════════════════════════╗
 # ║ Explicitly allow/suppress these lints to avoid noise ║
 # ╚══════════════════════════════════════════════════════╝

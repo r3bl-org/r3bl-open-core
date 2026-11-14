@@ -56,7 +56,7 @@
 //!     https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
 
 use super::ui_str;
-use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
+use crate::{DEBUG_ANALYTICS_CLIENT, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscPtyEvent, OutputDevice,
                SpinnerStyle, StyleSheet, TerminalInteractiveStatus, TuiAvailability,
                TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
@@ -99,7 +99,7 @@ pub fn start_task_to_check_if_upgrade_is_needed() {
         if let Ok(version_crates) =
             try_get_latest_release_version_from_crates_io(get_self_crate_name()).await
         {
-            DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+            DEBUG_ANALYTICS_CLIENT.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = "📦📦📦 Latest version of cmdr",
@@ -109,7 +109,7 @@ pub fn start_task_to_check_if_upgrade_is_needed() {
 
             if version_self != version_crates {
                 UPGRADE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                DEBUG_ANALYTICS_CLIENT.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info!(
                         message = "💿💿💿 There is a new version of cmdr available",

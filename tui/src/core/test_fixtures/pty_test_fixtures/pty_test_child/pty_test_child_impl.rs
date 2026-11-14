@@ -518,6 +518,7 @@ impl PtyTestChild {
     /// [`portable_pty`]: portable_pty
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
+    // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
     #[cfg(target_os = "windows")]
     fn get_writer_windows<R: Read>(
         &self,

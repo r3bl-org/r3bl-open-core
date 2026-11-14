@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Pc, RIGHT_ARROW_DASHED_GLYPH, RateLimitStatus, RateLimiter, RingBuffer,
-            RingBufferStack, TimeDuration, c_len};
+use crate::{HashMap, Pc, RIGHT_ARROW_DASHED_GLYPH, RateLimitStatus, RateLimiter,
+            RingBuffer, RingBufferStack, TimeDuration, c_len};
 use hdrhistogram::Histogram;
-use rustc_hash::FxHashMap;
 use smallstr::SmallString;
 use std::{fmt::Display,
           time::{Duration, Instant}};
@@ -417,7 +416,7 @@ mod calculator {
         /// 1. **Bucketing**: Each duration is converted to microseconds and divided by
         ///    the cluster sensitivity range to create bucket keys that group similar
         ///    durations.
-        /// 2. **Counting**: A [`FxHashMap`] counts occurrences of each bucket key.
+        /// 2. **Counting**: A [`HashMap`] counts occurrences of each bucket key.
         /// 3. **Finding Maximum**: The bucket with the highest count is selected.
         /// 4. **Percentage Calculation**: Uses integer arithmetic to calculate what
         ///    percentage of measurements fall into the most common bucket.
@@ -473,10 +472,10 @@ mod calculator {
             // Use the pre-calculated cluster sensitivity range from options.
             // Guard against division by zero if sensitivity range is 0.
             let range_micros = self.cluster_sensitivity_range.as_micros().max(1);
-            let count_map: FxHashMap<u128, usize> =
+            let count_map: HashMap<u128, usize> =
                 self.ring_buffer
                     .iter()
-                    .fold(FxHashMap::default(), |mut map, atom| {
+                    .fold(HashMap::default(), |mut map, atom| {
                         let key = atom.as_duration().as_micros() / range_micros;
                         *map.entry(key).or_default() += 1;
                         map
@@ -493,7 +492,7 @@ mod calculator {
                 .filter(|atom| atom.as_duration().as_micros() / range_micros == max_key)
                 .map(|atom| atom.hint);
 
-            let mut hint_counts = FxHashMap::default();
+            let mut hint_counts = HashMap::default();
             for hint in filtered_hints {
                 *hint_counts.entry(hint).or_insert(0) += 1;
             }

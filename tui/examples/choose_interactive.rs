@@ -5,7 +5,7 @@ use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TuiAvailabilityChoose
                cli_text_inline, cli_text_line, cli_text_lines, get_size, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
-               readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},
+               readline_async::{DEBUG_CHOOSE, HowToChoose, style::StyleSheet},
                set_mimalloc_in_main, throws, tui_color, vp_height, vp_width};
 
 const MULTI_LINE_HEADER: &str = "Multi line header";
@@ -27,7 +27,7 @@ async fn main() -> miette::Result<()> {
     let size = get_size()?;
 
     throws!({
-        let _log_guard = DEVELOPMENT_MODE.then(|| {
+        let _log_guard = DEBUG_CHOOSE.then(|| {
             let guard =
                 try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
             // % is Display, ? is Debug.
@@ -124,7 +124,7 @@ async fn main() -> miette::Result<()> {
             }
         }
 
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Stop logging...");
         });
@@ -219,7 +219,7 @@ async fn single_line_header(max_width_col_count: u16) -> miette::Result<()> {
 
     println!("User selected: {user_choice:?}");
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "User selected something",
@@ -319,7 +319,7 @@ async fn multiple_select_13_items_vph_5(
 
     println!("User selected: {user_choice:?}");
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "User selected something",
@@ -368,7 +368,7 @@ async fn multiple_select_2_items_vph_5(
 
     println!("User selected: {user_choice:?}");
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "User selected something",
@@ -420,7 +420,7 @@ async fn single_select_13_items_vph_5(
 
     println!("User selected: {user_choice:?}");
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "User selected something",
@@ -468,7 +468,7 @@ async fn single_select_2_items_vph_5(
 
     println!("User selected: {user_choice:?}");
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "User selected something",

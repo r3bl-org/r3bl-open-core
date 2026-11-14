@@ -5,7 +5,7 @@
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
 
-/// An [`RAII`] guard that grants exclusive access to the terminal devices
+/// An [RAII] guard that grants exclusive access to the terminal devices
 /// ([`OutputDevice`] and [`InputDevice`]) by temporarily suspending [`Readline`]
 /// operations.
 ///
@@ -51,10 +51,10 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// [`PauseState::PausedByBoth`]: crate::PauseState::PausedByBoth
 /// [`PauseState::PausedByModal`]: crate::PauseState::PausedByModal
 /// [`PauseState::PausedBySpinner`]: crate::PauseState::PausedBySpinner
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline`]: crate::Readline
 /// [`ReadlineLockManager`]: crate::ReadlineLockManager
 /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[allow(missing_debug_implementations)]
 pub struct ModalTerminalGuard<'a> {
     readline: &'a mut Readline,
@@ -109,9 +109,9 @@ impl Drop for ModalTerminalGuard<'_> {
     }
 }
 
-// XMARK: Witness token usage to restrict access of a method w/out making it private
+// XMARK: Witness token (compile-time proof) to restrict access to a pub method
 
-/// A [witness token] that proves a [`ModalTerminalGuard`] is held.
+/// A [witness token] (compile-time proof) that proves a [`ModalTerminalGuard`] is held.
 ///
 /// ## Proof and Lifecycle Chain
 ///

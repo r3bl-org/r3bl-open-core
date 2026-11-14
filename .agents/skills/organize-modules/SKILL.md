@@ -223,6 +223,50 @@ pub use input::*;
 
 **Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in `Cargo.toml`.
 
+#### ⚠️ `[dev-dependencies]` Caveat (Two-Layer Split)
+
+Cargo does **not** have a `[doc-dependencies]` table and **never links `[dev-dependencies]`** (such
+as `mockito`, `serial_test`, `pretty_assertions`, `test_case`) during `cargo doc` (`cfg(doc)` =
+`true`, `cfg(test)` = `false`).
+
+When a test module parent is gated with `#[cfg(any(test, doc))]` so its documentation pages and
+intra-doc links build in `cargo doc`, use a **Two-Layer Split**:
+
+1. **Documentation & pure-`[dependencies]` layer (inherits `#[cfg(any(test, doc))]`)**:
+   - Module shells (`pub mod integration_tests;`, `pub mod my_test;`, `pub mod test_fixtures;`) and
+     their `//!` module-level rustdocs.
+   - Fixture submodules that only depend on `std` or `[dependencies]` (e.g., `pub mod constants;`,
+     `pub mod jsonc_golden;`) — do **not** add redundant `#[cfg(test)]` to them, so rustdocs can
+     link directly to their symbols without leaking test constants into production modules.
+2. **Test-execution & `[dev-dependencies]` layer (`#[cfg(test)]`)**:
+   - Executable test blocks (`#[cfg(test)] mod tests { ... }`) and helper functions/submodules that
+     import `[dev-dependencies]` (e.g., `#[cfg(test)] pub mod http_server;` using `mockito`).
+   - Always add a brief comment above `#[cfg(test)]` fixture submodules explaining *why* they are
+     narrower than their `#[cfg(any(test, doc))]` parent (because `[dev-dependencies]` are not
+     linked during `cargo doc`).
+   - In `//!` rustdocs compiled under `cfg(doc)`, link to `[dev-dependencies]` crates via
+     `https://docs.rs/<crate>` rather than crate-path intra-doc links.
+
+```rust
+// integration_tests/test_fixtures/mod.rs
+// (parent `integration_tests` is already `#[cfg(any(test, doc))]`)
+
+// Already non-production via parent `#[cfg(any(test, doc))]`.
+// Kept visible under `cfg(doc)` so rustdocs can link to fixture constants/builders.
+pub mod constants;
+pub mod jsonc_golden;
+
+// Additionally gated behind `#[cfg(test)]` because `mockito` is a `[dev-dependency]` and
+// Cargo does not link `[dev-dependencies]` during `cargo doc` (`cfg(doc)`).
+#[cfg(test)]
+pub mod http_server;
+
+pub use constants::*;
+#[cfg(test)]
+pub use http_server::*;
+pub use jsonc_golden::*;
+```
+
 **Apply at all levels**: If the module is nested, both parent and child need the visibility
 change. Also update any re-exports:
 

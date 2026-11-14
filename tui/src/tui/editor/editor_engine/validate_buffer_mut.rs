@@ -17,7 +17,7 @@
 //! size cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`].
 //!
-//! <!-- It is ok to use ignore here - demonstrates [`RAII`] pattern with Drop trait, not
+//! <!-- It is ok to use ignore here - demonstrates [RAII] pattern with Drop trait, not
 //! a complete runnable example -->
 //!
 //! ```ignore
@@ -31,8 +31,8 @@
 //! The [`EditorBufferMutNoDrop`] variant does NOT invalidate the cache, which is useful
 //! for operations that don't modify content (e.g., viewport resizing).
 //!
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [newtype pattern]: https://doc.rust-lang.org/rust-by-example/generics/new_types.html
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use crate::{CCaret, CWidth, CanvasCameraExt, CursorPositionBoundsStatus,
             MemoizedMemorySize, SelectionContainer, Viewport, ZeroCopyGapBuffer,

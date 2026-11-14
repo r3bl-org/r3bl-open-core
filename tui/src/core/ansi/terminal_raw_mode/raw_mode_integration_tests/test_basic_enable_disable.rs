@@ -6,7 +6,7 @@
 /// This test uses a controller/controlled [`PTY`] pair to verify that:
 /// 1. [raw mode] can be enabled on a real [`PTY`].
 /// 2. [raw mode] can be disabled and terminal settings restored.
-/// 3. The [`RAII`] guard pattern works correctly.
+/// 3. The [RAII] guard pattern works correctly.
 ///
 /// # Run with:
 ///
@@ -15,7 +15,7 @@
 /// ```
 ///
 /// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,
