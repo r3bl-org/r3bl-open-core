@@ -78,6 +78,7 @@
 //! [`write_str`]: std::fmt::Formatter::write_str
 //! [Editor Component]: crate::EditorComponent
 
+// Attach.
 pub mod fast_stringify;
 pub mod format_no_alloc;
 #[cfg(any(test, doc))]
@@ -85,6 +86,7 @@ pub mod hex_slice;
 #[cfg(not(any(test, doc)))]
 mod hex_slice;
 
+// Re-export.
 pub use fast_stringify::*;
 pub use format_no_alloc::*;
 pub use hex_slice::*;

@@ -69,7 +69,7 @@ impl ChunkAccumulator {
             tracing::warn! {
                 message = "ChunkAccumulator::purge_malformed",
                 status = "discarding unrecognized/malformed escape sequence",
-                discarded_hex = %HexSlice(&self.buffer),
+                discarded_hex = %HexSlice { inner: &self.buffer },
                 discarded_str = %String::from_utf8_lossy(&self.buffer),
                 buffer_len = self.buffer.len(),
             };

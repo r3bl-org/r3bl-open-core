@@ -3,69 +3,75 @@
 //! Zero-allocation hexadecimal encoding and decoding namespace ([`HexSlice`]) for fixed
 //! byte containers and slices.
 
-use crate::ok;
+use crate::{NUL, ok};
 use std::fmt::{Display, Formatter};
 
 /// Zero-cost [`Display`] wrapper and namespace for stack-only hexadecimal encoding and
 /// decoding.
 ///
 /// Wrapping a byte slice formats it as compact lowercase hexadecimal characters directly
-/// into a [`Formatter`] in 32-byte stack chunks without heap allocation. Stateless
-/// nibble, byte, and fixed-buffer parsing helpers live directly on [`HexSlice<'static>`]
-/// so callers invoke `HexSlice::encode_byte(b)` or `HexSlice::try_parse_str(s, [0u8;
-/// 32])` without unconstrained lifetime inference issues.
+/// into a [`Formatter`] without heap allocation. Stateless nibble, byte, and byte buffer
+/// parsing are associated functions on [`HexSlice`].
 ///
 /// [`Display`]: std::fmt::Display
 /// [`Formatter`]: std::fmt::Formatter
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct HexSlice<'a>(pub &'a [u8]);
+pub struct HexSlice<'a> {
+    /// Raw byte slice to format as lowercase hexadecimal.
+    pub inner: &'a [u8],
+}
 
 impl HexSlice<'static> {
-    /// Parses a hexadecimal string directly into a caller-provided byte container
-    /// `out_buf` (such as `[u8; N]` or `Vec<u8>`) and returns `Some(out_buf)` on success.
+    /// Parses a hexadecimal string `in_hex_str` directly into a caller-provided byte
+    /// container `out_buf` (such as `[u8; N]` or `Vec<u8>`) and returns `Some(out_buf)`
+    /// on success.
     ///
     /// Since every byte (`u8`) requires 2 [`ASCII`] hex characters (`"00"`..=`"ff"`),
-    /// `hex_str` must be **exactly `2 * out_buf.len()` characters long** (for example,
-    /// `8` characters for `[0u8; 4]`, or `64` characters for `[0u8; 32]`). Both lowercase
-    /// (`'a'..='f'`) and uppercase (`'A'..='F'`) digits are accepted.
+    /// `in_hex_str` must be **exactly `2 * out_buf.as_mut().len()` bytes long** (for
+    /// example, `8` characters for `[0u8; 4]`, or `64` characters for `[0u8; 32]`). Both
+    /// lowercase (`'a'..='f'`) and uppercase (`'A'..='F'`) digits are accepted.
     ///
-    /// Each 2-character chunk (`hi_hex`, `lo_hex`) decodes its [`ASCII`] nibbles
-    /// independently into 4-bit values in bits `3..=0`, then shifts `hi` into the upper
-    /// half of the output byte before combining them with bitwise OR, e.g. `"2f"` becomes
-    /// `47` (`0x2f`):
+    /// Splits `in_hex_str` into 2-byte pairs `[in_hi_hex, in_lo_hex]` and decodes each
+    /// pair in place via [`Self::decode_byte`]:
     ///
     /// ```text
-    /// Input str "2f":    hi_hex = b'2' (50)          lo_hex = b'f' (102)
-    ///                          │                           │
-    ///                          ▼ decode_nibble             ▼ decode_nibble
-    ///                    hi = 0b0000_0010 (2)        lo = 0b0000_1111 (15)
-    ///                          │                           │
-    ///                          ▼ hi << 4                   │ (already in bits 3..=0)
-    ///                         0b0010_0000 (32)            0b0000_1111 (15)
-    ///                          └────────────┬──────────────┘
-    ///                                       ▼ bitwise OR (|)
-    ///                         *out_byte = 0b0010_1111 (47 / 0x2f)
+    /// in_hex_str = "0a1B2cFf"  (len = 8 == 2 * out_buf.len())
+    ///                         │
+    ///                         ▼ as_chunks::<2>()
+    ///      ┌────────────┬─────┴──────┬────────────┐
+    ///      ▼            ▼            ▼            ▼
+    /// [b'0', b'a'] [b'1', b'B'] [b'2', b'c'] [b'F', b'f']
+    ///      │            │            │            │
+    ///      ▼            ▼            ▼            ▼  Self::decode_byte
+    ///     0x0a         0x1b         0x2c         0xff
+    ///      └────────────┴─────┬──────┴────────────┘
+    ///                         ▼ written into out_buf
+    ///           Some([0x0a, 0x1b, 0x2c, 0xff])
     /// ```
     ///
-    /// Returns `None` if `hex_str` does not contain exact valid [`ASCII`] hex pairs
+    /// Returns `None` if `in_hex_str` does not contain exact valid [`ASCII`] hex pairs
     /// matching the byte length of `out_buf`. Callers that allow surrounding whitespace
     /// should call [`str::trim_ascii()`] before calling this function.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`Self::decode_byte`]: Self::decode_byte
     #[must_use]
-    pub fn try_parse_str<T: AsMut<[u8]>>(
-        in_hex_str: &str,
-        mut out_buf: T,
-    ) -> Option<T> {
+    pub fn try_parse_str<T: AsMut<[u8]>>(in_hex_str: &str, mut out_buf: T) -> Option<T> {
         let out_buf_mut = out_buf.as_mut();
 
         // Expect 2 ASCII hex bytes per output byte (e.g., 64 chars -> 32 raw bytes).
         // Early return if this isn't the case.
-        if in_hex_str.len() != out_buf_mut.len().checked_mul(2)? {
+        if in_hex_str.len()
+            != out_buf_mut
+                .len()
+                .checked_mul(constants::HEX_CHARS_PER_BYTE)?
+        {
             return None;
         }
 
-        let (in_hex_pairs, _rem) = in_hex_str.as_bytes().as_chunks::<2>();
+        let (in_hex_pairs, _rem) = in_hex_str
+            .as_bytes()
+            .as_chunks::<{ constants::HEX_CHARS_PER_BYTE }>();
 
         for (out_byte, &[in_hi_hex, in_lo_hex]) in
             out_buf_mut.iter_mut().zip(in_hex_pairs)
@@ -169,39 +175,66 @@ impl HexSlice<'static> {
 ///
 /// ```text
 /// ┌───────────────────────────────────────┐
-/// │          1 raw byte (8 bits)          │           byte      >> 4 = high nibble
-/// │   10 (dec) / 0A (hex) = 0b0000_1010   │           0000_1010 >> 4 = 0000_0000
-/// ├───────────────────┬───────────────────┤                          = 0
+/// │          1 raw byte (8 bits)          │      byte        >> 4   = high nibble
+/// │   10 (dec) / 0A (hex) = 0b0000_1010   │      0b0000_1010 >> 4   = 0b0000_0000
+/// ├───────────────────┬───────────────────┤                         = 0
 /// │ High nibble (4b)  │  Low nibble (4b)  │
-/// │ bits 7..=4: 0000  │ bits 3..=0: 1010  │           byte & 0x0F      = low nibble
-/// │   byte >> 4 = 0   │ byte & 0x0F = 10  │           0000_1010 & 0x0F = 0000_1010
-/// └─────────┬─────────┴─────────┬─────────┘                            = 10
+/// │ bits 7..=4: 0000  │ bits 3..=0: 1010  │      byte        & 0x0F = low nibble
+/// │   byte >> 4 = 0   │ byte & 0x0F = 10  │      0b0000_1010 & 0x0F = 0b0000_1010
+/// └─────────┬─────────┴─────────┬─────────┘                         = 10
 ///           ▼                   ▼
 ///       ┌───────┐           ┌───────┐
 ///       │  '0'  │           │  'a'  │   ──► writes "0a"
 ///       └───────┘           └───────┘
 /// ```
 ///
-/// Processes input in 32-byte chunks into a 64-byte stack buffer and writes each chunk
-/// with a single [`Formatter::write_str`] call (one call total for `<= 32` bytes), so
-/// LLVM can auto-vectorize the branchless nibble loop without `write!()` overhead.
+/// Processes `self.inner` in 32-byte chunks into a single reusable 64-byte stack buffer
+/// via [`HexSlice::encode_byte`], flushing each chunk with one [`Formatter::write_str`]
+/// call (one call total when `self.inner.len() <= 32`) so LLVM can auto-vectorize the
+/// branchless nibble loop without `write!()` overhead:
+///
+/// ```text
+/// self.inner: &[u8]  (arbitrary length, e.g. 40 bytes)
+///       │
+///       ▼ .chunks(32)               (CHUNK_INPUT_BYTES = 32)
+/// input_chunk: &[u8]  (N <= 32 bytes: chunk 1 = 32 B, chunk 2 = 8 B)
+///       │
+///       ▼ HexSlice::encode_byte     (reuses stack [u8; 64] buffer)
+/// out_slice: &mut [u8]  (2 * N ASCII bytes: 64 B, then 16 B)
+///       │
+///       ▼ from_utf8_unchecked + f.write_str(hex_str)
+/// Formatter             (1 write_str call per chunk, 0 heap allocs)
+/// ```
+///
+/// [`Formatter::write_str`]: std::fmt::Formatter::write_str
+/// [`HexSlice::encode_byte`]: HexSlice::encode_byte
 impl Display for HexSlice<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut output_bytes = [0u8; constants::CHUNK_OUTPUT_BYTES];
-        for input_chunk in self.0.chunks(constants::CHUNK_INPUT_BYTES) {
-            let char_len = input_chunk.len() * 2;
-            let out_slice = &mut output_bytes[..char_len];
-            let (pairs, _) = out_slice.as_chunks_mut::<2>();
-            for ([hi_dst, lo_dst], &byte) in pairs.iter_mut().zip(input_chunk) {
+        // Buffer for 64 hex chars which will be written next.
+        let mut output_bytes =
+            [NUL; constants::CHUNK_INPUT_BYTES * constants::HEX_CHARS_PER_BYTE];
+
+        // Chunk self.inner byte slice into 32-byte chunks. This code works if self.inner
+        // is < 32 bytes, or > 32 bytes, or 0 bytes.
+        for input_chunk in self.inner.chunks(constants::CHUNK_INPUT_BYTES) {
+            let out_char_len = input_chunk.len() * constants::HEX_CHARS_PER_BYTE;
+            let out_slice = &mut output_bytes[..out_char_len];
+
+            // output_bytes buffer len is always a multiple of 2 (HEX_CHARS_PER_BYTE).
+            let (out_pairs, _) =
+                out_slice.as_chunks_mut::<{ constants::HEX_CHARS_PER_BYTE }>();
+            for ([out_hi, out_lo], &byte) in out_pairs.iter_mut().zip(input_chunk) {
                 let (hi_ascii, lo_ascii) = HexSlice::encode_byte(byte);
-                *hi_dst = hi_ascii;
-                *lo_dst = lo_ascii;
+                *out_hi = hi_ascii;
+                *out_lo = lo_ascii;
             }
+
             // SAFETY: Every byte written by `HexSlice::encode_byte` is 7-bit ASCII
-            // (`'0'..='9'` or `'a'..='f'`), so all `char_len` bytes are valid UTF-8.
+            // (`'0'..='9'` or `'a'..='f'`), so all `out_char_len` bytes are valid UTF-8.
             let hex_str = unsafe { std::str::from_utf8_unchecked(out_slice) };
             f.write_str(hex_str)?;
         }
+
         ok!()
     }
 }
@@ -240,7 +273,7 @@ pub mod codec {
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[must_use]
     #[inline]
-    pub(super) const fn decode_nibble(ascii_byte: u8) -> Option<u8> {
+    pub const fn decode_nibble(ascii_byte: u8) -> Option<u8> {
         match ascii_byte {
             b'0'..=b'9' => Some(ascii_byte - b'0'),
             b'a'..=b'f' => Some(ascii_byte - b'a' + constants::HEX_ALPHA_OFFSET),
@@ -278,7 +311,7 @@ pub mod codec {
     /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
     #[must_use]
     #[inline]
-    pub(super) const fn encode_nibble(nibble: u8) -> u8 {
+    pub const fn encode_nibble(nibble: u8) -> u8 {
         let masked = nibble & constants::LOW_NIBBLE_MASK;
         let alpha_jump = if masked >= constants::HEX_ALPHA_OFFSET {
             constants::HEX_ALPHA_ASCII_SHIFT
@@ -291,13 +324,24 @@ pub mod codec {
 
 /// Constants.
 mod constants {
-    /// Stack chunk input size (`32` bytes -> `64` hex output bytes per write call).
-    pub const CHUNK_INPUT_BYTES: usize = 32;
-
-    /// Stack buffer size (`64` [`ASCII`] bytes) for a single formatted hex chunk.
+    /// Number of [`ASCII`] hex characters required to represent a single byte (`2`).
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    pub const CHUNK_OUTPUT_BYTES: usize = CHUNK_INPUT_BYTES * 2;
+    pub const HEX_CHARS_PER_BYTE: usize = 2;
+
+    /// Stack chunk input size (`32` bytes -> `64` hex output bytes per write call).
+    ///
+    /// Chosen because:
+    /// - `32` bytes matches a SHA-256 digest, so digests format in a single stack pass
+    ///   and one [`Formatter::write_str`] call.
+    /// - `64` output bytes fits in a single CPU cache line on the stack with zero heap
+    ///   allocation regardless of input length.
+    /// - `32` / `64` bytes aligns with [SIMD] register widths so LLVM can vectorize the
+    ///   inner nibble loop.
+    ///
+    /// [`Formatter::write_str`]: std::fmt::Formatter::write_str
+    /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
+    pub const CHUNK_INPUT_BYTES: usize = 32;
 
     /// Bit shift (`4` bits) for extracting or packing the high hexadecimal nibble.
     pub const HIGH_NIBBLE_SHIFT: u8 = 4;
@@ -368,11 +412,17 @@ mod tests {
 
     #[test]
     fn test_display_empty_single_chunk_and_multi_chunk() {
-        assert_eq2!(HexSlice(b"").to_string(), "");
-        assert_eq2!(HexSlice(&[0x00, 0x0a, 0x7f, 0xe3]).to_string(), "000a7fe3");
+        assert_eq2!(HexSlice { inner: b"" }.to_string(), "");
+        assert_eq2!(
+            HexSlice {
+                inner: &[0x00, 0x0a, 0x7f, 0xe3]
+            }
+            .to_string(),
+            "000a7fe3"
+        );
         // Exercise > 32 input bytes so multiple 64-byte stack chunks execute.
         let input_40 = [0xab_u8; 40];
         let expected_40 = "ab".repeat(40);
-        assert_eq2!(HexSlice(&input_40).to_string(), expected_40);
+        assert_eq2!(HexSlice { inner: &input_40 }.to_string(), expected_40);
     }
 }

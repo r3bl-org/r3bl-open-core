@@ -294,7 +294,7 @@ pub mod osc {
                     tracing::warn! {
                         message = "try_disambiguate_or_alt_bracket - parsed OSC sequence from stdin",
                         event = ?event,
-                        raw_osc_hex = %HexSlice(&chunk[..len]),
+                        raw_osc_hex = %HexSlice { inner: &chunk[..len] },
                         raw_osc_str = %String::from_utf8_lossy(&chunk[..len]),
                         consumed_bytes = len,
                     };

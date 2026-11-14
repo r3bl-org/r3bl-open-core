@@ -61,7 +61,7 @@ impl Sha256Digest {
 /// Formats the 32 byte digest as 64 lowercase hex chars without heap allocation.
 impl Display for Sha256Digest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        HexSlice(&self.inner).fmt(f)
+        HexSlice { inner: &self.inner }.fmt(f)
     }
 }
 
