@@ -8,7 +8,7 @@
 //!
 //! [`OSC`]: crate::osc_codes::OscSequence
 
-use crate::{HexSlice, LossyConvertToByte, RgbValue,
+use crate::{HexSlice, RgbValue,
             core::ansi::constants::{OSC_COLOR_SPEC_CHANNEL_SEPARATOR,
                                     OSC_COLOR_SPEC_HASH_PREFIX,
                                     OSC_COLOR_SPEC_RGB_PREFIX}};
@@ -54,23 +54,23 @@ fn try_parse_rgb_spec_color(payload: &[u8]) -> Option<RgbValue> {
 
 /// Parses 1, 2, 3, or 4 hex digits into an 8-bit color channel (`0..=255`).
 fn try_parse_hex_channel(slice: &[u8]) -> Option<u8> {
-    if !(1..=4).contains(&slice.len()) {
-        return None;
+    match *slice {
+        // 1 hex digit (4-bit): duplicate into both nibbles (e.g., b'f' -> "ff" = 0xff).
+        [d] => HexSlice::decode_byte(d, d),
+        // 2 hex digits (8-bit): full byte value (e.g., b"8a" -> 0x8a).
+        [hi, lo] => HexSlice::decode_byte(hi, lo),
+        // 3 hex digits (12-bit): validate trailing digit, keep upper 8 bits.
+        [hi, lo, d2] => {
+            HexSlice::decode_nibble(d2)?;
+            HexSlice::decode_byte(hi, lo)
+        }
+        // 4 hex digits (16-bit): validate trailing pair, keep upper 8 bits.
+        [hi, lo, d2, d3] => {
+            HexSlice::decode_byte(d2, d3)?;
+            HexSlice::decode_byte(hi, lo)
+        }
+        _ => None,
     }
-    let mut value = 0u16;
-    for &byte in slice {
-        let nibble = u16::from(HexSlice::decode_nibble(byte)?);
-        value = (value << 4) | nibble;
-    }
-    let channel = match slice.len() {
-        1 => value * 17, // 4-bit to 8-bit duplication (e.g., 0xF -> 0xFF).
-        2 => value,      // 8-bit full value.
-        3 => value >> 4, // 12-bit to top 8 bits.
-        4 => value >> 8, // 16-bit to top 8 bits.
-        _ => return None,
-    };
-
-    Some(LossyConvertToByte::to_u8_lossy(channel))
 }
 
 /// Parses `#RRGGBB` or `#RGB` hex colors into an [`RgbValue`].
@@ -348,5 +348,8 @@ mod tests {
         // Leading '+' sign (accepted by u16::from_str_radix) is rejected.
         assert_eq!(try_parse_color_spec(b"rgb:+f/+f/+f"), None);
         assert_eq!(try_parse_color_spec(b"#+f0000"), None);
+        // Invalid trailing hex digits in 3- and 4-digit channels are rejected.
+        assert_eq!(try_parse_color_spec(b"rgb:12g/00/00"), None);
+        assert_eq!(try_parse_color_spec(b"rgb:123g/00/00"), None);
     }
 }

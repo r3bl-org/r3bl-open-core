@@ -57,7 +57,7 @@
 //! [`HexSlice`] wraps any `&[u8]` slice for zero-allocation lowercase hex formatting via
 //! [`Display`] (chunked 32 bytes at a time on the stack), and hosts stack-only hex
 //! byte/nibble encoding and decoding helpers (`HexSlice::encode_byte`,
-//! `HexSlice::try_parse_str`).
+//! `HexSlice::decode_byte`, `HexSlice::try_parse_str`).
 //!
 //! [`16`]: crate::core::DEFAULT_STRING_STORAGE_SIZE
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code

@@ -72,14 +72,46 @@ impl HexSlice<'static> {
         {
             // Decode each hex digit pair, returning None if either byte is invalid ASCII
             // hex.
-            let hi_nibble = codec::decode_nibble(in_hi_hex)?;
-            let lo_nibble = codec::decode_nibble(in_lo_hex)?;
-            // Pack hi_nibble into upper bits 7..=4 and lo_nibble into lower bits 3..=0 of
-            // out_byte.
-            *out_byte = (hi_nibble << constants::HIGH_NIBBLE_SHIFT) | lo_nibble;
+            *out_byte = Self::decode_byte(in_hi_hex, in_lo_hex)?;
         }
 
         Some(out_buf)
+    }
+
+    /// Decodes a pair of [`ASCII`] hexadecimal character bytes `(in_hi_hex, in_lo_hex)`
+    /// into a single `u8`, case-insensitively (`'0'..='9'`, `'a'..='f'`, `'A'..='F'`).
+    /// This is the inverse of [`Self::encode_byte`].
+    ///
+    /// Each input byte decodes into a 4-bit nibble (`0..=15`), then `hi_nibble` shifts
+    /// into upper bits `7..=4` and combines with `lo_nibble` in bits `3..=0`, e.g.
+    /// `(b'2', b'f')` becomes `Some(0x2f)`:
+    ///
+    /// ```text
+    /// in_hi_hex = b'2' (50)          in_lo_hex = b'f' (102)
+    ///          │                              │
+    ///          ▼ decode_nibble                ▼ decode_nibble
+    /// hi_nibble = 0b0000_0010 (2)    lo_nibble = 0b0000_1111 (15)
+    ///          │                              │
+    ///          ▼ hi_nibble << 4               │ (already in bits 3..=0)
+    ///         0b0010_0000 (32)               0b0000_1111 (15)
+    ///          └──────────────┬───────────────┘
+    ///                         ▼ bitwise OR (|)
+    ///               Some(0b0010_1111) (0x2f)
+    /// ```
+    ///
+    /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`Self::encode_byte`]: Self::encode_byte
+    #[must_use]
+    #[inline]
+    pub const fn decode_byte(in_hi_hex: u8, in_lo_hex: u8) -> Option<u8> {
+        let Some(hi_nibble) = codec::decode_nibble(in_hi_hex) else {
+            return None;
+        };
+        let Some(lo_nibble) = codec::decode_nibble(in_lo_hex) else {
+            return None;
+        };
+        // Pack hi_nibble into upper bits 7..=4 and lo_nibble into lower bits 3..=0.
+        Some((hi_nibble << constants::HIGH_NIBBLE_SHIFT) | lo_nibble)
     }
 
     /// Decodes a single [`ASCII`] hexadecimal character byte into its 4-bit nibble value
@@ -92,19 +124,40 @@ impl HexSlice<'static> {
         codec::decode_nibble(ascii_byte)
     }
 
-    /// Encodes a single byte into its two lowercase [`ASCII`] hex character bytes
-    /// `[hi, lo]`.
+    /// Encodes a single byte into its two lowercase [`ASCII`] hex character bytes `(hi,
+    /// lo)`. This is the inverse of [`Self::decode_byte`].
+    ///
+    /// Splits `byte` into its upper 4 bits (`byte >> 4`) and lower 4 bits
+    /// (`byte & 0x0F`), encoding each nibble into `'0'..='9'` or `'a'..='f'`, e.g.
+    /// `0x2f` (`47`) becomes `(b'2', b'f')`:
+    ///
+    /// ```text
+    /// ┌─────────────────────────────────────────┐
+    /// │             byte = 0x2f (47)            │
+    /// │               0b0010_1111               │
+    /// ├────────────────────┬────────────────────┤
+    /// │  high_nibble (4b)  │   low_nibble (4b)  │
+    /// │  bits 7..=4: 0010  │  bits 3..=0: 1111  │
+    /// │  byte >> 4 = 2     │  byte & 0x0F = 15  │
+    /// └─────────┬──────────┴──────────┬─────────┘
+    ///           ▼ encode_nibble       ▼ encode_nibble
+    ///       b'2' (50)             b'f' (102)
+    ///           └──────────┬──────────┘
+    ///                      ▼
+    ///                (b'2', b'f')
+    /// ```
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+    /// [`Self::decode_byte`]: Self::decode_byte
     #[must_use]
     #[inline]
-    pub const fn encode_byte(byte: u8) -> [u8; 2] {
+    pub const fn encode_byte(byte: u8) -> (u8, u8) {
         let high_nibble = byte >> constants::HIGH_NIBBLE_SHIFT;
         let low_nibble = byte & constants::LOW_NIBBLE_MASK;
-        [
+        (
             codec::encode_nibble(high_nibble),
             codec::encode_nibble(low_nibble),
-        ]
+        )
     }
 }
 
@@ -140,7 +193,7 @@ impl Display for HexSlice<'_> {
             let out_slice = &mut output_bytes[..char_len];
             let (pairs, _) = out_slice.as_chunks_mut::<2>();
             for ([hi_dst, lo_dst], &byte) in pairs.iter_mut().zip(input_chunk) {
-                let [hi_ascii, lo_ascii] = HexSlice::encode_byte(byte);
+                let (hi_ascii, lo_ascii) = HexSlice::encode_byte(byte);
                 *hi_dst = hi_ascii;
                 *lo_dst = lo_ascii;
             }
@@ -281,11 +334,17 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_byte() {
-        assert_eq2!(HexSlice::encode_byte(0x00), [b'0', b'0']);
-        assert_eq2!(HexSlice::encode_byte(0x0a), [b'0', b'a']);
-        assert_eq2!(HexSlice::encode_byte(0x1e), [b'1', b'e']);
-        assert_eq2!(HexSlice::encode_byte(0xff), [b'f', b'f']);
+    fn test_encode_and_decode_byte() {
+        assert_eq2!(HexSlice::encode_byte(0x00), (b'0', b'0'));
+        assert_eq2!(HexSlice::encode_byte(0x0a), (b'0', b'a'));
+        assert_eq2!(HexSlice::encode_byte(0x1e), (b'1', b'e'));
+        assert_eq2!(HexSlice::encode_byte(0xff), (b'f', b'f'));
+
+        assert_eq2!(HexSlice::decode_byte(b'0', b'0'), Some(0x00));
+        assert_eq2!(HexSlice::decode_byte(b'2', b'f'), Some(0x2f));
+        assert_eq2!(HexSlice::decode_byte(b'F', b'a'), Some(0xfa));
+        assert_eq2!(HexSlice::decode_byte(b'g', b'0'), None);
+        assert_eq2!(HexSlice::decode_byte(b'0', b'g'), None);
     }
 
     #[test]

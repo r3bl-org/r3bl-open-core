@@ -309,7 +309,7 @@ impl FastStringify for OscSequence {
                     if idx > 0 {
                         acc.push(OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR);
                     }
-                    let [hi, lo] = HexSlice::encode_byte(byte);
+                    let (hi, lo) = HexSlice::encode_byte(byte);
                     let ch_hi = char::from(hi);
                     let ch_lo = char::from(lo);
                     acc.push(ch_hi);
