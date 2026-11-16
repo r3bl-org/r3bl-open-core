@@ -11,14 +11,14 @@ use std::fmt::{Display, Formatter};
 ///
 /// 1. Format any `&[u8]` slice as lowercase hex text via [`Display`] and [`Formatter`].
 /// 2. Decode a given string slice as an [`ASCII`]-encoded hex string into a
-///    caller-provided byte buffer via [`HexSlice::decode_str()`]. Returns `None` if the
-///    input string is not valid hex or does not match the output buffer length.
+///    caller-provided byte buffer via [`HexSlice::try_decode_str()`]. Returns `None` if
+///    the input string is not valid hex or does not match the output buffer length.
 /// 3. Encode a single `u8` byte into two lowercase [`ASCII`] hex bytes via
 ///    [`HexSlice::encode_byte()`].
 /// 4. Decode two [`ASCII`] hex bytes back into a single `u8` byte via
-///    [`HexSlice::decode_byte()`].
+///    [`HexSlice::try_decode_byte()`].
 /// 5. Decode a single [`ASCII`] hex byte into a 4-bit value (`0..=15`) via
-///    [`HexSlice::decode_nibble()`].
+///    [`HexSlice::try_decode_nibble()`].
 ///
 /// ```text
 ///   1 raw byte                          2 hex bytes (containing ASCII)
@@ -115,10 +115,10 @@ use std::fmt::{Display, Formatter};
 ///
 /// ## String Slice to Bytes
 ///
-/// [`HexSlice::decode_str()`] requires `in_hex_str.len() == 2 * out_buf.len()` (even
+/// [`HexSlice::try_decode_str()`] requires `in_hex_str.len() == 2 * out_buf.len()` (even
 /// length, exact match). It splits `in_hex_str` into 2-byte pairs
 /// `[in_hi_hex, in_lo_hex]` via `as_chunks::<2>()` and decodes each pair in place via
-/// [`HexSlice::decode_byte()`]:
+/// [`HexSlice::try_decode_byte()`]:
 ///
 /// ```text
 /// in_hex_str = "0a1B2cFf"  (len = 8 == 2 * out_buf.len())
@@ -128,7 +128,7 @@ use std::fmt::{Display, Formatter};
 ///      ▼            ▼            ▼            ▼
 /// [b'0', b'a'] [b'1', b'B'] [b'2', b'c'] [b'F', b'f']
 ///      │            │            │            │
-///      ▼            ▼            ▼            ▼  Self::decode_byte
+///      ▼            ▼            ▼            ▼  Self::try_decode_byte
 ///     0x0a         0x1b         0x2c         0xff
 ///      └────────────┴─────┬──────┴────────────┘
 ///                         ▼ written into out_buf
@@ -137,14 +137,14 @@ use std::fmt::{Display, Formatter};
 ///
 /// Returns `None` if `in_hex_str` does not contain exact valid [`ASCII`] hex pairs
 /// matching the byte length of `out_buf`. Callers that allow surrounding whitespace
-/// should call [`str::trim_ascii()`] before calling [`HexSlice::decode_str()`].
+/// should call [`str::trim_ascii()`] before calling [`HexSlice::try_decode_str()`].
 ///
 /// ## Hex Characters to Byte
 ///
-/// [`HexSlice::decode_byte()`] decodes each input byte via [`codec::decode_nibble()`],
-/// shifts `hi_nibble` left by `4` into upper bits `7..=4`, and combines with `lo_nibble`
-/// in bits `3..=0` using bitwise OR (`|`). For example, `(b'2', b'f')` becomes
-/// `Some(0x2f)`:
+/// [`HexSlice::try_decode_byte()`] decodes each input byte via
+/// [`codec::decode_nibble()`], shifts `hi_nibble` left by `4` into upper bits `7..=4`,
+/// and combines with `lo_nibble` in bits `3..=0` using bitwise OR (`|`). For example,
+/// `(b'2', b'f')` becomes `Some(0x2f)`:
 ///
 /// ```text
 /// in_hi_hex = b'2' (50)          in_lo_hex = b'f' (102)
@@ -189,10 +189,10 @@ use std::fmt::{Display, Formatter};
 /// [`codec::encode_nibble()`]: codec::encode_nibble
 /// [`Display::fmt()`]: std::fmt::Display::fmt
 /// [`Formatter::write_str()`]: std::fmt::Formatter::write_str
-/// [`HexSlice::decode_byte()`]: HexSlice::decode_byte
-/// [`HexSlice::decode_nibble()`]: HexSlice::decode_nibble
-/// [`HexSlice::decode_str()`]: HexSlice::decode_str
 /// [`HexSlice::encode_byte()`]: HexSlice::encode_byte
+/// [`HexSlice::try_decode_byte()`]: HexSlice::try_decode_byte
+/// [`HexSlice::try_decode_nibble()`]: HexSlice::try_decode_nibble
+/// [`HexSlice::try_decode_str()`]: HexSlice::try_decode_str
 /// [`std::str::from_utf8_unchecked()`]: std::str::from_utf8_unchecked
 /// [`str::trim_ascii()`]: str::trim_ascii
 /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
@@ -218,7 +218,7 @@ impl HexSlice<'_> {
     /// [`str::trim_ascii()`]: str::trim_ascii
     /// [String Slice to Bytes]: Self#string-slice-to-bytes
     #[must_use]
-    pub fn decode_str<T: AsMut<[u8]>>(in_hex_str: &str, mut out_buf: T) -> Option<T> {
+    pub fn try_decode_str<T: AsMut<[u8]>>(in_hex_str: &str, mut out_buf: T) -> Option<T> {
         let out_buf_mut = out_buf.as_mut();
 
         // Expect 2 ASCII hex bytes per output byte (e.g., 64 chars -> 32 raw bytes).
@@ -240,7 +240,7 @@ impl HexSlice<'_> {
         {
             // Decode each hex digit pair, returning None if either byte is invalid ASCII
             // hex.
-            *out_byte = Self::decode_byte(in_hi_hex, in_lo_hex)?;
+            *out_byte = Self::try_decode_byte(in_hi_hex, in_lo_hex)?;
         }
 
         Some(out_buf)
@@ -258,7 +258,7 @@ impl HexSlice<'_> {
     /// [Hex Characters to Byte]: Self#hex-characters-to-byte
     #[must_use]
     #[inline]
-    pub const fn decode_byte(in_hi_hex: u8, in_lo_hex: u8) -> Option<u8> {
+    pub const fn try_decode_byte(in_hi_hex: u8, in_lo_hex: u8) -> Option<u8> {
         let Some(hi_nibble) = codec::decode_nibble(in_hi_hex) else {
             return None;
         };
@@ -280,20 +280,20 @@ impl HexSlice<'_> {
     /// [Case-Insensitive Nibble Decoding]: Self#case-insensitive-nibble-decoding
     #[must_use]
     #[inline]
-    pub const fn decode_nibble(ascii_byte: u8) -> Option<u8> {
+    pub const fn try_decode_nibble(ascii_byte: u8) -> Option<u8> {
         codec::decode_nibble(ascii_byte)
     }
 
     /// Encodes a single byte into its two lowercase [`ASCII`] hex character bytes
     /// `(hi, lo)`.
     ///
-    /// This is the inverse of [`Self::decode_byte()`]. See [Byte to Hex Characters] and
-    /// [Branchless Nibble Encoding] for the nibble-splitting diagram and branchless
+    /// This is the inverse of [`Self::try_decode_byte()`]. See [Byte to Hex Characters]
+    /// and [Branchless Nibble Encoding] for the nibble-splitting diagram and branchless
     /// [`codec::encode_nibble()`] math.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     /// [`codec::encode_nibble()`]: codec::encode_nibble
-    /// [`Self::decode_byte()`]: Self::decode_byte
+    /// [`Self::try_decode_byte()`]: Self::try_decode_byte
     /// [Branchless Nibble Encoding]: Self#branchless-nibble-encoding
     /// [Byte to Hex Characters]: Self#byte-to-hex-characters
     #[must_use]
@@ -441,13 +441,13 @@ mod tests {
     fn test_nibble_encode_and_decode() {
         for nibble in 0..=15u8 {
             let ascii = codec::encode_nibble(nibble);
-            assert_eq2!(HexSlice::decode_nibble(ascii), Some(nibble));
+            assert_eq2!(HexSlice::try_decode_nibble(ascii), Some(nibble));
         }
         assert_eq2!(codec::encode_nibble(0xF0), b'0');
         assert_eq2!(codec::encode_nibble(0xFA), b'a');
-        assert_eq2!(HexSlice::decode_nibble(b'F'), Some(15));
-        assert_eq2!(HexSlice::decode_nibble(b'g'), None);
-        assert_eq2!(HexSlice::decode_nibble(b'/'), None);
+        assert_eq2!(HexSlice::try_decode_nibble(b'F'), Some(15));
+        assert_eq2!(HexSlice::try_decode_nibble(b'g'), None);
+        assert_eq2!(HexSlice::try_decode_nibble(b'/'), None);
     }
 
     #[test]
@@ -457,30 +457,30 @@ mod tests {
         assert_eq2!(HexSlice::encode_byte(0x1e), (b'1', b'e'));
         assert_eq2!(HexSlice::encode_byte(0xff), (b'f', b'f'));
 
-        assert_eq2!(HexSlice::decode_byte(b'0', b'0'), Some(0x00));
-        assert_eq2!(HexSlice::decode_byte(b'2', b'f'), Some(0x2f));
-        assert_eq2!(HexSlice::decode_byte(b'F', b'a'), Some(0xfa));
-        assert_eq2!(HexSlice::decode_byte(b'g', b'0'), None);
-        assert_eq2!(HexSlice::decode_byte(b'0', b'g'), None);
+        assert_eq2!(HexSlice::try_decode_byte(b'0', b'0'), Some(0x00));
+        assert_eq2!(HexSlice::try_decode_byte(b'2', b'f'), Some(0x2f));
+        assert_eq2!(HexSlice::try_decode_byte(b'F', b'a'), Some(0xfa));
+        assert_eq2!(HexSlice::try_decode_byte(b'g', b'0'), None);
+        assert_eq2!(HexSlice::try_decode_byte(b'0', b'g'), None);
     }
 
     #[test]
-    fn test_decode_str() {
+    fn test_try_decode_str() {
         assert_eq2!(
-            HexSlice::decode_str("0a1B2cFf", [0u8; 4]),
+            HexSlice::try_decode_str("0a1B2cFf", [0u8; 4]),
             Some([0x0a, 0x1b, 0x2c, 0xff])
         );
         assert_eq2!(
-            HexSlice::decode_str("0a1b", vec![0u8; 2]),
+            HexSlice::try_decode_str("0a1b", vec![0u8; 2]),
             Some(vec![0x0a, 0x1b])
         );
-        assert_eq2!(HexSlice::decode_str("", [0u8; 0]), Some([]));
+        assert_eq2!(HexSlice::try_decode_str("", [0u8; 0]), Some([]));
         // Wrong length (too short, too long, odd) or non-hex digits fail.
-        assert_eq2!(HexSlice::decode_str("0a1b2c", [0u8; 4]), None);
-        assert_eq2!(HexSlice::decode_str("0a1b2cffe0", [0u8; 4]), None);
-        assert_eq2!(HexSlice::decode_str("0a1b2cf", [0u8; 4]), None);
-        assert_eq2!(HexSlice::decode_str("0a1b2cfg", [0u8; 4]), None);
-        assert_eq2!(HexSlice::decode_str(" 0a1b2cff", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_decode_str("0a1b2c", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_decode_str("0a1b2cffe0", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_decode_str("0a1b2cf", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_decode_str("0a1b2cfg", [0u8; 4]), None);
+        assert_eq2!(HexSlice::try_decode_str(" 0a1b2cff", [0u8; 4]), None);
     }
 
     #[test]

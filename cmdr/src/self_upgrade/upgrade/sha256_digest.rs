@@ -56,7 +56,7 @@ impl Sha256Digest {
 
         // Create a scratch buffer to hold the 32 bytes of the digest.
         let out_buf = [0u8; constants::DIGEST_BYTES];
-        let out_buf = HexSlice::decode_str(hex_text, out_buf)?;
+        let out_buf = HexSlice::try_decode_str(hex_text, out_buf)?;
 
         // Move the scratch buffer into the struct.
         Some(Self { inner: out_buf })

@@ -65,18 +65,18 @@ fn try_parse_rgb_spec_color(payload: &[u8]) -> Option<RgbValue> {
 fn try_parse_hex_channel(slice: &[u8]) -> Option<u8> {
     match *slice {
         // 1 hex digit (4-bit): duplicate into both nibbles (e.g., b'f' -> "ff" = 0xff).
-        [d] => HexSlice::decode_byte(d, d),
+        [d] => HexSlice::try_decode_byte(d, d),
         // 2 hex digits (8-bit): full byte value (e.g., b"8a" -> 0x8a).
-        [hi, lo] => HexSlice::decode_byte(hi, lo),
+        [hi, lo] => HexSlice::try_decode_byte(hi, lo),
         // 3 hex digits (12-bit): validate trailing digit, keep upper 8 bits.
         [hi, lo, d2] => {
-            HexSlice::decode_nibble(d2)?;
-            HexSlice::decode_byte(hi, lo)
+            HexSlice::try_decode_nibble(d2)?;
+            HexSlice::try_decode_byte(hi, lo)
         }
         // 4 hex digits (16-bit): validate trailing pair, keep upper 8 bits.
         [hi, lo, d2, d3] => {
-            HexSlice::decode_byte(d2, d3)?;
-            HexSlice::decode_byte(hi, lo)
+            HexSlice::try_decode_byte(d2, d3)?;
+            HexSlice::try_decode_byte(hi, lo)
         }
         _ => None,
     }
