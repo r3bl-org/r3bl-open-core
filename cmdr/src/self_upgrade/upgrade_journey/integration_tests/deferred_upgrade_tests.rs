@@ -67,7 +67,7 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -80,7 +80,7 @@ mod tests {
         ));
 
         let exit_outcome = run_outcome.handle_upgrade_on_exit();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         assert!(matches!(exit_outcome, ExitOutcome::UpToDate(_)));
         assert_eq2!(
@@ -109,7 +109,7 @@ mod tests {
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::NotifyOnly,
             )),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::Disabled,
         );
 
@@ -123,7 +123,7 @@ mod tests {
 
         // Immediately invoke exit handler while manifest check is still in flight.
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         match exit_outcome {
             ExitOutcome::Completed(journey) => {

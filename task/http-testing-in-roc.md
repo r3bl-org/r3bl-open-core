@@ -250,12 +250,14 @@ integration tests) with `mockito`.
 - [x] Run `./check.fish --check` to verify `r3bl-cmdr` compiles cleanly.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
-    - [ ] `Cargo.toml`
-    - [ ] `cmdr/Cargo.toml`
-    - [ ] `tui/Cargo.toml`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
+    - [x] `Cargo.toml`
+    - [x] `cmdr/Cargo.toml`
+    - [x] `tui/Cargo.toml`
+    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/mod.rs`
+    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
+    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
+    - [x] `cmdr/src/self_upgrade/upgrade/sha256_digest.rs`
+    - [x] `tui/src/core/common/fast_strings/hex_slice.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`

@@ -25,21 +25,6 @@ pub mod blocks {
     /// HTTP method name for `HEAD` requests.
     pub const HTTP_METHOD_HEAD: &str = "HEAD";
 
-    /// HTTP header name for payload MIME type.
-    pub const HEADER_CONTENT_TYPE: &str = "content-type";
-
-    /// HTTP header name for payload byte length.
-    pub const HEADER_CONTENT_LENGTH: &str = "content-length";
-
-    /// MIME content type for JSON responses.
-    pub const MIME_APPLICATION_JSON: &str = "application/json";
-
-    /// MIME content type for binary payload downloads.
-    pub const MIME_APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
-
-    /// MIME content type for plain text responses (e.g., checksum files).
-    pub const MIME_TEXT_PLAIN: &str = "text/plain";
-
     /// Numeric HTTP status code for a successful response (`200 OK`).
     pub const HTTP_200_OK: usize = 200;
 

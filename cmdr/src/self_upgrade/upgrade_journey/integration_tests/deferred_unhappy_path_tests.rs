@@ -43,12 +43,12 @@ mod tests {
         );
 
         let result = fetch_crate_metadata_from_manifest(
-            &server_spawn_result.url,
+            &server_spawn_result.endpoint_url,
             &crate_name,
             Duration::from_millis(20),
         )
         .await;
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         match result {
             Err(ManifestCheckError::FetchOrParseFailed { ref diagnostic }) => {
@@ -82,7 +82,7 @@ mod tests {
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
                 UpgradeActionOnExit::NotifyOnly,
             )),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -96,7 +96,7 @@ mod tests {
 
         // Immediately invoke exit handler while manifest check is still in flight.
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         assert!(!timestamp_file_path.exists());
         match exit_outcome {
@@ -131,7 +131,7 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            bad_server_spawn_result.url.clone(),
+            bad_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -143,7 +143,7 @@ mod tests {
             ))
         ));
         let http_500_exit = http_500_start.handle_upgrade_on_exit();
-        bad_server_spawn_result.assert_each_endpoint_called_once();
+        bad_server_spawn_result.assert_each_mock_called_once();
 
         assert!(!timestamp_file_path.exists());
         match http_500_exit {
@@ -253,7 +253,7 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto)),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
 
@@ -266,7 +266,7 @@ mod tests {
         ));
 
         let exit_outcome = outcome.handle_upgrade_on_exit();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         assert!(!timestamp_file_path.exists());
         match exit_outcome {

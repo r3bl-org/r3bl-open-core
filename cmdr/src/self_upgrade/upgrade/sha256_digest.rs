@@ -35,18 +35,23 @@ impl Sha256Digest {
     }
 
     /// Decodes a 64-character hexadecimal SHA-256 string (case-insensitively) into a
-    /// [`Sha256Digest`].
+    /// [`Sha256Digest`] (32 bytes).
     ///
     /// Leading and trailing [`ASCII`] whitespace (such as spaces, `\n`, or `\r\n`) is
-    /// trimmed before decoding. Returns `None` if the trimmed string is not **exactly** 64
-    /// valid hex digits (`'0'..='9'`, `'a'..='f'`, `'A'..='F'`).
+    /// trimmed before decoding. Returns `None` if the trimmed string is not **exactly**
+    /// 64 valid hex digits (`'0'..='9'`, `'a'..='f'`, `'A'..='F'`).
     ///
-    /// For example:
-    /// - Accepted: `"e3b0c442...7852b855\n"` (64 hex characters, with optional
-    ///   whitespace)
-    /// - Rejected: `"e3b0c442...7852b855  foo.tar.gz"` (includes a filename after the
-    ///   hash, as in `sha256sum` output)
-    /// - Rejected: fewer or more than 64 characters, empty input, or non-hex characters
+    /// Here are some examples of different `checksum_text` values:
+    /// ```text
+    /// "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+    /// └─► 64 valid hex chars ─► Some(Sha256Digest)
+    ///
+    /// "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 foo.tar.gz"
+    /// └─► trailing filename (e.g., `sha256sum` program output) ─► None
+    ///
+    /// "", "a", "zzzz...", >64 chars, etc.
+    /// └─► length != 64 or non-hex chars ─► None
+    /// ```
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
     #[must_use]
@@ -106,9 +111,7 @@ mod tests {
         assert!(Sha256Digest::try_decode_hex_str("   \n").is_none());
         // Odd length (63 and 65 hex characters).
         assert!(Sha256Digest::try_decode_hex_str(&expected_hex[..63]).is_none());
-        assert!(
-            Sha256Digest::try_decode_hex_str(&format!("{expected_hex}a")).is_none()
-        );
+        assert!(Sha256Digest::try_decode_hex_str(&format!("{expected_hex}a")).is_none());
         // 64 characters with a non-hex byte ('g').
         let non_hex_64 =
             "g3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";

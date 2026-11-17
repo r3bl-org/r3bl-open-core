@@ -289,13 +289,13 @@ mod tests {
         let crate_name: CrateName = "r3bl-cmdr".into();
         let ok_server_spawn_result = manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let (meta, release_url) = fetch_crate_metadata_from_manifest(
-            &ok_server_spawn_result.url,
+            &ok_server_spawn_result.endpoint_url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap();
-        ok_server_spawn_result.assert_each_endpoint_called_once();
+        ok_server_spawn_result.assert_each_mock_called_once();
         assert_eq2!(meta.version, CrateVersion::try_parse("0.0.26").unwrap());
         assert_eq2!(
             &*release_url,
@@ -305,13 +305,13 @@ mod tests {
         let err_server_spawn_result =
             manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let err = fetch_crate_metadata_from_manifest(
-            &err_server_spawn_result.url,
+            &err_server_spawn_result.endpoint_url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap_err();
-        err_server_spawn_result.assert_each_endpoint_called_once();
+        err_server_spawn_result.assert_each_mock_called_once();
         assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
     }
 }

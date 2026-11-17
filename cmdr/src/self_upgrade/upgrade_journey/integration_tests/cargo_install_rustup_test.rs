@@ -115,12 +115,12 @@ fn run_cargo_install_worker() {
         CrateVersion::try_parse("0.0.25").unwrap(),
         UserFeedbackChannel::Quiet,
         UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-        server_spawn_result.url.clone(),
+        server_spawn_result.endpoint_url.clone(),
         CooldownPolicy::new_custom_path(timestamp_file_path),
     );
 
     let outcome = UpgradeJourney::new(config.clone()).start();
-    server_spawn_result.assert_each_endpoint_called_once();
+    server_spawn_result.assert_each_mock_called_once();
 
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::Completed(journey)) => {

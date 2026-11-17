@@ -279,14 +279,14 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(avail_strategy),
-            avail_server_spawn_result.url.clone(),
+            avail_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(avail_timestamp_file.clone()),
         );
         let avail_outcome = UpgradeJourney::new(avail_cfg)
             .into_checking(avail_strategy)
             .check_for_deferred_upgrade(avail_action)
             .await;
-        avail_server_spawn_result.assert_each_endpoint_called_once();
+        avail_server_spawn_result.assert_each_mock_called_once();
         assert!(!avail_timestamp_file.exists());
         match avail_outcome {
             DeferredCheckOutcome::UpgradeAvailable(journey) => {
@@ -310,14 +310,14 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(fail_strategy),
-            fail_server_spawn_result.url.clone(),
+            fail_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(fail_strategy)
             .check_for_deferred_upgrade(fail_action)
             .await;
-        fail_server_spawn_result.assert_each_endpoint_called_once();
+        fail_server_spawn_result.assert_each_mock_called_once();
         assert!(!fail_timestamp_file.exists());
         assert!(matches!(
             fail_outcome,
@@ -335,14 +335,14 @@ mod tests {
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(ok_strategy),
-            ok_server_spawn_result.url.clone(),
+            ok_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
         );
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(ok_strategy)
             .check_for_deferred_upgrade(ok_action)
             .await;
-        ok_server_spawn_result.assert_each_endpoint_called_once();
+        ok_server_spawn_result.assert_each_mock_called_once();
         assert!(ok_timestamp_file.exists());
         assert!(matches!(ok_outcome, DeferredCheckOutcome::UpToDate(_)));
     }
@@ -360,14 +360,14 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            upg_server_spawn_result.url.clone(),
+            upg_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(upg_timestamp_file.clone()),
         );
         let upg_outcome = UpgradeJourney::new(upg_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        upg_server_spawn_result.assert_each_endpoint_called_once();
+        upg_server_spawn_result.assert_each_mock_called_once();
         assert!(!upg_timestamp_file.exists());
         match upg_outcome {
             ImmediateCheckOutcome::Upgrading(journey) => {
@@ -388,14 +388,14 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            fail_server_spawn_result.url.clone(),
+            fail_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        fail_server_spawn_result.assert_each_endpoint_called_once();
+        fail_server_spawn_result.assert_each_mock_called_once();
         assert!(!fail_timestamp_file.exists());
         assert!(matches!(
             fail_outcome,
@@ -411,14 +411,14 @@ mod tests {
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            ok_server_spawn_result.url.clone(),
+            ok_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
         );
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        ok_server_spawn_result.assert_each_endpoint_called_once();
+        ok_server_spawn_result.assert_each_mock_called_once();
         assert!(ok_timestamp_file.exists());
         assert!(matches!(ok_outcome, ImmediateCheckOutcome::UpToDate(_)));
     }

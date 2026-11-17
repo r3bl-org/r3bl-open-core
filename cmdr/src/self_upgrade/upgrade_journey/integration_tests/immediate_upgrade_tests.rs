@@ -43,7 +43,7 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         config.get_cooldown_policy().touch(config.get_crate_name());
@@ -54,7 +54,7 @@ mod tests {
             .unwrap();
 
         let outcome = UpgradeJourney::new(config).start();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         assert!(matches!(
             outcome,
@@ -80,12 +80,12 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            server_spawn_result.url.clone(),
+            server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::Disabled,
         );
 
         let outcome = UpgradeJourney::new(config).start();
-        server_spawn_result.assert_each_endpoint_called_once();
+        server_spawn_result.assert_each_mock_called_once();
 
         assert!(matches!(
             outcome,
@@ -111,11 +111,11 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            bad_server_spawn_result.url.clone(),
+            bad_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         let fail_outcome = UpgradeJourney::new(fail_cfg).start();
-        bad_server_spawn_result.assert_each_endpoint_called_once();
+        bad_server_spawn_result.assert_each_mock_called_once();
 
         assert!(!timestamp_file_path.exists());
         match fail_outcome {
@@ -145,11 +145,11 @@ mod tests {
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            newer_server_spawn_result.url.clone(),
+            newer_server_spawn_result.endpoint_url.clone(),
             CooldownPolicy::new_custom_path(timestamp_file_path.clone()),
         );
         let upg_fail_outcome = UpgradeJourney::new(upg_fail_cfg).start();
-        newer_server_spawn_result.assert_each_endpoint_called_once();
+        newer_server_spawn_result.assert_each_mock_called_once();
 
         assert!(!timestamp_file_path.exists());
         match upg_fail_outcome {
