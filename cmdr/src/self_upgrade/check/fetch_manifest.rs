@@ -12,8 +12,7 @@ use std::time::Duration;
 /// This function is called by the [`Checking`] typestate in the [Control Plane] to
 /// resolve the transition into [`UpToDate`], [`UpgradeAvailable`], [`Upgrading`], or
 /// [`CheckFailed`]. This is part of the [Execution Plane]: it logs any fetch or parse
-/// failure via [`DEBUG_SELF_UPGRADE`], and never imports or touches [`UpgradeJourney`]
-/// or [`SINGLETON`].
+/// failure via [`DEBUG_SELF_UPGRADE`], and never imports or touches [`UpgradeJourney`].
 ///
 /// # Errors
 ///
@@ -28,7 +27,6 @@ use std::time::Duration;
 /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
 /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
@@ -178,11 +176,25 @@ pub enum ManifestCheckError {
         diagnostic: String,
     },
 
-    /// Dedicated `"self-upgrade"` OS thread or Tokio runtime failed to initialize.
+    /// Dedicated OS thread failed to spawn (`std::io::Error`) or its Tokio runtime
+    /// failed to initialize ([`TokioRuntimeOutcome::FailedToStart`]).
+    ///
+    /// [`TokioRuntimeOutcome::FailedToStart`]: r3bl_tui::TokioRuntimeOutcome::FailedToStart
     #[error("{reason}")]
     RuntimeOrThreadInitFailed {
         /// Underlying OS thread or Tokio runtime initialization failure description.
         reason: String,
+    },
+
+    /// Dedicated OS thread panicked while running the manifest check
+    /// ([`TokioRuntimeOutcome::Panicked`]).
+    ///
+    /// [`TokioRuntimeOutcome::Panicked`]: r3bl_tui::TokioRuntimeOutcome::Panicked
+    #[error("{panic_msg}")]
+    CheckThreadPanicked {
+        /// Full panic report formatted via `format!("{report:#}")` (includes thread
+        /// name and panic payload).
+        panic_msg: String,
     },
 }
 
@@ -313,5 +325,32 @@ mod tests {
         .unwrap_err();
         err_server_spawn_result.assert_each_mock_called_once();
         assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_fetch_crate_metadata_from_manifest_timeout_returns_fetch_or_parse_failed()
+    {
+        let crate_name: CrateName = "r3bl-cmdr".into();
+        let server_spawn_result = manifest_server::spawn_delayed_success(
+            SAMPLE_MANIFEST_0_0_26,
+            Duration::from_millis(100),
+        );
+
+        let result = fetch_crate_metadata_from_manifest(
+            &server_spawn_result.endpoint_url,
+            &crate_name,
+            Duration::from_millis(20),
+        )
+        .await;
+        server_spawn_result.assert_each_mock_called_once();
+
+        match result {
+            Err(ManifestCheckError::FetchOrParseFailed { ref diagnostic }) => {
+                assert!(!diagnostic.is_empty());
+            }
+            other => {
+                panic!("Expected Err(FetchOrParseFailed) on timeout, got {other:?}")
+            }
+        }
     }
 }

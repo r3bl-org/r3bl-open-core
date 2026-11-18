@@ -1,6 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{Completed, StateMarker, UpgradeResolution, super::ThreadRunner};
+use super::{Completed, StateMarker, UpgradeResolution,
+            super::thread_runner::ThreadRunner};
 use crate::{CrateMetadata, EndpointUrl, PromptUpgradeDecision, UpgradeActionOnExit,
             UpgradeError, UpgradeJourney, format_upgrade_available_notice,
             get_current_bin_name, perform_upgrade, prompt_user_to_upgrade};
@@ -68,10 +69,9 @@ impl UpgradeJourney<Upgrading> {
         }
     }
 
-    /// Executes the upgrade action on exit (`NotifyOnly`, `Auto`, or `PromptToUpgrade`)
-    /// outside the `SINGLETON` leaf lock, touches the `1h` cooldown timestamp file if and
-    /// only if the upgrade succeeded, and consumes `self` into
-    /// [`UpgradeJourney<Completed>`].
+    /// Executes the upgrade action on exit (`NotifyOnly`, `Auto`, or `PromptToUpgrade`),
+    /// touches the `1h` cooldown timestamp file if and only if the upgrade succeeded, and
+    /// consumes `self` into [`UpgradeJourney<Completed>`].
     #[must_use]
     pub(in crate::self_upgrade) fn execute_action_on_exit(
         self,
@@ -95,26 +95,18 @@ impl UpgradeJourney<Upgrading> {
                 let config = &self.config;
                 let metadata = &self.state.metadata;
                 let binaries_release_base_url = &self.state.binaries_release_base_url;
-                match ThreadRunner::run_blocking(config, || {
-                    perform_upgrade(config, metadata, binaries_release_base_url)
-                }) {
-                    TokioRuntimeOutcome::Completed(Ok(())) => UpgradeResolution::Upgraded,
-                    TokioRuntimeOutcome::Completed(Err(err)) => {
-                        UpgradeResolution::UpgradeFailed(err)
-                    }
-                    TokioRuntimeOutcome::FailedToStart(err)
-                    | TokioRuntimeOutcome::Panicked(err) => {
-                        UpgradeResolution::UpgradeFailed(UpgradeError::Other(format!(
-                            "{err:#}"
-                        )))
-                    }
-                }
+                let outcome = ThreadRunner::run_blocking(config, async || {
+                    resolve_upgrade_result(
+                        perform_upgrade(config, metadata, binaries_release_base_url).await,
+                    )
+                });
+                map_runtime_outcome_to_resolution(outcome)
             }
             UpgradeActionOnExit::PromptToUpgrade => {
                 let config = &self.config;
                 let metadata = &self.state.metadata;
                 let binaries_release_base_url = &self.state.binaries_release_base_url;
-                match ThreadRunner::run_blocking(
+                let outcome = ThreadRunner::run_blocking(
                     config,
                     async || match prompt_user_to_upgrade(
                         config.get_crate_name(),
@@ -128,28 +120,13 @@ impl UpgradeJourney<Upgrading> {
                         PromptUpgradeDecision::DeclinedByUser => {
                             UpgradeResolution::DeclinedByUser
                         }
-                        PromptUpgradeDecision::UpgradeNow => {
-                            match perform_upgrade(
-                                config,
-                                metadata,
-                                binaries_release_base_url,
-                            )
-                            .await
-                            {
-                                Ok(()) => UpgradeResolution::Upgraded,
-                                Err(err) => UpgradeResolution::UpgradeFailed(err),
-                            }
-                        }
+                        PromptUpgradeDecision::UpgradeNow => resolve_upgrade_result(
+                            perform_upgrade(config, metadata, binaries_release_base_url)
+                                .await,
+                        ),
                     },
-                ) {
-                    TokioRuntimeOutcome::Completed(res) => res,
-                    TokioRuntimeOutcome::FailedToStart(err)
-                    | TokioRuntimeOutcome::Panicked(err) => {
-                        UpgradeResolution::UpgradeFailed(UpgradeError::Other(format!(
-                            "{err:#}"
-                        )))
-                    }
-                }
+                );
+                map_runtime_outcome_to_resolution(outcome)
             }
         };
 
@@ -160,5 +137,30 @@ impl UpgradeJourney<Upgrading> {
         }
 
         self.into_completed(resolution)
+    }
+}
+
+fn resolve_upgrade_result(result: Result<(), UpgradeError>) -> UpgradeResolution {
+    match result {
+        Ok(()) => UpgradeResolution::Upgraded,
+        Err(err) => UpgradeResolution::UpgradeFailed(err),
+    }
+}
+
+fn map_runtime_outcome_to_resolution(
+    outcome: TokioRuntimeOutcome<UpgradeResolution>,
+) -> UpgradeResolution {
+    match outcome {
+        TokioRuntimeOutcome::Completed(resolution) => resolution,
+        TokioRuntimeOutcome::FailedToStart(err) => UpgradeResolution::UpgradeFailed(
+            UpgradeError::RuntimeOrThreadInitFailed {
+                reason: format!("{err:#}"),
+            },
+        ),
+        TokioRuntimeOutcome::Panicked(err) => UpgradeResolution::UpgradeFailed(
+            UpgradeError::UpgradeThreadPanicked {
+                panic_msg: format!("{err:#}"),
+            },
+        ),
     }
 }

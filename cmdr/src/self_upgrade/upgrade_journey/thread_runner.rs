@@ -22,7 +22,7 @@ impl ThreadRunner {
     ///
     /// [1]: r3bl_tui::StdThreadTokioRunner::run_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
-    pub(in crate::self_upgrade) fn run_blocking<T: Send, F: Send + AsyncFnOnce() -> T>(
+    pub fn run_blocking<T: Send, F: Send + AsyncFnOnce() -> T>(
         config: &UpgradeConfig,
         async_fn: F,
     ) -> TokioRuntimeOutcome<T> {
@@ -47,7 +47,7 @@ impl ThreadRunner {
     ///
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
-    pub(in crate::self_upgrade) fn run_non_blocking<
+    pub fn run_non_blocking<
         T: Send + 'static,
         F: Send + 'static + AsyncFnOnce() -> T,
     >(

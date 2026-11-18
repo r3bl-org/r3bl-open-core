@@ -1,80 +1,159 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Subsystem end-to-end integration tests for [`UpgradeJourney`].
+//! End-to-end integration tests for [`UpgradeJourney`].
 //!
-//! # Test Approach & Rationale
+//! # Why Integration Tests Exist Alongside Sibling Unit Tests
 //!
-//! Unit tests in sibling modules verify individual state transitions in isolation (in the
-//! [Control Plane]).
+//! Unit tests in sibling modules (`check/`, `upgrade/`, and `typestates/`) verify
+//! individual [Execution Plane] functions and individual [Control Plane] state
+//! transitions in isolation.
 //!
 //! This module exercises the full [`UpgradeJourney::start`] ->
-//! [`StartOutcome::handle_upgrade_on_exit`][2] lifecycle end-to-end, spanning both the
-//! [Control Plane] and [Execution Plane] across six test files:
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][on-exit] lifecycle end-to-end,
+//! spanning both the [Control Plane] and [Execution Plane] (including
+//! [`PerProcessStartLatch`][latch], [`CooldownPolicy`], [`mockito`] HTTP servers,
+//! `self_replace`, and [`PTY`] subprocess orchestration). Shared HTTP and manifest
+//! fixtures live in [`test_fixtures`], and [`PerProcessStartLatch`][latch] is imported
+//! directly by test files rather than barrel-exported from `upgrade_journey`.
 //!
-//! 1. **`start_guard_and_disabled_tests`**: In-process tests (`#[serial]`) covering the
-//!    single-start guard ([`StartOutcome::AlreadyStarted`]) and
-//!    [`UpgradePolicy::Disabled`].
-//! 2. **`immediate_upgrade_tests`**: In-process tests (`#[serial]`) covering
-//!    [`UpgradeStrategy::Immediate`] sync/async [`UpToDate`], `1h` cooldown bypass and
-//!    [`mtime`] refresh, [`CheckFailed`], and [`UpgradeResolution::UpgradeFailed`][6].
-//! 3. **`deferred_upgrade_tests`**: In-process tests (`#[serial]`) covering
-//!    [`UpgradeStrategy::Deferred`] `1h` cooldown skip/expiry and in-flight dedicated
-//!    thread join on exit.
-//! 4. **`deferred_unhappy_path_tests`**: In-process tests (`#[serial]`) covering
-//!    [`UpgradeStrategy::Deferred`] HTTP client timeout, in-flight delayed HTTP 500
-//!    failure, manifest network errors ([`ExitOutcome::CheckFailed`]), dedicated thread
-//!    panic recovery ([`ExitOutcome::NoDeferredCheckRunning`][1]), and
-//!    [`UpgradeActionOnExit::Auto`] binary download failure.
-//! 5. **`self_replace_test`**: Isolated subprocess test verifying
-//!    [`UpgradeSource::ReleaseArchive`][4] end-to-end: streaming a `.tar.gz` archive and
-//!    `.sha256` checksum from a local HTTP server, verifying the SHA-256 digest,
-//!    replacing the copied executable in-place via [`self_replace`], and installing
-//!    sibling binaries (`edi`, `env-source`).
-//! 6. **`cargo_install_rustup_test`**: Isolated subprocess test verifying
-//!    [`UpgradeSource::BuildFromSourceRustup`][5] end-to-end: falling back when the
-//!    release archive server is unreachable and driving stub `rustup` and `cargo`
-//!    binaries (emitting [`OscSequence`] `9;4` progress events) through
-//!    [`PtySessionBuilder`].
+//! # Test Organization: 5 Use-Case Groups (9 Files)
 //!
-//! Shared canned JSONC manifest responses are generated via
-//! [`test_fixtures::jsonc_golden`].
+//! 1. **Single-Start Latch & Disabled Policy (in-process `#[serial]`)**
+//!    - **`start_latch_and_disabled`**: Covers [`UpgradePolicy::Disabled`] (`0` HTTP
+//!      calls) and monotonic [`PerProcessStartLatch`][latch] rejection of duplicate calls
+//!      after `Disabled`, `Immediate`, or in-flight `Deferred` starts without handle
+//!      stealing.
+//! 2. **Immediate Upgrade (`--upgrade`, in-process `#[serial]`)**
+//!    - **`immediate_upgrade_happy_paths`**: Covers `remote == local` (`0.0.25`)
+//!      [`UpToDate`], `local > remote` (`0.0.26 > 0.0.25`, no downgrade), and `--upgrade`
+//!      bypassing an active `1h` cooldown and refreshing [`mtime`].
+//!    - **`immediate_upgrade_unhappy_paths`**: Covers manifest HTTP 500, connection
+//!      refused, crate missing from manifest ([`CheckFailed`]), and
+//!      [`CrateDistribution::ClosedSource`][cs] unreachable archive
+//!      ([`UpgradeResolution::UpgradeFailed`][failed]), all leaving cooldown expired or
+//!      missing.
+//! 3. **Deferred Upgrade on Exit (`--upgrade-behavior`, in-process `#[serial]` + non-TTY
+//!    subprocess)**
+//!    - **`deferred_upgrade_happy_paths`**: Covers active cooldown skip (`0` HTTP calls
+//!      -> [`ExitOutcome::Skipped`]), expired cooldown check -> [`UpToDate`], in-flight
+//!      check joined at exit with [`UpgradeActionOnExit::NotifyOnly`][notify], and
+//!      [`UpgradeActionOnExit::PromptToUpgrade`][prompt] in an isolated non-TTY
+//!      Coordinator / Worker subprocess (`Stdio::null()` ->
+//!      [`UpgradeResolution::SkippedNonInteractive`][non-tty]).
+//!    - **`deferred_upgrade_unhappy_paths`**: Covers in-flight delayed HTTP 500 failure
+//!      joined at exit, connection refused, [`CrateDistribution::ClosedSource`][cs]
+//!      unreachable archive, and dedicated check thread panic recovery
+//!      ([`ManifestCheckError::CheckThreadPanicked`][panicked]) without unwinding the
+//!      main thread.
+//! 4. **Binary Self-Replacement (isolated Coordinator / Worker subprocess on copied
+//!    executable)**
+//!    - **`self_replace_happy_paths`**: Verifies [`UpgradeSource::ReleaseArchive`] for
+//!      both `Immediate` (`--upgrade`) and `Deferred(Auto)` (exit): 4-route `.tar.gz` and
+//!      `.sha256` download, digest verification, in-place [`self_replace`] of the copied
+//!      executable, sibling binary (`edi`, `env-source`) installation, and cooldown
+//!      activation.
+//!    - **`self_replace_unhappy_paths`**: Verifies
+//!      [`CrateDistribution::ClosedSource`][cs] failure modes leave the copied executable
+//!      untouched on disk and cooldown untouched: SHA-256 checksum mismatch, `GET
+//!      *.tar.gz` HTTP 500 after `HEAD 200`, empty `.tar.gz` archive, and corrupt
+//!      non-gzip archive bytes.
+//! 5. **Open-Source Fallback via `rustup` & `cargo` (isolated Coordinator / Worker
+//!    subprocess with stub binaries on `PATH` in [`PTY`])**
+//!    - **`install_via_rustup_happy_paths`**: Verifies
+//!      [`UpgradeSource::BuildFromSourceRustup`][rustup] via stub `rustup` and `cargo`
+//!      emitting [`OSC`] `9;4` progress events inside [`PtySessionBuilder`] for
+//!      `Immediate` `HEAD` unreachable, `Deferred(Auto)` `HEAD` unreachable, and
+//!      mid-stream `GET *.tar.gz` HTTP 500 recovery (`try_fallback_to_source`).
+//!    - **`install_via_rustup_unhappy_paths`**: Verifies empty `PATH`
+//!      (`NoLocalToolchain`), stub `rustup` non-zero exit short-circuiting before
+//!      `cargo`, and stub `cargo` emitting `OSC 9;4;2;0` (`BuildError`) + non-zero exit
+//!      without activating cooldown.
 //!
-//! [1]: crate::self_upgrade::ExitOutcome::NoDeferredCheckRunning
-//! [2]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
-//! [4]: crate::self_upgrade::UpgradeSource::ReleaseArchive
-//! [5]: crate::self_upgrade::UpgradeSource::BuildFromSourceRustup
-//! [6]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! # Sync + Async `scenario_<name>()` Wrapper Policy
+//!
+//! Binaries that use `self_upgrade` mix synchronous (`fn main()`) and Tokio
+//! (`#[tokio::main]`) entry points.
+//!
+//! Every in-process test scenario in Groups 1–3 (plus Group 3's non-TTY prompt
+//! Coordinator) puts its test body in a single shared `scenario_<name>()` helper wrapped
+//! by both:
+//! - `#[test]` (`test_<name>_sync`), and
+//! - `#[tokio::test]` (`test_<name>_async`).
+//!
+//! Running each scenario under both harnesses verifies that [`UpgradeJourney::start`] and
+//! [`StdThreadTokioRunner`] never panic on nested Tokio runtimes when invoked from an
+//! existing async runtime.
+//!
+//! # Cooldown Interaction Flow
+//!
+//! ```text
+//! UpgradeJourney::start()
+//! │
+//! ├── Disabled
+//! │     └─► Cooldown not consulted ──► Never touched (stays NotInCooldown)
+//! │
+//! ├── Immediate (--upgrade)
+//! │     └─► Cooldown bypassed unconditionally ──► Runs check + upgrade
+//! │           ├── UpToDate / Upgraded ──► touch() ──► InCooldown
+//! │           └── Failures            ──► untouched (keeps prior state)
+//! │
+//! └── Deferred (--upgrade-behavior)
+//!       ├── Pre-check: InCooldown
+//!       │     └─► Skips check (0 HTTP) ──► not re-touched (stays InCooldown)
+//!       │
+//!       └── Pre-check: NotInCooldown
+//!             └─► Spawns check thread
+//!                   ├── UpToDate / Upgraded ──► touch() ──► InCooldown
+//!                   └── NotifyOnly / NonTTY / DeclinedByUser / Failures ──► untouched
+//! ```
+//!
 //! [`CheckFailed`]: crate::self_upgrade::CheckFailed
-//! [`ExitOutcome::CheckFailed`]: crate::self_upgrade::ExitOutcome::CheckFailed
+//! [`CooldownPolicy`]: crate::self_upgrade::CooldownPolicy
+//! [`ExitOutcome::Skipped`]: crate::self_upgrade::ExitOutcome::Skipped
+//! [`mockito`]: https://docs.rs/mockito
 //! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-//! [`OscSequence`]: r3bl_tui::OscSequence
+//! [`OSC`]: r3bl_tui::OscSequence
+//! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PtySessionBuilder`]: r3bl_tui::core::pty::PtySessionBuilder
 //! [`self_replace`]: self_replace::self_replace
-//! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
+//! [`StdThreadTokioRunner`]: r3bl_tui::StdThreadTokioRunner
 //! [`test_fixtures`]: mod@test_fixtures
-//! [`UpgradeActionOnExit::Auto`]: crate::self_upgrade::UpgradeActionOnExit::Auto
 //! [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 //! [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 //! [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
-//! [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
-//! [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
+//! [`UpgradeSource::ReleaseArchive`]: crate::self_upgrade::UpgradeSource::ReleaseArchive
 //! [`UpToDate`]: crate::self_upgrade::UpToDate
 //! [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+//! [cs]: crate::self_upgrade::CrateDistribution::ClosedSource
 //! [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+//! [failed]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [latch]: super::per_process_start_latch::PerProcessStartLatch
+//! [non-tty]: crate::self_upgrade::UpgradeResolution::SkippedNonInteractive
+//! [notify]: crate::self_upgrade::UpgradeActionOnExit::NotifyOnly
+//! [on-exit]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+//! [panicked]: crate::self_upgrade::ManifestCheckError::CheckThreadPanicked
+//! [prompt]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
+//! [rustup]: crate::self_upgrade::UpgradeSource::BuildFromSourceRustup
 
 #![rustfmt::skip]
 
 pub mod test_fixtures;
 
 #[cfg(test)]
-pub mod start_guard_and_disabled_tests;
+pub mod start_latch_and_disabled;
 #[cfg(test)]
-pub mod immediate_upgrade_tests;
+pub mod immediate_upgrade_happy_paths;
 #[cfg(test)]
-pub mod deferred_upgrade_tests;
+pub mod immediate_upgrade_unhappy_paths;
 #[cfg(test)]
-pub mod deferred_unhappy_path_tests;
+pub mod deferred_upgrade_happy_paths;
 #[cfg(test)]
-pub mod self_replace_test;
+pub mod deferred_upgrade_unhappy_paths;
 #[cfg(test)]
-pub mod cargo_install_rustup_test;
+pub mod self_replace_happy_paths;
+#[cfg(test)]
+pub mod self_replace_unhappy_paths;
+#[cfg(test)]
+pub mod install_via_rustup_happy_paths;
+#[cfg(test)]
+pub mod install_via_rustup_unhappy_paths;

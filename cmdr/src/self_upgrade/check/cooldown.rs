@@ -12,7 +12,7 @@ use std::{fs::{self, File},
 /// [`Self::check_status`], and updated via [`Self::touch`]. This type is part of the
 /// [Execution Plane] and is called by the [Control Plane]:
 /// - [`Self::check_status`] is called by [`UpgradeJourney::start`] to gate [`NotStarted`]
-///   into [`CooldownSkipped`] vs. [`Checking`].
+///   into [`Skipped`] vs. [`Checking`].
 /// - [`Self::touch`] is called only when [`Checking`] resolves to [`UpToDate`] or when
 ///   [`Upgrading`] resolves to [`Completed`] with [`UpgradeResolution::Upgraded`].
 ///
@@ -23,9 +23,9 @@ use std::{fs::{self, File},
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
 /// [`Completed`]: crate::self_upgrade::Completed
-/// [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
 /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
+/// [`Skipped`]: crate::self_upgrade::Skipped
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [`UpgradeResolution::Upgraded`]: crate::self_upgrade::UpgradeResolution::Upgraded
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
@@ -82,6 +82,40 @@ impl CooldownPolicy {
         Self::CustomTimestampFilePath(arg_path.into(), duration)
     }
 
+    /// Creates the cooldown timestamp file (if missing) and backdates its [`mtime`] past
+    /// the configured cooldown window so [`Self::check_status`] returns
+    /// [`CooldownStatus::NotInCooldown`].
+    ///
+    /// Does nothing when [`Self::try_get_cooldown_duration`] or
+    /// [`Self::resolve_file_path`] returns [`None`] (for example,
+    /// [`CooldownPolicy::Disabled`]).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the timestamp file cannot be opened for writing or its [`mtime`] cannot
+    /// be backdated.
+    ///
+    /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
+    #[cfg(any(test, doc))]
+    pub fn expire_for_testing(&self, crate_name: &CrateName) {
+        let (Some(duration), Some(timestamp_file_path)) = (
+            self.try_get_cooldown_duration(),
+            self.resolve_file_path(crate_name),
+        ) else {
+            return;
+        };
+
+        self.touch(crate_name);
+
+        let expired_mtime = SystemTime::now() - (duration + Duration::from_secs(10));
+        File::options()
+            .write(true)
+            .open(&timestamp_file_path)
+            .expect("cooldown timestamp file must exist after touch()")
+            .set_modified(expired_mtime)
+            .expect("backdating cooldown timestamp file mtime must succeed");
+    }
+
     /// Returns the cooldown duration before a fresh [`mtime`] timestamp file expires, or
     /// [`None`] if cooldown is disabled.
     ///
@@ -107,36 +141,36 @@ impl CooldownPolicy {
     #[must_use]
     pub fn check_status(&self, crate_name: &CrateName) -> CooldownStatus {
         let Some(duration) = self.try_get_cooldown_duration() else {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         };
 
         let Some(timestamp_file_path) = self.resolve_file_path(crate_name) else {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         };
 
         let Ok(metadata) = fs::metadata(&timestamp_file_path) else {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         };
 
         if !metadata.is_file() {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         }
 
         let Ok(modified) = metadata.modified() else {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         };
 
         // If `modified > now` (clock skew), `duration_since` returns `Err`, which safely
         // treats the timestamp file as expired rather than permanently suppressing
         // checks.
         let Ok(elapsed) = SystemTime::now().duration_since(modified) else {
-            return CooldownStatus::ExpiredOrMissing;
+            return CooldownStatus::NotInCooldown;
         };
 
         if elapsed < duration {
-            CooldownStatus::Active
+            CooldownStatus::InCooldown
         } else {
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         }
     }
 
@@ -232,7 +266,7 @@ pub enum CooldownStatus {
     ///
     /// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    Active,
+    InCooldown,
 
     /// Cooldown is disabled, timestamp file does not exist, not a regular file, [`mtime`]
     /// could not be read, system clock skewed backwards, or [`mtime`] age has reached or
@@ -240,7 +274,7 @@ pub enum CooldownStatus {
     ///
     /// [1]: crate::self_upgrade::manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    ExpiredOrMissing,
+    NotInCooldown,
 }
 
 #[cfg(test)]
@@ -259,7 +293,12 @@ mod tests {
         policy.touch(&crate_name);
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
+        );
+        policy.expire_for_testing(&crate_name);
+        assert_eq2!(
+            policy.check_status(&crate_name),
+            CooldownStatus::NotInCooldown
         );
     }
 
@@ -282,44 +321,42 @@ mod tests {
         let timestamp_file_path =
             resolve_self_upgrade_last_check_in_base_dir(&temp_dir, &crate_name);
         let policy = CooldownPolicy::new_custom_path(timestamp_file_path.clone());
-        let window = Duration::from_secs(3600);
 
-        // 1. Missing timestamp file -> ExpiredOrMissing.
+        // 1. Missing timestamp file -> NotInCooldown.
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
 
-        // 2. Touch timestamp file -> creates parent dir + 0-byte file -> Active within 1h
-        //    window.
+        // 2. Touch timestamp file -> creates parent dir + 0-byte file -> InCooldown
+        //    within 1h window.
         policy.touch(&crate_name);
         assert!(timestamp_file_path.exists());
         assert_eq2!(fs::metadata(&timestamp_file_path).unwrap().len(), 0);
-        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::Active);
+        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::InCooldown);
 
-        // 3. Backdate real file `mtime` beyond 1h -> ExpiredOrMissing, then re-touch
-        //    existing 0-byte timestamp file -> refreshes back to Active.
-        let backdated = SystemTime::now() - (window + Duration::from_secs(10));
-        File::open(&timestamp_file_path)
-            .unwrap()
-            .set_modified(backdated)
-            .unwrap();
+        // 3. Backdate real file `mtime` beyond 1h via `expire_for_testing` ->
+        //    NotInCooldown, then re-touch existing 0-byte timestamp file -> refreshes
+        //    back to InCooldown.
+        policy.expire_for_testing(&crate_name);
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
         policy.touch(&crate_name);
-        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::Active);
+        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::InCooldown);
 
-        // 4. Future `mtime` (`modified > now` backward clock skew) -> ExpiredOrMissing.
+        // 4. Future `mtime` (`modified > now` backward clock skew) -> NotInCooldown.
         let future_mtime = SystemTime::now() + Duration::from_secs(60);
-        File::open(&timestamp_file_path)
+        File::options()
+            .write(true)
+            .open(&timestamp_file_path)
             .unwrap()
             .set_modified(future_mtime)
             .unwrap();
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
     }
 
@@ -338,17 +375,17 @@ mod tests {
 
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
 
         policy.touch(&crate_name);
-        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::Active);
+        assert_eq2!(policy.check_status(&crate_name), CooldownStatus::InCooldown);
 
         // Sleep 25ms to exceed 20ms short duration naturally:
         std::thread::sleep(Duration::from_millis(25));
         assert_eq2!(
             policy.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
     }
 
@@ -362,7 +399,7 @@ mod tests {
         policy_dir_target.touch(&crate_name);
         assert_eq2!(
             policy_dir_target.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
 
         // 2. `fs::create_dir_all` fails when parent path is blocked by an existing file.
@@ -373,7 +410,7 @@ mod tests {
         policy_parent_err.touch(&crate_name);
         assert_eq2!(
             policy_parent_err.check_status(&crate_name),
-            CooldownStatus::ExpiredOrMissing
+            CooldownStatus::NotInCooldown
         );
     }
 }

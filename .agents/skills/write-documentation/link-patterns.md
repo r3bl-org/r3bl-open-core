@@ -704,6 +704,48 @@ to enter an infinite loop during documentation generation.
 **Best Practice:** When linking to a section in another module, always use the full
 `crate::` path.
 
+### Keeping Link Definitions Under 90 Chars with Explicit Short Labels
+
+When a shorthand link reference definition (``[`SomeLongType::some_method`]: crate::...``)
+exceeds **90 characters** (including the `/// ` or `//! ` prefix, matching
+`comment_width = 90` in `rustfmt.toml`), introduce an **explicit short reference label**
+(``[`DisplayText`][short-alias]``) so the definition fits cleanly on a single line instead
+of wrapping onto two lines.
+
+#### ❌ Bad: Shorthand definition exceeds 90 chars and wraps onto 2 lines
+
+```rust
+//! Covers [`DeferredUpgradeOutcome::handle_upgrade_on_exit`],
+//! [`CrateDistribution::ClosedSource`], and [`UpgradeResolution::UpgradeFailed`].
+//!
+//! [`CrateDistribution::ClosedSource`]:
+//!     crate::self_upgrade::CrateDistribution::ClosedSource
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]:
+//!     crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+//! [`UpgradeResolution::UpgradeFailed`]:
+//!     crate::self_upgrade::UpgradeResolution::UpgradeFailed
+```
+
+#### ✅ Good: Explicit short labels keep every definition on one line (<= 90 chars)
+
+```rust
+//! Covers [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][on-exit],
+//! [`CrateDistribution::ClosedSource`][cs], and
+//! [`UpgradeResolution::UpgradeFailed`][failed].
+//!
+//! [cs]: crate::self_upgrade::CrateDistribution::ClosedSource
+//! [failed]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [on-exit]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+```
+
+Pick short, meaningful kebab-case labels (for example, `[cs]`, `[failed]`, `[latch]`,
+`[non-tty]`, `[notify]`, `[on-exit]`, `[panicked]`, `[prompt]`, `[rustup]` as in
+`cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`).
+
+> **Note:** If the target path *by itself* still exceeds 90 chars even with a short label
+> (most common with long `#fragment-anchor` links), use the `#[allow(unused_imports)]`
+> workaround below to shorten the path.
+
 ### ⚠️ Rustfmt Comment-Wrapping Bug with Fragment Anchor Links
 
 When `wrap_comments = true` is configured in `rustfmt.toml` (with a specific
@@ -946,6 +988,7 @@ When fixing links, ensure:
 - [ ] All symbols in backticks are links: `` `Symbol` `` → ``[`Symbol`]``
 - [ ] All links use reference-style, not inline
 - [ ] All link definitions are at the bottom of the comment block
+- [ ] Link definitions > 90 chars use short explicit labels (``[`LongSymbol`][alias]`` → `[alias]: crate::...`) so each stays on one line
 - [ ] Methods and functions include parentheses: `fn()`
 - [ ] Field links use `field@` prefix for compiler-checked references
 - [ ] Module links use `mod@` prefix when ambiguous

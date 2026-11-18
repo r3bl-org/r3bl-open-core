@@ -201,11 +201,11 @@ impl UpgradeJourney<Checking> {
 /// [`UpgradeJourney::<Checking>::check_for_deferred_upgrade`].
 ///
 /// Returned directly via [`DeferredCheckHandle`] from the dedicated thread to
-/// [`StartOutcome::handle_upgrade_on_exit`]. Makes [`Upgrading`] unrepresentable prior to
-/// application exit.
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]. Makes [`Upgrading`]
+/// unrepresentable prior to application exit.
 ///
 /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeferredCheckOutcome {
@@ -214,9 +214,9 @@ pub enum DeferredCheckOutcome {
     UpToDate(UpgradeJourney<UpToDate>),
 
     /// Newer version found (`remote > current`); awaits exit handling via
-    /// [`StartOutcome::handle_upgrade_on_exit`].
+    /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`].
     ///
-    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
+    /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
     UpgradeAvailable(UpgradeJourney<UpgradeAvailable>),
 
     /// Network, parse, or thread/runtime error occurred during the manifest check.

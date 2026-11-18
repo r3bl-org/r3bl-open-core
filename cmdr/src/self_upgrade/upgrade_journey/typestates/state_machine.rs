@@ -6,7 +6,7 @@ use crate::UpgradeConfig;
 /// lifecycle, using the [Typestate Pattern].
 ///
 /// This struct holds an immutable [`UpgradeConfig`] alongside the current `State`, which
-/// can be one of [`NotStarted`], [`Disabled`], [`CooldownSkipped`], [`Checking`],
+/// can be one of [`NotStarted`], [`Disabled`], [`Skipped`], [`Checking`],
 /// [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`], [`Upgrading`], or [`Completed`].
 ///
 /// # How it is used
@@ -26,7 +26,7 @@ use crate::UpgradeConfig;
 ///
 /// > See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// > [`self_upgrade`] module documentation for how the CLI-to-domain boundary, typestate
-/// > machine, and process-wide singleton fit together.
+/// > machine, and lock-free [`PerProcessStartLatch`] fit together.
 ///
 /// # State Machine & Lifecycle Flow
 ///
@@ -35,7 +35,7 @@ use crate::UpgradeConfig;
 /// ```text
 /// 1. At startup: upgrade_journey!(channel, cli_args) ──► <NotStarted>.start()
 /// ┌─────────────────────────────────────────────────────────────────────────┘
-/// ├─ 1st .start() (claims SINGLETON -> Started; branches on UpgradePolicy):
+/// ├─ 1st .start() (claims PerProcessStartLatch false -> true; branches on UpgradePolicy):
 /// │  │
 /// │  ├─ UpgradePolicy::Disabled (--upgrade-behavior disable)
 /// │  │  └─► <Disabled> ──► StartOutcome::Disabled(<Disabled>)
@@ -43,7 +43,7 @@ use crate::UpgradeConfig;
 /// │  ├─ UpgradePolicy::Enabled(Immediate) (--upgrade)
 /// │  │  │ (Runs entire lifecycle inside .start(); main() exits immediately)
 /// │  │  └─► <Checking> (fetches versions.jsonc, 5s timeout; bypasses 1h cooldown)
-/// │  │      ├─► <CheckFailed> (network/parse error)
+/// │  │      ├─► <CheckFailed> (network/parse/init/panic error)
 /// │  │      │   └─► ImmediateUpgrade(CheckFailed(<CheckFailed>))
 /// │  │      ├─► <UpToDate> (remote <= current) ──► touch timestamp file
 /// │  │      │   └─► ImmediateUpgrade(UpToDate(<UpToDate>))
@@ -54,29 +54,29 @@ use crate::UpgradeConfig;
 /// │  │              └─► ImmediateUpgrade(Completed(<Completed>))
 /// │  │
 /// │  └─ UpgradePolicy::Enabled(Deferred(action))
-/// │     │ (Returns DeferredUpgrade immediately;
-/// │     │  start_outcome.handle_upgrade_on_exit() later takes and joins
-/// │     │  DeferredCheckHandle from SINGLETON)
-/// │     ├─ Active 1h cooldown ──► <CooldownSkipped>
-/// │     │  └─► DeferredUpgrade(CooldownSkipped(<CooldownSkipped>))
+/// │     │ (Returns DeferredUpgrade immediately; any spawned
+/// │     │  DeferredCheckHandle is owned linearly inside DeferredUpgradeOutcome)
+/// │     ├─ Active 1h cooldown ──► <Skipped>
+/// │     │  └─► DeferredUpgrade(Skipped(<Skipped>))
 /// │     └─ Expired/missing timestamp file ──► <Checking>
-/// │        ├─► Main thread: DeferredUpgrade(DeferredCheckSpawned(<Checking>))
+/// │        ├─► Main thread: DeferredUpgrade(DeferredCheckSpawned(DeferredCheckHandle))
 /// │        └─► Dedicated thread (2s timeout; returns DeferredCheckOutcome):
 /// │            ├─► DeferredCheckOutcome::UpToDate(<UpToDate>) ──► touch file
 /// │            ├─► DeferredCheckOutcome::CheckFailed(<CheckFailed>)
 /// │            └─► DeferredCheckOutcome::UpgradeAvailable(<UpgradeAvailable>)
 /// │
-/// └─ 2nd+ .start() (SINGLETON already SingletonState::Started)
-///    └─► StartOutcome::AlreadyStarted (no-op)
+/// └─ 2nd+ .start() (PerProcessStartLatch already claimed)
+///    └─► StartOutcome::AlreadyStarted (no-op, owns zero handles)
 ///
-/// 2. At exit: start_outcome.handle_upgrade_on_exit() ──► ExitOutcome
-/// ┌──────────────────────────────────────────────────────────────────┘
-/// ├─ Step 1: Takes DeferredCheckHandle from SINGLETON, drops lock,
-/// │          and joins dedicated thread (waits <= 2s)
-/// │  └─ If None (Disabled | Immediate | CooldownSkipped | already called)
-/// │     └─► ExitOutcome::NoDeferredCheckRunning
-/// └─ Step 2: Inspects DeferredCheckOutcome returned by dedicated thread:
-///    ├─ UpToDate(<UpToDate>) ──────► ExitOutcome::UpToDate(<UpToDate>)
+/// 2. At exit (only for StartOutcome::DeferredUpgrade(deferred)):
+///    deferred.handle_upgrade_on_exit() [consumes self] ──► ExitOutcome
+/// ┌───────────────────────────────────────────────────────────────────┘
+/// ├─ Skipped(<Skipped>) ──────────────► ExitOutcome::Skipped(<Skipped>)
+/// ├─ DeferredCheckSpawnFailed(<CheckFailed>)
+/// │  └─► ExitOutcome::CheckFailed(<CheckFailed>)
+/// └─ DeferredCheckSpawned(DeferredCheckHandle) ──► joins dedicated thread (<= 2s):
+///    ├─ FailedToStart | Panicked ─► ExitOutcome::CheckFailed(<CheckFailed>)
+///    ├─ UpToDate(<UpToDate>) ─────► ExitOutcome::UpToDate(<UpToDate>)
 ///    ├─ CheckFailed(<CheckFailed>) ► ExitOutcome::CheckFailed(<CheckFailed>)
 ///    └─ UpgradeAvailable(<UpgradeAvailable>) ──► <Upgrading>
 ///       ├─ Executes UpgradeActionOnExit:
@@ -96,12 +96,12 @@ use crate::UpgradeConfig;
 /// In the [Typestate Pattern], an [`UpgradeJourney<State>`] value is a witness, or
 /// compile-time proof, that the [Control Plane] verified the preconditions and
 /// orchestrated the required [Execution Plane] work to reach [`State`] (e.g., claiming
-/// [`SINGLETON`], checking [`UpgradePolicy`], and verifying cooldown or manifest
-/// versions).
+/// [`PerProcessStartLatch`], checking [`UpgradePolicy`], and verifying cooldown or
+/// manifest versions).
 ///
 /// Because Rust makes every `impl From<A> for B` unconditionally `pub` whenever `A` and
 /// `B` are `pub`, implementing [`From`] for state transitions would expose unguarded
-/// public constructors — allowing external callers to forge states (such as `let forged:
+/// public constructors: allowing external callers to forge states (such as `let forged:
 /// UpgradeJourney<Disabled> = journey.into();`) without calling [`.start()`]. This would
 /// defeat the typesafety afforded by the typestate machine. Using `pub(in
 /// crate::self_upgrade) fn into_*` seals transitions inside [`self_upgrade`].
@@ -110,11 +110,11 @@ use crate::UpgradeConfig;
 /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
 /// [`Checking`]: crate::self_upgrade::Checking
 /// [`Completed`]: crate::self_upgrade::Completed
-/// [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
 /// [`Disabled`]: crate::self_upgrade::Disabled
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
+/// [`PerProcessStartLatch`]: crate::self_upgrade::upgrade_journey::per_process_start_latch::PerProcessStartLatch
 /// [`self_upgrade`]: mod@crate::self_upgrade
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+/// [`Skipped`]: crate::self_upgrade::Skipped
 /// [`State`]: super::StateMarker
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable

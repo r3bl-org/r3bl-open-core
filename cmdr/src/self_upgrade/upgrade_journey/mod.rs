@@ -2,17 +2,17 @@
 
 #![rustfmt::skip]
 
-// Private submodules.
-mod singleton;
+// Attach.
+mod exit_outcome;
+pub(super) mod per_process_start_latch; // Rustdoc links from self_upgrade/mod.rs.
 mod start_outcome;
 mod thread_runner;
 mod typestates;
 mod upgrade_journey_macro;
 
-// Public barrel re-exports.
-pub use singleton::*;
+// Re-export.
+pub use exit_outcome::*;
 pub use start_outcome::*;
-pub use thread_runner::*;
 pub use typestates::*;
 
 #[cfg(any(test, doc))]

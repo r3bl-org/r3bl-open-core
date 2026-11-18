@@ -75,30 +75,33 @@
 //!     It holds an immutable [`UpgradeConfig`] alongside a `State` generic type that
 //!     implements [`StateMarker`], and each transition consumes
 //!     `UpgradeJourney<PrevState>` by value to return `UpgradeJourney<NextState>`.
-//!     - Here are the states: [`NotStarted`], [`Disabled`], [`CooldownSkipped`],
-//!       [`Checking`], [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`],
-//!       [`Upgrading`], and [`Completed`] (see [State Machine & Lifecycle Flow] on
-//!       [`UpgradeJourney`]).
+//!     - Here are the states: [`NotStarted`], [`Disabled`], [`Skipped`], [`Checking`],
+//!       [`UpToDate`], [`UpgradeAvailable`], [`CheckFailed`], [`Upgrading`], and
+//!       [`Completed`] (see [State Machine & Lifecycle Flow] on [`UpgradeJourney`]).
 //!     - State transitions are driven exclusively by the [Control Plane] on the
 //!       caller/current/main thread and a dedicated thread; see [Thread Model] for
 //!       details. The [Execution Plane] performs stateless network/disk work.
 //!   - Binaries construct [`UpgradeJourney<NotStarted>`] via [`upgrade_journey!`] and
-//!     call [`.start()`], which atomically claims the process-wide singleton:
+//!     call [`.start()`], which atomically claims the lock-free [`PerProcessStartLatch`]:
 //!     - It returns [`StartOutcome::AlreadyStarted`] on duplicate calls
 //!     - Or it returns [`StartOutcome::Disabled`], [`StartOutcome::ImmediateUpgrade`]
 //!       (carrying [`ImmediateUpgradeOutcome`]), or [`StartOutcome::DeferredUpgrade`]
 //!       (carrying [`DeferredUpgradeOutcome`]).
 //!
-//! 3. Coordinated Process-Wide Singleton
-//!   - [`SINGLETON`] holds the 2-variant [`SingletonState`] enum inside a leaf
-//!     [`ScopedMutex`], encoding the single-start guard alongside the optional
-//!     [`DeferredCheckHandle`] of the [`DEDICATED_THREAD_NAME`] OS thread.
-//!   - At shutdown, [`StartOutcome::handle_upgrade_on_exit`] takes the
-//!     [`DeferredCheckHandle`] from [`SINGLETON`], releases the mutex, and joins any
-//!     in-flight dedicated thread (preventing deadlock and ensuring short-lived
-//!     invocations wait up to [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
+//! 3. Lock-Free `PerProcessStartLatch` & Linear Handle Ownership
+//!   - [`PerProcessStartLatch`] enforces a monotonic per-process atomic single-start
+//!     check (`false -> true`) with zero mutexes or global thread state.
+//!   - Any spawned [`DeferredCheckHandle`] (along with its [`UpgradeJourney<Checking>`]
+//!     fallback) is owned linearly inside [`DeferredUpgradeOutcome`] rather than stored
+//!     in a global singleton, making handle stealing by duplicate `.start()` callers
+//!     impossible.
+//!   - At shutdown, [`DeferredUpgradeOutcome::handle_upgrade_on_exit`] consumes
+//!     [`DeferredUpgradeOutcome`] by value and joins its owned [`DeferredCheckHandle`]
+//!     (ensuring short-lived invocations wait up to
+//!     [`DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT`][2] when the
 //!     [`DEFERRED_CHECK_COOLDOWN_DELAY`][1] timestamp file was expired), then transitions
-//!     [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] for one-shot exit handling.
+//!     [`UpgradeAvailable`] -> [`Upgrading`] -> [`Completed`] (or preserves thread init
+//!     and panic diagnostics in [`CheckFailed`]).
 //!
 //! ## Control Plane vs. Execution Plane
 //!
@@ -106,10 +109,11 @@
 //!
 //! 1. Control Plane (State Machine, Lifecycle & Threading)
 //!    - [`upgrade_journey/`][`UpgradeJourney`] ([`UpgradeJourney`], [`StartOutcome`],
-//!      [`ExitOutcome`], [`SingletonState`], and [`SINGLETON`]) decides *whether* and
-//!      *when* to check or perform the upgrade.
+//!      [`ExitOutcome`], and [`PerProcessStartLatch`]) decides *whether* and *when* to
+//!      check or perform the upgrade.
 //!    - It owns the 9-state [`UpgradeJourney<State>`] machine, `1h` cooldown gating,
-//!      dedicated-thread spawning and joining, and the process-wide [`SINGLETON`].
+//!      dedicated-thread spawning and joining, and the lock-free
+//!      [`PerProcessStartLatch`].
 //!    - See [Thread Model] on [`NotStarted`] for the thread-by-thread state transition
 //!      flow across a deferred upgrade on exit ([`UpgradeStrategy::Deferred`], dedicated
 //!      thread + current thread) and an immediate upgrade
@@ -123,9 +127,9 @@
 //!      ([`prompt_user_to_upgrade`]).
 //!    - These functions are stateless with respect to the state machine: they don't know
 //!      or care which [`UpgradeJourney<State>`] is active, and they never import or touch
-//!      [`UpgradeJourney`] or [`SINGLETON`]. Instead, they take only the configuration
-//!      and metadata parameters they need (`&`[`UpgradeConfig`], `&`[`EndpointUrl`],
-//!      `&`[`CrateMetadata`]) and return a result.
+//!      [`UpgradeJourney`] or [`PerProcessStartLatch`]. Instead, they take only the
+//!      configuration and metadata parameters they need (`&`[`UpgradeConfig`],
+//!      `&`[`EndpointUrl`], `&`[`CrateMetadata`]) and return a result.
 //!
 //! # Error Handling Policy
 //!
@@ -144,7 +148,7 @@
 //!      enabled, and leaves the `1h` cooldown timestamp file untouched so the next run
 //!      can try again.
 //!    - If a newer version was found and the exit upgrade itself fails during
-//!      [`StartOutcome::handle_upgrade_on_exit`], the error is reported on
+//!      [`DeferredUpgradeOutcome::handle_upgrade_on_exit`], the error is reported on
 //!      [`UserFeedbackChannel`] and recorded as [`UpgradeResolution::UpgradeFailed`]
 //!      without failing the application's own exit status.
 //!
@@ -217,14 +221,13 @@
 //! [`clap`]: mod@clap
 //! [`Completed`]: crate::self_upgrade::Completed
 //! [`CooldownPolicy`]: crate::self_upgrade::CooldownPolicy
-//! [`CooldownSkipped`]: crate::self_upgrade::CooldownSkipped
 //! [`CrateDistribution::OpenSource`]: crate::self_upgrade::CrateDistribution::OpenSource
 //! [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
 //! [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 //! [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
-//! [`DEDICATED_THREAD_NAME`]: crate::self_upgrade::dedicated_thread::DEDICATED_THREAD_NAME
 //! [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
 //! [`DeferredCheckOutcome`]: crate::self_upgrade::DeferredCheckOutcome
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 //! [`DeferredUpgradeOutcome`]: crate::self_upgrade::DeferredUpgradeOutcome
 //! [`Disabled`]: crate::self_upgrade::Disabled
 //! [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
@@ -237,18 +240,16 @@
 //! [`notify-only`]: crate::self_upgrade::UpgradeActionOnExit::NotifyOnly
 //! [`NotStarted`]: crate::self_upgrade::NotStarted
 //! [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
+//! [`PerProcessStartLatch`]: crate::self_upgrade::upgrade_journey::per_process_start_latch::PerProcessStartLatch
 //! [`prompt-to-upgrade`]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
 //! [`prompt_user_to_upgrade`]: crate::self_upgrade::prompt_user_to_upgrade
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
-//! [`ScopedMutex`]: r3bl_tui::ScopedMutex
 //! [`self_upgrade`]: mod@crate::self_upgrade
-//! [`SINGLETON`]: crate::self_upgrade::SINGLETON
-//! [`SingletonState`]: crate::self_upgrade::SingletonState
+//! [`Skipped`]: crate::self_upgrade::Skipped
 //! [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
 //! [`StartOutcome::DeferredUpgrade`]: crate::self_upgrade::StartOutcome::DeferredUpgrade
 //! [`StartOutcome::Disabled`]: crate::self_upgrade::StartOutcome::Disabled
-//! [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 //! [`StartOutcome::ImmediateUpgrade`]: crate::self_upgrade::StartOutcome::ImmediateUpgrade
 //! [`StartOutcome`]: crate::self_upgrade::StartOutcome
 //! [`StateMarker`]: crate::self_upgrade::StateMarker

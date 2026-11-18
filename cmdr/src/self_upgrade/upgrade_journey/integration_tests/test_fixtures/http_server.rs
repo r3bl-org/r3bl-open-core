@@ -14,7 +14,7 @@
 //! [`self_upgrade`]: mod@crate::self_upgrade
 
 use super::{constants::*, jsonc_golden::*};
-use crate::self_upgrade::{EndpointUrl, Sha256Digest};
+use crate::self_upgrade::{CrateDistribution, EndpointUrl, Sha256Digest};
 use std::time::Duration;
 
 pub mod manifest_server {
@@ -125,13 +125,42 @@ pub mod manifest_server {
             Some(delay),
         )
     }
+
+    /// Registers a manifest endpoint with `.expect(0)` so
+    /// [`ServerSpawnResult::assert_expectations`] fails if any HTTP request reaches it.
+    ///
+    /// [`ServerSpawnResult::assert_expectations`]: super::ServerSpawnResult::assert_expectations
+    #[must_use]
+    pub fn spawn_uncalled() -> ServerSpawnResult {
+        // ServerOpts::default() binds to 127.0.0.1:0 (OS-assigned ephemeral port).
+        let mut spawned_server =
+            mockito::Server::new_with_opts(mockito::ServerOpts::default());
+
+        // Create the URL containing the OS-assigned port (determined at runtime).
+        let spawned_server_endpoint_url = EndpointUrl::default_manifest_url()
+            .with_socket_addr(spawned_server.socket_address());
+
+        let uncalled_manifest_mock = spawned_server
+            .mock(HTTP_METHOD_GET, VERSIONS_JSONC_PATH)
+            .with_status(blocks::HTTP_200_OK)
+            .with_body(manifest_up_to_date())
+            .expect(0)
+            .create();
+
+        ServerSpawnResult {
+            endpoint_url: spawned_server_endpoint_url,
+            server: spawned_server,
+            mock_route_handlers: vec![uncalled_manifest_mock],
+        }
+    }
 }
 
 pub mod archive_server {
     use super::*;
 
     /// Spawns a local [`mockito::Server`] that handles the 4 sequential requests of a
-    /// pre-compiled `.tar.gz` binary archive upgrade
+    /// pre-compiled `.tar.gz` binary archive upgrade for
+    /// [`CrateDistribution::OpenSource`]
     /// ([`UpgradeSource::ReleaseArchive`][1], not
     /// [`UpgradeSource::BuildFromSourceRustup`][2]).
     ///
@@ -189,6 +218,78 @@ pub mod archive_server {
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     #[must_use]
     pub fn spawn_success(archive_bytes: Vec<u8>) -> ServerSpawnResult {
+        let expected_sha256 = Sha256Digest::from_bytes(&archive_bytes);
+        spawn_with_manifest_and_checksum(
+            CrateDistribution::OpenSource,
+            archive_bytes,
+            expected_sha256,
+        )
+    }
+
+    /// Spawns a local 4-route binary release server serving a
+    /// [`CrateDistribution::ClosedSource`] manifest and matching SHA-256 digest for
+    /// `archive_bytes`.
+    #[must_use]
+    pub fn spawn_closed_source_success(archive_bytes: Vec<u8>) -> ServerSpawnResult {
+        let expected_sha256 = Sha256Digest::from_bytes(&archive_bytes);
+        spawn_with_manifest_and_checksum(
+            CrateDistribution::ClosedSource,
+            archive_bytes,
+            expected_sha256,
+        )
+    }
+
+    /// Spawns a local 4-route [`CrateDistribution::ClosedSource`] release server whose
+    /// `.sha256` endpoint returns `wrong_sha256` while serving `archive_bytes`,
+    /// triggering [`UpgradeError::ChecksumMismatch`].
+    ///
+    /// [`UpgradeError::ChecksumMismatch`]: crate::self_upgrade::UpgradeError::ChecksumMismatch
+    #[must_use]
+    pub fn spawn_checksum_mismatch_closed_source(
+        archive_bytes: Vec<u8>,
+        wrong_sha256: Sha256Digest,
+    ) -> ServerSpawnResult {
+        spawn_with_manifest_and_checksum(
+            CrateDistribution::ClosedSource,
+            archive_bytes,
+            wrong_sha256,
+        )
+    }
+
+    /// Spawns a local 4-route release server where `GET /versions.jsonc`, `HEAD *.tar.gz`,
+    /// and `GET *.tar.gz.sha256` all succeed (`200 OK`), and `GET *.tar.gz` responds
+    /// with HTTP `status` so callers exercise mid-stream archive download failure
+    /// handling.
+    #[must_use]
+    pub fn spawn_archive_get_error(
+        distribution: CrateDistribution,
+        status: usize,
+    ) -> ServerSpawnResult {
+        // Valid 64-char hex digest so `fetch_expected_sha256` succeeds and execution
+        // proceeds to `stream_archive_to_disk`.
+        let empty_sha256 = Sha256Digest::from_bytes(b"");
+        spawn_archive_routes(
+            distribution,
+            empty_sha256,
+            status,
+            b"archive download error".to_vec(),
+        )
+    }
+
+    fn spawn_with_manifest_and_checksum(
+        distribution: CrateDistribution,
+        archive_bytes: Vec<u8>,
+        expected_sha256: Sha256Digest,
+    ) -> ServerSpawnResult {
+        spawn_archive_routes(distribution, expected_sha256, HTTP_200_OK, archive_bytes)
+    }
+
+    fn spawn_archive_routes(
+        distribution: CrateDistribution,
+        expected_sha256: Sha256Digest,
+        archive_status: usize,
+        archive_body: Vec<u8>,
+    ) -> ServerSpawnResult {
         // ServerOpts::default() binds to 127.0.0.1:0 (OS-assigned ephemeral port).
         let mut spawned_server =
             mockito::Server::new_with_opts(mockito::ServerOpts::default());
@@ -211,14 +312,14 @@ pub mod archive_server {
                 // Embed the server's runtime URL into the manifest.
                 let response_release_url =
                     placeholder_release_base_url().with_socket_addr(addr);
-                manifest_upgrade_available_open_source(&response_release_url)
+                format_manifest_for_distribution(distribution, &response_release_url)
             })
             .expect(1);
 
         // We don't include the `Content-Length` with the response, since `self_upgrade`
         // (which uses reqwest HTTP client) only checks the `2xx` status code. And no
         // other test code checks for `Content-Length`. See
-        // `get_archive_mock_route_handler_builder` where the `Content-Length` is set.
+        // `get_archive_route_builder` where the `Content-Length` is set.
         let head_archive_route_builder = spawned_server
             .mock(HTTP_METHOD_HEAD, archive_url_path.as_str())
             .with_status(HTTP_200_OK)
@@ -227,17 +328,14 @@ pub mod archive_server {
         let get_checksum_route_builder = spawned_server
             .mock(HTTP_METHOD_GET, sha256_url_path.as_str())
             .with_status(HTTP_200_OK)
-            .with_body({
-                let archive_sha256 = Sha256Digest::from_bytes(&archive_bytes);
-                // Bare 64-char lowercase hex digest with trailing newline.
-                format!("{archive_sha256}\n")
-            })
+            // Bare 64-char lowercase hex digest with trailing newline.
+            .with_body(format!("{expected_sha256}\n"))
             .expect(1);
 
         let get_archive_route_builder = spawned_server
             .mock(HTTP_METHOD_GET, archive_url_path.as_str())
-            .with_status(HTTP_200_OK)
-            .with_body(archive_bytes) // This sets the Content-Length header automatically.
+            .with_status(archive_status)
+            .with_body(archive_body) // This sets the Content-Length header automatically.
             .expect(1);
 
         ServerSpawnResult {
@@ -249,6 +347,20 @@ pub mod archive_server {
                 get_checksum_route_builder.create(),
                 get_archive_route_builder.create(),
             ],
+        }
+    }
+
+    fn format_manifest_for_distribution(
+        distribution: CrateDistribution,
+        release_base_url: &EndpointUrl,
+    ) -> String {
+        match distribution {
+            CrateDistribution::OpenSource => {
+                manifest_upgrade_available_open_source(release_base_url)
+            }
+            CrateDistribution::ClosedSource => {
+                manifest_upgrade_available_closed_source(release_base_url)
+            }
         }
     }
 }
@@ -281,17 +393,24 @@ pub struct ServerSpawnResult {
     /// handlers).
     pub server: mockito::Server,
 
-    /// Registered HTTP mock route handlers ([`mockito::Mock`]), each configured with
-    /// `.expect(1)` and verified via [`Self::assert_each_mock_called_once`].
+    /// Registered HTTP mock route handlers ([`mockito::Mock`]), configured with
+    /// `.expect(1)` (or `.expect(0)` for [`manifest_server::spawn_uncalled`]) and
+    /// verified via [`Self::assert_expectations`] or
+    /// [`Self::assert_each_mock_called_once`].
     pub mock_route_handlers: Vec<mockito::Mock>,
 }
 
 impl ServerSpawnResult {
     /// Asserts that every registered HTTP mock route handler in
-    /// [`Self::mock_route_handlers`] was called once during the test.
-    pub fn assert_each_mock_called_once(&self) {
+    /// [`Self::mock_route_handlers`] satisfied its configured `.expect(...)` count
+    /// during the test (including `.expect(0)` for [`manifest_server::spawn_uncalled`]).
+    pub fn assert_expectations(&self) {
         for mock_route_handler in &self.mock_route_handlers {
             mock_route_handler.assert();
         }
     }
+
+    /// Asserts that every registered HTTP mock route handler in
+    /// [`Self::mock_route_handlers`] was called once during the test.
+    pub fn assert_each_mock_called_once(&self) { self.assert_expectations(); }
 }

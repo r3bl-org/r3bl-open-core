@@ -20,19 +20,18 @@ use std::{io, time::Duration};
 ///
 /// This function is called by the [`Upgrading`] typestate in the [Control Plane] (either
 /// during an immediate upgrade via [`UpgradeJourney::start`] or during a deferred
-/// upgrade on exit via [`StartOutcome::handle_upgrade_on_exit`]) to resolve the
+/// upgrade on exit via [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]) to resolve the
 /// transition into [`Completed`]. This is part of the [Execution Plane]: it never
-/// imports or touches [`UpgradeJourney`] or [`SINGLETON`].
+/// imports or touches [`UpgradeJourney`].
 ///
 /// # Errors
 ///
 /// Returns [`UpgradeError`] if all viable upgrade paths fail or are canceled.
 ///
 /// [`Completed`]: crate::self_upgrade::Completed
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 /// [`OSC`]: r3bl_tui::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
@@ -344,6 +343,27 @@ pub enum UpgradeError {
     /// User canceled the operation via `Ctrl+C`.
     #[error("Upgrade cancelled by user")]
     Cancelled,
+
+    /// Scoped OS thread or its Tokio runtime failed to initialize during exit upgrade
+    /// ([`TokioRuntimeOutcome::FailedToStart`]).
+    ///
+    /// [`TokioRuntimeOutcome::FailedToStart`]: r3bl_tui::TokioRuntimeOutcome::FailedToStart
+    #[error("{reason}")]
+    RuntimeOrThreadInitFailed {
+        /// Underlying OS thread or Tokio runtime initialization failure description.
+        reason: String,
+    },
+
+    /// Scoped OS thread panicked while running the exit prompt or upgrade installation
+    /// ([`TokioRuntimeOutcome::Panicked`]).
+    ///
+    /// [`TokioRuntimeOutcome::Panicked`]: r3bl_tui::TokioRuntimeOutcome::Panicked
+    #[error("{panic_msg}")]
+    UpgradeThreadPanicked {
+        /// Full panic report formatted via `format!("{report:#}")` (includes thread
+        /// name and panic payload).
+        panic_msg: String,
+    },
 
     /// General I/O, network, or archive error.
     #[error("{0}")]

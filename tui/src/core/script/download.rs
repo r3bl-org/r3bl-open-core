@@ -33,70 +33,91 @@ pub async fn try_download_file_overwrite_existing(
 mod tests_download {
     use super::*;
     use crate::try_create_temp_dir;
-    use std::time::Duration;
-    use tokio::time::timeout;
-
-    const TIMEOUT: Duration = Duration::from_secs(1);
 
     #[tokio::test]
-    async fn test_download_file_overwrite_existing() {
-        // Create the root temp dir.
-        let root = try_create_temp_dir().expect("conversion error");
+    async fn test_download_file_creates_and_overwrites_existing() {
+        let mut server = mockito::Server::new_async().await;
+        let root = try_create_temp_dir().unwrap();
+        let destination_file = root.join("artifact.bin");
 
-        let new_dir = root.join("test_download_file_overwrite_existing");
-        fs::create_dir_all(&new_dir).expect("conversion error");
+        // Initial download (no pre-existing file).
+        let v1_mock = server
+            .mock("GET", "/artifact-v1")
+            .with_status(200)
+            .with_body(b"initial-payload-v1")
+            .expect(1)
+            .create_async()
+            .await;
 
-        let source_url = "https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljson_1.6.5_linux_amd64";
-        let destination_file = new_dir.join("cfssljson");
-
-        // Download file (no pre-existing file).
-        match timeout(
-            TIMEOUT,
-            try_download_file_overwrite_existing(source_url, &destination_file),
+        try_download_file_overwrite_existing(
+            &format!("{}/artifact-v1", server.url()),
+            &destination_file,
         )
         .await
-        {
-            Ok(Ok(())) => {
-                assert!(destination_file.exists());
-            }
-            Ok(Err(err)) => {
-                // Re-throw the error and fail the test.
-                panic!("Error: {err:?}");
-            }
-            Err(_) => {
-                // Timeout does not mean that test has failed. Github is probably slow.
-                println!("Timeout");
-                return;
-            }
-        }
+        .unwrap();
+        assert!(destination_file.exists());
+        assert_eq2!(fs::read(&destination_file).unwrap(), b"initial-payload-v1");
+        v1_mock.assert_async().await;
 
-        let meta_data = destination_file.metadata().expect("conversion error");
-        let og_file_size = meta_data.len();
+        // Second download overwrites existing file with updated payload bytes.
+        let v2_mock = server
+            .mock("GET", "/artifact-v2")
+            .with_status(200)
+            .with_body(b"updated-binary-payload-v2-longer")
+            .expect(1)
+            .create_async()
+            .await;
 
-        // Download file again (overwrite existing).
-        match timeout(
-            TIMEOUT,
-            try_download_file_overwrite_existing(source_url, &destination_file),
+        try_download_file_overwrite_existing(
+            &format!("{}/artifact-v2", server.url()),
+            &destination_file,
         )
         .await
-        {
-            Ok(Ok(())) => {
-                assert!(destination_file.exists());
-            }
-            Ok(Err(err)) => {
-                // Re-throw the error and fail the test.
-                panic!("Error: {err:?}");
-            }
-            Err(_) => {
-                // Timeout does not mean that test has failed. Github is probably slow.
-                println!("Timeout");
-                return;
-            }
-        }
+        .unwrap();
+        assert_eq2!(
+            fs::read(&destination_file).unwrap(),
+            b"updated-binary-payload-v2-longer"
+        );
+        v2_mock.assert_async().await;
+    }
 
-        // Ensure that the file sizes are the same.
-        let meta_data = destination_file.metadata().expect("conversion error");
-        let new_file_size = meta_data.len();
-        assert_eq!(og_file_size, new_file_size);
+    #[tokio::test]
+    async fn test_download_file_propagates_http_404_and_500_errors() {
+        let mut server = mockito::Server::new_async().await;
+        let root = try_create_temp_dir().unwrap();
+
+        let not_found_mock = server
+            .mock("GET", "/missing")
+            .with_status(404)
+            .expect(1)
+            .create_async()
+            .await;
+        let server_error_mock = server
+            .mock("GET", "/boom")
+            .with_status(500)
+            .expect(1)
+            .create_async()
+            .await;
+
+        let missing_dest = root.join("missing.bin");
+        let boom_dest = root.join("boom.bin");
+
+        let res_404 = try_download_file_overwrite_existing(
+            &format!("{}/missing", server.url()),
+            &missing_dest,
+        )
+        .await;
+        assert!(res_404.is_err());
+        assert!(!missing_dest.exists());
+        not_found_mock.assert_async().await;
+
+        let res_500 = try_download_file_overwrite_existing(
+            &format!("{}/boom", server.url()),
+            &boom_dest,
+        )
+        .await;
+        assert!(res_500.is_err());
+        assert!(!boom_dest.exists());
+        server_error_mock.assert_async().await;
     }
 }

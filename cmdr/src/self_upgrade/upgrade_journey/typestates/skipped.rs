@@ -3,9 +3,10 @@
 use super::StateMarker;
 
 /// Typestate when an [`UpgradeStrategy::Deferred`] check is bypassed because the
-/// `1h` `mtime` cooldown timestamp file is still active.
+/// `1h` [`mtime`] cooldown timestamp file is still active.
 ///
+/// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CooldownSkipped;
-impl StateMarker for CooldownSkipped {}
+pub struct Skipped;
+impl StateMarker for Skipped {}
