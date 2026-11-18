@@ -2,17 +2,20 @@ Task: HTTP Testing in ROC (`MockHttpServer` Archival & `mockito` Migration)
 
 <!-- BEGIN mktoc -->
 
-- [Task: HTTP Testing in ROC (`MockHttpServer` Archival & `mockito` Migration)](#task-http-testing-in-roc-mockhttpserver-archival--mockito-migration)
 - [Overview](#overview)
     - [Target Types & Signatures](#target-types--signatures)
         - [Phase 1 (`tui/src/core/test_fixtures/http_server_fixtures.rs`)](#phase-1-tuisrccoretest_fixtureshttp_server_fixturesrs)
         - [Phase 3 (`cmdr/.../test_fixtures/http_server.rs` backed by `mockito`)](#phase-3-cmdrtest_fixtureshttp_serverrs-backed-by-mockito)
-        - [Phase 4 (`tui/src/core/script/` URL-configurable helpers)](#phase-4-tuisrccorescript-url-configurable-helpers)
+        - [Phase 4: `StartGate` & `StartOutcome` Types](#phase-4-startgate--startoutcome-types)
+        - [Phase 5: Cooldown & Test Fixtures](#phase-5-cooldown--test-fixtures)
+        - [Phase 6: Script URL Helpers](#phase-6-script-url-helpers)
 - [Implementation plan](#implementation-plan)
     - [Phase 1: Extract to `r3bl_tui`](#phase-1-extract-to-r3bl_tui)
     - [Phase 2: Archive to `r3bl-open-core-archive`](#phase-2-archive-to-r3bl-open-core-archive)
     - [Phase 3: Migrate `r3bl-cmdr` to `mockito`](#phase-3-migrate-r3bl-cmdr-to-mockito)
-    - [Phase 4: Add `mockito` Tests Across ROC](#phase-4-add-mockito-tests-across-roc)
+    - [Phase 4: Linear `StartOutcome` & `StartGate`](#phase-4-linear-startoutcome--startgate)
+    - [Phase 5: Use-Case Integration Tests](#phase-5-use-case-integration-tests)
+    - [Phase 6: Add `mockito` Tests Across ROC](#phase-6-add-mockito-tests-across-roc)
 
 <!-- END mktoc -->
 
@@ -27,7 +30,7 @@ unit tests entirely or make live internet calls during `cargo test`.
 
 To avoid maintaining a custom HTTP/1.1 server (request body framing, header matching, JSON
 diffing) while preserving the valuable `std` implementation for future reference, this
-task executes a 4-phase plan:
+task executes a 6-phase plan:
 
 1. **Extract Reusable `http_server_fixtures` into `r3bl_tui`:** Separate the
    domain-agnostic `std::net::TcpListener` HTTP/1.1 server and response formatters from
@@ -46,7 +49,19 @@ task executes a 4-phase plan:
    `cmdr/.../test_fixtures/http_server.rs`,
    `cmdr/src/self_upgrade/check/fetch_manifest.rs`, and
    `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs` with `mockito::Server`.
-4. **Add `mockito` HTTP Tests Across ROC (`analytics_client` & `r3bl_tui::script`):** Add
+4. **Replace `SINGLETON` with `StartGate` & Linear `StartOutcome`:** Delete
+   `ScopedMutex<SingletonState>` (`singleton.rs`), replace the single-start check with a
+   lock-free monotonic `StartGate` (`AtomicBoolExt::try_acquire`), move
+   `DeferredCheckHandle` directly into `StartOutcome` with by-value
+   `handle_upgrade_on_exit(self) -> ExitOutcome` so handle stealing and double-joins are
+   compile-time errors, and split `RuntimeOrThreadInitFailed` vs. `*ThreadPanicked`
+   variants across `ManifestCheckError` and `UpgradeError`.
+5. **Restructure `self_upgrade` Integration Tests Around Use Cases:** Reorganize
+   `cmdr/src/self_upgrade/upgrade_journey/integration_tests/` into a 5-pillar, 9-file
+   use-case-driven suite with sync/async caller parity on in-process tests, domain-level
+   cooldown test helpers, negative `archive_server` fixtures, and complete happy/unhappy
+   path coverage across `Immediate`, `Deferred`, `self_replace`, and `install_via_rustup`.
+6. **Add `mockito` HTTP Tests Across ROC (`analytics_client` & `r3bl_tui::script`):** Add
    deterministic local `mockito` tests for `cmdr/src/analytics_client/http_client.rs` and
    `tui/src/core/script/{http_client,github_api,crates_api,download}.rs`, eliminating live
    calls to `api.github.com`, `crates.io`, and `github.com/cloudflare/cfssl` in
@@ -135,7 +150,164 @@ impl ServerSpawnResult {
 }
 ```
 
-#### Phase 4 (`tui/src/core/script/` URL-configurable helpers)
+#### Phase 4: `StartGate` & `StartOutcome` Types
+
+Target signatures in `start_gate.rs`, `exit_outcome.rs`, `start_outcome.rs`,
+`fetch_manifest.rs`, and `perform_upgrade.rs` (replacing deleted `singleton.rs`):
+
+```rust
+// cmdr/src/self_upgrade/upgrade_journey/start_gate.rs
+static START_GATE: AtomicBool = AtomicBool::new(false);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::self_upgrade) enum StartClaimStatus {
+    Claimed,
+    AlreadyStarted,
+}
+
+#[derive(Debug)]
+pub(crate) struct StartGate;
+
+impl StartGate {
+    #[must_use]
+    pub(in crate::self_upgrade) fn try_claim() -> StartClaimStatus; // via AtomicBoolExt::try_acquire (monotonic per-process latch)
+
+    #[cfg(any(test, doc))]
+    pub(crate) fn reset_for_testing(); // via AtomicBoolExt::release
+}
+
+// cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExitOutcome {
+    NoDeferredCheckRunning,
+    UpToDate(UpgradeJourney<UpToDate>),
+    CheckFailed(UpgradeJourney<CheckFailed>),
+    Completed(UpgradeJourney<Completed>),
+}
+
+// cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs
+#[derive(Debug)]
+pub struct DeferredCheckHandle {
+    pub(in crate::self_upgrade) checking: UpgradeJourney<Checking>,
+    pub(in crate::self_upgrade) join_handle:
+        StdThreadTokioJoinHandle<DeferredCheckOutcome>,
+}
+
+impl DeferredCheckHandle {
+    #[must_use]
+    pub fn get_journey(&self) -> &UpgradeJourney<Checking>;
+}
+
+#[must_use = "call .handle_upgrade_on_exit() at shutdown (or exit early on ImmediateUpgrade)"]
+#[derive(Debug)]
+pub enum StartOutcome {
+    Disabled(UpgradeJourney<Disabled>),
+    ImmediateUpgrade(ImmediateUpgradeOutcome),
+    DeferredUpgrade(DeferredUpgradeOutcome),
+    AlreadyStarted,
+}
+
+#[derive(Debug)]
+pub enum DeferredUpgradeOutcome {
+    CooldownSkipped(UpgradeJourney<CooldownSkipped>),
+    DeferredCheckSpawned(DeferredCheckHandle),
+    DeferredCheckSpawnFailed(UpgradeJourney<CheckFailed>),
+}
+
+impl StartOutcome {
+    #[must_use]
+    pub fn handle_upgrade_on_exit(self) -> ExitOutcome;
+}
+
+// cmdr/src/self_upgrade/check/fetch_manifest.rs (ManifestCheckError additions)
+pub enum ManifestCheckError {
+    // ... existing CrateNotFoundInManifest, FetchOrParseFailed ...
+    #[error("{reason}")]
+    RuntimeOrThreadInitFailed { reason: String },
+    #[error("{panic_msg}")]
+    CheckThreadPanicked { panic_msg: String },
+}
+
+// cmdr/src/self_upgrade/upgrade/perform_upgrade.rs (UpgradeError additions)
+pub enum UpgradeError {
+    // ... existing NoViableUpgradeSource, UnsupportedPlatform, ChecksumMismatch, Cancelled, Other ...
+    #[error("{reason}")]
+    RuntimeOrThreadInitFailed { reason: String },
+    #[error("{panic_msg}")]
+    UpgradeThreadPanicked { panic_msg: String },
+}
+```
+
+#### Phase 5: Cooldown & Test Fixtures
+
+Target helpers for `cooldown.rs`, `jsonc_golden.rs`, `http_server.rs`, and the 9-file
+`integration_tests/mod.rs` layout:
+
+- `cmdr/src/self_upgrade/check/cooldown.rs`:
+
+```rust
+#[cfg(any(test, doc))]
+impl CooldownPolicy {
+    /// Creates the cooldown timestamp file and backdates its `mtime` past the
+    /// configured cooldown window so `check_status` returns `ExpiredOrMissing`.
+    pub fn expire_for_testing(&self, crate_name: &CrateName);
+}
+```
+
+- `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/jsonc_golden.rs`
+  & `http_server.rs`:
+
+```rust
+// jsonc_golden.rs
+#[must_use]
+pub fn manifest_without_crate(other_crate_name: &str) -> String;
+
+// http_server.rs (manifest_server)
+#[must_use]
+pub fn spawn_uncalled() -> ServerSpawnResult; // .expect(0)
+
+// http_server.rs (archive_server)
+#[must_use]
+pub fn spawn_closed_source_success(archive_bytes: Vec<u8>) -> ServerSpawnResult;
+#[must_use]
+pub fn spawn_checksum_mismatch_closed_source(
+    archive_bytes: Vec<u8>,
+    wrong_sha256: Sha256Digest,
+) -> ServerSpawnResult;
+#[must_use]
+pub fn spawn_archive_get_error(
+    distribution: CrateDistribution,
+    status: usize,
+) -> ServerSpawnResult;
+```
+
+- `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs` 9-file coordinator
+  layout:
+
+```rust
+pub mod test_fixtures;
+
+#[cfg(test)]
+pub mod start_guard_and_disabled;
+#[cfg(test)]
+pub mod immediate_upgrade_happy_paths;
+#[cfg(test)]
+pub mod immediate_upgrade_unhappy_paths;
+#[cfg(test)]
+pub mod deferred_upgrade_happy_paths;
+#[cfg(test)]
+pub mod deferred_upgrade_unhappy_paths;
+#[cfg(test)]
+pub mod self_replace_happy_paths;
+#[cfg(test)]
+pub mod self_replace_unhappy_paths;
+#[cfg(test)]
+pub mod install_via_rustup_happy_paths;
+#[cfg(test)]
+pub mod install_via_rustup_unhappy_paths;
+```
+
+#### Phase 6: Script URL Helpers
 
 To test `github_api.rs` and `crates_api.rs` against a local `mockito::Server` without
 changing their public signatures:
@@ -274,7 +446,192 @@ integration tests) with `mockito`.
     - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
 
-### Phase 4: Add `mockito` Tests Across ROC
+### Phase 4: Linear `StartOutcome` & `StartGate`
+
+Replace the `ScopedMutex<SingletonState>` process-wide `SINGLETON` with a lock-free
+monotonic `StartGate` (`AtomicBoolExt::try_acquire`) and move `DeferredCheckHandle`
+directly into `StartOutcome` (`handle_upgrade_on_exit(self) -> ExitOutcome`) so handle
+stealing and duplicate joins are unrepresentable at compile time while preserving full
+thread/runtime init and panic diagnostics.
+
+- [ ] Add `ManifestCheckError::CheckThreadPanicked { panic_msg: String }` alongside
+      `RuntimeOrThreadInitFailed` in `cmdr/src/self_upgrade/check/fetch_manifest.rs`, and
+      add symmetric `UpgradeError::RuntimeOrThreadInitFailed { reason: String }` and
+      `UpgradeError::UpgradeThreadPanicked { panic_msg: String }` in
+      `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs` (removing stale `SINGLETON` doc
+      links in both files).
+- [ ] Delete `cmdr/src/self_upgrade/upgrade_journey/singleton.rs`, create
+      `cmdr/src/self_upgrade/upgrade_journey/start_gate.rs` (`StartGate::try_claim` via
+      `AtomicBoolExt::try_acquire`, monotonic per-process latch not reset in production,
+      plus `#[cfg(any(test, doc))] StartGate::reset_for_testing` and unit test), create
+      `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs` (`ExitOutcome`), and update
+      `cmdr/src/self_upgrade/upgrade_journey/mod.rs`.
+- [ ] Update `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs` (preserving existing
+      doc-link edits): define `DeferredCheckHandle` (`checking` + `join_handle` +
+      `get_journey()`), drop `Clone, PartialEq, Eq` on `StartOutcome` and
+      `DeferredUpgradeOutcome` (`#[must_use]` on `StartOutcome`), change
+      `handle_upgrade_on_exit(self) -> ExitOutcome` to consume `self` by value (mapping
+      `DeferredCheckSpawnFailed` -> `ExitOutcome::CheckFailed`,
+      `TokioRuntimeOutcome::FailedToStart` ->
+      `ExitOutcome::CheckFailed(RuntimeOrThreadInitFailed)`, and
+      `TokioRuntimeOutcome::Panicked` -> `ExitOutcome::CheckFailed(CheckThreadPanicked)`),
+      and add unit tests for linear exit handling.
+- [ ] Update `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
+      (`StartGate`, `DeferredCheckHandle` construction, `FailedToStart` vs. `Panicked`
+      split in `run_immediate_upgrade`, and `# Thread Model` diagrams),
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs` (`FailedToStart` vs.
+      `Panicked` split into `UpgradeError`),
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`, and
+      `cmdr/src/self_upgrade/mod.rs` to remove `SINGLETON` and `SingletonState`.
+- [ ] Update existing integration tests (`start_guard_and_disabled_tests.rs`,
+      `immediate_upgrade_tests.rs`, `deferred_upgrade_tests.rs`,
+      `deferred_unhappy_path_tests.rs`, `self_replace_test.rs`,
+      `cargo_install_rustup_test.rs`, and `integration_tests/mod.rs`) to use
+      `StartGate::reset_for_testing()`, pattern-match `!Eq` `StartOutcome`, verify
+      `StartOutcome::AlreadyStarted.handle_upgrade_on_exit()` cannot steal an in-flight
+      `DeferredCheckSpawned` handle, and assert
+      `ExitOutcome::CheckFailed(CheckThreadPanicked)` with preserved panic payload in the
+      panic test.
+- [ ] Run `./check.fish --check`, `./check.fish --fmt`, and targeted
+      `cargo test -p r3bl-cmdr -q self_upgrade` to verify compilation, formatting, and all
+      unit/integration tests.
+- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
+      implementation and ensure no regressions.
+    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_gate.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`
+    - [ ] `cmdr/src/self_upgrade/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_guard_and_disabled_tests.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
+
+### Phase 5: Use-Case Integration Tests
+
+Restructure `cmdr/src/self_upgrade/upgrade_journey/integration_tests/` into a 5-pillar,
+9-file use-case-driven integration test suite building on Phase 4's linear `StartOutcome`
+ownership and `StartGate`, with complete happy/unhappy path coverage.
+
+- [ ] Add `CooldownPolicy::expire_for_testing` in
+      `cmdr/src/self_upgrade/check/cooldown.rs` (eliminating raw `File::set_modified`
+      boilerplate from integration tests) and move the Execution Plane timeout unit test
+      (`test_fetch_crate_metadata_from_manifest_timeout_returns_fetch_or_parse_failed`)
+      into `cmdr/src/self_upgrade/check/fetch_manifest.rs`.
+- [ ] Extend
+      `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/{jsonc_golden,http_server}.rs`
+      with `manifest_without_crate`, `manifest_server::spawn_uncalled` (`.expect(0)`), and
+      `archive_server` negative helpers (`spawn_closed_source_success`,
+      `spawn_checksum_mismatch_closed_source`, `spawn_archive_get_error`).
+- [ ] Rewrite module-level rustdoc and module list in
+      `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs` documenting: (a)
+      why integration tests exist alongside sibling unit tests (Control Plane + Execution
+      Plane E2E wiring), (b) the 5-pillar / 9-file use-case architecture (in-process vs.
+      subprocess Coordinator/Worker isolation), (c) the sync (`#[test]`) + async
+      (`#[tokio::test]`) `scenario_<name>()` wrapper policy for in-process files (matching
+      `fn main()` vs. `#[tokio::main]` workspace binaries), and (d) the ASCII cooldown
+      interaction matrix across `Immediate` and `Deferred`.
+- [ ] Implement Pillar 0 in `start_guard_and_disabled.rs` (`git mv` from
+      `start_guard_and_disabled_tests.rs`), each scenario with `_sync` + `_async` wrappers
+      and explicit `Arrange -> Act -> Assert` outcome bindings:
+    - `UpgradePolicy::Disabled` returns `StartOutcome::Disabled` and
+      `NoDeferredCheckRunning` (`0` HTTP calls via `spawn_uncalled`).
+    - 1st `Disabled` -> duplicate `Immediate` and duplicate `Deferred` both return
+      `StartOutcome::AlreadyStarted` and `NoDeferredCheckRunning` (`0` HTTP calls).
+    - 1st `Immediate` -> duplicate `Immediate` and duplicate `Deferred` both return
+      `StartOutcome::AlreadyStarted` and `NoDeferredCheckRunning`.
+    - 1st `Deferred` (in-flight `50ms` check) -> duplicate `Immediate` and duplicate
+      `Deferred` return `StartOutcome::AlreadyStarted`, consuming their
+      `.handle_upgrade_on_exit()` returns `NoDeferredCheckRunning` without stealing the
+      handle, and consuming the 1st `handle_upgrade_on_exit()` still joins and returns
+      `ExitOutcome::UpToDate`.
+- [ ] Implement Pillar 1 in `immediate_upgrade_happy_paths.rs` (`git mv` from
+      `immediate_upgrade_tests.rs`) and `immediate_upgrade_unhappy_paths.rs` (1 use case
+      per test, `_sync` + `_async` wrappers, cross-linking `self_replace_happy_paths` and
+      `install_via_rustup_happy_paths` for `remote > current` installs):
+    - Happy paths: `remote == local` (`0.0.25`) -> `UpToDate` + `CooldownStatus::Active`;
+      `local > remote` (`0.0.26 > 0.0.25`, no downgrade) -> `UpToDate` +
+      `CooldownStatus::Active`; active cooldown (`policy.touch`) bypassed by `--upgrade`
+      -> hits server + `UpToDate` + `CooldownStatus::Active`.
+    - Unhappy paths (all leaving `CooldownStatus::ExpiredOrMissing`): manifest HTTP 500 ->
+      `CheckFailed(FetchOrParseFailed)`; manifest connection refused ->
+      `CheckFailed(FetchOrParseFailed)`; crate missing from manifest ->
+      `CheckFailed(CrateNotFoundInManifest)`; `ClosedSource` `9.9.9` with unreachable
+      archive -> `Completed(UpgradeFailed(NoViableUpgradeSource))`.
+- [ ] Implement Pillar 2 in `deferred_upgrade_happy_paths.rs` (`git mv` from
+      `deferred_upgrade_tests.rs`) and `deferred_upgrade_unhappy_paths.rs` (`git mv` from
+      `deferred_unhappy_path_tests.rs`) (1 use case per test, `_sync` + `_async` wrappers,
+      cross-linking `self_replace_happy_paths` and `install_via_rustup_happy_paths` for
+      `Deferred(Auto)` installs):
+    - Happy paths: active cooldown -> `CooldownSkipped` and `NoDeferredCheckRunning` (`0`
+      HTTP calls); expired cooldown (`expire_for_testing`) and `UpToDate` ->
+      `DeferredCheckSpawned` -> `ExitOutcome::UpToDate` with `CooldownStatus::Active`;
+      in-flight `50ms` check joined at exit with `NotifyOnly` -> `Completed(NotifiedOnly)`
+      with `CooldownStatus::ExpiredOrMissing`; `PromptToUpgrade` in non-TTY ->
+      `Completed(SkippedNonInteractive)` with `CooldownStatus::ExpiredOrMissing`.
+    - Unhappy paths: in-flight `50ms` HTTP 500 joined at exit ->
+      `ExitOutcome::CheckFailed(FetchOrParseFailed)` with
+      `CooldownStatus::ExpiredOrMissing`; manifest connection refused ->
+      `ExitOutcome::CheckFailed(FetchOrParseFailed)` with
+      `CooldownStatus::ExpiredOrMissing`; `Deferred(Auto)` with `ClosedSource` `9.9.9` and
+      unreachable archive ->
+      `ExitOutcome::Completed(UpgradeFailed(NoViableUpgradeSource))` with
+      `CooldownStatus::ExpiredOrMissing`; dedicated thread panic -> caught as
+      `ExitOutcome::CheckFailed(CheckThreadPanicked)` preserving the panic message without
+      unwinding.
+- [ ] Implement Pillar 3 in `self_replace_happy_paths.rs` (`git mv` from
+      `self_replace_test.rs`) and `self_replace_unhappy_paths.rs` (isolated
+      Coordinator/Worker subprocesses on copied executable):
+    - Happy paths: `Immediate` (`--upgrade`) and `Deferred(Auto)` (exit) 4-route `.tar.gz`
+      and `.sha256` download, digest verification, `self_replace` of main executable and
+      `edi`/`env-source` siblings, and `CooldownStatus::Active`.
+    - Unhappy paths (`ClosedSource`, verifying copied executable bytes remain unchanged on
+      disk and `CooldownStatus::ExpiredOrMissing`): SHA-256 checksum mismatch ->
+      `Completed(UpgradeFailed(ChecksumMismatch))`; `GET *.tar.gz` HTTP 500 after
+      `HEAD 200` -> `Completed(UpgradeFailed(Other(...)))`; empty/corrupt `.tar.gz`
+      archive -> `Completed(UpgradeFailed(Other(...)))`.
+- [ ] Implement Pillar 4 in `install_via_rustup_happy_paths.rs` (`git mv` from
+      `cargo_install_rustup_test.rs`) and `install_via_rustup_unhappy_paths.rs` (isolated
+      Coordinator/Worker subprocesses with stub `rustup` and `cargo` on `PATH` in PTY):
+    - Happy paths: `HEAD` archive unreachable -> PTY stub `rustup` and
+      `cargo +nightly install` (`OSC 9;4`) for both `Immediate` and `Deferred(Auto)` with
+      `CooldownStatus::Active`; mid-stream `GET *.tar.gz` HTTP 500 after `HEAD 200`
+      (`OpenSource`) -> `try_fallback_to_source` recovers via PTY stub `rustup` and
+      `cargo` with `CooldownStatus::Active`.
+    - Unhappy paths (verifying `CooldownStatus::ExpiredOrMissing`): `OpenSource` archive
+      unreachable with empty `PATH` (no `rustup`) ->
+      `Completed(UpgradeFailed(NoViableUpgradeSource { reason: NoLocalToolchain }))`; stub
+      `rustup` exits `1` -> short-circuits before `cargo` (`cargo` absent from
+      `invocations.log`) and `Completed(UpgradeFailed)`; stub `cargo` emits
+      `OscSequence::BuildError` and exits `1` -> `Completed(UpgradeFailed)`.
+- [ ] Run `./check.fish --check` and targeted `cargo test -p r3bl-cmdr -q self_upgrade` to
+      verify compilation and all integration/unit tests pass.
+- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
+      implementation and ensure no regressions.
+    - [ ] `cmdr/src/self_upgrade/check/cooldown.rs`
+    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/jsonc_golden.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_guard_and_disabled.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_unhappy_paths.rs`
+
+### Phase 6: Add `mockito` Tests Across ROC
 
 Add deterministic `mockito`-backed unit tests for all remaining HTTP client modules in
 `r3bl-cmdr` and `r3bl_tui`, replacing live internet calls in `tui/src/core/script/`.

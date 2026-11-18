@@ -65,7 +65,7 @@ impl StartOutcome {
     /// # Terminal State at Exit
     ///
     /// When executing logic that runs on exit using
-    /// [`StdThreadTokioRunner::run_blocking`], after a TUI application (like `giti` or
+    /// [`StdThreadTokioRunner::run_blocking`][2], after a TUI application (like `giti` or
     /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
     /// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
     /// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
@@ -76,12 +76,11 @@ impl StartOutcome {
     ///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
     ///
     /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
+    /// [2]: r3bl_tui::StdThreadTokioRunner::run_blocking
     /// [`choose`]: r3bl_tui::choose
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
     /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
     /// [`Spinner`]: r3bl_tui::Spinner
-    /// [`StdThreadTokioRunner::run_blocking`]:
-    ///     r3bl_tui::StdThreadTokioRunner::run_blocking
     /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
     /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
