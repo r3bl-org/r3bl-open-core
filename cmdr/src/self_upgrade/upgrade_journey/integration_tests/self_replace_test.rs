@@ -35,7 +35,7 @@ use r3bl_tui::{assert_eq2, try_create_temp_dir};
 use std::{env, fs, process::Command};
 
 const ISOLATED_SELF_REPLACE_ENV_VAR: &str = "R3BL_TEST_SELF_REPLACE_ISOLATED";
-const TEST_FILTER: &str = "self_upgrade::upgrade_journey::integration_tests::self_replace_test::test_immediate_upgrade_release_archive_downloads_verifies_and_self_replaces";
+const TEST_FILTER: &str = "self_upgrade::upgrade_journey::integration_tests::self_replace_test::test_release_archive_downloads_verifies_sha256_and_replaces_main_and_sibling_binaries";
 
 const UPGRADED_MAIN_BINARY_BYTES: &[u8] = b"#!/bin/sh\necho upgraded-main-v9.9.9\n";
 const UPGRADED_EDI_BINARY_BYTES: &[u8] = b"#!/bin/sh\necho upgraded-edi-v9.9.9\n";
@@ -43,7 +43,8 @@ const UPGRADED_ENV_SOURCE_BINARY_BYTES: &[u8] =
     b"#!/bin/sh\necho upgraded-env-source-v9.9.9\n";
 
 #[test]
-fn test_immediate_upgrade_release_archive_downloads_verifies_and_self_replaces() {
+fn test_release_archive_downloads_verifies_sha256_and_replaces_main_and_sibling_binaries()
+{
     if env::var(ISOLATED_SELF_REPLACE_ENV_VAR).is_ok() {
         run_self_replace_worker();
         return;
@@ -91,7 +92,6 @@ fn test_immediate_upgrade_release_archive_downloads_verifies_and_self_replaces()
 
 /// Runs inside the isolated subprocess whose [`std::env::current_exe()`] points to
 /// `temp_dir/bin/<exe_name>`.
-#[cfg(test)]
 fn run_self_replace_worker() {
     SingletonState::reset_for_testing();
 

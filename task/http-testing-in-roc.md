@@ -258,6 +258,7 @@ integration tests) with `mockito`.
     - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
     - [x] `cmdr/src/self_upgrade/upgrade/sha256_digest.rs`
     - [x] `tui/src/core/common/fast_strings/hex_slice.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
     - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`

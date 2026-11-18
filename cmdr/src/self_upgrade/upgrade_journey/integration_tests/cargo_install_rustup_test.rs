@@ -40,10 +40,10 @@ use std::{env, fs, path::Path, process::Command};
 
 const ISOLATED_CARGO_INSTALL_ENV_VAR: &str = "R3BL_TEST_CARGO_INSTALL_ISOLATED";
 const INVOCATIONS_LOG_ENV_VAR: &str = "R3BL_TEST_TOOLCHAIN_INVOCATIONS_LOG";
-const TEST_FILTER: &str = "self_upgrade::upgrade_journey::integration_tests::cargo_install_rustup_test::test_immediate_upgrade_open_source_falls_back_to_rustup_and_cargo_install_pty";
+const TEST_FILTER: &str = "self_upgrade::upgrade_journey::integration_tests::cargo_install_rustup_test::test_open_source_fallback_runs_rustup_and_cargo_install_in_pty";
 
 #[test]
-fn test_immediate_upgrade_open_source_falls_back_to_rustup_and_cargo_install_pty() {
+fn test_open_source_fallback_runs_rustup_and_cargo_install_in_pty() {
     if env::var(ISOLATED_CARGO_INSTALL_ENV_VAR).is_ok() {
         run_cargo_install_worker();
         return;
@@ -96,7 +96,6 @@ fn test_immediate_upgrade_open_source_falls_back_to_rustup_and_cargo_install_pty
 }
 
 /// Runs inside the isolated subprocess with `temp_dir/bin` prepended to `PATH`.
-#[cfg(test)]
 fn run_cargo_install_worker() {
     SingletonState::reset_for_testing();
 
