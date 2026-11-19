@@ -279,7 +279,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-//! [`bounds_check`]: crate::bounds_check
+//! [`bounds_check`]: mod@crate::core::coordinates::bounds_check
 //! [`clear_line()`]: crate::core::ansi::OfsBufVT100::clear_line
 //! [`copy_chars_within_line()`]: crate::tui::OfsBuf::copy_chars_within_line
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
@@ -292,9 +292,9 @@
 //! [`handle_backspace()`]: crate::core::ansi::OfsBufVT100::handle_backspace
 //! [`handle_line_feed()`]: crate::core::ansi::OfsBufVT100::handle_line_feed
 //! [`handle_tab()`]: crate::core::ansi::OfsBufVT100::handle_tab
-//! [`IndexOps`]: crate::bounds_check::IndexOps
+//! [`IndexOps`]: crate::IndexOps
 //! [`insert_chars()`]: crate::core::ansi::OfsBufVT100::insert_chars
-//! [`LengthOps`]: crate::bounds_check::LengthOps
+//! [`LengthOps`]: crate::LengthOps
 //! [`move_cursor_down()`]: crate::core::ansi::OfsBufVT100::move_cursor_down
 //! [`move_cursor_left()`]: crate::core::ansi::OfsBufVT100::move_cursor_left
 //! [`move_cursor_right()`]: crate::core::ansi::OfsBufVT100::move_cursor_right
@@ -305,7 +305,7 @@
 //! [`Option<PixelCharDiffChunks>`]: std::option::Option
 //! [`Option<T>`]: std::option::Option
 //! [`PixelChar::Void`]: PixelChar::Void
-//! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
+//! [`RangeBoundsExt`]: crate::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
 //! [`reset_all_style_attributes()`]: crate::core::ansi::OfsBufVT100::reset_all_style_attributes
 //! [`set_char()`]: crate::tui::OfsBuf::set_char
@@ -319,30 +319,20 @@
 
 #![rustfmt::skip]
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod paint_impl; // Cross-folder rustdoc links (terminal_lib_backends, compositor, direct_to_ansi, render_op).
+
+// Attach. Folder-local (Intra-module).
 mod bulk_ops;
 mod storage;
 mod core;
 mod line_level_ops;
 mod pixel_char;
 mod pixel_char_line;
-
-// Attach private modules (hide internal structure).
-// Some modules are conditionally public for documentation to allow rustdoc links.
-#[cfg(any(test, doc))]
-pub mod diff_chunks;
-#[cfg(not(any(test, doc)))]
 mod diff_chunks;
-#[cfg(any(test, doc))]
-pub mod char_ops;
-#[cfg(not(any(test, doc)))]
 mod char_ops;
-#[cfg(any(test, doc))]
-pub mod paint_impl;
-#[cfg(not(any(test, doc)))]
-mod paint_impl;
 
-// Re-export public API (flat, ergonomic surface).
+// Re-export.
 pub use diff_chunks::*;
 pub use core::*;
 pub use paint_impl::*;
@@ -350,5 +340,6 @@ pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use storage::*;
 
+// Test fixtures (crate-internal for docs and tests).
 #[cfg(any(test, doc))]
-pub mod test_fixtures_ofs_buf;
+pub(crate) mod test_fixtures_ofs_buf; // Shared OfsBuf test fixtures across parser and backend tests.

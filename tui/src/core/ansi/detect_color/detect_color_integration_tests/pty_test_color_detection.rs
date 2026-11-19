@@ -12,7 +12,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{ColorSupport, PtyTestContext, PtyTestMode, Stream,
-            examine_env_vars_to_determine_color_support, generate_pty_test};
+            examine_env_vars_to_determine_color_support};
 use std::io::{BufRead, Write};
 
 generate_pty_test! {
@@ -54,6 +54,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     // Ensure no env vars override TTY detection.
     unsafe {

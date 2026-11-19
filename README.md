@@ -8,16 +8,9 @@ height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
-<!-- prettier-ignore-start -->
-```text
-██████╗  ██████╗  ██████╗
-██╔══██╗██╔═══██╗██╔════╝
-██████╔╝██║   ██║██║
-██╔══██╗██║   ██║██║
-██║  ██║╚██████╔╝╚██████╗
-╚═╝  ╚═╝ ╚═════╝  ╚═════╝
-```
-<!-- prettier-ignore-end -->
+<p align="left">
+  <img src="./.github/assets/roc-banner.svg" alt="ROC" width="312px">
+</p>
 
 <p align="left">
   <a href="https://crates.io/crates/r3bl_tui"><img src="https://img.shields.io/badge/crates.io-2.7M%2B%20downloads-orange?logo=rust&style=flat-square" alt="Crates.io Total Downloads"></a>
@@ -539,7 +532,7 @@ More detailed steps...
 
 - Steps are numbered (Step 0, Step 1, Step 2, etc.)
 - Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
-- Table of contents automatically generated and maintained using `doctoc`
+- Table of contents automatically generated and maintained using `mktoc`
 - Formatting standardized with `prettier`
 
 **Status markers:**

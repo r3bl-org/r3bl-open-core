@@ -41,46 +41,47 @@
 
 #![rustfmt::skip]
 
+// Attach.
 // These PTY tests use InputDevice which is cross-platform (DirectToAnsi on Linux, Crossterm on macOS/Windows).
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_ctrl_d_eof_test;
+pub(crate) mod pty_ctrl_d_eof_test; // Linked from event_handlers docs.
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_ctrl_d_delete_test;
+pub(crate) mod pty_ctrl_d_delete_test; // Linked from event_handlers docs.
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_ctrl_u_test;
+mod pty_ctrl_u_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_ctrl_w_test;
+pub(crate) mod pty_ctrl_w_test; // Linked from pty_test_child_impl docs.
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_ctrl_navigation_test;
+pub(crate) mod pty_ctrl_navigation_test; // Linked from event_handlers docs.
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_alt_navigation_test;
+mod pty_alt_navigation_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod test_pty_alt_word_deletion;
+mod test_pty_alt_word_deletion;
 
 // These PTY tests use portable_pty's generate_pty_test! macro which spawns a
 // child process in a PTY. The read_lines_and_drain() helper handles ConPTY's
 // lack of reliable EOF on Windows via a polling/timeout strategy.
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_shared_writer_no_blank_line_test;
+mod pty_shared_writer_no_blank_line_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_editor_state_test;
+mod pty_editor_state_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_multiline_output_test;
+mod pty_multiline_output_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_readline_test;
+mod pty_readline_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_concurrent_input_output_deadlock_test;
+mod pty_concurrent_input_output_deadlock_test;
 
 #[cfg(any(all(unix, doc), test))]
-pub mod readline_async_pty_test_fixtures;
+mod readline_async_pty_test_fixtures;

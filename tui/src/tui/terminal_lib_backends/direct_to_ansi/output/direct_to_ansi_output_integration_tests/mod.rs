@@ -137,11 +137,11 @@ mod text_operations_rendered;
 // Shared test helpers.
 #[cfg(test)]
 mod test_helpers {
-    use crate::{OutputDevice, RenderOpOutput, RenderOpPaint, RenderOpsLocalData,
-                StdoutMock, TuiColor, VPSize, render_op::RenderOpCommon,
+    use crate::{OutputDevice, OutputDeviceExt, RenderOpOutput, RenderOpPaint,
+                RenderOpsLocalData, StdoutMock, TuiColor, VPSize,
+                render_op::RenderOpCommon,
                 terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
-                test_fixtures::output_device_fixtures::OutputDeviceExt, vp_height,
-                vp_pos, vp_width};
+                vp_height, vp_pos, vp_width};
 
     /// Creates initial test state with default values
     pub fn create_test_state() -> RenderOpsLocalData {

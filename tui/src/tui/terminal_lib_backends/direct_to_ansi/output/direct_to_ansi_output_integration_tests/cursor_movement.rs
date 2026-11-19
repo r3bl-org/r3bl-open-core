@@ -21,8 +21,8 @@
 //! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{ansi_output, render_op::RenderOpCommon, term_row_delta, tui_color, vp_col,
-            vp_height, vp_row};
+use crate::{ansi_output, render_op::RenderOpCommon, term_row_delta, vp_col, vp_height,
+            vp_row};
 
 #[test]
 fn test_move_cursor_absolute_origin() {

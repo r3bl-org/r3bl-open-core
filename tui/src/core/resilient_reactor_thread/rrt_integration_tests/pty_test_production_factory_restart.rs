@@ -12,7 +12,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{Continuation, MioSoftwareInterrupt, PtyTestContext, PtyTestMode, RRT,
-            RRTEvent, RRTWorker, RestartPolicy, ThreadState, generate_pty_test,
+            RRTEvent, RRTWorker, RestartPolicy, ThreadState,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
                                                                 mio_poller::MioPollWorker}};
 use std::{io::{Write, stdout},
@@ -60,6 +60,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     create_call_counter::reset();
 

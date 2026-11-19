@@ -3,7 +3,7 @@
 use super::core::LineState;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CsiSequence, CursorBoundsCheck,
             NarrowingCastToU16, NumericValue, Seg, TermCol, TermColDelta, TermRowDelta,
-            VPCol, VPWidth, inline_string, ok, seg_index, seg_length, term_col_delta,
+            VPCol, VPWidth, seg_index, seg_length, term_col_delta,
             term_row_delta, vp_col};
 use std::io::{self, Write};
 
@@ -274,7 +274,7 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{ANSI_CSI_BRACKET_CHAR, CSI_START, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
-                ESC_START, core::test_fixtures::StdoutMock, vp_height, vp_width};
+                ESC_START, StdoutMock, vp_height, vp_width};
     use test_case::test_case;
 
     /// Checks if the string contains a `CursorForward` sequence ([`CSI`] <n> C).

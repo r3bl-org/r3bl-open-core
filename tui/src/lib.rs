@@ -28,56 +28,19 @@
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
 //! <!-- prettier-ignore-start -->
-//! ```text
+//! <pre style="border: none; background: transparent; padding: 0;"><span style="color: #FD2F53; background: linear-gradient(90deg, #FD2F53, #057FF1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; font-family: monospace; font-weight: bold; line-height: 1.2;">
 //! ██████╗ ██████╗ ██████╗ ██╗         ████████╗██╗   ██╗██╗
 //! ██╔══██╗╚════██╗██╔══██╗██║         ╚══██╔══╝██║   ██║██║
 //! ██████╔╝ █████╔╝██████╔╝██║            ██║   ██║   ██║██║
 //! ██╔══██╗ ╚═══██╗██╔══██╗██║            ██║   ██║   ██║██║
 //! ██║  ██║██████╔╝██████╔╝███████╗       ██║   ╚██████╔╝██║
 //! ╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝       ╚═╝    ╚═════╝ ╚═╝
-//! ```
+//! </span></pre>
 //! <!-- prettier-ignore-end -->
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
-//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
-//! style="color:#F92363"> </span><span style="color:#F82067">T</span><span
-//! style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
-//! style="color:#F31874"> </span><span style="color:#F11678">l</span><span
-//! style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
-//! style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
-//! style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
-//! style="color:#E10895"> </span><span style="color:#DE0799">a</span><span
-//! style="color:#DB069E">l</span><span style="color:#D804A2">l</span><span
-//! style="color:#D503A6">o</span><span style="color:#D203AA">w</span><span
-//! style="color:#CF02AE">s</span><span style="color:#CB01B2"> </span><span
-//! style="color:#C801B6">y</span><span style="color:#C501B9">o</span><span
-//! style="color:#C101BD">u</span><span style="color:#BD01C1"> </span><span
-//! style="color:#BA01C4">t</span><span style="color:#B601C8">o</span><span
-//! style="color:#B201CB"> </span><span style="color:#AE02CF">c</span><span
-//! style="color:#AA03D2">r</span><span style="color:#A603D5">e</span><span
-//! style="color:#A204D8">a</span><span style="color:#9E06DB">t</span><span
-//! style="color:#9A07DE">e</span><span style="color:#9608E1"> </span><span
-//! style="color:#910AE3">a</span><span style="color:#8D0BE6">p</span><span
-//! style="color:#890DE8">p</span><span style="color:#850FEB">s</span><span
-//! style="color:#8111ED"> </span><span style="color:#7C13EF">t</span><span
-//! style="color:#7815F1">o</span><span style="color:#7418F3"> </span><span
-//! style="color:#701AF5">e</span><span style="color:#6B1DF6">n</span><span
-//! style="color:#6720F8">h</span><span style="color:#6322F9">a</span><span
-//! style="color:#5F25FA">n</span><span style="color:#5B28FB">c</span><span
-//! style="color:#572CFC">e</span><span style="color:#532FFD"> </span><span
-//! style="color:#4F32FD">d</span><span style="color:#4B36FE">e</span><span
-//! style="color:#4739FE">v</span><span style="color:#443DFE">e</span><span
-//! style="color:#4040FE">l</span><span style="color:#3C44FE">o</span><span
-//! style="color:#3948FE">p</span><span style="color:#354CFE">e</span><span
-//! style="color:#324FFD">r</span><span style="color:#2E53FD"> </span><span
-//! style="color:#2B57FC">p</span><span style="color:#285BFB">r</span><span
-//! style="color:#245EFA">o</span><span style="color:#215FF9">d</span><span
-//! style="color:#1E63F8">u</span><span style="color:#1A67F7">c</span><span
-//! style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
-//! style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
-//! style="color:#097BF2">t</span><span style="color:#057FF1">y</span>.
+//! <span style="color: #FD2F53; background: linear-gradient(90deg, #FD2F53, #057FF1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">R3BL TUI library allows you to create apps to enhance developer productivity.</span>
 //!
 //! Please read the main [README.md] of the `r3bl-open-core` monorepo and workspace to get
 //! a better understanding of the context in which this crate is meant to exist.
@@ -1393,7 +1356,7 @@
 //! > line (to put the terminal back into "cooked mode") which is a bad user experience.
 //!
 //! To achieve this, this crate uses architectural patterns that guarantee terminal
-//! restoration through [`RAII`] (Resource Acquisition Is Initialization) and poison-safe
+//! restoration through [RAII] (Resource Acquisition Is Initialization) and poison-safe
 //! cleanup. This section details how we handle the interplay between panic handling,
 //! resource cleanup via [`Drop`], and mutex poison-safety.
 //!
@@ -1418,7 +1381,7 @@
 //! 3. The [`OutputDevice`] mutex is now **poisoned** because Thread A was holding it when
 //!    it started to panic.
 //! 4. The panic triggers stack unwinding **on Thread A**, calling `drop()` on other
-//!    **[`RAII`] guards** that were created by the application and are still in scope.
+//!    **[RAII] guards** that were created by the application and are still in scope.
 //! 5. These `drop()` implementations (for components like **[`Readline`]** or
 //!    **[`RawModeGuard`]**) must write to the terminal to restore it. Tasks include:
 //!    moving the cursor to the left margin (done by [`Readline`]), showing the cursor if
@@ -1442,7 +1405,7 @@
 //! terminal unusable.
 //!
 //! To ensure this, we follow these rules:
-//! 1. **[`RAII`] for Terminal State**: We use guards like [`RawModeGuard`] that implement
+//! 1. **[RAII] for Terminal State**: We use guards like [`RawModeGuard`] that implement
 //!    [`Drop`] to automatically disable [raw mode].
 //! 2. **Poison-Safe Cleanup**: Mutexes used during cleanup (like those protecting the
 //!    terminal output device) must be "poison-safe".
@@ -2023,7 +1986,7 @@
 //!   raw mode calls to [`terminal_raw_mode`] and writes [`ANSI`] mode-setting bytes
 //!   directly.
 //! - **Panic-Safety**: Global setups like `enter_raw_mode` and alternate screen are
-//!   wrapped in [`RAII`] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
+//!   wrapped in [RAII] guards (e.g., [`RawModeGuard`] and [`FullScreenTuiModeGuard`])
 //!   to ensure the terminal state is always correctly restored upon exit or panic.
 //!
 //! ## [`CliTextInline`]: Styled Text Fragments
@@ -3089,7 +3052,7 @@
 //! ### Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
+//! use r3bl_tui::{TuiAvailability, IntoErr, PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -3275,10 +3238,10 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`Available`]: crate::TerminalInteractiveStatus::Available
-//! [`backend_compat_tests`]: crate::backend_compat_tests
-//! [`bounds_check`]: mod@crate::bounds_check
+//! [`backend_compat_tests`]: mod@crate::core::terminal_io::backend_compat_tests
+//! [`bounds_check`]: mod@crate::core::coordinates::bounds_check
 //! [`buf_reader`]: field@PtyTestContext::buf_reader
-//! [`BufTextStorage`]: crate::core::common::fast_strings::fast_stringify::BufTextStorage
+//! [`BufTextStorage`]: crate::BufTextStorage
 //! [`ByteIndex`]: crate::ByteIndex
 //! [`ByteLength`]: crate::ByteLength
 //! [`canvas`]: mod@crate::core::coordinates::canvas
@@ -3315,7 +3278,7 @@
 //! [`epoll`]: https://manpages.debian.org/epoll.7
 //! [`ESC`]: crate::EscSequence
 //! [`fast_strings`]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
-//! [`FastStringify`]: crate::core::common::fast_strings::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::FastStringify
 //! [`Flat1DSimd`]: crate::core::Flat1DSimd
 //! [`Flat2DArray`]: crate::Flat2DArray
 //! [`format_no_alloc`]: macro@crate::format_no_alloc
@@ -3332,6 +3295,7 @@
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`lock_raw()`]: crate::Monitor::lock_raw
+//! [`main_event_loop`]: crate::TerminalWindow::main_event_loop
 //! [`md_parser` module documentation]: crate::tui::md_parser
 //! [`mio_poller`]: crate::mio_poller
 //! [`mio`]: mio
@@ -3360,19 +3324,18 @@
 //! [`paint_impl`]: mod@crate::terminal_lib_backends::ofs_buf::paint_impl
 //! [`paint`]: mod@crate::paint
 //! [`pty_mux_example`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/pty_mux_example.rs
-//! [`pty_mux` module documentation]: mod@crate::pty_mux
-//! [`pty_mux`]: crate::core::pty_mux
+//! [`pty_mux` module documentation]: mod@crate::core::pty::pty_mux
+//! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`pty_pair`]: field@PtyTestContext::pty_pair
-//! [`pty_test_fixtures`]: crate::pty_test_fixtures
+//! [`pty_test_fixtures`]: mod@crate::core::test_fixtures::pty_test_fixtures
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`PTYMux::run()`]: crate::pty_mux::PTYMux::run
+//! [`PTYMux::run()`]: crate::PTYMux::run
 //! [`PTYMux`]: crate::PTYMux
-//! [`PTYMuxBuilder::build()`]: crate::pty_mux::PTYMuxBuilder::build
+//! [`PTYMuxBuilder::build()`]: crate::PTYMuxBuilder::build
 //! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 //! [`PtyTestContext`]: crate::PtyTestContext
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
 //! [`r3bl_redux`]: https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`RangeBoundsResult::Overflowed`]: crate::RangeBoundsResult::Overflowed
 //! [`RangeBoundsResult::Underflowed`]: crate::RangeBoundsResult::Underflowed
 //! [`RangeBoundsResult::Within`]: crate::RangeBoundsResult::Within
@@ -3391,7 +3354,7 @@
 //! [`Readline`]: crate::Readline
 //! [`readline`]: https://manpages.debian.org/readline.3
 //! [`ReadlineAsyncContext::try_new()`]: crate::readline_async::ReadlineAsyncContext::try_new
-//! [`render_engine()`]: crate::editor_engine::engine_public_api::render_engine
+//! [`render_engine()`]: crate::render_engine
 //! [`RenderOpCommon`]: crate::tui::RenderOpCommon
 //! [`RenderOpIRVec`]: crate::tui::RenderOpIRVec
 //! [`RenderOpOutput`]: crate::RenderOpOutput
@@ -3547,6 +3510,7 @@
 //! [PixelChar]: crate::tui::PixelChar
 //! [PTYMux]: crate::PTYMux
 //! [R3BL CMDR]: https://github.com/r3bl-org/r3bl-cmdr
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [RangeBoundsExt]: crate::RangeBoundsExt
 //! [RangeConvertExt]: crate::RangeConvertExt
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
@@ -3595,23 +3559,18 @@
 // bytes) are intentional and necessary for I/O operations.
 #![cfg_attr(test, allow(clippy::large_stack_arrays))]
 
-// Allow `$crate::macro_name!()` inside `#[macro_export]` macro bodies. The `$crate::`
-// prefix is required for cross-crate correctness (external callers need it to resolve
-// sibling macros back to this crate). This lint can only be suppressed at crate level.
-// See: https://github.com/rust-lang/rust/issues/52234
-#![allow(macro_expanded_macro_exports_accessed_by_absolute_paths)]
-
-// Attach modules (re-exported below to provide clean public API).
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
 pub mod core;
+
+// Attach.
 pub mod network_io;
 pub mod readline_async;
 pub mod tui;
 
-// Re-export stable public API using glob imports for ergonomic, flat API surface.
-//
-// All internal modules MUST have unique names to prevent namespace collisions in these
-// glob re-exports. This ensures a clean, warning-free flat API surface for library users.
-// See `organize-modules` skill for the mandated naming convention.
+// Re-export.
+// Stable flat public API via glob re-exports (all internal modules must have unique
+// names to prevent namespace collisions; see `organize-modules` skill).
 pub use crate::core::*; // `crate::` prefix avoids collision with standard library `core` crate.
 pub use network_io::*;
 pub use readline_async::*;

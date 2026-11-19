@@ -13,8 +13,7 @@
 //! ## Usage
 //!
 //! ```
-//! use r3bl_tui::core::graphemes::word_boundaries::*;
-//! use r3bl_tui::{GCStringOwned, seg_index};
+//! use r3bl_tui::{GCStringOwned, find_next_word_end, find_prev_word_start, seg_index};
 //!
 //! let line = GCStringOwned::from("hello-world foo");
 //! let cursor = 11; // After "hello-world"

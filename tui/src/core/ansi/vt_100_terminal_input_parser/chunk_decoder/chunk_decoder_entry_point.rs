@@ -165,7 +165,7 @@ use crate::{byte_offset,
 /// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
 /// [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 /// [`mouse`]: mod@super::mouse
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`ParsedInputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::ParsedInputEventIR
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SS3`]: https://vt100.net/docs/vt510-rm/SS.html
@@ -175,7 +175,7 @@ use crate::{byte_offset,
 /// [`utf8`]: mod@super::utf8
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
-/// [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+/// [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 #[must_use]
 pub fn try_decode_input_event(
     accumulated_bytes: &[u8],
@@ -547,7 +547,7 @@ mod tests_invalid_input {
 
 /// Tests for [`OSC`] sequence and Alt+] disambiguation routing.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[cfg(test)]
 mod tests_osc_routing {
     use super::*;

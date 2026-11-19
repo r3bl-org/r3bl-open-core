@@ -69,16 +69,15 @@
 use crate::{app::{MAX_EVENT_LOG_ENTRIES, OscDiagnosticsApp},
             box_drawing::{Placement, detect_width, make_box_line},
             terminal_output::{clear_screen_and_home, cursor_to, flush, print_text}};
-use r3bl_tui::{CSI_PARAM_SEPARATOR, CSI_START, ClipboardTarget, InputDevice, InputEvent,
-               Key, KeyPress, KeyState, ModifierKeysMask, NarrowingCastToU16, OscSender,
-               OutputDevice, PaintMode, RgbValue, SGR_BG_EXTENDED, SGR_COLOR_MODE_RGB,
-               SGR_RESET_STR, SGR_SET_GRAPHICS, TERMINAL_LIB_BACKEND,
-               TerminalColorReport, TerminalColorRole, TerminalLibBackend,
-               TerminalModeController, WideningCastToUsize, ansi_output,
-               assert_terminal_is_interactive, get_size, ok, pc, set_mimalloc_in_main,
-               try_initialize_logging_global, vp_col, vp_row};
-use std::{collections::{HashMap, VecDeque},
-          time::Instant};
+use r3bl_tui::{CSI_PARAM_SEPARATOR, CSI_START, ClipboardTarget, HashMap, InputDevice,
+               InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+               NarrowingCastToU16, OscSender, OutputDevice, PaintMode, RgbValue,
+               SGR_BG_EXTENDED, SGR_COLOR_MODE_RGB, SGR_RESET_STR, SGR_SET_GRAPHICS,
+               TERMINAL_LIB_BACKEND, TerminalColorReport, TerminalColorRole,
+               TerminalLibBackend, TerminalModeController, WideningCastToUsize,
+               ansi_output, assert_terminal_is_interactive, get_size, ok, pc,
+               set_mimalloc_in_main, try_initialize_logging_global, vp_col, vp_row};
+use std::{collections::VecDeque, time::Instant};
 use strip_ansi_escapes::strip_str;
 use tracing_core::LevelFilter;
 use ui::render;
@@ -167,7 +166,7 @@ mod app {
         #[must_use]
         pub fn new() -> Self {
             Self {
-                color_reports: HashMap::new(),
+                color_reports: HashMap::default(),
                 event_log: VecDeque::new(),
                 last_emitted_osc: None,
                 current_progress_step: 0,

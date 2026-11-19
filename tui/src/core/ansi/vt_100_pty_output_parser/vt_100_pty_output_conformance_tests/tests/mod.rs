@@ -43,47 +43,47 @@
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [conformance tests]: super
 
-// === OPERATIONS TESTS ===
-// These test files map 1:1 with operations/ modules.
+// Attach.
+// Operations tests (map 1:1 with ops/ modules).
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_char_ops;
+pub(crate) mod vt_100_test_char_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_clear_ops;
+pub(crate) mod vt_100_test_clear_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_control_ops;
+pub(crate) mod vt_100_test_control_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_cursor_ops;
+pub(crate) mod vt_100_test_cursor_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_da_ops;
+pub(crate) mod vt_100_test_da_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_dsr_ops;
+pub(crate) mod vt_100_test_dsr_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_line_ops;
+pub(crate) mod vt_100_test_line_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_margin_ops;
+pub(crate) mod vt_100_test_margin_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_mode_ops;
+pub(crate) mod vt_100_test_mode_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_osc_ops;
+pub(crate) mod vt_100_test_osc_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_scroll_ops;
+pub(crate) mod vt_100_test_scroll_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_sgr_ops;
+pub(crate) mod vt_100_test_sgr_ops; // Cross-folder ops shim rustdoc links.
 
 #[cfg(any(test, doc))]
-pub mod vt_100_test_terminal_ops;
+pub(crate) mod vt_100_test_terminal_ops; // Cross-folder ops shim rustdoc links.
 
 // === PROTOCOL TESTS ===
 // These test ANSI/`VT-100` protocol parsing and sequence handling.

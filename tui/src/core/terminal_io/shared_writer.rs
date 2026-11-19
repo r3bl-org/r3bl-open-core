@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, ok};
+use crate::InlineString;
 use std::{io::{self, Write},
           str::from_utf8};
 use tokio::sync::{broadcast, mpsc};

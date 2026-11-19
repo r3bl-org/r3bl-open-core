@@ -34,7 +34,7 @@
 //! conditionally compiled modules -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::*;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::*;
 //!
 //! // Extended color sequences
 //! let fg = fg_ansi256(196);                 // → "\x1b[38:5:196m"
@@ -59,15 +59,19 @@
 //! [`CsiSequence`]: crate::CsiSequence
 //! [`Display`]: std::fmt::Display
 //! [`DsrSequence`]: crate::DsrSequence
-//! [`FastStringify`]: crate::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-pub mod csi_builders;
-pub mod dsr_builders;
-pub mod extended_color_builders;
+// Attach.
+pub(crate) mod csi_builders; // Used by parser and conformance tests.
+pub(crate) mod dsr_builders; // Used by generator and response event tests.
+pub(crate) mod extended_color_builders; // Used by SGR conformance tests.
 
-// Re-export all builders for convenient wildcard imports
-pub use csi_builders::*;
-pub use dsr_builders::*;
-pub use extended_color_builders::*;
+// Re-export.
+#[allow(unused_imports)] // Convenience barrel re-export documented in module header.
+pub(crate) use csi_builders::*;
+#[allow(unused_imports)] // Convenience barrel re-export documented in module header.
+pub(crate) use dsr_builders::*;
+#[allow(unused_imports)] // Convenience barrel re-export documented in module header.
+pub(crate) use extended_color_builders::*;

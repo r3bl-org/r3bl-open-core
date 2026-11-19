@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{HEADING_CHAR, HeadingData, HeadingLevel, NEW_LINE, NUL_CHAR, NUL_STR, SPACE,
-            parse_null_padded_line::is};
+            is};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{tag, take_while, take_while1},
@@ -61,7 +61,7 @@ fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
     ).parse(input)
 }
 
-/// Matches one or more `#` chars, consumes it, and outputs [Level].
+/// Matches one or more `#` chars, consumes it, and outputs [`HeadingLevel`].
 #[rustfmt::skip]
 fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
     map(
@@ -77,7 +77,6 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use nom::{Err as NomErr,
               error::{Error, ErrorKind}};
 

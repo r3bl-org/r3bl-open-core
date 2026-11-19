@@ -9,17 +9,17 @@
 //!
 //! See [constants module design] for the three-tier architecture.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`OscSender`]: crate::OscSender
-//! [`OscSequence`]: crate::osc_codes::OscSequence
+//! [`OscSequence`]: crate::OscSequence
 //! [`PtyOscProgressScanner`]: crate::core::ansi::osc::PtyOscProgressScanner
 //! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 use super::{ascii_byte_to_char, ascii_byte_to_str,
             input_sequences::{ANSI_PARAM_SEPARATOR, ANSI_PARAM_SEPARATOR_CHAR,
                               ANSI_PARAM_SEPARATOR_STR, ASCII_QUESTION_MARK}};
-use crate::{core::ansi, define_ansi_const};
+use crate::core::ansi;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Group 1: Enclosures, Delimiters, Queries & Terminators (Foundational Protocol Tokens)
@@ -31,13 +31,13 @@ use crate::{core::ansi, define_ansi_const};
 /// Value: `93` dec, `5D` hex.
 ///
 /// [`ESC`]: crate::EscSequence
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const ANSI_OSC_CLOSE_BRACKET: u8 = b']';
 pub const ANSI_OSC_CLOSE_BRACKET_CHAR: char = ascii_byte_to_char(ANSI_OSC_CLOSE_BRACKET);
 
 /// [`OSC`] Start: Sequence start as string slice: `ESC ]` (`\x1b]`).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_START: &str = const_format::formatcp!(
     "{ESC_STR}{ANSI_OSC_CLOSE_BRACKET_CHAR}",
     ESC_STR = ansi::constants::ESC_STR
@@ -45,47 +45,47 @@ pub const OSC_START: &str = const_format::formatcp!(
 
 /// [`OSC`] Prefix: Byte slice starting an [`OSC`] sequence: `ESC ]` (`0x1B 0x5D`).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PREFIX: &[u8] = OSC_START.as_bytes();
 
 /// [`OSC`] Start: Sequence start as byte slice: `ESC ]` (`0x1B 0x5D`).
 ///
 /// Alias for [`OSC_PREFIX`].
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_START_BYTES: &[u8] = OSC_PREFIX;
 
 /// [`OSC`] Prefix Length: Number of bytes in the [`OSC_PREFIX`] (2 bytes).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PREFIX_LEN: usize = OSC_PREFIX.len();
 
 /// Parameter Delimiter: Semicolon `;` separating [`OSC`] parameters.
 ///
 /// Value: `';'` (`3B` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_DELIMITER: char = ANSI_PARAM_SEPARATOR_CHAR;
 
 /// Parameter Delimiter byte: Semicolon `b';'` (`0x3B`) separating [`OSC`] parameters.
 ///
 /// Value: `59` dec, `3B` hex.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_DELIMITER_BYTE: u8 = ANSI_PARAM_SEPARATOR;
 
 /// Parameter Delimiter string: Semicolon `";"` separating [`OSC`] parameters.
 ///
 /// Value: `";"` (`3B` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_DELIMITER_STR: &str = ANSI_PARAM_SEPARATOR_STR;
 
 /// Parameter Delimiter byte slice: Semicolon `b";"` separating [`OSC`] parameters.
 ///
 /// Value: `b";"` (`3B` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_DELIMITER_BYTES: &[u8] = OSC_DELIMITER_STR.as_bytes();
 
 /// Query Parameter: Question mark `?` indicating a query in [`OSC`] sequences
@@ -93,21 +93,21 @@ pub const OSC_DELIMITER_BYTES: &[u8] = OSC_DELIMITER_STR.as_bytes();
 ///
 /// Value: `'?'` (`3F` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_QUERY: char = ascii_byte_to_char(ASCII_QUESTION_MARK);
 
 /// Query Parameter string: `"?"` indicating a query in [`OSC`] sequences.
 ///
 /// Value: `"?"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_QUERY_STR: &str = ascii_byte_to_str(&[ASCII_QUESTION_MARK]);
 
 /// Query Parameter byte slice: `b"?"` indicating a query in [`OSC`] sequences.
 ///
 /// Value: `b"?"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_QUERY_BYTES: &[u8] = OSC_QUERY_STR.as_bytes();
 
 define_ansi_const!(@esc_str : OSC_TERMINATOR_ST = ["\\"] =>
@@ -116,21 +116,21 @@ define_ansi_const!(@esc_str : OSC_TERMINATOR_ST = ["\\"] =>
 
 /// 7-bit String Terminator (`ST`) byte slice: `ESC \` (`0x1B 0x5C`).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_TERMINATOR_ST_BYTES: &[u8] = OSC_TERMINATOR_ST.as_bytes();
 
 /// BEL Terminator byte: De-facto standard [`OSC`] terminator byte (`0x07`).
 ///
 /// Value: `7` dec, `07` hex.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_TERMINATOR_BEL_BYTE: u8 = 0x07;
 
 /// BEL Terminator: De-facto standard [`OSC`] terminator string (`\x07`).
 ///
 /// Value: `\x07` (`07` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_TERMINATOR_BEL: &str = ascii_byte_to_str(&[OSC_TERMINATOR_BEL_BYTE]);
 
 /// BEL Terminator byte slice: De-facto standard [`OSC`] terminator byte slice
@@ -138,7 +138,7 @@ pub const OSC_TERMINATOR_BEL: &str = ascii_byte_to_str(&[OSC_TERMINATOR_BEL_BYTE
 ///
 /// Value: `b"\x07"` (`07` hex).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_TERMINATOR_BEL_BYTES: &[u8] = OSC_TERMINATOR_BEL.as_bytes();
 
 /// Bell (BEL) ([`ANSI`]): Control character `0x07` used to terminate [`OSC`] sequences.
@@ -148,7 +148,7 @@ pub const OSC_TERMINATOR_BEL_BYTES: &[u8] = OSC_TERMINATOR_BEL.as_bytes();
 /// Value: `7` dec, `07` hex.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const ANSI_BEL: u8 = OSC_TERMINATOR_BEL_BYTE;
 
 /// Final byte of the 7-bit String Terminator transport encoding
@@ -221,7 +221,7 @@ pub const ANSI_ST_FINAL: u8 = b'\\';
 /// [`ANSI_ESC`]: crate::core::ansi::constants::ANSI_ESC
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`UART`]: https://en.wikipedia.org/wiki/UART
 /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
@@ -295,35 +295,35 @@ pub const OSC_CODE_PROGRESS: &str = "9";
 ///
 /// Value: `"4"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PROGRESS_SUBCOMMAND: &str = "4";
 
 /// Progress State Update: State `1` indicating active progress in [`OSC`] 9;4.
 ///
 /// Value: `"1"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PROGRESS_STATE_UPDATE: &str = "1";
 
 /// Progress State Clear: State `0` indicating progress cleared or removed in [`OSC`] 9;4.
 ///
 /// Value: `"0"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PROGRESS_STATE_CLEAR: &str = "0";
 
 /// Progress Percent Clear: Value `0` indicating 0% progress when clearing in [`OSC`] 9;4.
 ///
 /// Value: `"0"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_PROGRESS_PERCENT_CLEAR: &str = "0";
 
 /// Operating System Command 52 ([`OSC`]): Parameter code for clipboard operations.
 ///
 /// Value: `"52"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_CLIPBOARD: &str = "52";
 
 /// Operating System Command 10 ([`OSC`]): Parameter code for querying or reporting the
@@ -331,7 +331,7 @@ pub const OSC_CODE_CLIPBOARD: &str = "52";
 ///
 /// Value: `"10"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_FOREGROUND: &str = "10";
 
 /// Operating System Command 11 ([`OSC`]): Parameter code for querying or reporting the
@@ -339,7 +339,7 @@ pub const OSC_CODE_COLOR_REPORT_FOREGROUND: &str = "10";
 ///
 /// Value: `"11"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_BACKGROUND: &str = "11";
 
 /// Operating System Command 12 ([`OSC`]): Parameter code for querying or reporting the
@@ -347,7 +347,7 @@ pub const OSC_CODE_COLOR_REPORT_BACKGROUND: &str = "11";
 ///
 /// Value: `"12"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_CURSOR: &str = "12";
 
 /// Operating System Command 13 ([`OSC`]): Parameter code for querying or reporting the
@@ -355,7 +355,7 @@ pub const OSC_CODE_COLOR_REPORT_CURSOR: &str = "12";
 ///
 /// Value: `"13"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND: &str = "13";
 
 /// Operating System Command 14 ([`OSC`]): Parameter code for querying or reporting the
@@ -363,7 +363,7 @@ pub const OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND: &str = "13";
 ///
 /// Value: `"14"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND: &str = "14";
 
 /// Operating System Command 17 ([`OSC`]): Parameter code for querying or reporting the
@@ -371,7 +371,7 @@ pub const OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND: &str = "14";
 ///
 /// Value: `"17"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_HIGHLIGHT: &str = "17";
 
 /// Operating System Command 19 ([`OSC`]): Parameter code for querying or reporting the
@@ -379,7 +379,7 @@ pub const OSC_CODE_COLOR_REPORT_HIGHLIGHT: &str = "17";
 ///
 /// Value: `"19"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND: &str = "19";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -390,7 +390,7 @@ pub const OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND: &str = "19";
 ///
 /// Value: `"rgb:"`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`RGB`]: crate::RgbValue
 pub const OSC_COLOR_SPEC_RGB_PREFIX: &str = "rgb:";
 
@@ -401,7 +401,7 @@ pub const OSC_COLOR_SPEC_RGB_PREFIX: &str = "rgb:";
 ///
 /// Sequence part: `/`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`RGB`]: crate::RgbValue
 pub const OSC_COLOR_SPEC_CHANNEL_SEPARATOR: u8 = b'/';
 
@@ -409,7 +409,7 @@ pub const OSC_COLOR_SPEC_CHANNEL_SEPARATOR: u8 = b'/';
 ///
 /// Sequence part: `/`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`RGB`]: crate::RgbValue
 pub const OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR: char =
     ascii_byte_to_char(OSC_COLOR_SPEC_CHANNEL_SEPARATOR);
@@ -420,7 +420,7 @@ pub const OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR: char =
 ///
 /// Sequence part: `#`.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const OSC_COLOR_SPEC_HASH_PREFIX: &[u8] = b"#";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -431,12 +431,12 @@ pub const OSC_COLOR_SPEC_HASH_PREFIX: &[u8] = b"#";
 ///
 /// Value: `99` dec, `63` hex.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const CLIPBOARD_TARGET_CLIPBOARD: u8 = b'c';
 
 /// [`OSC`] 52 Target char: Standard desktop system clipboard buffer (`'c'`).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const CLIPBOARD_TARGET_CLIPBOARD_CHAR: char =
     ascii_byte_to_char(CLIPBOARD_TARGET_CLIPBOARD);
 
@@ -444,12 +444,12 @@ pub const CLIPBOARD_TARGET_CLIPBOARD_CHAR: char =
 ///
 /// Value: `112` dec, `70` hex.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const CLIPBOARD_TARGET_PRIMARY: u8 = b'p';
 
 /// [`OSC`] 52 Target char: Primary selection buffer (`'p'`).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const CLIPBOARD_TARGET_PRIMARY_CHAR: char =
     ascii_byte_to_char(CLIPBOARD_TARGET_PRIMARY);
 
@@ -465,7 +465,7 @@ pub const CLIPBOARD_TARGET_PRIMARY_CHAR: char =
 ///
 /// Value: `1_048_576` bytes (1 MiB).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const MAX_OSC_SEQUENCE_LENGTH: usize = 1_048_576;
 
 /// Maximum allowed cumulative bytes to discard when draining a runaway [`OSC`] sequence.
@@ -475,7 +475,7 @@ pub const MAX_OSC_SEQUENCE_LENGTH: usize = 1_048_576;
 ///
 /// Value: `16_777_216` bytes (16 MiB).
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 pub const MAX_OSC_DRAIN_BYTES: usize = 16_777_216;
 
 #[cfg(test)]

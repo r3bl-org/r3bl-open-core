@@ -2,17 +2,20 @@
 
 #![rustfmt::skip]
 
-// Attach private modules.
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod generate_pty_test;
+
+// Attach.
 mod async_debounced_deadline;
 mod constants;
 mod deadline;
 mod debounced_state;
-mod generate_pty_test;
 mod pty_test_child;
 mod pty_test_watchdog;
 mod spawn_controlled_in_pty;
 
-// Export flat public API.
+// Re-export.
 pub use async_debounced_deadline::*;
 pub use constants::*;
 pub use deadline::*;

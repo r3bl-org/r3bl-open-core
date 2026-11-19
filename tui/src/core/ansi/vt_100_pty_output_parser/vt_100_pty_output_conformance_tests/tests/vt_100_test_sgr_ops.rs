@@ -20,7 +20,7 @@ use vte::Perform;
 /// Tests for [`SGR`] (Select Graphic Rendition) styling operations.
 ///
 /// [`SGR`]: crate::SgrCode
-pub mod sgr_styling {
+mod sgr_styling {
     use super::*;
     use crate::{vp_col, vp_row};
 
@@ -759,7 +759,7 @@ pub mod sgr_styling {
 }
 
 /// Tests for character set switching operations.
-pub mod character_sets {
+mod character_sets {
     use super::*;
 
     #[test]

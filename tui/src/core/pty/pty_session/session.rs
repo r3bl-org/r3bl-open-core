@@ -52,7 +52,7 @@ use crate::ControlledChildTerminationHandle;
 /// [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
 /// [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
 /// [`tokio::select!`]: tokio::select
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 #[derive(Debug)]
 pub struct PtySession {
     /// Send [`PtyInputEvent`] events to the child process.

@@ -4,9 +4,8 @@ use crate::{BulletKind, CHECKED, CheckboxParsePolicy, InlineVec, LIST_PREFIX_BAS
             Lines, MdLineFragment, NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR,
             ORDERED_LIST_PARTIAL_PREFIX, ParseList, SPACE, SPACE_CHAR, SmartListIRStr,
             SmartListLine, SmartListLineStr, UNCHECKED, UNORDERED_LIST_PREFIX,
-            get_spaces,
-            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
-            parse_list, parse_null_padded_line::is, tiny_inline_string};
+            get_spaces, is,
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{is_not, tag, take_while},
@@ -125,7 +124,6 @@ mod parse_block_smart_list_helper {
 #[cfg(test)]
 mod tests_parse_block_smart_list {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_with_unicode() {
@@ -449,7 +447,6 @@ pub fn parse_smart_list(
 #[cfg(test)]
 mod tests_bullet_kinds {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_bullet_kinds() {
@@ -472,7 +469,7 @@ mod tests_bullet_kinds {
 #[cfg(test)]
 mod tests_parse_smart_list {
     use super::*;
-    use crate::{SmartListIR, assert_eq2};
+    use crate::SmartListIR;
 
     #[test]
     fn test_invalid_ul_list() {
@@ -861,7 +858,6 @@ fn parse_multi_line_content<'a>(
 #[cfg(test)]
 mod tests_parse_smart_list_content_lines {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_single_line_no_newline() {

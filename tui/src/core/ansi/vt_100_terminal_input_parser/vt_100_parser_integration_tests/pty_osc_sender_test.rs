@@ -88,8 +88,7 @@ use crate::{ClipboardTarget, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
                                     OSC_PROGRESS_PERCENT_CLEAR,
                                     OSC_PROGRESS_STATE_CLEAR,
                                     OSC_PROGRESS_STATE_UPDATE, OSC_PROGRESS_SUBCOMMAND,
-                                    OSC_START, OSC_TERMINATOR_BEL, OSC_TERMINATOR_ST},
-            generate_pty_test, pc};
+                                    OSC_START, OSC_TERMINATOR_BEL, OSC_TERMINATOR_ST}};
 use base64::prelude::*;
 use std::io::Write;
 
@@ -107,7 +106,7 @@ generate_pty_test! {
 /// process and validates exact byte-level wire formatting for each [`OscSender`]
 /// operation.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscSender`]: crate::core::ansi::osc::OscSender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn controller(context: PtyTestContext) {
@@ -154,7 +153,7 @@ fn controller(context: PtyTestContext) {
 /// Runs inside the child process connected to the controlled side of the [`PTY`].
 /// Exercises each [`OscSender`] method on standard output.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscSender`]: crate::core::ansi::osc::OscSender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn controlled() {

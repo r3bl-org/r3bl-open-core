@@ -10,7 +10,7 @@
 use super::{AnsiValue, convert::convert_rgb_into_ansi256};
 use crate::{TransformColor,
             common::{CommonError, CommonErrorType, CommonResult, LossyConvertToByte},
-            tui_style::hex_color_parser::parse_hex_color};
+            parse_hex_color};
 
 /// Represents a color in [`RGB`] (24-bit [`truecolor`]) format.
 ///
@@ -99,7 +99,6 @@ impl TransformColor for RgbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use test_case::test_case;
 
     #[test]
@@ -154,9 +153,10 @@ mod tests {
     }
 
     /// <https://www.ditig.com/256-colors-cheat-sheet>
-    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`] value 57 = `BlueViolet`
+    ///
+    /// [`RGB`]: #5f00ff rgb(95,0,255)
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model

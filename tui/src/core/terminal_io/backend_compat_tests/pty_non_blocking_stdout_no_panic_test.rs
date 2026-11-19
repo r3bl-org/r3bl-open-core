@@ -44,7 +44,7 @@ use crate::{
     },
 };
 
-use crate::{OutputDevice, PtyTestContext, PtyTestMode, generate_pty_test};
+use crate::{OutputDevice, PtyTestContext, PtyTestMode};
 use std::io::Write;
 
 generate_pty_test! {

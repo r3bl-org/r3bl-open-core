@@ -1,0 +1,289 @@
+// Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+/// Wrap the given block or stmt so that it returns a Result<()>. It is just
+/// syntactic sugar that helps having to write Ok(()) repeatedly.
+///
+/// # Example 1
+///
+/// ```
+/// use r3bl_tui::{CommonResult, throws};
+///
+/// fn test_simple_2_col_layout() -> CommonResult {
+///     let input_event = Some("a");
+///     throws! {
+///         match input_event {
+///             Some(character) => println!("{:?}", character),
+///             _ => todo!(),
+///         }
+///     }
+/// }
+/// ```
+///
+/// # Example 2
+///
+/// ```
+/// use r3bl_tui::{CommonResult, throws};
+///
+/// fn test_simple_2_col_layout() -> CommonResult {
+///     throws!({
+///         let result: miette::Result<&str> = Ok("foo bar");
+///         _ = result?;
+///         ()
+///     });
+/// }
+#[macro_export]
+macro_rules! throws {
+    ($it: block) => {{
+        $it
+        return Ok(())
+    }};
+    ($it: stmt) => {{
+        $it
+        return Ok(())
+    }};
+}
+
+/// Wrap the given block or stmt so that it returns a Result<$it>. It is just
+/// syntactic sugar that helps having to write Ok($it) repeatedly.
+///
+/// # Example
+///
+/// ```no_run
+/// use r3bl_tui::{throws_with_return, CommonResult};
+/// fn function_returns_string() -> CommonResult<&'static str> {
+///     throws_with_return!({
+///         println!("⛵ Draw -> draw: {}\r", "state");
+///         "Hello, World!"
+///     });
+/// }
+/// ```
+#[macro_export]
+macro_rules! throws_with_return {
+    ($it: block) => {{
+        return Ok($it);
+    }};
+    ($it: stmt) => {{
+        return Ok($it);
+    }};
+}
+
+/// This is a really simple macro to make it effortless to use the color console logger.
+///
+/// It takes a single identifier as an argument, or any number of them. It simply dumps an
+/// arrow symbol, followed by the identifier ([stringify]'d) along with the value that it
+/// contains (using the [Debug] formatter). All of the output is colorized for easy
+/// readability. You can use it like this.
+///
+/// # Example 1
+///
+/// ```
+/// use r3bl_tui::console_log;
+///
+/// let my_string = "Hello World!";
+/// console_log!(my_string);
+///
+/// let my_number = 42;
+/// console_log!(my_string, my_number);
+/// ```
+///
+/// # Example 2
+///
+/// You can also use it in these other forms for terminal raw mode output. This will dump
+/// the output to [`stderr`].
+///
+/// ```
+/// use r3bl_tui::console_log;
+///
+/// let result: miette::Result<String> = Ok("foo".to_string());
+/// if let Err(err) = result {
+///     let msg = format!("Failed to {}", stringify!($cmd));
+///     console_log!(ERROR_RAW &msg, err);
+/// }
+/// ```
+///
+/// # Example 3
+///
+/// This will dump the output to [`stdout`].
+///
+/// ```
+/// use r3bl_tui::console_log;
+///
+/// let msg = format!("Did the thing to {}", stringify!($name));
+/// console_log!(OK_RAW &msg);
+/// ```
+///
+/// <https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions>
+///
+/// [`stderr`]: std::io::stderr
+/// [`stdout`]: std::io::stdout
+#[macro_export]
+macro_rules! console_log {
+    (ERROR_RAW $msg:expr, $err:expr) => {{
+        use $crate::{fg_pink, fg_lizard_green, italic};
+        eprintln!(
+            "{} {} {}\r",
+            fg_pink("▶"),
+            fg_lizard_green($msg),
+            italic(&format!("{:#?}", $err))
+        );
+    }};
+
+    (OK_RAW $msg:expr) => {{
+        use $crate::{fg_pink, fg_lizard_green};
+        println!(
+            "{} {}\r",
+            fg_pink("▶"),
+            fg_lizard_green($msg)
+        );
+    }};
+
+    (
+        $(                      /* Start a repetition. */
+            $element:expr       /* Expression. */
+        )                       /* End repetition. */
+        ,                       /* Comma separated. */
+        *                       /* Zero or more times. */
+        $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        /* Enclose the expansion in a block so that we can use multiple statements. */
+        {
+            use $crate::{fg_pink, fg_lizard_green, fg_light_yellow_green};
+            /* Start a repetition. */
+            $(
+                /* Each repeat will contain the following statement, with $element replaced. */
+                println!(
+                    "{} {} <- {}",
+                    fg_pink("▶"),
+                    fg_light_yellow_green(&format!("{:#?}", $element)),
+                    fg_lizard_green(stringify!($element)).underline()
+                );
+            )*
+        }
+    };
+}
+
+/// The `$id` is a mutable reference to the `$eval` expression.
+/// - It returns the `$id` after running the `$code` block.
+/// - Note that `$id` is not leaked into the caller's scope / block.
+///
+/// # Example
+///
+/// ```
+/// use r3bl_tui::with_mut;
+/// let it = with_mut! {
+///     vec!["one", "two", "three"],
+///     as it /* This only exists in the scope of the run block below. */,
+///     run {
+///         it.push("four");
+///         assert_eq!(it.len(), 4);
+///     }
+/// };
+/// assert!(it.len() == 4);
+/// ```
+#[macro_export]
+macro_rules! with_mut {
+    ($eval:expr, as $id:ident, run $code:block) => {{
+        let mut $id = $eval;
+        $code;
+        $id
+    }};
+}
+
+/// Similar to [`assert_eq!`] but automatically prints the left and right hand side
+/// variables if the assertion fails.
+///
+/// Useful for debugging tests, since cargo would just print out the left and right values
+/// *w/out* providing information on *what variables* were being compared.
+#[macro_export]
+macro_rules! assert_eq2_og {
+    ($left:expr, $right:expr $(,)?) => {
+        assert_eq!(
+            $left,
+            $right,
+            "\n😮 {}\nleft : `{}`\nright: `{}`\nline :",
+            $crate::style_prompt("Houston, we have a problem..."),
+            $crate::style_error(stringify!($left)),
+            $crate::style_error(stringify!($right))
+        );
+    };
+}
+
+/// A wrapper for `pretty_assertions::assert_eq!` in tests, falling back to
+/// `std::assert_eq!` in non-test (e.g., documentation) builds so that
+/// `pretty_assertions` is only needed as a dev-dependency.
+#[macro_export]
+macro_rules! assert_eq2 {
+    ($($params:tt)*) => {{
+        #[cfg(test)]
+        {
+            pretty_assertions::assert_eq!($($params)*)
+        }
+        #[cfg(not(test))]
+        {
+            std::assert_eq!($($params)*)
+        }
+    }};
+}
+
+/// Sends a signal to the main thread of app to render. The two things to pass in this
+/// macro are
+/// 1. Sender
+/// 2. `AppEvent` (Signal to MPSC channel)
+#[macro_export]
+macro_rules! send_signal {
+    (
+        $main_thread_channel_sender : expr,
+        $signal : expr
+    ) => {{
+        let sender_clone = $main_thread_channel_sender.clone();
+
+        // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
+        // that it doesn't block the calling thread. More info:
+        // <https://tokio.rs/tokio/tutorial/channels>.
+        tokio::spawn(async move {
+            // We don't care about the result of this operation.
+            sender_clone.send($signal).await.ok();
+        });
+    }};
+}
+
+/// Simple macro to create a [`Result`] with an [`Ok`] variant. It is just syntactic sugar
+/// that helps having to write `Ok(())`.
+/// - If no arg is passed in then it will return `Ok(())`.
+/// - If an arg is passed in then it will return `Ok($arg)`.
+#[macro_export]
+macro_rules! ok {
+    // No args.
+    () => {
+        Ok(())
+    };
+    // With arg.
+    ($value:expr) => {
+        Ok($value)
+    };
+}
+
+/// A decl macro that generates code to measure the performance of the block that it
+/// surrounds.
+///
+/// # Returns
+///
+/// If you use `timed!($expr)` then it will return a tuple of `($expr, duration)`.
+///
+/// # Example
+///
+/// ```
+/// use r3bl_tui::timed;
+/// let (retval, duration) = timed!({ (1_u32..=100).sum::<u32>() });
+/// assert_eq!(retval, 5050);
+/// let _ = duration;
+/// ```
+#[macro_export]
+macro_rules! timed {
+    ($block:block) => {{
+        let start = std::time::Instant::now();
+        let retval = $block;
+        let duration = start.elapsed();
+        (retval, duration)
+    }};
+}

@@ -105,9 +105,9 @@ impl<T> IntoErr for TuiAvailability<T> {
 /// my_app 2> errors.log
 /// ```
 ///
-/// [`/dev/pts/*`]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
-/// [`/dev/tty*`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
-/// [`/dev/tty`]: crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
+/// [`/dev/pts/*`]: crate::PtyPair#child-process-perspective
+/// [`/dev/tty*`]: crate::PtyPair#what-is-a-tty
+/// [`/dev/tty`]: crate::PtyPair#controlling-terminal-alias-devtty
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Available`]: Self::Available
 /// [`fd`]: https://manpages.debian.org/open.2
@@ -307,7 +307,7 @@ pub fn is_input_interactive() -> TTYResult {
 /// [`choose()`]: crate::choose
 /// [`DisplayPreference::Stderr`]: crate::DisplayPreference::Stderr
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
-/// [`PTYMux`]: crate::pty_mux::PTYMux
+/// [`PTYMux`]: crate::PTYMux
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`Spinner`]: crate::readline_async::Spinner
 /// [`stderr`]: std::io::stderr

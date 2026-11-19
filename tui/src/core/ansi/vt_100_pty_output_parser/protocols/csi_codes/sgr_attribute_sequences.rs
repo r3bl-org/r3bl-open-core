@@ -25,7 +25,7 @@ use crate::{BufTextStorage, FastStringify, TuiStyle, TuiStyleAttribs,
                                     SGR_OVERLINE, SGR_RAPID_BLINK, SGR_RESET_STR,
                                     SGR_REVERSE, SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
                                     SGR_UNDERLINE},
-            generate_impl_display_for_fast_stringify, ok, tui_style_attrib};
+            tui_style_attrib};
 use smallvec::SmallVec;
 
 /// Represents text attribute [`SGR`] operations.

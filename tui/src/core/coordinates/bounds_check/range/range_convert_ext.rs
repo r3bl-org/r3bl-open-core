@@ -254,7 +254,7 @@ use std::ops::RangeInclusive;
 /// - [`RangeBoundsExt`] - Range validation against content boundaries
 /// - [Module documentation] - Overview of bounds checking architecture
 ///
-/// [`canvas`]: mod@crate::canvas
+/// [`canvas`]: mod@crate::core::coordinates::canvas
 /// [`CRow`]: crate::CRow
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
 /// [`RangeExclusive`]: crate::RangeExclusive
@@ -265,8 +265,8 @@ use std::ops::RangeInclusive;
 /// [`VPRow`]: crate::VPRow
 /// [`VT-100`]:
 ///     mod@crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_scroll_ops
-/// [Interval Notation]: mod@crate::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 pub trait RangeConvertExt {
     /// The index type contained in this range.
     type IndexType;

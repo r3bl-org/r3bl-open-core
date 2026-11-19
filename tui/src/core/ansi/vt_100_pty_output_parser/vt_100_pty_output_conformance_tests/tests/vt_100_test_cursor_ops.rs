@@ -18,7 +18,7 @@ use std::num::NonZeroU16;
 use vte::Perform;
 
 /// Tests for absolute cursor positioning (CUP, HVP commands).
-pub mod positioning {
+mod positioning {
     use super::*;
 
     #[test]
@@ -333,7 +333,7 @@ pub mod positioning {
 }
 
 /// Tests for relative cursor movement (up, down, forward, backward).
-pub mod movement {
+mod movement {
     use super::*;
 
     #[test]
@@ -592,7 +592,7 @@ pub mod movement {
 ///
 /// [`CSI`]: crate::CsiSequence
 /// [`ESC`]: crate::EscSequence
-pub mod save_restore {
+mod save_restore {
     use super::*;
 
     #[test]
@@ -747,7 +747,7 @@ pub mod save_restore {
 }
 
 /// Tests for Vertical Position Absolute (VPA) operation.
-pub mod vertical_position_absolute {
+mod vertical_position_absolute {
     use super::*;
 
     #[test]

@@ -25,7 +25,7 @@ use crate::{CsiCount,
             term_col, term_row, vp_col, vp_row};
 
 /// Tests for Insert Line (IL) operations.
-pub mod insert_line {
+mod insert_line {
     use super::*;
 
     #[test]
@@ -133,7 +133,7 @@ pub mod insert_line {
 }
 
 /// Tests for Delete Line (DL) operations.
-pub mod delete_line {
+mod delete_line {
     use super::*;
 
     #[test]

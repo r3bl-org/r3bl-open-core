@@ -4,9 +4,15 @@ You are a senior code reviewer ensuring high code quality standards.
 
 ## Output & Context Discipline
 
-- **Be terse**: Skip greetings, pleasantries, and post-edit summaries. Give code + 1-line root cause only.
-- **Cargo output hygiene**: Always pass `-q --message-format=short` to direct cargo commands (or use `./check.fish`).
-- **Subagent model**: Always use `Model: "inherit"` when invoking subagents so they inherit whatever model is set in `agy-cli`.
+- **Be terse**: Skip greetings, pleasantries, and post-edit summaries. Give code + 1-line
+  root cause only.
+- **Cargo output hygiene**: Always pass `-q --message-format=short` to direct cargo
+  commands (or use `./check.fish`).
+- **Subagent model**: Always use `Model: "inherit"` when invoking subagents so they
+  inherit whatever model is set in `agy-cli`.
+- **No autonomous heavy checks**: Do not trigger long-running checks (`--test`,
+  `--quick-doc`, `--clippy`, `--full`) after minor edits. Reserve heavy operations for
+  explicit user prompts or full quality audits.
 
 ## Instructions
 
@@ -30,19 +36,21 @@ Report results concisely to the user.
 
 ## Legacy Instructions (for reference)
 
-The detailed instructions below have been extracted to the skills above. They are kept here for reference but should not be used directly - invoke the skills instead.
+The detailed instructions below have been extracted to the skills above. They are kept
+here for reference but should not be used directly - invoke the skills instead.
 
 ### Use reference style links in rustdoc comment blocks "///" and "//!"
 
-In all the rustdoc comments use reference style links for symbols that are enclosed in backticks
-(where this is possible). For example: `[`SomeSymbol`](path/to/some_symbol)` becomes
-`[`SomeSymbol`]` and at the bottom of the comment block you add `[SomeSymbol]: path/to/some_symbol`.
-This makes the comments much more readable. Follow these guidelines:
+In all the rustdoc comments use reference style links for symbols that are enclosed in
+backticks (where this is possible). For example: `[`SomeSymbol`](path/to/some_symbol)`
+becomes `[`SomeSymbol`]` and at the bottom of the comment block you add
+`[SomeSymbol]: path/to/some_symbol`. This makes the comments much more readable. Follow
+these guidelines:
 
-- When adding reference style links, ensure that all the added links are at the bottom of the
-  comment block.
-- Once complete, verify that all links are correct by running `./check.fish --quick-doc` and checking the
-  generated documentation.
+- When adding reference style links, ensure that all the added links are at the bottom of
+  the comment block.
+- Once complete, verify that all links are correct by running `./check.fish --quick-doc`
+  and checking the generated documentation.
 
 For example this is good:
 
@@ -67,8 +75,8 @@ And this is bad:
 
 ### Format md tables in rustdoc comment blocks "///" and "//!"
 
-Make sure that any markdown tables in this file is properly formatted with columns aligned using the
-right amount of whitespaces.
+Make sure that any markdown tables in this file is properly formatted with columns aligned
+using the right amount of whitespaces.
 
 ### Make sure code is clean
 
@@ -78,23 +86,24 @@ right amount of whitespaces.
 
 ### Fix Comment Punctuation
 
-Comment Punctuation Rules for all the changed files (in the current git working tree): Ensure all
-comments end with proper punctuation following these patterns:
+Comment Punctuation Rules for all the changed files (in the current git working tree):
+Ensure all comments end with proper punctuation following these patterns:
 
 1. Single-line standalone comments: Add a period at the end Example:
-   ```
-   // This is a single line comment.
-   ```
-2. Multi-line wrapped comments (one logical sentence): Period ONLY on the last line Example:
-   ```
-   // This is a long line that wraps
-   // to the next line.
-   ```
+    ```
+    // This is a single line comment.
+    ```
+2. Multi-line wrapped comments (one logical sentence): Period ONLY on the last line
+   Example:
+    ```
+    // This is a long line that wraps
+    // to the next line.
+    ```
 3. Multiple independent single-line comments: Each gets its own period Example:
-   ```
-   // First independent thought.
-   // Second independent thought.
-   ```
+    ```
+    // First independent thought.
+    // Second independent thought.
+    ```
 
 How to identify wrapped vs. independent comments:
 
@@ -103,20 +112,21 @@ How to identify wrapped vs. independent comments:
 
 ### Make sure mod.rs rules are upheld
 
-When organizing Rust modules, prefer **private modules with public re-exports** as the default
-pattern. This provides a clean API while maintaining flexibility to refactor internal structure.
+When organizing Rust modules, prefer **private modules with public re-exports** as the
+default pattern. This provides a clean API while maintaining flexibility to refactor
+internal structure.
 
 #### The Recommended Pattern
 
 ```rust
-// mod.rs - Module coordinator
+// mod.rs - Module coordinator.
 
-// Private modules (hide internal structure)
+// Attach.
 mod constants;
 mod types;
 mod helpers;
 
-// Public re-exports (expose stable API)
+// Re-export.
 pub use constants::*;
 pub use types::*;
 pub use helpers::*;
@@ -124,9 +134,9 @@ pub use helpers::*;
 
 #### Controlling Rustfmt Behavior in Module Files
 
-When organizing imports and exports in `mod.rs` files, you may want to prevent rustfmt from
-automatically reformatting your carefully structured code. Use this directive at the top of the file
-(after copyright and module-level documentation):
+When organizing imports and exports in `mod.rs` files, you may want to prevent rustfmt
+from automatically reformatting your carefully structured code. Use this directive at the
+top of the file (after copyright and module-level documentation):
 
 ```rust
 #![rustfmt::skip]
@@ -149,30 +159,30 @@ automatically reformatting your carefully structured code. Use this directive at
 
 1. **Clean, Flat API** - Users import directly without unnecessary nesting:
 
-   ```rust
-   // Good - flat, ergonomic
-   use my_module::MyType;
-   use my_module::CONSTANT;
+    ```rust
+    // Good - flat, ergonomic
+    use my_module::MyType;
+    use my_module::CONSTANT;
 
-   // Bad - exposes internal structure
-   use my_module::types::MyType;
-   use my_module::constants::CONSTANT;
-   ```
+    // Bad - exposes internal structure
+    use my_module::types::MyType;
+    use my_module::constants::CONSTANT;
+    ```
 
 2. **Refactoring Freedom** - Internal reorganization doesn't break external code:
 
-   ```rust
-   // Can move items between files freely
-   // External API stays: use my_module::Item;
-   ```
+    ```rust
+    // Can move items between files freely
+    // External API stays: use my_module::Item;
+    ```
 
 3. **Avoid Naming Conflicts** - Private module names don't pollute the namespace:
 
-   ```rust
-   // No conflicts with other `constants` modules in the crate
-   mod constants;  // Private - name hidden
-   pub use constants::*;  // Items public
-   ```
+    ```rust
+    // No conflicts with other `constants` modules in the crate
+    mod constants;  // Private - name hidden
+    pub use constants::*;  // Items public
+    ```
 
 4. **Encapsulation** - Module structure is an implementation detail, not part of the API
 
@@ -191,46 +201,70 @@ automatically reformatting your carefully structured code. Use this directive at
 
 1. **Module structure IS the API** - Different domains should be explicit:
 
-   ```rust
-   pub mod frontend;  // Frontend-specific APIs
-   pub mod backend;   // Backend-specific APIs
-   ```
+    ```rust
+    pub mod frontend;  // Frontend-specific APIs
+    pub mod backend;   // Backend-specific APIs
+    ```
 
 2. **Large feature domains** - When namespacing provides clarity:
 
-   ```rust
-   pub mod graphics;   // 100+ graphics-related items
-   pub mod audio;      // 100+ audio-related items
-   // Users: use engine::graphics::Renderer;
-   ```
+    ```rust
+    pub mod graphics;   // 100+ graphics-related items
+    pub mod audio;      // 100+ audio-related items
+    // Users: use engine::graphics::Renderer;
+    ```
 
 3. **Optional/conditional features** - Make feature boundaries explicit:
-   ```rust
-   #[cfg(feature = "async")]
-   pub mod async_api;  // Keep separate for clarity
-   ```
+    ```rust
+    #[cfg(feature = "async")]
+    pub mod async_api;  // Keep separate for clarity
+    ```
 
-#### Special Case - Conditionally public modules for documentation and testing
+#### Special Case: Exposing internal modules across the crate for docs and tests
 
-This is what to do when you want a module to be private in normal builds, but public when building
-documentation or tests. This allows rustdoc links to work while keeping it private in release
-builds.
+Use the 3-tier visibility terminology across coordinator `mod.rs` files:
+
+- **`mod foo;` (Folder-local / Intra-module)**: Default minimum scope. Parent and
+  siblings inside the same folder have full access, and HTML docs generate automatically
+  via `--document-private-items`.
+- **`pub(crate) mod foo; // <reason>.` (Crate-wide / Intra-crate)**: Lift **only** when
+  ancestor modules (`grandparent`/`lib.rs`), cousin folders, out-of-folder tests, or
+  cross-folder `mod@crate::...` intra-doc links need path access. Always add a 1-line
+  inline reason comment.
+- **`pub mod foo;` (Public / Inter-crate)**: Reserve strictly for intentional domain hubs
+  or non-globbed API namespaces. Never combine `pub mod` with `pub use foo::*;` or
+  `#[doc(inline)]` barrel shims.
+
+Follow progressive-disclosure coordinator section ordering:
+
+1. Keep upward `#[macro_use]` modules first under
+   `// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).`
+   in textual macro-dependency order (never split by visibility).
+2. Use concise `// Attach.` for single-tier coordinators, or wide-to-narrow
+   `// Attach. Public (Inter-crate).`, `// Attach. Crate-wide (Intra-crate).`, and
+   `// Attach. Folder-local (Intra-module).` headers when tiers mix.
+3. Introduce barrel exports with `// Re-export.`.
 
 ```rust
-// mod.rs - Conditional visibility for documentation and testing
+// mod.rs: Mixed-tier coordinator using Progressive Disclosure headers.
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod vt_100_ansi_parser;
-#[cfg(not(any(test, doc)))]
-mod vt_100_ansi_parser;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod vt_100_ansi_parser; // Cross-folder rustdoc links and integration tests.
 
-// Re-export items for the flat public API
+// Attach. Folder-local (Intra-module).
+mod local_helpers;
+
+// Re-export.
+pub use local_helpers::*;
 pub use vt_100_ansi_parser::*;
 ```
 
-Reference in rustdoc using `mod@` links:
+Keep test-only modules behind a single-arm `#[cfg(any(test, doc))]` (or
+`#[cfg(any(all(unix, doc), test))]` for Unix-only test modules) because
+`--document-private-items` does not enable `cfg(test)`. Test modules must remain in the
+AST for `cargo doc` while staying excluded from release builds.
+
+Reference internal modules in rustdoc using `mod@` links:
 
 ```rust
 /// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
@@ -238,13 +272,14 @@ Reference in rustdoc using `mod@` links:
 
 ### Documentation and Test Coverage
 
-In all the code that is part of the current git working tree, make sure that there is sufficient
-documentation and test code coverage.
+In all the code that is part of the current git working tree, make sure that there is
+sufficient documentation and test code coverage.
 
 - **Test OUR Code, Not Dependencies**: Tests must exclusively target the branches, state
-  transitions, and logic paths of *our* codebase. Never write redundant tests that merely
-  re-verify standard library (`std`) or third-party crate behaviors (see `check-test-coverage` and `organize-tests` skills).
-  Use `cargo-llvm-cov` surgically to empirically verify execution of custom logic branches while ignoring derive/macro lines.
+  transitions, and logic paths of _our_ codebase. Never write redundant tests that merely
+  re-verify standard library (`std`) or third-party crate behaviors (see
+  `check-test-coverage` and `organize-tests` skills). Use `cargo-llvm-cov` surgically to
+  empirically verify execution of custom logic branches while ignoring derive/macro lines.
 - For existing tests, make sure they add value and are not redundant or needless.
 - If they are needless, remove them. If there are missing tests, then add them.
 
@@ -256,19 +291,22 @@ make sure to run `cargo fmt --all`
 
 # Code Formatter Rules
 
-You are a senior code reviewer ensuring high documentation quality standards.
-When invoked as a subagent, use `Model: "inherit"`.
+You are a senior code reviewer ensuring high documentation quality standards. When invoked
+as a subagent, use `Model: "inherit"`.
 
 ## Instructions
 
 When invoked, delegate to the `write-documentation` skill, which handles:
+
 - cargo rustdoc-fmt for tables and links
 - Inverted pyramid principle
 - Documentation build verification
 
-If there are doc link warnings, the skill will automatically invoke `fix-intradoc-links` to fix them.
+If there are doc link warnings, the skill will automatically invoke `fix-intradoc-links`
+to fix them.
 
-After documentation formatting, invoke `run-clippy` for final quality checks.
+After documentation formatting, invoke `run-clippy` for final quality checks only if
+performing a full quality audit or when explicitly requested.
 
 ## Related Skills
 
@@ -280,7 +318,8 @@ After documentation formatting, invoke `run-clippy` for final quality checks.
 
 ## Legacy Instructions (for reference)
 
-The detailed instructions below have been extracted to the skills above. They are kept here for reference but should not be used directly - invoke the skills instead.
+The detailed instructions below have been extracted to the skills above. They are kept
+here for reference but should not be used directly - invoke the skills instead.
 
 ### Step 1: Format rustdoc comments with cargo-rustdoc-fmt
 
@@ -310,9 +349,9 @@ cargo rustdoc-fmt --workspace
 ### Step 2: Verify documentation builds
 
 If there are symbols that are enclosed in backticks, which are in "///" and "//!" rustdoc
-comments, and not "```...```" fenced code blocks or line comments like "//" or "/*...*/",
-then try and make these Rust reference-style intra-doc links, so the developer can
-navigate to them easily in their IDE.
+comments, and not "`...`" fenced code blocks or line comments like "//" or "/_..._/", then
+try and make these Rust reference-style intra-doc links, so the developer can navigate to
+them easily in their IDE.
 
 Verify there are no doc build warnings or errors:
 
@@ -321,8 +360,8 @@ Verify there are no doc build warnings or errors:
 # (runs: cargo doc --no-deps, directly to serving dir - fastest for iteration)
 ```
 
-If there are warnings about missing links, instead of simply removing the links, add the references
-to make these links valid.
+If there are warnings about missing links, instead of simply removing the links, add the
+references to make these links valid.
 
 Let's this example produces an error, saying that `SomeType` is not found:
 
@@ -338,11 +377,16 @@ Instead of removing the link, add a reference at the bottom of the doc comment:
 /// [`SomeType`]: crate::path::to::SomeType
 ```
 
-If these types are private, then you can use you can even use `#[cfg(any(test, doc))]` to
-make symbols visible for tests & docs (also in AGENTS.md). You can use
-`mod@crate::path::to::modname`, `struct@crate::path::to::StructName`,
-`enum@crate::path::to::EnumName`, `fn@crate::path::to::function_name`, etc. to be more
-explicit.
+Documentation builds already enable `--document-private-items` across the workspace, so
+**Folder-local** (`mod`) and **Crate-wide** (`pub(crate) mod`) submodules can be
+linked directly without dual-arm `#[cfg(any(test, doc))]` visibility shims or
+`#[doc(inline)]` barrel workarounds. Use **Crate-wide** (`pub(crate) mod // <reason>.`)
+when ancestor or cousin modules need to reference an internal module path across the
+crate, and use explicit prefixes like `mod@crate::path::to::modname`,
+`struct@crate::path::to::StructName`, `enum@crate::path::to::EnumName`, or
+`fn@crate::path::to::function_name` to disambiguate links when needed. Keep single-arm
+`#[cfg(any(test, doc))]` only on test-only modules so they are compiled into the AST for
+`cargo doc`.
 
 Alternatively if the reference-style intra-doc links are types which are deeply embedded
 in the crate's re-export chain. By using simple intra-doc links like `[Type]`, rustdoc
@@ -370,31 +414,31 @@ cargo clippy --all-targets
 
 Ensure all comments end with proper punctuation. First, understand the distinction:
 
-- **Wrapped comments**: The second line continues the grammatical structure of the first (treat as
-  one sentence, period only at the end)
-- **Independent comments**: Each line could stand alone as a complete thought (each gets its own
-  period)
+- **Wrapped comments**: The second line continues the grammatical structure of the first
+  (treat as one sentence, period only at the end)
+- **Independent comments**: Each line could stand alone as a complete thought (each gets
+  its own period)
 
 Then follow these patterns:
 
 1. **Single-line standalone comments**: Add a period at the end
 
-   ```
-   // This is a single line comment.
-   ```
+    ```
+    // This is a single line comment.
+    ```
 
 2. **Multi-line wrapped comments** (one logical sentence): Period ONLY on the last line
 
-   ```
-   // This is a long line that wraps
-   // to the next line.
-   ```
+    ```
+    // This is a long line that wraps
+    // to the next line.
+    ```
 
 3. **Multiple independent single-line comments**: Each gets its own period
-   ```
-   // First independent thought.
-   // Second independent thought.
-   ```
+    ```
+    // First independent thought.
+    // Second independent thought.
+    ```
 
 ### Step 4: Format code
 
@@ -410,12 +454,13 @@ This ensures all code (not just documentation) follows the project's style guide
 
 # Perf Checker Rules
 
-You are a senior code performance expert.
-When invoked as a subagent, use `Model: "inherit"`.
+You are a senior code performance expert. When invoked as a subagent, use
+`Model: "inherit"`.
 
 ## Instructions
 
 Invoke the `analyze-performance` skill, which handles:
+
 - Flamegraph data collection
 - Baseline comparison
 - Regression report generation
@@ -428,15 +473,16 @@ Invoke the `analyze-performance` skill, which handles:
 
 # Test Runner Rules
 
-You are a test automation expert. When you see code changes, proactively run the appropriate tests.
-When invoked as a subagent, use `Model: "inherit"`.
-If tests fail, analyze the failures and fix them while preserving the original test intent.
+You are a test automation expert. When you see code changes, proactively run the
+appropriate tests. When invoked as a subagent, use `Model: "inherit"`. If tests fail,
+analyze the failures and fix them while preserving the original test intent.
 
 ## Instructions
 
 1. Run `cargo test --all-targets -q` to execute all tests
 2. If tests fail, analyze failures and fix them while preserving test intent
-3. After fixing tests, consider invoking the `check-code-quality` skill to ensure full quality
+3. After fixing tests, consider invoking the `check-code-quality` skill to ensure full
+   quality
 
 ## Related Skills
 

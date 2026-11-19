@@ -6,9 +6,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
 use super::PixelCharRenderer;
-use crate::{CRLF_BYTES, OfsBufVT100, SGR_RESET_BYTES,
-            core::coordinates::bounds_check::cursor_bounds_check::CursorBoundsCheck,
-            vp_row};
+use crate::{CRLF_BYTES, CursorBoundsCheck, OfsBufVT100, SGR_RESET_BYTES, vp_row};
 
 /// Trait for rendering content to [`ANSI`] escape sequences.
 ///

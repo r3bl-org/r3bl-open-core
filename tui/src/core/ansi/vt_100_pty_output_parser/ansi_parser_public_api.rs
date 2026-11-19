@@ -129,7 +129,7 @@
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vte`]: https://docs.rs/vte
 
-use crate::{OfsBufVT100, PtyResponseEvent, core::osc::OscPtyEvent};
+use crate::{OfsBufVT100, OscPtyEvent, PtyResponseEvent};
 use std::mem::take;
 
 /// Terminal state context for [`ANSI`] sequence processing.
@@ -249,7 +249,7 @@ impl OfsBufVT100 {
     /// [`OfsBuf`]: crate::tui::OfsBuf
     /// [`OscPtyEvent`]: crate::OscPtyEvent
     /// [`PixelChar`]: crate::tui::PixelChar
-    /// [`Process`]: crate::pty_mux::Process
+    /// [`Process`]: crate::Process
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PtyResponseEvent`]: crate::PtyResponseEvent
     /// [`SGR`]: crate::SgrCode
@@ -285,20 +285,20 @@ impl OfsBufVT100 {
 mod tests {
     use crate::{
         core::ansi::constants::{CSI_START, DA_DEVICE_ATTRIBUTES},
-        core::osc::osc_codes::OscSequence,
-        ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
-        DSR_STATUS_REQUEST, OscPtyEvent, PtyResponseEvent::{self, TerminalStatus},
-        NarrowingCastToU16, SgrCode,
-        ofs_buf::test_fixtures_ofs_buf::{
-            assert_empty_at, assert_plain_char_at, assert_plain_text_at,
-            assert_styled_char_at,
-        }, term_col, term_col_delta, term_row, term_row_delta, vp_col, vp_row,
-        vt_100_pty_output_conformance_tests::{
+        core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::{
             nz,
             conformance_data::cursor_sequences::move_left,
             test_fixtures_vt_100_ansi_conformance::create_test_ofs_buf_10r_by_10c,
             test_sequence_generators::csi_builders::csi_seq_cursor_pos,
         },
+        ANSIBasicColor, CARRIAGE_RETURN, CsiSequence, DSR_CURSOR_POSITION_REQUEST,
+        DSR_STATUS_REQUEST, OscPtyEvent, OscSequence,
+        PtyResponseEvent::{self, TerminalStatus},
+        NarrowingCastToU16, SgrCode,
+        ofs_buf::test_fixtures_ofs_buf::{
+            assert_empty_at, assert_plain_char_at, assert_plain_text_at,
+            assert_styled_char_at,
+        }, term_col, term_col_delta, term_row, term_row_delta, vp_col, vp_row,
         PendingWrap,
     };
 

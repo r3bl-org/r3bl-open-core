@@ -20,8 +20,7 @@
 //! [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
 
 use crate::{ArrayBoundsCheck, ArrayUnderflowResult, LengthOps, OfsBufVT100,
-            ShiftLinesDirection, VPHeight,
-            core::coordinates::bounds_check::RangeConvertExt, ok, vp_row};
+            RangeConvertExt, ShiftLinesDirection, VPHeight, vp_row};
 
 impl OfsBufVT100 {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -369,11 +368,12 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{OfsBufVT100, PixelChar, term_row,
+    use crate::{OfsBufVT100, PixelChar,
+                core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::nz,
+                term_row,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_vt100_test_buffer_with_size},
-                vp_col, vp_height, vp_idx, vp_row, vp_width,
-                vt_100_pty_output_conformance_tests::nz};
+                vp_col, vp_height, vp_idx, vp_row, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         create_vt100_test_buffer_with_size(vp_width(10), vp_height(6))

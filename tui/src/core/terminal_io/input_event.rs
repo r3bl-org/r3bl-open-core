@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-pub use crate::core::ansi::vt_100_terminal_input_parser::{TerminalColorReport,
-                                                          TerminalColorRole};
-use crate::{KeyPress, MouseInput, VPSize, core::resilient_reactor_thread::ShutdownReason};
+use crate::{KeyPress, MouseInput, TerminalColorReport, VPSize,
+            core::resilient_reactor_thread::ShutdownReason, vp_height, vp_width};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
@@ -223,9 +222,9 @@ mod helpers {
     }
 }
 
-pub(crate) mod converters {
-    use super::{CTEvent, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent};
-    use crate::{vp_height, vp_width};
+mod converters {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();

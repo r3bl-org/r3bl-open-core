@@ -8,18 +8,17 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use super::{MAX_PROCESSES, OUTPUT_POLL_INTERVAL_MS, OutputRenderer, Process,
-            ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS};
-use crate::{Continuation, DEBUG_TUI_PTY_MUX, EventPropagation, InputEvent,
+            ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS, input_router};
+use crate::{AdaptiveRenderResult::{Render, Skip},
+            Budget, Continuation, DEBUG_TUI_PTY_MUX, EventPropagation, InputEvent,
             TerminalInteractiveStatus, TuiAvailability, VPSize, VPWidth,
             ansi_output::{cursor_movement::cursor_position,
                           screen_clearing::clear_screen},
             core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
                    get_size,
                    osc::OscSender,
-                   pty::pty_mux::{AdaptiveRenderResult::{Render, Skip},
-                                  Budget, input_router},
                    terminal_io::{InputDevice, OutputDevice, TerminalModeController}},
-            format_no_alloc, ok, vp_col, vp_row};
+            vp_col, vp_row};
 use std::{fmt::Debug,
           thread::sleep,
           time::{Duration, Instant}};
@@ -38,7 +37,7 @@ use tokio::time::interval;
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::pty_mux::PTYMux;
+/// use r3bl_tui::PTYMux;
 ///
 /// let builder = PTYMux::builder()
 ///     .add_process("htop", "htop", vec![])

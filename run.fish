@@ -286,7 +286,6 @@ end
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
 # - typos-lsp: Language server protocol for typos source-code spell checker
-# - harper-ls: Language server for Harper grammar & spell checker
 # - typos-cli: Source code spell checker CLI (typos)
 # - cargo-llvm-cov: Source-based code coverage data generator
 # - cmdr: CLI apps (edi, giti, rc, env-source)
@@ -319,7 +318,6 @@ function install-cargo-tools
         "inferno" \
         "lychee" \
         "typos-lsp" \
-        "harper-ls" \
         "typos-cli" \
         "cargo-llvm-cov"
 

@@ -61,7 +61,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
-/// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
+/// [no-ack]: mod@crate::core::ansi::vt_100_terminal_input_parser#progressive-keyboard-enhancement
 #[must_use]
 pub fn parse_csi_u_sequence(chunk: &[u8]) -> Option<ParsedInputEventIR> {
     let frame = Frame::try_extract(chunk)?;

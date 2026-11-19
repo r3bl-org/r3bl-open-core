@@ -195,8 +195,8 @@ mod tests {
 
         history.update(Some("test3".into()));
         assert_eq!(history.entries.len(), 2);
-        assert!(history.entries.contains(&"test2".to_string()));
-        assert!(history.entries.contains(&"test3".to_string()));
+        assert!(history.entries.iter().any(|it| it == "test2"));
+        assert!(history.entries.iter().any(|it| it == "test3"));
     }
 
     // Write tests for search_next and search_previous.

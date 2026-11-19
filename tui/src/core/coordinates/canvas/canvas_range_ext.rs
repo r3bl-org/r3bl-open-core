@@ -12,7 +12,7 @@ use std::ops::{Range, RangeInclusive};
 ///
 /// [`canvas`]: mod@crate::core::coordinates::canvas
 /// [`decorator pattern`]:
-///     mod@crate::core::canvas#design-decision-decorator-vs-newtype-pattern-rationale
+///     mod@crate::core::coordinates::canvas#design-decision-decorator-vs-newtype-pattern-rationale
 pub trait CanvasRangeExt {
     type OutputRange;
 

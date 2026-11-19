@@ -371,7 +371,7 @@ pub fn render_ofs_buf_diff(diff_chunks: &PixelCharDiffChunks) -> RenderOpOutputV
     it
 }
 
-pub mod render_helper {
+mod render_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -455,9 +455,9 @@ pub mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::{render_helper::style_eq, *};
-    use crate::{Flat2DArray, RenderOpsLocalData, VPWidth, assert_eq2,
-                compositor_render_ops_to_ofs_buf::print_text_with_attributes, new_style,
-                tui_color, vp_col, vp_height, vp_row, vp_width};
+    use crate::{Flat2DArray, RenderOpsLocalData, VPWidth,
+                compositor_render_ops_to_ofs_buf::print_text_with_attributes, vp_col,
+                vp_height, vp_row, vp_width};
 
     /// Helper function to make an `OfsBuf`.
     fn make_ofs_buf_plain_text() -> OfsBuf {

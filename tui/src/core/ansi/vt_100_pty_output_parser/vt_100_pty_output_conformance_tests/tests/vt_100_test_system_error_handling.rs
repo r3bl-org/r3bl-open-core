@@ -45,7 +45,7 @@ use crate::{core::ansi::vt_100_pty_output_parser::CsiSequence, term_col, term_ro
 /// Tests for malformed [`CSI`] sequence handling.
 ///
 /// [`CSI`]: crate::CsiSequence
-pub mod malformed_csi_sequences {
+mod malformed_csi_sequences {
     use super::*;
 
     /// Note: Using type-safe `CsiSequence` builders (not raw bytes) because we're testing
@@ -166,8 +166,8 @@ pub mod malformed_csi_sequences {
 
 /// Tests for malformed [`OSC`] sequence handling.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
-pub mod malformed_osc_sequences {
+/// [`OSC`]: crate::OscSequence
+mod malformed_osc_sequences {
     use super::*;
 
     #[test]
@@ -234,7 +234,7 @@ pub mod malformed_osc_sequences {
 /// Tests for invalid control characters and [`UTF-8`] handling.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-pub mod invalid_character_handling {
+mod invalid_character_handling {
     use super::*;
 
     #[test]
@@ -305,7 +305,7 @@ pub mod invalid_character_handling {
 }
 
 /// Tests for boundary conditions and edge cases.
-pub mod boundary_edge_cases {
+mod boundary_edge_cases {
     use super::*;
 
     /// Note: Testing [`VT-100`] spec compliance requires raw [`ANSI`] bytes because
@@ -470,7 +470,7 @@ pub mod boundary_edge_cases {
 }
 
 /// Tests for parser state recovery and resilience.
-pub mod parser_resilience {
+mod parser_resilience {
     use super::*;
 
     #[test]
@@ -581,7 +581,7 @@ pub mod parser_resilience {
 /// [`ESC`]: crate::EscSequence
 /// [`performer.rs`]: super::super::super::performer
 /// [performer module docs]: super::super::super::performer#malformed-sequences-and-the-ignore-parameter
-pub mod vte_parser_limit_exceeded {
+mod vte_parser_limit_exceeded {
     use super::*;
     use crate::CharacterSet;
 

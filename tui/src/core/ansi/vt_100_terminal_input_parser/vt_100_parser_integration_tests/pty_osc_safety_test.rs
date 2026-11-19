@@ -108,7 +108,6 @@ use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::Write, time::Duration};
 
@@ -126,7 +125,7 @@ generate_pty_test! {
 /// unrecognized command codes, and malformed color payloads, followed by valid marker
 /// keystrokes to prove pipeline health.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
@@ -378,7 +377,7 @@ mod payload {
     /// [`constants::RUNAWAY_FILL_BYTE`]: super::constants::RUNAWAY_FILL_BYTE
     /// [`constants::RUNAWAY_PAYLOAD_LEN`]: super::constants::RUNAWAY_PAYLOAD_LEN
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker
     pub fn runaway(marker: &[u8]) -> Vec<u8> {
         let mut data = Vec::with_capacity(

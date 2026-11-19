@@ -209,7 +209,7 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
 #[cfg(test)]
 mod locate_col_tests {
     use super::*;
-    use crate::{EditorEngine, EditorEngineConfig, assert_eq2, c_col, c_row};
+    use crate::{EditorEngine, EditorEngineConfig, c_col, c_row};
 
     #[test]
     fn test_locate_col_at_start() {
@@ -441,7 +441,7 @@ mod locate_col_tests {
 #[cfg(test)]
 mod locate_row_tests {
     use super::*;
-    use crate::{EditorEngine, EditorEngineConfig, assert_eq2, c_col, c_row};
+    use crate::{EditorEngine, EditorEngineConfig, c_col, c_row};
 
     #[test]
     fn test_locate_row_at_top() {

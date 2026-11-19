@@ -22,14 +22,14 @@
 //! [`readline_async_controlled_loop()`].
 //!
 //! [`ESC`]: crate::EscSequence
-//! [`LineState`]: crate::readline_async::readline_async_impl::LineState
+//! [`LineState`]: crate::LineState
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async_controlled_loop()`]:
 //!     super::readline_async_pty_test_fixtures::readline_async_controlled_loop
 
 use crate::{MSG_CONTROLLED_READY, GLYPH_CONTROLLER, GLYPH_WAITING, MSG_LINE_PREFIX,
             MSG_CONTROLLED_STARTING, PtyTestContext, PtyTestMode,
-            generate_pty_test, seg_index,
+            seg_index,
             readline_async::readline_async_impl::readline_async_integration_tests::readline_async_pty_test_fixtures::{
                 readline_async_controlled_loop, readline_async_controller_exit
             }};

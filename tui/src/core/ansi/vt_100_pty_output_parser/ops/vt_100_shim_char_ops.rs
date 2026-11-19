@@ -66,7 +66,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`test_char_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
+//! [`test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [module-level Architecture Overview]: super#architecture-overview

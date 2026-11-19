@@ -6,7 +6,7 @@ use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT
             EditorEngineConfig, EventPropagation, FileExtensionToken, FlexBox,
             FlexBoxId, GlobalData, HasFocus, InputEvent, SystemClipboard,
             TerminalWindowMainThreadSignal, VPBoundingBox,
-            editor_engine::engine_public_api, ok};
+            editor_engine::engine_public_api};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -39,7 +39,7 @@ where
 pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
-pub mod editor_component_impl_component_trait {
+mod editor_component_impl_component_trait {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -112,13 +112,14 @@ pub mod editor_component_impl_component_trait {
         /// This shim simply calls [`engine_public_api::apply_event`] w/ all the
         /// necessary arguments:
         /// - Global scope: [`GlobalData`] (containing app state).
-        /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
+        /// - User input (from [`TerminalWindow::main_event_loop`]): [`InputEvent`].
         ///
         /// Usually a component must have focus in order for the [`crate::App`] to
         /// [`route_event_to_focused_component`]
         /// in the first place.
         ///
         /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
+        /// [`TerminalWindow::main_event_loop`]: crate::TerminalWindow::main_event_loop
         fn handle_event(
             &mut self,
             global_data: &mut GlobalData<S, AS>,
@@ -172,7 +173,7 @@ pub mod editor_component_impl_component_trait {
     }
 }
 
-pub mod constructor {
+mod constructor {
     use super::{BoxedSafeComponent, Debug, EditorComponent, EditorComponentData,
                 EditorEngine, EditorEngineConfig, FlexBoxId, HasEditorBuffers,
                 OnEditorBufferChangeFn};

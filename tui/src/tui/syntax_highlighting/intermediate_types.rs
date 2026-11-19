@@ -18,13 +18,11 @@
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [clipped]: StyleUSSpanLine::clip
 
-use crate::{CCol, CPos, CharacterMatchResult, GCStringOwned, InlineString, ParseList,
-            PatternMatcherStateMachine, RenderList, TuiStyle, TuiStyledTexts, VPWidth,
-            get_foreground_dim_style, get_metadata_tags_marker_style,
-            get_metadata_tags_values_style, get_metadata_title_marker_style,
-            get_metadata_title_value_style,
-            md_parser::md_parser_constants::{COLON, COMMA, SPACE},
-            tiny_inline_string, tui_styled_text, vp_width};
+use crate::{CCol, COLON, COMMA, CPos, CharacterMatchResult, GCStringOwned, InlineString,
+            ParseList, PatternMatcherStateMachine, RenderList, SPACE, TuiStyle,
+            TuiStyledTexts, VPWidth, get_foreground_dim_style,
+            get_metadata_tags_marker_style, get_metadata_tags_values_style,
+            get_metadata_title_marker_style, get_metadata_title_value_style, vp_width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -262,8 +260,7 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{ConvertToPlainText, RenderList, assert_eq2, c_pos, ch, new_style,
-                render_list, tui_color};
+    use crate::{ConvertToPlainText, RenderList, c_pos, ch};
 
     mod fixtures {
         use super::*;

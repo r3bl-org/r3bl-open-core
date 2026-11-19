@@ -3,8 +3,7 @@
 use crate::{CCaret, CRow, DeleteSelectionWith, EditorBuffer, GetMemSize, InlineString,
             InlineVec, ItemsOwned, SelectionLine, c_caret, fg_color,
             glyphs::{CUT_GLYPH, DIRECTION_GLYPH, ELLIPSIS_GLYPH, TIRE_MARKS_GLYPH,
-                     VERT_LINE_DASHED_GLYPH},
-            inline_string, join, tui_color};
+                     VERT_LINE_DASHED_GLYPH}};
 use smallvec::smallvec;
 use std::{fmt::Debug, mem::size_of};
 
@@ -328,7 +327,7 @@ mod impl_debug_format {
 #[cfg(test)]
 mod tests_selection {
     use super::*;
-    use crate::{assert_eq2, c_col, c_row, c_sel_line};
+    use crate::{c_col, c_row, c_sel_line};
 
     #[test]
     fn test_anchor_caret() {

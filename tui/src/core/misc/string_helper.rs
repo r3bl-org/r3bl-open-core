@@ -353,7 +353,7 @@ mod truncate_from_left_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, cli_text_inline, new_style, tui_color, vp_width};
+    use crate::{cli_text_inline, vp_width};
 
     #[test]
     fn test_contains_ansi_escape_sequence() {

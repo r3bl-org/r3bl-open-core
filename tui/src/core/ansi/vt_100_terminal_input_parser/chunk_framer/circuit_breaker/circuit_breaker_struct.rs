@@ -56,7 +56,7 @@ use tracing::Level;
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
 /// [`Open`]: Self::Open
 /// [`OpenAwaitingSt`]: Self::OpenAwaitingSt
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscDrainReason`]: OscDrainReason
 /// [`OscDrainResult::undrained_bytes()`]: OscDrainResult::undrained_bytes
 /// [`OscDrainResult`]: OscDrainResult
@@ -87,7 +87,7 @@ pub enum OscCircuitBreaker {
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ChunkFramer::process_incoming_bytes()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::ChunkFramer::process_incoming_bytes
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     Open {
         /// Total bytes drained so far across chunks (bounded by
@@ -118,7 +118,7 @@ pub enum OscCircuitBreaker {
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     OpenAwaitingSt {
         /// Total bytes drained so far across chunks (bounded by
@@ -258,7 +258,7 @@ impl OscCircuitBreaker {
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`stdin`]: std::io::stdin
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
@@ -326,7 +326,7 @@ impl OscCircuitBreaker {
     /// [`ANSI_ST_FINAL`]: crate::ANSI_ST_FINAL
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`ESC`]: crate::EscSequence
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     fn handle_awaiting_st<'a>(
         &mut self,

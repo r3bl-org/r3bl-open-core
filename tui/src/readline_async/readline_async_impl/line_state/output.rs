@@ -2,8 +2,7 @@
 
 use super::core::{EndsWithNewline, LineState};
 use crate::{CsiSequence, GCStringOwned, LINE_FEED_BYTE, NarrowingCastToU16,
-            ReadlineError, TermCol, TermColDelta, TermRowDelta, early_return_if_paused,
-            inline_string, ok, vp_width};
+            ReadlineError, TermCol, TermColDelta, TermRowDelta, vp_width};
 use std::io::Write;
 
 impl LineState {
@@ -204,7 +203,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{core::test_fixtures::StdoutMock, vp_height, vp_width};
+    use crate::{StdoutMock, vp_height, vp_width};
     use smallvec::SmallVec;
 
     /// Helper to decode [`ANSI`] escape sequences in output for debugging.

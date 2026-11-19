@@ -1,6 +1,6 @@
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 
-# Make sure to keep this in sync with `run` nushell script `$workspace_folders`.
+# Make sure to keep this in sync with `run.fish` `$workspace_folders`.
 [workspace]
 members = [
   "analytics_schema",
@@ -15,7 +15,11 @@ resolver = "3"
 
 # https://github.com/trailofbits/cargo-unmaintained
 [workspace.metadata.unmaintained]
-ignore = ["gethostname", "objs", "home", "proc-macro-error", "wayland-commons"]
+ignore = [
+  "gethostname",      # Transitive dependency via `copypasta` -> `x11-clipboard` -> `x11rb` (r3bl_tui).
+  "home",             # Transitive dependency via `which` (r3bl-rust-analyzer-mcp-server).
+  "assert-json-diff", # Transitive dev-dependency via `mockito` (r3bl-cmdr, r3bl_tui).
+]
 
 # ┌───────────────────────────────────────────────────────────────────────┐
 # │                       RUSTC LINTS SECTION                             │
@@ -42,6 +46,27 @@ unit_bindings = "warn"
 unsafe_attr_outside_unsafe = "warn"
 unused = "warn"
 unused_import_braces = "warn"
+
+# ┌───────────────────────────────────────────────────────────────────────┐
+# │                        RUSTDOC LINTS SECTION                          │
+# │ https://doc.rust-lang.org/rustdoc/lints.html                          │
+# └───────────────────────────────────────────────────────────────────────┘
+[workspace.lints.rustdoc]
+# Configures this rustdoc lint both locally and on docs.rs (inherited via
+# `[lints] workspace = true` in every workspace member crate).
+#
+# Why this is needed even WITH `--document-private-items` enabled:
+# - Whenever a `pub` item links to a `pub(crate)` or private item, rustdoc still
+#   fires `rustdoc::private_intra_doc_links` by default (`warning: public
+#   documentation for X links to private item Y; this link resolves only because
+#   you passed --document-private-items`).
+# - Rustdoc warns conservatively because it cannot inspect `[package.metadata.docs.rs]`
+#   on its own to know whether docs.rs also passes `--document-private-items`.
+# - Since `--document-private-items` IS enabled everywhere (`.cargo/config.toml`,
+#   `check_docs.fish`, and all `[package.metadata.docs.rs]` sections), allowing
+#   `private_intra_doc_links` silences that false-alarm warning while keeping
+#   `rustdoc::broken_intra_doc_links` active for genuinely broken links.
+private_intra_doc_links = "allow"
 
 # ┌───────────────────────────────────────────────────────────┐
 # │                   CLIPPY LINTS SECTION                    │
@@ -104,6 +129,7 @@ comparison_chain = "warn"
 elidable_lifetime_names = "warn"
 wildcard_imports = "warn"
 large_futures = "warn"
+disallowed_types = "warn"
 # ╔══════════════════════════════════════════════════════╗
 # ║ Explicitly allow/suppress these lints to avoid noise ║
 # ╚══════════════════════════════════════════════════════╝

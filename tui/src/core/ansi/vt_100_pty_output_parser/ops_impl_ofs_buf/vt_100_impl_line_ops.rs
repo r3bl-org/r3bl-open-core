@@ -55,13 +55,10 @@
 //! [`clear_line()`]: OfsBufVT100::clear_line
 //! [`shift_lines_in_range()`]: OfsBufVT100::shift_lines_in_range
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [Interval Notation]: crate::bounds_check#interval-notation
+//! [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 
-use crate::{OfsBufVT100, PixelChar, RangeExclusive, ShiftLinesDirection, VPHeight,
-            VPLength, VPRow,
-            core::coordinates::bounds_check::{RangeBoundsExt, RangeConvertExt,
-                                              RangeValidityStatus},
-            ok};
+use crate::{OfsBufVT100, PixelChar, RangeBoundsExt, RangeConvertExt, RangeExclusive,
+            RangeValidityStatus, ShiftLinesDirection, VPHeight, VPLength, VPRow};
 
 impl OfsBufVT100 {
     /// Clear an entire line by filling it with blank characters.

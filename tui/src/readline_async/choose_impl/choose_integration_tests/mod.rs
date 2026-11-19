@@ -9,6 +9,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`SharedWriter`]: crate::SharedWriter
 
+// Attach.
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_shared_writer_pause_test;
-pub mod pty_test_select_component;
+mod pty_shared_writer_pause_test;
+mod pty_test_select_component;

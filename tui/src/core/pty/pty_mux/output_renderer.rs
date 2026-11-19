@@ -5,11 +5,10 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, Flat2DA
             FlushKind, GCStringOwned, LengthOps, NarrowingCastToU16, OfsBuf,
             OfsBufVT100, OutputDevice, PixelChar, ProcessStatus, RangeExt,
             RenderOpsLocalData, SPACE_CHAR, ScrollbackAmount, TuiStyle, VPCol, VPPos,
-            VPRow, VPSize, Viewport, ViewportToCanvasExt, ok,
+            VPRow, VPSize, Viewport, ViewportToCanvasExt,
             print_text_with_attributes,
             tui::{DEBUG_TUI_PTY_MUX,
                   terminal_lib_backends::{paint_ofs_buf, render_ofs_buf}},
-            tui_color,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, vp_col, vp_pos, vp_row, vp_width};
 use std::fmt::Debug;
@@ -296,7 +295,7 @@ impl OutputRenderer {
 /// a terminal emulator cursor. If interactive regions (like a find feature) are added to
 /// the chrome in the future, they will be handled by compositing another virtual caret.
 ///
-/// [`hide_cursor`]: TerminalModeController::hide_cursor
+/// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
 fn paint_buffer(ofs_buf: &OfsBuf, output_device: &OutputDevice) {
     let render_ops = render_ofs_buf(ofs_buf);
     output_device.write(|out| {
@@ -309,7 +308,7 @@ fn paint_buffer(ofs_buf: &OfsBuf, output_device: &OutputDevice) {
     });
 }
 
-pub mod render_from_active_buffer_helpers {
+mod render_from_active_buffer_helpers {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -489,7 +488,7 @@ pub mod render_from_active_buffer_helpers {
     }
 }
 
-pub mod cursor_projection_helpers {
+mod cursor_projection_helpers {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

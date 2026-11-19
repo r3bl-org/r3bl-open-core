@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FileExtensionToken,
-            InlineString, ItemsOwned, ch, fmt_option, ok};
+            InlineString, ItemsOwned, ch};
 use std::fmt::{Debug, Display, Formatter};
 
 /// Please do not construct this struct directly and use

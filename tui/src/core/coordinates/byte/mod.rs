@@ -37,9 +37,9 @@
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 // Attach source files.
-pub mod byte_index;
-pub mod byte_length;
-pub mod byte_offset;
+mod byte_index;
+mod byte_length;
+mod byte_offset;
 
 // Re-export.
 pub use byte_index::*;

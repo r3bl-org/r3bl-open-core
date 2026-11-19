@@ -13,10 +13,10 @@
 //! [`OfsBuf`]: crate::tui::OfsBuf
 
 use super::super::CanvasStorage;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, CPos, NarrowingCastToU16, PixelChar,
-            RangeConstructExt, RangeExclusive, ShiftLinesDirection, VPHeight, VPLength,
-            VPRow, VPSize, VPWidth, Viewport, ViewportPanValidity, ViewportToCanvasExt,
-            c_pos, core::common::flat_2d_array::Flat2DArray, vp_height, vp_row};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CPos, Flat2DArray,
+            NarrowingCastToU16, PixelChar, RangeConstructExt, RangeExclusive,
+            ShiftLinesDirection, VPHeight, VPLength, VPRow, VPSize, VPWidth, Viewport,
+            ViewportPanValidity, ViewportToCanvasExt, c_pos, vp_height, vp_row};
 
 impl CanvasStorage for Flat2DArray<PixelChar> {
     fn get_viewport(&self) -> Viewport {

@@ -1,15 +1,15 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 #[cfg(any(test, doc))]
-pub mod mock_real_objects_for_editor {
-    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, HudData, OfsBufPool,
-                OutputDevice, OutputDeviceExt, PartialFlexBox, RenderPipeline,
-                VPBoundingBox, VPSize, core::test_fixtures::StdoutMock, vp_col,
-                vp_height, vp_row, vp_width};
-    use rustc_hash::FxHashMap;
+pub(crate) mod mock_real_objects_for_editor { // Shared editor test mocks used by dialog and editor tests.
+    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, HashMap, HudData,
+                OfsBufPool, OutputDevice, OutputDeviceExt, PartialFlexBox,
+                RenderPipeline, StdoutMock, VPBoundingBox, VPSize, vp_col, vp_height,
+                vp_row, vp_width};
     use std::fmt::Debug;
     use tokio::sync::mpsc;
 
+    #[allow(dead_code)] // Shared editor test helper retained for GlobalData setup.
     #[must_use]
     pub fn make_global_data<S, AS>(
         window_size: Option<VPSize>,
@@ -32,7 +32,7 @@ pub mod mock_real_objects_for_editor {
             output_device,
             ofs_buf_pool,
             hud_data: HudData::default(),
-            memoized_text_widths: FxHashMap::default(),
+            memoized_text_widths: HashMap::default(),
         };
 
         (global_data, stdout_mock)
@@ -72,8 +72,8 @@ pub mod mock_real_objects_for_editor {
 }
 
 #[cfg(any(test, doc))]
-pub mod assert {
-    use crate::{EditorBuffer, assert_eq2, editor_engine::engine_internal_api};
+pub(crate) mod assert { // Shared editor test assertions used by editor tests.
+    use crate::{EditorBuffer, editor_engine::engine_internal_api};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer) {
         assert_eq2!(buffer.get_str_at_caret(), None);

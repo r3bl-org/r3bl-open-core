@@ -16,4 +16,5 @@ rustc-ice-*.txt
 rust-toolchain-script.lock*
 .claude/worktrees
 .vscode/task-spaces.json
+.vscode/jump-points.json
 .antigravitycli/

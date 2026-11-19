@@ -11,7 +11,7 @@
 //! [`PixelCharLine`]: crate::PixelCharLine
 
 use crate::{GetMemSize, InlineVec, PixelChar, TinyInlineString, VPWidth, dim_underline,
-            get_mem_size, ok, tiny_inline_string};
+            slice_size};
 use smallvec::smallvec;
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
@@ -23,7 +23,7 @@ pub struct PixelCharLine {
 
 impl GetMemSize for PixelCharLine {
     fn get_mem_size(&self) -> usize {
-        get_mem_size::slice_size(self.pixel_chars.as_ref())
+        slice_size(self.pixel_chars.as_ref())
     }
 }
 

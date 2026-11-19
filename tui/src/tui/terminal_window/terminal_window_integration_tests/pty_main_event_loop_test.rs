@@ -14,8 +14,7 @@
 use crate::{App, CommonResult, ComponentRegistryMap, EventPropagation, GlobalData,
             HasFocus, InputDevice, InputEvent, Key, KeyPress, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
-            TerminalWindowMainThreadSignal, generate_pty_test, key_press,
-            main_event_loop_impl, ok, send_signal, throws_with_return, vp_height,
+            TerminalWindowMainThreadSignal, main_event_loop_impl, vp_height,
             vp_width};
 use std::{fmt::{Debug, Display, Formatter},
           io::Write};
@@ -77,6 +76,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {

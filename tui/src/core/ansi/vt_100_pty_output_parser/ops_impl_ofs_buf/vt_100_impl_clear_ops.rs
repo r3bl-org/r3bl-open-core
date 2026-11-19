@@ -2,7 +2,7 @@
 
 use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
             NarrowingCastToU16, OfsBufVT100, PixelChar, RangeBoundsExt as _,
-            RangeExt as _, VPHeight, VPRow, glyphs::SPACER_GLYPH_CHAR, ok, vp_height,
+            RangeExt as _, VPHeight, VPRow, glyphs::SPACER_GLYPH_CHAR, vp_height,
             vp_width};
 use std::cmp::min;
 
@@ -476,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_bce_strips_attributes_but_keeps_bg_color() {
-        use crate::{tui_color, tui_style_attrib};
+        use crate::tui_style_attrib;
 
         let mut buf = create_test_buffer();
 

@@ -75,21 +75,25 @@
 //! ## Architectural Role
 //!
 //! This module sits in the **"trust zone"** of our [`UTF-8`] architecture:
-//! - **Input modules** ([`implementations::insert`]) validate [`UTF-8`] at boundaries
+//! - **Input modules** ([`zcgb_insert_ops`]) validate [`UTF-8`] at boundaries
 //! - **This module** trusts validated content and optimizes for performance
-//! - **Access modules** ([`implementations::access`]) provide zero-copy string access
+//! - **Access modules** ([`zcgb_access_ops`]) provide zero-copy string access
 //!
 //! The safety depends on the **architectural contract** that content entering
 //! the buffer is [`UTF-8`] validated, making subsequent operations safe.
 //!
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+//! [`from_utf8_lossy()`]: String::from_utf8_lossy
+//! [`from_utf8_unchecked()`]: std::str::from_utf8_unchecked
 //! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`zcgb_access_ops`]: mod@super::zcgb_access_ops
+//! [`zcgb_insert_ops`]: mod@super::zcgb_insert_ops
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndexRangeExt, CRow, c_len, ok,
-            segment_builder::{build_doc_segments_for_str, calculate_doc_display_width}};
+use crate::{ByteIndexRangeExt, CRow, build_doc_segments_for_str, c_len,
+            calculate_doc_display_width};
 use miette::{Result, miette};
 use std::str::from_utf8_unchecked;
 

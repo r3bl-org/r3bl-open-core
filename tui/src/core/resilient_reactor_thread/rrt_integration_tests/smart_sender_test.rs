@@ -14,6 +14,7 @@ impl RRTSoftwareInterrupt for SmartInterrupt {
 
 #[derive(Debug)]
 pub struct SmartWorker {
+    #[allow(dead_code)] // Kept for Debug diagnostics when inspecting test workers.
     pub config_val: String,
     pub receiver: tokio::sync::broadcast::Receiver<String>,
 }

@@ -4,8 +4,7 @@ use super::{SelectMode, scroll_editor_content};
 use crate::{CWidth, CaretDirection, CursorBoundsCheck, CursorPositionBoundsStatus,
             EditorArgsMut, EditorBuffer, EditorEngine, NumericValue, RangeExt,
             RowContentPositionStatus, WideSegmentLookahead, c_caret, c_col, c_row,
-            c_width, caret_mut, empty_check_early_return, locate_col, locate_row,
-            multiline_disabled_check_early_return};
+            c_width, caret_mut, locate_col, locate_row};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -616,12 +615,12 @@ mod left_helper {
     }
 }
 
-// Module is public only when building documentation or tests.
+// Module is crate-internal only when building documentation or tests.
 // This allows rustdoc links to work.
 #[cfg(any(test, doc))]
-pub mod tests {
+pub(crate) mod tests { // Linked from scroll_editor_content docs.
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                FileExtensionToken, assert_eq2, c_caret, c_col, c_height, c_row,
+                FileExtensionToken, c_caret, c_col, c_height, c_row,
                 clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,

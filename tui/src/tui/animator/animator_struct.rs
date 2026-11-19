@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, TerminalWindowMainThreadSignal, throws};
+use crate::{CommonResult, TerminalWindowMainThreadSignal};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 

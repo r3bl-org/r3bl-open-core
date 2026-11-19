@@ -35,51 +35,47 @@
 //! [`InputEvent`]: crate::InputEvent
 
 use crate::{KeyState, LossyConvertToByte, NarrowingCastToU8, OscSequence,
-            core::ansi::{constants::{ANSI_CSI_U_CHAR,
+            TerminalColorReport,
+            core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_CSI_U_CHAR, ANSI_ESC,
                                      ANSI_FUNCTION_KEY_TERMINATOR_CHAR,
-                                     ANSI_PARAM_SEPARATOR_CHAR,
-                                     ANSI_SUBPARAM_SEPARATOR_CHAR, ASCII_DEL,
-                                     CONTROL_CHAR_MASK, CONTROL_ENTER, CONTROL_NUL,
-                                     CONTROL_TAB, CSI_START, ESC_STR,
-                                     FOCUS_GAINED_FINAL_CHAR, FOCUS_LOST_FINAL_CHAR,
-                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
-                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
-                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
-                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
-                                     FUNCTION_F9_CODE, FUNCTION_F10_CODE,
-                                     FUNCTION_F11_CODE, FUNCTION_F12_CODE,
-                                     MODIFIER_ALT, MODIFIER_PARAMETER_BASE_CHAR_VAL,
-                                     MODIFIER_PARAMETER_OFFSET,
-                                     MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
-                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
-                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
-                                     MOUSE_RELEASE_BUTTON_CODE,
-                                     MOUSE_RIGHT_BUTTON_CODE,
-                                     MOUSE_SCROLL_DOWN_BUTTON,
-                                     MOUSE_SCROLL_LEFT_BUTTON,
-                                     MOUSE_SCROLL_RIGHT_BUTTON,
+                                     ANSI_PARAM_SEPARATOR_CHAR, ANSI_SS3_O,
+                                     ANSI_SUBPARAM_SEPARATOR_CHAR, ARROW_DOWN_FINAL,
+                                     ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
+                                     ASCII_DEL, BACKTAB_FINAL, CONTROL_CHAR_MASK,
+                                     CONTROL_ENTER, CONTROL_NUL, CONTROL_TAB, CSI_START,
+                                     ESC_STR, FOCUS_GAINED_FINAL_CHAR,
+                                     FOCUS_LOST_FINAL_CHAR, FUNCTION_F1_CODE,
+                                     FUNCTION_F2_CODE, FUNCTION_F3_CODE,
+                                     FUNCTION_F4_CODE, FUNCTION_F5_CODE,
+                                     FUNCTION_F6_CODE, FUNCTION_F7_CODE,
+                                     FUNCTION_F8_CODE, FUNCTION_F9_CODE,
+                                     FUNCTION_F10_CODE, FUNCTION_F11_CODE,
+                                     FUNCTION_F12_CODE, MODIFIER_ALT,
+                                     MODIFIER_PARAMETER_BASE_CHAR_VAL,
+                                     MODIFIER_PARAMETER_OFFSET, MOUSE_LEFT_BUTTON_CODE,
+                                     MOUSE_MIDDLE_BUTTON_CODE, MOUSE_MODIFIER_ALT,
+                                     MOUSE_MODIFIER_CTRL, MOUSE_MODIFIER_SHIFT,
+                                     MOUSE_MOTION_FLAG, MOUSE_RELEASE_BUTTON_CODE,
+                                     MOUSE_RIGHT_BUTTON_CODE, MOUSE_SCROLL_DOWN_BUTTON,
+                                     MOUSE_SCROLL_LEFT_BUTTON, MOUSE_SCROLL_RIGHT_BUTTON,
                                      MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_MARKER_CHAR,
                                      MOUSE_SGR_PRESS_CHAR, MOUSE_SGR_RELEASE_CHAR,
                                      MOUSE_X10_COORD_OFFSET, MOUSE_X10_MARKER_CHAR,
                                      MOUSE_X10_PREFIX, OSC_DELIMITER, OSC_START,
                                      OSC_TERMINATOR_ST, PASTE_END_GENERATE_CODE,
-                                     PASTE_START_GENERATE_CODE,
-                                     RESIZE_EVENT_CODE_CHAR, RESIZE_TERMINATOR_CHAR,
-                                     SPECIAL_DELETE_CODE, SPECIAL_INSERT_CODE,
-                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-                                     UTF8_CHAR_MAX_BYTES},
-                         vt_100_terminal_input_parser::{TerminalColorReport,
-                                                        VT100FocusStateIR,
+                                     PASTE_START_GENERATE_CODE, RESIZE_EVENT_CODE_CHAR,
+                                     RESIZE_TERMINATOR_CHAR, SPECIAL_DELETE_CODE,
+                                     SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
+                                     SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+                                     SPECIAL_PAGE_UP_CODE, SS3_F1_FINAL, SS3_F2_FINAL,
+                                     SS3_F3_FINAL, SS3_F4_FINAL, UTF8_CHAR_MAX_BYTES},
+                         vt_100_terminal_input_parser::{VT100FocusStateIR,
                                                         VT100InputEventIR,
                                                         VT100KeyCodeIR,
                                                         VT100KeyModifiersIR,
                                                         VT100MouseActionIR,
                                                         VT100MouseButtonIR,
-                                                        VT100PasteModeIR}},
-            input_sequences::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O, ARROW_DOWN_FINAL,
-                              ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-                              BACKTAB_FINAL, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
-                              SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL}};
+                                                        VT100PasteModeIR}}};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PRE-COMPUTED SEQUENCE CONSTANTS
@@ -411,7 +407,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEventIR) -> Option<Vec<u8>> 
 /// - `action`: Press, Release, Motion, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
@@ -446,7 +442,7 @@ pub fn generate_x10_mouse_sequence(
 /// - `action`: Press or Release ([`RXVT`] primarily uses Press)
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`RXVT`]: https://en.wikipedia.org/wiki/Rxvt
 #[must_use]
@@ -472,7 +468,7 @@ pub fn generate_rxvt_mouse_sequence(
 /// - `action`: Press, Release, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
 ///
-/// [1-based]: crate::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
+/// [1-based]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::mouse#verifying-coordinate-systems
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`SGR`]: crate::SgrCode
 #[must_use]
@@ -527,7 +523,7 @@ pub fn generate_paste_sequence(mode: VT100PasteModeIR) -> Vec<u8> {
 /// - `17`: Highlight / selection background
 /// - `19`: Highlight / selection foreground
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[must_use]
 pub fn generate_color_report_sequence(report: TerminalColorReport) -> Vec<u8> {
     terminal_events::generate_color_report_sequence(report)
@@ -890,7 +886,7 @@ mod terminal_events {
     /// Repeating each 8-bit channel byte (`{channel:02x}{channel:02x}`) scales `0xRR`
     /// to `0xRRRR`.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub fn generate_color_report_sequence(report: TerminalColorReport) -> Vec<u8> {
         OscSequence::ColorReport(report).to_string().into_bytes()
     }
@@ -899,9 +895,8 @@ mod terminal_events {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RgbValue, TermPos, VPHeight, VPWidth,
-                core::ansi::vt_100_terminal_input_parser::{TerminalColorRole,
-                                                           VT100ScrollDirectionIR}};
+    use crate::{RgbValue, TermPos, TerminalColorRole, VPHeight, VPWidth,
+                core::ansi::vt_100_terminal_input_parser::VT100ScrollDirectionIR};
 
     // ==================== Terminal Events ====================
 

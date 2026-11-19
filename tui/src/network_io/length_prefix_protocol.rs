@@ -3,8 +3,8 @@
 //! This module is standalone, you can use it any project that needs to communicate
 //! between a client and a server using a length-prefix, binary payload, protocol.
 
-use crate::{NarrowingCastToUsize, compress, json_serde, ok,
-            protocol_types::LengthPrefixType};
+use super::{compress, json_serde};
+use crate::{LengthPrefixType, NarrowingCastToUsize};
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

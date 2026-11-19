@@ -1,10 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, ParseList,
-            md_parser::md_parser_constants::{COLON, COMMA, SPACE},
-            parse_list,
-            parse_null_padded_line::trim_optional_leading_newline_and_nulls,
-            take_text_in_single_line};
+use crate::{COLON, COMMA, InlineVec, ParseList, SPACE, take_text_in_single_line,
+            trim_optional_leading_newline_and_nulls};
 use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 
 /// Parses comma-separated value metadata pairs.
@@ -114,7 +111,7 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
     use super::*;
-    use crate::{assert_eq2, md_parser::md_parser_constants::TAGS};
+    use crate::TAGS;
 
     #[test]
     fn test_not_quoted_no_eol() {

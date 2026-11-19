@@ -42,20 +42,23 @@
 
 #![rustfmt::skip]
 
-// Attach source files.
-pub mod bounding_box;
-pub mod caret;
-pub mod col_index;
-pub mod col_width;
-pub mod index;
-pub mod index_and_length_impl_macros;
-pub mod length;
-pub mod pos;
-pub mod row_height;
-pub mod row_index;
-pub mod size;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod index_and_length_impl_macros;
 
-// Re-export types and constructors.
+// Attach.
+mod bounding_box;
+mod caret;
+mod col_index;
+mod col_width;
+mod index;
+mod length;
+mod pos;
+mod row_height;
+mod row_index;
+mod size;
+
+// Re-export.
 pub use bounding_box::*;
 pub use caret::*;
 pub use col_index::*;

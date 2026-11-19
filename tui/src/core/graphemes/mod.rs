@@ -176,7 +176,7 @@
 //!
 //! Please take a look at [`crate::graphemes::GCStringOwned`] for the following
 //! items:
-//! - Methods in [`mod@crate::graphemes::gc_string`] for more details on how the
+//! - Methods in [`mod@gc_string`] for more details on how the
 //!   conversion between "display" (or `display_col_index`), i.e., [`crate::VPCol`] and
 //!   "logical" or "segment", i.e., [`SegIndex`] is done.
 //! - The choices that were made in the design of the [`GCStringOwned`] struct for
@@ -271,20 +271,16 @@
 //! [UTF-8 encoding video]: https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc
 //! [UTF-8 String]: https://doc.rust-lang.org/book/ch08-02-strings.html
 
-// Attach sources.
-pub mod gc_string;
-pub mod traits;
-pub mod unicode_segment;
-pub mod word_boundaries;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod gc_string; // Cross-folder rustdoc module link (buffer_struct).
+
+// Attach. Folder-local (Intra-module).
+mod traits;
+mod unicode_segment;
+mod word_boundaries;
 
 // Re-export.
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use gc_string::owned;
 pub use gc_string::*;
 pub use traits::*;
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use traits::{grapheme_string, grapheme_string_owned_ext, seg_content};
 pub use unicode_segment::*;
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use unicode_segment::{seg, seg_index, seg_length, segment_builder};
 pub use word_boundaries::*;

@@ -53,7 +53,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::PixelChar;
-use crate::{List, VPPos, ok};
+use crate::{List, VPPos};
 use std::{fmt::Debug, ops::Deref};
 
 /// This is a wrapper type so the [`std::fmt::Debug`] can be implemented for it, that

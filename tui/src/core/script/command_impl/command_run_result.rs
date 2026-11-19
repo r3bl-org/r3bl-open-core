@@ -1,7 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink, fg_slate_gray,
-            inline_string};
+use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink, fg_slate_gray};
 use std::{fmt::{Debug, Display, Error, Formatter},
           result::Result as StdResult};
 use tokio::process::Command;
@@ -44,7 +43,7 @@ pub enum CommandRunResult<T: Debug + Display> {
 }
 
 /// Display impl for [`CommandRunResult`]. This also generates log output.
-pub(crate) mod display_impl_for_command_run_result {
+mod display_impl_for_command_run_result {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

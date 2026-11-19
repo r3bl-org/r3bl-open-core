@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{DisplayPreference, WriterConfig};
-use crate::log::{rolling_file_appender_impl, tracing_config::TracingConfig};
+use super::{DisplayPreference, WriterConfig, rolling_file_appender_impl,
+            tracing_config::TracingConfig};
 use tracing_core::LevelFilter;
 use tracing_subscriber::{Layer, registry::LookupSpan};
 
@@ -252,7 +252,7 @@ mod fixtures {
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
     use super::{fixtures::get_expected, *};
-    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter};
     use smallvec::smallvec;
 
     #[tokio::test]

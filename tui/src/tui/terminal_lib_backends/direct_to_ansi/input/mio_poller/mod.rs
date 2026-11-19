@@ -488,43 +488,18 @@
 
 #![rustfmt::skip]
 
-// RRT-based interrupt + worker types.
-#[cfg(any(test, doc))]
-pub mod mio_poll_interrupt;
-#[cfg(not(any(test, doc)))]
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod mio_poll_worker; // Cross-folder rustdoc link (chunk_decoder/mouse).
+pub(crate) mod handler_stdin; // Cross-folder rustdoc links (chunk_framer, vt_100_terminal_input_parser).
+
+// Attach. Folder-local (Intra-module).
 mod mio_poll_interrupt;
-
-#[cfg(any(test, doc))]
-pub mod mio_poll_worker;
-#[cfg(not(any(test, doc)))]
-mod mio_poll_worker;
-
-#[cfg(any(test, doc))]
-pub mod sources;
-#[cfg(not(any(test, doc)))]
 mod sources;
-
-#[cfg(any(test, doc))]
-pub mod dispatcher;
-#[cfg(not(any(test, doc)))]
 mod dispatcher;
-
-#[cfg(any(test, doc))]
-pub mod handler_signals;
-#[cfg(not(any(test, doc)))]
 mod handler_signals;
-
-#[cfg(any(test, doc))]
-pub mod handler_stdin;
-#[cfg(not(any(test, doc)))]
-mod handler_stdin;
-
-#[cfg(any(test, doc))]
-pub mod handler_software_interrupt;
-#[cfg(not(any(test, doc)))]
 mod handler_software_interrupt;
 
-// Re-export public API.
+// Re-export.
 pub use handler_stdin::*;
 pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;

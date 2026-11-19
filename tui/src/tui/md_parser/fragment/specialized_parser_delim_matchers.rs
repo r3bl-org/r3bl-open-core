@@ -5,10 +5,11 @@
 //! [`crate::parse_fragment_plain_text_no_new_line()`].
 //!
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
-//! tests in [`crate::parse_fragments_in_a_line`].
+//! tests in [`parse_fragments_in_a_line`].
+//!
+//! [`parse_fragments_in_a_line`]: mod@super::parse_fragments_in_a_line
 
-use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_green, fg_red,
-            md_parser::md_parser_constants::NEW_LINE,
+use crate::{DEBUG_MD_PARSER_STDOUT, NEW_LINE, fg_blue, fg_green, fg_red,
             take_text_between_delims_err_on_new_line};
 use nom::{IResult, Parser, bytes::complete::tag, combinator::recognize, multi::many1};
 

@@ -19,7 +19,7 @@ use crate::cargo_rustdoc_fmt::constants::{BACKTICK_BYTE, BACKTICK_CHAR,
 /// - Compound term `` "[`CSI` spec]" `` → `[`[`CSI`]` spec]`
 ///
 /// [`CSI` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
-/// [`CSI`]: crate::CsiSequence
+/// [`CSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
 pub(super) fn linked_form(term: &str) -> String {
     if term.contains(BACKTICK_CHAR) {
         format!("{LINK_LABEL_OPEN}{term}{LINK_LABEL_CLOSE}")
@@ -75,7 +75,7 @@ pub(super) fn contains_standalone_linked_term(line: &str, term: &str) -> bool {
 /// 2. Not linked: `` [`CSI` spec] `` - upgrade to `[`[`CSI`]` spec]`
 ///
 /// [`CSI` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
-/// [`CSI`]: crate::CsiSequence
+/// [`CSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
 pub(super) fn upgrade_term_in_line(line: &str, term: &str) -> String {
     // Fast path: if the line does not contain the term substring at all, skip
     // allocations.
@@ -244,7 +244,7 @@ fn upgrade_plain_word_term_in_line(
 /// enclosing multi-backtick code spans, or existing Markdown links.
 ///
 /// [`CSI` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
-/// [`CSI`]: crate::CsiSequence
+/// [`CSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code#CSI
 fn upgrade_compound_term_in_line(line: &str, term: &str) -> String {
     let linked_pattern = format!("{LINK_LABEL_OPEN}{term}{LINK_LABEL_CLOSE}");
     let code_spans = find_inline_code_spans(line);

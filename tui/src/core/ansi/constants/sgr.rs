@@ -5,9 +5,7 @@
 //! See [constants module design] for the three-tier architecture.
 //!
 //! [`SGR`]: crate::SgrCode
-//! [constants module design]: mod@crate::constants#design
-
-use crate::define_ansi_const;
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 define_ansi_const!(@sgr_str : SGR_RESET_STR = ["0m"] =>
     "Reset (SGR 0)" : "Resets all text attributes to default. Avoids runtime format!() calls."

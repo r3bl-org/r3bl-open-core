@@ -1,11 +1,13 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Attach sources.
-pub mod custom_event_formatter;
-pub mod log_public_api;
-pub mod rolling_file_appender_impl;
-pub mod tracing_config;
-pub mod tracing_init;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod rolling_file_appender_impl; // Cross-folder rustdoc link to ROLLING_LOG_FILE_WRITER_GUARD.
+
+// Attach. Folder-local (Intra-module).
+mod tracing_init;
+mod custom_event_formatter;
+mod log_public_api;
+mod tracing_config;
 
 // Re-export.
 pub use custom_event_formatter::*;
@@ -16,4 +18,4 @@ pub use tracing_init::*;
 
 // Tests.
 #[cfg(test)]
-pub mod log_integration_tests;
+mod log_integration_tests;

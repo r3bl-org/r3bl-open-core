@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AnalyticsAction, http_client, proxy_machine_id};
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use crate::DEBUG_ANALYTICS_CLIENT;
 use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_tui::inline_string;
 
@@ -37,7 +37,7 @@ pub fn start_task_to_generate_event(proxy_user_id: String, action: AnalyticsActi
                         .await;
                 match result {
                     Ok(_) => {
-                        DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
+                        DEBUG_ANALYTICS_CLIENT.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                     message = "Successfully reported analytics event to r3bl-base.",

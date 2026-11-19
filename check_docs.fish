@@ -72,7 +72,7 @@
 # Accepts optional --timeout=SECS for builds that need time limits.
 # All other arguments pass through to `cargo doc`.
 function run_cargo_doc
-    set -lx RUSTDOCFLAGS "--extend-css $CHECK_REPO_ROOT/docs/rustdoc/custom.css"
+    set -lx RUSTDOCFLAGS "--document-private-items --extend-css $CHECK_REPO_ROOT/docs/rustdoc/custom.css"
 
     set -l timeout_secs 0
     set -l cargo_args

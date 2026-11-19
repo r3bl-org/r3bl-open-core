@@ -41,16 +41,18 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TerminalInteractiveStatus`]: crate::TerminalInteractiveStatus
 
-// Private modules (hide internal structure).
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod key_press;
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod capabilities; // Cross-folder rustdoc module link (raw_mode_unix).
+
+// Attach. Folder-local (Intra-module).
 mod backpressure_stdout;
-#[cfg(any(test, doc))]
-pub mod capabilities;
-#[cfg(not(any(test, doc)))]
-mod capabilities;
 mod enhanced_keys;
 mod input_device;
 mod input_event;
-mod key_press;
 mod modifier_keys_mask;
 mod mouse_input;
 mod output_device;
@@ -58,7 +60,7 @@ mod shared_writer;
 mod terminal_mode_controller;
 mod types;
 
-// Re-exports for flat public API.
+// Re-export.
 pub use backpressure_stdout::*;
 pub use capabilities::*;
 pub use enhanced_keys::*;
@@ -73,8 +75,7 @@ pub use terminal_mode_controller::*;
 pub use types::*;
 
 // Backend compatibility tests (Linux-only PTY tests).
-// Public for docs and tests so intra-doc links resolve.
 // DirectToAnsiInputDevice is Linux-only, so exclude on macOS and Windows across all
 // builds.
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod backend_compat_tests;
+pub(crate) mod backend_compat_tests; // Cross-folder rustdoc module links (lib.rs, spawn_controlled_in_pty).

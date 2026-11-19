@@ -47,9 +47,8 @@
 //! 3. After insertion, any remaining unused capacity is null-padded
 //! 4. When extending line capacity, new memory is initialized with `\0`
 //!
-//! The null-padding logic is especially critical in
-//! [`insert_text_at_byte_ofs`] where
-//! content shifting and capacity extension occur.
+//! The null-padding logic is especially critical in [`insert_text_at_byte_pos()`]
+//! where content shifting and capacity extension occur.
 //!
 //! # [`UTF-8`] Safety in Insertion Operations
 //!
@@ -95,9 +94,10 @@
 //! After insertion, all other modules can safely use [`from_utf8_unchecked()`] because
 //! they operate on content that was validated at this boundary.
 //!
+//! [`from_utf8_unchecked()`]: std::str::from_utf8_unchecked
 //! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`insert_empty_line()`]: ZeroCopyGapBuffer::insert_empty_line
-//! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
+//! [`insert_text_at_byte_pos()`]: ZeroCopyGapBuffer::insert_text_at_byte_pos
 //! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
@@ -105,7 +105,7 @@
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CIndex, CRow,
             CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
-            NUL, byte_offset, c_len, ok};
+            NUL, byte_offset, c_len};
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {

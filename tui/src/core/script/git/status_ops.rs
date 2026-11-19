@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{RepoStatus, ResultAndCommand, Run, command,
-            script::git::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
-                                 git_command_names::{GIT_CMD_REV_PARSE,
-                                                     GIT_CMD_STATUS, GIT_PROGRAM}}};
+use super::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
+                   git_command_names::{GIT_CMD_REV_PARSE, GIT_CMD_STATUS, GIT_PROGRAM}};
+use crate::{RepoStatus, ResultAndCommand, Run};
 
 /// Runs `git status --porcelain` and reports whether the git repo is clean or not. It is
 /// not clean if files exist that aren't committed yet, and are staged, unstaged,
@@ -50,21 +49,16 @@ pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::{git_test_fixtures::helper_setup_git_repo_with_commit,
+                       types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+                                                   GIT_CMD_CONFIG, GIT_CMD_INIT},
+                               git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
+                                                 GIT_CONFIG_USER_EMAIL,
+                                                 GIT_CONFIG_USER_NAME},
+                               test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
+                                             TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}}};
     use super::*;
-    use crate::{generate_async_isolated_process_test, ok,
-                script::git::{git_test_fixtures::helper_setup_git_repo_with_commit,
-                              types::{git_command_names::{GIT_CMD_ADD,
-                                                          GIT_CMD_COMMIT,
-                                                          GIT_CMD_CONFIG,
-                                                          GIT_CMD_INIT},
-                                      git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
-                                                        GIT_CONFIG_USER_EMAIL,
-                                                        GIT_CONFIG_USER_NAME},
-                                      test_config::{TEST_EMAIL,
-                                                    TEST_GPG_SIGN_DISABLED,
-                                                    TEST_INITIAL_COMMIT_MSG,
-                                                    TEST_USER_NAME}}},
-                try_create_temp_dir_and_cd, try_write_file, with_saved_pwd};
+    use crate::try_write_file;
 
     async fn test_try_is_working_directory_clean() -> miette::Result<()> {
         with_saved_pwd!(async {

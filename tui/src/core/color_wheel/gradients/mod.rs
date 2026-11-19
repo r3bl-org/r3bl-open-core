@@ -13,9 +13,9 @@
 //! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
-// Attach sources.
-pub mod ansi_256;
-pub mod truecolor;
+// Attach.
+mod ansi_256;
+mod truecolor;
 
 // Re-export.
 pub use ansi_256::*;

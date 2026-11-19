@@ -6,5 +6,6 @@
 
 #![rustfmt::skip]
 
+// Attach.
 #[cfg(any(all(unix, doc), test))]
-pub mod pty_spinner_test;
+mod pty_spinner_test;

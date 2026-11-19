@@ -38,11 +38,11 @@
 //! - `valid_large_inputs`: Complex nested structures
 //! - `valid_jumbo_inputs`: Real-world files and comprehensive documents
 
-pub mod invalid_inputs;
-pub mod valid_jumbo_inputs;
-pub mod valid_large_inputs;
-pub mod valid_medium_inputs;
-pub mod valid_small_inputs;
+mod invalid_inputs;
+mod valid_jumbo_inputs;
+mod valid_large_inputs;
+mod valid_medium_inputs;
+mod valid_small_inputs;
 
 // Re-export all constants for easy access.
 pub use invalid_inputs::*;

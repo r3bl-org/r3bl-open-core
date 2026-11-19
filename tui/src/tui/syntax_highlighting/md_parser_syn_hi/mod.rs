@@ -9,8 +9,8 @@
 //!    user.
 
 // Attach.
-pub mod md_parser_stylesheet;
-pub mod md_parser_syn_hi_impl;
+mod md_parser_stylesheet;
+mod md_parser_syn_hi_impl;
 
 // Re-export.
 pub use md_parser_stylesheet::*;

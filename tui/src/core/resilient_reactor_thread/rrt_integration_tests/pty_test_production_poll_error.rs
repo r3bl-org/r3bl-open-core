@@ -17,7 +17,6 @@
 //! [`StdinEvent::Error`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::channel_types::StdinEvent::Error
 
 use crate::{Continuation, PtyTestContext, PtyTestMode, RRTEvent, RRTWorker,
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::{PollerEvent,
                                                                                 StdinEvent},
                                                                 mio_poller::MioPollWorker}};
@@ -57,6 +56,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{POLL_ERROR_READY}");
     std::io::stdout().flush().expect("Failed to flush");

@@ -39,7 +39,6 @@
 //! [`try_subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::try_subscribe
 
 use crate::{CaughtPanicResult, PtyTestContext, PtyTestMode, extract_panic_message,
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::Write;
 
@@ -88,6 +87,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: tests singleton device semantics. The harness performs
 /// [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{SINGLETON_READY}");
     std::io::stdout().flush().expect("Failed to flush");

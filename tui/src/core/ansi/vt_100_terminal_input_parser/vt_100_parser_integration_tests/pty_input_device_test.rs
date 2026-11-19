@@ -108,7 +108,6 @@ use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::Write, time::Duration};
 
@@ -212,6 +211,7 @@ fn controller(context: PtyTestContext) {
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`file descriptor`]: https://manpages.debian.org/open.2
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
 fn controlled() {

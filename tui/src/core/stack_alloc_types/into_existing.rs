@@ -69,7 +69,7 @@
 //! [`fast_stringify`]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
 //! [`FastStringify`]: crate::FastStringify
 
-use crate::{CommonResult, DEFAULT_READ_BUFFER_SIZE, ok};
+use crate::{CommonResult, DEFAULT_READ_BUFFER_SIZE};
 use miette::{Context, IntoDiagnostic};
 use smallstr::SmallString;
 use smallvec::Array;
@@ -198,8 +198,6 @@ macro_rules! join_fmt {
 
 #[cfg(test)]
 mod tests_join_fmt {
-    use crate::ok;
-
     struct Foo {
         items: Vec<String>,
     }
@@ -273,8 +271,6 @@ macro_rules! join_with_index_fmt {
 
 #[cfg(test)]
 mod tests_join_with_index_fmt {
-    use crate::ok;
-
     struct Foo {
         items: Vec<String>,
     }
@@ -377,8 +373,7 @@ pub mod write_to_file {
 
 #[cfg(test)]
 mod tests_write_to_file {
-    use crate::{into_existing::write_to_file::try_write_str_to_file, ok,
-                try_create_temp_dir};
+    use crate::{try_create_temp_dir, write_to_file::try_write_str_to_file};
     use miette::IntoDiagnostic;
     use std::fs;
 
@@ -432,7 +427,7 @@ mod tests_write_to_file {
 #[cfg(test)]
 mod tests_read_from_file {
     use crate::{DEFAULT_DOCUMENT_SIZE, DocumentStorage, InlineString,
-                into_existing::read_from_file::try_read_file_path_into_inline_string,
+                read_from_file::try_read_file_path_into_inline_string,
                 try_create_temp_dir};
     use std::{fs::File, io::Write};
 

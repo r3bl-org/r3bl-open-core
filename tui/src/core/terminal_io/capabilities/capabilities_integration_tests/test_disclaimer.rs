@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{emit_stderr_redirection_disclaimer, generate_isolated_process_test};
+use crate::emit_stderr_redirection_disclaimer;
 use std::io::Write;
 
 // XMARK: Process isolated test.
@@ -50,6 +50,7 @@ fn controller(spawned_self_process_output: std::process::Output) {
 /// Controlled path: [`stderr`] is redirected, call disclaimer twice and exit. The
 /// harness performs [`std::process::exit(0)`] after this function returns.
 ///
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`stderr`]: std::io::stderr
 fn controlled() {
     // Call it twice to test idempotency.

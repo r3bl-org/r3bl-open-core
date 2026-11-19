@@ -1,16 +1,16 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`RAII`] subscription guard for the Resilient Reactor Thread (RRT) pattern. See
+//! [RAII] subscription guard for the Resilient Reactor Thread (RRT) pattern. See
 //! [`SubscriberGuard`] for details.
 //!
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use super::{BroadcastSender, InputSender, RRTEvent, RRTWorker, SubscribeError,
             ThreadLifecycleMonitor};
 use std::sync::Arc;
 use tokio::sync::broadcast::Receiver;
 
-/// An [`RAII`] guard that interrupts the dedicated thread on drop.
+/// An [RAII] guard that interrupts the dedicated thread on drop.
 ///
 /// Holding a [`SubscriberGuard`] keeps async consumers in your [`TUI`] and
 /// [`readline_async`] app subscribed to events from the dedicated thread. Dropping it
@@ -65,7 +65,6 @@ use tokio::sync::broadcast::Receiver;
 /// [`interrupt_on_drop`]: Self::interrupt_on_drop
 /// [`InterruptHandle`]: super::InterruptHandle
 /// [`mio::Poll`]: mio::Poll
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`receiver`]: Self::receiver
@@ -79,6 +78,7 @@ use tokio::sync::broadcast::Receiver;
 ///     super::ThreadLifecycleMonitor::interrupt_if_running
 /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 /// [broadcast channel]: tokio::sync::broadcast
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety

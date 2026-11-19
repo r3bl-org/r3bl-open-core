@@ -223,7 +223,6 @@ mod impl_deref_deref_mut {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inline_vec;
 
     #[test]
     fn test_use_with_choose() {

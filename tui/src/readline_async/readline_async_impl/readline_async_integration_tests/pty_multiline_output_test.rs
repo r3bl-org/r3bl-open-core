@@ -168,10 +168,10 @@
 //! [`SharedWriter`]: crate::SharedWriter
 //! [blank line test]: super::pty_shared_writer_no_blank_line_test
 
-use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS, LineStateControlSignal,
-            MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING, NarrowingCastToU16, OfsBufVT100,
-            PixelChar, PtyTestContext, PtyTestMode, SharedWriter, generate_pty_test, ok,
-            readline_async::readline_async_impl::LineState, vp_height, vp_width};
+use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS, LineState,
+            LineStateControlSignal, MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING,
+            NarrowingCastToU16, OfsBufVT100, PixelChar, PtyTestContext, PtyTestMode,
+            SharedWriter, vp_height, vp_width};
 use std::io::Write;
 
 generate_pty_test! {
@@ -337,6 +337,7 @@ fn get_line_content(buf: &OfsBufVT100, row: usize, max_cols: usize) -> String {
 /// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`SharedWriter`]: crate::SharedWriter
+/// [`std::process::exit(0)`]: std::process::exit
 /// [module docs]: self
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");

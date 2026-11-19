@@ -7,22 +7,28 @@ description: Run comprehensive Rust code quality checks including compilation, l
 
 ## When to Use
 
-- After completing significant code changes
-- Before creating commits
-- Before creating pull requests
-- When user says "check code quality", "run quality checks", "make sure code is good", etc.
+- When user explicitly invokes `/check` or says "check code quality", "run quality checks", "make sure code is good", etc.
+- Before creating commits or opening pull requests (final milestone verification)
+- After completing an entire task or major feature phase (with user confirmation)
+
+> [!IMPORTANT]
+> **Do NOT run this skill or its heavy checks (`--test`, `--clippy`, `--quick-doc`, `--full`) after minor or routine edits.**
+> For routine edits and interim review points, run ONLY fast checks (`./check.fish --check` and `./check.fish --fmt`).
+>
+> **ALWAYS pass `BypassSandbox: true` to `run_command` whenever executing `./check.fish`** (for all flags, whether run directly or inside a background subagent). Networked tests, `lychee`, `star-history`, `$HOME` fish shell state, and tmpfs/build tooling require running outside the default sandbox.
 
 ## Non-Blocking Execution via Subagents
 
 Long-running verification commands (such as `./check.fish --test`, `./check.fish --doc`, `./check.fish --quick-doc`, and `./check.fish --full`) can take multiple minutes. To keep the primary conversation responsive and unblocked:
 
-1. **Fast Synchronous Checks**: Lightweight checks like `./check.fish --check` (fast typecheck) and `./check.fish --fmt` take only a few seconds and can run directly in the conversation.
-2. **Long-Running Checks via Subagent**: Delegate time-consuming checks to a background subagent using `invoke_subagent` with `TypeName: "self", Model: "inherit"`.
-3. **Continuous Collaboration**: While the subagent runs tests or builds docs in the background, the primary agent remains completely free to converse, review diffs, answer questions, or plan next steps with the user.
+1. **Always Bypass Sandbox for `check.fish`**: Every `./check.fish` invocation via `run_command` MUST set `BypassSandbox: true`, including fast checks and commands delegated to subagents.
+2. **Fast Synchronous Checks**: Lightweight checks like `./check.fish --check` (fast typecheck) and `./check.fish --fmt` take only a few seconds and can run directly in the conversation (with `BypassSandbox: true`).
+3. **Long-Running Checks via Subagent**: Delegate time-consuming checks to a background subagent using `invoke_subagent` with `TypeName: "self", Model: "inherit"`, and instruct the subagent to run `./check.fish` with `BypassSandbox: true`.
+4. **Continuous Collaboration**: While the subagent runs tests or builds docs in the background, the primary agent remains completely free to converse, review diffs, answer questions, or plan next steps with the user.
 
 ## Quick Approach (Recommended)
 
-Run the comprehensive check script which handles everything automatically:
+Run the comprehensive check script with `BypassSandbox: true`, which handles everything automatically:
 
 ```bash
 ./check.fish --full
@@ -264,13 +270,11 @@ When performing quality checks or complex refactorings:
    modifications.
 2. **Milestone Review Pauses:** Stop and request a manual review after any meaningful 
    progress (e.g., refactoring is complete and `cargo check` passes).
-3. **Attention Signal:** Run `fish -c "beep"` when stopping for a mandatory review point 
-   to alert the user.
-4. **Validation First:** Never present broken code to the user. Always run 
+3. **Validation First:** Never present broken code to the user. Always run 
    `./check.fish --check` or `cargo check` before asking for a review.
-5. **Strict Documentation Preservation:** Maintain absolute byte-perfect integrity of 
+4. **Strict Documentation Preservation:** Maintain absolute byte-perfect integrity of 
    surrounding documentation when performing surgical edits.
-6. **Mandatory Manual Review:** Follow the file-by-file `codium-insider` review 
+5. **Mandatory Manual Review:** Follow the file-by-file `codium-insider` review 
    workflow described in the "Final Step" section above for all modified files.
 
 ## Optional Performance Analysis

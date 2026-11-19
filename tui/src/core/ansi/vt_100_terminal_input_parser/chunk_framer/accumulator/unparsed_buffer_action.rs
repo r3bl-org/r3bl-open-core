@@ -39,7 +39,7 @@ use crate::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_OSC_CLOSE_BRACKET, ANSI_SS3_O,
 ///
 /// [`ChunkAccumulator`]: super::ChunkAccumulator
 /// [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::ChunkFramer
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`try_decode_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::try_decode_input_event
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnparsedBufferAction {
@@ -58,7 +58,7 @@ pub enum UnparsedBufferAction {
     /// The framer purges the accumulator immediately to prevent stream lockup.
     ///
     /// [`CSI`]: crate::CsiSequence
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
     PurgeMalformed,
 
@@ -69,7 +69,7 @@ pub enum UnparsedBufferAction {
     /// streaming drain mode to swallow the remainder without allocations.
     ///
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     TripCircuitBreaker,
 }
 
@@ -94,7 +94,7 @@ impl UnparsedBufferAction {
     /// [`CSI_FINAL_BYTE_MIN`]: crate::CSI_FINAL_BYTE_MIN
     /// [`CSI`]: crate::CsiSequence
     /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: MAX_ESCAPE_SEQUENCE_LENGTH
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscScanResult::scan()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner::OscScanResult::scan
     /// [`SS3_SEQ_LEN`]: crate::SS3_SEQ_LEN
     /// [`SS3`]: https://en.wikipedia.org/wiki/ANSI_escape_code#SS3
@@ -129,7 +129,7 @@ impl UnparsedBufferAction {
 
     /// Evaluates an [`OSC`] sequence by delegating to [`OscScanResult::scan()`].
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`OscScanResult::scan()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::osc_scanner::OscScanResult::scan
     #[must_use]
     fn determine_osc_action(unparsed_bytes: &[u8]) -> Self {

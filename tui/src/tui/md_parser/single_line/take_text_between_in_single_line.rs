@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_MD_PARSER_STDOUT, fg_green, fg_red,
-            md_parser::md_parser_constants::NEW_LINE};
+use crate::{DEBUG_MD_PARSER_STDOUT, NEW_LINE, fg_green, fg_red};
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_until},
           combinator::map,
@@ -71,7 +70,6 @@ fn take_text_between<'input>(
 #[cfg(test)]
 mod tests_parse_take_between {
     use super::*;
-    use crate::assert_eq2;
     use nom::{Err as NomErr, error::Error};
 
     #[test]

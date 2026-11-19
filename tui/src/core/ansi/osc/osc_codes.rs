@@ -53,24 +53,21 @@
 //! [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
 
 use super::osc_color::try_parse_color_spec;
-use crate::{OSC_PREFIX, Pc, TerminalColorReport, TerminalColorRole,
-            core::{ansi::constants::{ANSI_BEL, ANSI_ESC, ANSI_ST_FINAL,
-                                     CLIPBOARD_TARGET_CLIPBOARD_CHAR,
-                                     CLIPBOARD_TARGET_PRIMARY_CHAR,
-                                     OSC_CODE_CLIPBOARD, OSC_CODE_HYPERLINK,
-                                     OSC_CODE_ICON, OSC_CODE_PROGRESS, OSC_CODE_TITLE,
-                                     OSC_CODE_TITLE_AND_ICON,
-                                     OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR,
-                                     OSC_COLOR_SPEC_RGB_PREFIX, OSC_DELIMITER,
-                                     OSC_HYPERLINK_END, OSC_PROGRESS_END,
-                                     OSC_PROGRESS_PERCENT_CLEAR,
-                                     OSC_PROGRESS_STATE_CLEAR,
-                                     OSC_PROGRESS_STATE_UPDATE,
-                                     OSC_PROGRESS_SUBCOMMAND, OSC_QUERY,
-                                     OSC_QUERY_STR, OSC_START, OSC_TERMINATOR_BEL,
-                                     OSC_TERMINATOR_ST, OSC_TITLE_END},
-                   common::fast_stringify::{BufTextStorage, FastStringify}},
-            generate_impl_display_for_fast_stringify, ok};
+use crate::{BufTextStorage, FastStringify, HexSlice, OSC_PREFIX, Pc, TerminalColorReport,
+            TerminalColorRole,
+            core::ansi::constants::{ANSI_BEL, ANSI_ESC, ANSI_ST_FINAL,
+                                    CLIPBOARD_TARGET_CLIPBOARD_CHAR,
+                                    CLIPBOARD_TARGET_PRIMARY_CHAR, OSC_CODE_CLIPBOARD,
+                                    OSC_CODE_HYPERLINK, OSC_CODE_ICON, OSC_CODE_PROGRESS,
+                                    OSC_CODE_TITLE, OSC_CODE_TITLE_AND_ICON,
+                                    OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR,
+                                    OSC_COLOR_SPEC_RGB_PREFIX, OSC_DELIMITER,
+                                    OSC_HYPERLINK_END, OSC_PROGRESS_END,
+                                    OSC_PROGRESS_PERCENT_CLEAR, OSC_PROGRESS_STATE_CLEAR,
+                                    OSC_PROGRESS_STATE_UPDATE, OSC_PROGRESS_SUBCOMMAND,
+                                    OSC_QUERY, OSC_QUERY_STR, OSC_START,
+                                    OSC_TERMINATOR_BEL, OSC_TERMINATOR_ST,
+                                    OSC_TITLE_END}};
 use base64::prelude::*;
 use std::{fmt::{self, Write as _},
           str::FromStr};
@@ -303,15 +300,20 @@ impl FastStringify for OscSequence {
             OscSequence::ColorReport(report) => {
                 acc.push_str(report.role.as_str());
                 acc.push(OSC_DELIMITER);
-                let r = report.color.red;
-                let g = report.color.green;
-                let b = report.color.blue;
-                let prefix = OSC_COLOR_SPEC_RGB_PREFIX;
-                let sep = OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR;
-                let _ = write!(
-                    acc,
-                    "{prefix}{r:02x}{r:02x}{sep}{g:02x}{g:02x}{sep}{b:02x}{b:02x}"
-                );
+                acc.push_str(OSC_COLOR_SPEC_RGB_PREFIX);
+                let channels = [report.color.red, report.color.green, report.color.blue];
+                for (idx, byte) in channels.into_iter().enumerate() {
+                    if idx > 0 {
+                        acc.push(OSC_COLOR_SPEC_CHANNEL_SEPARATOR_CHAR);
+                    }
+                    let (hi, lo) = HexSlice::encode_byte(byte);
+                    let ch_hi = char::from(hi);
+                    let ch_lo = char::from(lo);
+                    acc.push(ch_hi);
+                    acc.push(ch_lo);
+                    acc.push(ch_hi);
+                    acc.push(ch_lo);
+                }
                 OSC_TERMINATOR_ST
             }
         };
@@ -364,7 +366,7 @@ impl ClipboardTarget {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{core::ansi::constants::*, pc};
+    use crate::core::ansi::constants::*;
     use crate::{RgbValue,
                 core::ansi::vt_100_terminal_input_parser::{
                     chunk_decoder::terminal_events::osc::parse_osc_response,
@@ -543,7 +545,7 @@ mod tests {
 
     /// Test helper to format an [`OSC`] color query sequence with a specific terminator.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     fn generate_color_query_sequence(
         role: TerminalColorRole,
         terminator: &str,

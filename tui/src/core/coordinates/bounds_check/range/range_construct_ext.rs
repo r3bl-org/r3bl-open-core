@@ -134,7 +134,7 @@ pub type RangeExclusive<Idx> = Range<Idx>;
 /// [`CHeight`]: crate::CHeight
 /// [`CRow`]: crate::CRow
 /// [`CWidth`]: crate::CWidth
-/// [`Interval Notation`]: mod@crate::bounds_check#interval-notation
+/// [`Interval Notation`]: mod@crate::core::coordinates::bounds_check#interval-notation
 /// [`Range`]: std::ops::Range
 /// [`std`]: std
 /// [`VPCol`]: crate::VPCol
@@ -227,7 +227,7 @@ pub trait RangeConstructExt {
     fn to_inclusive_range(&self) -> Option<RangeInclusive<Self::IndexType>>;
 }
 
-/// Macro to implement [`RangeConstructExt`] for coordinate `(`[`Index`]`, `[`Length`]`)`
+/// Macro to implement [`RangeConstructExt`] for coordinate `(`[`IndexOps`]`, `[`LengthOps`]`)`
 /// pairs.
 ///
 /// # Rationale: Declarative Macro vs. Generic Blanket Impl
@@ -258,10 +258,10 @@ pub trait RangeConstructExt {
 /// [`CCol`]: crate::CCol
 /// [`CRow`]: crate::CRow
 /// [`decorator pattern`]:
-///     mod@crate::core::canvas#design-decision-decorator-vs-newtype-pattern-rationale
+///     mod@crate::core::coordinates::canvas#design-decision-decorator-vs-newtype-pattern-rationale
 /// [`Deref`]: std::ops::Deref
-/// [`Index`]: crate::Index
-/// [`Length`]: crate::Length
+/// [`IndexOps`]: crate::IndexOps
+/// [`LengthOps`]: crate::LengthOps
 /// [`NumericValue`]: crate::NumericValue
 /// [`saturating_add`]: usize::saturating_add
 /// [`saturating_sub`]: usize::saturating_sub

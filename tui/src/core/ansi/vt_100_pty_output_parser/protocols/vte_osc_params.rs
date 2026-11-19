@@ -46,8 +46,8 @@
 //! assert_eq!(args.next_str(), None);
 //! ```
 //!
-//! [`CSI`]: crate::core::ansi::vt_100_pty_output_parser::protocols::CsiSequence
-//! [`OSC`]: crate::core::ansi::osc::OscSequence
+//! [`CSI`]: crate::CsiSequence
+//! [`OSC`]: crate::OscSequence
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VTE`]: mod@vte

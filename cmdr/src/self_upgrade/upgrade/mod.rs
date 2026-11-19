@@ -1,0 +1,31 @@
+// Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+#![rustfmt::skip]
+
+// Private submodules.
+mod perform_upgrade;
+mod bin_name;
+mod build;
+mod download;
+mod feedback_device;
+mod prompt;
+mod release_asset;
+mod release_target;
+mod sha256_digest;
+mod swap;
+mod ui_strings;
+mod upgrade_source;
+
+// Public barrel re-exports.
+pub use perform_upgrade::*;
+pub use bin_name::*;
+pub use build::*;
+pub use download::*;
+pub use feedback_device::*;
+pub use prompt::*;
+pub use release_asset::*;
+pub use release_target::*;
+pub use sha256_digest::*;
+pub use swap::*;
+pub use ui_strings::*;
+pub use upgrade_source::*;

@@ -41,8 +41,7 @@
 
 use crate::{BufTextStorage, ESC_INDEX_DOWN_STR, ESC_RESET_TERMINAL_STR,
             ESC_RESTORE_CURSOR_STR, ESC_REVERSE_INDEX_STR, ESC_SAVE_CURSOR_STR,
-            ESC_SELECT_ASCII_STR, ESC_SELECT_DEC_GRAPHICS_STR, FastStringify,
-            generate_impl_display_for_fast_stringify, ok};
+            ESC_SELECT_ASCII_STR, ESC_SELECT_DEC_GRAPHICS_STR, FastStringify};
 use std::fmt;
 
 /// Builder for [`ESC`] ([`ESC` spec]) sequences.
@@ -106,6 +105,7 @@ generate_impl_display_for_fast_stringify!(EscSequence);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HashSet;
 
     #[test]
     fn test_esc_save_cursor() {
@@ -215,7 +215,7 @@ mod tests {
             EscSequence::SelectDECGraphics,
         ];
 
-        let mut outputs = rustc_hash::FxHashSet::default();
+        let mut outputs = HashSet::default();
 
         for sequence in &sequences {
             let output = sequence.to_string();

@@ -100,7 +100,7 @@
 //! # Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, core::pty_mux::PTYMux, ok};
+//! use r3bl_tui::{TuiAvailability, IntoErr, PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
@@ -133,13 +133,13 @@
 //! [`core::ansi`]: mod@crate::core::ansi
 //! [`growable_buffer.rs`]: crate::tui::GrowableBuffer
 //! [`GrowableBuffer`]: crate::tui::GrowableBuffer
-//! [`mod.rs`]: mod@crate::pty_mux
+//! [`mod.rs`]: mod@crate::core::pty::pty_mux
 //! [`OfsBuf`]: crate::tui::OfsBuf
 //! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`PTY Session`]: crate::PtySession
-//! [`pty_mux`]: mod@crate::pty_mux
+//! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
@@ -151,19 +151,16 @@
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
 //! [Canvas and Viewport concept]: mod@crate::core::coordinates::canvas#canvas-and-viewport-concept
 
-// Attach.
+// Private modules (hide internal structure).
 mod adaptive_render_budget;
 mod constants;
-#[cfg(any(test, doc))]
-pub mod input_router;
-#[cfg(not(any(test, doc)))]
 mod input_router;
 mod mux;
 mod output_renderer;
 mod process_manager;
 mod scrollback_amount;
 
-// Public re-exports (flat API)
+// Public re-exports (flat API).
 pub use adaptive_render_budget::*;
 pub use constants::*;
 pub use input_router::*;

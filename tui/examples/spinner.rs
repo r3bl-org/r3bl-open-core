@@ -1,12 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CommonResult, IntoErr, OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR,
-               SpinnerColor, SpinnerStyle, SpinnerTemplate, TuiAvailability,
-               assert_terminal_is_interactive, ok,
+use r3bl_tui::{ARTIFICIAL_UI_DELAY, CommonResult, DELAY_MS, DELAY_UNIT, IntoErr,
+               OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor, SpinnerStyle,
+               SpinnerTemplate, TuiAvailability, assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
-               set_mimalloc_in_main,
-               spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
-               underline};
+               set_mimalloc_in_main, underline};
 use std::{io::Write, time::Duration};
 use tokio::{spawn,
             task::JoinError,

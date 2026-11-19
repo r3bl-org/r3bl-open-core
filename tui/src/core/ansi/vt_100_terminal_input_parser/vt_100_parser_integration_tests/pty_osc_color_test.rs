@@ -112,7 +112,6 @@ use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::Write, time::Duration};
 
@@ -234,6 +233,7 @@ fn controller(context: PtyTestContext) {
 /// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
 /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
 fn controlled() {

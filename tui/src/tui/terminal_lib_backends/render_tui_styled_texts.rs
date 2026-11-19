@@ -20,8 +20,7 @@ pub fn render_tui_styled_texts_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, TuiStylesheet, ZOrder, assert_eq2, console_log,
-                render_pipeline, throws};
+    use crate::{CommonResult, TuiStylesheet, ZOrder};
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult {
@@ -43,8 +42,6 @@ mod tests {
 
     mod test_helper {
         use super::*;
-        use crate::{new_style, throws_with_return, tui_color, tui_styled_text,
-                    tui_styled_texts, tui_stylesheet};
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({

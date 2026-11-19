@@ -115,7 +115,7 @@ pub fn get_gradient_array_for(
 #[cfg(test)]
 mod ansi_256_gradients_test {
     use super::*;
-    use crate::{LossyConvertToByte, assert_eq2};
+    use crate::LossyConvertToByte;
 
     #[test]
     fn test_all() {

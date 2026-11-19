@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::seg_length::{SegLength, seg_length};
-use crate::{ChUnit, IndexOps, VPIndex, generate_index_type_impl};
+use crate::{ChUnit, IndexOps, VPIndex};
 use std::fmt::{Display, Formatter};
 
 /// Represents a [`grapheme`] segment index inside of [`crate::GCStringOwned`].

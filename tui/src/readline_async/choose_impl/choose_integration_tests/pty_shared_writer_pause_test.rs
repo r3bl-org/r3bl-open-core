@@ -28,7 +28,7 @@
 use crate::{ChannelCapacity, Header, InputDevice, MSG_CONTROLLED_READY, MSG_LINE_PREFIX,
             MSG_SUCCESS, ModalTerminalGuard, OutputDevice, PtyTestContext, PtyTestMode,
             Readline, TuiAvailabilityChooseExt, choose, generate_keyboard_sequence,
-            generate_pty_test, vp_height, vp_width,
+            vp_height, vp_width,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
 use std::io::Write;
@@ -112,6 +112,7 @@ fn controller(context: PtyTestContext) {
 /// [`choose()`]: crate::choose
 /// [`LineStateControlSignal`]: crate::LineStateControlSignal
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`stdout`]: std::io::stdout
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");

@@ -105,14 +105,15 @@
 //! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 //! [Issue #963]: https://github.com/crossterm-rs/crossterm/issues/963
 
-pub mod osc_codes;
+// Attach.
+mod osc_codes;
 mod osc_color;
-pub mod osc_hyperlink;
-pub mod osc_pty_event;
-pub mod osc_sender;
-pub mod pty_osc_progress_scanner;
+mod osc_hyperlink;
+mod osc_pty_event;
+mod osc_sender;
+mod pty_osc_progress_scanner;
 
-// Re-export main types and functions for convenience.
+// Re-export.
 pub use osc_codes::*;
 pub use osc_color::*;
 pub use osc_hyperlink::*;

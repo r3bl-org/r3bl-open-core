@@ -4,11 +4,11 @@
 //!
 //! [`ChunkFramer`]: super::ChunkFramer
 
-pub mod test_fixtures;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod osc_and_unrecognized_tests; // Cross-folder backend_compat link.
 
-pub mod basic_and_special_keys_tests;
-pub mod esc_and_chunked_tests;
-pub mod osc_and_unrecognized_tests;
-pub mod utf8_tests;
-
-pub use test_fixtures::*;
+// Attach. Folder-local (Intra-module).
+mod basic_and_special_keys_tests;
+mod esc_and_chunked_tests;
+mod test_fixtures;
+mod utf8_tests;

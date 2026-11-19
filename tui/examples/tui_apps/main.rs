@@ -18,9 +18,9 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, IntoErr, TuiAvailability,
-               VPSize, assert_terminal_is_interactive, fg_color, fg_frozen_blue,
-               fg_pink, fg_slate_gray, get_size, inline_string,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI, IntoErr, TuiAvailability, VPSize,
+               assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
+               fg_slate_gray, get_size, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -46,12 +46,12 @@ async fn main_impl() -> CommonResult {
     assert_terminal_is_interactive();
 
     let args: Vec<String> = std::env::args().collect();
-    let no_log_arg_passed = args.contains(&"--no-log".to_string());
+    let no_log_arg_passed = args.iter().any(|it| it == "--no-log");
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     let _log_guard = if no_log_arg_passed {
         try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok()
-    } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
+    } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI {
         try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok()
     } else {
         None

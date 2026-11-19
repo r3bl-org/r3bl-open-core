@@ -21,7 +21,7 @@
 
 use crate::{ChannelCapacity, InputDevice, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
             MSG_SUCCESS, OutputDevice, PtyTestContext, PtyTestMode, Readline,
-            generate_pty_test, vp_height, vp_width};
+            vp_height, vp_width};
 use std::io::Write;
 use tokio::{sync::broadcast, time::Duration};
 
@@ -105,6 +105,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {

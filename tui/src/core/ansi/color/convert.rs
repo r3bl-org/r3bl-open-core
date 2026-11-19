@@ -297,7 +297,7 @@ mod convert_between_rgb_and_u32 {
     }
 }
 
-pub mod ansi_constants {
+pub(super) mod ansi_constants {
     /// Lookup table for approximate shades of gray.
     pub static ANSI256_FROM_GRAY: [u8; 256] = [
         16, 16, 16, 16, 16, 232, 232, 232, 232, 232, 232, 232, 232, 232, 233, 233, 233,

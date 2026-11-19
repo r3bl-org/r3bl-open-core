@@ -9,13 +9,17 @@ scenarios.
 
 When deciding between local intra-doc links vs external URLs, follow this priority order:
 
-| Priority | Source Type                | Link Style    | Example                                          |
-| -------- | -------------------------- | ------------- | ------------------------------------------------ |
-| 1        | Code in this monorepo      | Local path    | `[`Foo`]: crate::module::Foo`                    |
-| 2        | Dependency in Cargo.toml   | Crate path    | `[`mio`]: mio`                                   |
-| 3        | OS/CS/hardware terminology | External URL  | `[`epoll`]: https://manpages.debian.org/epoll.7` |
-| 4        | Pedagogical/domain terms   | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
-| 5        | Non-dependency crates      | docs.rs URL   | `[`some_crate`]: https://docs.rs/some_crate`     |
+| Priority | Source Type                                     | Link Style    | Example                                          |
+| -------- | ----------------------------------------------- | ------------- | ------------------------------------------------ |
+| 1        | Code in this monorepo                           | Local path    | `[`Foo`]: crate::module::Foo`                    |
+| 2        | `[dependencies]` in Cargo.toml                  | Crate path    | `[`mio`]: mio`                                   |
+| 3        | OS/CS/hardware terminology                      | External URL  | `[`epoll`]: https://manpages.debian.org/epoll.7` |
+| 4        | Pedagogical/domain terms                        | Wikipedia URL | `[design pattern]: https://en.wikipedia.org/...` |
+| 5        | Non-dependency or `[dev-dependencies]` crates\* | docs.rs URL   | `[`mockito`]: https://docs.rs/mockito`           |
+
+\*Cargo does not link `[dev-dependencies]` during `cargo doc`, so crate-path intra-doc
+links to `[dev-dependencies]` fail with broken-link warnings; use
+`https://docs.rs/<crate>` instead.
 
 **Key principle:** If it's in your Cargo.toml, use local links. This enables:
 
@@ -39,10 +43,14 @@ When deciding between local intra-doc links vs external URLs, follow this priori
 //! [Actor]: https://en.wikipedia.org/wiki/Actor_model
 ```
 
-> [!IMPORTANT]
-> **Link Checker Safety (`lychee`)**:
-> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g. `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or drops connections for link checkers).
-> - **GNU tools & utilities**: Always link to Wikipedia (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker traffic).
+> [!IMPORTANT] **Link Checker Safety (`lychee`)**:
+>
+> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g.
+>   `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or
+>   drops connections for link checkers).
+> - **GNU tools & utilities**: Always link to Wikipedia
+>   (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker
+>   traffic).
 
 > **Note:** This rubric is also in `SKILL.md`. The redundancy is intentional -prioritizing
 > reliable application over efficiency. SKILL.md content loads when the skill triggers
@@ -150,20 +158,58 @@ incorrectly.
 
 ---
 
-## Pattern 4: Links to Private Types (Conditional Visibility)
+## Pattern 4: Links to Private Types and Crate-Internal Modules
 
-### Step 1: Make Module Conditionally Public
+Workspace doc builds enable `--document-private-items` across `.cargo/config.toml`
+(`[build] rustdocflags`), `check_docs.fish` (`RUSTDOCFLAGS`), and crate `Cargo.toml`
+(`[package.metadata.docs.rs]`), paired with
+`[workspace.lints.rustdoc] private_intra_doc_links = "allow"` in the root `Cargo.toml`.
+
+Because private items and modules are documented directly, **parent-to-child** links
+(`mod.rs` to child), **sibling-to-sibling** links (same folder), and
+**descendant-to-ancestor-sibling** links resolve with plain **`mod`** without dual-arm
+`#[cfg(any(test, doc))]` shims. However, `--document-private-items` controls **page
+generation** and `private_intra_doc_links = "allow"` only suppresses the public-to-private
+warning; `rustdoc` still enforces `rustc`'s module privacy rules when resolving a path
+from outside the module's folder:
 
 ```rust
-// mod.rs
+pub mod a {
+    mod secret {}            // ❌ `mod@crate::a::secret` from cousin `b` fails (`no item named secret in module a`)
+    pub(crate) mod shared {} // ✅ `mod@crate::a::shared` from cousin `b` resolves; still hidden outside crate
+}
 
-// Make internal_module public only for docs and tests
-#[cfg(any(test, doc))]
-pub mod internal_module;
-#[cfg(not(any(test, doc)))]
-mod internal_module;
+/// Links to [`a::shared`].
+///
+/// [`a::shared`]: mod@crate::a::shared
+pub mod b {}
+```
 
-// Re-export items for public API
+Keep submodules as **Folder-local (Intra-module)** (`mod`) whenever only their parent
+`mod.rs` or siblings in the same folder reference them. Upgrade to **Crate-wide
+(Intra-crate)** (`pub(crate) mod`) with a 1-line inline reason comment **only** for the
+two cases where `rustdoc` / `rustc` cross-folder privacy blocks path resolution (and
+reserve **Public (Inter-crate)** `pub mod` strictly for domain hubs or non-globbed API
+namespaces):
+
+- **Cousin-to-cousin** links (`folder_y` linking to `mod@crate::folder_x::sub`).
+- **Ancestor-to-grandchild** links (`lib.rs` or `grandparent/mod.rs` linking down into
+  `mod@crate::grandparent::parent::child`, because parents cannot see children's private
+  `mod`).
+
+### Step 1: Use `Folder-local` (`mod`) or `Crate-wide` (`pub(crate) mod`)
+
+```rust
+// mod.rs (mixed-tier coordinator ordered wide-to-narrow)
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod internal_module; // Cross-folder rustdoc module link (other_domain).
+
+// Attach. Folder-local (Intra-module).
+mod debug;
+
+// Re-export.
+pub use debug::*;
 pub use internal_module::*;
 ```
 
@@ -179,11 +225,11 @@ pub use internal_module::*;
 
 ```rust
 // lib.rs or mod.rs
-#[cfg(any(test, doc))]
-pub mod vt_100_ansi_parser;
-#[cfg(not(any(test, doc)))]
-mod vt_100_ansi_parser;
 
+// Attach.
+pub(crate) mod vt_100_ansi_parser; // Cross-folder rustdoc module link (TerminalState).
+
+// Re-export.
 pub use vt_100_ansi_parser::*;
 
 /// Terminal state manager.
@@ -196,47 +242,53 @@ pub struct TerminalState {
 }
 ```
 
-### Simpler Alternative: Just Make It `pub`
+### Items Inside a Module: `pub(crate)` vs Barrel Re-Export
 
-The conditional visibility pattern above is for **modules**. For **functions, structs, and
-other items** inside a private module, there's a simpler approach: just make the item
-`pub`.
+For **functions, structs, and other items** inside a module, keep visibility as tight as
+possible:
 
-This is safe because of our **private modules with public re-exports** (barrel export)
-pattern. An item being `pub` inside its containing module doesn't mean it escapes into the
-wild - `mod.rs` is the gatekeeper. The `pub use` re-exports in `mod.rs` explicitly control
-which symbols are visible to other modules, docs, and tests.
+- **Crate-internal only**: Keep items private (for links inside the same folder hierarchy)
+  or mark them `pub(crate)` (for links from cousin/ancestor modules via `pub(crate) mod`).
+  With `--document-private-items` and `private_intra_doc_links = "allow"`, intra-doc links
+  resolve without widening visibility to `pub`.
+- **Part of the public API**: Mark items `pub` inside a `mod` or `pub(crate) mod` and
+  expose them through `pub use submodule::*;` in `mod.rs` (the barrel export gatekeeper),
+  so un-re-exported `pub` items inside internal modules never leak into the crate's public
+  API.
 
 ```rust
-// rrt.rs - internal function, safe to be pub
+// rrt.rs: internal function, safe to keep pub(crate).
 /// Runs the worker's poll loop until it returns [`Continuation::Stop`].
-pub fn run_worker_loop<W, E>(...) { ... }
-
-// mod.rs - re-exports control actual visibility
-pub use rrt::*;  // run_worker_loop is now linkable in docs
+pub(crate) fn run_worker_loop<W, E>(...) { ... }
 ```
 
-Now intra-doc links resolve:
+Intra-doc links resolve without re-exporting `run_worker_loop` in `mod.rs`:
 
 ```rust
-//! Resources are cleaned up via [`RAII`] when [`run_worker_loop()`] returns.
+//! Resources are cleaned up via [RAII] when [`run_worker_loop()`] returns.
 //!
 //! [`run_worker_loop()`]: run_worker_loop
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 **When to use which approach:**
 
-| Situation                          | Approach                                                   |
-| :--------------------------------- | :--------------------------------------------------------- |
-| Private **module** needs doc links | Conditional visibility (`#[cfg(any(test, doc))]`)          |
-| Private **item** inside a module   | Just make it `pub` - `mod.rs` re-exports are the real gate |
+| Situation | Approach |
+| :--- | :--- |
+| Same-folder **module** (parent/sibling links only) | **Folder-local (Intra-module)**: `mod` (documented automatically) |
+| Cross-folder **module** (cousin or ancestor-to-grandchild link) | **Crate-wide (Intra-crate)**: `pub(crate) mod // <reason>.` (no dual-arm shims) |
+| Intentional API domain hub or explicit namespace | **Public (Inter-crate)**: `pub mod` (never glob-re-exported) |
+| Internal **item** linked across modules | Private or `pub(crate)` (no need to make `pub` just for docs) |
+| **Test-only** module linked in docs | Single-arm `#[cfg(any(test, doc))] pub(crate) mod ...; // <reason>.` |
 
 ---
 
 ## Pattern 5: Links to Test Functions
 
 ### Step 1: Make Test Function Visible to Docs
+
+Use `#[cfg_attr(not(doc), test)]` (or `#[cfg_attr(not(doc), tokio::test)]` for async
+tests) so `cargo doc` sees a regular function item while `cargo test` still executes it:
 
 ```rust
 /// Ground truth validation for terminal parsing.
@@ -249,14 +301,18 @@ pub async fn test_terminal_parsing() -> Result<()> {
 }
 ```
 
-### Step 2: Module Must Be Conditionally Public
+### Step 2: Include Test-Only Module in the Doc AST
+
+Single-arm `#[cfg(any(test, doc))]` remains required on **test-only modules** because
+`--document-private-items` does not enable `cfg(test)`. Without `doc` in the guard,
+rustdoc omits the module from the AST and links to test functions fail; with
+`pub(crate) mod`, sibling modules and docs across the crate can reference it while keeping
+the module out of release binaries and the public API:
 
 ```rust
 // mod.rs
 #[cfg(any(test, doc))]
-pub mod tests;
-#[cfg(not(any(test, doc)))]
-mod tests;
+pub(crate) mod tests;
 ```
 
 ### Step 3: Link to Test Function
@@ -648,6 +704,48 @@ to enter an infinite loop during documentation generation.
 **Best Practice:** When linking to a section in another module, always use the full
 `crate::` path.
 
+### Keeping Link Definitions Under 90 Chars with Explicit Short Labels
+
+When a shorthand link reference definition (``[`SomeLongType::some_method`]: crate::...``)
+exceeds **90 characters** (including the `/// ` or `//! ` prefix, matching
+`comment_width = 90` in `rustfmt.toml`), introduce an **explicit short reference label**
+(``[`DisplayText`][short-alias]``) so the definition fits cleanly on a single line instead
+of wrapping onto two lines.
+
+#### ❌ Bad: Shorthand definition exceeds 90 chars and wraps onto 2 lines
+
+```rust
+//! Covers [`DeferredUpgradeOutcome::handle_upgrade_on_exit`],
+//! [`CrateDistribution::ClosedSource`], and [`UpgradeResolution::UpgradeFailed`].
+//!
+//! [`CrateDistribution::ClosedSource`]:
+//!     crate::self_upgrade::CrateDistribution::ClosedSource
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]:
+//!     crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+//! [`UpgradeResolution::UpgradeFailed`]:
+//!     crate::self_upgrade::UpgradeResolution::UpgradeFailed
+```
+
+#### ✅ Good: Explicit short labels keep every definition on one line (<= 90 chars)
+
+```rust
+//! Covers [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][on-exit],
+//! [`CrateDistribution::ClosedSource`][cs], and
+//! [`UpgradeResolution::UpgradeFailed`][failed].
+//!
+//! [cs]: crate::self_upgrade::CrateDistribution::ClosedSource
+//! [failed]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [on-exit]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+```
+
+Pick short, meaningful kebab-case labels (for example, `[cs]`, `[failed]`, `[latch]`,
+`[non-tty]`, `[notify]`, `[on-exit]`, `[panicked]`, `[prompt]`, `[rustup]` as in
+`cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`).
+
+> **Note:** If the target path *by itself* still exceeds 90 chars even with a short label
+> (most common with long `#fragment-anchor` links), use the `#[allow(unused_imports)]`
+> workaround below to shorten the path.
+
 ### ⚠️ Rustfmt Comment-Wrapping Bug with Fragment Anchor Links
 
 When `wrap_comments = true` is configured in `rustfmt.toml` (with a specific
@@ -839,6 +937,50 @@ trait, the link breaks silently (same caveat as heading anchors).
 
 ---
 
+## Pattern 17: Linking to Declarative Macros
+
+Shared and documented `macro_rules!` macros carry `#[macro_export]` (so `rustdoc`
+generates `macro.<name>.html`) and propagate internally via `#[macro_use]` from a private
+`<domain>_macros` module. How you link to them depends on where the doc comment sits
+relative to `#[macro_use]`:
+
+### Inside Consumer Files / Below `#[macro_use]` (Bare Link)
+
+For item docs (`///`) in sibling or descendant modules below `#[macro_use]`, write the
+backticked macro link directly **without** a link reference definition:
+
+```rust
+/// Uses [`define_ansi_const!`] to build sequences at compile time.
+pub const ESC_STR: &str = "\x1b";
+```
+
+**Why:** `#[macro_use]` puts `define_ansi_const!` into lexical scope, and
+`#[macro_export]` makes its target public at crate root, so `rustdoc` resolves it
+automatically. Do **not** add `crate::define_ansi_const` when `#[macro_use]` already
+imports it.
+
+### In Module Docs Above `#[macro_use]` (Explicit `crate::` Ref)
+
+For module-level `//!` docs at the top of the coordinator `mod.rs` (before
+`#[macro_use] mod <domain>_macros;`), add a crate-root link definition at the bottom of
+the `//!` block:
+
+```rust
+//! Overview of [`define_ansi_const!`] sequences.
+//!
+//! [`define_ansi_const!`]: crate::define_ansi_const
+
+#[macro_use]
+mod ansi_const_macros;
+```
+
+**Why:** `//!` module docs sit textually above `#[macro_use] mod ...;`, so the macro is
+not in textual scope at that point in the file. (Do **not** write ``[`crate::my_macro!`]``
+in prose, and intra-doc link definitions never trigger
+`macro_expanded_macro_exports_accessed_by_absolute_paths`.)
+
+---
+
 ## Checklist for Perfect Intra-doc Links
 
 When fixing links, ensure:
@@ -846,10 +988,12 @@ When fixing links, ensure:
 - [ ] All symbols in backticks are links: `` `Symbol` `` → ``[`Symbol`]``
 - [ ] All links use reference-style, not inline
 - [ ] All link definitions are at the bottom of the comment block
+- [ ] Link definitions > 90 chars use short explicit labels (``[`LongSymbol`][alias]`` → `[alias]: crate::...`) so each stays on one line
 - [ ] Methods and functions include parentheses: `fn()`
 - [ ] Field links use `field@` prefix for compiler-checked references
 - [ ] Module links use `mod@` prefix when ambiguous
-- [ ] Private types are in conditionally public modules
+- [ ] Cross-module private targets use `pub(crate) mod` (no dual-arm
+      `#[cfg(any(test, doc))]` production shims)
 - [ ] Test functions use `#[cfg_attr(not(doc), test)]` pattern
 - [ ] Absolute paths start with `crate::` or `std::`
 - [ ] `./check.fish --quick-doc` shows zero warnings
@@ -984,19 +1128,21 @@ if the field or method is renamed.
 
 ## Quick Reference
 
-| Link To                    | Pattern Example                                    |
-| -------------------------- | -------------------------------------------------- |
-| Struct                     | ``[`Foo`]: crate::Foo``                            |
-| Enum                       | ``[`Bar`]: crate::Bar``                            |
-| Trait                      | ``[`Display`]: std::fmt::Display``                 |
-| Function                   | ``[`process()`]: crate::process``                  |
-| Method                     | ``[`run()`]: Self::run``                           |
-| Field                      | ``[`field`]: field@Self::field``                   |
-| Module                     | ``[`parser`]: mod@crate::parser``                  |
-| Re-export                  | ``[`Type`]: crate::Type``                          |
-| Test function              | ``[`test_foo`]: crate::tests::test_foo``           |
-| Private type (pub for doc) | ``[`Internal`]: struct@crate::internal::Internal`` |
-| Section heading (fragment) | ``[`docs`]: mod@crate::path::module#section-name`` |
-| Trait impl section         | `[default]: TypeName#impl-TraitName-for-TypeName`  |
+| Link To                             | Pattern Example                                    |
+| ----------------------------------- | -------------------------------------------------- |
+| Struct                              | ``[`Foo`]: crate::Foo``                            |
+| Enum                                | ``[`Bar`]: crate::Bar``                            |
+| Trait                               | ``[`Display`]: std::fmt::Display``                 |
+| Function                            | ``[`process()`]: crate::process``                  |
+| Method                              | ``[`run()`]: Self::run``                           |
+| Field                               | ``[`field`]: field@Self::field``                   |
+| Module                              | ``[`parser`]: mod@crate::parser``                  |
+| Re-export                           | ``[`Type`]: crate::Type``                          |
+| Test function                       | ``[`test_foo`]: crate::tests::test_foo``           |
+| Private type (`pub(crate) mod`)     | ``[`Internal`]: struct@crate::internal::Internal`` |
+| Section heading (fragment)          | ``[`docs`]: mod@crate::path::module#section-name`` |
+| Trait impl section                  | `[default]: TypeName#impl-TraitName-for-TypeName`  |
+| Macro (in `#[macro_use]` scope)     | ``[`my_macro!`]`` (no ref def needed)              |
+| Macro (above `#[macro_use]`, `//!`) | ``[`my_macro!`]: crate::my_macro``                 |
 
 All links go **at the bottom** of the rustdoc comment block!

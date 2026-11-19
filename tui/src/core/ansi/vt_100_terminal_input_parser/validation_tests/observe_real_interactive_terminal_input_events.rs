@@ -25,7 +25,6 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::ok;
 use std::{io::{Result as IoResult, Write},
           time::Duration};
 use tokio::io::AsyncReadExt;

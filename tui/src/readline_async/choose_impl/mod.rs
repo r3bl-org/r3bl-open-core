@@ -57,15 +57,20 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
-pub mod crossterm_macros;
-pub mod event_loop;
-pub mod function_component;
-pub mod keypress_reader_sync;
-pub mod scroll;
-pub mod select_component;
-pub mod state;
-pub mod style;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod crossterm_macros;
 
+// Attach.
+mod event_loop;
+mod function_component;
+mod keypress_reader_sync;
+mod scroll;
+mod select_component;
+mod state;
+mod style;
+
+// Re-export.
 pub use event_loop::*;
 pub use function_component::*;
 pub use keypress_reader_sync::*;
@@ -75,7 +80,7 @@ pub use state::*;
 pub use style::*;
 
 /// Enables file logging. You can use `tail -f /tmp/r3bl_tui/log.txt` to watch the logs.
-pub const DEVELOPMENT_MODE: bool = false;
+pub const DEBUG_CHOOSE: bool = false;
 
 #[cfg(any(all(unix, doc), test))]
 mod choose_integration_tests;

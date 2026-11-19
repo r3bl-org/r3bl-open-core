@@ -1,19 +1,21 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Attach.
-pub mod app;
-pub mod component;
-pub mod default_input_handler;
-pub mod event_routing_support;
-pub mod main_event_loop;
-pub mod manage_focus;
-pub mod shared_global_data;
-pub mod terminal_window_api;
-pub mod terminal_window_type_aliases;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod terminal_window_api; // Cross-folder rustdoc module link (lib.rs).
+
+// Attach. Folder-local (Intra-module).
+mod app;
+mod component;
+mod default_input_handler;
+mod event_routing_support;
+mod main_event_loop;
+mod manage_focus;
+mod shared_global_data;
+mod terminal_window_type_aliases;
 
 // Integration tests (PTY tests).
 #[cfg(any(all(unix, doc), test))]
-pub mod terminal_window_integration_tests;
+mod terminal_window_integration_tests;
 
 // Re-export.
 pub use app::*;

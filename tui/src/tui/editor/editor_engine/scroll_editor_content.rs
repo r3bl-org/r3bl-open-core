@@ -74,7 +74,7 @@ use crate::{CCaret, CCol, CRow, CWidth, CanvasCameraExt, CaretDirection,
             VPHeight, Viewport, c_col, c_row};
 use std::cmp::Ordering;
 
-pub mod horiz_caret_movement {
+pub(super) mod horiz_caret_movement { // Folder-internal helper used by sibling editor_engine modules.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -158,7 +158,7 @@ pub mod horiz_caret_movement {
     }
 }
 
-pub mod vert_caret_movement {
+pub(super) mod vert_caret_movement { // Folder-internal helper used by sibling editor_engine modules.
     use super::clip_caret_to_bounds::{clip_c_caret_row_to_content_height,
                                       clip_c_caret_to_content_width};
     #[allow(clippy::wildcard_imports)]
@@ -239,7 +239,7 @@ pub mod vert_caret_movement {
     }
 }
 
-pub mod clip_caret_to_bounds {
+pub(super) mod clip_caret_to_bounds { // Folder-internal helper used by sibling editor_engine modules.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -287,8 +287,8 @@ pub mod clip_caret_to_bounds {
 mod tests {
     use super::{clip_caret_to_bounds::*, horiz_caret_movement::*, vert_caret_movement::*};
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                FileExtensionToken, GCStringOwned, assert_eq2, c_caret, c_col, c_height,
-                c_pos, c_row, c_width, clipboard_test_fixtures::TestClipboard,
+                FileExtensionToken, GCStringOwned, c_caret, c_col, c_height, c_pos,
+                c_row, c_width, clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor, vp_caret,
                 vp_col, vp_height, vp_row, vp_width};
 

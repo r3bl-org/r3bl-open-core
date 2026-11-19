@@ -36,6 +36,7 @@
 //! Used by [`PaintRenderOpImplCrossterm`] (Backend Executor) to track cursor
 //! position and colors, avoiding redundant commands.
 //!
+//! [`PaintRenderOpImplCrossterm`]: crate::PaintRenderOpImplCrossterm
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use crate::{TuiColor, VPPos};

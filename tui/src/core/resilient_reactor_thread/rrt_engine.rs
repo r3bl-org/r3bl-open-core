@@ -28,7 +28,7 @@ use std::{panic::{AssertUnwindSafe, catch_unwind},
 /// 1. The framework acquires the [`shared_state`] lock, transitions from [`Running`] to
 ///    [`Restarting`] (consuming the old [`InterruptHandle`]), **and immediately releases
 ///    the lock to begin dropping and recreating OS resources**.
-/// 2. The current [`RRTWorker`] is dropped and [`RAII`] cleanup releases OS resources.
+/// 2. The current [`RRTWorker`] is dropped and [RAII] cleanup releases OS resources.
 /// 3. The framework sleeps for the configured delay (see [`RestartPolicy`]).
 /// 4. [`RRTWorker::create_and_register_os_sources()`] is called to create a fresh
 ///    [`RRTWorker`] + [`RRTSoftwareInterrupt`] pair. The new [`RRTWorker`] allocates new
@@ -74,7 +74,6 @@ use std::{panic::{AssertUnwindSafe, catch_unwind},
 /// [`Continue`]: crate::core::common::Continuation::Continue
 /// [`Mutex`]: std::sync::Mutex
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Restart`]: crate::core::common::Continuation::Restart
 /// [`Restarting`]: super::ThreadState::Restarting
 /// [`RestartPolicy`]: super::RestartPolicy
@@ -92,6 +91,7 @@ use std::{panic::{AssertUnwindSafe, catch_unwind},
 /// [`Stopped`]: super::ThreadState::Stopped
 /// [`TerminationGuard::drop()`]: super::TerminationGuard#method.drop
 /// [`try_subscribe()`]: super::RRT::try_subscribe
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 /// [Thread Lifecycle]: super::RRT#thread-lifecycle

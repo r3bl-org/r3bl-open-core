@@ -43,7 +43,7 @@ fn fill_buffer_with_lines(ofs_buf_vt_100: &mut OfsBufVT100) {
 }
 
 /// Tests for auto-wrap mode (DECAWM) functionality.
-pub mod auto_wrap {
+mod auto_wrap {
     use super::*;
 
     #[test]
@@ -329,7 +329,7 @@ pub mod auto_wrap {
 }
 
 /// Tests for line wrapping behavior at buffer boundaries.
-pub mod line_wrapping {
+mod line_wrapping {
     use super::*;
 
     #[test]
@@ -384,7 +384,7 @@ pub mod line_wrapping {
 }
 
 /// Tests for buffer scrolling operations.
-pub mod scrolling {
+mod scrolling {
     use super::*;
 
     #[test]
@@ -808,7 +808,7 @@ pub mod scrolling {
 /// Tests for line wrap causing scroll on the last line of the buffer.
 /// This addresses a critical gap where line wrapping behavior at the
 /// bottom of the buffer wasn't tested.
-pub mod line_wrap_scroll_interaction {
+mod line_wrap_scroll_interaction {
     use super::*;
 
     #[test]
@@ -968,7 +968,7 @@ pub mod line_wrap_scroll_interaction {
 /// scrolling regions.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-pub mod decstbm_scroll_margins {
+mod decstbm_scroll_margins {
     use super::*;
 
     #[test]
@@ -1374,7 +1374,7 @@ pub mod decstbm_scroll_margins {
 }
 
 /// Tests for cursor operations at scroll region boundaries.
-pub mod cursor_boundary_operations {
+mod cursor_boundary_operations {
     use super::*;
 
     #[test]
@@ -1558,7 +1558,7 @@ pub mod cursor_boundary_operations {
 }
 
 /// Tests for scroll region boundary validation and edge cases.
-pub mod boundary_validation {
+mod boundary_validation {
     use super::*;
 
     #[test]
@@ -1686,7 +1686,7 @@ pub mod boundary_validation {
 }
 
 /// Tests for complex scroll region interactions.
-pub mod complex_interactions {
+mod complex_interactions {
     use super::*;
 
     #[test]

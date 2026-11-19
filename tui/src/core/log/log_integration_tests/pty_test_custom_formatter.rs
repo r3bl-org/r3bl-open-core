@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{BufReadExt, CustomEventFormatter, GLYPH_CONTROLLER, MSG_SUCCESS,
-            PtyTestContext, PtyTestMode, StdoutMock, generate_pty_test};
+            PtyTestContext, PtyTestMode, StdoutMock};
 use chrono::Local;
 use std::{sync::Mutex,
           time::{Duration, Instant}};

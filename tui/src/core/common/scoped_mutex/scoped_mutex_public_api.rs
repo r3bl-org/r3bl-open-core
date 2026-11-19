@@ -602,8 +602,7 @@ impl<S: ?Sized, const POLICY: DeadlockPreventionPolicy> ScopedMutex<S, POLICY> {
 #[cfg(test)]
 mod tests_core {
     use super::test_fixtures::assert_child_process_success;
-    use crate::{CaughtPanicResult, extract_panic_message,
-                generate_isolated_process_test, scoped_mutex};
+    use crate::{CaughtPanicResult, extract_panic_message};
     use std::{process::Stdio, sync::Arc};
 
     generate_isolated_process_test!(
@@ -736,7 +735,7 @@ mod tests_core {
 #[cfg(test)]
 mod tests_any {
     use super::test_fixtures::assert_child_process_success;
-    use crate::{extract_panic_message, generate_isolated_process_test, scoped_mutex};
+    use crate::extract_panic_message;
     use std::{process::Stdio, sync::Arc};
 
     generate_isolated_process_test!(
@@ -820,7 +819,7 @@ mod tests_any {
 #[cfg(test)]
 mod tests_specific {
     use super::test_fixtures::assert_child_process_success;
-    use crate::{extract_panic_message, generate_isolated_process_test, scoped_mutex};
+    use crate::extract_panic_message;
     use std::process::Stdio;
 
     generate_isolated_process_test!(
@@ -933,7 +932,7 @@ mod tests_specific {
 #[cfg(test)]
 mod tests_opt_out {
     use super::test_fixtures::assert_child_process_success;
-    use crate::{extract_panic_message, generate_isolated_process_test, scoped_mutex};
+    use crate::extract_panic_message;
     use std::process::Stdio;
 
     // SEMANTIC NOTE: Self-recursion on a SINGLE instance of OPT_OUT would deadlock
@@ -1033,7 +1032,7 @@ mod tests_opt_out {
 #[cfg(test)]
 mod tests_mixed {
     use super::test_fixtures::assert_child_process_success;
-    use crate::{extract_panic_message, generate_isolated_process_test, scoped_mutex};
+    use crate::extract_panic_message;
     use std::process::Stdio;
 
     generate_isolated_process_test!(

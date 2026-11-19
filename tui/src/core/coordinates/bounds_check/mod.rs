@@ -1157,7 +1157,7 @@
 //!   bounds checking system.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
+//! [`array_bounds_check.rs`]: mod@array_bounds_check
 //! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
 //! [`ArrayOverflowResult`]: crate::ArrayOverflowResult
 //! [`as_index_iter()`]: crate::RangeExt::as_index_iter
@@ -1183,7 +1183,7 @@
 //! [`convert_to_length()`]: crate::IndexOps::convert_to_length
 //! [`CSI`]: crate::CsiSequence
 //! [`CsiCount`]: crate::CsiCount
-//! [`cursor_bounds_check.rs`]: mod@crate::cursor_bounds_check
+//! [`cursor_bounds_check.rs`]: mod@cursor_bounds_check
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 //! [`CursorPositionBoundsStatus`]: crate::CursorPositionBoundsStatus
 //! [`eol_cursor_position()`]: crate::CursorBoundsCheck::eol_cursor_position
@@ -1196,8 +1196,8 @@
 //! [`index.overflows(length)`]: crate::core::ArrayBoundsCheck::overflows
 //! [`index.underflows(min_index)`]: crate::core::ArrayBoundsCheck::underflows
 //! [`index_from_end()`]: crate::LengthOps::index_from_end
-//! [`index_ops.rs`]: mod@crate::index_ops
-//! [`index_ops`]: mod@crate::index_ops
+//! [`index_ops.rs`]: mod@index_ops
+//! [`index_ops`]: mod@index_ops
 //! [`IndexOps`]: crate::IndexOps
 //! [`is_overflowed_by()`]: crate::LengthOps::is_overflowed_by
 //! [`is_valid_cursor_position()`]: crate::CursorBoundsCheck::is_valid_cursor_position
@@ -1207,23 +1207,23 @@
 //! [`length.convert_to_index()`]: crate::LengthOps::convert_to_index
 //! [`length.is_overflowed_by(index)`]: crate::LengthOps::is_overflowed_by
 //! [`length.remaining_from(index)`]: crate::LengthOps::remaining_from
-//! [`length_ops.rs`]: mod@crate::length_ops
-//! [`length_ops`]: mod@crate::length_ops
+//! [`length_ops.rs`]: mod@length_ops
+//! [`length_ops`]: mod@length_ops
 //! [`LengthOps`]: crate::LengthOps
-//! [`numeric_value`]: mod@crate::numeric_value
+//! [`numeric_value`]: mod@numeric_value
 //! [`NumericConversions`]: crate::NumericConversions
 //! [`NumericValue`]: crate::NumericValue
 //! [`overflows()`]: crate::core::ArrayBoundsCheck::overflows
 //! [`overlaps()`]: crate::RangeBoundsExt::overlaps
 //! [`Range<VPIndex>`]: std::ops::Range
-//! [`range_bounds_check.rs`]: mod@crate::bounds_check::range::range_bounds_check
-//! [`range_bounds_check`]: mod@crate::bounds_check::range::range_bounds_check
-//! [`range_construct_ext.rs`]: mod@crate::bounds_check::range::range_construct_ext
-//! [`range_construct_ext`]: mod@crate::bounds_check::range::range_construct_ext
-//! [`range_convert_ext.rs`]: mod@crate::bounds_check::range::range_convert_ext
-//! [`range_convert_ext`]: mod@crate::bounds_check::range::range_convert_ext
-//! [`range_ext.rs`]: mod@crate::bounds_check::range::range_ext
-//! [`range_ext`]: mod@crate::bounds_check::range::range_ext
+//! [`range_bounds_check.rs`]: mod@range::range_bounds_check
+//! [`range_bounds_check`]: mod@range::range_bounds_check
+//! [`range_construct_ext.rs`]: mod@range::range_construct_ext
+//! [`range_construct_ext`]: mod@range::range_construct_ext
+//! [`range_convert_ext.rs`]: mod@range::range_convert_ext
+//! [`range_convert_ext`]: mod@range::range_convert_ext
+//! [`range_ext.rs`]: mod@range::range_ext
+//! [`range_ext`]: mod@range::range_ext
 //! [`Range`]: std::ops::Range
 //! [`RangeBoundsExt`]: crate::RangeBoundsExt
 //! [`RangeBoundsResult`]: crate::RangeBoundsResult
@@ -1235,7 +1235,7 @@
 //! [`RangeInclusive`]: std::ops::RangeInclusive
 //! [`RangeValidityStatus`]: crate::RangeValidityStatus
 //! [`remaining_from()`]: crate::LengthOps::remaining_from
-//! [`result_enums.rs`]: mod@crate::result_enums
+//! [`result_enums.rs`]: mod@result_enums
 //! [`ScreenCoordinate`]: crate::ScreenCoordinate
 //! [`StorageCoordinate`]: crate::StorageCoordinate
 //! [`TermCol`]: crate::TermCol
@@ -1246,8 +1246,8 @@
 //! [`to_len()`]: crate::RangeBoundsExt::to_len
 //! [`try_as_u16()`]: NumericConversions::try_as_u16
 //! [`underflows()`]: crate::core::ArrayBoundsCheck::underflows
-//! [`viewport_bounds_check.rs`]: mod@crate::viewport_bounds_check
-//! [`viewport_bounds_check`]: mod@crate::viewport_bounds_check
+//! [`viewport_bounds_check.rs`]: mod@viewport_bounds_check
+//! [`viewport_bounds_check`]: mod@viewport_bounds_check
 //! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 //! [`vp_row()`]: crate::vp_row
 //! [`vp_width()`]: crate::vp_width
@@ -1261,7 +1261,7 @@
 //! [Decision Tree]: #decision-tree-which-trait-do-i-need
 //! [Example: Type System in Action]: #example-type-system-in-action
 //! [Exclusive vs Inclusive Range Comparison]:
-//!     mod@crate::bounds_check::range::range_bounds_check#exclusive-vs-inclusive-range-comparison
+//!     mod@range::range_bounds_check#exclusive-vs-inclusive-range-comparison
 //! [Getting Started with Bounds Checking]: #getting-started-with-bounds-checking
 //! [semantic trait distinctions]: #semantic-trait-distinctions
 //! [Type System Foundation]: #type-system-foundation
@@ -1269,15 +1269,17 @@
 
 #![rustfmt::skip]
 
-// Attach.
-pub mod array_bounds_check;
-pub mod cursor_bounds_check;
-pub mod index_ops;
-pub mod length_ops;
-pub mod numeric_value;
-pub mod range;
-pub mod result_enums;
-pub mod viewport_bounds_check;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod numeric_value; // Cross-folder rustdoc module link (canvas).
+
+// Attach. Folder-local (Intra-module).
+mod array_bounds_check;
+mod cursor_bounds_check;
+mod index_ops;
+mod length_ops;
+mod range;
+mod result_enums;
+mod viewport_bounds_check;
 
 // Re-export.
 pub use array_bounds_check::*;

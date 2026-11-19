@@ -62,7 +62,7 @@
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{DEBUG_TUI_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
             ED_ERASE_FROM_START, ED_ERASE_TO_END, EL_ERASE_ALL, EL_ERASE_FROM_START,
-            EL_ERASE_TO_END, ParamsExt, ok};
+            EL_ERASE_TO_END, ParamsExt};
 
 /// Handle ED (Erase in Display) - clear screen relative to cursor.
 ///

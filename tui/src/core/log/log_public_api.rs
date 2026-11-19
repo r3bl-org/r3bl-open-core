@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DisplayPreference, GlobalLogFileGuard, ThreadLocalLogFileGuard,
-            TracingConfig, WriterConfig, ok};
+            TracingConfig, WriterConfig};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
 pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";

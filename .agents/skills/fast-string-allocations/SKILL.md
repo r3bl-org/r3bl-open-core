@@ -16,12 +16,12 @@ When writing code that involves string building, formatting, or rendering (espec
 
 ## Core Strategy
 
-Read the full Source of Truth at `mod@crate::core::common::fast_strings#string-allocation-performance-strategy` for detailed architectural constraints.
+Read the full documentation at `mod@crate::core::common::fast_strings#string-allocation-performance-strategy` for detailed architectural constraints.
 
 ### Performance Hierarchy (Fastest to Slowest)
 
 1. **Direct `push_str()`** - Zero overhead, direct memory copy.
-2. **`crate::format_no_alloc!`** - Zero heap allocations, reuses existing heap.
+2. **`format_no_alloc!`** - Zero heap allocations, reuses existing heap.
 3. **`FastStringify`** - Temporary heap allocation, completely bypasses `Formatter` state machine.
 4. **`inline_string!`** - Stack allocated (16 bytes), but dynamically spills to the heap if exceeded.
 5. **`format!` / `write!`** - Always heap allocates (`format!`) OR uses heavy formatter overhead (`write!`). Avoid in hot paths.

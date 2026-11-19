@@ -52,6 +52,14 @@
 //!   the macro inside the loop. It clears the buffer and writes into the existing heap
 //!   capacity, ensuring absolutely zero heap allocations per tick.
 //!
+//! ## 4. [`HexSlice`] (For Zero-Allocation Hex Encoding & Decoding)
+//!
+//! [`HexSlice`] wraps any `&[u8]` slice for zero-allocation lowercase hex formatting via
+//! [`Display`] (chunked 32 bytes at a time on the stack), and hosts stack-only hex
+//! byte/nibble encoding and decoding helpers (`HexSlice::encode_byte`,
+//! `HexSlice::try_decode_byte`, `HexSlice::try_decode_nibble`,
+//! `HexSlice::try_decode_str`).
+//!
 //! [`16`]: crate::core::DEFAULT_STRING_STORAGE_SIZE
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`Display`]: std::fmt::Display
@@ -60,6 +68,7 @@
 //! [`format_no_alloc!`]: macro@crate::format_no_alloc
 //! [`Formatter`]: std::fmt::Formatter
 //! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`HexSlice`]: crate::HexSlice
 //! [`inline_string!`]: crate::inline_string
 //! [`InlineString`]: crate::InlineString
 //! [`push_str()`]: String::push_str
@@ -70,8 +79,16 @@
 //! [`write_str`]: std::fmt::Formatter::write_str
 //! [Editor Component]: crate::EditorComponent
 
-pub mod fast_stringify;
-pub mod format_no_alloc;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod fast_stringify;
+#[macro_use]
+mod format_no_alloc;
 
+// Attach.
+mod hex_slice;
+
+// Re-export.
 pub use fast_stringify::*;
 pub use format_no_alloc::*;
+pub use hex_slice::*;

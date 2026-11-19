@@ -2,18 +2,16 @@
 
 use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, Continuation,
-            DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
+            DEBUG_TUI, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
             LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool, OutputDevice,
             PaintMode, PaintRenderOpImplCrossterm, RenderOpCommon, RenderOpFlush,
-            RenderOpIR, SufficientSize, TelemetryAtomHint, TerminalModeController,
-            TerminalWindowMainThreadSignal, TextColorizationPolicy, VPSize,
-            WideningCastToU8, WideningCastToU16, ZOrder, ch,
-            emit_stderr_redirection_disclaimer, glyphs, inline_string, new_style, ok,
-            render_pipeline,
-            telemetry::{Telemetry, telemetry_default_constants},
-            telemetry_record, vp_col, vp_height, vp_row, vp_width};
+            RenderOpIR, SufficientSize, Telemetry, TelemetryAtomHint,
+            TerminalModeController, TerminalWindowMainThreadSignal,
+            TextColorizationPolicy, VPSize, WideningCastToU8, WideningCastToU16, ZOrder,
+            ch, emit_stderr_redirection_disclaimer, glyphs, telemetry_default_constants,
+            vp_col, vp_height, vp_row, vp_width};
 use smallvec::smallvec;
 use std::{fmt::{Debug, Display},
           marker::PhantomData};
@@ -305,7 +303,7 @@ where
 
     /// Logs startup information if debugging is enabled.
     fn log_startup_info(&self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             tracing::info!(
                 message = %inline_string!(
                     "main_event_loop {sp} Startup {ch}",
@@ -319,7 +317,7 @@ where
 
     /// Logs shutdown information if debugging is enabled.
     fn log_shutdown_info(&self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             tracing::info!(
                 message = %inline_string!(
                     "main_event_loop {sp} Shutdown {ch}",
@@ -335,7 +333,7 @@ where
     /// execute quickly, so it avoids deep traversal of the editor buffer and dialog
     /// buffers. This is called in a hot loop, on every render, so it must be quick!
     pub fn log_telemetry_info(&mut self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!(
@@ -542,7 +540,7 @@ fn handle_input_event<S, AS>(
 
 /// Logs input event if debugging is enabled.
 fn log_input_event_if_enabled(input_event: &InputEvent) {
-    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI_MOD).then(|| {
+    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
         if let InputEvent::Keyboard(_) = input_event {
             tracing::info!(
                 message = %inline_string!(
@@ -814,7 +812,7 @@ where
                 painter.flush(locked_output_device);
 
                 // Print debug message w/ error.
-                DEBUG_TUI_MOD.then(|| {
+                DEBUG_TUI.then(|| {
                     tracing::error!(
                         message = %inline_string!(
                             "AppManager::render_app() error {ch}",

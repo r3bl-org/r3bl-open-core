@@ -53,12 +53,12 @@
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`VMIN`]: https://manpages.debian.org/termios.3
 //! [`VTIME`]: https://manpages.debian.org/termios.3
-//! [Parent module documentation]: mod@crate::terminal_raw_mode
+//! [Parent module documentation]: mod@crate::core::ansi::terminal_raw_mode
 //! [parent module's raw vs cooked section]:
-//!     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+//!     mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 
 use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, ScopedMutex, TtyStatus,
-            is_tty_stdin, ok, scoped_mutex};
+            is_tty_stdin};
 use rustix::{fd::{AsFd, BorrowedFd},
              termios::{self, OptionalActions, Termios}};
 use std::{fs::File, io, sync::LazyLock};
@@ -169,7 +169,7 @@ pub static SAVED_TERMIOS: LazyLock<
 /// [`VEOF`]: https://manpages.debian.org/termios.3
 /// [`VMIN`]: https://manpages.debian.org/termios.3
 /// [`VTIME`]: https://manpages.debian.org/termios.3
-/// [module documentation]: mod@crate::terminal_raw_mode
+/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 pub fn enable_raw_mode() -> Result<(), RawModeError> {
@@ -291,7 +291,7 @@ mod terminal_fd {
     /// ### Design Rationale: Backend-Aware [`TTY`] Detection
     ///
     /// This function uses the crate's centralized [`TTY`] detection logic (via
-    /// [`term.rs`]) to ensure consistency. This "backend-aware" routing ensures that the
+    /// [`capabilities`]) to ensure consistency. This "backend-aware" routing ensures that the
     /// entire crate respects the same [`TERMINAL_LIB_BACKEND`] configuration when
     /// determining terminal interactivity.
     ///
@@ -302,15 +302,15 @@ mod terminal_fd {
     /// - The process lacks permissions to open the controlling terminal.
     ///
     /// [`/dev/tty`]:
-    ///     crate::pty_engine::pty_pair::PtyPair#controlling-terminal-alias-devtty
+    ///     crate::PtyPair#controlling-terminal-alias-devtty
+    /// [`capabilities`]: mod@crate::core::terminal_io::capabilities
     /// [`PtyPair`]: crate::PtyPair
     /// [`stdin`]: std::io::stdin
     /// [`tcsetattr`]: termios::tcsetattr
-    /// [`term.rs`]: mod@crate::term
     /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
     /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
     /// [direct access via `/dev/tty`]:
-    ///     crate::pty_engine::pty_pair::PtyPair#the-solution-direct-access-via-devtty
+    ///     crate::PtyPair#the-solution-direct-access-via-devtty
     pub fn get() -> io::Result<TerminalFd> {
         if is_tty_stdin() == TtyStatus::IsTty {
             let stdin = io::stdin();

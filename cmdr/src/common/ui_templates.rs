@@ -19,7 +19,7 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 
 /// This is the instruction header for the multi select list. It is used when the user can
 /// select multiple items from the list. The instructions are displayed at the top of the
-/// list. This is easily converted into a [`r3bl_tui::choose_impl::Header::MultiLine`].
+/// list. This is easily converted into a [`r3bl_tui::Header::MultiLine`].
 ///
 /// The last line is passed in as a parameter to allow for customization. This is useful
 /// when the list is long and the instructions are at the top.
@@ -53,7 +53,7 @@ pub fn prefix_multi_select_instruction_header(
 /// This is the instruction header for the single select list. It is used when the user
 /// can only select one item from the list. The instructions are displayed at the top of
 /// the list. This is easily converted into a
-/// [`r3bl_tui::choose_impl::Header::MultiLine`].
+/// [`r3bl_tui::Header::MultiLine`].
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn prefix_single_select_instruction_header(

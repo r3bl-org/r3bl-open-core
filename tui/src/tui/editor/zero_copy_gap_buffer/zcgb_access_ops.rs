@@ -102,12 +102,12 @@
 //! operations safe and performant.
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`from_utf8_lossy()`]: String::from_utf8_lossy
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt, CRow, LengthOps,
-            RangeExclusive, RangeValidityStatus, byte_index,
-            core::coordinates::bounds_check::RangeBoundsExt};
+            RangeBoundsExt, RangeExclusive, RangeValidityStatus, byte_index};
 use std::str::{from_utf8, from_utf8_unchecked};
 
 impl ZeroCopyGapBuffer {

@@ -51,14 +51,12 @@
 //! [rendering pipeline overview]:
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod crossterm_paint_render_op_impl; // Cross-folder rustdoc links (terminal_lib_backends, compositor, direct_to_ansi).
+
+// Attach. Folder-local (Intra-module).
 mod debug;
 mod input_device_impl;
-
-#[cfg(any(test, doc))]
-pub mod crossterm_paint_render_op_impl;
-#[cfg(not(any(test, doc)))]
-mod crossterm_paint_render_op_impl;
 
 // Re-export.
 pub use crossterm_paint_render_op_impl::*;

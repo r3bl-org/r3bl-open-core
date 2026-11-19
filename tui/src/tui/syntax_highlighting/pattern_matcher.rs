@@ -84,7 +84,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, vp_width};
+    use crate::vp_width;
 
     #[test]
     fn test_with_emoji() {

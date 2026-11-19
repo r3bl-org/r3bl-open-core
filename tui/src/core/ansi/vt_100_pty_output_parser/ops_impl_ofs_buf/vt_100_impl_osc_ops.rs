@@ -23,7 +23,7 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`handle_hyperlink`]: crate::core::ansi::OfsBufVT100::handle_hyperlink
 //! [`handle_title_and_icon`]: crate::core::ansi::OfsBufVT100::handle_title_and_icon
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`print_char()`]: crate::core::ansi::OfsBufVT100::print_char
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_pty_output_parser::ops::osc_ops`]:
@@ -31,7 +31,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::core::osc::OscPtyEvent;
+use crate::OscPtyEvent;
 
 impl OfsBufVT100 {
     /// Handle:
@@ -41,7 +41,7 @@ impl OfsBufVT100 {
     ///
     /// Sets window title and/or icon name by queuing an [`OSC`] event.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub fn handle_title_and_icon(&mut self, title: &str) {
         self.get_parser_global_state_mut()
             .pending_osc_events
@@ -53,7 +53,7 @@ impl OfsBufVT100 {
     /// Creates hyperlinks with URI by queuing an [`OSC`] event. The display text is
     /// handled separately via [`print_char()`] calls.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub fn handle_hyperlink(&mut self, uri: &str) {
         self.get_parser_global_state_mut().pending_osc_events.push(
             OscPtyEvent::Hyperlink {

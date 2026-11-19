@@ -30,7 +30,7 @@
 //! See [`PtySessionConfigToken::CaptureOsc`] for the environment variables
 //! required to trigger [`OSC`] emission from cargo.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PtySessionConfigToken::CaptureOsc`]:
 //!     crate::core::pty::PtySessionConfigToken::CaptureOsc
@@ -83,7 +83,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
 
 /// Runs a single cargo build with [`OSC`] capture.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     println!("{YELLOW}========================================");
     println!("{YELLOW}Starting Cargo build #{run_number} with OSC capture...");

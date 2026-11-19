@@ -88,7 +88,10 @@
 
 #![rustfmt::skip]
 
-// Private modules - implementation details.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod render_op_ir; // Cross-folder rustdoc links (terminal_lib_backends, render_pipeline).
+
+// Attach. Folder-local (Intra-module).
 mod render_op_common;
 mod render_op_common_ext;
 mod render_op_debug_format;
@@ -98,14 +101,7 @@ mod render_op_paint;
 mod render_ops_exec;
 mod render_ops_local_data;
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod render_op_ir;
-#[cfg(not(any(test, doc)))]
-mod render_op_ir;
-
-// Public re-exports - stable API surface.
+// Re-export.
 pub use render_op_common::*;
 pub use render_op_common_ext::*;
 pub use render_op_debug_format::*;

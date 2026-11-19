@@ -47,7 +47,7 @@
 
 use crate::{CommonResultWithError, Continuation, LineState, LineStateControlSignal,
             OutputDevice, PauseBuffer, PauseState, PauseStateTransition, ReadlineError,
-            SafeLineState, SafePauseBuffer, SendRawTerminal, StdMutex, join, ok};
+            SafeLineState, SafePauseBuffer, SendRawTerminal, StdMutex};
 use std::{io, sync::Arc};
 use tokio::{spawn,
             sync::{broadcast, mpsc},
@@ -300,7 +300,7 @@ pub fn flush_internal(
 #[cfg(test)]
 mod test_pause_and_resume_support {
     use super::*;
-    use crate::{OutputDeviceExt, core::test_fixtures::StdoutMock, vp_height, vp_width};
+    use crate::{OutputDeviceExt, StdoutMock, vp_height, vp_width};
     use std::sync::Arc;
     use tokio::sync::{broadcast, mpsc};
 
@@ -314,7 +314,7 @@ mod test_pause_and_resume_support {
 
     fn create_test_fixtures() -> TestFixtures {
         let test_size = vp_width(100) + vp_height(100);
-        let safe_line_state = Arc::new(crate::scoped_mutex!(
+        let safe_line_state = Arc::new(scoped_mutex!(
             SPECIFIC,
             LineState::new("> ".to_string(), test_size)
         ));

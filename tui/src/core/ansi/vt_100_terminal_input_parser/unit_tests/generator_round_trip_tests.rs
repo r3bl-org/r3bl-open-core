@@ -16,11 +16,10 @@
 //! [`generate_keyboard_sequence`]: crate::core::ansi::generator::generate_keyboard_sequence
 //! [`try_parse_input_event`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
 
-use crate::{RgbValue, TermPos, VPHeight, VPWidth,
+use crate::{RgbValue, TermPos, TerminalColorReport, TerminalColorRole, VPHeight,
+            VPWidth,
             core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::{MaybeMore, ParsedInputEventIR,
-                                                        TerminalColorReport,
-                                                        TerminalColorRole,
                                                         VT100FocusStateIR,
                                                         VT100InputEventIR,
                                                         VT100KeyCodeIR,

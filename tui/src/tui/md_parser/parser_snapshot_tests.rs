@@ -13,11 +13,11 @@
 
 #[cfg(test)]
 mod tests {
+    use super::super::conformance_test_data::*;
     #[allow(unused_imports)]
     use crate::{BulletKind, CodeBlockLine, HeadingLevel, List};
     use crate::{CodeBlockLineContent, HeadingData, HyperlinkData, MdDocument, MdElement,
-                MdLineFragment, ZeroCopyGapBuffer, md_parser::conformance_test_data::*,
-                parse_markdown};
+                MdLineFragment, ZeroCopyGapBuffer, parse_markdown};
 
     /// Macro for creating a List from elements
     #[allow(unused_macros)]

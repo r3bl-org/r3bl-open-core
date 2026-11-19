@@ -6,15 +6,10 @@
 mod event_conversion;
 mod history;
 mod line_control_task;
+mod line_state;
 mod lock_manager;
 mod readline_struct;
 mod types;
-
-// Attach conditionally: public when testing or generating docs, private otherwise.
-#[cfg(any(test, doc))]
-pub mod line_state;
-#[cfg(not(any(test, doc)))]
-mod line_state;
 
 // Re-export.
 pub use event_conversion::*;
@@ -27,4 +22,4 @@ pub use types::*;
 
 // Integration tests (conditional visibility).
 #[cfg(any(test, doc))]
-pub mod readline_async_integration_tests;
+pub(crate) mod readline_async_integration_tests; // Cross-folder rustdoc links (pty_test_child_impl, event_handlers).

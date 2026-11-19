@@ -19,7 +19,7 @@ use crate::{ByteOffset, byte_offset};
 ///   resume (`&chunk[*bytes_consumed..]`).
 ///
 /// [`ByteOffset`]: crate::ByteOffset
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(clippy::enum_variant_names)]
 pub enum OscDrainResult<'a> {

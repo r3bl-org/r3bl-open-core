@@ -1,12 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
+use crate::{Component, DEBUG_TUI, DialogEngine, DialogEngineApi,
             DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfig,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
             OnDialogPressFn, VPBoundingBox,
-            common::{CommonError, CommonErrorType, CommonResult},
-            ok};
+            common::{CommonError, CommonErrorType, CommonResult}};
 use std::fmt::Debug;
 
 /// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
@@ -94,7 +93,7 @@ where
     /// [DialogEngineApi::apply_event] w/ all the necessary
     /// arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
-    /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
+    /// - User input (from [`TerminalWindow::main_event_loop`]): [`InputEvent`].
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
     ///
     /// Usually a component must have focus in order for the [`crate::App`] to
@@ -102,6 +101,7 @@ where
     /// in the first place.
     ///
     /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
+    /// [`TerminalWindow::main_event_loop`]: crate::TerminalWindow::main_event_loop
     /// [DialogEngineApi::apply_event]: DialogEngineApi::apply_event
     fn handle_event(
         &mut self,
@@ -140,7 +140,7 @@ where
                 DialogChoice(dialog_choice) => {
                     has_focus.reset_modal_id();
 
-                    DEBUG_TUI_MOD.then(|| {
+                    DEBUG_TUI.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "🐝 restore focus to non modal",

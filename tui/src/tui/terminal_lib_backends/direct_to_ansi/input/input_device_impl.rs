@@ -49,7 +49,7 @@
 //!    application lifecycles without losing unread keystrokes.
 //!
 //! [`/dev/pts/N`]:
-//!     crate::pty_engine::pty_pair::PtyPair#how-devptmx-and-devptsn-work-together
+//!     crate::PtyPair#how-devptmx-and-devptsn-work-together
 //! [`BackpressureStdout`]: crate::BackpressureStdout
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`EPOLLET`]: https://manpages.debian.org/epoll.7
@@ -69,12 +69,12 @@ use crate::core::resilient_reactor_thread::{RRT, SubscriberGuard};
 
 /// Type alias for the input device's subscriber guard.
 ///
-/// This is the [`RAII`] guard returned by [`SINGLETON.try_subscribe()`]. Holding this
+/// This is the [RAII] guard returned by [`SINGLETON.try_subscribe()`]. Holding this
 /// guard keeps you subscribed to input events; dropping it triggers the cleanup protocol
 /// that may cause the thread to exit.
 ///
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`SINGLETON.try_subscribe()`]: crate::RRT::try_subscribe
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 
 /// Process-global input resource singleton (crate-internal).
@@ -82,7 +82,7 @@ pub type InputSubscriberGuard = SubscriberGuard<MioPollWorker>;
 /// See [`RRT`] for what the singleton holds when active.
 ///
 /// [`RRT`]: crate::RRT
-pub mod global_input_resource {
+pub(crate) mod global_input_resource { // Crate-internal input singleton accessed by mio_poller PTY tests.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

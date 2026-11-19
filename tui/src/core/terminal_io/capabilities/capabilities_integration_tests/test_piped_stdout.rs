@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{generate_isolated_process_test, is_output_interactive};
+use crate::is_output_interactive;
 use std::io::Write;
 
 generate_isolated_process_test!(
@@ -44,6 +44,7 @@ fn controller(spawned_self_process_output: std::process::Output) {
 /// Controlled path: [`stdout`] is piped, report the result and exit. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
 ///
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`stdout`]: std::io::stdout
 fn controlled() {
     let result = is_output_interactive();

@@ -8,12 +8,12 @@
 //!
 //! [`grapheme`]: https://unicode.org/reports/tr29/
 
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, CCol, CIndex,
-            CLength, CWidth, ContainsWideSegment, CursorBoundsCheck, GCStringOwned,
-            LengthOps, NarrowingCastToU16, NumericValue, RangeBoundsExt,
-            RangeBoundsResult, RangeConstructExt, RangeExclusive, RangeValidityStatus,
-            SegStringOwned, byte_index, byte_len, c_index, c_width,
-            core::coordinates::byte_index::ByteIndexRangeExt};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
+            ByteLength, CCol, CIndex, CLength, CWidth, ContainsWideSegment,
+            CursorBoundsCheck, GCStringOwned, LengthOps, NarrowingCastToU16,
+            NumericValue, RangeBoundsExt, RangeBoundsResult, RangeConstructExt,
+            RangeExclusive, RangeValidityStatus, SegStringOwned, byte_index, byte_len,
+            c_index, c_width};
 
 /// Represents a [`grapheme`] cluster segment within a continuous document line.
 ///

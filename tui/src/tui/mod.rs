@@ -3,7 +3,7 @@
 #![rustfmt::skip]
 
 /// Enable or disable generating log output for telemetry data. This has higher precedence
-/// than [`DEBUG_TUI_MOD`]. The telemetry logs are not debug level, but info level.
+/// than [`DEBUG_TUI`]. The telemetry logs are not debug level, but info level.
 pub const DISPLAY_LOG_TELEMETRY: bool = true;
 
 /// This is the global `DEBUG` const. It is possible to create local (module scoped)
@@ -12,7 +12,7 @@ pub const DISPLAY_LOG_TELEMETRY: bool = true;
 /// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
 ///
 /// If set to `true` it enables file logging for entire module.
-pub const DEBUG_TUI_MOD: bool = true;
+pub const DEBUG_TUI: bool = true;
 
 /// Enable or disable bounds checking debug logging. This logs bounds check conversions,
 /// such as when a saturating cast to `u16` overflows or underflows.
@@ -41,8 +41,11 @@ pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
 /// This flag has no effect unless [`DEBUG_TUI_SHOW_PIPELINE`] is set to `true`.
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 
-/// Controls input event debugging [`crate::InputDevice`], and execution of render ops
-/// [`crate::queue_terminal_command!`] debugging output.
+/// Controls input event debugging [`InputDevice`], and execution of render ops
+/// [`queue_terminal_command!`] debugging output.
+///
+/// [`InputDevice`]: crate::InputDevice
+/// [`queue_terminal_command!`]: crate::queue_terminal_command
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 /// Controls debug logging for the [`DirectToAnsi`] backend (input parsing and
@@ -58,7 +61,7 @@ pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
 
 /// Controls debug logging for the [PTY multiplexer], including adaptive rendering.
 ///
-/// [PTY multiplexer]: crate::pty::pty_mux::PTYMux
+/// [PTY multiplexer]: crate::PTYMux
 pub const DEBUG_TUI_PTY_MUX: bool = true;
 
 /// Controls high-volume debug logging for the [`ProcessManager`].
@@ -67,7 +70,7 @@ pub const DEBUG_TUI_PTY_MUX: bool = true;
 /// within the active [`PTY`] sessions. Because of the extreme volume of bytes being
 /// parsed from the [`PTY`] event loop, this is separated from [`DEBUG_TUI_PTY_MUX`].
 ///
-/// [`ProcessManager`]: crate::core::pty::pty_mux::ProcessManager
+/// [`ProcessManager`]: crate::ProcessManager
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 
@@ -78,7 +81,7 @@ pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 /// high-volume output when running interactive TUIs, so defaults to `false`.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`AnsiToOfsBufPerformer`]: crate::core::ansi::vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer
+/// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
 /// [`VT-100` PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
 pub const DEBUG_TUI_VT100_PARSER: bool = false;
 
@@ -104,15 +107,19 @@ pub const DEBUG_ENV_SOURCE: bool = false;
 /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub const UNICODE_REPLACEMENT_CHAR: char = '�';
 
-// Attach sources.
-pub mod rsx;
-pub mod layout;
-pub mod editor;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod rsx;
+#[macro_use]
 pub mod terminal_lib_backends;
+
+// Attach.
 pub mod animator;
 pub mod cmd_line_args;
 pub mod dialog;
+pub mod editor;
 pub mod global_constants;
+pub mod layout;
 pub mod md_parser;
 pub mod syntax_highlighting;
 pub mod terminal_window;
@@ -125,13 +132,6 @@ pub use editor::*;
 pub use global_constants::*;
 pub use layout::*;
 pub use md_parser::*;
-pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
-
-// Rustdoc search link fixes.
-
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use md_parser::{block, convert_to_plain_text, extended, fragment,
-                    md_parser_constants, md_parser_types, parse_markdown, single_line};

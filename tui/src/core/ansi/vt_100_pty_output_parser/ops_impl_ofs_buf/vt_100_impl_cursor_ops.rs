@@ -13,8 +13,8 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 
-use crate::{OfsBufVT100, VPCol, VPHeight, VPPos, VPRow, VPWidth,
-            core::coordinates::bounds_check::IndexOps, vp_col, vp_height};
+use crate::{IndexOps, OfsBufVT100, VPCol, VPHeight, VPPos, VPRow, VPWidth, vp_col,
+            vp_height};
 
 impl OfsBufVT100 {
     /// Move cursor up by n lines.

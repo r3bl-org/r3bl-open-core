@@ -1,10 +1,9 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, CONTROL_C, DebouncedState, GLYPH_CONTROLLED,
-            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, InputDevice, KeyState,
+            GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS, InputDevice, KeyState, LineState,
             MSG_CONTROLLED_READY, MSG_LINE_PREFIX, PtyTestContext, SegIndex, StdMutex,
-            core::test_fixtures::StdoutMock,
-            readline_async::readline_async_impl::LineState, vp_height, vp_width};
+            StdoutMock, vp_height, vp_width};
 use std::{io::{Write, stdout},
           sync::Arc,
           time::Duration};
@@ -57,7 +56,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
     let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(5));
     let mut debounced_state = DebouncedState::new(Duration::from_millis(10));
     let safe_output_terminal = Arc::new(StdMutex::new(StdoutMock::default()));
-    let history = crate::readline_async::readline_async_impl::History::new();
+    let history = crate::History::new();
     let safe_history = Arc::new(StdMutex::new(history));
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

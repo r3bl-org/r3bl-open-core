@@ -7,30 +7,38 @@
 
 #![rustfmt::skip]
 
-// Attach sources.
-pub mod common_atomic;
-pub mod common_enums;
-pub mod common_math;
-pub mod common_result_and_error;
-pub mod fast_strings;
-pub mod flat_2d_array;
-pub mod get_mem_size;
-pub mod lru_cache;
-pub mod memoized_value;
-pub mod miette_setup_global_report_handler;
-pub mod monitor;
-pub mod ordered_map;
-pub mod rate_limiter;
-pub mod ring_buffer;
-pub mod ring_buffer_heap;
-pub mod ring_buffer_stack;
-pub mod scoped_mutex;
-pub mod string_repeat_cache;
-pub mod telemetry;
-pub mod time_duration;
-pub mod primitive_casting;
-pub mod os_string_ext;
-pub mod type_aliases;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+pub(crate) mod fast_strings; // Cross-folder rustdoc module links (lib.rs, into_existing).
+#[macro_use]
+mod scoped_mutex;
+#[macro_use]
+mod telemetry;
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod string_repeat_cache; // Cross-folder rustdoc link to DYNAMIC_CACHE (scoped_mutex).
+
+// Attach. Folder-local (Intra-module).
+mod common_atomic;
+mod common_enums;
+mod common_math;
+mod common_result_and_error;
+mod flat_2d_array;
+mod get_mem_size;
+mod lru_cache;
+mod memoized_value;
+mod miette_setup_global_report_handler;
+mod monitor;
+mod ordered_map;
+mod rate_limiter;
+mod ring_buffer;
+mod ring_buffer_heap;
+mod ring_buffer_stack;
+mod std_thread_tokio_runner;
+mod time_duration;
+mod primitive_casting;
+mod os_string_ext;
+mod type_aliases;
 
 // Re-export.
 pub use common_atomic::*;
@@ -49,6 +57,7 @@ pub use rate_limiter::*;
 pub use ring_buffer::*;
 pub use ring_buffer_heap::*;
 pub use ring_buffer_stack::*;
+pub use std_thread_tokio_runner::*;
 pub use scoped_mutex::*;
 pub use string_repeat_cache::*;
 pub use telemetry::*;

@@ -25,9 +25,7 @@
 use super::super::*;
 use crate::ActiveScreenBuffer;
 #[cfg(test)]
-use crate::core::coordinates::bounds_check::cursor_bounds_check::CursorBoundsCheck;
-#[cfg(test)]
-use crate::{AutoWrapMode, OfsBufVT100};
+use crate::{AutoWrapMode, CursorBoundsCheck, OfsBufVT100};
 
 impl OfsBufVT100 {
     /// Set auto wrap mode on.
@@ -117,7 +115,7 @@ impl OfsBufVT100 {
 #[cfg(test)]
 mod tests_mode_ops {
     use super::*;
-    use crate::{OfsBufVT100, RangeExt, RequestedScreenMode, VPPos, new_style, vp_col,
+    use crate::{OfsBufVT100, RangeExt, RequestedScreenMode, VPPos, vp_col,
                 vp_height, vp_row, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {

@@ -52,13 +52,14 @@
 //! [`unit_tests::generator_round_trip_tests`] instead.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`generator`]: crate::generator
+//! [`generator`]: mod@crate::core::ansi::generator
 //! [`unit_tests::generator_round_trip_tests`]:
 //!     super::unit_tests::generator_round_trip_tests
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [parent module]: super#testing-strategy
 
+// Attach.
 #[cfg(any(test, doc))]
-pub mod input_parser_validation_test;
+mod input_parser_validation_test;
 #[cfg(any(test, doc))]
-pub mod observe_real_interactive_terminal_input_events;
+pub(crate) mod observe_real_interactive_terminal_input_events; // Linked by term_pos.

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::constants::git_ui_strings::CURRENT_BRANCH_PREFIX;
 use crate::{InlineString, ItemsOwned};
-use crate::script::git::types::constants::git_ui_strings::CURRENT_BRANCH_PREFIX;
 
 /// Information about local git branches:
 /// - The currently checked out branch.

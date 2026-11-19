@@ -26,8 +26,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{core::coordinates::{TermRow, bounds_check::LengthOps},
-            vp_height};
+use crate::{LengthOps, TermRow, vp_height};
 
 impl OfsBufVT100 {
     /// Reset scroll margins to full screen (no restrictions).
@@ -79,8 +78,9 @@ impl OfsBufVT100 {
 
 #[cfg(test)]
 mod tests_margin_ops {
-    use crate::{OfsBufVT100, term_row, vp_height, vp_width,
-                vt_100_pty_output_conformance_tests::nz};
+    use crate::{OfsBufVT100,
+                core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::nz,
+                term_row, vp_height, vp_width};
 
     fn create_test_buffer() -> OfsBufVT100 {
         let size = vp_width(10) + vp_height(6);

@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{TuiStyledText, sizing::VecTuiStyledText};
-use crate::{ConvertToPlainText, GCStringOwned, InlineString, VPWidth, join,
-            join_with_index_fmt, ok};
+use crate::{ConvertToPlainText, GCStringOwned, InlineString, VPWidth};
 use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
@@ -123,9 +122,7 @@ mod impl_debug {
 mod tests {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::{CommonResult, TuiStyle, TuiStylesheet, assert_eq2, ch, throws,
-                throws_with_return, tui_color, tui_style_id, tui_styled_text,
-                tui_stylesheet};
+    use crate::{CommonResult, TuiStyle, TuiStylesheet, ch, tui_style_id};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult {

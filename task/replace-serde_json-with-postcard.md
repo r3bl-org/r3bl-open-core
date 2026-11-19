@@ -1,20 +1,20 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
+<!-- BEGIN mktoc -->
 
 - [Replace serde_json with Postcard in Network Protocol](#replace-serde_json-with-postcard-in-network-protocol)
-  - [Overview](#overview)
-  - [Why Postcard?](#why-postcard)
-  - [Implementation Plan](#implementation-plan)
+- [Overview](#overview)
+- [Why Postcard?](#why-postcard)
+- [Implementation Plan](#implementation-plan)
     - [Step 0: Add Postcard Dependency](#step-0-add-postcard-dependency)
     - [Step 1: Rename Module](#step-1-rename-module)
     - [Step 2: Update postcard_serde.rs Implementation](#step-2-update-postcard_serders-implementation)
     - [Step 3: Update mod.rs](#step-3-update-modrs)
     - [Step 4: Verification](#step-4-verification)
-  - [File Changes Summary](#file-changes-summary)
+- [Run tests](#run-tests)
+- [Check clippy](#check-clippy)
+- [Build docs](#build-docs)
+- [File Changes Summary](#file-changes-summary)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Replace serde_json with Postcard in Network Protocol
 
@@ -23,9 +23,9 @@
 This task replaces `serde_json` with `postcard` for the network protocol serialization in
 `tui/src/network_io/`.
 
-**Note:** This is a follow-up to the bincode removal task (`task/done/remove-bincode.md`) which
-initially replaced bincode with serde_json. We're now replacing serde_json with postcard for better
-performance and consistency with our syntect fork.
+**Note:** This is a follow-up to the bincode removal task (`task/done/remove-bincode.md`)
+which initially replaced bincode with serde_json. We're now replacing serde_json with
+postcard for better performance and consistency with our syntect fork.
 
 **Scope:** Only the network protocol layer. KV storage continues to use serde_json (via
 `kv::Json`), which is fine for that use case.
@@ -34,15 +34,18 @@ performance and consistency with our syntect fork.
 
 1. **Binary format** - Compact binary output (smaller than JSON, similar to bincode)
 2. **Performance** - Faster serialization/deserialization than text-based JSON
-3. **Active maintenance & funding** - Unlike bincode (which was abandoned due to maintainer
-   harassment), Postcard has strong maintainer support:
-   - **Author:** James Munns (OneVariable UG), founding member of Rust Embedded Working Group
-   - **Mozilla funded:** The 1.0 release was sponsored by Mozilla Corporation
-   - **Current version:** v1.1.3 (July 2025), with 378 commits and active development
-   - **Community adoption:** 1.3k GitHub stars, used by 7,800+ projects
-   - **Ecosystem involvement:** James is active in Rust governance and speaks at major conferences
+3. **Active maintenance & funding** - Unlike bincode (which was abandoned due to
+   maintainer harassment), Postcard has strong maintainer support:
+    - **Author:** James Munns (OneVariable UG), founding member of Rust Embedded Working
+      Group
+    - **Mozilla funded:** The 1.0 release was sponsored by Mozilla Corporation
+    - **Current version:** v1.1.3 (July 2025), with 378 commits and active development
+    - **Community adoption:** 1.3k GitHub stars, used by 7,800+ projects
+    - **Ecosystem involvement:** James is active in Rust governance and speaks at major
+      conferences
 4. **Serde compatible** - Drop-in replacement at the serialization layer
-5. **Consistency** - Matches our syntect fork (see `task/pending/fork-syntect-and-remove-bincode-dep.md`)
+5. **Consistency** - Matches our syntect fork (see
+   `task/pending/fork-syntect-and-remove-bincode-dep.md`)
 
 ## Implementation Plan
 
@@ -187,8 +190,8 @@ cargo doc -p r3bl_tui --no-deps
 
 ## File Changes Summary
 
-| File                               | Action                             |
-| ---------------------------------- | ---------------------------------- |
-| `tui/Cargo.toml`                   | Add `postcard` dependency          |
-| `tui/src/network_io/json_serde.rs` | Rename to `postcard_serde.rs`      |
-| `tui/src/network_io/mod.rs`        | Update module name and re-export   |
+| File                               | Action                           |
+| ---------------------------------- | -------------------------------- |
+| `tui/Cargo.toml`                   | Add `postcard` dependency        |
+| `tui/src/network_io/json_serde.rs` | Rename to `postcard_serde.rs`    |
+| `tui/src/network_io/mod.rs`        | Update module name and re-export |
