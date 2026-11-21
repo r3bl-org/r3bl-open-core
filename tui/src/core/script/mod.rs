@@ -40,5 +40,3 @@ pub use http_client::*;
 pub use package_manager::*;
 pub use permissions::*;
 pub use temp_dir::*;
-
-pub const DEBUG_SCRIPT: bool = true;

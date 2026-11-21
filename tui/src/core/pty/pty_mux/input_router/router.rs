@@ -2,7 +2,7 @@
 
 use super::{super::ProcessManager, keyboard_command::KeyboardCommand,
             mouse_command::MouseCommand};
-use crate::{Continuation, DEBUG_TUI_PTY_MUX, InputEvent, VPSize};
+use crate::{Continuation, DEBUG_PTY_MUX, InputEvent, VPSize};
 
 /// Dynamic input event routing for the [`PTY`] multiplexer.
 ///
@@ -47,7 +47,7 @@ pub fn handle_input(
         InputEvent::Keyboard(key) => {
             // Decision - convert key press to command.
             let keyboard_command = KeyboardCommand::from((key, focused_process_buffer));
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "handle_input",
@@ -76,7 +76,7 @@ pub fn handle_input(
             // Decision - convert mouse input to command.
             let mouse_command =
                 MouseCommand::from((&mouse_input, focused_process_buffer));
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "handle_input",

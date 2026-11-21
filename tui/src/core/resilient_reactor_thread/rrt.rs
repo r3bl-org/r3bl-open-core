@@ -5,7 +5,7 @@
 
 use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker, SubscribeError,
             SubscriberGuard, ThreadLifecycleMonitor, ThreadState, run_worker_loop};
-use crate::{DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
+use crate::{DEBUG_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::broadcast;
 
@@ -69,7 +69,7 @@ pub fn try_subscribe<W: RRTWorker>(
                 match W::create_and_register_os_sources(config.clone(), input_receiver) {
                     Ok(pair) => pair,
                     Err(err) => {
-                        DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                        DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                             tracing::error!(
                                 message = "RRT: Failed to allocate OS resources.",
                                 error = ?err
@@ -103,7 +103,7 @@ pub fn try_subscribe<W: RRTWorker>(
             let thread_move_shared_state = Arc::clone(shared_state);
             let thread_move_config = config;
 
-            DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+            DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::info!(
                     message = "RRT: Spawning new dedicated thread.",
                     generation = thread_generation
@@ -131,7 +131,7 @@ pub fn try_subscribe<W: RRTWorker>(
                     ))
                 }
                 Err(err) => {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                         tracing::error!(
                             message = "RRT: Failed to spawn dedicated thread.",
                             error = ?err

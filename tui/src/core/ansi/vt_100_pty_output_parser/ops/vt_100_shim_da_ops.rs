@@ -59,7 +59,7 @@
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-use crate::{AnsiToOfsBufPerformer, DEBUG_TUI_VT100_PARSER};
+use crate::{AnsiToOfsBufPerformer, DEBUG_VT100_PARSER};
 
 /// Handles Device Attributes ([`DA`]) query responses `CSI c` or `CSI 0 c` received FROM
 /// the [`PTY`] child process.
@@ -79,7 +79,7 @@ pub fn device_attributes(
     if !intermediates.is_empty() {
         // We only support DA1. Intermediates mean it's DA2 (>) or DA3 (=) or something
         // else.
-        DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_VT100_PARSER.then(|| {
             tracing::warn!("DA intermediate not supported: {:?}", intermediates);
         });
         return;
@@ -91,7 +91,7 @@ pub fn device_attributes(
     if is_da1 {
         performer.ofs_buf_vt_100.handle_device_attributes_request();
     } else {
-        DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_VT100_PARSER.then(|| {
             tracing::warn!("Unsupported DA query params: {:?}", params);
         });
     }

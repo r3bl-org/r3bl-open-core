@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ClipboardService, DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut,
+use crate::{ClipboardService, DEBUG_CLIPBOARD, DeleteSelectionWith, EditorArgsMut,
             EditorBuffer, EditorEngine, InputEvent, Key, KeyPress, KeyState,
             ModifierKeysMask, NEW_LINE_CHAR, SelectMode, SpecialKey, VPSize,
             editor_engine::engine_internal_api, fg_green, validate_scroll_on_resize};
@@ -74,7 +74,7 @@ impl TryFrom<InputEvent> for EditorEvent {
 
     #[allow(clippy::too_many_lines)]
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
-        DEBUG_TUI_COPY_PASTE.then(|| {
+        DEBUG_CLIPBOARD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "🐥🐥🐥  EditorEvent::try_from",
@@ -371,7 +371,7 @@ impl EditorEvent {
 
         // Log paste operations for debugging.
         if is_paste {
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 tracing::debug! {
                     message = "📋📋📋 Text was pasted from clipboard",
                     clipboard_text = %text
@@ -543,7 +543,7 @@ impl EditorEvent {
                         );
                     }
                     Err(error) => {
-                        DEBUG_TUI_COPY_PASTE.then(|| {
+                        DEBUG_CLIPBOARD.then(|| {
                             tracing::debug! {
                                 message = "📋📋📋 Failed to paste the text from clipboard",
                                 error = ?error

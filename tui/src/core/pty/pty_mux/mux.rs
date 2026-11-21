@@ -10,7 +10,7 @@
 use super::{MAX_PROCESSES, OUTPUT_POLL_INTERVAL_MS, OutputRenderer, Process,
             ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS, input_router};
 use crate::{AdaptiveRenderResult::{Render, Skip},
-            Budget, Continuation, DEBUG_TUI_PTY_MUX, EventPropagation, InputEvent,
+            Budget, Continuation, DEBUG_PTY_MUX, EventPropagation, InputEvent,
             TerminalInteractiveStatus, TuiAvailability, VPSize, VPWidth,
             ansi_output::{cursor_movement::cursor_position,
                           screen_clearing::clear_screen},
@@ -308,7 +308,7 @@ mod impl_pty_mux {
             let _fullscreen_tui_mode_guard =
                 self.output_device.setup_full_screen_tui()?;
 
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::run",
@@ -323,7 +323,7 @@ mod impl_pty_mux {
             }
 
             // Start all processes at startup.
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::run",
@@ -349,7 +349,7 @@ mod impl_pty_mux {
                 .render_initial_status_bar(&self.output_device, &self.process_manager)?;
 
             // Main event loop
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::run",
@@ -357,7 +357,7 @@ mod impl_pty_mux {
                 };
             });
             let result = self.run_event_loop().await;
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::run",
@@ -407,7 +407,7 @@ mod impl_pty_mux {
                                 render_budget.mark_end();
                             },
                             Skip => {
-                                DEBUG_TUI_PTY_MUX.then(|| {
+                                DEBUG_PTY_MUX.then(|| {
                                     // % is Display, ? is Debug.
                                     tracing::info! {
                                         message = "Skipping render, backpressure detected in stdout",
@@ -424,7 +424,7 @@ mod impl_pty_mux {
 
                     // Handle user input using existing InputDevice.
                     Some(input_event) = self.input_device.next() => {
-                        DEBUG_TUI_PTY_MUX.then(|| {
+                        DEBUG_PTY_MUX.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug! {
                                 message = "PTYMux::run_event_loop",
@@ -446,7 +446,7 @@ mod impl_pty_mux {
                         // Create OSC controller for this input handling.
 
                         // Handle input events using the input router.
-                        DEBUG_TUI_PTY_MUX.then(|| {
+                        DEBUG_PTY_MUX.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug! {
                                 message = "PTYMux::run_event_loop",
@@ -462,7 +462,7 @@ mod impl_pty_mux {
                             &mut self.process_manager,
                         )?;
                         if continuation == Continuation::Stop {
-                            DEBUG_TUI_PTY_MUX.then(|| {
+                            DEBUG_PTY_MUX.then(|| {
                                 // % is Display, ? is Debug.
                                 tracing::debug! {
                                     message = "PTYMux::run_event_loop",
@@ -482,7 +482,7 @@ mod impl_pty_mux {
                 }
             }
 
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::run_event_loop",
@@ -548,7 +548,7 @@ mod impl_pty_mux {
         #[allow(clippy::too_many_lines)]
         fn cleanup_terminal(&mut self) {
             let start_time = Instant::now();
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -559,7 +559,7 @@ mod impl_pty_mux {
             });
 
             // First, kill all running processes.
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -567,7 +567,7 @@ mod impl_pty_mux {
                 };
             });
             self.process_manager.shutdown_all_processes();
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -576,7 +576,7 @@ mod impl_pty_mux {
             });
 
             // Give processes a short time to terminate gracefully, then force exit.
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -584,7 +584,7 @@ mod impl_pty_mux {
                 };
             });
             sleep(Duration::from_millis(100));
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -593,7 +593,7 @@ mod impl_pty_mux {
             });
 
             // Force flush any pending output.
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -602,7 +602,7 @@ mod impl_pty_mux {
             });
             self.output_device.write(|out| match out.flush() {
                 Ok(()) => {
-                    DEBUG_TUI_PTY_MUX.then(|| {
+                    DEBUG_PTY_MUX.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug! {
                             message = "PTYMux::cleanup_terminal",
@@ -611,7 +611,7 @@ mod impl_pty_mux {
                     });
                 }
                 Err(e) => {
-                    DEBUG_TUI_PTY_MUX.then(|| {
+                    DEBUG_PTY_MUX.then(|| {
                         // % is Display, ? is Debug.
                         tracing::warn! {
                             message = "PTYMux::cleanup_terminal",
@@ -620,7 +620,7 @@ mod impl_pty_mux {
                     });
                 }
             });
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -629,7 +629,7 @@ mod impl_pty_mux {
             });
 
             // Clear screen
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -643,7 +643,7 @@ mod impl_pty_mux {
                 );
                 let _unused = out.flush();
             });
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -652,7 +652,7 @@ mod impl_pty_mux {
             });
 
             // Force flush after escape sequences.
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -661,7 +661,7 @@ mod impl_pty_mux {
             });
             self.output_device.write(|out| match out.flush() {
                 Ok(()) => {
-                    DEBUG_TUI_PTY_MUX.then(|| {
+                    DEBUG_PTY_MUX.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug! {
                             message = "PTYMux::cleanup_terminal",
@@ -670,7 +670,7 @@ mod impl_pty_mux {
                     });
                 }
                 Err(e) => {
-                    DEBUG_TUI_PTY_MUX.then(|| {
+                    DEBUG_PTY_MUX.then(|| {
                         // % is Display, ? is Debug.
                         tracing::warn! {
                             message = "PTYMux::cleanup_terminal",
@@ -679,7 +679,7 @@ mod impl_pty_mux {
                     });
                 }
             });
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -688,7 +688,7 @@ mod impl_pty_mux {
             });
 
             // End raw mode
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -696,7 +696,7 @@ mod impl_pty_mux {
                 };
             });
             self.output_device.teardown_full_screen_tui().ok();
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -705,7 +705,7 @@ mod impl_pty_mux {
             });
 
             let total_time = start_time.elapsed();
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "PTYMux::cleanup_terminal",
@@ -714,7 +714,7 @@ mod impl_pty_mux {
             });
 
             if total_time > Duration::from_millis(500) {
-                DEBUG_TUI_PTY_MUX.then(|| {
+                DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::warn! {
                     message = "PTYMux::cleanup_terminal",
@@ -725,7 +725,7 @@ mod impl_pty_mux {
 
             // If cleanup took too long, there might be zombie processes.
             if total_time > Duration::from_secs(1) {
-                DEBUG_TUI_PTY_MUX.then(|| {
+                DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error! {
                     message = "PTYMux::cleanup_terminal",

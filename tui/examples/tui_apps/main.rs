@@ -6,7 +6,7 @@
 #![warn(rust_2018_idioms)]
 
 /// Enables debug logging.
-pub const ENABLE_TRACE_EXAMPLES: bool = true;
+pub const DEBUG_EXAMPLES: bool = true;
 
 // Attach sources.
 mod ex_app_no_layout;
@@ -51,7 +51,7 @@ async fn main_impl() -> CommonResult {
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     let _log_guard = if no_log_arg_passed {
         try_initialize_logging_global(tracing_core::LevelFilter::OFF).ok()
-    } else if ENABLE_TRACE_EXAMPLES | DEBUG_TUI {
+    } else if DEBUG_EXAMPLES | DEBUG_TUI {
         try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok()
     } else {
         None

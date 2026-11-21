@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf,
+use crate::{CommonResult, DEBUG_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf,
             OfsBufPool, OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport,
             VPSize, get_next_tick_glyph_str, glyphs,
             telemetry_sizing::TelemetryReportLineStorage};
@@ -122,7 +122,7 @@ where
         match &self.maybe_saved_ofs_buf {
             None => write!(f, "no saved ofs_buf")?,
             Some(ofs_buf) => {
-                if DEBUG_TUI_COMPOSITOR {
+                if DEBUG_COMPOSITOR {
                     write!(f, "{ofs_buf:?}")?;
                 } else {
                     write!(f, "ofs_buf saved from previous render")?;

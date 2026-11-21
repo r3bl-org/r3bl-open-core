@@ -1,22 +1,25 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Centralized TUI module coordinator and static `DEBUG_*` / `INFO_*` logging toggles for
+//! `r3bl_tui`.
+//!
+//! When file logging is enabled, you can use `run.fish log` or `tail -f
+//! /tmp/r3bl_tui/log.txt` to watch the logs.
+
 #![rustfmt::skip]
 
 /// Enable or disable generating log output for telemetry data. This has higher precedence
 /// than [`DEBUG_TUI`]. The telemetry logs are not debug level, but info level.
-pub const DISPLAY_LOG_TELEMETRY: bool = true;
+pub const INFO_DISPLAY_LOG_TELEMETRY: bool = true;
 
-/// This is the global `DEBUG` const. It is possible to create local (module scoped)
-/// `DEBUG` const. However, you would have to use that symbol explicitly in the relevant
-/// module, eg:
-/// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
+/// Controls debug logging for the [`tui`] module.
 ///
-/// If set to `true` it enables file logging for entire module.
+/// [`tui`]: mod@crate::tui
 pub const DEBUG_TUI: bool = true;
 
 /// Enable or disable bounds checking debug logging. This logs bounds check conversions,
 /// such as when a saturating cast to `u16` overflows or underflows.
-pub const DEBUG_TUI_BOUNDS_CHECK: bool = false;
+pub const DEBUG_BOUNDS_CHECK: bool = false;
 
 /// Enable or disable MD parser debug logging. This makes the parser very slow when
 /// enabled.
@@ -26,53 +29,53 @@ pub const DEBUG_MD_PARSER: bool = false;
 pub const DEBUG_MD_PARSER_STDOUT: bool = false;
 
 /// Enable or disable syntax highlighting debug logging.
-pub const DEBUG_TUI_SYN_HI: bool = false;
+pub const DEBUG_SYN_HI: bool = false;
 
 /// Enable or disable select, copy, paste debug logging.
-pub const DEBUG_TUI_COPY_PASTE: bool = false;
+pub const DEBUG_CLIPBOARD: bool = false;
 
 /// Enable or disable compositor debug logging.
-pub const DEBUG_TUI_COMPOSITOR: bool = false;
+pub const DEBUG_COMPOSITOR: bool = false;
 
 /// Enable or disable debug logging for this `terminal_lib_backends` module. Related flag:
-/// [`DEBUG_TUI_SHOW_PIPELINE_EXPANDED`].
-pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
+/// [`DEBUG_RENDER_PIPELINE_EXPANDED`].
+pub const DEBUG_RENDER_PIPELINE: bool = false;
 
-/// This flag has no effect unless [`DEBUG_TUI_SHOW_PIPELINE`] is set to `true`.
-pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
+/// This flag has no effect unless [`DEBUG_RENDER_PIPELINE`] is set to `true`.
+pub const DEBUG_RENDER_PIPELINE_EXPANDED: bool = false;
 
 /// Controls input event debugging [`InputDevice`], and execution of render ops
 /// [`queue_terminal_command!`] debugging output.
 ///
 /// [`InputDevice`]: crate::InputDevice
 /// [`queue_terminal_command!`]: crate::queue_terminal_command
-pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
+pub const DEBUG_TERMINAL_BACKEND: bool = false;
 
 /// Controls debug logging for the [`DirectToAnsi`] backend (input parsing and
 /// output rendering/flush operations).
 ///
 /// [`DirectToAnsi`]: crate::terminal_lib_backends::direct_to_ansi
-pub const DEBUG_TUI_SHOW_DIRECT_TO_ANSI: bool = false;
+pub const DEBUG_DIRECT_TO_ANSI: bool = false;
 
 /// Controls input event debugging for the [`mio-poller`] thread.
 ///
 /// [`mio-poller`]: crate::terminal_lib_backends::direct_to_ansi::input::mio_poller
-pub const DEBUG_TUI_SHOW_MIO_POLLER: bool = false;
+pub const DEBUG_MIO_POLLER: bool = false;
 
 /// Controls debug logging for the [PTY multiplexer], including adaptive rendering.
 ///
 /// [PTY multiplexer]: crate::PTYMux
-pub const DEBUG_TUI_PTY_MUX: bool = true;
+pub const DEBUG_PTY_MUX: bool = true;
 
 /// Controls high-volume debug logging for the [`ProcessManager`].
 ///
 /// Logs continuous data polling events, byte output yielding, and terminal resizing
 /// within the active [`PTY`] sessions. Because of the extreme volume of bytes being
-/// parsed from the [`PTY`] event loop, this is separated from [`DEBUG_TUI_PTY_MUX`].
+/// parsed from the [`PTY`] event loop, this is separated from [`DEBUG_PTY_MUX`].
 ///
 /// [`ProcessManager`]: crate::ProcessManager
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
+pub const DEBUG_PTY_PROCESS_MANAGER: bool = false;
 
 /// Controls debug logging for the [`VT-100` PTY output parser].
 ///
@@ -83,12 +86,12 @@ pub const DEBUG_TUI_PTY_PROCESS_MANAGER: bool = false;
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`AnsiToOfsBufPerformer`]: crate::AnsiToOfsBufPerformer
 /// [`VT-100` PTY output parser]: crate::core::ansi::vt_100_pty_output_parser
-pub const DEBUG_TUI_VT100_PARSER: bool = false;
+pub const DEBUG_VT100_PARSER: bool = false;
 
 /// Controls debug logging for the [Resilient Reactor Thread].
 ///
 /// [Resilient Reactor Thread]: crate::core::resilient_reactor_thread
-pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
+pub const DEBUG_RESILIENT_REACTOR_THREAD: bool = false;
 
 /// Controls selective warning and error logging for the [`env_source`] module.
 ///
@@ -98,6 +101,16 @@ pub const DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD: bool = false;
 /// [`env_source`]: mod@crate::core::script::env_source
 /// [`stderr`]: std::io::stderr
 pub const DEBUG_ENV_SOURCE: bool = false;
+
+/// Controls debug logging for the [`script`] module.
+///
+/// [`script`]: mod@crate::core::script
+pub const DEBUG_SCRIPT: bool = true;
+
+/// Controls debug logging for [`choose`].
+///
+/// [`choose`]: crate::choose
+pub const DEBUG_CHOOSE: bool = false;
 
 /// [`Unicode`] replacement character used when a [`grapheme`] cluster cannot be converted
 /// to a single char. This character (�) is the standard fallback for

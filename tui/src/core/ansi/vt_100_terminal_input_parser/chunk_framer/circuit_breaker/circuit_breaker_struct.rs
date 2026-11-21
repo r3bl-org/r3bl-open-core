@@ -2,7 +2,7 @@
 
 use super::{OscDrainReason, OscDrainResult};
 use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN, ANSI_ST_FINAL,
-            ByteOffset, CARRIAGE_RETURN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, LINE_FEED,
+            ByteOffset, CARRIAGE_RETURN, DEBUG_DIRECT_TO_ANSI, LINE_FEED,
             MAX_OSC_DRAIN_BYTES, byte_offset};
 use tracing::Level;
 
@@ -133,7 +133,7 @@ impl OscCircuitBreaker {
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
-    /// Logs a warning at [`Level::WARN`] when [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is
+    /// Logs a warning at [`Level::WARN`] when [`DEBUG_DIRECT_TO_ANSI`] is
     /// enabled.
     ///
     /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
@@ -148,13 +148,13 @@ impl OscCircuitBreaker {
     ///   sequence was detected and purged.
     ///
     /// [`ByteOffset`]: crate::ByteOffset
-    /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+    /// [`DEBUG_DIRECT_TO_ANSI`]: crate::DEBUG_DIRECT_TO_ANSI
     /// [`Level::WARN`]: tracing::Level::WARN
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn trip(&mut self, already_drained_byte_count: ByteOffset) {
         let breaker = &mut *self; // Mutable reborrow.
 
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             tracing::warn! {
                 message = "OscCircuitBreaker::trip",
                 status = "tripping circuit breaker for runaway OSC sequence",
@@ -201,7 +201,7 @@ impl OscCircuitBreaker {
     ) -> OscDrainResult<'a> {
         let breaker = &mut *self; // Mutable reborrow.
 
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             // % is Display, ? is Debug.
             match level {
                 Level::WARN => {

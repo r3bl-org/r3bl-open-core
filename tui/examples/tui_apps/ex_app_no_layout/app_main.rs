@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{AppSignal, State};
-use crate::{ENABLE_TRACE_EXAMPLES,
+use crate::{DEBUG_EXAMPLES,
             ex_app_no_layout::app_main::animator_task::start_animator_task};
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
@@ -216,7 +216,7 @@ mod app_main_impl_trait_app {
             let AppData { animator, .. } = &mut self.data;
 
             throws_with_return!({
-                ENABLE_TRACE_EXAMPLES.then(|| {
+                DEBUG_EXAMPLES.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "AppNoLayout::handle_event",

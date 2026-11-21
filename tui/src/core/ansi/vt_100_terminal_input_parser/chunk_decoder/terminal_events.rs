@@ -92,7 +92,7 @@ use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                     maybe_more::MaybeMore},
             csi_scanner::CsiParams,
             osc_scanner::OscScanResult};
-use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, HexSlice, OscSequence, byte_offset,
+use crate::{DEBUG_DIRECT_TO_ANSI, HexSlice, OscSequence, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR,
                                     ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
@@ -251,12 +251,12 @@ pub(crate) mod osc { // Cross-folder osc_codes/osc_sender/maybe_more links.
     ///    For detailed security rationale on discarding inbound clipboard queries, see
     ///    [Why are [`OSC`] 52 read queries discarded?][osc-52-discard-rationale].
     ///
-    /// **Diagnostics**: When [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is enabled, parsing or
+    /// **Diagnostics**: When [`DEBUG_DIRECT_TO_ANSI`] is enabled, parsing or
     /// absorbing an [`OSC`] sequence logs structured telemetry with both raw hex bytes
     /// and string representation.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+    /// [`DEBUG_DIRECT_TO_ANSI`]: crate::DEBUG_DIRECT_TO_ANSI
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
     /// [`MaybeMore::KernelDrained`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
     /// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
@@ -288,7 +288,7 @@ pub(crate) mod osc { // Cross-folder osc_codes/osc_sender/maybe_more links.
             OscScanResult::Complete(consumed) => {
                 let osc_seq_bytes = &chunk[..consumed.as_usize()];
                 let event = parse_osc_response(osc_seq_bytes);
-                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                DEBUG_DIRECT_TO_ANSI.then(|| {
                     let len = consumed.as_usize();
                     // % is Display, ? is Debug.
                     tracing::warn! {

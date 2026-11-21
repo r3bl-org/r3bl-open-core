@@ -7,7 +7,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, Flat2DA
             RenderOpsLocalData, SPACE_CHAR, ScrollbackAmount, TuiStyle, VPCol, VPPos,
             VPRow, VPSize, Viewport, ViewportToCanvasExt,
             print_text_with_attributes,
-            tui::{DEBUG_TUI_PTY_MUX,
+            tui::{DEBUG_PTY_MUX,
                   terminal_lib_backends::{paint_ofs_buf, render_ofs_buf}},
             tui_style_attrib::{self, Bold},
             tui_style_attribs, vp_col, vp_pos, vp_row, vp_width};
@@ -444,7 +444,7 @@ mod render_from_active_buffer_helpers {
 
         // Generate a structured trace log if the cursor was snapped backwards.
         if original_col != col_usize {
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info! {
                     message = "OutputRenderer::composite_virtual_cursor_into_buffer",
@@ -472,7 +472,7 @@ mod render_from_active_buffer_helpers {
             PixelChar::Void => {
                 // Fallback: If we hit a malformed buffer (e.g. Void at column 0), do
                 // nothing.
-                DEBUG_TUI_PTY_MUX.then(|| {
+                DEBUG_PTY_MUX.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "OutputRenderer::composite_virtual_cursor_into_buffer",

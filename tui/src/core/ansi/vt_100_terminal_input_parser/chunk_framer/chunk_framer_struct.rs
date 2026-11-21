@@ -106,7 +106,7 @@ use std::collections::VecDeque;
 ///    contains an unfinished sequence and requires more bytes from subsequent reads to
 ///    complete. The accumulator is left intact.
 ///
-/// When [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is enabled, discarded sequences log a
+/// When [`DEBUG_DIRECT_TO_ANSI`] is enabled, discarded sequences log a
 /// structured warning with both hex bytes and lossy [`UTF-8`] text to aid diagnosis.
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -115,7 +115,7 @@ use std::collections::VecDeque;
 /// [`ChunkFramer`]: ChunkFramer
 /// [`consume_stdin_input_with_sender()`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::consume_stdin_input_with_sender
 /// [`CSI`]: crate::CsiSequence
-/// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+/// [`DEBUG_DIRECT_TO_ANSI`]: crate::DEBUG_DIRECT_TO_ANSI
 /// [`ESC`]: crate::EscSequence
 /// [`MAX_ESCAPE_SEQUENCE_LENGTH`]: super::accumulator::constants::MAX_ESCAPE_SEQUENCE_LENGTH
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH

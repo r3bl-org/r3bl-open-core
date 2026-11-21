@@ -3,7 +3,7 @@
 use super::{EditorBufferConfig, SelectionContainer, history::EditorHistory,
             render_cache::RenderCache};
 use crate::{CCaret, CCol, CHeight, CPos, CRow, CWidth, CursorPositionBoundsStatus,
-            DEBUG_TUI_COPY_PASTE, DEBUG_TUI, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
+            DEBUG_CLIPBOARD, DEBUG_TUI, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, NumericValue, TinyInlineString, VPCaret,
             VPSize, Viewport, ZeroCopyGapBuffer, format_as_kibibytes_with_commas,
@@ -372,7 +372,7 @@ mod versions {
             let content_copy = self.content.clone();
             self.history.add(content_copy);
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🍎🍎🍎 add_content_to_undo_stack buffer",
@@ -395,7 +395,7 @@ mod versions {
                 self.content = content;
             }
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🍎🍎🍎 undo buffer",
@@ -418,7 +418,7 @@ mod versions {
                 self.content = content;
             }
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🍎🍎🍎 redo buffer",
                     buffer = ?self

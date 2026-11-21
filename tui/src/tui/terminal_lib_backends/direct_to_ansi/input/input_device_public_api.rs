@@ -11,7 +11,7 @@ use super::{channel_types::{PollerEvent, SignalEvent, StdinEvent},
             input_device_impl::{InputSubscriberGuard, global_input_resource}};
 use crate::{InputEvent,
             core::resilient_reactor_thread::{RRTEvent, SubscribeError},
-            tui::DEBUG_TUI_SHOW_DIRECT_TO_ANSI};
+            tui::DEBUG_DIRECT_TO_ANSI};
 use std::fmt::Debug;
 use tokio::sync::broadcast::error::RecvError;
 
@@ -798,7 +798,7 @@ impl DirectToAnsiInputDevice {
                 Err(RecvError::Lagged(skipped)) => {
                     // This receiver fell behind - some messages were dropped.
                     // Log and continue from the current position.
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                    DEBUG_DIRECT_TO_ANSI.then(|| {
                         tracing::warn!(
                             "DirectToAnsiInputDevice: receiver lagged, skipped {skipped} messages"
                         );

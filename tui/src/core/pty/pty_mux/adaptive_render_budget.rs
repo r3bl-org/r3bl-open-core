@@ -27,7 +27,7 @@
 //! [`should_render()`]: Budget::should_render
 
 use super::ProcessManager;
-use crate::DEBUG_TUI_PTY_MUX;
+use crate::DEBUG_PTY_MUX;
 use std::time::{Duration, Instant};
 
 /// Default render speed is ~60 FPS.
@@ -147,7 +147,7 @@ impl Budget {
                 .saturating_add(THROTTLE_PENALTY_MS)
                 .min(MAX_FRAME_DELAY_MS);
 
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info! {
                     message = "Budget::mark_end",
@@ -172,7 +172,7 @@ impl Budget {
             // Only log recovery if the delay actually changed to avoid spamming
             // the logs
             if old_delay != self.render_cooldown_delay {
-                DEBUG_TUI_PTY_MUX.then(|| {
+                DEBUG_PTY_MUX.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "Budget::mark_end",

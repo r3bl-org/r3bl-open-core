@@ -2,7 +2,7 @@
 
 use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, CommonResult, ComponentRegistryMap, Continuation,
-            DEBUG_TUI, DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
+            DEBUG_TUI, INFO_DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
             LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool, OutputDevice,
@@ -303,7 +303,7 @@ where
 
     /// Logs startup information if debugging is enabled.
     fn log_startup_info(&self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
+        (INFO_DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             tracing::info!(
                 message = %inline_string!(
                     "main_event_loop {sp} Startup {ch}",
@@ -317,7 +317,7 @@ where
 
     /// Logs shutdown information if debugging is enabled.
     fn log_shutdown_info(&self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
+        (INFO_DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             tracing::info!(
                 message = %inline_string!(
                     "main_event_loop {sp} Shutdown {ch}",
@@ -333,7 +333,7 @@ where
     /// execute quickly, so it avoids deep traversal of the editor buffer and dialog
     /// buffers. This is called in a hot loop, on every render, so it must be quick!
     pub fn log_telemetry_info(&mut self) {
-        (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
+        (INFO_DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!(
@@ -540,7 +540,7 @@ fn handle_input_event<S, AS>(
 
 /// Logs input event if debugging is enabled.
 fn log_input_event_if_enabled(input_event: &InputEvent) {
-    (DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
+    (INFO_DISPLAY_LOG_TELEMETRY || DEBUG_TUI).then(|| {
         if let InputEvent::Keyboard(_) = input_event {
             tracing::info!(
                 message = %inline_string!(

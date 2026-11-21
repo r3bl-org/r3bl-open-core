@@ -7,7 +7,7 @@
 //! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 
 use super::{RRTWorker, ThreadLifecycleMonitor, ThreadState};
-use crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD;
+use crate::DEBUG_RESILIENT_REACTOR_THREAD;
 use std::sync::Arc;
 
 /// [RAII] guard that transitions the dedicated thread to [`ThreadState::Stopped`] and
@@ -44,7 +44,7 @@ impl<W: RRTWorker> Drop for TerminationGuard<W> {
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
     fn drop(&mut self) {
-        DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+        DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
             tracing::info!(
                 message =
                     "RRT: TerminationGuard dropping, transitioning state to Stopped."

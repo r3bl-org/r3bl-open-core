@@ -6,7 +6,7 @@
 use super::{BroadcastSender, InterruptHandle, RRTEvent, RRTWorker, RestartPolicy,
             RetryLoopExhaustion, ShutdownReason, StopReason, TerminationGuard,
             ThreadLifecycleMonitor, ThreadState};
-use crate::{DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD, core::common::Continuation};
+use crate::{DEBUG_RESILIENT_REACTOR_THREAD, core::common::Continuation};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           sync::Arc,
           time::Duration};
@@ -103,7 +103,7 @@ pub fn run_worker_loop<W: RRTWorker>(
 ) {
     let _guard: TerminationGuard<W> = shared_state.clone().into();
 
-    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
         tracing::info!(message = "RRT: run_worker_loop() started.");
     });
 
@@ -135,7 +135,7 @@ pub fn run_worker_loop<W: RRTWorker>(
                     });
 
                 if should_stop {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                         tracing::info!(message = "RRT: Stopped (all receivers dropped).");
                     });
                     let state_guard = shared_state.set_state(
@@ -162,7 +162,7 @@ pub fn run_worker_loop<W: RRTWorker>(
                 Continuation::Continue => {}
 
                 Continuation::Stop => {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                         tracing::info!(message = "RRT: Stopped (worker requested).");
                     });
 
@@ -177,7 +177,7 @@ pub fn run_worker_loop<W: RRTWorker>(
                 }
 
                 Continuation::Restart => {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                         tracing::info!(message = "RRT: Restart requested by worker.");
                     });
 
@@ -223,7 +223,7 @@ pub fn run_worker_loop<W: RRTWorker>(
     // If the worker panicked, notify subscribers so they can take corrective action
     // (e.g., call try_subscribe() to relaunch a fresh thread).
     if let Err(error) = result {
-        DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+        DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
             tracing::error!(message = "RRT: Worker thread panicked.", ?error);
         });
         drop(sender_for_panic.send(RRTEvent::Shutdown(ShutdownReason::Panic)));
@@ -232,7 +232,7 @@ pub fn run_worker_loop<W: RRTWorker>(
     // Explicitly drop worker before RAII guard drops.
     maybe_worker.take();
 
-    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
         tracing::info!(message = "RRT: run_worker_loop() exiting.");
     });
 
@@ -256,7 +256,7 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
     loop {
         *restart_count += 1;
         if *restart_count > policy.max_restarts {
-            DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+            DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::error!(
                     message = "RRT: Restart budget exhausted, thread exiting.",
                     attempts = *restart_count
@@ -272,7 +272,7 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
 
         // Apply delay before attempting restart.
         if let Some(delay) = *current_delay {
-            DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+            DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::info!(
                     message = "RRT: Restarting (retry with delay).",
                     attempt = *restart_count,
@@ -282,7 +282,7 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
             std::thread::sleep(delay);
             *current_delay = advance_backoff_delay(delay, policy);
         } else {
-            DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+            DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::info!(
                     message = "RRT: Restarting (retry without delay).",
                     attempt = *restart_count
@@ -295,7 +295,7 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
 
         match W::create_and_register_os_sources(config.clone(), input_receiver) {
             Ok((new_worker, new_interrupt)) => {
-                DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                     tracing::info!(message = "RRT: Restart successful.");
                 });
 
@@ -320,7 +320,7 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
                 return RetryLoopExhaustion::No; // Success - back to outer poll loop.
             }
             Err(error) => {
-                DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                     tracing::error!(
                         message = "RRT: Restart failed (could not recreate sources).",
                         ?error,

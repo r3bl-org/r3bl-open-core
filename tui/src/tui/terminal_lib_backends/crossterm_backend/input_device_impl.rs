@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CrosstermEventResult, DEBUG_TUI_SHOW_TERMINAL_BACKEND, InputEvent,
+use crate::{CrosstermEventResult, DEBUG_TERMINAL_BACKEND, InputEvent,
             PinnedInputStream};
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
@@ -70,7 +70,7 @@ impl CrosstermInputDevice {
                     // to panic or log errors here.
                 }
                 Err(e) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+                    DEBUG_TERMINAL_BACKEND.then(|| {
                         tracing::error!(
                             message = "Error reading input event.",
                             error = ?e,

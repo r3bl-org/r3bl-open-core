@@ -5,7 +5,7 @@
 
 use super::super::channel_types::PollerEvent;
 use crate::{Continuation, core::resilient_reactor_thread::RRTEvent,
-            tui::DEBUG_TUI_SHOW_MIO_POLLER};
+            tui::DEBUG_MIO_POLLER};
 use tokio::sync::broadcast::Sender;
 
 /// Handles a synthetic software interrupt event using the provided `sender`.
@@ -26,7 +26,7 @@ pub fn handle_software_interrupt_with_sender(
 ) -> Continuation {
     let receiver_count = sender.receiver_count();
 
-    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+    DEBUG_MIO_POLLER.then(|| {
         tracing::debug!(
             message = "mio-poller-thread: software interrupt triggered",
             receiver_count

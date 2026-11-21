@@ -63,7 +63,7 @@ use super::super::{PrivateModeType, ansi_parser_public_api::AnsiToOfsBufPerforme
 #[allow(unused_imports, reason = "Allows flat link ref defs in rustdocs")]
 use crate::core::ansi::vt_100_pty_output_parser;
 use crate::{AutoWrapMode, BRACKETED_PASTE_MODE, CursorKeyMode, CursorVisibilityMode,
-            DEBUG_TUI_VT100_PARSER, LossyConvertToByte, MouseTrackingFormat,
+            DEBUG_VT100_PARSER, LossyConvertToByte, MouseTrackingFormat,
             MouseTrackingMode, RequestedScreenMode, URXVT_MOUSE_EXTENSION,
             UTF8_MOUSE_EXTENSION, WideningCastToU16,
             core::ansi::constants::CSI_PRIVATE_MODE_PREFIX};
@@ -100,7 +100,7 @@ pub fn set_mode(
     intermediates: &[u8],
 ) {
     let Some(modes) = parse_private_modes(params, intermediates) else {
-        DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_VT100_PARSER.then(|| {
             tracing::warn!("CSI h: Standard mode setting not implemented");
         });
         return;
@@ -147,7 +147,7 @@ pub fn set_mode(
             PrivateModeType::Other(
                 UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
             ) => {
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}h: Suppressed/shimmed private mode",
                         mode.as_u16_widening()
@@ -155,7 +155,7 @@ pub fn set_mode(
                 });
             }
             _ => {
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}h: Unimplemented/ignored private mode set",
                         mode.as_u16_widening()
@@ -196,7 +196,7 @@ pub fn reset_mode(
     intermediates: &[u8],
 ) {
     let Some(modes) = parse_private_modes(params, intermediates) else {
-        DEBUG_TUI_VT100_PARSER.then(|| {
+        DEBUG_VT100_PARSER.then(|| {
             tracing::warn!("CSI l: Standard mode reset not implemented");
         });
         return;
@@ -243,7 +243,7 @@ pub fn reset_mode(
             PrivateModeType::Other(
                 UTF8_MOUSE_EXTENSION | URXVT_MOUSE_EXTENSION | BRACKETED_PASTE_MODE,
             ) => {
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}l: Suppressed/shimmed private mode reset",
                         mode.as_u16_widening()
@@ -251,7 +251,7 @@ pub fn reset_mode(
                 });
             }
             _ => {
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::debug!(
                         "CSI ?{}l: Unimplemented/ignored private mode reset",
                         mode.as_u16_widening()

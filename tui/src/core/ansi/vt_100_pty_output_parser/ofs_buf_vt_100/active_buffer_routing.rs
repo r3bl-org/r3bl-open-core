@@ -4,7 +4,7 @@
 //! the [`OfsBufOpsVT100`] trait and its implementations.
 
 use super::{AlternateBuffer, OfsBufVT100, PrimaryBuffer};
-use crate::{ActiveScreenBuffer, CanvasStorage, DEBUG_TUI_VT100_PARSER,
+use crate::{ActiveScreenBuffer, CanvasStorage, DEBUG_VT100_PARSER,
             NarrowingCastToU16, PixelChar, RangeExclusive, ScrollbackAmount,
             ShiftLinesDirection, VPCol, VPLength, VPPos, VPRow, VPSize, VPWidth,
             Viewport, ViewportPanValidity, vp_col};
@@ -60,7 +60,7 @@ impl OfsBufVT100 {
             requested_row,
         }) = self.primary_buffer.try_pan_viewport_to(pos_copy)
         {
-            DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_VT100_PARSER.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error! {
                     message = "active_buffer_routing::pan_viewport_left failed",
@@ -86,7 +86,7 @@ impl OfsBufVT100 {
             requested_row,
         }) = self.primary_buffer.try_pan_viewport_to(pos_copy)
         {
-            DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_VT100_PARSER.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error! {
                     message = "active_buffer_routing::pan_viewport_right failed",

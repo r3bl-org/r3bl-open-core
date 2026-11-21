@@ -1,11 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TuiAvailabilityChooseExt,
-               TuiColor, TuiStyle, assert_terminal_is_interactive, choose,
-               cli_text_inline, cli_text_line, cli_text_lines, get_size, inline_vec,
+use r3bl_tui::{CliTextInline, DEBUG_CHOOSE, DefaultIoDevices, InlineVec,
+               TuiAvailabilityChooseExt, TuiColor, TuiStyle,
+               assert_terminal_is_interactive, choose, cli_text_inline, cli_text_line,
+               cli_text_lines, get_size, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
-               readline_async::{DEBUG_CHOOSE, HowToChoose, StyleSheet},
+               readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, throws, tui_color, vp_height, vp_width};
 
 const MULTI_LINE_HEADER: &str = "Multi line header";

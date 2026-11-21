@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::DEBUG_TUI_BOUNDS_CHECK;
+use crate::DEBUG_BOUNDS_CHECK;
 
 /// Extension trait for performing potentially lossy conversions from primitive types to
 /// [`u8`]. Avoid triggering warnings from:
@@ -142,7 +142,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for usize {
         fn as_u16_narrowing(self) -> u16 {
             if self > u16::MAX as usize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -161,7 +161,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for isize {
         fn as_u16_narrowing(self) -> u16 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -172,7 +172,7 @@ mod impl_narrowing_cast_to_u16 {
                 });
                 0
             } else if self > u16::MAX as isize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -195,7 +195,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for i16 {
         fn as_u16_narrowing(self) -> u16 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
                         original_type = "i16",
@@ -213,7 +213,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for u32 {
         fn as_u16_narrowing(self) -> u16 {
             if self > u16::MAX as u32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -232,7 +232,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for i32 {
         fn as_u16_narrowing(self) -> u16 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -243,7 +243,7 @@ mod impl_narrowing_cast_to_u16 {
                 });
                 0
             } else if self > u16::MAX as i32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -262,7 +262,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for u64 {
         fn as_u16_narrowing(self) -> u16 {
             if self > u16::MAX as u64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -281,7 +281,7 @@ mod impl_narrowing_cast_to_u16 {
     impl NarrowingCastToU16 for i64 {
         fn as_u16_narrowing(self) -> u16 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -292,7 +292,7 @@ mod impl_narrowing_cast_to_u16 {
                 });
                 0
             } else if self > u16::MAX as i64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU16::as_u16_narrowing",
@@ -338,7 +338,7 @@ mod impl_narrowing_cast_to_i16 {
     impl NarrowingCastToI16 for u16 {
         fn as_i16_narrowing(self) -> i16 {
             if self > i16::MAX as u16 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "u16",
@@ -356,7 +356,7 @@ mod impl_narrowing_cast_to_i16 {
     impl NarrowingCastToI16 for usize {
         fn as_i16_narrowing(self) -> i16 {
             if self > i16::MAX as usize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "usize",
@@ -374,7 +374,7 @@ mod impl_narrowing_cast_to_i16 {
     impl NarrowingCastToI16 for isize {
         fn as_i16_narrowing(self) -> i16 {
             if self < i16::MIN as isize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "isize",
@@ -384,7 +384,7 @@ mod impl_narrowing_cast_to_i16 {
                 });
                 i16::MIN
             } else if self > i16::MAX as isize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "isize",
@@ -402,7 +402,7 @@ mod impl_narrowing_cast_to_i16 {
     impl NarrowingCastToI16 for u32 {
         fn as_i16_narrowing(self) -> i16 {
             if self > i16::MAX as u32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "u32",
@@ -420,7 +420,7 @@ mod impl_narrowing_cast_to_i16 {
     impl NarrowingCastToI16 for i32 {
         fn as_i16_narrowing(self) -> i16 {
             if self < i16::MIN as i32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "i32",
@@ -430,7 +430,7 @@ mod impl_narrowing_cast_to_i16 {
                 });
                 i16::MIN
             } else if self > i16::MAX as i32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToI16::as_i16_narrowing",
                         original_type = "i32",
@@ -479,7 +479,7 @@ mod impl_narrowing_cast_to_isize {
     impl NarrowingCastToIsize for usize {
         fn as_isize_narrowing(self) -> isize {
             if self > isize::MAX as usize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToIsize::as_isize_narrowing",
                         original_type = "usize",
@@ -497,7 +497,7 @@ mod impl_narrowing_cast_to_isize {
     impl NarrowingCastToIsize for u64 {
         fn as_isize_narrowing(self) -> isize {
             if self > isize::MAX as u64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToIsize::as_isize_narrowing",
                         original_type = "u64",
@@ -515,7 +515,7 @@ mod impl_narrowing_cast_to_isize {
     impl NarrowingCastToIsize for i64 {
         fn as_isize_narrowing(self) -> isize {
             if self < isize::MIN as i64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToIsize::as_isize_narrowing",
                         original_type = "i64",
@@ -525,7 +525,7 @@ mod impl_narrowing_cast_to_isize {
                 });
                 isize::MIN
             } else if self > isize::MAX as i64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToIsize::as_isize_narrowing",
                         original_type = "i64",
@@ -602,7 +602,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for usize {
         fn as_u8_narrowing(self) -> u8 {
             if self > u8::MAX as usize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -621,7 +621,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for isize {
         fn as_u8_narrowing(self) -> u8 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -632,7 +632,7 @@ mod impl_narrowing_cast_to_u8 {
                 });
                 0
             } else if self > u8::MAX as isize {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -651,7 +651,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for u32 {
         fn as_u8_narrowing(self) -> u8 {
             if self > u8::MAX as u32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -670,7 +670,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for i32 {
         fn as_u8_narrowing(self) -> u8 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -681,7 +681,7 @@ mod impl_narrowing_cast_to_u8 {
                 });
                 0
             } else if self > u8::MAX as i32 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -700,7 +700,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for u64 {
         fn as_u8_narrowing(self) -> u8 {
             if self > u8::MAX as u64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -719,7 +719,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for i64 {
         fn as_u8_narrowing(self) -> u8 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -730,7 +730,7 @@ mod impl_narrowing_cast_to_u8 {
                 });
                 0
             } else if self > u8::MAX as i64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -749,7 +749,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for u16 {
         fn as_u8_narrowing(self) -> u8 {
             if self > u8::MAX as u16 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -768,7 +768,7 @@ mod impl_narrowing_cast_to_u8 {
     impl NarrowingCastToU8 for i16 {
         fn as_u8_narrowing(self) -> u8 {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -779,7 +779,7 @@ mod impl_narrowing_cast_to_u8 {
                 });
                 0
             } else if self > u8::MAX as i16 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToU8::as_u8_narrowing",
@@ -854,7 +854,7 @@ mod impl_narrowing_cast_to_usize {
     impl NarrowingCastToUsize for i32 {
         fn as_usize_narrowing(self) -> usize {
             if self < 0 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     // % is Display, ? is Debug.
                     tracing::error! {
                         message = "NarrowingCastToUsize::as_usize_narrowing",
@@ -877,7 +877,7 @@ mod impl_narrowing_cast_to_usize {
     impl NarrowingCastToUsize for u64 {
         fn as_usize_narrowing(self) -> usize {
             if self > usize::MAX as u64 {
-                DEBUG_TUI_BOUNDS_CHECK.then(|| {
+                DEBUG_BOUNDS_CHECK.then(|| {
                     tracing::error! {
                         message = "NarrowingCastToUsize::as_usize_narrowing",
                         original_type = "u64",

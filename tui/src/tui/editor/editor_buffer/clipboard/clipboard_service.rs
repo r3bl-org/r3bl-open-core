@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
+use crate::{DEBUG_CLIPBOARD, EditorBuffer, InlineVecStr};
 use std::error::Error;
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
@@ -74,7 +74,7 @@ pub fn copy_to_clipboard(
         .try_to_put_content_into_clipboard(acc_lines.join("\n"));
 
     if let Err(error) = result {
-        DEBUG_TUI_COPY_PASTE.then(|| {
+        DEBUG_CLIPBOARD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📋📋📋 Failed to copy selected text to clipboard",

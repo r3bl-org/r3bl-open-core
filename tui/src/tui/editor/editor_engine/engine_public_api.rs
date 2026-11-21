@@ -3,8 +3,8 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use crate::{ClipboardService, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
+use crate::{ClipboardService, CommonResult, DEBUG_CLIPBOARD, DEBUG_TUI,
+            DEBUG_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
             EditorEvent, FlexBox, GapBufferLine, HasFocus, InlineString, InputEvent,
             Key, KeyPress, NarrowingCastToU16, PrettyPrintDebug, RangeBoundsResult,
             RangeConstructExt, RenderArgs, RenderOpCommon, RenderOpIR, RenderOpIRVec,
@@ -257,7 +257,7 @@ pub fn render_selection(render_args: RenderArgs<'_>, mut render_ops: &mut Render
                 continue;
             }
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "🍉🍉🍉 selection_str_slice",
@@ -456,7 +456,7 @@ mod syn_hi_r3bl_path {
             let lines: &StyleUSSpanLines =
                 editor_engine.get_ast_cache().expect("conversion error");
 
-            DEBUG_TUI_SYN_HI.then(|| {
+            DEBUG_SYN_HI.then(|| {
                 // % is Display, ? is Debug.
                 //
                 // # Implementation Note: Intentional Use of Raw `usize`

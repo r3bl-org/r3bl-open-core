@@ -4,7 +4,7 @@
 
 use super::{constants::ACCUMULATOR_INITIAL_CAPACITY,
             unparsed_buffer_action::UnparsedBufferAction};
-use crate::{ByteLength, ByteOffset, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, HexSlice};
+use crate::{ByteLength, ByteOffset, DEBUG_DIRECT_TO_ANSI, HexSlice};
 
 /// Dedicated buffer accumulator for terminal input bytes.
 ///
@@ -66,7 +66,7 @@ impl ChunkAccumulator {
     /// malformed or unrecognized escape sequences, logging diagnostic warnings when
     /// enabled.
     pub fn purge_malformed(&mut self) {
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             tracing::warn! {
                 message = "ChunkAccumulator::purge_malformed",
                 status = "discarding unrecognized/malformed escape sequence",

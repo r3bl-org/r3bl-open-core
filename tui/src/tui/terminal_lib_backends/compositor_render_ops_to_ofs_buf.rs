@@ -74,7 +74,7 @@
 
 use super::{OfsBuf, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
-use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
+use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_COMPOSITOR,
             GCStringOwned, MemoizedLenMap, NarrowingCastToU16, PixelChar, RangeExt,
             RenderOpsLocalData, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, VPPos,
             VPSize, VPWidth, WideningCastToUsize, ZOrder, ch,
@@ -112,7 +112,7 @@ impl RenderPipeline {
             }
         }
 
-        DEBUG_TUI_COMPOSITOR.then(|| {
+        DEBUG_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("ofs_buf {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
@@ -385,7 +385,7 @@ pub fn print_text_with_attributes(
         }
     }?;
 
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info! {
             message = %inline_string!(
@@ -417,7 +417,7 @@ pub fn print_text_with_attributes(
         render_local_data,
     );
 
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = %match maybe_style {

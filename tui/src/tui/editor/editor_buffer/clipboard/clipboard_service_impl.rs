@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ClipboardResult, ClipboardService};
-use crate::{ClipboardTarget, DEBUG_TUI_COPY_PASTE, OscSequence};
+use crate::{ClipboardTarget, DEBUG_CLIPBOARD, OscSequence};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::Write;
 
@@ -37,7 +37,7 @@ impl ClipboardService for Osc52Clipboard {
         write!(stdout, "{seq}")?;
         stdout.flush()?;
 
-        DEBUG_TUI_COPY_PASTE.then(|| {
+        DEBUG_CLIPBOARD.then(|| {
             if let OscSequence::ClipboardSet { data, .. } = &seq {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -105,7 +105,7 @@ impl ClipboardService for SystemClipboard {
             .and_then(|mut ctx| ctx.set_contents(content.clone()))
         {
             Ok(()) => {
-                DEBUG_TUI_COPY_PASTE.then(|| {
+                DEBUG_CLIPBOARD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "📋📋📋 Selected Text was copied to clipboard via copypasta",
@@ -115,7 +115,7 @@ impl ClipboardService for SystemClipboard {
                 ok!()
             }
             Err(copypasta_err) => {
-                DEBUG_TUI_COPY_PASTE.then(|| {
+                DEBUG_CLIPBOARD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "📋📋📋 copypasta failed, falling back to OSC 52",

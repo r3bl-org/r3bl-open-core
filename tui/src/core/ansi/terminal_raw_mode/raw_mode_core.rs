@@ -42,7 +42,7 @@
 use super::raw_mode_unix;
 #[cfg(windows)]
 use super::raw_mode_windows;
-use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND, TerminalLibBackend};
+use crate::{DEBUG_TERMINAL_BACKEND, TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use miette::IntoDiagnostic;
 
 /// Enables raw mode on the terminal.
@@ -69,7 +69,7 @@ use miette::IntoDiagnostic;
 /// [`termios`]: https://en.wikipedia.org/wiki/Termios
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+    DEBUG_TERMINAL_BACKEND.then(|| {
         tracing::debug!(
             message = "enable_raw_mode: 🟢 enabling raw mode",
             backend = ?TERMINAL_LIB_BACKEND
@@ -98,10 +98,10 @@ pub fn enable_raw_mode() -> miette::Result<()> {
     };
 
     match &result {
-        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        Ok(()) => DEBUG_TERMINAL_BACKEND.then(|| {
             tracing::debug!(message = "enable_raw_mode: ✅ success");
         }),
-        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        Err(e) => DEBUG_TERMINAL_BACKEND.then(|| {
             tracing::error!(message = "enable_raw_mode: ❌ failed", error = %e);
         }),
     };
@@ -133,7 +133,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// [`termios`]: https://en.wikipedia.org/wiki/Termios
 /// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
-    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+    DEBUG_TERMINAL_BACKEND.then(|| {
         tracing::debug!(
             message = "disable_raw_mode: 🔴 disabling raw mode",
             backend = ?TERMINAL_LIB_BACKEND
@@ -163,10 +163,10 @@ pub fn disable_raw_mode() -> miette::Result<()> {
     };
 
     match &result {
-        Ok(()) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        Ok(()) => DEBUG_TERMINAL_BACKEND.then(|| {
             tracing::debug!(message = "disable_raw_mode: ✅ success");
         }),
-        Err(e) => DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+        Err(e) => DEBUG_TERMINAL_BACKEND.then(|| {
             tracing::error!(message = "disable_raw_mode: ❌ failed", error = %e);
         }),
     };
