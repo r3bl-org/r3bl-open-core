@@ -1,9 +1,11 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CheckFailed, StateMarker, UpToDate, UpgradeAvailable, Upgrading};
-use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, ManifestCheckError,
-            UpgradeActionOnExit, UpgradeJourney, UpgradeStrategy,
-            fetch_crate_metadata_from_manifest};
+use super::{CheckFailed, CheckFailedError, StateMarker, UpToDate, UpgradeAvailable,
+            Upgrading};
+use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, FetchManifestOutput,
+            UpgradeActionOnExit, UpgradeJourney, UpgradeStrategy, VERSIONS_JSONC_FILE,
+            try_fetch_manifest};
+use const_format::formatcp;
 
 /// Typestate while querying [`R3BL_VERSIONS_JSONC_URL`] (either synchronously on the
 /// current thread via [`UpgradeStrategy::Immediate`] or on the dedicated thread via
@@ -72,7 +74,7 @@ impl UpgradeJourney<Checking> {
     #[must_use]
     pub(in crate::self_upgrade) fn into_check_failed(
         self,
-        error: ManifestCheckError,
+        error: CheckFailedError,
     ) -> UpgradeJourney<CheckFailed> {
         UpgradeJourney {
             config: self.config,
@@ -81,12 +83,12 @@ impl UpgradeJourney<Checking> {
     }
 
     /// Consumes `self` on the dedicated thread (in the [Control Plane]; see [Thread
-    /// Model]), queries the JSONC manifest via [`fetch_crate_metadata_from_manifest`] (in
+    /// Model]), queries the JSONC manifest via [`try_fetch_manifest`] (in
     /// the [Execution Plane]) using [`UpgradeStrategy::manifest_timeout`], touches the
     /// `1h` cooldown timestamp file when [`UpToDate`], and returns
     /// [`DeferredCheckOutcome`].
     ///
-    /// [`fetch_crate_metadata_from_manifest`]: crate::self_upgrade::fetch_crate_metadata_from_manifest
+    /// [`try_fetch_manifest`]: crate::self_upgrade::try_fetch_manifest
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
@@ -98,21 +100,23 @@ impl UpgradeJourney<Checking> {
         action_on_exit: UpgradeActionOnExit,
     ) -> DeferredCheckOutcome {
         let timeout = UpgradeStrategy::Deferred(action_on_exit).manifest_timeout();
-        let (metadata, binaries_release_base_url) =
-            match fetch_crate_metadata_from_manifest(
-                self.config.get_jsonc_manifest_url(),
-                self.config.get_crate_name(),
-                timeout,
-            )
-            .await
-            {
-                Ok(pair) => pair,
-                Err(error) => {
-                    return DeferredCheckOutcome::CheckFailed(
-                        self.into_check_failed(error),
-                    );
-                }
-            };
+        let FetchManifestOutput {
+            metadata,
+            binaries_release_base_url,
+        } = match try_fetch_manifest(
+            self.config.get_jsonc_manifest_url(),
+            self.config.get_crate_name(),
+            timeout,
+        )
+        .await
+        {
+            Ok(info) => info,
+            Err(error) => {
+                return DeferredCheckOutcome::CheckFailed(
+                    self.into_check_failed(error.into()),
+                );
+            }
+        };
 
         if metadata
             .version
@@ -132,11 +136,11 @@ impl UpgradeJourney<Checking> {
 
     /// Consumes `self` synchronously on the current thread during an explicit `--upgrade`
     /// ([`UpgradeStrategy::Immediate`]) run (in the [Control Plane]; see [Thread Model]),
-    /// queries the JSONC manifest via [`fetch_crate_metadata_from_manifest`] (in the
+    /// queries the JSONC manifest via [`try_fetch_manifest`] (in the
     /// [Execution Plane]) using [`UpgradeStrategy::manifest_timeout`], touches the `1h`
     /// cooldown timestamp file when [`UpToDate`], and returns [`ImmediateCheckOutcome`].
     ///
-    /// [`fetch_crate_metadata_from_manifest`]: crate::self_upgrade::fetch_crate_metadata_from_manifest
+    /// [`try_fetch_manifest`]: crate::self_upgrade::try_fetch_manifest
     /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
     /// [`UpgradeStrategy::manifest_timeout`]: crate::self_upgrade::UpgradeStrategy::manifest_timeout
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
@@ -148,21 +152,23 @@ impl UpgradeJourney<Checking> {
         self,
     ) -> ImmediateCheckOutcome {
         let timeout = UpgradeStrategy::Immediate.manifest_timeout();
-        let (metadata, binaries_release_base_url) =
-            match fetch_crate_metadata_from_manifest(
-                self.config.get_jsonc_manifest_url(),
-                self.config.get_crate_name(),
-                timeout,
-            )
-            .await
-            {
-                Ok(pair) => pair,
-                Err(error) => {
-                    return ImmediateCheckOutcome::CheckFailed(
-                        self.into_check_failed(error),
-                    );
-                }
-            };
+        let FetchManifestOutput {
+            metadata,
+            binaries_release_base_url,
+        } = match try_fetch_manifest(
+            self.config.get_jsonc_manifest_url(),
+            self.config.get_crate_name(),
+            timeout,
+        )
+        .await
+        {
+            Ok(info) => info,
+            Err(error) => {
+                return ImmediateCheckOutcome::CheckFailed(
+                    self.into_check_failed(error.into()),
+                );
+            }
+        };
 
         if metadata
             .version
@@ -182,7 +188,7 @@ impl UpgradeJourney<Checking> {
         DEBUG_SELF_UPGRADE.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
-                message = "Newer version available in versions.jsonc",
+                message = formatcp!("Newer version available in {VERSIONS_JSONC_FILE}"),
                 crate_name = %self.config.get_crate_name(),
                 current_version = %self.config.get_current_version(),
                 remote_version = %metadata.version
@@ -191,9 +197,20 @@ impl UpgradeJourney<Checking> {
     }
 
     fn touch_cooldown_on_up_to_date(&self) {
-        self.config
-            .get_cooldown_policy()
-            .touch(self.config.get_crate_name());
+        if let Err(err) = self
+            .config
+            .get_remote_version_check_gate()
+            .try_touch_timestamp_file()
+        {
+            DEBUG_SELF_UPGRADE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = "Could not enter cooldown after confirming binary is up to date",
+                    crate_name = %self.config.get_crate_name(),
+                    error = ?err
+                );
+            });
+        }
     }
 }
 
@@ -201,11 +218,11 @@ impl UpgradeJourney<Checking> {
 /// [`UpgradeJourney::<Checking>::check_for_deferred_upgrade`].
 ///
 /// Returned directly via [`DeferredCheckHandle`] from the dedicated thread to
-/// [`StartOutcome::handle_upgrade_on_exit`]. Makes [`Upgrading`] unrepresentable prior to
-/// application exit.
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]. Makes [`Upgrading`]
+/// unrepresentable prior to application exit.
 ///
 /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-/// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeferredCheckOutcome {
@@ -214,9 +231,9 @@ pub enum DeferredCheckOutcome {
     UpToDate(UpgradeJourney<UpToDate>),
 
     /// Newer version found (`remote > current`); awaits exit handling via
-    /// [`StartOutcome::handle_upgrade_on_exit`].
+    /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`].
     ///
-    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
+    /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
     UpgradeAvailable(UpgradeJourney<UpgradeAvailable>),
 
     /// Network, parse, or thread/runtime error occurred during the manifest check.
@@ -247,11 +264,13 @@ pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CooldownPolicy, CrateVersion, JsoncScalar, UpgradeConfig, UpgradePolicy,
+    use crate::{CrateVersion, GateStatus, GateStatusError, JsoncScalar,
+                RemoteVersionCheckGate, UpgradeConfig, UpgradePolicy,
                 UserFeedbackChannel,
                 self_upgrade::integration_tests::test_fixtures::{blocks,
                                                                  manifest_server}};
-    use r3bl_tui::{assert_eq2, try_create_temp_dir};
+    use r3bl_tui::{TempDirChildPath, assert_eq2, try_create_temp_dir};
+    use std::io::ErrorKind;
 
     const SAMPLE_MANIFEST_0_0_26: &str = r#"{
         "binaries_release_base_url": "https://github.com/r3bl-org/r3bl-binaries/releases/download",
@@ -269,25 +288,32 @@ mod tests {
         let temp_dir = try_create_temp_dir().unwrap();
 
         // 1. UpgradeAvailable (`remote 0.0.26 > local 0.0.25`) must NOT touch cooldown.
-        let avail_timestamp_file = temp_dir.join("avail.last_check");
         let avail_action = UpgradeActionOnExit::NotifyOnly;
         let avail_strategy = UpgradeStrategy::Deferred(avail_action);
-        let avail_server_spawn_result =
+        let res_avail_server_spawn =
             manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let avail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(avail_strategy),
-            avail_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(avail_timestamp_file.clone()),
+            res_avail_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "avail").unwrap(),
+                None,
+            ),
         );
+        let avail_gate = avail_cfg.get_remote_version_check_gate().clone();
         let avail_outcome = UpgradeJourney::new(avail_cfg)
             .into_checking(avail_strategy)
             .check_for_deferred_upgrade(avail_action)
             .await;
-        avail_server_spawn_result.assert_each_mock_called_once();
-        assert!(!avail_timestamp_file.exists());
+        res_avail_server_spawn.assert_each_mock_called_once();
+        assert!(matches!(
+            avail_gate.try_check_gate_status(),
+            Err(GateStatusError::MetadataReadFailed { src_err, .. })
+                if src_err.kind() == ErrorKind::NotFound
+        ));
         match avail_outcome {
             DeferredCheckOutcome::UpgradeAvailable(journey) => {
                 assert_eq2!(journey.get_state().action_on_exit, avail_action);
@@ -300,50 +326,60 @@ mod tests {
         }
 
         // 2. CheckFailed (`500 Internal Server Error`) must NOT touch cooldown.
-        let fail_timestamp_file = temp_dir.join("fail.last_check");
         let fail_action = UpgradeActionOnExit::Auto;
         let fail_strategy = UpgradeStrategy::Deferred(fail_action);
-        let fail_server_spawn_result =
+        let res_fail_server_spawn =
             manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(fail_strategy),
-            fail_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
+            res_fail_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "fail").unwrap(),
+                None,
+            ),
         );
+        let fail_gate = fail_cfg.get_remote_version_check_gate().clone();
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(fail_strategy)
             .check_for_deferred_upgrade(fail_action)
             .await;
-        fail_server_spawn_result.assert_each_mock_called_once();
-        assert!(!fail_timestamp_file.exists());
+        res_fail_server_spawn.assert_each_mock_called_once();
         assert!(matches!(
-            fail_outcome,
-            DeferredCheckOutcome::CheckFailed(_)
+            fail_gate.try_check_gate_status(),
+            Err(GateStatusError::MetadataReadFailed { src_err, .. })
+                if src_err.kind() == ErrorKind::NotFound
         ));
+        assert!(matches!(fail_outcome, DeferredCheckOutcome::CheckFailed(_)));
 
         // 3. UpToDate (`remote 0.0.26 <= local 0.0.26`) MUST touch cooldown.
-        let ok_timestamp_file = temp_dir.join("uptodate.last_check");
         let ok_action = UpgradeActionOnExit::Auto;
         let ok_strategy = UpgradeStrategy::Deferred(ok_action);
-        let ok_server_spawn_result =
+        let res_ok_server_spawn =
             manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let ok_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(ok_strategy),
-            ok_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
+            res_ok_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "uptodate").unwrap(),
+                None,
+            ),
         );
+        let ok_gate = ok_cfg.get_remote_version_check_gate().clone();
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(ok_strategy)
             .check_for_deferred_upgrade(ok_action)
             .await;
-        ok_server_spawn_result.assert_each_mock_called_once();
-        assert!(ok_timestamp_file.exists());
+        res_ok_server_spawn.assert_each_mock_called_once();
+        assert_eq2!(
+            ok_gate.try_check_gate_status().unwrap(),
+            GateStatus::ClosedForCooldown
+        );
         assert!(matches!(ok_outcome, DeferredCheckOutcome::UpToDate(_)));
     }
 
@@ -352,23 +388,30 @@ mod tests {
         let temp_dir = try_create_temp_dir().unwrap();
 
         // 1. Upgrading (`remote 0.0.26 > local 0.0.25`) must NOT touch cooldown yet.
-        let upg_timestamp_file = temp_dir.join("imm_upg.last_check");
-        let upg_server_spawn_result =
+        let res_upg_server_spawn =
             manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let upg_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            upg_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(upg_timestamp_file.clone()),
+            res_upg_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "imm_upg").unwrap(),
+                None,
+            ),
         );
+        let upg_gate = upg_cfg.get_remote_version_check_gate().clone();
         let upg_outcome = UpgradeJourney::new(upg_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        upg_server_spawn_result.assert_each_mock_called_once();
-        assert!(!upg_timestamp_file.exists());
+        res_upg_server_spawn.assert_each_mock_called_once();
+        assert!(matches!(
+            upg_gate.try_check_gate_status(),
+            Err(GateStatusError::MetadataReadFailed { src_err, .. })
+                if src_err.kind() == ErrorKind::NotFound
+        ));
         match upg_outcome {
             ImmediateCheckOutcome::Upgrading(journey) => {
                 assert_eq2!(
@@ -380,46 +423,59 @@ mod tests {
         }
 
         // 2. CheckFailed (`500 Internal Server Error`) must NOT touch cooldown.
-        let fail_timestamp_file = temp_dir.join("imm_fail.last_check");
-        let fail_server_spawn_result =
+        let res_fail_server_spawn =
             manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
         let fail_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.25").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            fail_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(fail_timestamp_file.clone()),
+            res_fail_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "imm_fail").unwrap(),
+                None,
+            ),
         );
+        let fail_gate = fail_cfg.get_remote_version_check_gate().clone();
         let fail_outcome = UpgradeJourney::new(fail_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        fail_server_spawn_result.assert_each_mock_called_once();
-        assert!(!fail_timestamp_file.exists());
+        res_fail_server_spawn.assert_each_mock_called_once();
+        assert!(matches!(
+            fail_gate.try_check_gate_status(),
+            Err(GateStatusError::MetadataReadFailed { src_err, .. })
+                if src_err.kind() == ErrorKind::NotFound
+        ));
         assert!(matches!(
             fail_outcome,
             ImmediateCheckOutcome::CheckFailed(_)
         ));
 
         // 3. UpToDate (`remote 0.0.26 <= local 0.0.26`) MUST touch cooldown.
-        let ok_timestamp_file = temp_dir.join("imm_ok.last_check");
-        let ok_server_spawn_result =
+        let res_ok_server_spawn =
             manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
         let ok_cfg = UpgradeConfig::new(
             "r3bl-cmdr",
             CrateVersion::try_parse("0.0.26").unwrap(),
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Enabled(UpgradeStrategy::Immediate),
-            ok_server_spawn_result.endpoint_url.clone(),
-            CooldownPolicy::new_custom_path(ok_timestamp_file.clone()),
+            res_ok_server_spawn.endpoint_url.clone(),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "imm_ok").unwrap(),
+                None,
+            ),
         );
+        let ok_gate = ok_cfg.get_remote_version_check_gate().clone();
         let ok_outcome = UpgradeJourney::new(ok_cfg)
             .into_checking(UpgradeStrategy::Immediate)
             .check_for_immediate_upgrade()
             .await;
-        ok_server_spawn_result.assert_each_mock_called_once();
-        assert!(ok_timestamp_file.exists());
+        res_ok_server_spawn.assert_each_mock_called_once();
+        assert_eq2!(
+            ok_gate.try_check_gate_status().unwrap(),
+            GateStatus::ClosedForCooldown
+        );
         assert!(matches!(ok_outcome, ImmediateCheckOutcome::UpToDate(_)));
     }
 }

@@ -2,7 +2,7 @@
 
 //! Composed compile-time constants and endpoint test fixtures.
 
-use crate::self_upgrade::{EndpointUrl, JsoncScalar, ReleaseAsset, ReleaseTarget, archive};
+use crate::self_upgrade::{EndpointUrl, JsoncScalar, ReleaseAsset, ReleaseTarget};
 use const_format::formatcp;
 
 /// Primitive building blocks, hostnames, and network addresses for test fixtures.
@@ -41,7 +41,7 @@ pub mod blocks {
     pub const RELEASES_DOWNLOAD_PATH: &str = "releases/download";
 
     /// Central version manifest filename.
-    pub const VERSIONS_JSONC_FILE: &str = "versions.jsonc";
+    pub use crate::self_upgrade::VERSIONS_JSONC_FILE;
 
     /// Test crate name matching `Cargo.toml`.
     pub const TEST_CRATE_NAME: &str = "r3bl-cmdr";
@@ -80,15 +80,13 @@ pub fn placeholder_release_base_url() -> EndpointUrl {
 
 /// Request path for the central version manifest file.
 pub const VERSIONS_JSONC_PATH: &str = formatcp!(
-    "{slash}{file}",
-    slash = archive::URL_PATH_SEPARATOR,
+    "/{file}",
     file = blocks::VERSIONS_JSONC_FILE,
 );
 
 /// Request path prefix for binary release asset downloads on the local test server.
 pub const RELEASES_DOWNLOAD_REQUEST_PATH: &str = formatcp!(
-    "{slash}{path}",
-    slash = archive::URL_PATH_SEPARATOR,
+    "/{path}",
     path = blocks::RELEASES_DOWNLOAD_PATH,
 );
 

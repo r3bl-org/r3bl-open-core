@@ -286,6 +286,55 @@ impl TryFrom<&str> for CrateDistribution { ... }
 impl TryFrom<String> for CrateDistribution { ... }
 ```
 
+### Step 11: Enforce `maybe_` and `res_` Naming Conventions (Mandatory)
+
+Scan changed files for `Option<T>` and `Result<T, E>` bindings, fields, and parameters:
+
+- **`Option<T>` (`maybe_`)**: Local variables, struct fields, and function parameters
+  holding `Option<T>` must start with `maybe_` (e.g., `let maybe_viewport`,
+  `maybe_style: Option<TuiStyle>`, `maybe_max_height: Option<ChUnit>`).
+- **`Result<T, E>` (`res_`)**: Local variables and function parameters holding
+  `Result<T, E>` must start with `res_` (e.g., `let res_bytes`, `res_io: Result<()>`).
+- **Unwrapped values drop the prefix**: Bindings extracted via `if let`, `match`,
+  `let-else`, or `?` must drop the prefix (e.g., `if let Some(style) = maybe_style`,
+  `let bytes = res_bytes?;`).
+
+**✅ Good:**
+
+```rust
+pub struct Panel {
+    pub maybe_style: Option<TuiStyle>,
+}
+
+fn render(maybe_max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let res_bytes = serialize(panel);
+    let bytes = res_bytes?;
+
+    if let Some(style) = panel.maybe_style {
+        apply_style(style, maybe_max_height, &bytes);
+    }
+    Ok(())
+}
+```
+
+**❌ Bad:**
+
+```rust
+pub struct Panel {
+    pub style: Option<TuiStyle>,
+}
+
+fn render(max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let bytes = serialize(panel);
+    let inner = bytes?;
+
+    if let Some(s) = panel.style {
+        apply_style(s, max_height, &inner);
+    }
+    Ok(())
+}
+```
+
 ## Reporting Results
 
 After completing all steps, report concisely:

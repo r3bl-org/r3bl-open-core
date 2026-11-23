@@ -159,11 +159,11 @@ async fn main() -> miette::Result<()> {
 
     // Run the multiplexer event loop.
     tracing::debug!("About to start multiplexer.run()");
-    let run_result = multiplexer.run().await;
-    tracing::debug!("multiplexer.run() completed with result: {:?}", run_result);
+    let res_mux_run = multiplexer.run().await;
+    tracing::debug!("multiplexer.run() completed with result: {:?}", res_mux_run);
 
     // Check for any errors from the run.
-    run_result?;
+    res_mux_run?;
 
     println!("👋 PTYMux session ended. Goodbye!");
 

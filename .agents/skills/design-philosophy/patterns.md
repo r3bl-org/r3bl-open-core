@@ -14,6 +14,46 @@ fn process(data: &[u8], offset: usize, len: usize, flags: u32, mode: u8) -> Resu
 fn process(input: InputBuffer, options: ProcessOptions) -> Result<OutputBuffer, ProcessError>
 ```
 
+### Naming `Option` and `Result` Values
+
+Prefix `Option<T>` locals, struct fields, and parameters with `maybe_`, and `Result<T, E>` locals and parameters with `res_`. Drop the prefix once unwrapped so the inner value gets the clean domain name.
+
+#### Bad: Ambiguous Wrapper Names
+
+```rust
+pub struct Panel {
+    pub style: Option<TuiStyle>,
+}
+
+fn render(max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let bytes = serialize(panel);
+    let inner = bytes?;
+
+    if let Some(s) = panel.style {
+        apply_style(s, max_height, &inner);
+    }
+    Ok(())
+}
+```
+
+#### Good: Self-Documenting `maybe_` / `res_` Prefixes
+
+```rust
+pub struct Panel {
+    pub maybe_style: Option<TuiStyle>,
+}
+
+fn render(maybe_max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let res_bytes = serialize(panel);
+    let bytes = res_bytes?;
+
+    if let Some(style) = panel.maybe_style {
+        apply_style(style, maybe_max_height, &bytes);
+    }
+    Ok(())
+}
+```
+
 ---
 
 ## Progressive Disclosure Patterns
@@ -587,3 +627,4 @@ pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
 | ADT Const Params       | "Can I use a const enum to replace a trait or runtime field?"                   |
 | Type Co-location       | "Is this floating function constructing or decoding a co-located domain type?"   |
 | Constant Hierarchy     | "Is this atomic (base u8) or a composed sequence (base &str)?"                  |
+| Wrapper Naming         | "Do `Option<T>` values start with `maybe_` and `Result<T, E>` with `res_`?"     |

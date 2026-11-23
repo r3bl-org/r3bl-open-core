@@ -4,7 +4,7 @@ use crate::generate_friendly_random_id;
 use miette::IntoDiagnostic;
 use std::{fmt::{Display, Formatter},
           ops::Deref,
-          path::Path};
+          path::{Component, Path, PathBuf}};
 
 #[derive(Debug)]
 pub struct TempDir {
@@ -153,6 +153,83 @@ impl Display for TempDir {
 /// ```
 impl AsRef<Path> for TempDir {
     fn as_ref(&self) -> &Path { &self.inner }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TempDirChildPath {
+    inner: PathBuf,
+}
+
+impl TempDirChildPath {
+    /// Creates a [`TempDirChildPath`] guaranteed to stay inside `parent`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `arg_sub_dir` is absolute or contains a parent-directory
+    /// (`..`) component.
+    pub fn try_new(
+        parent: &TempDir,
+        arg_sub_dir: impl AsRef<Path>,
+    ) -> miette::Result<Self> {
+        let sub_dir = arg_sub_dir.as_ref();
+        let is_relative = sub_dir.is_relative();
+        let has_parent_in_component =
+            sub_dir.components().any(|c| c == Component::ParentDir);
+        if !is_relative || has_parent_in_component {
+            miette::bail!(
+                "sub_dir must be relative and not contain parent components: {}",
+                sub_dir.display()
+            );
+        }
+        let child = parent.inner.join(sub_dir);
+        Ok(Self { inner: child })
+    }
+
+    #[must_use]
+    pub fn as_path_buf(&self) -> PathBuf { self.inner.clone() }
+}
+
+/// Needed for `fs::metadata` and `File::options().open()`.
+impl AsRef<Path> for TempDirChildPath {
+    fn as_ref(&self) -> &Path { &self.inner }
+}
+
+/// Allow easy access to inner [`PathBuf`] for APIs that expect it.
+impl Deref for TempDirChildPath {
+    type Target = std::path::PathBuf;
+
+    fn deref(&self) -> &Self::Target { &self.inner }
+}
+
+#[cfg(test)]
+mod tests_temp_dir_child_path {
+    use super::*;
+    use crate::try_create_temp_dir;
+
+    #[test]
+    #[allow(clippy::missing_errors_doc)]
+    fn test_try_new_valid_relative_and_empty() -> miette::Result<()> {
+        let temp_dir = try_create_temp_dir()?;
+        let child = TempDirChildPath::try_new(&temp_dir, "child")?;
+        assert_eq!(child.inner, temp_dir.inner.join("child"));
+
+        let nested = TempDirChildPath::try_new(&temp_dir, "a/b/c")?;
+        assert_eq!(nested.inner, temp_dir.inner.join("a/b/c"));
+
+        let root_itself = TempDirChildPath::try_new(&temp_dir, "")?;
+        assert_eq!(root_itself.inner, temp_dir.inner.join(""));
+        Ok(())
+    }
+
+    #[test]
+    #[allow(clippy::missing_errors_doc)]
+    fn test_try_new_rejects_absolute_and_parent_dir_traversal() -> miette::Result<()> {
+        let temp_dir = try_create_temp_dir()?;
+        assert!(TempDirChildPath::try_new(&temp_dir, std::env::temp_dir()).is_err());
+        assert!(TempDirChildPath::try_new(&temp_dir, "../escape").is_err());
+        assert!(TempDirChildPath::try_new(&temp_dir, "a/../../escape").is_err());
+        Ok(())
+    }
 }
 
 #[cfg(test)]

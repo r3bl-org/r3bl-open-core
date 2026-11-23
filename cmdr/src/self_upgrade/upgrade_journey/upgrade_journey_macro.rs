@@ -10,11 +10,11 @@
 ///    - the passed [`UserFeedbackChannel`],
 ///    - an [`UpgradePolicy`] converted from [`UpgradeCLIArgs`],
 ///    - the calling crate's compile-time package identity, and
-///    - the default [`EndpointUrl`] and [`CooldownPolicy`].
+///    - the default [`EndpointUrl`] and [`RemoteVersionCheckGate`].
 /// 3. And finally returns an [`UpgradeJourney<NotStarted>`] ready to [`.start()`].
 ///
-/// For custom overrides (in tests to pass custom URLs or [`CooldownPolicy`]), construct
-/// [`UpgradeConfig::new()`] and pass it to [`UpgradeJourney::new()`] directly.
+/// For custom overrides (in tests to pass custom URLs or [`RemoteVersionCheckGate`]),
+/// construct [`UpgradeConfig::new()`] and pass it to [`UpgradeJourney::new()`] directly.
 ///
 /// See [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
 /// [`self_upgrade`] module documentation.
@@ -65,9 +65,9 @@
 ///
 /// [1]: crate::self_upgrade::CrateVersion::from_cargo_parts
 /// [`.start()`]: crate::self_upgrade::UpgradeJourney::start
-/// [`CooldownPolicy`]: crate::self_upgrade::CooldownPolicy
 /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 /// [`NotStarted`]: crate::self_upgrade::NotStarted
+/// [`RemoteVersionCheckGate`]: crate::self_upgrade::RemoteVersionCheckGate
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs
@@ -83,7 +83,7 @@
 #[macro_export]
 macro_rules! upgrade_journey {
     ($user_feedback_channel:expr, $upgrade_cli_args:expr) => {{
-        let crate_name = ::core::env!("CARGO_PKG_NAME");
+        let crate_name = $crate::CrateName::from(::core::env!("CARGO_PKG_NAME"));
 
         // XMARK: Use const expression for compile time (witness) validation
 
@@ -100,7 +100,9 @@ macro_rules! upgrade_journey {
 
         let upgrade_policy = $crate::UpgradePolicy::from($upgrade_cli_args);
         let manifest_url = $crate::EndpointUrl::default_manifest_url();
-        let cooldown_policy = $crate::CooldownPolicy::default();
+        let remote_version_check_gate =
+            $crate::RemoteVersionCheckGate::try_new(&crate_name, None)
+                .unwrap_or($crate::RemoteVersionCheckGate::Disabled);
 
         let config = $crate::UpgradeConfig::new(
             crate_name,
@@ -108,7 +110,7 @@ macro_rules! upgrade_journey {
             $user_feedback_channel,
             upgrade_policy,
             manifest_url,
-            cooldown_policy,
+            remote_version_check_gate,
         );
 
         $crate::UpgradeJourney::<$crate::NotStarted>::new(config)
@@ -117,8 +119,8 @@ macro_rules! upgrade_journey {
 
 #[cfg(test)]
 mod tests {
-    use crate::{CooldownPolicy, CrateName, EndpointUrl, NotStarted, UpgradeCLIArgs,
-                UpgradePolicy, UpgradeStrategy, UserFeedbackChannel};
+    use crate::{CrateName, EndpointUrl, NotStarted, RemoteVersionCheckGate,
+                UpgradeCLIArgs, UpgradePolicy, UpgradeStrategy, UserFeedbackChannel};
     use r3bl_tui::assert_eq2;
 
     #[test]
@@ -139,8 +141,12 @@ mod tests {
             &EndpointUrl::default_manifest_url()
         );
         assert_eq2!(
-            default_journey.get_config().get_cooldown_policy(),
-            &CooldownPolicy::default()
+            default_journey.get_config().get_remote_version_check_gate(),
+            &RemoteVersionCheckGate::try_new(
+                &CrateName::from(env!("CARGO_PKG_NAME")),
+                None,
+            )
+            .unwrap_or(RemoteVersionCheckGate::Disabled)
         );
         assert_eq2!(
             default_journey.get_config().get_upgrade_policy(),

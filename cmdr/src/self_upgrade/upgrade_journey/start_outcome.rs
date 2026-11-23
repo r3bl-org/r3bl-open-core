@@ -1,24 +1,61 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{CheckFailed, Checking, Completed, CooldownSkipped, DeferredCheckOutcome,
-            Disabled, ExitOutcome, SingletonState, UpToDate, UpgradeJourney};
-use crate::DEBUG_SELF_UPGRADE;
-use r3bl_tui::TokioRuntimeOutcome;
+use super::{CheckFailed, CheckFailedError, Checking, Completed, DeferredCheckOutcome,
+            Disabled, ExitOutcome, Skipped, UpToDate, UpgradeJourney,
+            thread_runner::ThreadRunner};
+use r3bl_tui::StdThreadTokioJoinHandle;
+
+/// Handle to an in-flight dedicated check thread spawned during a deferred upgrade on
+/// exit ([`UpgradeStrategy::Deferred`]).
+///
+/// Owned linearly inside [`DeferredUpgradeOutcome::DeferredCheckSpawned`] and consumed
+/// by [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]. Storing both the
+/// [`UpgradeJourney<Checking>`] fallback and the [`StdThreadTokioJoinHandle`] inside this
+/// opaque wrapper guarantees that:
+/// 1. Duplicate `.start()` callers receiving [`StartOutcome::AlreadyStarted`] can never
+///    steal the active check thread's handle.
+/// 2. If the dedicated OS thread's Tokio runtime fails to initialize or panics,
+///    [`DeferredUpgradeOutcome::handle_upgrade_on_exit`] transitions the fallback journey
+///    into [`ExitOutcome::CheckFailed`] without losing the diagnostic payload.
+///
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+/// [`StartOutcome::AlreadyStarted`]: crate::self_upgrade::StartOutcome::AlreadyStarted
+/// [`StdThreadTokioJoinHandle`]: r3bl_tui::StdThreadTokioJoinHandle
+/// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
+/// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
+#[derive(Debug)]
+pub struct DeferredCheckHandle {
+    pub(in crate::self_upgrade) checking: UpgradeJourney<Checking>,
+    pub(in crate::self_upgrade) join_handle:
+        StdThreadTokioJoinHandle<DeferredCheckOutcome>,
+}
+
+impl DeferredCheckHandle {
+    /// Returns a reference to the [`UpgradeJourney<Checking>`] associated with the
+    /// in-flight dedicated check thread.
+    ///
+    /// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
+    #[must_use]
+    pub fn get_journey(&self) -> &UpgradeJourney<Checking> { &self.checking }
+}
 
 /// Outcome returned by [`UpgradeJourney::<NotStarted>::start`][start], telling the
 /// binary's `main()` whether upgrade checks are disabled, `--upgrade` executed
 /// immediately, a deferred upgrade was scheduled for exit, or `start()` was already
 /// called earlier in this process.
 ///
-/// At application exit, call [`Self::handle_upgrade_on_exit`] on this value to join any
-/// in-flight dedicated thread and complete the deferred upgrade lifecycle.
+/// At application exit, if [`Self::DeferredUpgrade`] was returned, call
+/// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`] (consuming it by value) to join
+/// any owned [`DeferredCheckHandle`] and complete the deferred upgrade lifecycle.
+/// [`Self::Disabled`], [`Self::ImmediateUpgrade`], and [`Self::AlreadyStarted`] are
+/// terminal at startup and require no exit handling.
 ///
 /// [start]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "match ImmediateUpgrade to exit early, or hold DeferredUpgrade to call .handle_upgrade_on_exit() at shutdown"]
+#[derive(Debug)]
 pub enum StartOutcome {
     /// `--upgrade-behavior disable` ([`UpgradePolicy::Disabled`]): upgrade checks are
-    /// disabled; calling [`Self::handle_upgrade_on_exit`] at exit is a no-op returning
-    /// [`ExitOutcome::NoDeferredCheckRunning`].
+    /// disabled and no exit handling is needed.
     ///
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
     Disabled(UpgradeJourney<Disabled>),
@@ -30,104 +67,19 @@ pub enum StartOutcome {
     ImmediateUpgrade(ImmediateUpgradeOutcome),
 
     /// Deferred upgrade on exit ([`UpgradeStrategy::Deferred`]); `main()` continues
-    /// running the application and calls [`Self::handle_upgrade_on_exit`] at shutdown.
+    /// running the application and calls
+    /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`] at shutdown.
     ///
     /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
     DeferredUpgrade(DeferredUpgradeOutcome),
 
     /// [`UpgradeJourney::start`] was already called earlier in this process; the
-    /// duplicate call spawned zero threads and left [`SINGLETON`] unchanged.
+    /// duplicate call spawned zero threads and left [`PerProcessStartLatch`] claimed
+    /// without a [`DeferredCheckHandle`].
     ///
-    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
+    /// [`PerProcessStartLatch`]: crate::self_upgrade::upgrade_journey::per_process_start_latch::PerProcessStartLatch
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     AlreadyStarted,
-}
-
-impl StartOutcome {
-    /// Called by `main()` at shutdown on the main thread to complete a deferred upgrade
-    /// on exit ([`UpgradeStrategy::Deferred`][1]). The TUI teardown must be complete
-    /// before this is called. This is part of the [Control Plane].
-    ///
-    /// If [`UpgradeJourney::start`] spawned a dedicated thread, the main thread waits for
-    /// that thread to finish and receive its [`DeferredCheckOutcome`], then runs the
-    /// configured [`UpgradeActionOnExit`] on the main thread if an upgrade is available
-    /// ([`DeferredCheckOutcome::UpgradeAvailable`]):
-    /// 1. Takes the [`DeferredCheckHandle`] via
-    ///    [`SingletonState::take_deferred_check_handle`] (releasing `SINGLETON.write`
-    ///    **before** calling `handle.join()`), guaranteeing one-shot idempotent behavior
-    ///    if called more than once.
-    /// 2. If `handle.join()` returns [`TokioRuntimeOutcome::Completed`] with
-    ///    [`DeferredCheckOutcome::UpgradeAvailable`], transitions into [`Upgrading`] and
-    ///    delegates to `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which
-    ///    invokes the [Execution Plane] to prompt or install the upgrade), returning
-    ///    [`ExitOutcome::Completed`].
-    ///
-    /// # Terminal State at Exit
-    ///
-    /// When executing logic that runs on exit using
-    /// [`StdThreadTokioRunner::run_blocking`][2], after a TUI application (like `giti` or
-    /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
-    /// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
-    /// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
-    /// this way so that the following can work interoperably with full TUI apps:
-    /// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
-    ///    prompts and restore [cooked mode] afterward.
-    /// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
-    ///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
-    ///
-    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
-    /// [2]: r3bl_tui::StdThreadTokioRunner::run_blocking
-    /// [`choose`]: r3bl_tui::choose
-    /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-    /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
-    /// [`Spinner`]: r3bl_tui::Spinner
-    /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
-    /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
-    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-    /// [`Upgrading`]: crate::self_upgrade::Upgrading
-    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-    /// [cooked mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
-    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-    /// [raw mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
-    /// [standalone mode]: r3bl_tui::Spinner#standalone-mode
-    #[must_use]
-    pub fn handle_upgrade_on_exit(&self) -> ExitOutcome {
-        // Step 1: Loud lock release: take `DeferredCheckHandle` inside `SINGLETON.write`
-        // so the lock is dropped before `handle.join()` blocks on the dedicated thread.
-        let Some(handle) = SingletonState::take_deferred_check_handle() else {
-            return ExitOutcome::NoDeferredCheckRunning;
-        };
-
-        let outcome = match handle.join() {
-            TokioRuntimeOutcome::Completed(outcome) => outcome,
-            TokioRuntimeOutcome::FailedToStart(report)
-            | TokioRuntimeOutcome::Panicked(report) => {
-                DEBUG_SELF_UPGRADE.then(|| {
-                    // % is Display, ? is Debug.
-                    tracing::debug!(
-                        message = "Dedicated self-upgrade thread runtime failed or panicked",
-                        error = ?report
-                    );
-                });
-                return ExitOutcome::NoDeferredCheckRunning;
-            }
-        };
-
-        // Step 2: Transition the `DeferredCheckOutcome` returned directly by the thread.
-        match outcome {
-            DeferredCheckOutcome::UpToDate(up_to_date) => {
-                ExitOutcome::UpToDate(up_to_date)
-            }
-            DeferredCheckOutcome::CheckFailed(failed) => ExitOutcome::CheckFailed(failed),
-            DeferredCheckOutcome::UpgradeAvailable(available) => {
-                let action_on_exit = available.get_state().action_on_exit;
-                let upgrading = available.into_upgrading();
-                let completed = upgrading.execute_action_on_exit(action_on_exit);
-                ExitOutcome::Completed(completed)
-            }
-        }
-    }
 }
 
 /// Outcome of an explicit `--upgrade` ([`UpgradeStrategy::Immediate`]) run inside
@@ -165,25 +117,214 @@ pub enum ImmediateUpgradeOutcome {
 /// [`StartOutcome::DeferredUpgrade`].
 ///
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "call .handle_upgrade_on_exit() at application shutdown"]
+#[derive(Debug)]
 pub enum DeferredUpgradeOutcome {
     /// Deferred check was skipped because the `1h` cooldown timestamp file is still
     /// active.
-    CooldownSkipped(UpgradeJourney<CooldownSkipped>),
+    Skipped(UpgradeJourney<Skipped>),
 
-    /// Dedicated thread was spawned with [`UpgradeJourney<Checking>`] and its
-    /// [`DeferredCheckHandle`] was stored in [`SINGLETON`] for
-    /// [`StartOutcome::handle_upgrade_on_exit`].
+    /// Dedicated thread was spawned with [`UpgradeJourney<Checking>`] and its owned
+    /// [`DeferredCheckHandle`] is stored here for [`Self::handle_upgrade_on_exit`].
     ///
-    /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
     /// [`UpgradeJourney<Checking>`]: crate::self_upgrade::UpgradeJourney
-    DeferredCheckSpawned(UpgradeJourney<Checking>),
+    DeferredCheckSpawned(DeferredCheckHandle),
 
     /// Dedicated OS thread failed to spawn; transitioned to
     /// [`UpgradeJourney<CheckFailed>`].
     ///
     /// [`UpgradeJourney<CheckFailed>`]: crate::self_upgrade::UpgradeJourney
     DeferredCheckSpawnFailed(UpgradeJourney<CheckFailed>),
+}
+
+impl DeferredUpgradeOutcome {
+    /// Called by `main()` at shutdown on the main thread (consuming `self` by value) to
+    /// complete a deferred upgrade on exit ([`UpgradeStrategy::Deferred`][1]). The TUI
+    /// teardown must be complete before this is called. This is part of the [Control
+    /// Plane].
+    ///
+    /// Consumes the linear [`DeferredUpgradeOutcome`] value so it cannot be invoked more
+    /// than once or steal another caller's thread handle:
+    /// 1. [`Self::Skipped`] holds no thread handle and returns [`ExitOutcome::Skipped`].
+    /// 2. [`Self::DeferredCheckSpawnFailed`] preserves its OS thread spawn failure by
+    ///    returning [`ExitOutcome::CheckFailed`].
+    /// 3. [`Self::DeferredCheckSpawned`] joins its owned [`DeferredCheckHandle`]:
+    ///    - If joining returns [`DeferredCheckOutcome::UpgradeAvailable`], transitions
+    ///      into [`Upgrading`] and delegates to
+    ///      `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which invokes the
+    ///      [Execution Plane] to prompt or install the upgrade), returning
+    ///      [`ExitOutcome::Completed`].
+    ///    - If joining fails with [`ThreadRunnerError::RuntimeOrThreadInitFailed`] or
+    ///      [`ThreadRunnerError::ThreadPanicked`], preserves the diagnostic payload
+    ///      inside [`ExitOutcome::CheckFailed`]
+    ///      ([`CheckFailedError::ThreadRunner`]).
+    ///
+    /// # Terminal State at Exit
+    ///
+    /// When executing logic that runs on exit using
+    /// [`StdThreadTokioRunner::run_blocking`][2], after a TUI application (like `giti` or
+    /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
+    /// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
+    /// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
+    /// this way so that the following can work interoperably with full TUI apps:
+    /// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
+    ///    prompts and restore [cooked mode] afterward.
+    /// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
+    ///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
+    ///
+    /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
+    /// [2]: r3bl_tui::StdThreadTokioRunner::run_blocking
+    /// [`choose`]: r3bl_tui::choose
+    /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
+    /// [`Spinner`]: r3bl_tui::Spinner
+    /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
+    /// [`ThreadRunnerError::RuntimeOrThreadInitFailed`]: crate::self_upgrade::ThreadRunnerError::RuntimeOrThreadInitFailed
+    /// [`ThreadRunnerError::ThreadPanicked`]: crate::self_upgrade::ThreadRunnerError::ThreadPanicked
+    /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
+    /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
+    /// [`Upgrading`]: crate::self_upgrade::Upgrading
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [cooked mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+    /// [raw mode]: mod@r3bl_tui::core::ansi#terminal-input-modes-raw-vs-cooked
+    /// [standalone mode]: r3bl_tui::Spinner#standalone-mode
+    #[must_use]
+    pub fn handle_upgrade_on_exit(self) -> ExitOutcome {
+        let DeferredCheckHandle {
+            checking,
+            join_handle,
+        } = match self {
+            Self::Skipped(skipped) => return ExitOutcome::Skipped(skipped),
+            Self::DeferredCheckSpawnFailed(failed) => {
+                return ExitOutcome::CheckFailed(failed);
+            }
+            Self::DeferredCheckSpawned(handle) => handle,
+        };
+
+        let outcome = match ThreadRunner::join(checking.get_config(), join_handle) {
+            Ok(outcome) => outcome,
+            Err(thread_err) => {
+                return ExitOutcome::CheckFailed(
+                    checking.into_check_failed(CheckFailedError::from(thread_err)),
+                );
+            }
+        };
+
+        // Transition the `DeferredCheckOutcome` returned directly by the thread.
+        match outcome {
+            DeferredCheckOutcome::UpToDate(up_to_date) => {
+                ExitOutcome::UpToDate(up_to_date)
+            }
+            DeferredCheckOutcome::CheckFailed(failed) => ExitOutcome::CheckFailed(failed),
+            DeferredCheckOutcome::UpgradeAvailable(available) => {
+                let action_on_exit = available.get_state().action_on_exit;
+                let upgrading = available.into_upgrading();
+                let completed = upgrading.execute_action_on_exit(action_on_exit);
+                ExitOutcome::Completed(completed)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CrateDistribution, CrateMetadata, CrateReleaseDate, CrateVersion,
+                EndpointUrl, JsoncScalar, NotStarted, RemoteVersionCheckGate,
+                ThreadRunnerError, UpgradeActionOnExit, UpgradeConfig, UpgradePolicy,
+                UpgradeResolution, UpgradeStrategy, UserFeedbackChannel};
+    use r3bl_tui::{StdThreadTokioRunner, assert_eq2};
+
+    fn make_test_metadata(version_str: &str) -> CrateMetadata {
+        CrateMetadata {
+            version: CrateVersion::try_parse(version_str).unwrap(),
+            crate_distribution: CrateDistribution::OpenSource,
+            released_on: CrateReleaseDate::now(),
+        }
+    }
+
+    fn make_test_journey(
+        version_str: &str,
+        policy: UpgradePolicy,
+    ) -> UpgradeJourney<NotStarted> {
+        let config = UpgradeConfig::new(
+            "r3bl-cmdr",
+            CrateVersion::try_parse(version_str).unwrap(),
+            UserFeedbackChannel::Quiet,
+            policy,
+            EndpointUrl::default_manifest_url(),
+            RemoteVersionCheckGate::Disabled,
+        );
+        UpgradeJourney::new(config)
+    }
+
+    #[test]
+    fn test_handle_upgrade_on_exit_skipped_returns_exit_skipped() {
+        let skipped = make_test_journey(
+            "0.1.0",
+            UpgradePolicy::Enabled(UpgradeStrategy::Deferred(
+                UpgradeActionOnExit::NotifyOnly,
+            )),
+        )
+        .into_skipped();
+        assert_eq2!(
+            DeferredUpgradeOutcome::Skipped(skipped.clone()).handle_upgrade_on_exit(),
+            ExitOutcome::Skipped(skipped)
+        );
+    }
+
+    #[test]
+    fn test_handle_upgrade_on_exit_preserves_spawn_failure() {
+        let strategy = UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto);
+        let error = CheckFailedError::ThreadRunner(
+            ThreadRunnerError::RuntimeOrThreadInitFailed {
+                reason: "Failed to spawn dedicated self-upgrade thread: Resource busy"
+                    .to_string(),
+            },
+        );
+        let failed = make_test_journey("0.1.0", UpgradePolicy::Enabled(strategy))
+            .into_checking(strategy)
+            .into_check_failed(error);
+
+        let deferred = DeferredUpgradeOutcome::DeferredCheckSpawnFailed(failed.clone());
+        assert_eq2!(
+            deferred.handle_upgrade_on_exit(),
+            ExitOutcome::CheckFailed(failed)
+        );
+    }
+
+    #[test]
+    fn test_handle_upgrade_on_exit_executes_owned_deferred_handle() {
+        let meta = make_test_metadata("0.2.0");
+        let strategy = UpgradeStrategy::Deferred(UpgradeActionOnExit::NotifyOnly);
+        let checking = make_test_journey("0.1.0", UpgradePolicy::Enabled(strategy))
+            .into_checking(strategy);
+        let available = checking.clone().into_upgrade_available(
+            UpgradeActionOnExit::NotifyOnly,
+            meta,
+            EndpointUrl::try_parse("https://example.com/releases/download").unwrap(),
+        );
+        let expected_completed = available
+            .clone()
+            .into_upgrading()
+            .into_completed(UpgradeResolution::NotifiedOnly);
+
+        let join_handle = StdThreadTokioRunner::run_non_blocking(async move || {
+            DeferredCheckOutcome::UpgradeAvailable(available)
+        })
+        .unwrap();
+
+        let deferred_handle = DeferredCheckHandle {
+            checking: checking.clone(),
+            join_handle,
+        };
+        assert_eq2!(deferred_handle.get_journey(), &checking);
+
+        let deferred = DeferredUpgradeOutcome::DeferredCheckSpawned(deferred_handle);
+        assert_eq2!(
+            deferred.handle_upgrade_on_exit(),
+            ExitOutcome::Completed(expected_completed)
+        );
+    }
 }

@@ -3,7 +3,7 @@
 use super::{super::{archive, semver},
             ReleaseTarget};
 use crate::DEBUG_SELF_UPGRADE;
-use r3bl_tui::{create_client_with_user_agent, fg_magenta};
+use r3bl_tui::{create_http_client, fg_magenta};
 
 /// Sentinel type serving as a namespace for release archive helpers.
 ///
@@ -107,7 +107,7 @@ impl ReleaseAsset {
             );
         });
 
-        let Ok(client) = create_client_with_user_agent(None) else {
+        let Ok(client) = create_http_client() else {
             return false;
         };
 

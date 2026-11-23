@@ -675,6 +675,56 @@ fn get_char(&self, pos: Pos) -> Option<PixelChar> {
 }
 ```
 
+### Naming `Option` and `Result` Values (`maybe_` / `res_`) (Mandatory)
+
+Prefix names that hold an `Option<T>` or `Result<T, E>` so readers can see fallibility and
+optionality at a glance without checking type annotations:
+
+- **`maybe_` for `Option<T>`**: Use on local variables, struct fields, and function
+  parameters (e.g., `let maybe_viewport`, `maybe_style: Option<TuiStyle>`,
+  `maybe_max_height: Option<ChUnit>`).
+- **`res_` for `Result<T, E>`**: Use on local variables and function parameters (e.g.,
+  `let res_bytes: Result<Buffer, Error>`, `res_io: Result<()>`).
+- **Drop the prefix once unwrapped**: Inside `if let`, `match`, `let-else`, or after `?`,
+  bind the inner value without the prefix (e.g., `if let Some(style) = maybe_style`,
+  `let bytes = res_bytes?;`).
+
+**✅ Good:**
+
+```rust
+pub struct Panel {
+    pub maybe_style: Option<TuiStyle>,
+}
+
+fn render(maybe_max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let res_bytes = serialize(panel);
+    let bytes = res_bytes?;
+
+    if let Some(style) = panel.maybe_style {
+        apply_style(style, maybe_max_height, &bytes);
+    }
+    Ok(())
+}
+```
+
+**❌ Bad:**
+
+```rust
+pub struct Panel {
+    pub style: Option<TuiStyle>,
+}
+
+fn render(max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let bytes = serialize(panel);
+    let inner = bytes?;
+
+    if let Some(s) = panel.style {
+        apply_style(s, max_height, &inner);
+    }
+    Ok(())
+}
+```
+
 ### Prefer `FxHashMap` and `FxHashSet` over Standard `HashMap` and `HashSet` (Mandatory)
 
 Do NOT use standard `std::collections::HashMap` or `std::collections::HashSet` in this

@@ -74,8 +74,8 @@ pub async fn launch_giti(cli_arg: CLIArg) {
         // This branch is for both successful and unsuccessful command executions. Even
         // though the `res` is not `Err` it does not mean that the command ran
         // successfully, it may have failed gracefully.
-        Ok(cmd_run_result) => {
-            display_command_run_result(cmd_run_result).await;
+        Ok(res_cmd_run) => {
+            display_command_run_result(res_cmd_run).await;
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
@@ -102,9 +102,7 @@ pub async fn report_unrecoverable_errors(report: miette::Report) {
 }
 
 /// Command ran and produced result: success, not success, fail, no-op.
-pub async fn display_command_run_result(
-    cmd_run_result: CommandRunResult<CommandRunDetails>,
-) {
-    println!("{cmd_run_result}");
+pub async fn display_command_run_result(res_run: CommandRunResult<CommandRunDetails>) {
+    println!("{res_run}");
     upgrade_check::show_exit_message(ExitContext::Normal).await;
 }

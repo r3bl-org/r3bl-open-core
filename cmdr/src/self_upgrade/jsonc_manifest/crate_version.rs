@@ -13,7 +13,7 @@ use std::{cmp::Ordering,
 /// It enforces a strict 3-component [`SemVer`] format where `major`, `minor`, and `patch`
 /// are unsigned 16-bit integers (`u16`). Pre-release suffixes (such as `"-alpha.1"`),
 /// build metadata (such as `"+build"`), and tag prefixes (such as `"v0.1.0"`) are
-/// strictly disallowed in `versions.jsonc`.
+/// strictly disallowed in [`VERSIONS_JSONC_FILE`].
 ///
 /// See [`CrateMetadata`] and [`JsoncManifest`] for the complete JSONC schema
 /// specification and example. Here's a snippet of JSONC that is deserialized into this
@@ -32,6 +32,7 @@ use std::{cmp::Ordering,
 /// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
 /// [`SemVer`]: https://semver.org/
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct CrateVersion {
     /// Major version number (`MAJOR` in `MAJOR.MINOR.PATCH`), incremented for
@@ -70,9 +71,9 @@ impl CrateVersion {
     ///    and neither [`str::parse`] nor [`Result::unwrap`] is `const`. Thus,
     ///    [`u16::from_str_radix`] is used.
     /// 3. **Rejecting pre-releases**: Cargo allows pre-release suffixes (e.g.,
-    ///    `"0.1.0-alpha.1"`), which `versions.jsonc` disallows, so catch it here.
+    ///    `"0.1.0-alpha.1"`), which [`VERSIONS_JSONC_FILE`] disallows, so catch it here.
     ///
-    /// For runtime manifest parsing (`versions.jsonc` and tests), use
+    /// For runtime manifest parsing ([`VERSIONS_JSONC_FILE`] and tests), use
     /// [`JsoncScalar::try_parse`] instead.
     ///
     /// # Panics
@@ -83,6 +84,7 @@ impl CrateVersion {
     /// [`env!`]: std::env!
     /// [`SemVer`]: https://semver.org/
     /// [`upgrade_journey!`]: crate::upgrade_journey
+    /// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
     #[must_use]
     pub const fn from_cargo_parts(
         major: &str,
@@ -111,8 +113,10 @@ impl CrateVersion {
     }
 }
 
-/// Parses a `"MAJOR.MINOR.PATCH"` string slice (from `versions.jsonc` or tests) into a
-/// [`CrateVersion`] at runtime.
+/// Parses a `"MAJOR.MINOR.PATCH"` string slice (from [`VERSIONS_JSONC_FILE`] or tests)
+/// into a [`CrateVersion`] at runtime.
+///
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 impl JsoncScalar for CrateVersion {
     type ParseError = VersionParseErrorKind;
 

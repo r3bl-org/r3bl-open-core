@@ -11,8 +11,8 @@ use std::{fmt::{Display, Formatter},
 /// `"2026-10-17T00:00:00Z"`), stored in [`CrateMetadata::released_on`].
 ///
 /// It consolidates all [`chrono`] date/time parsing, comparison, and formatting
-/// operations for `versions.jsonc` in one place so callers do not need to depend on
-/// [`chrono`] types or formatting flags directly.
+/// operations for [`VERSIONS_JSONC_FILE`] in one place so callers do not need to depend
+/// on [`chrono`] types or formatting flags directly.
 ///
 /// See [`CrateMetadata`] and [`JsoncManifest`] for the complete JSONC schema
 /// specification and example. Here's a snippet of JSONC that is deserialized into this
@@ -30,6 +30,7 @@ use std::{fmt::{Display, Formatter},
 /// [`CrateMetadata::released_on`]: crate::self_upgrade::CrateMetadata::released_on
 /// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CrateReleaseDate {
     inner: DateTime<Utc>,
@@ -41,8 +42,10 @@ impl CrateReleaseDate {
     pub fn now() -> Self { Self { inner: Utc::now() } }
 }
 
-/// Parses an RFC 3339 / ISO 8601 UTC timestamp string slice (from `versions.jsonc` or
-/// tests) into a [`CrateReleaseDate`].
+/// Parses an RFC 3339 / ISO 8601 UTC timestamp string slice (from [`VERSIONS_JSONC_FILE`]
+/// or tests) into a [`CrateReleaseDate`].
+///
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 impl JsoncScalar for CrateReleaseDate {
     type ParseError = chrono::ParseError;
 

@@ -233,11 +233,11 @@ pub mod toolchain_probe {
     /// depending on Unix-specific `which` or Windows-specific `where.exe`.
     #[must_use]
     pub fn is_toolchain_binary_on_path(binary_name: &str) -> bool {
-        let result = std::process::Command::new(binary_name)
+        let res_output = std::process::Command::new(binary_name)
             .arg(toolchain_cli_args::VERSION)
             .output();
         matches!(
-            CommandOutputResult::from(result),
+            CommandOutputResult::from(res_output),
             CommandOutputResult::Success(_)
         )
     }

@@ -773,6 +773,9 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 2. **Use reference-style links** - keep prose clean
 3. **Place all link definitions at bottom** of comment block
 4. **Include `()` for functions/methods** - distinguishes from types
+5. **Use short explicit link labels (`[text][alias]`) when a definition exceeds 90
+   chars** - keeps each link definition on one line (`comment_width = 90` in
+   `rustfmt.toml`)
 
 ### Link Source Priority
 
@@ -850,6 +853,32 @@ When you rename, move, or delete a symbol:
 ```rust
 /// This struct uses `Position` to track cursor location.
 ```
+
+### Long Link Definitions (> 90 Chars): Use Explicit Short Labels
+
+When a shorthand link definition like ``[`LongType::method`]: crate::...`` exceeds `90`
+characters (including the `/// ` or `//! ` prefix, matching `comment_width = 90` in
+`rustfmt.toml`), introduce a reference-style link with an explicit short label
+(`[text][alias]`) so the definition stays on a single line:
+
+```rust
+// ❌ Bad: Shorthand definition exceeds 90 chars and forces 2-line wrapping
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]:
+//!     crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+
+// ✅ Good: Explicit short label keeps each definition on a single line (<= 90 chars)
+//! Handles [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][on-exit] for
+//! [`CrateDistribution::ClosedSource`][cs] failures
+//! ([`UpgradeResolution::UpgradeFailed`][failed]).
+//!
+//! [cs]: crate::self_upgrade::CrateDistribution::ClosedSource
+//! [failed]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [on-exit]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+```
+
+Use short, descriptive, kebab-case aliases (e.g., `[cs]`, `[failed]`, `[latch]`,
+`[non-tty]`, `[notify]`, `[on-exit]`, `[panicked]`, `[prompt]`, `[rustup]`). See
+`link-patterns.md` for details.
 
 ### Linking to Dependency Crates
 
@@ -1423,6 +1452,9 @@ Before committing documentation:
 - [ ] High-level concepts at module/trait level (inverted pyramid)
 - [ ] All links use reference-style with `crate::` paths
 - [ ] All link definitions at bottom of comment blocks
+- [ ] Link definitions > 90 chars use short explicit labels
+      (``[`LongSymbol`][alias]`` -> ``[alias]: crate::...``) so each definition stays on
+      one line
 - [ ] Constants use binary/byte literal/decimal (not hex)
 - [ ] Hex shown in comments for cross-reference
 - [ ] ANSI constants follow [Standardized Doc Template]

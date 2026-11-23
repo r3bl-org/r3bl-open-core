@@ -8,8 +8,8 @@ use std::{fmt::{Display, Formatter},
 /// Name of a published R3BL crate (e.g., `"r3bl-cmdr"`).
 ///
 /// This struct serves as the map key in [`JsoncManifest::crates`] and identifies the
-/// target crate in [`UpgradeConfig`] when querying [`R3BL_VERSIONS_JSONC_URL`]
-/// or updating `versions.jsonc`.
+/// target crate in [`UpgradeConfig`] when querying [`R3BL_VERSIONS_JSONC_URL`] or
+/// updating [`VERSIONS_JSONC_FILE`].
 ///
 /// See [`JsoncManifest`] for the complete JSONC schema specification and example. Here's
 /// a snippet of JSONC that is deserialized into this struct:
@@ -24,6 +24,7 @@ use std::{fmt::{Display, Formatter},
 /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
 /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(transparent)]
 pub struct CrateName {

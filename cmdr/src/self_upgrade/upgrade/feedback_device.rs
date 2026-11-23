@@ -54,7 +54,7 @@ pub fn report_upgrade_source_error(
 
 #[cfg(test)]
 mod tests {
-    use super::{super::super::{CooldownPolicy, CrateVersion, EndpointUrl,
+    use super::{super::super::{RemoteVersionCheckGate, CrateVersion, EndpointUrl,
                                NoViableSourceReason, UpgradePolicy},
                 *};
     use r3bl_tui::assert_eq2;
@@ -85,7 +85,7 @@ mod tests {
             UserFeedbackChannel::Quiet,
             UpgradePolicy::default(),
             EndpointUrl::default_manifest_url(),
-            CooldownPolicy::Disabled,
+            RemoteVersionCheckGate::Disabled,
         );
 
         let no_source_err = UpgradeError::NoViableUpgradeSource {

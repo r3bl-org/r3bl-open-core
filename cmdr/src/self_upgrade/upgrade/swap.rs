@@ -60,8 +60,8 @@ pub mod archive_extraction {
             .entries()
             .map_err(|e| UpgradeError::Other(e.to_string()))?;
 
-        for entry_res in entries {
-            let mut entry = entry_res.map_err(|e| UpgradeError::Other(e.to_string()))?;
+        for res_entry in entries {
+            let mut entry = res_entry.map_err(|e| UpgradeError::Other(e.to_string()))?;
             if !entry.header().entry_type().is_file() {
                 continue;
             }
@@ -260,9 +260,9 @@ mod tests {
         }
 
         let extract_dir = temp_dir.join("out");
-        let result = extract_and_apply_archive(&archive_path, &extract_dir);
+        let res_extract = extract_and_apply_archive(&archive_path, &extract_dir);
         assert!(matches!(
-            result,
+            res_extract,
             Err(UpgradeError::Other(msg)) if msg.contains("contained no files")
         ));
     }

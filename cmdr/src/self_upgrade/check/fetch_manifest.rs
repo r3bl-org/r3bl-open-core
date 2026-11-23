@@ -1,170 +1,92 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::super::{CrateMetadata, CrateName, EndpointUrl, JsoncManifest};
+use super::super::{CrateMetadata, CrateName, EndpointUrl, JsoncManifest,
+                   VERSIONS_JSONC_FILE};
 use crate::DEBUG_SELF_UPGRADE;
+use const_format::formatcp;
 use miette::{Context, IntoDiagnostic};
-use r3bl_tui::{create_client_with_user_agent, fg_magenta, ok};
+use r3bl_tui::{create_http_client, fg_magenta, ok};
 use std::time::Duration;
 
-/// Fetches `versions.jsonc` from `manifest_url` within `timeout` and extracts
-/// `(`[`CrateMetadata`]`, `[`EndpointUrl`]`)` for `crate_name`.
+/// Fetches [`VERSIONS_JSONC_FILE`] from `manifest_url` within `timeout` duration and
+/// extracts [`FetchManifestOutput::metadata`] and
+/// [`FetchManifestOutput::binaries_release_base_url`] for the given `crate_name`.
 ///
 /// This function is called by the [`Checking`] typestate in the [Control Plane] to
 /// resolve the transition into [`UpToDate`], [`UpgradeAvailable`], [`Upgrading`], or
-/// [`CheckFailed`]. This is part of the [Execution Plane]: it logs any fetch or parse
-/// failure via [`DEBUG_SELF_UPGRADE`], and never imports or touches [`UpgradeJourney`]
-/// or [`SINGLETON`].
+/// [`CheckFailed`].
+///
+/// This function is part of the [Execution Plane]. While it performs its duties, if it
+/// encounters any fetch or parse failures, then it logs them via [`DEBUG_SELF_UPGRADE`].
+/// It never imports or touches [`UpgradeJourney`].
 ///
 /// # Errors
 ///
-/// Returns [`ManifestCheckError::FetchOrParseFailed`] if the HTTP request fails, times
-/// out after `timeout`, returns a non-2xx status, or fails JSONC deserialization, or
-/// [`ManifestCheckError::CrateNotFoundInManifest`] if `crate_name` is absent from
-/// [`JsoncManifest::crates`].
+/// 1. Returns [`FetchManifestError::FetchOrParseFailed`] if:
+///    - The HTTP request fails, times out after `timeout` duration.
+///    - Returns a non-2xx status.
+///    - Fails JSONC deserialization.
+/// 2. Returns [`FetchManifestError::CrateNotFoundInManifest`] if `crate_name` is absent
+///    from [`JsoncManifest::crates`].
 ///
 /// [`CheckFailed`]: crate::self_upgrade::CheckFailed
 /// [`Checking`]: crate::self_upgrade::Checking
-/// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
 /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
-/// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
 /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeJourney`]: crate::self_upgrade::UpgradeJourney
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [`UpToDate`]: crate::self_upgrade::UpToDate
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-pub async fn fetch_crate_metadata_from_manifest(
+pub async fn try_fetch_manifest(
     manifest_url: &EndpointUrl,
     crate_name: &CrateName,
     timeout: Duration,
-) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError> {
-    let res_manifest =
-        http_req_helpers::try_get_jsonc_manifest_from_url(manifest_url, timeout).await;
+) -> Result<FetchManifestOutput, FetchManifestError> {
+    let manifest =
+        http_req_helpers::try_get_jsonc_manifest_from_url(manifest_url, timeout).await?;
 
-    let res_extracted = http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
-        res_manifest,
+    http_req_helpers::try_get_crate_metadata_from_jsonc_manifest(
+        manifest,
         crate_name,
         manifest_url,
-    );
-
-    if let Err(ref error) = res_extracted {
-        DEBUG_SELF_UPGRADE.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug!(
-                message = "Failed to resolve crate metadata from versions manifest",
-                crate_name = %crate_name,
-                url = %fg_magenta(&**manifest_url),
-                error = %error
-            );
-        });
-    }
-
-    res_extracted
+    )
 }
 
-/// These helper methods make it easier to write unit tests. Even though ergonomically
-/// they are a bit awkward to use.
-mod http_req_helpers {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
+/// Extracted crate metadata and shared release base URL returned by
+/// [`try_fetch_manifest`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FetchManifestOutput {
+    /// Parsed version, distribution, and release date for the queried crate.
+    pub metadata: CrateMetadata,
 
-    /// Fetches `versions.jsonc` from `url` (typically
-    /// [`EndpointUrl::default_manifest_url`], backed by [`R3BL_VERSIONS_JSONC_URL`])
-    /// within `timeout` and parses it into a [`JsoncManifest`].
+    /// Top-level [`JsoncManifest::binaries_release_base_url`][1] shared by all crates in
+    /// [`VERSIONS_JSONC_FILE`].
     ///
-    /// # Errors
-    ///
-    /// Returns an error if the HTTP request fails, times out after `timeout`, returns a
-    /// non-2xx status, or if the manifest content cannot be parsed as valid JSONC.
-    ///
-    /// [`EndpointUrl::default_manifest_url`]: crate::self_upgrade::EndpointUrl::default_manifest_url
-    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
-    /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
-    pub async fn try_get_jsonc_manifest_from_url(
-        url: &EndpointUrl,
-        timeout: Duration,
-    ) -> miette::Result<JsoncManifest> {
-        DEBUG_SELF_UPGRADE.then(|| {
-            // % is Display, ? is Debug.
-            tracing::debug!(
-                message = "Fetching versions manifest",
-                url = %fg_magenta(&**url),
-                timeout_ms = timeout.as_millis()
-            );
-        });
-
-        // Make the HTTP GET request to fetch the `versions.jsonc` file as a string.
-        let http_client = create_client_with_user_agent(None)?;
-        // Closure prevents having to chain `.into_diagnostic()?` multiple times.
-        let fetch_fn = async || -> Result<String, reqwest::Error> {
-            http_client
-                .get(&**url)
-                .timeout(timeout)
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await
-        };
-        let text = fetch_fn()
-            .await
-            .into_diagnostic()
-            .with_context(|| "Problem getting manifest")?;
-
-        // Parse the `versions.jsonc` string into a JsoncManifest.
-        let manifest = JsoncManifest::try_parse_jsonc(&text)?;
-
-        ok!(manifest)
-    }
-
-    /// Extracts [`CrateMetadata`] and [`EndpointUrl`] for `crate_name` from a
-    /// [`JsoncManifest`] query result, preserving the full [`miette`] diagnostic chain
-    /// via `format!("{err:#}")` on failure.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ManifestCheckError`] if `res_manifest` is `Err` or if `crate_name` is
-    /// absent from [`JsoncManifest::crates`].
-    ///
-    /// [`CrateMetadata`]: crate::self_upgrade::CrateMetadata
-    /// [`EndpointUrl`]: crate::self_upgrade::EndpointUrl
-    /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
-    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
-    /// [`miette`]: mod@miette
-    pub fn extract_crate_metadata_from_jsonc_manifest(
-        res_manifest: miette::Result<JsoncManifest>,
-        crate_name: &CrateName,
-        manifest_url: &EndpointUrl,
-    ) -> Result<(CrateMetadata, EndpointUrl), ManifestCheckError> {
-        let manifest =
-            res_manifest.map_err(|err| ManifestCheckError::FetchOrParseFailed {
-                diagnostic: format!("{err:#}"),
-            })?;
-        let metadata = manifest.crates.get(crate_name).cloned().ok_or_else(|| {
-            ManifestCheckError::CrateNotFoundInManifest {
-                crate_name: crate_name.clone(),
-                manifest_url: manifest_url.clone(),
-            }
-        })?;
-        Ok((metadata, manifest.binaries_release_base_url))
-    }
+    /// [1]: crate::self_upgrade::JsoncManifest::binaries_release_base_url
+    pub binaries_release_base_url: EndpointUrl,
 }
 
-/// Failure reason recorded in [`CheckFailed::error`] when a manifest check fails.
+/// Execution Plane failure returned by [`try_fetch_manifest`] when fetching, parsing, or
+/// looking up a crate in [`VERSIONS_JSONC_FILE`] fails.
 ///
-/// [`CheckFailed::error`]: crate::self_upgrade::CheckFailed::error
+/// Wrapped by [`CheckFailedError::FetchManifest`][1] in the [Control Plane].
+///
+/// [1]: crate::self_upgrade::CheckFailedError::FetchManifest
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
-pub enum ManifestCheckError {
-    /// Target crate was not present in the remote `versions.jsonc` manifest's `crates`
-    /// map ([`JsoncManifest::crates`]).
+pub enum FetchManifestError {
+    /// Target crate was not present in the remote [`VERSIONS_JSONC_FILE`] manifest's
+    /// [`CRATES`] map ([`JsoncManifest::crates`]).
     ///
+    /// [`CRATES`]: crate::self_upgrade::versions_manifest_keys::CRATES
     /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
     #[error("Crate '{crate_name}' not found in manifest at '{manifest_url}'")]
     CrateNotFoundInManifest {
         /// Queried crate name.
         crate_name: CrateName,
+
         /// Manifest endpoint URL where `crate_name` was looked up.
         manifest_url: EndpointUrl,
     },
@@ -177,13 +99,138 @@ pub enum ManifestCheckError {
         /// [`miette`]: mod@miette
         diagnostic: String,
     },
+}
 
-    /// Dedicated `"self-upgrade"` OS thread or Tokio runtime failed to initialize.
-    #[error("{reason}")]
-    RuntimeOrThreadInitFailed {
-        /// Underlying OS thread or Tokio runtime initialization failure description.
-        reason: String,
-    },
+impl FetchManifestError {
+    /// Formats the full [`miette`] diagnostic chain via `format!("{err:#}")` into
+    /// [`FetchManifestError::FetchOrParseFailed`].
+    ///
+    /// [`miette`]: mod@miette
+    #[must_use]
+    fn from_fetch_or_parse_error(err: &miette::Report) -> Self {
+        Self::FetchOrParseFailed {
+            diagnostic: format!("{err:#}"),
+        }
+    }
+}
+
+/// Private step helpers for [`try_fetch_manifest`] (fetch/parse and crate metadata
+/// extraction), kept separate for direct unit testing.
+mod http_req_helpers {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Fetches [`VERSIONS_JSONC_FILE`] from `url` (typically
+    /// [`EndpointUrl::default_manifest_url`][1], backed by [`R3BL_VERSIONS_JSONC_URL`])
+    /// within `timeout` duration and parses it into a [`JsoncManifest`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FetchManifestError::FetchOrParseFailed`] if the HTTP request fails,
+    /// times out after `timeout`, returns a non-2xx status, or if the manifest content
+    /// cannot be parsed as valid JSONC.
+    ///
+    /// [1]: crate::self_upgrade::EndpointUrl::default_manifest_url
+    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+    /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
+    pub async fn try_get_jsonc_manifest_from_url(
+        url: &EndpointUrl,
+        timeout: Duration,
+    ) -> Result<JsoncManifest, FetchManifestError> {
+        let url: &str = url;
+
+        DEBUG_SELF_UPGRADE.then(|| {
+            // % is Display, ? is Debug.
+            tracing::debug!(
+                message = formatcp!("Fetching {VERSIONS_JSONC_FILE}"),
+                url = %fg_magenta(url),
+                timeout_ms = timeout.as_millis()
+            );
+        });
+
+        let res_manifest: miette::Result<JsoncManifest> = async {
+            // Make the HTTP GET request to fetch the manifest file as a string.
+            let http_client = create_http_client()?;
+
+            // This closure prevents having to chain `.into_diagnostic()?` multiple times.
+            let async_fetch_fn = async || -> Result<String, reqwest::Error> {
+                http_client
+                    .get(url)
+                    .timeout(timeout)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .text()
+                    .await
+            };
+            let resp_text = async_fetch_fn()
+                .await
+                .into_diagnostic()
+                .with_context(|| formatcp!("Failed to fetch {VERSIONS_JSONC_FILE}"))?;
+
+            // Parse the manifest string into a JsoncManifest.
+            let manifest =
+                JsoncManifest::try_parse_jsonc(&resp_text).with_context(|| {
+                    format!("Failed to parse {VERSIONS_JSONC_FILE} from '{url}'")
+                })?;
+
+            ok!(manifest)
+        }
+        .await;
+
+        res_manifest.map_err(|err| {
+            let error = FetchManifestError::from_fetch_or_parse_error(&err);
+            DEBUG_SELF_UPGRADE.then(|| {
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = formatcp!("Failed to fetch or parse {VERSIONS_JSONC_FILE}"),
+                    url = %fg_magenta(url),
+                    error = %error
+                );
+            });
+            error
+        })
+    }
+
+    /// Extracts [`FetchManifestOutput`] for `crate_name` from an already-fetched
+    /// [`JsoncManifest`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FetchManifestError::CrateNotFoundInManifest`] if `crate_name` is absent
+    /// from [`JsoncManifest::crates`].
+    ///
+    /// [`JsoncManifest::crates`]: crate::self_upgrade::JsoncManifest::crates
+    /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
+    pub fn try_get_crate_metadata_from_jsonc_manifest(
+        manifest: JsoncManifest,
+        crate_name: &CrateName,
+        manifest_url: &EndpointUrl,
+    ) -> Result<FetchManifestOutput, FetchManifestError> {
+        let metadata = manifest.crates.get(crate_name).cloned().ok_or_else(|| {
+            let error = FetchManifestError::CrateNotFoundInManifest {
+                crate_name: crate_name.clone(),
+                manifest_url: manifest_url.clone(),
+            };
+            DEBUG_SELF_UPGRADE.then(|| {
+                let url_str: &str = manifest_url;
+                // % is Display, ? is Debug.
+                tracing::debug!(
+                    message = formatcp!(
+                        "Failed to resolve crate metadata from {VERSIONS_JSONC_FILE}"
+                    ),
+                    crate_name = %crate_name,
+                    url = %fg_magenta(url_str),
+                    error = %error
+                );
+            });
+            error
+        })?;
+        Ok(FetchManifestOutput {
+            metadata,
+            binaries_release_base_url: manifest.binaries_release_base_url,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -211,53 +258,48 @@ mod tests {
     async fn test_try_get_jsonc_manifest_from_invalid_url() {
         let invalid_url =
             EndpointUrl::try_parse("http://127.0.0.1:0/nonexistent").unwrap();
-        let result = http_req_helpers::try_get_jsonc_manifest_from_url(
+        let res_manifest = http_req_helpers::try_get_jsonc_manifest_from_url(
             &invalid_url,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await;
-        assert!(result.is_err());
+        assert!(res_manifest.is_err());
     }
 
     #[test]
-    fn test_extract_crate_metadata_preserves_full_miette_diagnostic_chain() {
-        let crate_name = "r3bl-cmdr".into();
-        let root_err: miette::Result<JsoncManifest> =
-            Err(miette::miette!("TLS handshake reset by peer"))
+    fn test_from_fetch_or_parse_error_preserves_full_miette_diagnostic_chain() {
+        let root_err: miette::Report =
+            Err::<(), _>(miette::miette!("TLS handshake reset by peer"))
                 .wrap_err("GET https://r3bl.com/versions.jsonc failed")
-                .wrap_err("manifest fetch failed");
+                .wrap_err("manifest fetch failed")
+                .unwrap_err();
 
-        let err = http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
-            root_err,
-            &crate_name,
-            &EndpointUrl::default_manifest_url(),
-        )
-        .unwrap_err();
+        let err = FetchManifestError::from_fetch_or_parse_error(&root_err);
 
         let err_str = err.to_string();
-        assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
+        assert!(matches!(err, FetchManifestError::FetchOrParseFailed { .. }));
         assert!(err_str.contains("manifest fetch failed"));
         assert!(err_str.contains("GET https://r3bl.com/versions.jsonc failed"));
         assert!(err_str.contains("TLS handshake reset by peer"));
     }
 
     #[test]
-    fn test_extract_crate_metadata_missing_crate_and_success() {
+    fn test_try_get_crate_metadata_missing_crate_and_success() {
         let crate_name = "r3bl-cmdr".into();
         let missing_crate: CrateName = "nonexistent-crate".into();
         let manifest = JsoncManifest::try_parse_jsonc(SAMPLE_MANIFEST_0_0_26).unwrap();
         let example_url =
             EndpointUrl::try_parse("https://example.com/versions.jsonc").unwrap();
 
-        let missing_err = http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
-            Ok(manifest.clone()),
+        let missing_err = http_req_helpers::try_get_crate_metadata_from_jsonc_manifest(
+            manifest.clone(),
             &missing_crate,
             &example_url,
         )
         .unwrap_err();
         assert_eq2!(
             missing_err,
-            ManifestCheckError::CrateNotFoundInManifest {
+            FetchManifestError::CrateNotFoundInManifest {
                 crate_name: missing_crate,
                 manifest_url: example_url.clone(),
             }
@@ -269,13 +311,15 @@ mod tests {
                 .contains("https://example.com/versions.jsonc")
         );
 
-        let (meta, release_base_url) =
-            http_req_helpers::extract_crate_metadata_from_jsonc_manifest(
-                Ok(manifest),
-                &crate_name,
-                &example_url,
-            )
-            .unwrap();
+        let FetchManifestOutput {
+            metadata: meta,
+            binaries_release_base_url: release_base_url,
+        } = http_req_helpers::try_get_crate_metadata_from_jsonc_manifest(
+            manifest,
+            &crate_name,
+            &example_url,
+        )
+        .unwrap();
         assert_eq2!(meta.version, CrateVersion::try_parse("0.0.26").unwrap());
         assert_eq2!(meta.crate_distribution, CrateDistribution::OpenSource);
         assert_eq2!(
@@ -285,33 +329,62 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_crate_metadata_from_manifest_success_and_http_error() {
+    async fn test_try_fetch_manifest_success_and_http_error() {
         let crate_name: CrateName = "r3bl-cmdr".into();
-        let ok_server_spawn_result = manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
-        let (meta, release_url) = fetch_crate_metadata_from_manifest(
-            &ok_server_spawn_result.endpoint_url,
+        let res_ok_server_spawn = manifest_server::spawn_success(SAMPLE_MANIFEST_0_0_26);
+        let FetchManifestOutput {
+            metadata: meta,
+            binaries_release_base_url: release_url,
+        } = try_fetch_manifest(
+            &res_ok_server_spawn.endpoint_url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap();
-        ok_server_spawn_result.assert_each_mock_called_once();
+        res_ok_server_spawn.assert_each_mock_called_once();
         assert_eq2!(meta.version, CrateVersion::try_parse("0.0.26").unwrap());
         assert_eq2!(
             &*release_url,
             "https://github.com/r3bl-org/r3bl-binaries/releases/download"
         );
 
-        let err_server_spawn_result =
+        let res_err_server_spawn =
             manifest_server::spawn_error("boom", blocks::HTTP_500_INTERNAL_SERVER_ERROR);
-        let err = fetch_crate_metadata_from_manifest(
-            &err_server_spawn_result.endpoint_url,
+        let err = try_fetch_manifest(
+            &res_err_server_spawn.endpoint_url,
             &crate_name,
             manifest_timeouts::DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT,
         )
         .await
         .unwrap_err();
-        err_server_spawn_result.assert_each_mock_called_once();
-        assert!(matches!(err, ManifestCheckError::FetchOrParseFailed { .. }));
+        res_err_server_spawn.assert_each_mock_called_once();
+        assert!(matches!(err, FetchManifestError::FetchOrParseFailed { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_try_fetch_manifest_timeout_returns_fetch_or_parse_failed() {
+        let crate_name: CrateName = "r3bl-cmdr".into();
+        let res_server_spawn = manifest_server::spawn_delayed_success(
+            SAMPLE_MANIFEST_0_0_26,
+            Duration::from_millis(100),
+        );
+
+        let res_fetch = try_fetch_manifest(
+            &res_server_spawn.endpoint_url,
+            &crate_name,
+            Duration::from_millis(20),
+        )
+        .await;
+        res_server_spawn.assert_each_mock_called_once();
+
+        match res_fetch {
+            Err(FetchManifestError::FetchOrParseFailed { ref diagnostic }) => {
+                assert!(!diagnostic.is_empty());
+            }
+            other => {
+                panic!("Expected Err(FetchOrParseFailed) on timeout, got {other:?}")
+            }
+        }
     }
 }

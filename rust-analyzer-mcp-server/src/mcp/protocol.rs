@@ -172,8 +172,8 @@ impl ToolResult {
     /// Returns [`serde_json::Error`] if JSON serialization fails.
     pub fn json_pretty(val: &impl Serialize) -> Result<Self, serde_json::Error> {
         let json_text = serde_json::to_string_pretty(val)?;
-        let tool_result = Self::text(json_text);
-        Ok(tool_result)
+        let res_tool = Self::text(json_text);
+        Ok(res_tool)
     }
 }
 
@@ -258,10 +258,10 @@ mod tests {
         assert_eq!(result.content[0].text, "Hello world");
 
         let json_val = json!({ "key": "value" });
-        let json_result = ToolResult::json_pretty(&json_val).unwrap();
-        assert_eq!(json_result.content.len(), 1);
-        assert_eq!(json_result.content[0].content_type, mcp_content_types::TEXT);
-        assert!(json_result.content[0].text.contains("\"key\": \"value\""));
+        let res_json = ToolResult::json_pretty(&json_val).unwrap();
+        assert_eq!(res_json.content.len(), 1);
+        assert_eq!(res_json.content[0].content_type, mcp_content_types::TEXT);
+        assert!(res_json.content[0].text.contains("\"key\": \"value\""));
     }
 
     #[test]

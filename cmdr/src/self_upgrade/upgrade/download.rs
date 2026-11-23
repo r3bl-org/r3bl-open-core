@@ -2,7 +2,7 @@
 
 use super::{super::UpgradeError, Sha256Digest, ui_strings};
 use futures_util::StreamExt;
-use r3bl_tui::{Spinner, create_client_with_user_agent};
+use r3bl_tui::{Spinner, create_http_client};
 use std::{fs::{self, File},
           io::Write,
           path::Path};
@@ -28,7 +28,7 @@ pub async fn download_and_verify_archive(
     archive_path: &Path,
     maybe_spinner: Option<&Spinner>,
 ) -> Result<(), UpgradeError> {
-    let client = create_client_with_user_agent(None)
+    let client = create_http_client()
         .map_err(|e| UpgradeError::Other(e.to_string()))?;
 
     let expected_sha256 =
@@ -227,21 +227,21 @@ mod tests {
     fn test_verify_file_sha256_nonexistent_file() {
         let temp_dir = try_create_temp_dir().unwrap();
         let nonexistent = temp_dir.join("nonexistent.bin");
-        let result = sha256_checksum::verify_file_sha256(
+        let res_verify = sha256_checksum::verify_file_sha256(
             &nonexistent,
             Sha256Digest::from_bytes(b""),
         );
-        assert!(matches!(result, Err(UpgradeError::Other(_))));
+        assert!(matches!(res_verify, Err(UpgradeError::Other(_))));
     }
 
     #[tokio::test]
     async fn test_fetch_expected_sha256_unreachable_url() {
-        let client = reqwest::Client::new();
-        let result = sha256_checksum::fetch_expected_sha256(
+        let client = create_http_client().unwrap();
+        let res_sha256 = sha256_checksum::fetch_expected_sha256(
             &client,
             "http://127.0.0.1:1/nonexistent.sha256",
         )
         .await;
-        assert!(matches!(result, Err(UpgradeError::Other(_))));
+        assert!(matches!(res_sha256, Err(UpgradeError::Other(_))));
     }
 }

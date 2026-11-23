@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::versions_manifest_keys, CrateMetadata, CrateName, EndpointUrl,
-            JsoncScalar};
+use super::{super::{VERSIONS_JSONC_FILE, versions_manifest_keys},
+            CrateMetadata, CrateName, EndpointUrl, JsoncScalar};
 use jsonc_parser::{ParseOptions, cst::CstRootNode};
 use miette::IntoDiagnostic;
 use r3bl_tui::{HashMap, ok};
@@ -28,13 +28,13 @@ use serde::Deserialize;
 ///
 /// The manifest uses **JSON with Comments (JSONC)** parsed via [`jsonc_parser`]:
 /// - **Human-readable documentation in-file**: Supports `//` line comments, `/* ... */`
-///   block comments, and trailing commas directly inside `versions.jsonc`.
+///   block comments, and trailing commas directly inside [`VERSIONS_JSONC_FILE`].
 /// - **Lossless comment-preserving updates**: When release tooling updates a crate's
 ///   version and release timestamp via [`Self::try_update_crate_in_jsonc()`],
 ///   [`CstRootNode`] mutates only the target CST nodes in-place, preserving all existing
 ///   comments, blank lines, and formatting.
 ///
-/// # Example `versions.jsonc`
+/// # Example [`VERSIONS_JSONC_FILE`]
 ///
 /// ```jsonc
 /// // R3BL Centralized Crate Version Manifest
@@ -61,24 +61,24 @@ use serde::Deserialize;
 /// # Forward Compatibility & Schema Evolution
 ///
 /// Neither of the JSON object structs ([`JsoncManifest`] and [`CrateMetadata`]) uses
-/// [`#[serde(deny_unknown_fields)]`][2] so we can evolve `versions.jsonc` in the future
-/// without breaking older binaries that users already have installed. Note that the
-/// scalar fields like [`EndpointUrl`], [`CrateName`], [`CrateVersion`],
+/// [`#[serde(deny_unknown_fields)]`][2] so we can evolve [`VERSIONS_JSONC_FILE`] in the
+/// future without breaking older binaries that users already have installed. Note that
+/// the scalar fields like [`EndpointUrl`], [`CrateName`], [`CrateVersion`],
 /// [`CrateDistribution`], and [`CrateReleaseDate`] deserialize directly from JSON
 /// strings.
-/// - **Adding new fields**: We can add new fields anywhere in `versions.jsonc`, and older
-///   binaries will simply ignore the fields they don't know about.
-/// - **Changing the schema**: `"crates"` is `V1`. If we ever need a completely new
-///   format, we can add a new `"crates_v2"` section next to `"crates"` in
-///   `versions.jsonc`. Older binaries will keep reading `"crates"` to upgrade themselves,
-///   while newer binaries read `"crates_v2"`.
+/// - **Adding new fields**: We can add new fields anywhere in [`VERSIONS_JSONC_FILE`],
+///   and older binaries will simply ignore the fields they don't know about.
+/// - **Changing the schema**: [`CRATES`] is `V1`. If we ever need a completely new
+///   format, we can add a new `"crates_v2"` section next to [`CRATES`] in
+///   [`VERSIONS_JSONC_FILE`]. Older binaries will keep reading [`CRATES`] to upgrade
+///   themselves, while newer binaries read `"crates_v2"`.
 ///
 /// # How we parse JSONC
 ///
 /// Neither the [`serde_json`] crate nor the [`jsonc_parser`] crate alone is sufficient to
-/// parse and mutate `versions.jsonc`. We use [`jsonc_parser`] + [`serde_json`] on the
-/// read path and [`jsonc_parser`] on the write path. The [`JsoncScalar`] trait formalizes
-/// this approach for scalar values.
+/// parse and mutate [`VERSIONS_JSONC_FILE`]. We use [`jsonc_parser`] + [`serde_json`] on
+/// the read path and [`jsonc_parser`] on the write path. The [`JsoncScalar`] trait
+/// formalizes this approach for scalar values.
 ///
 /// 1. **Read Path (`jsonc_parser` + `serde::Deserialize`)**:
 ///    - Limitations:
@@ -99,7 +99,7 @@ use serde::Deserialize;
 ///      - [`JsoncManifest`] and [`CrateMetadata`] intentionally do **not** implement
 ///        [`serde::Serialize`]. Serializing via [`serde_json::to_string()`] would strip
 ///        all comments, blank lines, trailing commas, and formatting from
-///        `versions.jsonc`.
+///        [`VERSIONS_JSONC_FILE`].
 ///    - Workaround:
 ///      - Instead, [`Self::try_update_crate_in_jsonc()`] parses the document into a
 ///        lossless [`CstRootNode`], converts updated scalar values into [`CstInputValue`]
@@ -126,6 +126,7 @@ use serde::Deserialize;
 /// [3]: crate::self_upgrade::CrateMetadata::try_update_cst_object
 /// [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
 /// [`CrateReleaseDate`]: crate::self_upgrade::CrateReleaseDate
+/// [`CRATES`]: crate::self_upgrade::versions_manifest_keys::CRATES
 /// [`CrateVersion`]: crate::self_upgrade::CrateVersion
 /// [`CstInputValue`]: jsonc_parser::cst::CstInputValue
 /// [`CstObject`]: jsonc_parser::cst::CstObject
@@ -176,14 +177,14 @@ impl JsoncManifest {
     ///
     /// # Workflow
     ///
-    /// New crate entries in `versions.jsonc` are initially authored by hand (with
+    /// New crate entries in [`VERSIONS_JSONC_FILE`] are initially authored by hand (with
     /// their descriptive comments and formatting). When publishing a new release of
     /// an existing crate, release tooling calls this function to update that crate's
     /// data in place (while preserving all existing comments, blank lines, and
     /// formatting) by updating these values:
-    /// 1. `"version"`.
-    /// 2. `"crate_distribution"`.
-    /// 3. `"released_on"`.
+    /// 1. [`VERSION`].
+    /// 2. [`CRATE_DISTRIBUTION`].
+    /// 3. [`RELEASED_ON`].
     ///
     /// # Returns
     ///
@@ -194,7 +195,10 @@ impl JsoncManifest {
     /// Returns an error if `jsonc_str` is not valid JSONC or does not contain an
     /// existing valid entry for `crate_name`.
     ///
+    /// [`CRATE_DISTRIBUTION`]: crate::self_upgrade::versions_manifest_keys::CRATE_DISTRIBUTION
     /// [`CstRootNode`]: jsonc_parser::cst::CstRootNode
+    /// [`RELEASED_ON`]: crate::self_upgrade::versions_manifest_keys::RELEASED_ON
+    /// [`VERSION`]: crate::self_upgrade::versions_manifest_keys::VERSION
     pub fn try_update_crate_in_jsonc(
         jsonc_str: &str,
         crate_name: &CrateName,
@@ -225,7 +229,7 @@ impl JsoncManifest {
         // If the closure returns `None`, it means the crate was not found, so we
         // bail.
         if maybe_entry_updated_fn().is_none() {
-            miette::bail!("Crate '{crate_name}' not found in versions.jsonc");
+            miette::bail!("Crate '{crate_name}' not found in {VERSIONS_JSONC_FILE}");
         }
 
         // Convert CST back to a formatted String, preserving all comments and
@@ -407,13 +411,13 @@ mod tests {
             crate_distribution: CrateDistribution::OpenSource,
             released_on: CrateReleaseDate::try_parse("2026-10-18T00:00:00Z").unwrap(),
         };
-        let result = JsoncManifest::try_update_crate_in_jsonc(
+        let res_update = JsoncManifest::try_update_crate_in_jsonc(
             jsonc,
             &"missing-crate".into(),
             &meta,
         );
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("missing-crate"));
+        assert!(res_update.is_err());
+        assert!(res_update.unwrap_err().to_string().contains("missing-crate"));
     }
 
     #[test]

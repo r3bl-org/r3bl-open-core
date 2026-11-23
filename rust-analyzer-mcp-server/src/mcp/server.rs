@@ -269,8 +269,8 @@ impl RustAnalyzerMCPServer {
 
                     match self.handle_tool_call(tool_name, args) {
                         Ok(result) => match serde_json::to_value(result) {
-                            Ok(serialized_result) => {
-                                McpResponse::success(request.id, serialized_result)
+                            Ok(res_serialized) => {
+                                McpResponse::success(request.id, res_serialized)
                             }
                             Err(e) => {
                                 let error_payload =

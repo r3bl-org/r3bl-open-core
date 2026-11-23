@@ -107,6 +107,7 @@ _Meta Task: Prepare v0.8.0 Release_
 - [x] [switch-to-parallel-frontend.md](done/switch-to-parallel-frontend.md)
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [http-testing-in-roc.md](http-testing-in-roc.md)
+- [ ] [main thread rendering issue](https://github.com/r3bl-org/r3bl-open-core/issues/495)
 - [ ] [two-static-meanings-article.md](two-static-meanings-article.md)
 - [ ] [const-expr-witness-token-article.md](const-expr-witness-token-article.md)
 - [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)

@@ -3,9 +3,9 @@
 #![rustfmt::skip]
 
 // Private submodules.
-mod cooldown;
 mod fetch_manifest;
+mod remote_version_check_gate;
 
 // Public barrel re-exports.
-pub use cooldown::*;
 pub use fetch_manifest::*;
+pub use remote_version_check_gate::*;

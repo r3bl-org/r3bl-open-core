@@ -48,9 +48,9 @@ pub async fn run_source_build_with_spinner(
     };
 
     if use_rustup {
-        let rustup_result =
+        let res_rustup_update =
             toolchain_setup::run_rustup_update(maybe_spinner.as_ref()).await;
-        match rustup_result {
+        match res_rustup_update {
             Ok(status) if status.success() => {}
             Ok(status) => {
                 if let Some(mut spinner) = maybe_spinner.take() {
@@ -76,7 +76,7 @@ pub async fn run_source_build_with_spinner(
         ));
     }
 
-    let install_result = cargo_installer::run_cargo_install_with_progress(
+    let res_cargo_install = cargo_installer::run_cargo_install_with_progress(
         crate_name,
         pinned_version,
         maybe_spinner.as_ref(),
@@ -88,7 +88,7 @@ pub async fn run_source_build_with_spinner(
         spinner.await_shutdown().await;
     }
 
-    install_result
+    res_cargo_install
 }
 
 // -------------------------------------------------------------------------------------------------

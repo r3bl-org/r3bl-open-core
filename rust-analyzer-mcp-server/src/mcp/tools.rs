@@ -65,8 +65,8 @@ where
 
     if readiness.status == IndexingStatus::InProgress {
         let progress_msg = format_indexing_in_progress_message(&readiness);
-        let tool_result = ToolResult::text(progress_msg);
-        return Ok(tool_result);
+        let res_tool = ToolResult::text(progress_msg);
+        return Ok(res_tool);
     }
 
     let result = match query_fn(client) {
@@ -91,8 +91,8 @@ where
         }
     }
 
-    let tool_result = ToolResult::json_pretty(&result)?;
-    Ok(tool_result)
+    let res_tool = ToolResult::json_pretty(&result)?;
+    Ok(res_tool)
 }
 
 /// Returns the complete list of available MCP tool definitions provided by this server.
@@ -335,8 +335,8 @@ pub fn handle_format(
     uri: &str,
 ) -> Result<ToolResult, McpServerError> {
     let result = client.formatting(uri)?;
-    let tool_result = ToolResult::json_pretty(&result)?;
-    Ok(tool_result)
+    let res_tool = ToolResult::json_pretty(&result)?;
+    Ok(res_tool)
 }
 
 /// Handles the `rust_analyzer_code_actions` tool call.
@@ -471,8 +471,8 @@ pub fn handle_diagnostics(
     }
 
     let diagnostics = format_file_diagnostics(file_path, &result);
-    let tool_result = ToolResult::json_pretty(&diagnostics)?;
-    Ok(tool_result)
+    let res_tool = ToolResult::json_pretty(&diagnostics)?;
+    Ok(res_tool)
 }
 
 /// Aggregates diagnostic severity counts for error summary reports.

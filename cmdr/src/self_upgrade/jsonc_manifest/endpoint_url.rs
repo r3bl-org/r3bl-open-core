@@ -14,7 +14,7 @@ use std::{fmt::{Display, Formatter},
 /// Validated HTTP(S) endpoint URL (manifest URL or binary release archive base URL).
 ///
 /// Encapsulates the remote URL string used in 2 places:
-/// 1. Querying `versions.jsonc`, via [`UpgradeConfig`].
+/// 1. Querying [`VERSIONS_JSONC_FILE`], via [`UpgradeConfig`].
 /// 2. Downloading pre-compiled release archives, via
 ///    [`JsoncManifest::binaries_release_base_url`][1].
 ///
@@ -29,7 +29,7 @@ use std::{fmt::{Display, Formatter},
 ///
 /// These test helpers generate local endpoints from a given [`EndpointUrl`] by swapping
 /// out remote protocol, host and port with ephemeral local ones, while leaving path
-/// segments untouched (e.g. `releases/download`, or `versions.jsonc`):
+/// segments untouched (e.g. `releases/download`, or [`VERSIONS_JSONC_FILE`]):
 ///
 /// ```text
 /// Original URL:
@@ -53,6 +53,7 @@ use std::{fmt::{Display, Formatter},
 /// [1]: crate::self_upgrade::JsoncManifest::binaries_release_base_url
 /// [`SocketAddr`]: std::net::SocketAddr
 /// [`UpgradeConfig`]: crate::self_upgrade::UpgradeConfig
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 /// [`with_closed_socket_addr`]: Self::with_closed_socket_addr
 /// [`with_socket_addr`]: Self::with_socket_addr
 /// [WHATWG URL]: https://url.spec.whatwg.org/

@@ -1,13 +1,15 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::{DeferredUpgradeOutcome, ImmediateUpgradeOutcome, SingletonState,
-                    StartClaimStatus, StartOutcome, ThreadRunner},
-            Checking, CooldownSkipped, Disabled, ImmediateCheckOutcome, StateMarker};
-use crate::{CooldownStatus, DEBUG_SELF_UPGRADE, ManifestCheckError, UpgradeActionOnExit,
-            UpgradeConfig, UpgradeJourney, UpgradePolicy, UpgradeStrategy,
+use super::{super::{DeferredCheckHandle, DeferredUpgradeOutcome,
+                    ImmediateUpgradeOutcome, StartOutcome,
+                    per_process_start_latch::{PerProcessStartLatch, StartClaimStatus},
+                    thread_runner::ThreadRunner},
+            CheckFailedError, Checking, Disabled, ImmediateCheckOutcome, Skipped,
+            StateMarker};
+use crate::{DEBUG_SELF_UPGRADE, GateStatus, UpgradeActionOnExit, UpgradeConfig,
+            UpgradeJourney, UpgradePolicy, UpgradeStrategy,
             format_already_up_to_date_msg, format_upgrade_failed_retry_msg,
             get_current_bin_name};
-use r3bl_tui::TokioRuntimeOutcome;
 
 /// Initial typestate of [`UpgradeJourney<NotStarted>`] before [`UpgradeJourney::start`]
 /// is called.
@@ -29,25 +31,24 @@ use r3bl_tui::TokioRuntimeOutcome;
 /// CURRENT THREAD                                  DEDICATED THREAD ("self-upgrade")
 /// ──────────────                                  ─────────────────────────────────
 /// 1. Calls journey.start()
-///    • Claims SINGLETON -> SingletonState::Started(None)
+///    • Claims PerProcessStartLatch (PER_PROCESS_START_LATCH: false -> true)
 ///    • If 1h cooldown active:
-///      returns DeferredUpgrade(CooldownSkipped)
+///      returns DeferredUpgrade(Skipped)
 ///    • Otherwise: transitions to Checking
 ///      and spawns "self-upgrade" via
 ///      StdThreadTokioRunner::run_non_blocking,
-///      storing DeferredCheckHandle in
-///      SingletonState::Started(Some(handle)) ───► 2. Calls checking
+///      returning DeferredUpgrade(
+///      DeferredCheckSpawned(handle)) ────────────► 2. Calls checking
 ///    │                                                 .check_for_deferred_upgrade()
 ///    ▼                                                 .await (2s timeout)
-///    Returns DeferredUpgrade(                        and returns DeferredCheckOutcome:
-///      DeferredCheckSpawned(Checking))                 UpToDate | UpgradeAvailable | CheckFailed
-///    (App runs normal TUI / CLI work)                  │
+///    App owns DeferredUpgradeOutcome                   and returns DeferredCheckOutcome:
+///    (normal TUI / CLI work runs)                      UpToDate | UpgradeAvailable | CheckFailed
+///    │                                                 │
 ///    │                                                 │
 ///    ▼                                                 │
-/// 3. At exit, calls                                    │
-///    start_outcome.handle_upgrade_on_exit()            │
-///    • Takes DeferredCheckHandle from SINGLETON        │
-///      (drops lock) and joins dedicated thread ◄───────┘
+/// 3. At exit, consumes DeferredUpgradeOutcome via      │
+///    deferred.handle_upgrade_on_exit()                 │
+///    • Joins owned DeferredCheckHandle ◄───────────────┘
 ///    • If UpgradeAvailable: transitions to Upgrading,
 ///      calls upgrading.execute_action_on_exit(),
 ///      and returns ExitOutcome::Completed(Completed)
@@ -62,7 +63,7 @@ use r3bl_tui::TokioRuntimeOutcome;
 /// ```text
 /// CURRENT THREAD (inside journey.start() -> Self::run_immediate_upgrade())
 /// ────────────────────────────────────────────────────────────────────────
-/// 1. Claims SINGLETON -> SingletonState::Started(None)
+/// 1. Claims PerProcessStartLatch (PER_PROCESS_START_LATCH: false -> true)
 ///    and transitions NotStarted -> Checking
 ///    │
 /// 2. Calls checking.check_for_immediate_upgrade().await (5s timeout)
@@ -78,7 +79,6 @@ use r3bl_tui::TokioRuntimeOutcome;
 ///
 /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
 /// [`DeferredCheckOutcome`]: crate::self_upgrade::DeferredCheckOutcome
-/// [`SINGLETON`]: crate::self_upgrade::SINGLETON
 /// [`StartOutcome::ImmediateUpgrade`]:
 ///     crate::self_upgrade::StartOutcome::ImmediateUpgrade
 /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
@@ -112,11 +112,11 @@ impl UpgradeJourney<NotStarted> {
     /// This method is called by `main()` at startup to launch the [`self_upgrade`]
     /// engine. This is part of the [Control Plane].
     ///
-    /// Atomically claims [`SingletonState`] in [`SINGLETON`] and dispatches based on
-    /// [`UpgradeConfig::get_upgrade_policy()`]:
+    /// Atomically claims [`PerProcessStartLatch`] and dispatches based on
+    /// [`UpgradeConfig::get_upgrade_policy()`] as follows:
     ///
     /// 1. **Duplicate `.start()` calls**:
-    ///    - Leaves [`SINGLETON`] untouched, spawns zero threads, logs via
+    ///    - Leaves [`PerProcessStartLatch`] claimed, spawns zero threads, logs via
     ///      [`DEBUG_SELF_UPGRADE`], and returns [`StartOutcome::AlreadyStarted`].
     ///
     /// 2. **Immediate upgrade ([`UpgradeStrategy::Immediate`], `--upgrade`)**:
@@ -127,13 +127,15 @@ impl UpgradeJourney<NotStarted> {
     /// 3. **Deferred upgrade on exit ([`UpgradeStrategy::Deferred`],
     ///    `--upgrade-behavior`)**:
     ///    - Checks the `1h` cooldown timestamp file via
-    ///      [`CooldownPolicy::check_status`][status]; if active, returns
-    ///      [`DeferredUpgradeOutcome::CooldownSkipped`], or if expired, spawns the
+    ///      [`RemoteVersionCheckGate::try_check_gate_status`][status] (failing open and
+    ///      logging under [`DEBUG_SELF_UPGRADE`] on unexpected filesystem or clock
+    ///      errors); if [`GateStatus::ClosedForCooldown`], returns
+    ///      [`DeferredUpgradeOutcome::Skipped`], or if [`GateStatus::Open`], spawns the
     ///      dedicated `"self-upgrade"` thread via
-    ///      [`StdThreadTokioRunner::run_non_blocking`] (storing its
-    ///      [`DeferredCheckHandle`] in [`SINGLETON`] for
-    ///      [`StartOutcome::handle_upgrade_on_exit`]) and returns
-    ///      [`DeferredUpgradeOutcome::DeferredCheckSpawned`].
+    ///      [`StdThreadTokioRunner::run_non_blocking`][3] and returns its owned
+    ///      [`DeferredCheckHandle`] inside
+    ///      [`DeferredUpgradeOutcome::DeferredCheckSpawned`] for
+    ///      [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][1].
     ///
     /// 4. **Disabled ([`UpgradePolicy::Disabled`], `--upgrade-behavior disable`)**:
     ///    - Transitions to [`UpgradeJourney<Disabled>`] with zero threads and zero I/O,
@@ -143,25 +145,23 @@ impl UpgradeJourney<NotStarted> {
     /// diagram, and [Main Entry Point: `UpgradeJourney` & Typestate Lifecycle][ep] in the
     /// [`self_upgrade`] module documentation.
     ///
+    /// [1]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+    /// [3]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
     /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
     /// [`self_upgrade`]: mod@crate::self_upgrade
-    /// [`SINGLETON`]: crate::self_upgrade::SINGLETON
-    /// [`StartOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::StartOutcome::handle_upgrade_on_exit
-    /// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`UpgradeJourney<Disabled>`]: crate::self_upgrade::UpgradeJourney
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
     /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
     /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     /// [ep]: mod@crate::self_upgrade#main-entry-point-upgradejourney--typestate-lifecycle
-    /// [status]: crate::self_upgrade::CooldownPolicy::check_status
+    /// [status]: crate::self_upgrade::RemoteVersionCheckGate::try_check_gate_status
     /// [Thread Model]: crate::self_upgrade::NotStarted#thread-model
-    #[must_use]
     pub fn start(self) -> StartOutcome {
         // Early return if another instance is already running.
-        if SingletonState::try_claim_start() == StartClaimStatus::AlreadyStarted {
+        if PerProcessStartLatch::claim() == StartClaimStatus::AlreadyStarted {
             return log_duplicate_start(&self.config);
         }
 
@@ -179,25 +179,45 @@ impl UpgradeJourney<NotStarted> {
             // Enabled - Deferred Upgrade.
             UpgradePolicy::Enabled(
                 strategy @ UpgradeStrategy::Deferred(action_on_exit),
-            ) => {
-                match self
-                    .config
-                    .get_cooldown_policy()
-                    .check_status(self.config.get_crate_name())
-                {
-                    CooldownStatus::Active => StartOutcome::DeferredUpgrade(
-                        DeferredUpgradeOutcome::CooldownSkipped(
-                            self.into_cooldown_skipped(),
-                        ),
-                    ),
-                    CooldownStatus::ExpiredOrMissing => {
-                        let checking = self.into_checking(strategy);
-                        StartOutcome::DeferredUpgrade(Self::run_deferred_upgrade(
-                            checking,
-                            action_on_exit,
-                        ))
-                    }
+            ) => match self.check_gate_status_fail_open() {
+                GateStatus::ClosedForCooldown => StartOutcome::DeferredUpgrade(
+                    DeferredUpgradeOutcome::Skipped(self.into_skipped()),
+                ),
+                GateStatus::Open => {
+                    let checking = self.into_checking(strategy);
+                    StartOutcome::DeferredUpgrade(Self::run_deferred_upgrade(
+                        checking,
+                        action_on_exit,
+                    ))
                 }
+            },
+        }
+    }
+
+    /// Evaluates [`RemoteVersionCheckGate::try_check_gate_status`][1] with a fail-open
+    /// Control Plane policy: any [`GateStatusError`][2] (missing timestamp file on first
+    /// run, filesystem error, or clock skew) is logged under [`DEBUG_SELF_UPGRADE`] and
+    /// treated as [`GateStatus::Open`] so upgrade checks are never silently suppressed.
+    ///
+    /// [1]: crate::self_upgrade::RemoteVersionCheckGate::try_check_gate_status
+    /// [2]: crate::self_upgrade::GateStatusError
+    fn check_gate_status_fail_open(&self) -> GateStatus {
+        match self
+            .config
+            .get_remote_version_check_gate()
+            .try_check_gate_status()
+        {
+            Ok(status) => status,
+            Err(err) => {
+                DEBUG_SELF_UPGRADE.then(|| {
+                    // % is Display, ? is Debug.
+                    tracing::debug!(
+                        message = "Could not check cooldown gate status; failing open",
+                        crate_name = %self.config.get_crate_name(),
+                        error = ?err
+                    );
+                });
+                GateStatus::Open
             }
         }
     }
@@ -211,12 +231,10 @@ impl UpgradeJourney<NotStarted> {
     }
 
     #[must_use]
-    pub(in crate::self_upgrade) fn into_cooldown_skipped(
-        self,
-    ) -> UpgradeJourney<CooldownSkipped> {
+    pub(in crate::self_upgrade) fn into_skipped(self) -> UpgradeJourney<Skipped> {
         UpgradeJourney {
             config: self.config,
-            state: CooldownSkipped,
+            state: Skipped,
         }
     }
 
@@ -272,18 +290,18 @@ impl UpgradeJourney<NotStarted> {
                 }
             },
         ) {
-            TokioRuntimeOutcome::Completed(outcome) => outcome,
-            TokioRuntimeOutcome::FailedToStart(err)
-            | TokioRuntimeOutcome::Panicked(err) => {
-                let error_str = format!("{err:#}");
+            Ok(outcome) => outcome,
+            Err(thread_err) => {
+                let error_str = thread_err.to_string();
                 let bin_name = get_current_bin_name();
                 config
                     .get_user_feedback_channel()
                     .eprintln(format_upgrade_failed_retry_msg(&bin_name, &error_str));
 
-                ImmediateUpgradeOutcome::CheckFailed(fallback_checking.into_check_failed(
-                    ManifestCheckError::RuntimeOrThreadInitFailed { reason: error_str },
-                ))
+                ImmediateUpgradeOutcome::CheckFailed(
+                    fallback_checking
+                        .into_check_failed(CheckFailedError::from(thread_err)),
+                )
             }
         }
     }
@@ -298,20 +316,15 @@ impl UpgradeJourney<NotStarted> {
                 .check_for_deferred_upgrade(action_on_exit)
                 .await
         }) {
-            Ok(handle) => {
-                SingletonState::set_deferred_check_handle(handle);
-                DeferredUpgradeOutcome::DeferredCheckSpawned(checking)
+            Ok(join_handle) => {
+                DeferredUpgradeOutcome::DeferredCheckSpawned(DeferredCheckHandle {
+                    checking,
+                    join_handle,
+                })
             }
-            Err(io_err) => {
-                let error = ManifestCheckError::RuntimeOrThreadInitFailed {
-                    reason: format!(
-                        "Failed to spawn dedicated self-upgrade thread: {io_err:#}"
-                    ),
-                };
-                DeferredUpgradeOutcome::DeferredCheckSpawnFailed(
-                    checking.into_check_failed(error),
-                )
-            }
+            Err(thread_err) => DeferredUpgradeOutcome::DeferredCheckSpawnFailed(
+                checking.into_check_failed(CheckFailedError::from(thread_err)),
+            ),
         }
     }
 }

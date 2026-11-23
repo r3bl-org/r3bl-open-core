@@ -397,8 +397,8 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     };
 
     // First: Run rustup update (spinner shows with output-based progress).
-    let rustup_result = run_rustup_update(maybe_spinner.as_ref()).await;
-    if let Err(e) = rustup_result {
+    let res_rustup_update = run_rustup_update(maybe_spinner.as_ref()).await;
+    if let Err(e) = res_rustup_update {
         // Handle error, stop spinner.
         if let Some(mut spinner) = maybe_spinner.take() {
             spinner.request_shutdown();
@@ -414,7 +414,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     }
 
     // Second: Run cargo install with OSC progress tracking.
-    let install_result =
+    let res_cargo_install =
         run_cargo_install_with_progress(crate_name, maybe_spinner.as_ref()).await;
 
     // Stop spinner.
@@ -424,7 +424,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     }
 
     // Report result.
-    report_upgrade_install_result(install_result);
+    report_upgrade_install_result(res_cargo_install);
 }
 
 /// Reports the result of the installation process.

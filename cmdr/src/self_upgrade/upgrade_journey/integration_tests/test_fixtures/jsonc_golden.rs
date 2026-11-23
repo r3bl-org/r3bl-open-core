@@ -46,6 +46,20 @@ pub fn manifest_upgrade_available_closed_source(
     )
 }
 
+/// Manifest JSONC payload that omits `r3bl-cmdr` and instead contains only
+/// `other_crate_name`, triggering [`FetchManifestError::CrateNotFoundInManifest`].
+///
+/// [`FetchManifestError::CrateNotFoundInManifest`]: crate::self_upgrade::FetchManifestError::CrateNotFoundInManifest
+#[must_use]
+pub fn manifest_without_crate(other_crate_name: &str) -> String {
+    make_manifest_jsonc(
+        other_crate_name,
+        blocks::TEST_CURRENT_VERSION,
+        OPEN_SOURCE,
+        PLACEHOLDER_RELEASE_BASE_URL,
+    )
+}
+
 /// Generates a valid JSONC manifest string from structured arguments.
 #[must_use]
 fn make_manifest_jsonc(

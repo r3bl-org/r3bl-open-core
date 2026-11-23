@@ -53,8 +53,11 @@ pub struct CrateDistributionParseError {
     pub input: String,
 }
 
-/// Parses an `"open-source"` or `"closed-source"` string slice (from `versions.jsonc` or
-/// tests) into a [`CrateDistribution`], and converts back into a [`CstInputValue`].
+/// Parses an [`OPEN_SOURCE`] or [`CLOSED_SOURCE`] string slice (from
+/// [`VERSIONS_JSONC_FILE`] or tests) into a [`CrateDistribution`], and converts back
+/// into a [`CstInputValue`].
+///
+/// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
 impl JsoncScalar for CrateDistribution {
     type ParseError = CrateDistributionParseError;
 
@@ -77,7 +80,7 @@ impl JsoncScalar for CrateDistribution {
     }
 }
 
-/// Formats the distribution model (`"open-source"` or `"closed-source"`) for UI error
+/// Formats the distribution model ([`OPEN_SOURCE`] or [`CLOSED_SOURCE`]) for UI error
 /// messages and logs.
 impl Display for CrateDistribution {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

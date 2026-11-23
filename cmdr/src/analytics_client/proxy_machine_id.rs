@@ -1,18 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AnalyticsAction, report_analytics};
-use crate::{DEBUG_ANALYTICS_CLIENT, try_get_proxy_machine_id_file_path};
+use crate::{DEBUG_ANALYTICS_CLIENT, r3bl_file_paths};
 use r3bl_tui::{InlineString, generate_friendly_random_id,
                read_from_file::try_read_file_path_into_inline_string, write_to_file};
 use std::fs;
 
-/// Reads the proxy machine ID from [`try_get_proxy_machine_id_file_path`]
+/// Reads the proxy machine ID from
+/// [`r3bl_file_paths::cache::try_get_proxy_machine_id_file_path`]
 /// ([`<cache_dir>/r3bl/proxy_machine_id`][1]) if it exists, or generates and persists a
 /// new friendly random ID.
 ///
 /// [1]: crate::r3bl_file_paths#platform-base-directories
 pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
-    let Some(id_file_path) = try_get_proxy_machine_id_file_path() else {
+    let Some(id_file_path) = r3bl_file_paths::cache::try_get_proxy_machine_id_file_path()
+    else {
         return generate_friendly_random_id();
     };
 

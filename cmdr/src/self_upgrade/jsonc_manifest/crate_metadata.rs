@@ -47,8 +47,8 @@ pub struct CrateMetadata {
 }
 
 impl CrateMetadata {
-    /// Updates a crate entry's [`CstObject`] node in-place inside `versions.jsonc` with
-    /// the scalar values from `self` (via [`JsoncScalar::cst_value()`][3]).
+    /// Updates a crate entry's [`CstObject`] node in-place inside [`VERSIONS_JSONC_FILE`]
+    /// with the scalar values from `self` (via [`JsoncScalar::cst_value()`][3]).
     ///
     /// Called by [`JsoncManifest::try_update_crate_in_jsonc()`][1] after navigating to
     /// `root_object["crates"][crate_name]`. This method mutates the three leaf properties
@@ -74,6 +74,7 @@ impl CrateMetadata {
     /// [3]: crate::self_upgrade::JsoncScalar::cst_value
     /// [`RELEASED_ON`]: crate::self_upgrade::versions_manifest_keys::RELEASED_ON
     /// [`VERSION`]: crate::self_upgrade::versions_manifest_keys::VERSION
+    /// [`VERSIONS_JSONC_FILE`]: crate::self_upgrade::VERSIONS_JSONC_FILE
     #[must_use]
     pub fn try_update_cst_object(&self, crate_object: &CstObject) -> Option<()> {
         use versions_manifest_keys::{CRATE_DISTRIBUTION, RELEASED_ON, VERSION};

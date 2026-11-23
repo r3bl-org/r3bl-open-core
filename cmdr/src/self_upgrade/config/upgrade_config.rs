@@ -1,6 +1,6 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{super::{CooldownPolicy, CrateName, CrateVersion, EndpointUrl},
+use super::{super::{CrateName, CrateVersion, EndpointUrl, RemoteVersionCheckGate},
             UpgradePolicy, UserFeedbackChannel};
 
 /// An immutable configuration for the [`self_upgrade`] engine, held inside
@@ -15,8 +15,8 @@ use super::{super::{CooldownPolicy, CrateName, CrateVersion, EndpointUrl},
 ///   providing CLI args (from the binary) and the desired [`UserFeedbackChannel`] along
 ///   with a bunch of defaults for all the remaining fields to [`UpgradeConfig::new()`].
 /// - Tests construct [`UpgradeConfig::new()`] directly to pass explicit [`UpgradePolicy`]
-///   variants, custom URL overrides, or [`CooldownPolicy::Disabled`] /
-///   [`CooldownPolicy::CustomTimestampFilePath`].
+///   variants, custom URL overrides, or [`RemoteVersionCheckGate::Disabled`] /
+///   [`RemoteVersionCheckGate::new_temp_dir`].
 ///
 /// [`UpgradeConfig`] stays unchanged across all [`UpgradeJourney`] state transitions
 /// (typestate narrowing), while [`UpgradeJourney::start()`] unpacks [`UpgradePolicy`]
@@ -24,9 +24,9 @@ use super::{super::{CooldownPolicy, CrateName, CrateVersion, EndpointUrl},
 /// [`UpgradeActionOnExit`] in [`UpgradeAvailable`]).
 ///
 /// [`Checking`]: crate::self_upgrade::Checking
-/// [`CooldownPolicy::CustomTimestampFilePath`]: CooldownPolicy::CustomTimestampFilePath
-/// [`CooldownPolicy::Disabled`]: CooldownPolicy::Disabled
-/// [`CooldownPolicy`]: CooldownPolicy
+/// [`RemoteVersionCheckGate::Disabled`]: RemoteVersionCheckGate::Disabled
+/// [`RemoteVersionCheckGate::new_temp_dir`]: RemoteVersionCheckGate::new_temp_dir
+/// [`RemoteVersionCheckGate`]: RemoteVersionCheckGate
 /// [`self_upgrade`]: mod@crate::self_upgrade
 /// [`upgrade_journey!`]: crate::upgrade_journey
 /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
@@ -65,7 +65,7 @@ pub struct UpgradeConfig {
     /// Cooldown timestamp file policy governing `1h` [`mtime`] version-check caching.
     ///
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
-    cooldown_policy: CooldownPolicy,
+    remote_version_check_gate: RemoteVersionCheckGate,
 }
 
 impl UpgradeConfig {
@@ -82,8 +82,8 @@ impl UpgradeConfig {
     /// * `upgrade_policy`: Resolved [`UpgradePolicy`] governing startup and exit behavior
     ///   for this invocation.
     /// * `jsonc_manifest_url`: Endpoint URL for the centralized JSONC version manifest.
-    /// * `cooldown_policy`: [`CooldownPolicy`] controlling `1h` [`mtime`] timestamp file
-    ///   caching.
+    /// * `remote_version_check_gate`: [`RemoteVersionCheckGate`] controlling `1h`
+    ///   [`mtime`] timestamp file caching.
     ///
     /// [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
     /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
@@ -95,7 +95,7 @@ impl UpgradeConfig {
         user_feedback_channel: UserFeedbackChannel,
         upgrade_policy: UpgradePolicy,
         jsonc_manifest_url: EndpointUrl,
-        cooldown_policy: CooldownPolicy,
+        remote_version_check_gate: RemoteVersionCheckGate,
     ) -> Self {
         Self {
             crate_name: arg_crate_name.into(),
@@ -103,7 +103,7 @@ impl UpgradeConfig {
             user_feedback_channel,
             upgrade_policy,
             jsonc_manifest_url,
-            cooldown_policy,
+            remote_version_check_gate,
         }
     }
 
@@ -131,21 +131,24 @@ impl UpgradeConfig {
 
     /// Cooldown timestamp file policy governing `1h` `mtime` version-check caching.
     #[must_use]
-    pub fn get_cooldown_policy(&self) -> &CooldownPolicy { &self.cooldown_policy }
+    pub fn get_remote_version_check_gate(&self) -> &RemoteVersionCheckGate {
+        &self.remote_version_check_gate
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{super::super::{JsoncScalar, R3BL_VERSIONS_JSONC_URL, manifest_timeouts},
                 *};
-    use crate::resolve_self_upgrade_last_check_in_base_dir;
-    use r3bl_tui::assert_eq2;
-    use std::path::Path;
+    use r3bl_tui::{TempDirChildPath, assert_eq2, try_create_temp_dir};
 
     #[test]
     fn test_upgrade_config_field_initialization() {
+        let crate_name = CrateName::from("r3bl-cmdr");
+        let default_gate = RemoteVersionCheckGate::try_new(&crate_name, None)
+            .unwrap_or(RemoteVersionCheckGate::Disabled);
         let config = UpgradeConfig::new(
-            "r3bl-cmdr",
+            crate_name.clone(),
             CrateVersion {
                 major: 1,
                 minor: 2,
@@ -154,10 +157,10 @@ mod tests {
             UserFeedbackChannel::Stderr,
             UpgradePolicy::default(),
             EndpointUrl::default_manifest_url(),
-            CooldownPolicy::default(),
+            default_gate.clone(),
         );
 
-        assert_eq2!(config.get_crate_name(), &CrateName::from("r3bl-cmdr"));
+        assert_eq2!(config.get_crate_name(), &crate_name);
         assert_eq2!(
             config.get_current_version(),
             CrateVersion {
@@ -171,17 +174,16 @@ mod tests {
             UserFeedbackChannel::Stderr
         );
         assert_eq2!(config.get_upgrade_policy(), UpgradePolicy::default());
-        assert_eq2!(&**config.get_jsonc_manifest_url(), R3BL_VERSIONS_JSONC_URL);
-        assert_eq2!(config.get_cooldown_policy(), &CooldownPolicy::default());
-        assert_eq2!(
-            config.get_cooldown_policy().try_get_cooldown_duration(),
-            Some(manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY)
-        );
+        let manifest_url_str: &str = config.get_jsonc_manifest_url();
+        assert_eq2!(manifest_url_str, R3BL_VERSIONS_JSONC_URL);
+        assert_eq2!(config.get_remote_version_check_gate(), &default_gate);
+        if let RemoteVersionCheckGate::Enabled { duration, .. } =
+            config.get_remote_version_check_gate()
+        {
+            assert_eq2!(*duration, manifest_timeouts::DEFERRED_CHECK_COOLDOWN_DELAY);
+        }
 
-        let custom_timestamp_file_path = resolve_self_upgrade_last_check_in_base_dir(
-            Path::new("/tmp"),
-            config.get_crate_name(),
-        );
+        let temp_dir = try_create_temp_dir().unwrap();
         let custom_config = UpgradeConfig::new(
             config.get_crate_name().clone(),
             CrateVersion {
@@ -192,16 +194,23 @@ mod tests {
             UserFeedbackChannel::Quiet,
             UpgradePolicy::Disabled,
             EndpointUrl::try_parse("https://example.com/custom_manifest.jsonc").unwrap(),
-            CooldownPolicy::new_custom_path(custom_timestamp_file_path.clone()),
+            RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "custom").unwrap(),
+                None,
+            ),
         );
         assert_eq2!(custom_config.get_upgrade_policy(), UpgradePolicy::Disabled);
+        let custom_manifest_url_str: &str = custom_config.get_jsonc_manifest_url();
         assert_eq2!(
-            &**custom_config.get_jsonc_manifest_url(),
+            custom_manifest_url_str,
             "https://example.com/custom_manifest.jsonc"
         );
         assert_eq2!(
-            custom_config.get_cooldown_policy(),
-            &CooldownPolicy::new_custom_path(custom_timestamp_file_path)
+            custom_config.get_remote_version_check_gate(),
+            &RemoteVersionCheckGate::new_temp_dir(
+                TempDirChildPath::try_new(&temp_dir, "custom").unwrap(),
+                None,
+            )
         );
     }
 }

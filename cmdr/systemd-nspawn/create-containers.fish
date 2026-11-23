@@ -30,6 +30,20 @@ function ensure_dependencies
     end
 end
 
+function isolate_container_mdns -a container_path
+    if not test -d "$container_path/etc"
+        return 0
+    end
+
+    # Prevent guest systemd-resolved / avahi-daemon from colliding with host UDP 5353/5355 if booted with -b
+    sudo mkdir -p "$container_path/etc/systemd/resolved.conf.d"
+    printf '[Resolve]\nMulticastDNS=no\nLLMNR=no\n' | sudo tee "$container_path/etc/systemd/resolved.conf.d/99-disable-mdns.conf" > /dev/null
+
+    sudo mkdir -p "$container_path/etc/systemd/system"
+    sudo ln -sf /dev/null "$container_path/etc/systemd/system/avahi-daemon.service"
+    sudo ln -sf /dev/null "$container_path/etc/systemd/system/avahi-daemon.socket"
+end
+
 function create_ubuntu_container
     set container_path "/var/lib/machines/$UBUNTU_CONTAINER"
 
@@ -54,6 +68,7 @@ function create_ubuntu_container
         return 1
     end
 
+    isolate_container_mdns $container_path
     echo "Ubuntu container created at $container_path"
 end
 
@@ -111,6 +126,7 @@ function create_fedora_container
     sudo systemd-nspawn -D $container_path \
         dnf install -y curl gcc gcc-c++ make ca-certificates
 
+    isolate_container_mdns $container_path
     echo "Fedora container created at $container_path"
 end
 
@@ -166,6 +182,7 @@ function create_arch_container
         return 1
     end
 
+    isolate_container_mdns $container_path
     echo "Arch container created at $container_path"
 end
 

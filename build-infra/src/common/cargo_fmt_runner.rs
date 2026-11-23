@@ -53,8 +53,8 @@ pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
     }
 
     // Execute command
-    let cmd_output_result = cmd.output();
-    match CommandOutputResult::from(cmd_output_result) {
+    let res_cmd_output = cmd.output();
+    match CommandOutputResult::from(res_cmd_output) {
         CommandOutputResult::Success(_) => {
             if verbose {
                 println!("cargo fmt completed successfully");

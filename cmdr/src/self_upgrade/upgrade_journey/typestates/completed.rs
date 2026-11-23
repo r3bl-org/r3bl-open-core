@@ -1,7 +1,34 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::StateMarker;
-use crate::{CrateMetadata, UpgradeError};
+use crate::{CrateMetadata, ThreadRunnerError, UpgradeError};
+
+/// Control Plane failure reason recorded in [`UpgradeResolution::UpgradeFailed`] when an
+/// upgrade execution or interactive exit prompt fails.
+///
+/// Composes [Execution Plane] upgrade errors ([`UpgradeError`]) with [Control Plane]
+/// thread/runtime failures ([`ThreadRunnerError`]).
+///
+/// [`ThreadRunnerError`]: crate::self_upgrade::ThreadRunnerError
+/// [`UpgradeError`]: crate::self_upgrade::UpgradeError
+/// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+/// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum UpgradeFailedError {
+    /// Download, checksum verification, binary replacement, or source build failed in
+    /// the [Execution Plane].
+    ///
+    /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    #[error(transparent)]
+    PerformUpgrade(#[from] UpgradeError),
+
+    /// Scoped OS thread failed to spawn, initialize its Tokio runtime, or panicked in
+    /// the [Control Plane].
+    ///
+    /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
+    #[error(transparent)]
+    ThreadRunner(#[from] ThreadRunnerError),
+}
 
 /// Terminal outcome recorded inside [`Completed`] after an immediate upgrade or exit
 /// upgrade action finishes.
@@ -11,11 +38,11 @@ pub enum UpgradeResolution {
     /// timestamp file was refreshed).
     Upgraded,
 
-    /// Download, checksum verification, swap, or source compilation failed; carries the
-    /// structured [`UpgradeError`].
+    /// Download, checksum verification, swap, source compilation, or thread/runtime
+    /// execution failed; carries the structured [`UpgradeFailedError`].
     ///
-    /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
-    UpgradeFailed(UpgradeError),
+    /// [`UpgradeFailedError`]: crate::self_upgrade::UpgradeFailedError
+    UpgradeFailed(UpgradeFailedError),
 
     /// User selected `"No, thanks"` or dismissed the interactive prompt.
     DeclinedByUser,

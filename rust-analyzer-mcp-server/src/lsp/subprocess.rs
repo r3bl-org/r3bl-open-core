@@ -48,11 +48,11 @@ impl RustAnalyzerClient {
         #[cfg(not(windows))]
         let binary_locator = "which";
 
-        let cmd_output_result = Command::new(binary_locator)
+        let res_cmd_output = Command::new(binary_locator)
             .arg(lsp_framing::RUST_ANALYZER_BINARY)
             .output();
 
-        match CommandOutputResult::from(cmd_output_result) {
+        match CommandOutputResult::from(res_cmd_output) {
             CommandOutputResult::Success(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let first_line = stdout.lines().find(|line| !line.trim().is_empty());

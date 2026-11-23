@@ -192,7 +192,7 @@ fn upgrade_plain_word_term_in_line(
 ) -> String {
     let code_spans = find_inline_code_spans(line);
     let link_ranges = find_md_link_ranges(line);
-    let mut final_result = String::new();
+    let mut res_final = String::new();
     let mut search_start = 0;
     let line_bytes = line.as_bytes();
 
@@ -225,16 +225,16 @@ fn upgrade_plain_word_term_in_line(
         let is_part_of_word = prev_is_word || next_is_word;
 
         if is_inside_code_span || is_part_of_word || is_inside_link {
-            final_result.push_str(&line[search_start..end_pos]);
+            res_final.push_str(&line[search_start..end_pos]);
         } else {
-            final_result.push_str(&line[search_start..abs_pos]);
-            final_result.push_str(linked_pattern);
+            res_final.push_str(&line[search_start..abs_pos]);
+            res_final.push_str(linked_pattern);
         }
         search_start = end_pos;
     }
-    final_result.push_str(&line[search_start..]);
+    res_final.push_str(&line[search_start..]);
 
-    final_result
+    res_final
 }
 
 /// Upgrades a compound term (one that contains backticks) in a line.

@@ -1,12 +1,24 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use const_format::formatcp;
 use std::time::Duration;
+
+/// Hostname serving R3BL's central version manifest (`"r3bl.com"`).
+pub const R3BL_HOST: &str = "r3bl.com";
+
+/// Central version manifest filename (`"versions.jsonc"`).
+pub const VERSIONS_JSONC_FILE: &str = "versions.jsonc";
 
 /// URL for R3BL crate versions and distribution visibility. See [`JsoncManifest`] for the
 /// complete JSONC schema specification and example.
 ///
 /// [`JsoncManifest`]: crate::self_upgrade::JsoncManifest
-pub const R3BL_VERSIONS_JSONC_URL: &str = "https://r3bl.com/versions.jsonc";
+pub const R3BL_VERSIONS_JSONC_URL: &str = formatcp!(
+    "{scheme}://{host}/{file}",
+    scheme = url_schemes::HTTPS,
+    host = R3BL_HOST,
+    file = VERSIONS_JSONC_FILE,
+);
 
 /// Property keys used in the [`R3BL_VERSIONS_JSONC_URL`] manifest.
 ///
@@ -29,7 +41,7 @@ pub mod versions_manifest_keys {
     pub const RELEASED_ON: &str = "released_on";
 }
 
-/// Wire string values for [`CrateDistribution`] in `versions.jsonc`.
+/// Wire string values for [`CrateDistribution`] in [`VERSIONS_JSONC_FILE`].
 ///
 /// [`CrateDistribution`]: crate::self_upgrade::CrateDistribution
 pub mod crate_distribution_values {
@@ -98,22 +110,23 @@ pub mod manifest_timeouts {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// HTTP timeout (`5s`) when fetching `versions.jsonc` during explicit `--upgrade`
-    /// ([`UPGRADE_ARG_LONG`]) runs.
+    /// HTTP timeout (`5s`) when fetching [`VERSIONS_JSONC_FILE`] during explicit
+    /// `--upgrade` ([`UPGRADE_ARG_LONG`]) runs.
     ///
     /// [`UPGRADE_ARG_LONG`]: crate::self_upgrade::upgrade_cli_args::UPGRADE_ARG_LONG
     pub const IMMEDIATE_CHECK_FETCH_MANIFEST_URL_TIMEOUT: Duration =
         Duration::from_secs(5);
 
-    /// HTTP timeout (`2s`) when fetching `versions.jsonc` during a deferred upgrade
-    /// check configured via `--upgrade-behavior` ([`UPGRADE_BEHAVIOR_ARG_LONG`]).
+    /// HTTP timeout (`2s`) when fetching [`VERSIONS_JSONC_FILE`] during a deferred
+    /// upgrade check configured via `--upgrade-behavior`
+    /// ([`UPGRADE_BEHAVIOR_ARG_LONG`]).
     ///
     /// [`UPGRADE_BEHAVIOR_ARG_LONG`]: crate::self_upgrade::upgrade_cli_args::UPGRADE_BEHAVIOR_ARG_LONG
     pub const DEFERRED_CHECK_FETCH_MANIFEST_URL_TIMEOUT: Duration =
         Duration::from_secs(2);
 
     /// Cooldown window (`1h`) after a verified [`UpToDate`] check or completed upgrade
-    /// before a deferred upgrade check queries `versions.jsonc` again.
+    /// before a deferred upgrade check queries [`VERSIONS_JSONC_FILE`] again.
     ///
     /// [`UpToDate`]: crate::self_upgrade::UpToDate
     pub const DEFERRED_CHECK_COOLDOWN_DELAY: Duration = Duration::from_hours(1);

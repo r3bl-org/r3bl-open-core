@@ -92,8 +92,8 @@ async fn run() -> miette::Result<()> {
         workspace_utils::find_rust_files(&workspace_root, &cli_arg.skip_folder_matches)
     } else {
         // Default: use git to find changed files
-        let (is_git_repo_result, _) = try_is_git_repo().await;
-        let is_git_repo = is_git_repo_result.map_err(|e| miette::miette!("{:?}", e))?;
+        let (res_is_git_repo, _) = try_is_git_repo().await;
+        let is_git_repo = res_is_git_repo.map_err(|e| miette::miette!("{:?}", e))?;
         if is_git_repo {
             let (git_files_result, _) =
                 try_get_changed_files_by_ext(&[RUST_FILE_EXTENSION]).await;
