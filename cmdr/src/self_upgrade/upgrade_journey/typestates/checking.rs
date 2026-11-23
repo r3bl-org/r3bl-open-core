@@ -224,7 +224,7 @@ impl UpgradeJourney<Checking> {
 /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
 /// [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum DeferredCheckOutcome {
     /// Local binary is already up to date (`remote <= current`); `1h` cooldown timestamp
     /// file has been touched.
@@ -247,7 +247,7 @@ pub enum DeferredCheckOutcome {
 ///
 /// [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub(in crate::self_upgrade) enum ImmediateCheckOutcome {
     /// Local binary is already up to date (`remote <= current`); `1h` cooldown timestamp
     /// file has been touched.

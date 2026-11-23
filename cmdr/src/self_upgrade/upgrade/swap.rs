@@ -20,13 +20,16 @@ pub fn extract_and_apply_archive(
     archive_path: &Path,
     extract_dir: &Path,
 ) -> Result<(), UpgradeError> {
-    fs::create_dir_all(extract_dir).map_err(|e| UpgradeError::Other(e.to_string()))?;
+    fs::create_dir_all(extract_dir).map_err(|src_err| UpgradeError::FileIo {
+        path: extract_dir.to_path_buf(),
+        src_err,
+    })?;
     let extracted_files =
         archive_extraction::extract_archive_files(archive_path, extract_dir)?;
     if extracted_files.is_empty() {
-        return Err(UpgradeError::Other(
-            "Downloaded archive contained no files".to_string(),
-        ));
+        return Err(UpgradeError::EmptyArchive {
+            archive_path: archive_path.to_path_buf(),
+        });
     }
     binary_replacement::apply_extracted_binaries(&extracted_files)
 }
@@ -45,38 +48,35 @@ pub mod archive_extraction {
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError::Other`] if decompression or extraction fails.
+    /// Returns [`UpgradeError::ArchiveExtractFailed`] if decompression or extraction
+    /// fails, or [`UpgradeError::SetExecutableFailed`] if setting file permissions fails.
     pub fn extract_archive_files(
         archive_path: &Path,
         extract_dir: &Path,
     ) -> Result<Vec<PathBuf>, UpgradeError> {
-        let tar_gz =
-            File::open(archive_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let map_extract_err = |src_err| UpgradeError::ArchiveExtractFailed {
+            archive_path: archive_path.to_path_buf(),
+            src_err,
+        };
+        let tar_gz = File::open(archive_path).map_err(map_extract_err)?;
         let tar_decoder = GzDecoder::new(tar_gz);
         let mut archive = tar::Archive::new(tar_decoder);
 
         let mut extracted_files = Vec::new();
-        let entries = archive
-            .entries()
-            .map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let entries = archive.entries().map_err(map_extract_err)?;
 
         for res_entry in entries {
-            let mut entry = res_entry.map_err(|e| UpgradeError::Other(e.to_string()))?;
+            let mut entry = res_entry.map_err(map_extract_err)?;
             if !entry.header().entry_type().is_file() {
                 continue;
             }
-            let entry_path = entry
-                .path()
-                .map_err(|e| UpgradeError::Other(e.to_string()))?;
+            let entry_path = entry.path().map_err(map_extract_err)?;
             let Some(base_name) = entry_path.file_name() else {
                 continue;
             };
             let dest_path = extract_dir.join(base_name);
-            entry
-                .unpack(&dest_path)
-                .map_err(|e| UpgradeError::Other(e.to_string()))?;
-            try_set_file_executable(&dest_path)
-                .map_err(|e| UpgradeError::Other(e.to_string()))?;
+            entry.unpack(&dest_path).map_err(map_extract_err)?;
+            try_set_file_executable(&dest_path)?;
             extracted_files.push(dest_path);
         }
 
@@ -118,19 +118,24 @@ pub mod binary_replacement {
     ///
     /// # Errors
     ///
-    /// Returns [`UpgradeError::Other`] if the current executable path cannot be resolved
-    /// or if `self_replace` fails.
+    /// Returns [`UpgradeError::BinarySwapFailed`] or
+    /// [`UpgradeError::InvalidCurrentExePath`] if the current executable path cannot be
+    /// resolved or if `self_replace` fails.
     pub fn apply_extracted_binaries(
         extracted_files: &[PathBuf],
     ) -> Result<(), UpgradeError> {
-        let current_exe_path =
-            current_exe().map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let current_exe_path = current_exe()
+            .map_err(|src_err| UpgradeError::BinarySwapFailed { src_err })?;
         let current_exe_name =
             path_file_name_str(&current_exe_path).ok_or_else(|| {
-                UpgradeError::Other("Could not determine current binary name".to_string())
+                UpgradeError::InvalidCurrentExePath {
+                    exe_path: current_exe_path.clone(),
+                }
             })?;
         let install_dir = current_exe_path.parent().ok_or_else(|| {
-            UpgradeError::Other("Could not determine binary parent directory".to_string())
+            UpgradeError::InvalidCurrentExePath {
+                exe_path: current_exe_path.clone(),
+            }
         })?;
 
         let mut replaced_self = false;
@@ -151,9 +156,8 @@ pub mod binary_replacement {
             if file_name.eq_ignore_ascii_case(current_exe_name)
                 || extracted_stem.eq_ignore_ascii_case(current_stem)
             {
-                self_replace::self_replace(extracted_file).map_err(|e| {
-                    UpgradeError::Other(format!("self_replace failed: {e}"))
-                })?;
+                self_replace::self_replace(extracted_file)
+                    .map_err(|src_err| UpgradeError::BinarySwapFailed { src_err })?;
                 replaced_self = true;
             } else {
                 let sibling_dest = install_dir.join(file_name);
@@ -171,7 +175,7 @@ pub mod binary_replacement {
 
         if !replaced_self && extracted_files.len() == 1 {
             self_replace::self_replace(&extracted_files[0])
-                .map_err(|e| UpgradeError::Other(format!("self_replace failed: {e}")))?;
+                .map_err(|src_err| UpgradeError::BinarySwapFailed { src_err })?;
         }
 
         Ok(())
@@ -263,7 +267,8 @@ mod tests {
         let res_extract = extract_and_apply_archive(&archive_path, &extract_dir);
         assert!(matches!(
             res_extract,
-            Err(UpgradeError::Other(msg)) if msg.contains("contained no files")
+            Err(UpgradeError::EmptyArchive { ref archive_path })
+                if archive_path.ends_with("empty.tar.gz")
         ));
     }
 }

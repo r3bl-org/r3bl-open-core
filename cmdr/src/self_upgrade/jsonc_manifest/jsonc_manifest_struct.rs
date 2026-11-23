@@ -150,6 +150,19 @@ pub struct JsoncManifest {
     pub crates: HashMap<CrateName, CrateMetadata>,
 }
 
+/// Error returned by [`JsoncManifest::try_parse_jsonc`] when the manifest document is
+/// syntactically invalid JSONC or fails [`JsoncManifest`] schema validation.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum JsoncParseError {
+    /// Invalid JSONC syntax (unterminated string/comment, unexpected token, etc.).
+    #[error("Invalid JSONC syntax in manifest: {0}")]
+    InvalidSyntax(#[from] jsonc_parser::errors::ParseError),
+
+    /// Valid JSONC syntax, and missing or invalid [`JsoncManifest`] schema fields.
+    #[error("Manifest does not match expected schema: {0}")]
+    InvalidSchema(#[from] serde_json::Error),
+}
+
 impl JsoncManifest {
     /// Parses a JSONC string (supporting `//` line comments, `/* ... */` block
     /// comments, and trailing commas) into a [`JsoncManifest`].
@@ -159,16 +172,16 @@ impl JsoncManifest {
     ///
     /// # Errors
     ///
-    /// Returns an error if the JSONC syntax is invalid or if required fields do not
-    /// match the [`JsoncManifest`] schema.
-    pub fn try_parse_jsonc(jsonc_str: &str) -> miette::Result<Self> {
+    /// Returns [`JsoncParseError::InvalidSyntax`] if the JSONC syntax is invalid or
+    /// [`JsoncParseError::InvalidSchema`] if required fields do not match the
+    /// [`JsoncManifest`] schema.
+    pub fn try_parse_jsonc(jsonc_str: &str) -> Result<Self, JsoncParseError> {
         let value = jsonc_parser::parse_to_serde_value::<serde_json::Value>(
             jsonc_str,
             &ParseOptions::default(),
-        )
-        .into_diagnostic()?;
+        )?;
 
-        serde_json::from_value::<Self>(value).into_diagnostic()
+        Ok(serde_json::from_value::<Self>(value)?)
     }
 
     /// Updates an existing crate's [`CrateMetadata`] in-place inside a JSONC
@@ -423,7 +436,10 @@ mod tests {
     #[test]
     fn test_jsonc_manifest_parse_invalid_syntax() {
         let bad_jsonc = r#"{ "crates": "#;
-        assert!(JsoncManifest::try_parse_jsonc(bad_jsonc).is_err());
+        assert!(matches!(
+            JsoncManifest::try_parse_jsonc(bad_jsonc),
+            Err(JsoncParseError::InvalidSyntax(_))
+        ));
     }
 
     #[test]
@@ -439,6 +455,7 @@ mod tests {
         }"#;
         let err = JsoncManifest::try_parse_jsonc(missing_base_url_jsonc)
             .expect_err("Manifest missing binaries_release_base_url must be rejected");
+        assert!(matches!(err, JsoncParseError::InvalidSchema(_)));
         assert!(
             err.to_string()
                 .contains(versions_manifest_keys::BINARIES_RELEASE_BASE_URL)

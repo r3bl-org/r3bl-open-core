@@ -139,10 +139,15 @@ fn scenario_in_cooldown_skips_with_zero_http_calls() {
 
     // Assert.
     res_server_spawn.assert_expectations();
-    assert_eq2!(
-        exit_outcome,
-        ExitOutcome::Skipped(UpgradeJourney::new(config.clone()).into_skipped())
-    );
+    match exit_outcome {
+        ExitOutcome::Skipped(skipped_journey) => {
+            assert_eq2!(
+                skipped_journey,
+                UpgradeJourney::new(config.clone()).into_skipped()
+            );
+        }
+        other => panic!("Expected ExitOutcome::Skipped, got {other:?}"),
+    }
     assert_eq2!(
         config
             .get_remote_version_check_gate()
@@ -248,10 +253,10 @@ fn scenario_inflight_check_joined_at_exit_with_notify_only_stays_not_in_cooldown
                 journey.get_state().metadata.version,
                 CrateVersion::try_parse("9.9.9").unwrap()
             );
-            assert_eq2!(
+            assert!(matches!(
                 journey.get_state().resolution,
                 UpgradeResolution::NotifiedOnly
-            );
+            ));
         }
         other => panic!("Expected Completed(NotifiedOnly) after join, got {other:?}"),
     }
@@ -340,10 +345,10 @@ fn run_non_tty_prompt_worker() {
                 journey.get_state().metadata.version,
                 CrateVersion::try_parse("9.9.9").unwrap()
             );
-            assert_eq2!(
+            assert!(matches!(
                 journey.get_state().resolution,
                 UpgradeResolution::SkippedNonInteractive
-            );
+            ));
         }
         other => panic!(
             "Expected Completed(SkippedNonInteractive) in non-TTY subprocess, got {other:?}"

@@ -94,7 +94,7 @@ pub enum StartOutcome {
 /// [`UpgradeStrategy::Immediate`]: crate::self_upgrade::UpgradeStrategy::Immediate
 /// [`UserFeedbackChannel::Quiet`]: crate::self_upgrade::UserFeedbackChannel::Quiet
 /// [`UserFeedbackChannel`]: crate::self_upgrade::UserFeedbackChannel
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum ImmediateUpgradeOutcome {
     /// Local binary was already up to date (`remote <= current`).
     UpToDate(UpgradeJourney<UpToDate>),
@@ -154,7 +154,7 @@ impl DeferredUpgradeOutcome {
     ///      `UpgradeJourney::<Upgrading>::execute_action_on_exit` (which invokes the
     ///      [Execution Plane] to prompt or install the upgrade), returning
     ///      [`ExitOutcome::Completed`].
-    ///    - If joining fails with [`ThreadRunnerError::RuntimeOrThreadInitFailed`] or
+    ///    - If joining fails with [`ThreadRunnerError::RuntimeInitFailed`] or
     ///      [`ThreadRunnerError::ThreadPanicked`], preserves the diagnostic payload
     ///      inside [`ExitOutcome::CheckFailed`]
     ///      ([`CheckFailedError::ThreadRunner`]).
@@ -178,7 +178,7 @@ impl DeferredUpgradeOutcome {
     /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
     /// [`Spinner`]: r3bl_tui::Spinner
     /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
-    /// [`ThreadRunnerError::RuntimeOrThreadInitFailed`]: crate::self_upgrade::ThreadRunnerError::RuntimeOrThreadInitFailed
+    /// [`ThreadRunnerError::RuntimeInitFailed`]: crate::self_upgrade::ThreadRunnerError::RuntimeInitFailed
     /// [`ThreadRunnerError::ThreadPanicked`]: crate::self_upgrade::ThreadRunnerError::ThreadPanicked
     /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
@@ -268,30 +268,40 @@ mod tests {
             )),
         )
         .into_skipped();
-        assert_eq2!(
-            DeferredUpgradeOutcome::Skipped(skipped.clone()).handle_upgrade_on_exit(),
-            ExitOutcome::Skipped(skipped)
-        );
+        let outcome =
+            DeferredUpgradeOutcome::Skipped(skipped.clone()).handle_upgrade_on_exit();
+        match outcome {
+            ExitOutcome::Skipped(actual) => assert_eq2!(actual, skipped),
+            other => panic!("Expected ExitOutcome::Skipped, got {other:?}"),
+        }
     }
 
     #[test]
     fn test_handle_upgrade_on_exit_preserves_spawn_failure() {
         let strategy = UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto);
         let error = CheckFailedError::ThreadRunner(
-            ThreadRunnerError::RuntimeOrThreadInitFailed {
-                reason: "Failed to spawn dedicated self-upgrade thread: Resource busy"
-                    .to_string(),
+            ThreadRunnerError::ThreadSpawnFailed {
+                src_err: std::io::Error::other("Resource busy"),
             },
         );
         let failed = make_test_journey("0.1.0", UpgradePolicy::Enabled(strategy))
             .into_checking(strategy)
             .into_check_failed(error);
 
-        let deferred = DeferredUpgradeOutcome::DeferredCheckSpawnFailed(failed.clone());
-        assert_eq2!(
-            deferred.handle_upgrade_on_exit(),
-            ExitOutcome::CheckFailed(failed)
-        );
+        let deferred = DeferredUpgradeOutcome::DeferredCheckSpawnFailed(failed);
+        match deferred.handle_upgrade_on_exit() {
+            ExitOutcome::CheckFailed(journey) => match journey.get_state().error {
+                CheckFailedError::ThreadRunner(
+                    ThreadRunnerError::ThreadSpawnFailed { ref src_err },
+                ) => {
+                    assert!(src_err.to_string().contains("Resource busy"));
+                }
+                ref other => {
+                    panic!("Expected ThreadSpawnFailed, got {other:?}")
+                }
+            },
+            other => panic!("Expected ExitOutcome::CheckFailed, got {other:?}"),
+        }
     }
 
     #[test]
@@ -305,10 +315,6 @@ mod tests {
             meta,
             EndpointUrl::try_parse("https://example.com/releases/download").unwrap(),
         );
-        let expected_completed = available
-            .clone()
-            .into_upgrading()
-            .into_completed(UpgradeResolution::NotifiedOnly);
 
         let join_handle = StdThreadTokioRunner::run_non_blocking(async move || {
             DeferredCheckOutcome::UpgradeAvailable(available)
@@ -322,9 +328,18 @@ mod tests {
         assert_eq2!(deferred_handle.get_journey(), &checking);
 
         let deferred = DeferredUpgradeOutcome::DeferredCheckSpawned(deferred_handle);
-        assert_eq2!(
-            deferred.handle_upgrade_on_exit(),
-            ExitOutcome::Completed(expected_completed)
-        );
+        match deferred.handle_upgrade_on_exit() {
+            ExitOutcome::Completed(completed) => {
+                assert_eq2!(
+                    completed.get_state().metadata.version,
+                    CrateVersion::try_parse("0.2.0").unwrap()
+                );
+                assert!(matches!(
+                    completed.get_state().resolution,
+                    UpgradeResolution::NotifiedOnly
+                ));
+            }
+            other => panic!("Expected ExitOutcome::Completed, got {other:?}"),
+        }
     }
 }

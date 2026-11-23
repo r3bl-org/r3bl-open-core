@@ -28,8 +28,7 @@ pub async fn download_and_verify_archive(
     archive_path: &Path,
     maybe_spinner: Option<&Spinner>,
 ) -> Result<(), UpgradeError> {
-    let client = create_http_client()
-        .map_err(|e| UpgradeError::Other(e.to_string()))?;
+    let client = create_http_client()?;
 
     let expected_sha256 =
         sha256_checksum::fetch_expected_sha256(&client, sha256_url).await?;
@@ -68,16 +67,18 @@ pub mod sha256_checksum {
     /// # Errors
     ///
     /// Returns [`UpgradeError::ChecksumMismatch`] if the computed digest differs from
-    /// `expected`, or [`UpgradeError::Other`] on file read failure.
+    /// `expected`, or [`UpgradeError::FileIo`] on file read failure.
     ///
     /// [`UpgradeError::ChecksumMismatch`]: crate::self_upgrade::UpgradeError::ChecksumMismatch
-    /// [`UpgradeError::Other`]: crate::self_upgrade::UpgradeError::Other
+    /// [`UpgradeError::FileIo`]: crate::self_upgrade::UpgradeError::FileIo
     pub fn verify_file_sha256(
         file_path: &Path,
         expected: Sha256Digest,
     ) -> Result<(), UpgradeError> {
-        let bytes =
-            fs::read(file_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let bytes = fs::read(file_path).map_err(|src_err| UpgradeError::FileIo {
+            path: file_path.to_path_buf(),
+            src_err,
+        })?;
         let actual = Sha256Digest::from_bytes(&bytes);
         if actual != expected {
             return Err(UpgradeError::ChecksumMismatch { expected, actual });
@@ -101,20 +102,29 @@ pub mod sha256_checksum {
         let sha_resp = tokio::select! {
             _ = signal::ctrl_c() => return Err(UpgradeError::Cancelled),
             res = client.get(sha256_url).send() => {
-                res.map_err(|e| UpgradeError::Other(e.to_string()))?
+                res.map_err(|src_err| UpgradeError::DownloadHttpFailed {
+                    url: sha256_url.to_string(),
+                    src_err,
+                })?
             }
         };
-        let sha_resp = sha_resp
-            .error_for_status()
-            .map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let sha_resp = sha_resp.error_for_status().map_err(|src_err| {
+            UpgradeError::DownloadHttpFailed {
+                url: sha256_url.to_string(),
+                src_err,
+            }
+        })?;
         let sha_text = tokio::select! {
             _ = signal::ctrl_c() => return Err(UpgradeError::Cancelled),
             res = sha_resp.text() => {
-                res.map_err(|e| UpgradeError::Other(e.to_string()))?
+                res.map_err(|src_err| UpgradeError::DownloadHttpFailed {
+                    url: sha256_url.to_string(),
+                    src_err,
+                })?
             }
         };
         Sha256Digest::try_decode_hex_str(&sha_text).ok_or_else(|| {
-            UpgradeError::Other(format!("Invalid .sha256 file format: {sha_text}"))
+            UpgradeError::InvalidSha256FileFormat { raw_text: sha_text }
         })
     }
 }
@@ -142,16 +152,25 @@ pub mod archive_stream {
         let archive_resp = tokio::select! {
             _ = signal::ctrl_c() => return Err(UpgradeError::Cancelled),
             res = client.get(archive_url).send() => {
-                res.map_err(|e| UpgradeError::Other(e.to_string()))?
+                res.map_err(|src_err| UpgradeError::DownloadHttpFailed {
+                    url: archive_url.to_string(),
+                    src_err,
+                })?
             }
         };
-        let archive_resp = archive_resp
-            .error_for_status()
-            .map_err(|e| UpgradeError::Other(e.to_string()))?;
+        let archive_resp = archive_resp.error_for_status().map_err(|src_err| {
+            UpgradeError::DownloadHttpFailed {
+                url: archive_url.to_string(),
+                src_err,
+            }
+        })?;
         let total_bytes = archive_resp.content_length();
 
         let mut dest_file =
-            File::create(archive_path).map_err(|e| UpgradeError::Other(e.to_string()))?;
+            File::create(archive_path).map_err(|src_err| UpgradeError::FileIo {
+                path: archive_path.to_path_buf(),
+                src_err,
+            })?;
         let mut downloaded_bytes: u64 = 0;
         let mut stream = archive_resp.bytes_stream();
 
@@ -165,7 +184,10 @@ pub mod archive_stream {
                         Some(Ok(chunk)) => {
                             dest_file
                                 .write_all(&chunk)
-                                .map_err(|e| UpgradeError::Other(e.to_string()))?;
+                                .map_err(|src_err| UpgradeError::FileIo {
+                                    path: archive_path.to_path_buf(),
+                                    src_err,
+                                })?;
                             downloaded_bytes = downloaded_bytes.saturating_add(
                                 u64::try_from(chunk.len()).unwrap_or(u64::MAX),
                             );
@@ -180,8 +202,11 @@ pub mod archive_stream {
                                 );
                             }
                         }
-                        Some(Err(err)) => {
-                            return Err(UpgradeError::Other(err.to_string()));
+                        Some(Err(src_err)) => {
+                            return Err(UpgradeError::DownloadHttpFailed {
+                                url: archive_url.to_string(),
+                                src_err,
+                            });
                         }
                         None => break,
                     }
@@ -191,7 +216,10 @@ pub mod archive_stream {
 
         dest_file
             .flush()
-            .map_err(|e| UpgradeError::Other(e.to_string()))?;
+            .map_err(|src_err| UpgradeError::FileIo {
+                path: archive_path.to_path_buf(),
+                src_err,
+            })?;
         Ok(())
     }
 }
@@ -214,13 +242,13 @@ mod tests {
             "0000000000000000000000000000000000000000000000000000000000000000",
         )
         .unwrap();
-        assert_eq2!(
-            sha256_checksum::verify_file_sha256(&file_path, zero_digest),
-            Err(UpgradeError::ChecksumMismatch {
-                expected: zero_digest,
-                actual: empty_digest,
-            })
-        );
+        match sha256_checksum::verify_file_sha256(&file_path, zero_digest) {
+            Err(UpgradeError::ChecksumMismatch { expected, actual }) => {
+                assert_eq2!(expected, zero_digest);
+                assert_eq2!(actual, empty_digest);
+            }
+            other => panic!("Expected Err(ChecksumMismatch), got {other:?}"),
+        }
     }
 
     #[test]
@@ -231,7 +259,7 @@ mod tests {
             &nonexistent,
             Sha256Digest::from_bytes(b""),
         );
-        assert!(matches!(res_verify, Err(UpgradeError::Other(_))));
+        assert!(matches!(res_verify, Err(UpgradeError::FileIo { .. })));
     }
 
     #[tokio::test]
@@ -242,6 +270,9 @@ mod tests {
             "http://127.0.0.1:1/nonexistent.sha256",
         )
         .await;
-        assert!(matches!(res_sha256, Err(UpgradeError::Other(_))));
+        assert!(matches!(
+            res_sha256,
+            Err(UpgradeError::DownloadHttpFailed { .. })
+        ));
     }
 }

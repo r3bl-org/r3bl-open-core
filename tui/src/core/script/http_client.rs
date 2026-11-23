@@ -1,9 +1,13 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
-
 /// Global default HTTP `User-Agent` header sent by R3BL apps and libraries.
 pub const R3BL_USER_AGENT: &str = "r3bl/1.0 (https://r3bl.com)";
+
+/// Error returned by [`create_http_client`] when constructing the default
+/// [`reqwest::Client`] fails (for example, if TLS backend initialization fails).
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create HTTP client")]
+pub struct HttpClientError(#[source] pub reqwest::Error);
 
 /// The **only** canonical place in the codebase to construct a [`reqwest::Client`].
 ///
@@ -16,16 +20,16 @@ pub const R3BL_USER_AGENT: &str = "r3bl/1.0 (https://r3bl.com)";
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`HttpClientError`] if:
 /// - The HTTP client builder fails to build.
 /// - TLS backend initialization fails.
-pub fn create_http_client() -> miette::Result<reqwest::Client> {
+pub fn create_http_client() -> Result<reqwest::Client, HttpClientError> {
     // Canonical constructor: allowed to call `reqwest::Client::builder` directly.
     #[allow(clippy::disallowed_methods)]
-    let it = reqwest::Client::builder()
+    reqwest::Client::builder()
         .user_agent(R3BL_USER_AGENT)
-        .build();
-    it.into_diagnostic()
+        .build()
+        .map_err(HttpClientError)
 }
 
 #[cfg(test)]

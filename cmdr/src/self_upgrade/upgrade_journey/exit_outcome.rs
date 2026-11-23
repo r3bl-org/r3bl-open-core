@@ -7,7 +7,7 @@ use super::{CheckFailed, Completed, Skipped, UpToDate, UpgradeJourney};
 ///
 /// [1]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum ExitOutcome {
     /// Deferred check was skipped at startup because the `1h` cooldown timestamp file
     /// was still active ([`DeferredUpgradeOutcome::Skipped`][1]).

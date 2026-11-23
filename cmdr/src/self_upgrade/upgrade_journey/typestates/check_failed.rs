@@ -13,13 +13,14 @@ use crate::{FetchManifestError, ThreadRunnerError};
 /// [`ThreadRunnerError`]: crate::self_upgrade::ThreadRunnerError
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum CheckFailedError {
     /// Manifest fetch, HTTP status, JSONC parse, or crate lookup failed in the
     /// [Execution Plane].
     ///
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
+    #[diagnostic(transparent)]
     FetchManifest(#[from] FetchManifestError),
 
     /// Dedicated or scoped OS thread failed to spawn, initialize its Tokio runtime, or
@@ -27,12 +28,13 @@ pub enum CheckFailedError {
     ///
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
+    #[diagnostic(transparent)]
     ThreadRunner(#[from] ThreadRunnerError),
 }
 
 /// Typestate when the manifest check encountered a network, parse, or thread/runtime
 /// failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct CheckFailed {
     /// Structured [`CheckFailedError`] describing why the check failed.
     ///

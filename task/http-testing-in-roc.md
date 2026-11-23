@@ -10,6 +10,7 @@ Task: HTTP Testing in ROC (`MockHttpServer` Archival & `mockito` Migration)
         - [Phase 5: Deferred Exit & `Skipped` Types](#phase-5-deferred-exit--skipped-types)
         - [Phase 6: Cooldown & Test Fixtures](#phase-6-cooldown--test-fixtures)
         - [Phase 7: Script URL Helpers](#phase-7-script-url-helpers)
+        - [Phase 8: High-Fidelity Typed Errors (Zero String Squashing)](#phase-8-high-fidelity-typed-errors-zero-string-squashing)
 - [Implementation plan](#implementation-plan)
     - [Phase 1: Extract to `r3bl_tui`](#phase-1-extract-to-r3bl_tui)
     - [Phase 2: Archive to `r3bl-open-core-archive`](#phase-2-archive-to-r3bl-open-core-archive)
@@ -18,6 +19,11 @@ Task: HTTP Testing in ROC (`MockHttpServer` Archival & `mockito` Migration)
     - [Phase 5: Deferred Exit & `Skipped`](#phase-5-deferred-exit--skipped)
     - [Phase 6: Use-Case Integration Tests](#phase-6-use-case-integration-tests)
     - [Phase 7: Add `mockito` Tests Across ROC](#phase-7-add-mockito-tests-across-roc)
+    - [Phase 8: Eliminate Lossy Error Squashing Across ROC](#phase-8-eliminate-lossy-error-squashing-across-roc)
+        - [Sub-phase 8.1: Typed `r3bl_tui::script` Errors](#sub-phase-81-typed-r3bl_tuiscript-errors)
+        - [Sub-phase 8.2: `JsoncParseError`, `FetchManifestError` & `!Eq` Check Outcomes](#sub-phase-82-jsoncparseerror-fetchmanifesterror--eq-check-outcomes)
+        - [Sub-phase 8.3: `TokioRuntimeOutcome` & `ThreadRunnerError`](#sub-phase-83-tokioruntimeoutcome--threadrunnererror)
+        - [Sub-phase 8.4: `UpgradeError` Overhaul (Delete `Other(String)`)](#sub-phase-84-upgradeerror-overhaul-delete-otherstring)
 
 <!-- END mktoc -->
 
@@ -32,7 +38,7 @@ unit tests entirely or make live internet calls during `cargo test`.
 
 To avoid maintaining a custom HTTP/1.1 server (request body framing, header matching, JSON
 diffing) while preserving the valuable `std` implementation for future reference, this
-task executes a 7-phase plan:
+task executes an 8-phase plan:
 
 1. **Extract Reusable `http_server_fixtures` into `r3bl_tui`:** Separate the
    domain-agnostic `std::net::TcpListener` HTTP/1.1 server and response formatters from
@@ -79,6 +85,13 @@ task executes a 7-phase plan:
    `tui/src/core/script/{http_client,github_api,crates_api,download}.rs`, eliminating live
    calls to `api.github.com`, `crates.io`, and `github.com/cloudflare/cfssl` in
    `cargo test`.
+8. **Eliminate Lossy Error Squashing Across ROC (`HttpClientError`, `JsoncParseError`,
+   `FetchManifestError`, `ThreadRunnerError`, `UpgradeError`):** Replace all lossy
+   `format!("{err:#}")` / `.to_string()` string-squashed error fields and `miette::Report`
+   enum payloads across `r3bl_tui` (`http_client`, `temp_dir`, `permissions`,
+   `TokioRuntimeOutcome`) and `r3bl-cmdr` (`JsoncManifest::try_parse_jsonc`,
+   `FetchManifestError`, `ThreadRunnerError`, `UpgradeError`) with high-fidelity typed
+   `thiserror::Error` + `miette::Diagnostic` enums preserving real `#[source]` chains.
 
 ### Target Types & Signatures
 
@@ -409,6 +422,257 @@ changing their public signatures:
 - `tui/src/core/script/crates_api.rs`: Extract
   `pub(super) async fn try_get_latest_release_version_from_url(url: &str) -> miette::Result<String>`
   called by `try_get_latest_release_version_from_crates_io(crate_name: &str)`.
+
+#### Phase 8: High-Fidelity Typed Errors (Zero String Squashing)
+
+Following the repo's **High-Fidelity Error Handling** guidelines (`design-philosophy` #5:
+never squash `miette::Report` or `std::error::Error` into `String`), drop `Clone,
+PartialEq, Eq` on error-carrying typestates/outcomes (`CheckFailed`, `Completed`,
+`DeferredCheckOutcome`, `ImmediateCheckOutcome`, `ImmediateUpgradeOutcome`, `ExitOutcome`)
+and replace every string-squashed or `miette::Report`-wrapped error with typed
+`#[derive(Debug, thiserror::Error, miette::Diagnostic)]` definitions using `#[source]` and
+`#[diagnostic(transparent)]`:
+
+```rust
+// tui/src/core/script/http_client.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create HTTP client")]
+pub struct HttpClientError(#[from] pub reqwest::Error);
+
+pub fn create_http_client() -> Result<reqwest::Client, HttpClientError>;
+
+// tui/src/core/script/temp_dir.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create temporary directory '{}'", path.display())]
+pub struct TempDirError {
+    pub path: PathBuf,
+    #[source]
+    pub src_err: std::io::Error,
+}
+
+pub fn try_create_temp_dir() -> Result<TempDir, TempDirError>;
+
+// tui/src/core/script/permissions.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum FilePermissionsError {
+    #[error("Failed to read metadata for '{}'", path.display())]
+    MetadataReadFailed {
+        path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("Path is not a regular file: '{}'", path.display())]
+    NotARegularFile {
+        path: PathBuf,
+    },
+
+    #[error("Failed to set permissions ({mode:#o}) on '{}'", path.display())]
+    SetPermissionsFailed {
+        path: PathBuf,
+        mode: u32,
+        #[source]
+        src_err: std::io::Error,
+    },
+}
+
+pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> Result<(), FilePermissionsError>;
+pub fn try_set_file_executable(file: impl AsRef<Path>) -> Result<(), FilePermissionsError>;
+
+// tui/src/core/common/std_thread_tokio_runner.rs
+#[must_use]
+#[derive(Debug)]
+pub enum TokioRuntimeOutcome<T> {
+    Completed(T),
+    FailedToStart(std::io::Error),
+    Panicked {
+        thread_name: &'static str,
+        panic_msg: String,
+    },
+}
+
+// cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum JsoncParseError {
+    #[error("Invalid JSONC syntax in manifest")]
+    InvalidSyntax(#[from] jsonc_parser::errors::ParseError),
+
+    #[error("Manifest does not match expected schema")]
+    InvalidSchema(#[from] serde_json::Error),
+}
+
+impl JsoncManifest {
+    pub fn try_parse_jsonc(jsonc_str: &str) -> Result<Self, JsoncParseError>;
+}
+
+// cmdr/src/self_upgrade/check/fetch_manifest.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum FetchManifestError {
+    #[error("Failed to create HTTP client for manifest '{manifest_url}'")]
+    HttpClientCreateFailed {
+        manifest_url: EndpointUrl,
+        #[source]
+        #[diagnostic_source]
+        src_err: HttpClientError,
+    },
+
+    #[error("Failed to fetch manifest from '{manifest_url}'")]
+    HttpRequestFailed {
+        manifest_url: EndpointUrl,
+        #[source]
+        src_err: reqwest::Error,
+    },
+
+    #[error("Failed to parse manifest from '{manifest_url}'")]
+    JsoncParseFailed {
+        manifest_url: EndpointUrl,
+        #[source]
+        #[diagnostic_source]
+        src_err: JsoncParseError,
+    },
+
+    #[error("Crate '{crate_name}' not found in manifest at '{manifest_url}'")]
+    CrateNotFoundInManifest {
+        crate_name: CrateName,
+        manifest_url: EndpointUrl,
+    },
+}
+
+// cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum ThreadRunnerError {
+    #[error("Failed to spawn dedicated self-upgrade OS thread")]
+    ThreadSpawnFailed {
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("Failed to initialize Tokio runtime on self-upgrade OS thread")]
+    RuntimeInitFailed {
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("{thread_name} panicked: {panic_msg}")]
+    ThreadPanicked {
+        thread_name: &'static str,
+        panic_msg: String,
+    },
+}
+
+// cmdr/src/self_upgrade/upgrade/perform_upgrade.rs
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum UpgradeError {
+    #[error(
+        "No viable upgrade source for '{crate_name}' (distribution={crate_distribution}): {reason}"
+    )]
+    NoViableUpgradeSource {
+        crate_name: CrateName,
+        crate_distribution: CrateDistribution,
+        reason: NoViableSourceReason,
+    },
+
+    #[error("Unsupported host target platform: {0}")]
+    UnsupportedPlatform(String),
+
+    #[error("SHA-256 checksum mismatch: expected {expected}, got {actual}")]
+    ChecksumMismatch {
+        expected: Sha256Digest,
+        actual: Sha256Digest,
+    },
+
+    #[error("Upgrade cancelled by user")]
+    Cancelled,
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    HttpClientCreateFailed(#[from] HttpClientError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TempDirCreateFailed(#[from] TempDirError),
+
+    #[error("Failed to download release asset from '{url}'")]
+    DownloadHttpFailed {
+        url: String,
+        #[source]
+        src_err: reqwest::Error,
+    },
+
+    #[error("Invalid .sha256 file format: {raw_text}")]
+    InvalidSha256FileFormat {
+        raw_text: String,
+    },
+
+    #[error("File I/O failed at '{}'", path.display())]
+    FileIo {
+        path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("Failed to extract archive '{}'", archive_path.display())]
+    ArchiveExtractFailed {
+        archive_path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("Downloaded archive '{}' contained no files", archive_path.display())]
+    EmptyArchive {
+        archive_path: PathBuf,
+    },
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SetExecutableFailed(#[from] FilePermissionsError),
+
+    #[error("Current executable path '{}' has no valid file name or parent directory", exe_path.display())]
+    InvalidCurrentExePath {
+        exe_path: PathBuf,
+    },
+
+    #[error("Failed to replace running executable via self_replace")]
+    BinarySwapFailed {
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("cargo install exited with status {status}")]
+    SourceBuildExitedNonZero {
+        status: ExitStatus,
+    },
+
+    #[error("Source build PTY or process I/O failed")]
+    SourceBuildIo {
+        #[source]
+        src_err: std::io::Error,
+    },
+}
+
+// Control Plane wrappers (CheckFailedError & UpgradeFailedError)
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum CheckFailedError {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    FetchManifest(#[from] FetchManifestError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ThreadRunner(#[from] ThreadRunnerError),
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum UpgradeFailedError {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    PerformUpgrade(#[from] UpgradeError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ThreadRunner(#[from] ThreadRunnerError),
+}
+```
 
 ## Implementation plan
 
@@ -850,3 +1114,140 @@ Add deterministic `mockito`-backed unit tests for all remaining HTTP client modu
     - [ ] `tui/src/core/script/download.rs`
     - [ ] `tui/src/core/script/github_api.rs`
     - [ ] `tui/src/core/script/crates_api.rs`
+
+### Phase 8: Eliminate Lossy Error Squashing Across ROC
+
+Eliminate all lossy error-to-`String` squashing (`format!("{err:#}")`, `.to_string()`,
+`UpgradeError::Other(String)`) and `miette::Report`-inside-enum wrappers across
+`r3bl_tui` and `r3bl-cmdr::self_upgrade`. Because `miette::Report` implements a blanket
+`From<E: miette::Diagnostic + Send + Sync + 'static>`, replacing `miette::Result` on
+`r3bl_tui::script` helpers with typed `thiserror::Error` + `miette::Diagnostic` errors is
+backwards-compatible with all existing `miette::Result` `?` callers while giving
+`self_upgrade` real `#[source]` error chains.
+
+#### Sub-phase 8.1: Typed `r3bl_tui::script` Errors
+
+Replace `miette::Result` with typed `thiserror::Error` + `miette::Diagnostic` error types
+in `http_client.rs`, `temp_dir.rs`, and `permissions.rs` (re-exported via
+`tui/src/core/script/mod.rs`).
+
+- [x] Define `HttpClientError(#[from] pub reqwest::Error)` in
+      `tui/src/core/script/http_client.rs` and update `create_http_client()` to return
+      `Result<reqwest::Client, HttpClientError>`.
+- [x] Define `TempDirError { path, #[source] src_err }` in
+      `tui/src/core/script/temp_dir.rs` and update `try_create_temp_dir()` to return
+      `Result<TempDir, TempDirError>`.
+- [x] Define `FilePermissionsError` (`MetadataReadFailed`, `NotARegularFile`,
+      `SetPermissionsFailed`) in `tui/src/core/script/permissions.rs` and update
+      `set_permission()` and `try_set_file_executable()` to return
+      `Result<(), FilePermissionsError>`.
+- [x] Run `./check.fish --check` to verify the entire workspace compiles cleanly (existing
+      `miette::Result` callers continue using bare `?`).
+- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
+      correct implementation and ensure no regressions.
+    - [ ] `tui/src/core/script/http_client.rs`
+    - [ ] `tui/src/core/script/temp_dir.rs`
+    - [ ] `tui/src/core/script/permissions.rs`
+
+#### Sub-phase 8.2: `JsoncParseError`, `FetchManifestError` & `!Eq` Check Outcomes
+
+Give `JsoncManifest::try_parse_jsonc` a typed `JsoncParseError`, rewrite
+`FetchManifestError` in `fetch_manifest.rs` with typed stage variants (`HttpClientCreateFailed`,
+`HttpRequestFailed`, `JsoncParseFailed`, `CrateNotFoundInManifest`), and drop `Clone,
+PartialEq, Eq` from `CheckFailed` and check-carrying outcome enums.
+
+- [x] Add `JsoncParseError` (`InvalidSyntax(jsonc_parser::errors::ParseError)`,
+      `InvalidSchema(serde_json::Error)`) in
+      `cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs` and change
+      `JsoncManifest::try_parse_jsonc` to return `Result<Self, JsoncParseError>`.
+- [x] Rewrite `FetchManifestError` and `try_get_jsonc_manifest_from_url` in
+      `cmdr/src/self_upgrade/check/fetch_manifest.rs` to preserve `HttpClientError`,
+      `reqwest::Error`, and `JsoncParseError` directly via `#[source]` (deleting
+      `FetchOrParseFailed { diagnostic: String }` and `from_fetch_or_parse_error`), and
+      update unit tests in `fetch_manifest.rs` to assert structured variants
+      (`src_err.is_timeout()`, `src_err.status()`, `JsoncParseFailed`, etc.).
+- [x] Drop `Clone, PartialEq, Eq` from `CheckFailedError` and `CheckFailed` (adding
+      `#[diagnostic(transparent)]` on `CheckFailedError` variants) in
+      `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`, and drop
+      `Clone, PartialEq, Eq` from `DeferredCheckOutcome` / `ImmediateCheckOutcome`
+      (`checking.rs`), `ImmediateUpgradeOutcome` (`start_outcome.rs`), and `ExitOutcome`
+      (`exit_outcome.rs`).
+- [x] Convert `assert_eq2!` / `.clone()` sites on `!Eq` check/exit outcomes to structured
+      pattern matches in `start_outcome.rs`, `immediate_upgrade_unhappy_paths.rs`,
+      `deferred_upgrade_happy_paths.rs`, and `deferred_upgrade_unhappy_paths.rs`
+      (asserting real `reqwest::Error` status/connect properties instead of string
+      diagnostics).
+- [x] Run `./check.fish --check` to verify compilation.
+- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
+      correct implementation and ensure no regressions.
+    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs`
+    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
+
+#### Sub-phase 8.3: `TokioRuntimeOutcome` & `ThreadRunnerError`
+
+Eliminate `miette::Report` from `TokioRuntimeOutcome` in `r3bl_tui` and replace the
+string-squashed `ThreadRunnerError` variants with `ThreadSpawnFailed`,
+`RuntimeInitFailed`, and `ThreadPanicked`.
+
+- [x] Update `TokioRuntimeOutcome<T>` in
+      `tui/src/core/common/std_thread_tokio_runner.rs` to hold
+      `FailedToStart(std::io::Error)` and
+      `Panicked { thread_name: &'static str, panic_msg: String }` (updating its unit
+      tests).
+- [x] Update `ThreadRunnerError` in
+      `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs` to drop `Clone, PartialEq,
+      Eq` and use `ThreadSpawnFailed { #[source] src_err: std::io::Error }`,
+      `RuntimeInitFailed { #[source] src_err: std::io::Error }`, and
+      `ThreadPanicked { thread_name: &'static str, panic_msg: String }` (updating
+      `thread_runner.rs`, `start_outcome.rs`, and `deferred_upgrade_unhappy_paths.rs`
+      tests).
+- [x] Drop `Clone, PartialEq, Eq` from `UpgradeFailedError`, `UpgradeResolution`, and
+      `Completed` (adding `#[diagnostic(transparent)]` on `UpgradeFailedError` variants)
+      in `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`, and convert any
+      `assert_eq2!` comparisons on `UpgradeResolution` / `Completed` in integration tests
+      to pattern matches.
+- [x] Run `./check.fish --check` to verify compilation.
+- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
+      correct implementation and ensure no regressions.
+    - [ ] `tui/src/core/common/std_thread_tokio_runner.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_happy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_happy_paths.rs`
+
+#### Sub-phase 8.4: `UpgradeError` Overhaul (Delete `Other(String)`)
+
+Delete `UpgradeError::Other(String)` completely and replace all `.map_err(|e|
+UpgradeError::Other(...))` call sites across `perform_upgrade.rs`, `download.rs`, and
+`swap.rs` with structured `UpgradeError` variants preserving `#[source]` errors.
+
+- [x] Replace `UpgradeError::Other(String)` (and drop `Clone, PartialEq, Eq`) in
+      `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs` with typed variants:
+      `HttpClientCreateFailed`, `TempDirCreateFailed`, `DownloadHttpFailed`,
+      `InvalidSha256FileFormat`, `FileIo`, `ArchiveExtractFailed`, `EmptyArchive`,
+      `SetExecutableFailed`, `InvalidCurrentExePath`, `BinarySwapFailed`,
+      `SourceBuildExitedNonZero`, and `SourceBuildIo`.
+- [x] Update `perform_upgrade.rs`, `download.rs`, and `swap.rs` (plus unit tests in
+      `download.rs` and `swap.rs`) to construct those typed variants directly without
+      `.to_string()` squashing.
+- [x] Update `self_replace_unhappy_paths.rs` and `install_via_rustup_unhappy_paths.rs`
+      (and rustdoc comments in `cmdr/src/self_upgrade/`) to match the concrete
+      `UpgradeError` variants (`DownloadHttpFailed`, `EmptyArchive`,
+      `ArchiveExtractFailed`, `SourceBuildExitedNonZero`) instead of `UpgradeError::Other`.
+- [x] Run `./check.fish --check` to verify compilation across the workspace.
+- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
+      correct implementation and ensure no regressions.
+    - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/download.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade/swap.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_unhappy_paths.rs`
+    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_unhappy_paths.rs`

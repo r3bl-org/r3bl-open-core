@@ -4,9 +4,9 @@
 //! ([`CrateDistribution::ClosedSource`], so archive download/verification errors never
 //! fall back to `cargo install`):
 //! - SHA-256 checksum mismatch -> [`UpgradeError::ChecksumMismatch`].
-//! - `GET *.tar.gz` HTTP 500 after `HEAD 200` -> [`UpgradeError::Other`].
-//! - Empty `.tar.gz` archive -> [`UpgradeError::Other`] (`"contained no files"`).
-//! - Corrupt non-gzip archive bytes -> [`UpgradeError::Other`].
+//! - `GET *.tar.gz` HTTP 500 after `HEAD 200` -> [`UpgradeError::DownloadHttpFailed`].
+//! - Empty `.tar.gz` archive -> [`UpgradeError::EmptyArchive`].
+//! - Corrupt non-gzip archive bytes -> [`UpgradeError::ArchiveExtractFailed`].
 //!
 //! All scenarios run in an isolated Coordinator / Worker subprocess on a copied
 //! executable and assert that the executable bytes on disk remain unchanged, no sibling
@@ -15,8 +15,10 @@
 //!
 //! [`CrateDistribution::ClosedSource`]: crate::self_upgrade::CrateDistribution::ClosedSource
 //! [`GateStatusError::MetadataReadFailed`]: crate::self_upgrade::GateStatusError::MetadataReadFailed
+//! [`UpgradeError::ArchiveExtractFailed`]: crate::self_upgrade::UpgradeError::ArchiveExtractFailed
 //! [`UpgradeError::ChecksumMismatch`]: crate::self_upgrade::UpgradeError::ChecksumMismatch
-//! [`UpgradeError::Other`]: crate::self_upgrade::UpgradeError::Other
+//! [`UpgradeError::DownloadHttpFailed`]: crate::self_upgrade::UpgradeError::DownloadHttpFailed
+//! [`UpgradeError::EmptyArchive`]: crate::self_upgrade::UpgradeError::EmptyArchive
 
 use super::{super::per_process_start_latch::PerProcessStartLatch, test_fixtures::*};
 use crate::{CrateDistribution, CrateVersion, GateStatusError, JsoncScalar,
@@ -48,14 +50,12 @@ fn test_checksum_mismatch_fails_without_replacing_binary() {
             archive_bytes,
             wrong_sha256,
         );
-        run_self_replace_unhappy_worker(res_server_spawn, |err| {
-            assert_eq2!(
-                err,
-                &UpgradeError::ChecksumMismatch {
-                    expected: wrong_sha256,
-                    actual: actual_digest,
-                }
-            );
+        run_self_replace_unhappy_worker(res_server_spawn, |err| match err {
+            UpgradeError::ChecksumMismatch { expected, actual } => {
+                assert_eq2!(expected, &wrong_sha256);
+                assert_eq2!(actual, &actual_digest);
+            }
+            other => panic!("Expected ChecksumMismatch, got {other:?}"),
         });
         return;
     }
@@ -69,8 +69,14 @@ fn test_archive_get_http_500_fails_without_replacing_binary() {
             CrateDistribution::ClosedSource,
             blocks::HTTP_500_INTERNAL_SERVER_ERROR,
         );
-        run_self_replace_unhappy_worker(res_server_spawn, |err| {
-            assert!(matches!(err, UpgradeError::Other(msg) if !msg.is_empty()));
+        run_self_replace_unhappy_worker(res_server_spawn, |err| match err {
+            UpgradeError::DownloadHttpFailed { src_err, .. } => {
+                assert_eq2!(
+                    src_err.status(),
+                    Some(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
+                );
+            }
+            other => panic!("Expected DownloadHttpFailed(500), got {other:?}"),
         });
         return;
     }
@@ -89,8 +95,8 @@ fn test_empty_archive_fails_without_replacing_binary() {
             archive_server::spawn_closed_source_success(empty_tar_gz);
         run_self_replace_unhappy_worker(res_server_spawn, |err| {
             assert!(
-                matches!(err, UpgradeError::Other(msg) if msg.contains("contained no files")),
-                "Expected 'contained no files' error, got {err:?}"
+                matches!(err, UpgradeError::EmptyArchive { .. }),
+                "Expected EmptyArchive error, got {err:?}"
             );
         });
         return;
@@ -105,7 +111,10 @@ fn test_corrupt_archive_fails_without_replacing_binary() {
             b"corrupt-not-a-gzip-archive".to_vec(),
         );
         run_self_replace_unhappy_worker(res_server_spawn, |err| {
-            assert!(matches!(err, UpgradeError::Other(msg) if !msg.is_empty()));
+            assert!(
+                matches!(err, UpgradeError::ArchiveExtractFailed { .. }),
+                "Expected ArchiveExtractFailed, got {err:?}"
+            );
         });
         return;
     }

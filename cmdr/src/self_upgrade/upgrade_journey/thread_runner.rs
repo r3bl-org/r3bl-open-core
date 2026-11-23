@@ -7,26 +7,39 @@ use r3bl_tui::{StdThreadTokioJoinHandle, StdThreadTokioRunner, TokioRuntimeOutco
 /// self-upgrade OS thread and its Tokio runtime ([`StdThreadTokioRunner`]).
 ///
 /// [`StdThreadTokioRunner`]: r3bl_tui::StdThreadTokioRunner
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum ThreadRunnerError {
-    /// Dedicated or scoped OS thread failed to spawn (`std::io::Error`) or its Tokio
-    /// runtime failed to initialize ([`TokioRuntimeOutcome::FailedToStart`]).
+    /// Dedicated OS thread failed to spawn ([`StdThreadTokioRunner::run_non_blocking`]).
+    ///
+    /// [`StdThreadTokioRunner::run_non_blocking`]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
+    #[error("Failed to spawn dedicated self-upgrade OS thread: {src_err}")]
+    ThreadSpawnFailed {
+        /// Underlying OS thread spawn error.
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Scoped OS thread spawn or Tokio runtime initialization failed
+    /// ([`TokioRuntimeOutcome::FailedToStart`]).
     ///
     /// [`TokioRuntimeOutcome::FailedToStart`]: r3bl_tui::TokioRuntimeOutcome::FailedToStart
-    #[error("{reason}")]
-    RuntimeOrThreadInitFailed {
-        /// Underlying OS thread or Tokio runtime initialization failure description.
-        reason: String,
+    #[error("Failed to initialize Tokio runtime on self-upgrade OS thread: {src_err}")]
+    RuntimeInitFailed {
+        /// Underlying OS thread or Tokio runtime initialization error.
+        #[source]
+        src_err: std::io::Error,
     },
 
     /// Dedicated or scoped OS thread panicked during execution
     /// ([`TokioRuntimeOutcome::Panicked`]).
     ///
     /// [`TokioRuntimeOutcome::Panicked`]: r3bl_tui::TokioRuntimeOutcome::Panicked
-    #[error("{panic_msg}")]
+    #[error("{thread_name} panicked: {panic_msg}")]
     ThreadPanicked {
-        /// Full panic report formatted via `format!("{report:#}")` (includes thread
-        /// name and panic payload).
+        /// Diagnostic thread label (`SCOPED_THREAD_NAME` or `UNSCOPED_THREAD_NAME`).
+        thread_name: &'static str,
+
+        /// Extracted panic payload description.
         panic_msg: String,
     },
 }
@@ -50,9 +63,9 @@ impl ThreadRunner {
     ///
     /// # Errors
     ///
-    /// Returns [`ThreadRunnerError::RuntimeOrThreadInitFailed`] if the scoped OS thread
-    /// or Tokio runtime failed to start, or [`ThreadRunnerError::ThreadPanicked`] if the
-    /// thread panicked.
+    /// Returns [`ThreadRunnerError::RuntimeInitFailed`] if the scoped OS thread or Tokio
+    /// runtime failed to start, or [`ThreadRunnerError::ThreadPanicked`] if the thread
+    /// panicked.
     ///
     /// [1]: r3bl_tui::StdThreadTokioRunner::run_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
@@ -73,8 +86,8 @@ impl ThreadRunner {
     ///
     /// # Errors
     ///
-    /// Returns [`ThreadRunnerError::RuntimeOrThreadInitFailed`] if the OS thread could
-    /// not be spawned.
+    /// Returns [`ThreadRunnerError::ThreadSpawnFailed`] if the OS thread could not be
+    /// spawned.
     ///
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
@@ -85,20 +98,16 @@ impl ThreadRunner {
         config: &UpgradeConfig,
         async_fn: F,
     ) -> Result<StdThreadTokioJoinHandle<T>, ThreadRunnerError> {
-        StdThreadTokioRunner::run_non_blocking(async_fn).map_err(|io_err| {
+        StdThreadTokioRunner::run_non_blocking(async_fn).map_err(|src_err| {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "ThreadRunner::run_non_blocking: Could not spawn dedicated self-upgrade thread",
                     crate_name = %config.get_crate_name(),
-                    error = ?io_err
+                    error = ?src_err
                 );
             });
-            ThreadRunnerError::RuntimeOrThreadInitFailed {
-                reason: format!(
-                    "Failed to spawn dedicated self-upgrade thread: {io_err:#}"
-                ),
-            }
+            ThreadRunnerError::ThreadSpawnFailed { src_err }
         })
     }
 
@@ -107,9 +116,9 @@ impl ThreadRunner {
     ///
     /// # Errors
     ///
-    /// Returns [`ThreadRunnerError::RuntimeOrThreadInitFailed`] if the dedicated Tokio
-    /// runtime failed to initialize, or [`ThreadRunnerError::ThreadPanicked`] if the
-    /// dedicated thread panicked.
+    /// Returns [`ThreadRunnerError::RuntimeInitFailed`] if the dedicated Tokio runtime
+    /// failed to initialize, or [`ThreadRunnerError::ThreadPanicked`] if the dedicated
+    /// thread panicked.
     ///
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     pub fn join<T: Send + 'static>(
@@ -131,30 +140,33 @@ fn map_runtime_outcome<T>(
 ) -> Result<T, ThreadRunnerError> {
     match outcome {
         TokioRuntimeOutcome::Completed(value) => Ok(value),
-        TokioRuntimeOutcome::FailedToStart(report) => {
+        TokioRuntimeOutcome::FailedToStart(src_err) => {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = log_message,
                     crate_name = %config.get_crate_name(),
-                    error = ?report
+                    error = ?src_err
                 );
             });
-            Err(ThreadRunnerError::RuntimeOrThreadInitFailed {
-                reason: format!("{report:#}"),
-            })
+            Err(ThreadRunnerError::RuntimeInitFailed { src_err })
         }
-        TokioRuntimeOutcome::Panicked(report) => {
+        TokioRuntimeOutcome::Panicked {
+            thread_name,
+            panic_msg,
+        } => {
             DEBUG_SELF_UPGRADE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = log_message,
                     crate_name = %config.get_crate_name(),
-                    error = ?report
+                    thread_name = thread_name,
+                    panic_msg = %panic_msg
                 );
             });
             Err(ThreadRunnerError::ThreadPanicked {
-                panic_msg: format!("{report:#}"),
+                thread_name,
+                panic_msg,
             })
         }
     }
@@ -182,14 +194,14 @@ mod tests {
     fn test_run_blocking_returns_ok_and_catches_panic() {
         let config = make_test_config();
         let res_ok = ThreadRunner::run_blocking(&config, async || 42_u32);
-        assert_eq2!(res_ok, Ok(42_u32));
+        assert_eq2!(res_ok.unwrap(), 42_u32);
 
         let res_panic: Result<(), ThreadRunnerError> =
             ThreadRunner::run_blocking(&config, async || {
                 panic!("simulated blocking panic");
             });
         match res_panic {
-            Err(ThreadRunnerError::ThreadPanicked { ref panic_msg }) => {
+            Err(ThreadRunnerError::ThreadPanicked { ref panic_msg, .. }) => {
                 assert!(panic_msg.contains("simulated blocking panic"));
             }
             other => panic!("Expected Err(ThreadPanicked), got {other:?}"),
@@ -200,14 +212,14 @@ mod tests {
     fn test_run_non_blocking_and_join_returns_ok_and_catches_panic() {
         let config = make_test_config();
         let ok_handle = ThreadRunner::run_non_blocking(&config, async || 7_u32).unwrap();
-        assert_eq2!(ThreadRunner::join(&config, ok_handle), Ok(7_u32));
+        assert_eq2!(ThreadRunner::join(&config, ok_handle).unwrap(), 7_u32);
 
         let panic_handle = ThreadRunner::run_non_blocking(&config, async || -> u32 {
             panic!("simulated non-blocking panic");
         })
         .unwrap();
         match ThreadRunner::join(&config, panic_handle) {
-            Err(ThreadRunnerError::ThreadPanicked { ref panic_msg }) => {
+            Err(ThreadRunnerError::ThreadPanicked { ref panic_msg, .. }) => {
                 assert!(panic_msg.contains("simulated non-blocking panic"));
             }
             other => panic!("Expected Err(ThreadPanicked), got {other:?}"),

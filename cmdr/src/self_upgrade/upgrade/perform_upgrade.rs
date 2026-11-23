@@ -6,8 +6,9 @@ use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
             create_output_device_for_feedback_channel, download_and_verify_archive,
             extract_and_apply_archive, get_current_bin_name,
             report_upgrade_source_error, run_source_build_with_spinner, ui_strings};
-use r3bl_tui::{OutputDevice, Spinner, SpinnerStyle, TuiAvailability, try_create_temp_dir};
-use std::{io, time::Duration};
+use r3bl_tui::{FilePermissionsError, HttpClientError, OutputDevice, Spinner,
+               SpinnerStyle, TempDirError, TuiAvailability, try_create_temp_dir};
+use std::{io, path::PathBuf, process::ExitStatus, time::Duration};
 
 /// Executes the resolved upgrade flow for `config`:
 /// 1. Resolves [`UpgradeSource`] via [`UpgradeSource::try_resolve`].
@@ -220,11 +221,11 @@ pub async fn execute_source_build_step(
             Ok(())
         }
         Ok(status) => {
-            let reason = format!("cargo install exited with status {status}");
+            let err = UpgradeError::SourceBuildExitedNonZero { status };
             config.get_user_feedback_channel().eprintln(
-                ui_strings::format_upgrade_failed_retry_msg(bin_name, &reason),
+                ui_strings::format_upgrade_failed_retry_msg(bin_name, &err.to_string()),
             );
-            Err(UpgradeError::Other(reason))
+            Err(err)
         }
         Err(err) if err.kind() == io::ErrorKind::Interrupted => {
             config.get_user_feedback_channel().eprintln(
@@ -235,12 +236,12 @@ pub async fn execute_source_build_step(
             );
             Err(UpgradeError::Cancelled)
         }
-        Err(err) => {
-            let reason = err.to_string();
+        Err(src_err) => {
+            let err = UpgradeError::SourceBuildIo { src_err };
             config.get_user_feedback_channel().eprintln(
-                ui_strings::format_upgrade_failed_retry_msg(bin_name, &reason),
+                ui_strings::format_upgrade_failed_retry_msg(bin_name, &err.to_string()),
             );
-            Err(UpgradeError::Other(reason))
+            Err(err)
         }
     }
 }
@@ -263,8 +264,7 @@ pub async fn download_and_replace_release_archive(
     sha256_url: &str,
     output_device: OutputDevice,
 ) -> Result<(), UpgradeError> {
-    let temp_dir =
-        try_create_temp_dir().map_err(|e| UpgradeError::Other(e.to_string()))?;
+    let temp_dir = try_create_temp_dir()?;
 
     let archive_path = temp_dir.join(ReleaseAsset::format_archive_filename(
         crate_name,
@@ -315,7 +315,7 @@ pub async fn download_and_replace_release_archive(
 /// Errors that can occur during [`UpgradeSource`] resolution or upgrade execution.
 ///
 /// [`UpgradeSource`]: crate::self_upgrade::UpgradeSource
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum UpgradeError {
     /// Neither release binaries nor a viable local source build toolchain are
     /// available.
@@ -344,9 +344,84 @@ pub enum UpgradeError {
     #[error("Upgrade cancelled by user")]
     Cancelled,
 
-    /// General I/O, network, or archive error.
-    #[error("{0}")]
-    Other(String),
+    /// Failed to construct the HTTP client for archive or checksum downloads.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    HttpClientCreateFailed(#[from] HttpClientError),
+
+    /// Failed to create a temporary staging directory on disk.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TempDirCreateFailed(#[from] TempDirError),
+
+    /// Network, HTTP status, or stream error while downloading the `.tar.gz` archive or
+    /// `.sha256` file.
+    #[error("Failed to download release asset from '{url}': {src_err}")]
+    DownloadHttpFailed {
+        url: String,
+        #[source]
+        src_err: reqwest::Error,
+    },
+
+    /// Downloaded `.sha256` text could not be decoded into a 32-byte hex digest.
+    #[error("Invalid .sha256 file format: {raw_text}")]
+    InvalidSha256FileFormat { raw_text: String },
+
+    /// Filesystem read/write failure while staging or verifying the downloaded archive.
+    #[error("File I/O failed at '{}': {src_err}", path.display())]
+    FileIo {
+        path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Decompression or `.tar` unpacking failed for `archive_path`.
+    #[error("Failed to extract archive '{}': {src_err}", archive_path.display())]
+    ArchiveExtractFailed {
+        archive_path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Downloaded `.tar.gz` archive unpacked cleanly, and contained zero regular files.
+    #[error("Downloaded archive '{}' contained no files", archive_path.display())]
+    EmptyArchive { archive_path: PathBuf },
+
+    /// Failed to mark an extracted binary executable (`0o755`).
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SetExecutableFailed(#[from] FilePermissionsError),
+
+    /// Current running executable path lacked a valid [`UTF-8`] filename or parent
+    /// directory.
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+    #[error(
+        "Current executable path '{}' has no valid file name or parent directory",
+        exe_path.display()
+    )]
+    InvalidCurrentExePath { exe_path: PathBuf },
+
+    /// Resolving `current_exe()` or replacing the running binary via
+    /// [`self_replace::self_replace`] failed.
+    #[error("Failed to replace running executable: {src_err}")]
+    BinarySwapFailed {
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// `rustup` or `cargo install` subprocess exited with a non-zero [`ExitStatus`].
+    #[error("cargo install exited with status {status}")]
+    SourceBuildExitedNonZero { status: ExitStatus },
+
+    /// Spawning or reading from the source-build [`PTY`] session failed.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+    #[error("Source build PTY or process I/O failed: {src_err}")]
+    SourceBuildIo {
+        #[source]
+        src_err: std::io::Error,
+    },
 }
 
 /// Specific reason why [`UpgradeError::NoViableUpgradeSource`] occurred.

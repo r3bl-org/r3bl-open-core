@@ -13,13 +13,14 @@ use crate::{CrateMetadata, ThreadRunnerError, UpgradeError};
 /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum UpgradeFailedError {
     /// Download, checksum verification, binary replacement, or source build failed in
     /// the [Execution Plane].
     ///
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
+    #[diagnostic(transparent)]
     PerformUpgrade(#[from] UpgradeError),
 
     /// Scoped OS thread failed to spawn, initialize its Tokio runtime, or panicked in
@@ -27,12 +28,13 @@ pub enum UpgradeFailedError {
     ///
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
+    #[diagnostic(transparent)]
     ThreadRunner(#[from] ThreadRunnerError),
 }
 
 /// Terminal outcome recorded inside [`Completed`] after an immediate upgrade or exit
 /// upgrade action finishes.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum UpgradeResolution {
     /// Binary replacement or source installation succeeded (and the `1h` cooldown
     /// timestamp file was refreshed).
@@ -60,7 +62,7 @@ pub enum UpgradeResolution {
 }
 
 /// Terminal typestate after an immediate upgrade or exit upgrade action finishes.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Completed {
     /// Remote [`CrateMetadata`] targeted by the upgrade flow.
     ///

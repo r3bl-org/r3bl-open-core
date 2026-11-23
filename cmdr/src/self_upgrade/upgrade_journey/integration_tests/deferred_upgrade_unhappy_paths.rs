@@ -29,7 +29,7 @@ use crate::{CheckFailedError, CrateDistribution, CrateVersion, EndpointUrl,
             RemoteVersionCheckGate, ThreadRunnerError, UpgradeActionOnExit,
             UpgradeConfig, UpgradeError, UpgradeFailedError, UpgradePolicy,
             UpgradeStrategy, UserFeedbackChannel, self_upgrade::*};
-use r3bl_tui::{TempDirChildPath, try_create_temp_dir};
+use r3bl_tui::{TempDirChildPath, assert_eq2, try_create_temp_dir};
 use serial_test::serial;
 use std::{io::ErrorKind, time::Duration};
 
@@ -131,14 +131,19 @@ fn scenario_inflight_delayed_http_500_returns_check_failed_without_cooldown() {
             if src_err.kind() == ErrorKind::NotFound
     ));
     match exit_outcome {
-        ExitOutcome::CheckFailed(journey) => {
-            assert!(matches!(
-                journey.get_state().error,
-                CheckFailedError::FetchManifest(
-                    FetchManifestError::FetchOrParseFailed { ref diagnostic }
-                ) if !diagnostic.is_empty()
-            ));
-        }
+        ExitOutcome::CheckFailed(journey) => match journey.get_state().error {
+            CheckFailedError::FetchManifest(
+                FetchManifestError::HttpRequestFailed { ref src_err, .. },
+            ) => {
+                assert_eq2!(
+                    src_err.status(),
+                    Some(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
+                );
+            }
+            ref other => {
+                panic!("Expected HttpRequestFailed(500), got {other:?}")
+            }
+        },
         other => panic!("Expected ExitOutcome::CheckFailed after join, got {other:?}"),
     }
 }
@@ -180,14 +185,16 @@ fn scenario_manifest_connection_refused_returns_check_failed_without_cooldown() 
             if src_err.kind() == ErrorKind::NotFound
     ));
     match exit_outcome {
-        ExitOutcome::CheckFailed(journey) => {
-            assert!(matches!(
-                journey.get_state().error,
-                CheckFailedError::FetchManifest(
-                    FetchManifestError::FetchOrParseFailed { ref diagnostic }
-                ) if !diagnostic.is_empty()
-            ));
-        }
+        ExitOutcome::CheckFailed(journey) => match journey.get_state().error {
+            CheckFailedError::FetchManifest(
+                FetchManifestError::HttpRequestFailed { ref src_err, .. },
+            ) => {
+                assert!(src_err.is_connect());
+            }
+            ref other => {
+                panic!("Expected HttpRequestFailed(is_connect), got {other:?}")
+            }
+        },
         other => panic!(
             "Expected ExitOutcome::CheckFailed on connection refused, got {other:?}"
         ),
@@ -299,6 +306,7 @@ fn scenario_dedicated_thread_panic_returns_check_failed_without_unwinding() {
         ExitOutcome::CheckFailed(journey) => match journey.get_state().error {
             CheckFailedError::ThreadRunner(ThreadRunnerError::ThreadPanicked {
                 ref panic_msg,
+                ..
             }) => {
                 assert!(
                     panic_msg.contains("simulated dedicated self-upgrade thread panic")

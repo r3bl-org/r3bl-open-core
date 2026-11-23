@@ -1,10 +1,22 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::generate_friendly_random_id;
-use miette::IntoDiagnostic;
 use std::{fmt::{Display, Formatter},
           ops::Deref,
           path::{Component, Path, PathBuf}};
+
+/// Error returned by [`try_create_temp_dir`] when creating the temporary directory on
+/// disk fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create temporary directory '{}'", path.display())]
+pub struct TempDirError {
+    /// Temporary directory path passed to [`std::fs::create_dir_all`].
+    pub path: PathBuf,
+
+    /// Underlying OS filesystem error.
+    #[source]
+    pub src_err: std::io::Error,
+}
 
 #[derive(Debug)]
 pub struct TempDir {
@@ -26,14 +38,17 @@ impl TempDir {
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`TempDirError`] if:
 /// - The temp directory cannot be created due to insufficient permissions
 /// - The file system is full
 /// - I/O errors occur during directory creation
-pub fn try_create_temp_dir() -> miette::Result<TempDir> {
+pub fn try_create_temp_dir() -> Result<TempDir, TempDirError> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(generate_friendly_random_id().as_str());
-    std::fs::create_dir_all(&new_temp_dir).into_diagnostic()?;
+    std::fs::create_dir_all(&new_temp_dir).map_err(|src_err| TempDirError {
+        path: new_temp_dir.clone(),
+        src_err,
+    })?;
     Ok(TempDir {
         inner: new_temp_dir,
     })

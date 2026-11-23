@@ -116,12 +116,19 @@ fn scenario_manifest_http_500_returns_check_failed_without_cooldown() {
     ));
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::CheckFailed(journey)) => {
-            assert!(matches!(
-                journey.get_state().error,
+            match journey.get_state().error {
                 CheckFailedError::FetchManifest(
-                    FetchManifestError::FetchOrParseFailed { ref diagnostic }
-                ) if !diagnostic.is_empty()
-            ));
+                    FetchManifestError::HttpRequestFailed { ref src_err, .. },
+                ) => {
+                    assert_eq2!(
+                        src_err.status(),
+                        Some(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
+                    );
+                }
+                ref other => {
+                    panic!("Expected HttpRequestFailed(500), got {other:?}")
+                }
+            }
         }
         other => panic!("Expected ImmediateUpgrade(CheckFailed), got {other:?}"),
     }
@@ -157,12 +164,16 @@ fn scenario_manifest_connection_refused_returns_check_failed_without_cooldown() 
     ));
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::CheckFailed(journey)) => {
-            assert!(matches!(
-                journey.get_state().error,
+            match journey.get_state().error {
                 CheckFailedError::FetchManifest(
-                    FetchManifestError::FetchOrParseFailed { ref diagnostic }
-                ) if !diagnostic.is_empty()
-            ));
+                    FetchManifestError::HttpRequestFailed { ref src_err, .. },
+                ) => {
+                    assert!(src_err.is_connect());
+                }
+                ref other => {
+                    panic!("Expected HttpRequestFailed(is_connect), got {other:?}")
+                }
+            }
         }
         other => panic!("Expected ImmediateUpgrade(CheckFailed), got {other:?}"),
     }
@@ -201,15 +212,20 @@ fn scenario_crate_missing_from_manifest_returns_check_failed_without_cooldown() 
     ));
     match outcome {
         StartOutcome::ImmediateUpgrade(ImmediateUpgradeOutcome::CheckFailed(journey)) => {
-            assert_eq2!(
-                journey.get_state().error,
+            match journey.get_state().error {
                 CheckFailedError::FetchManifest(
                     FetchManifestError::CrateNotFoundInManifest {
-                        crate_name: "r3bl-cmdr".into(),
-                        manifest_url: expected_url,
-                    }
-                )
-            );
+                        ref crate_name,
+                        ref manifest_url,
+                    },
+                ) => {
+                    assert_eq2!(crate_name, &"r3bl-cmdr".into());
+                    assert_eq2!(manifest_url, &expected_url);
+                }
+                ref other => {
+                    panic!("Expected CrateNotFoundInManifest, got {other:?}")
+                }
+            }
         }
         other => panic!("Expected ImmediateUpgrade(CheckFailed), got {other:?}"),
     }

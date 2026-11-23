@@ -7,9 +7,9 @@
 //!   [`NoViableSourceReason::NoLocalToolchain`].
 //! - Stub `rustup` succeeding on `--version` and exiting `1` on `toolchain install` ->
 //!   short-circuits before invoking `cargo` (`cargo` absent from `invocations.log`) and
-//!   returns [`UpgradeError::Other`].
+//!   returns [`UpgradeError::SourceBuildExitedNonZero`].
 //! - Stub `cargo` emitting `OSC 9;4;2;0` ([`OscPtyEvent::BuildError`]) and exiting `1` ->
-//!   returns [`UpgradeError::Other`].
+//!   returns [`UpgradeError::SourceBuildExitedNonZero`].
 //!
 //! All failure paths run in an isolated Coordinator / Worker subprocess and leave no
 //! cooldown timestamp file on disk ([`GateStatusError::MetadataReadFailed`] with
@@ -20,7 +20,7 @@
 //! [`NoViableSourceReason::NoLocalToolchain`]: crate::self_upgrade::NoViableSourceReason::NoLocalToolchain
 //! [`OscPtyEvent::BuildError`]: r3bl_tui::OscPtyEvent::BuildError
 //! [`UpgradeError::NoViableUpgradeSource`]: crate::self_upgrade::UpgradeError::NoViableUpgradeSource
-//! [`UpgradeError::Other`]: crate::self_upgrade::UpgradeError::Other
+//! [`UpgradeError::SourceBuildExitedNonZero`]: crate::self_upgrade::UpgradeError::SourceBuildExitedNonZero
 
 use super::{super::per_process_start_latch::PerProcessStartLatch, test_fixtures::*};
 use crate::{CrateDistribution, CrateVersion, GateStatusError, JsoncScalar,
@@ -80,7 +80,10 @@ fn test_open_source_unreachable_archive_with_empty_path_returns_no_local_toolcha
 fn test_rustup_nonzero_exit_short_circuits_before_cargo() {
     if env::var(ISOLATED_RUSTUP_UNHAPPY_ENV_VAR).is_ok() {
         run_open_source_failure_worker(|err| {
-            assert!(matches!(err, UpgradeError::Other(msg) if !msg.is_empty()));
+            assert!(
+                matches!(err, UpgradeError::SourceBuildExitedNonZero { status } if !status.success()),
+                "Expected SourceBuildExitedNonZero, got {err:?}"
+            );
         });
         return;
     }
@@ -102,7 +105,10 @@ fn test_rustup_nonzero_exit_short_circuits_before_cargo() {
 fn test_cargo_build_error_osc_and_nonzero_exit_returns_upgrade_failed() {
     if env::var(ISOLATED_RUSTUP_UNHAPPY_ENV_VAR).is_ok() {
         run_open_source_failure_worker(|err| {
-            assert!(matches!(err, UpgradeError::Other(msg) if !msg.is_empty()));
+            assert!(
+                matches!(err, UpgradeError::SourceBuildExitedNonZero { status } if !status.success()),
+                "Expected SourceBuildExitedNonZero, got {err:?}"
+            );
         });
         return;
     }

@@ -403,6 +403,44 @@ pub enum MyError {
 fn process() -> Result<(), MyError> { ... }
 ```
 
+### Bad: Returning `miette::Result` from Library Helpers
+
+```rust
+// ❌ Bad: Erases the concrete error type into `miette::Report`.
+// Typed downstream callers cannot match on it or attach it via `#[source]`,
+// tempting them into lossy `format!("{err:#}")` / `Other(String)` squashing.
+pub fn create_http_client() -> miette::Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .user_agent(R3BL_USER_AGENT)
+        .build()
+        .into_diagnostic()
+}
+```
+
+### Good: Typed Wrapper Error in Libraries, `miette::Result` Only at App Boundaries
+
+```rust
+// ✅ Good: Concrete library error deriving both `thiserror::Error` and `miette::Diagnostic`.
+// `#[from]` generates `From<reqwest::Error>` AND marks the field as `Error::source()`.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create HTTP client")]
+pub struct HttpClientError(#[from] pub reqwest::Error);
+
+pub fn create_http_client() -> Result<reqwest::Client, HttpClientError> {
+    reqwest::Client::builder()
+        .user_agent(R3BL_USER_AGENT)
+        .build()
+        .map_err(HttpClientError)
+}
+
+// Application boundary (`main()` / CLI entry point): bare `?` works automatically
+// because `HttpClientError` implements `miette::Diagnostic`.
+pub fn run_cli() -> miette::Result<()> {
+    let _client = create_http_client()?;
+    Ok(())
+}
+```
+
 ### Bad: Using `#[serde(try_from = "String")]` and Manual `FromStr` / `TryFrom` Error Boilerplate on Unit Enums
 
 Never use `#[serde(try_from = "String")]` + manual `FromStr` / `TryFrom<&str>` / `TryFrom<String>` and custom error types on simple unit enums just to deserialize string variants like `"open-source"` or `"closed-source"`:

@@ -151,10 +151,10 @@ fn run_self_replace_happy_worker(strategy: UpgradeStrategy) {
                         journey.get_state().metadata.version,
                         CrateVersion::try_parse("9.9.9").unwrap()
                     );
-                    assert_eq2!(
+                    assert!(matches!(
                         journey.get_state().resolution,
                         UpgradeResolution::Upgraded
-                    );
+                    ));
                 }
                 other => {
                     panic!(
@@ -179,10 +179,10 @@ fn run_self_replace_happy_worker(strategy: UpgradeStrategy) {
                         journey.get_state().metadata.version,
                         CrateVersion::try_parse("9.9.9").unwrap()
                     );
-                    assert_eq2!(
+                    assert!(matches!(
                         journey.get_state().resolution,
                         UpgradeResolution::Upgraded
-                    );
+                    ));
                 }
                 other => {
                     panic!("Expected ExitOutcome::Completed(Upgraded), got {other:?}")

@@ -223,12 +223,20 @@ pub enum TokioRuntimeOutcome<T> {
     /// The Tokio runtime initialized and ran `async_fn` to completion, producing `T`.
     Completed(T),
 
-    /// The `current_thread` Tokio runtime failed to initialize before `async_fn` ran.
-    FailedToStart(miette::Report),
+    /// Spawning the OS thread or initializing its `current_thread` Tokio runtime failed
+    /// before `async_fn` ran.
+    FailedToStart(std::io::Error),
 
-    /// The `current_thread` Tokio runtime started, but `async_fn` panicked while
-    /// running on the OS thread.
-    Panicked(miette::Report),
+    /// The `current_thread` Tokio runtime started, and `async_fn` panicked while running
+    /// on the OS thread.
+    Panicked {
+        /// Diagnostic thread label ([`SCOPED_THREAD_NAME`] or [`UNSCOPED_THREAD_NAME`]).
+        thread_name: &'static str,
+
+        /// Extracted panic message (`&str` or `String` payload, or `"unknown panic
+        /// payload"`).
+        panic_msg: String,
+    },
 }
 
 mod convert_errors {
@@ -238,11 +246,7 @@ mod convert_errors {
     impl<T> From<std::io::Error> for TokioRuntimeOutcome<T> {
         /// Wraps a thread or Tokio runtime initialization [`std::io::Error`] into
         /// [`Self::FailedToStart`].
-        fn from(err: std::io::Error) -> Self {
-            let report =
-                miette::Report::from_err(err).wrap_err("Failed to create tokio runtime");
-            Self::FailedToStart(report)
-        }
+        fn from(err: std::io::Error) -> Self { Self::FailedToStart(err) }
     }
 
     impl<'scope, T> From<ScopedJoinHandle<'scope, TokioRuntimeOutcome<T>>>
@@ -265,9 +269,9 @@ mod convert_errors {
 
     impl<T> TokioRuntimeOutcome<T> {
         /// Flattens the [`std::thread::Result`] returned by `join()` on `thread_name`
-        /// into [`Self`], formatting any caught panic payload into [`Self::Panicked`].
+        /// into [`Self`], extracting any caught panic payload into [`Self::Panicked`].
         fn from_join_result(
-            thread_name: &str,
+            thread_name: &'static str,
             join_result: std::thread::Result<Self>,
         ) -> Self {
             match join_result {
@@ -277,13 +281,15 @@ mod convert_errors {
                         panic_payload.downcast_ref::<&str>(),
                         panic_payload.downcast_ref::<String>(),
                     ) {
-                        (Some(&s), _) => s,
-                        (_, Some(s)) => s.as_str(),
-                        (None, None) => "unknown panic payload",
+                        (Some(&s), _) => s.to_string(),
+                        (_, Some(s)) => s.clone(),
+                        (None, None) => "unknown panic payload".to_string(),
                     };
 
-                    let report = miette::miette!("{thread_name} panicked: {panic_msg}");
-                    Self::Panicked(report)
+                    Self::Panicked {
+                        thread_name,
+                        panic_msg,
+                    }
                 }
             }
         }
@@ -340,10 +346,12 @@ mod tests {
         });
 
         match outcome {
-            TokioRuntimeOutcome::Panicked(report) => {
-                let msg = report.to_string();
-                assert!(msg.contains(&format!("{SCOPED_THREAD_NAME} panicked")));
-                assert!(msg.contains("simulated panic inside run_blocking"));
+            TokioRuntimeOutcome::Panicked {
+                thread_name,
+                panic_msg,
+            } => {
+                assert_eq!(thread_name, SCOPED_THREAD_NAME);
+                assert!(panic_msg.contains("simulated panic inside run_blocking"));
             }
             _ => panic!("Expected TokioRuntimeOutcome::Panicked"),
         }
@@ -371,10 +379,12 @@ mod tests {
 
         let outcome = handle.join();
         match outcome {
-            TokioRuntimeOutcome::Panicked(report) => {
-                let msg = report.to_string();
-                assert!(msg.contains(&format!("{UNSCOPED_THREAD_NAME} panicked")));
-                assert!(msg.contains("simulated panic inside run_non_blocking"));
+            TokioRuntimeOutcome::Panicked {
+                thread_name,
+                panic_msg,
+            } => {
+                assert_eq!(thread_name, UNSCOPED_THREAD_NAME);
+                assert!(panic_msg.contains("simulated panic inside run_non_blocking"));
             }
             _ => panic!("Expected TokioRuntimeOutcome::Panicked"),
         }
@@ -387,10 +397,8 @@ mod tests {
         let outcome = TokioRuntimeOutcome::<()>::from(io_err);
 
         match outcome {
-            TokioRuntimeOutcome::FailedToStart(report) => {
-                let msg = format!("{report:#}");
-                assert!(msg.contains("Failed to create tokio runtime"));
-                assert!(msg.contains("simulated runtime init failure"));
+            TokioRuntimeOutcome::FailedToStart(err) => {
+                assert!(err.to_string().contains("simulated runtime init failure"));
             }
             _ => panic!("Expected TokioRuntimeOutcome::FailedToStart"),
         }
