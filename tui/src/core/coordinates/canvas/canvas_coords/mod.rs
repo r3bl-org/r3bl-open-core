@@ -51,7 +51,11 @@
 
 #![rustfmt::skip]
 
-// Attach source files.
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod canvas_index_and_length_impl_macros;
+
+// Attach.
 mod c_bounding_box;
 mod c_col;
 mod c_height;
@@ -61,9 +65,8 @@ mod c_pos;
 mod c_row;
 mod c_size;
 mod c_width;
-mod macros;
 
-// Re-export types and constructors.
+// Re-export.
 pub use c_bounding_box::*;
 pub use c_col::*;
 pub use c_height::*;

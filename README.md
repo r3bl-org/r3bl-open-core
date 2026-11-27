@@ -8,16 +8,9 @@ height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
-<!-- prettier-ignore-start -->
-```text
-██████╗  ██████╗  ██████╗
-██╔══██╗██╔═══██╗██╔════╝
-██████╔╝██║   ██║██║
-██╔══██╗██║   ██║██║
-██║  ██║╚██████╔╝╚██████╗
-╚═╝  ╚═╝ ╚═════╝  ╚═════╝
-```
-<!-- prettier-ignore-end -->
+<p align="left">
+  <img src="./.github/assets/roc-banner.svg" alt="ROC" width="312px">
+</p>
 
 <p align="left">
   <a href="https://crates.io/crates/r3bl_tui"><img src="https://img.shields.io/badge/crates.io-2.7M%2B%20downloads-orange?logo=rust&style=flat-square" alt="Crates.io Total Downloads"></a>
@@ -539,7 +532,7 @@ More detailed steps...
 
 - Steps are numbered (Step 0, Step 1, Step 2, etc.)
 - Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
-- Table of contents automatically generated and maintained using `doctoc`
+- Table of contents automatically generated and maintained using `mktoc`
 - Formatting standardized with `prettier`
 
 **Status markers:**
@@ -904,30 +897,30 @@ fish run.fish
 
 ### Key Commands
 
-| Command                                                    | Description                                                                             |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `fish run.fish all`                                        | Run all major checks (build, test, clippy, docs, audit, format)                         |
-| `fish run.fish build`                                      | Build the entire workspace                                                              |
-| `fish run.fish test`                                       | Run all tests across the workspace                                                      |
-| `fish run.fish cov <pkg> [test] [file] [--html]`           | Run targeted `cargo-llvm-cov` with filtered output (or `--html` in browser)             |
-| `fish run.fish install-cargo-tools`                        | Install all dev tools (`crates.io` + local source packages)                             |
-| `fish run.fish update-cargo-tools`                         | Update all tools (`crates.io` + rebuild local source packages)                          |
-| `fish run.fish install-cmdr`                               | Install `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) from source                 |
-| `fish run.fish install-build-infra`                        | Install `build-infra` tools (`cargo-rustdoc-fmt`) from source                           |
-| `fish run.fish test-watch [pattern]`                       | Watch for file changes and run specific test                                            |
-| `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
-| `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
-| `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
-| `fish run.fish bench`                                      | Run benchmarks                                                                          |
-| `fish run.fish run-binaries`                               | Run `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) interactively                   |
-| `fish run.fish dev-dashboard`                              | Start 2-pane `tmux` development dashboard (tests, docs, checks)                         |
-| `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
-| `fish run.fish check-windows-build`                        | Verify Windows cross-compilation (platform `cfg` gates)                                 |
-| `fish run.fish toolchain-validate`                         | Quick toolchain validation (components only, ~1-2 seconds)                              |
-| `fish run.fish toolchain-validate-complete`                | Complete toolchain validation (full build+test, ~5-10 minutes)                          |
-| `fish run.fish toolchain-update`                           | Update Rust to month-old nightly toolchain with cleanup                                 |
-| `fish run.fish toolchain-sync`                             | Sync Rust environment to match `rust-toolchain.toml`                                    |
-| `fish run.fish toolchain-remove`                           | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
+| Command                                                | Description                                                                             |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `fish run.fish all`                                    | Run all major checks (build, test, clippy, docs, audit, format)                         |
+| `fish run.fish build`                                  | Build the entire workspace                                                              |
+| `fish run.fish test`                                   | Run all tests across the workspace                                                      |
+| `fish run.fish cov <pkg> [test] [file] [--html]`       | Run targeted `cargo-llvm-cov` with filtered output (or `--html` in browser)             |
+| `fish run.fish install-cargo-tools`                    | Install all dev tools (`crates.io` + local source packages)                             |
+| `fish run.fish update-cargo-tools`                     | Update all tools (`crates.io` + rebuild local source packages)                          |
+| `fish run.fish install-cmdr`                           | Install `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) from source                 |
+| `fish run.fish install-build-infra`                    | Install `build-infra` tools (`cargo-rustdoc-fmt`) from source                           |
+| `fish run.fish test-watch [pattern]`                   | Watch for file changes and run specific test                                            |
+| `fish run.fish examples`                               | Run TUI examples interactively                                                          |
+| `fish run.fish examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
+| `fish run.fish examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
+| `fish run.fish bench`                                  | Run benchmarks                                                                          |
+| `fish run.fish binaries`                               | Run `cmdr` binaries (`edi`, `giti`, `rc`, `env-source`) interactively                   |
+| `fish run.fish dev-dashboard`                          | Start 2-pane `tmux` development dashboard (tests, docs, checks)                         |
+| `fish run.fish check-full`                             | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
+| `fish run.fish check-windows-build`                    | Verify Windows cross-compilation (platform `cfg` gates)                                 |
+| `fish run.fish toolchain-validate`                     | Quick toolchain validation (components only, ~1-2 seconds)                              |
+| `fish run.fish toolchain-validate-complete`            | Complete toolchain validation (full build+test, ~5-10 minutes)                          |
+| `fish run.fish toolchain-update`                       | Update Rust to month-old nightly toolchain with cleanup                                 |
+| `fish run.fish toolchain-sync`                         | Sync Rust environment to match `rust-toolchain.toml`                                    |
+| `fish run.fish toolchain-remove`                       | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
 
 > **TUI Testing**: The `r3bl_tui` crate uses PTY-based testing for accurate terminal I/O
 > verification. See the [PTY Testing Infrastructure] section in the TUI README for details

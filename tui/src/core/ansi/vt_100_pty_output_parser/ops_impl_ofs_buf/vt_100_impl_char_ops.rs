@@ -5,10 +5,10 @@
 //! This module implements character-level operations that correspond to [`ANSI`] escape
 //! sequences handled by the [`char_ops`] shim. These include:
 //!
-//! - `ICH` (Insert Character) - [`insert_chars`]
-//! - `DCH` (Delete Character) - [`delete_chars`]
-//! - `ECH` (Erase Character) - [`clear_chars`]
-//! - `Print Character` - [`print_char`] (printable character handling with [`VT-100`]
+//! - `ICH` (Insert Character) - [`try_insert_chars`]
+//! - `DCH` (Delete Character) - [`try_delete_chars`]
+//! - `ECH` (Erase Character) - [`try_clear_chars`]
+//! - `Print Character` - [`try_print_char`] (printable character handling with [`VT-100`]
 //!   features)
 //!
 //! All operations maintain [`VT-100`] compliance and handle proper character shifting,
@@ -21,19 +21,17 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_char_ops
-//! [`clear_chars`]: OfsBufVT100::clear_chars
-//! [`delete_chars`]: OfsBufVT100::delete_chars
-//! [`insert_chars`]: OfsBufVT100::insert_chars
-//! [`print_char`]: OfsBufVT100::print_char
+//! [`try_clear_chars`]: OfsBufVT100::try_clear_chars
+//! [`try_delete_chars`]: OfsBufVT100::try_delete_chars
+//! [`try_insert_chars`]: OfsBufVT100::try_insert_chars
+//! [`try_print_char`]: OfsBufVT100::try_print_char
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, OfsBufVT100, PixelChar,
-            VPLength,
-            core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
-                                              RangeBoundsExt, RangeConvertExt, RangeExt},
-            ok, vp_col, vp_width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, AutoWrapMode, CursorBoundsCheck,
+            LengthOps, OfsBufBoundsError, OfsBufVT100, PixelChar, RangeBoundsExt,
+            RangeConvertExt, RangeExt, VPLength, vp_col, vp_width};
 
 impl OfsBufVT100 {
     /// Insert blank characters at cursor position (for `ICH` - Insert Character).
@@ -66,14 +64,14 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the cursor position is out of bounds or if the operation
     /// fails.
-    pub fn insert_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
+    pub fn try_insert_chars(&mut self, how_many: VPLength) -> Result<(), OfsBufBoundsError> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
         // Nothing to insert if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at.col_index) == ArrayOverflowResult::Overflowed {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::ColOutOfBounds { col: at.col_index });
         }
 
         // Calculate how many characters we can actually insert.
@@ -82,17 +80,17 @@ impl OfsBufVT100 {
 
         // Exit early if nothing to insert.
         if how_many_clamped.is_empty() {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::EmptyOperation);
         }
 
         let buffer_height = active_buf.get_viewport().get_height();
         if buffer_height.is_overflowed_by(at.row_index) == ArrayOverflowResult::Overflowed
         {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: at.row_index });
         }
 
         let Some(line) = active_buf.get_row_mut(at.row_index) else {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: at.row_index });
         };
 
         // Copy characters to the right to make room for insertion. Define inclusive
@@ -157,14 +155,14 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the cursor position is out of bounds or if the operation
     /// fails.
-    pub fn delete_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
+    pub fn try_delete_chars(&mut self, how_many: VPLength) -> Result<(), OfsBufBoundsError> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
         // Nothing to delete if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at.col_index) == ArrayOverflowResult::Overflowed {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::ColOutOfBounds { col: at.col_index });
         }
 
         // Calculate how many characters we can actually delete.
@@ -173,13 +171,13 @@ impl OfsBufVT100 {
 
         // Exit early if nothing to delete.
         if how_many_clamped.is_empty() {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::EmptyOperation);
         }
 
         let buffer_height = active_buf.get_viewport().get_height();
         if buffer_height.is_overflowed_by(at.row_index) == ArrayOverflowResult::Overflowed
         {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: at.row_index });
         }
 
         // Copy characters from the right, overwriting the characters at cursor (this IS
@@ -237,14 +235,14 @@ impl OfsBufVT100 {
     ///
     /// Returns an error if the cursor position is out of bounds or if the operation
     /// fails.
-    pub fn clear_chars(&mut self, how_many: VPLength) -> miette::Result<()> {
+    pub fn try_clear_chars(&mut self, how_many: VPLength) -> Result<(), OfsBufBoundsError> {
         let at = self.get_active_screen_buffer().get_cursor_pos();
         let active_buf = self.get_active_screen_buffer_mut();
         let max_width = active_buf.get_viewport().get_width();
 
         // Nothing to erase if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at.col_index) == ArrayOverflowResult::Overflowed {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::ColOutOfBounds { col: at.col_index });
         }
 
         // Calculate how many characters we can actually erase.
@@ -253,13 +251,13 @@ impl OfsBufVT100 {
 
         // Exit early if nothing to erase.
         if how_many_clamped.is_empty() {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::EmptyOperation);
         }
 
         let buffer_height = active_buf.get_viewport().get_height();
         if buffer_height.is_overflowed_by(at.row_index) == ArrayOverflowResult::Overflowed
         {
-            return Err(miette::miette!("Operation failed"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: at.row_index });
         }
 
         // Use type-safe range clamping for consistent patterns.
@@ -273,16 +271,17 @@ impl OfsBufVT100 {
     /// Applies the deferred pending wrap by performing a carriage return and line feed.
     ///
     /// This is called when the terminal is in a pending wrap state and receives the next
-    /// printable character. It delegates to [`handle_carriage_return`] and [`index_down`]
+    /// printable character. It delegates to [`handle_carriage_return`] and [`try_index_down`]
     /// which automatically handles [`DECSTBM`] scrolling regions correctly.
     ///
     /// # Errors
     /// Returns an error if the scrolling operation fails.
     ///
     /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-    pub fn apply_pending_wrap(&mut self) -> miette::Result<()> {
+    /// [`try_index_down`]: Self::try_index_down
+    pub fn try_apply_pending_wrap(&mut self) -> Result<(), OfsBufBoundsError> {
         self.handle_carriage_return();
-        self.index_down()?;
+        self.try_index_down()?;
         self.get_parser_global_state_mut().clear_pending_wrap();
         ok!()
     }
@@ -314,11 +313,11 @@ impl OfsBufVT100 {
     ///
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
     /// [`DECAWM`]: https://vt100.net/docs/vt510-rm/DECAWM.html
-    pub fn print_char(&mut self, ch: char) -> miette::Result<()> {
+    pub fn try_print_char(&mut self, ch: char) -> Result<(), OfsBufBoundsError> {
         // If there's a pending wrap, apply it before printing this new character. Handle
         // pending line wrap based on DECAWM (Auto Wrap Mode).
         if self.get_parser_global_state_mut().get_pending_wrap() == PendingWrap::Yes {
-            self.apply_pending_wrap()?;
+            self.try_apply_pending_wrap()?;
         }
 
         // Apply character set translation if in graphics mode.
@@ -353,7 +352,7 @@ impl OfsBufVT100 {
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             //
-            // This logic only triggers when `print_char()` places a character into the
+            // This logic only triggers when `try_print_char()` places a character into the
             // very last column on the screen (when `new_col` overflows the maximum
             // column). When that happens, the terminal does not jump to the next line
             // yet. It just parks the cursor directly on top of the character it just
@@ -416,7 +415,7 @@ mod tests_shifting_ops {
 
         // Insert 2 blank characters at position 2 (before 'C').
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.insert_chars(vp_len(2));
+        let result = buffer.try_insert_chars(vp_len(2));
         assert!(result.is_ok());
 
         // Expected result: "AB  CD" (E and F are pushed out).
@@ -468,7 +467,7 @@ mod tests_shifting_ops {
 
         // Try to insert 10 characters at position 1 (more than remaining space).
         buffer.set_cursor_pos(test_row + vp_col(1));
-        let result = buffer.insert_chars(vp_len(10));
+        let result = buffer.try_insert_chars(vp_len(10));
         assert!(result.is_ok());
 
         // Should insert as many as possible: "A     " (5 spaces, B-F pushed out).
@@ -498,7 +497,7 @@ mod tests_shifting_ops {
 
         // Try to insert at the last position.
         buffer.set_cursor_pos(test_row + vp_col(5));
-        let result = buffer.insert_chars(vp_len(1));
+        let result = buffer.try_insert_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Should insert one space, pushing F out: "ABCDE ".
@@ -522,17 +521,17 @@ mod tests_shifting_ops {
 
         // Test with invalid row.
         buffer.set_cursor_pos(vp_pos(2, 10));
-        let result1 = buffer.insert_chars(vp_len(1));
+        let result1 = buffer.try_insert_chars(vp_len(1));
         assert!(result1.is_err());
 
         // Test with cursor position beyond line width.
         buffer.set_cursor_pos(vp_pos(10, 0));
-        let result2 = buffer.insert_chars(vp_len(1));
+        let result2 = buffer.try_insert_chars(vp_len(1));
         assert!(result2.is_err());
 
         // Test with zero insert count.
         buffer.set_cursor_pos(vp_pos(2, 0));
-        let result3 = buffer.insert_chars(vp_len(0));
+        let result3 = buffer.try_insert_chars(vp_len(0));
         assert!(result3.is_err());
     }
 
@@ -546,7 +545,7 @@ mod tests_shifting_ops {
 
         // Delete 2 characters at position 2 (delete 'C' and 'D').
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.delete_chars(vp_len(2));
+        let result = buffer.try_delete_chars(vp_len(2));
         assert!(result.is_ok());
 
         // Verify: "AB" + "EF" + "  " (CD deleted, EF shifted left, blanks at end).
@@ -598,7 +597,7 @@ mod tests_shifting_ops {
 
         // Try to delete 10 characters at position 1 (more than remaining space).
         buffer.set_cursor_pos(test_row + vp_col(1));
-        let result = buffer.delete_chars(vp_len(10));
+        let result = buffer.try_delete_chars(vp_len(10));
         assert!(result.is_ok());
 
         // Verify: "A" + "     " (BCDEF all deleted, 5 blanks at end).
@@ -628,7 +627,7 @@ mod tests_shifting_ops {
 
         // Try to delete at the last position.
         buffer.set_cursor_pos(test_row + vp_col(5));
-        let result = buffer.delete_chars(vp_len(1));
+        let result = buffer.try_delete_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Verify: "ABCDE " (F deleted, one blank at end).
@@ -654,17 +653,17 @@ mod tests_shifting_ops {
 
         // Test with invalid row.
         buffer.set_cursor_pos(vp_pos(2, 10));
-        let result1 = buffer.delete_chars(vp_len(1));
+        let result1 = buffer.try_delete_chars(vp_len(1));
         assert!(result1.is_err());
 
         // Test with cursor position beyond line width.
         buffer.set_cursor_pos(vp_pos(10, 0));
-        let result2 = buffer.delete_chars(vp_len(1));
+        let result2 = buffer.try_delete_chars(vp_len(1));
         assert!(result2.is_err());
 
         // Test with zero delete count.
         buffer.set_cursor_pos(vp_pos(2, 0));
-        let result3 = buffer.delete_chars(vp_len(0));
+        let result3 = buffer.try_delete_chars(vp_len(0));
         assert!(result3.is_err());
     }
 
@@ -678,7 +677,7 @@ mod tests_shifting_ops {
 
         // Erase 3 characters at position 2 (erase 'C', 'D', 'E').
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.clear_chars(vp_len(3));
+        let result = buffer.try_clear_chars(vp_len(3));
         assert!(result.is_ok());
 
         // Verify: "AB" + "   " + "F" (CDE erased with blanks, F stays in place).
@@ -730,7 +729,7 @@ mod tests_shifting_ops {
 
         // Try to erase 10 characters at position 1 (more than remaining space).
         buffer.set_cursor_pos(test_row + vp_col(1));
-        let result = buffer.clear_chars(vp_len(10));
+        let result = buffer.try_clear_chars(vp_len(10));
         assert!(result.is_ok());
 
         // Verify: "A" + "     " (BCDEF all erased with blanks).
@@ -760,7 +759,7 @@ mod tests_shifting_ops {
 
         // Try to erase at the last position.
         buffer.set_cursor_pos(test_row + vp_col(5));
-        let result = buffer.clear_chars(vp_len(1));
+        let result = buffer.try_clear_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Verify: "ABCDE " (F erased with blank).
@@ -786,17 +785,17 @@ mod tests_shifting_ops {
 
         // Test with invalid row.
         buffer.set_cursor_pos(vp_pos(2, 10));
-        let result1 = buffer.clear_chars(vp_len(1));
+        let result1 = buffer.try_clear_chars(vp_len(1));
         assert!(result1.is_err());
 
         // Test with cursor position beyond line width.
         buffer.set_cursor_pos(vp_pos(10, 0));
-        let result2 = buffer.clear_chars(vp_len(1));
+        let result2 = buffer.try_clear_chars(vp_len(1));
         assert!(result2.is_err());
 
         // Test with zero erase count.
         buffer.set_cursor_pos(vp_pos(2, 0));
-        let result3 = buffer.clear_chars(vp_len(0));
+        let result3 = buffer.try_clear_chars(vp_len(0));
         assert!(result3.is_err());
     }
 
@@ -829,7 +828,7 @@ mod tests_shifting_ops {
 
         // Test delete at column 0 - should delete A,B and shift left.
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.delete_chars(vp_len(2));
+        let result = buffer.try_delete_chars(vp_len(2));
         assert!(result.is_ok());
 
         // Verify: C,D,E,F,G,H,I,J shifted left, blanks at end.
@@ -874,7 +873,7 @@ mod tests_shifting_ops {
 
         // Test insert at column 0 - should insert 2 blanks and shift right.
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.insert_chars(vp_len(2));
+        let result = buffer.try_insert_chars(vp_len(2));
         assert!(result.is_ok());
 
         // Verify: 2 blanks inserted at start, A-H shifted right, I,J lost.
@@ -913,7 +912,7 @@ mod tests_shifting_ops {
 
         // Test erase at column 0 - should erase A,B,C without shifting.
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.clear_chars(vp_len(3));
+        let result = buffer.try_clear_chars(vp_len(3));
         assert!(result.is_ok());
 
         // Verify: A,B,C erased (blanks), D-J remain in place.
@@ -977,7 +976,7 @@ mod tests_shifting_ops {
 
         // Test single char delete at middle position (delete C).
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.delete_chars(vp_len(1));
+        let result = buffer.try_delete_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Verify: A,B remain, D,E shifted left, blank at end.
@@ -1022,7 +1021,7 @@ mod tests_shifting_ops {
 
         // Test single char insert at middle position (before C).
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.insert_chars(vp_len(1));
+        let result = buffer.try_insert_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Verify: A,B remain, blank inserted, C,D shifted right, E lost.
@@ -1067,7 +1066,7 @@ mod tests_shifting_ops {
 
         // Test single char erase at middle position (erase C).
         buffer.set_cursor_pos(test_row + vp_col(2));
-        let result = buffer.clear_chars(vp_len(1));
+        let result = buffer.try_clear_chars(vp_len(1));
         assert!(result.is_ok());
 
         // Verify: A,B remain, C erased (blank), D,E remain in place.
@@ -1110,7 +1109,7 @@ mod tests_shifting_ops {
 
         // Test delete on empty line (should succeed but do nothing).
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.delete_chars(vp_len(3));
+        let result = buffer.try_delete_chars(vp_len(3));
         assert!(result.is_ok()); // Should succeed on spacer-filled line
 
         // Verify line remains empty.
@@ -1126,7 +1125,7 @@ mod tests_shifting_ops {
 
         // Test insert on empty line at column 0.
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.insert_chars(vp_len(3));
+        let result = buffer.try_insert_chars(vp_len(3));
         assert!(result.is_ok());
 
         // Verify 3 blanks were inserted (line still appears empty).
@@ -1141,7 +1140,7 @@ mod tests_shifting_ops {
 
         // Test erase on empty line (should succeed but do nothing).
         buffer.set_cursor_pos(test_row + vp_col(0));
-        let result = buffer.clear_chars(vp_len(2));
+        let result = buffer.try_clear_chars(vp_len(2));
         assert!(result.is_ok()); // Should succeed on spacer-filled line
 
         // Verify line remains empty.
@@ -1166,7 +1165,7 @@ mod tests_shifting_ops {
 
         // Try to delete at position beyond content length (but within width).
         buffer.set_cursor_pos(test_row + vp_col(5));
-        let result = buffer.delete_chars(vp_len(1));
+        let result = buffer.try_delete_chars(vp_len(1));
         assert!(result.is_ok()); // Should succeed - position is within buffer width
 
         // Verify original content unchanged.
@@ -1206,7 +1205,7 @@ mod tests_print_char {
         buffer.set_cursor_pos(vp_pos(2, 1));
 
         // Print a character.
-        let _unused = buffer.print_char('A');
+        let _unused = buffer.try_print_char('A');
 
         // Verify character was printed at cursor position.
         let printed_char = buffer.get_char(vp_pos(2, 1)).expect("conversion error");
@@ -1229,7 +1228,7 @@ mod tests_print_char {
         buffer.set_cursor_pos(vp_pos(0, 0));
 
         // Print DEC graphics characters that should be translated.
-        let _unused = buffer.print_char('q'); // Should become '─' (horizontal line)
+        let _unused = buffer.try_print_char('q'); // Should become '─' (horizontal line)
 
         // Verify translation occurred.
         let printed_char = buffer.get_char(vp_pos(0, 0)).expect("conversion error");
@@ -1250,7 +1249,7 @@ mod tests_print_char {
         buffer.set_cursor_pos(vp_pos(4, 1));
 
         // Print a character - should wrap to next line.
-        let _unused = buffer.print_char('X');
+        let _unused = buffer.try_print_char('X');
 
         // Verify character was printed at end of current line.
         let printed_char = buffer.get_char(vp_pos(4, 1)).expect("conversion error");
@@ -1268,7 +1267,7 @@ mod tests_print_char {
         );
 
         // Print another character - should wrap to next line, and print at column 0.
-        let _unused = buffer.print_char('Y');
+        let _unused = buffer.try_print_char('Y');
         let printed_char = buffer.get_char(vp_pos(0, 2)).expect("conversion error");
         match printed_char {
             PixelChar::PlainText { display_char, .. } => assert_eq!(display_char, 'Y'),

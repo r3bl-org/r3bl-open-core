@@ -173,7 +173,6 @@ mod impl_elegant_constructor_dsl_pattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_editor_buffer_config_dsl() {

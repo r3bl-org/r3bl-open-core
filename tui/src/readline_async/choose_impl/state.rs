@@ -153,7 +153,7 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TuiStyle, assert_eq2, cli_text_inline};
+    use crate::{TuiStyle, cli_text_inline};
     use smallvec::smallvec;
 
     #[test]

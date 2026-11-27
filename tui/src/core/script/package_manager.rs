@@ -1,7 +1,39 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommandOutputResult, command, ok};
-use miette::{Context, IntoDiagnostic};
+use crate::ProcessExecutionOutcome;
+use std::process::ExitStatus;
+
+/// Error returned by [`try_check_if_package_is_installed`] and [`try_install_package`].
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum PackageManagerError {
+    /// No supported package manager binary was detected on this system.
+    #[error("No supported package manager detected on this system")]
+    UnsupportedSystem,
+
+    /// Failed to spawn the package manager check or install command.
+    #[error("Failed to spawn package manager command '{program}'")]
+    SpawnFailed {
+        /// Program name invoked.
+        program: String,
+        /// Underlying OS spawn error.
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Package installation command exited with a non-zero status.
+    #[error("Failed to install package '{package_name}' (status {status}): {stderr}")]
+    InstallFailed {
+        /// Package name requested for installation.
+        package_name: String,
+        /// Non-zero exit status returned by the installer.
+        status: ExitStatus,
+        /// Captured [`stderr`] decoded as lossy [`UTF-8`].
+        ///
+        /// [`stderr`]: std::io::stderr
+        /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+        stderr: String,
+    },
+}
 
 /// Supported package manager types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,48 +55,48 @@ impl PackageManager {
     #[must_use]
     pub fn detect() -> Option<Self> {
         // Check in order of specificity
-        let cmd_output_result = std::process::Command::new("apt-get")
+        let res_output = std::process::Command::new("apt-get")
             .arg("--version")
             .output();
         if matches!(
-            CommandOutputResult::from(cmd_output_result),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         ) {
             return Some(PackageManager::Apt);
         }
 
-        let cmd_output_result =
+        let res_output =
             std::process::Command::new("dnf").arg("--version").output();
         if matches!(
-            CommandOutputResult::from(cmd_output_result),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         ) {
             return Some(PackageManager::Dnf);
         }
 
-        let cmd_output_result = std::process::Command::new("pacman").arg("-V").output();
+        let res_output = std::process::Command::new("pacman").arg("-V").output();
         if matches!(
-            CommandOutputResult::from(cmd_output_result),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         ) {
             return Some(PackageManager::Pacman);
         }
 
-        let cmd_output_result = std::process::Command::new("zypper")
+        let res_output = std::process::Command::new("zypper")
             .arg("--version")
             .output();
         if matches!(
-            CommandOutputResult::from(cmd_output_result),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         ) {
             return Some(PackageManager::Zypper);
         }
 
-        let cmd_output_result =
+        let res_output =
             std::process::Command::new("brew").arg("--version").output();
         if matches!(
-            CommandOutputResult::from(cmd_output_result),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         ) {
             return Some(PackageManager::Brew);
         }
@@ -107,12 +139,12 @@ impl PackageManager {
 /// regardless of package manager.
 #[must_use]
 pub fn is_command_available(command_name: &str) -> bool {
-    let cmd_output_result = std::process::Command::new("which")
+    let res_output = std::process::Command::new("which")
         .arg(command_name)
         .output();
     matches!(
-        CommandOutputResult::from(cmd_output_result),
-        CommandOutputResult::Success(_)
+        ProcessExecutionOutcome::from(res_output),
+        ProcessExecutionOutcome::Success(_)
     )
 }
 
@@ -132,21 +164,23 @@ pub fn is_command_available(command_name: &str) -> bool {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::check_if_package_is_installed;
+/// use r3bl_tui::try_check_if_package_is_installed;
 ///
 /// async fn check() {
 ///     let package_name = "bash";
-///     let is_installed = check_if_package_is_installed(package_name).await.expect("conversion error");
+///     let is_installed = try_check_if_package_is_installed(package_name).await.expect("conversion error");
 ///     assert!(is_installed);
 /// }
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - No supported package manager is detected
-/// - The command fails to execute
-pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result<bool> {
+/// Returns [`PackageManagerError::UnsupportedSystem`] if no supported package manager is
+/// detected, or [`PackageManagerError::SpawnFailed`] if the check command fails to
+/// execute.
+pub async fn try_check_if_package_is_installed(
+    package_name: &str,
+) -> Result<bool, PackageManagerError> {
     // Fast path: check if command is available on PATH.
     // This handles macOS system binaries (e.g., /bin/bash) that aren't
     // managed by brew, and provides a quick answer on all platforms.
@@ -156,22 +190,27 @@ pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result
 
     // Slow path: ask the package manager (handles library packages and
     // packages whose binary name differs from the package name).
-    let pkg_mgr = PackageManager::detect()
-        .ok_or_else(|| miette::miette!("No supported package manager found"))?;
+    let pkg_mgr =
+        PackageManager::detect().ok_or(PackageManagerError::UnsupportedSystem)?;
 
     let (cmd, base_args) = pkg_mgr.check_command();
 
-    let cmd_output_result = command!(
+    let res_output = command!(
         program => cmd,
         args => base_args[0], package_name
     )
     .output()
     .await;
 
-    match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::Success(_) => ok!(true),
-        CommandOutputResult::NonZeroExit(_) => ok!(false),
-        CommandOutputResult::SpawnFailed(err) => Err(err).into_diagnostic(),
+    match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::Success(_) => ok!(true),
+        ProcessExecutionOutcome::NonZeroExit(_) => ok!(false),
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
+            Err(PackageManagerError::SpawnFailed {
+                program: cmd.to_owned(),
+                src_err,
+            })
+        }
     }
 }
 
@@ -191,28 +230,29 @@ pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::install_package;
+/// use r3bl_tui::try_install_package;
 ///
 /// async fn install() {
 ///     let package_name = "tree";
-///     install_package(package_name).await.expect("conversion error");
+///     try_install_package(package_name).await.expect("conversion error");
 /// }
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`PackageManagerError`] if:
 /// - No supported package manager is detected
-/// - The user does not have sudo privileges (for package managers that require it)
-/// - The package installation fails
-/// - Network issues prevent downloading the package
-pub async fn install_package(package_name: &str) -> miette::Result<()> {
-    let pkg_mgr = PackageManager::detect()
-        .ok_or_else(|| miette::miette!("No supported package manager found"))?;
+///   ([`PackageManagerError::UnsupportedSystem`])
+/// - Spawning the install command fails ([`PackageManagerError::SpawnFailed`])
+/// - The package installation exits non-zero ([`PackageManagerError::InstallFailed`])
+pub async fn try_install_package(package_name: &str) -> Result<(), PackageManagerError> {
+    let pkg_mgr =
+        PackageManager::detect().ok_or(PackageManagerError::UnsupportedSystem)?;
 
     let (cmd, base_args) = pkg_mgr.install_command();
+    let invoked_program = if pkg_mgr.requires_sudo() { "sudo" } else { cmd };
 
-    let cmd_output_result = if pkg_mgr.requires_sudo() {
+    let res_output = if pkg_mgr.requires_sudo() {
         // Build args: ["apt", "install", "-y", package_name]
         let mut args = vec![cmd];
         args.extend(base_args.iter().copied());
@@ -237,19 +277,19 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
         .await
     };
 
-    match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::Success(_) => ok!(),
-        CommandOutputResult::NonZeroExit(output) => Err(miette::miette!(
-            "Failed to install package '{}' with {}: {:?}",
-            package_name,
-            cmd,
-            String::from_utf8_lossy(&output.stderr)
-        )),
-        CommandOutputResult::SpawnFailed(err) => {
-            Err(err).into_diagnostic().wrap_err_with(|| {
-                format!(
-                    "Failed to spawn installation command for package '{package_name}'"
-                )
+    match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::Success(_) => ok!(),
+        ProcessExecutionOutcome::NonZeroExit(output) => {
+            Err(PackageManagerError::InstallFailed {
+                package_name: package_name.to_owned(),
+                status: output.status,
+                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+            })
+        }
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
+            Err(PackageManagerError::SpawnFailed {
+                program: invoked_program.to_owned(),
+                src_err,
             })
         }
     }
@@ -283,7 +323,7 @@ mod tests_package_manager {
     async fn test_check_if_package_is_installed() {
         // bash should be installed on any Unix-like system
         let package_name = "bash";
-        let result = check_if_package_is_installed(package_name).await;
+        let result = try_check_if_package_is_installed(package_name).await;
 
         // Only check if we have a package manager available
         if let Ok(is_installed) = result {
@@ -294,7 +334,7 @@ mod tests_package_manager {
     #[tokio::test]
     async fn test_install_nonexistent_package() {
         let package_name = "this_package_definitely_does_not_exist_12345";
-        let result = install_package(package_name).await;
+        let result = try_install_package(package_name).await;
 
         // This should fail because the package doesn't exist
         assert!(result.is_err());

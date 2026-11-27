@@ -145,11 +145,11 @@
 //! [`Alacritty`]: https://alacritty.org/
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
-//! [`generator`]: crate::generator
+//! [`generator`]: mod@crate::core::ansi::generator
 //! [`observe_real_interactive_terminal_input_events`]: mod@super::observe_real_interactive_terminal_input_events
 //! [`SGR`]: crate::SgrCode
 //! [`unit_tests::generator_round_trip_tests`]:
-//!     mod@crate::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
+//!     mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::giti::{BranchNewDetails, CommandRunDetails, ui_str};
-use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, IntoErr,
+use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, IntoErr,
                ReadlineAsyncContext, ReadlineEvent, TuiAvailability,
                try_create_and_switch_to_branch, try_get_local_branches};
 
@@ -13,12 +13,12 @@ use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, IntoErr,
 /// - Git operations fail
 /// - User input fails
 /// - Branch creation fails (branch already exists, invalid name, etc.)
-pub async fn handle_branch_new_command(
+pub async fn try_handle_branch_new_command(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+) -> miette::Result<CommandRunReport<CommandRunDetails>> {
     match maybe_branch_name {
-        Some(branch_name) => command_execute::create_new_branch(branch_name).await,
-        None => user_interaction::prompt_for_branch_name().await,
+        Some(branch_name) => command_execute::try_create_new_branch(branch_name).await,
+        None => user_interaction::try_prompt_for_branch_name().await,
     }
 }
 
@@ -42,35 +42,37 @@ mod command_execute {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn create_new_branch(
+    pub async fn try_create_new_branch(
         branch_name: String,
-    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = try_get_local_branches().await;
-        let (_, branch_info) = res?;
+    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+        let (_, branch_info) = try_get_local_branches().await.result?;
 
         if let BranchExists::Yes = branch_info.exists_locally(&branch_name) {
             let string =
                 ui_str::branch_create_display::info_branch_already_exists(&branch_name);
-            let it = CommandRunResult::Noop(string, details::with_details(branch_name));
+            let it = CommandRunReport::Noop(string, details::with_details(branch_name));
             return Ok(it);
         }
 
-        let (res_output, cmd) = try_create_and_switch_to_branch(&branch_name).await;
+        let CommandRunOutcome {
+            result: res_output,
+            command: cmd,
+        } = try_create_and_switch_to_branch(&branch_name).await;
         match res_output {
             Ok(()) => {
-                let it = CommandRunResult::Run(
+                let it = CommandRunReport::Run(
                     ui_str::branch_create_display::info_create_success(&branch_name),
                     details::with_details(branch_name),
                     cmd,
                 );
                 Ok(it)
             }
-            Err(report) => {
+            Err(err) => {
                 let string =
                     ui_str::branch_create_display::error_failed_to_create_new_branch(
                         &branch_name,
                     );
-                let it = CommandRunResult::Fail(string, cmd, report);
+                let it = CommandRunReport::Fail(string, cmd, err.into());
                 Ok(it)
             }
         }
@@ -81,8 +83,8 @@ mod user_interaction {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn prompt_for_branch_name()
-    -> CommonResult<CommandRunResult<CommandRunDetails>> {
+    pub async fn try_prompt_for_branch_name()
+    -> miette::Result<CommandRunReport<CommandRunDetails>> {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
 
@@ -94,19 +96,19 @@ mod user_interaction {
 
         // The loop is just to handle the resize event.
         loop {
-            let evt = rl_ctx.read_line().await?;
+            let evt = rl_ctx.try_read_line().await?;
             match evt {
                 ReadlineEvent::Line(branch_name) => {
-                    rl_ctx.request_shutdown(None).await?;
+                    rl_ctx.try_request_shutdown(None).await?;
                     rl_ctx.await_shutdown().await;
 
-                    return command_execute::create_new_branch(branch_name).await;
+                    return command_execute::try_create_new_branch(branch_name).await;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                    rl_ctx.request_shutdown(None).await?;
+                    rl_ctx.try_request_shutdown(None).await?;
                     rl_ctx.await_shutdown().await;
 
-                    let it = CommandRunResult::Noop(
+                    let it = CommandRunReport::Noop(
                         ui_str::branch_create_display::info_no_branch_created(),
                         details::empty(),
                     );

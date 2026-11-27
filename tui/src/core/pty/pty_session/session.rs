@@ -7,13 +7,13 @@ use crate::ControlledChildTerminationHandle;
 
 /// Handle for a [`PTY`] session.
 ///
-/// This is returned by [`PtySessionBuilder::start()`].
+/// This is returned by [`PtySessionBuilder::try_start()`].
 ///
 /// Holds the synchronous communication channels and lifecycle handles for interacting
 /// with the background threads running the child process.
 ///
 /// For asynchronous applications that require a [`tokio::select!`] loop, use
-/// [`PtySessionBuilder::start_async()`] instead, which returns an [`AsyncPtySession`].
+/// [`PtySessionBuilder::try_start_async()`] instead, which returns an [`AsyncPtySession`].
 /// See the [Session Layer] documentation for details.
 ///
 /// # Examples
@@ -30,7 +30,7 @@ use crate::ControlledChildTerminationHandle;
 /// fn main() -> miette::Result<()> {
 ///     let mut session = PtySessionBuilder::new("echo")
 ///         .cli_arg("hello")
-///         .start()?;
+///         .try_start()?;
 ///
 ///     while let Ok(event) = session.rx_output_event.recv() {
 ///         match event {
@@ -49,10 +49,10 @@ use crate::ControlledChildTerminationHandle;
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyInputEvent`]: crate::PtyInputEvent
 /// [`PtyOutputEvent`]: crate::PtyOutputEvent
-/// [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
-/// [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
+/// [`PtySessionBuilder::try_start()`]: crate::PtySessionBuilder::try_start
+/// [`PtySessionBuilder::try_start_async()`]: crate::PtySessionBuilder::try_start_async
 /// [`tokio::select!`]: tokio::select
-/// [Session Layer]: mod@crate::pty_session
+/// [Session Layer]: mod@crate::core::pty::pty_session
 #[derive(Debug)]
 pub struct PtySession {
     /// Send [`PtyInputEvent`] events to the child process.
@@ -75,7 +75,7 @@ pub struct PtySession {
 
 /// Handle for an asynchronous [`PTY`] session.
 ///
-/// This is returned by [`PtySessionBuilder::start_async()`].
+/// This is returned by [`PtySessionBuilder::try_start_async()`].
 ///
 /// Holds the asynchronous communication channels and lifecycle handles for interacting
 /// with the background threads running the child process. It is designed for use in
@@ -97,7 +97,7 @@ pub struct PtySession {
 /// async fn main() -> miette::Result<()> {
 ///     let mut session = PtySessionBuilder::new("echo")
 ///         .cli_arg("hello")
-///         .start_async()?;
+///         .try_start_async()?;
 ///
 ///     loop {
 ///         tokio::select! {
@@ -122,7 +122,7 @@ pub struct PtySession {
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyInputEvent`]: crate::PtyInputEvent
 /// [`PtyOutputEvent`]: crate::PtyOutputEvent
-/// [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
+/// [`PtySessionBuilder::try_start_async()`]: crate::PtySessionBuilder::try_start_async
 /// [`tokio::select!`]: tokio::select
 #[derive(Debug)]
 pub struct AsyncPtySession {

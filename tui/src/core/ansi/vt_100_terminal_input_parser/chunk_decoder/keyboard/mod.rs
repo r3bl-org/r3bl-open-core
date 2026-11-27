@@ -430,50 +430,27 @@
 //! [`utf8`]: mod@super::utf8
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-220`]: https://en.wikipedia.org/wiki/VT220
-//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`VT100KeyCodeIR`]: crate::vt_100_terminal_input_parser::VT100KeyCodeIR
-//! [`VT100KeyModifiersIR`]: crate::vt_100_terminal_input_parser::VT100KeyModifiersIR
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100KeyCodeIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR
+//! [`VT100KeyModifiersIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyModifiersIR
 //! [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 //! [`xterm`]: https://en.wikipedia.org/wiki/Xterm
 //! [ANSI escape codes]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [Bob Bemer]: https://en.wikipedia.org/wiki/Bob_Bemer
 //! [Ken Thompson]: https://en.wikipedia.org/wiki/Ken_Thompson
-//! [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+//! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 //! [parity checking]: https://en.wikipedia.org/wiki/Parity_bit
 //! [Rob Pike]: https://en.wikipedia.org/wiki/Rob_Pike
 
 // Skip rustfmt for rest of file.
 #![rustfmt::skip]
 
-// Submodules with conditional visibility for documentation and testing.
-#[cfg(any(test, doc))]
-pub mod alt_keys;
-#[cfg(not(any(test, doc)))]
+// Private modules (hide internal structure).
 mod alt_keys;
-
-#[cfg(any(test, doc))]
-pub mod ctrl_and_dedicated_keys;
-#[cfg(not(any(test, doc)))]
 mod ctrl_and_dedicated_keys;
-
-#[cfg(any(test, doc))]
-pub mod csi_decoder;
-#[cfg(not(any(test, doc)))]
 mod csi_decoder;
-
-#[cfg(any(test, doc))]
-pub mod csi_u;
-#[cfg(not(any(test, doc)))]
 mod csi_u;
-
-#[cfg(any(test, doc))]
-pub mod modifiers;
-#[cfg(not(any(test, doc)))]
 mod modifiers;
-
-#[cfg(any(test, doc))]
-pub mod ss3;
-#[cfg(not(any(test, doc)))]
 mod ss3;
 
 // Public re-exports (barrel export pattern).

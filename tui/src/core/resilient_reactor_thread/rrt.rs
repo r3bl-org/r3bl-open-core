@@ -3,9 +3,10 @@
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread (RRT)
 //! pattern. See [`RRT`] for details.
 
-use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker, SubscribeError,
-            SubscriberGuard, ThreadLifecycleMonitor, ThreadState, run_worker_loop};
-use crate::{DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
+use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker,
+            RRTWorkerAndInterrupt, SubscribeError, SubscriberGuard,
+            ThreadLifecycleMonitor, ThreadState, run_worker_loop};
+use crate::{DEBUG_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::broadcast;
 
@@ -31,7 +32,7 @@ pub fn try_subscribe<W: RRTWorker>(
     sender: &BroadcastSender<W::Output>,
     shared_state: &Arc<ThreadLifecycleMonitor<W>>,
     config: W::Config,
-) -> Result<SubscriberGuard<W>, SubscribeError> {
+) -> Result<SubscriberGuard<W>, SubscribeError<W::CreateError>> {
     let state_guard = shared_state.block_until_stable_state_reached();
 
     let (strategy, mut state_guard) =
@@ -65,11 +66,11 @@ pub fn try_subscribe<W: RRTWorker>(
                 tokio::sync::broadcast::channel(W::INPUT_CHANNEL_CAPACITY);
 
             // Allocate OS resources (outside the lock).
-            let (worker, interrupt) =
+            let RRTWorkerAndInterrupt { worker, interrupt } =
                 match W::create_and_register_os_sources(config.clone(), input_receiver) {
                     Ok(pair) => pair,
                     Err(err) => {
-                        DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                        DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                             tracing::error!(
                                 message = "RRT: Failed to allocate OS resources.",
                                 error = ?err
@@ -103,7 +104,7 @@ pub fn try_subscribe<W: RRTWorker>(
             let thread_move_shared_state = Arc::clone(shared_state);
             let thread_move_config = config;
 
-            DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+            DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                 tracing::info!(
                     message = "RRT: Spawning new dedicated thread.",
                     generation = thread_generation
@@ -131,7 +132,7 @@ pub fn try_subscribe<W: RRTWorker>(
                     ))
                 }
                 Err(err) => {
-                    DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+                    DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                         tracing::error!(
                             message = "RRT: Failed to spawn dedicated thread.",
                             error = ?err
@@ -280,10 +281,10 @@ pub fn try_subscribe<W: RRTWorker>(
 ///      [`RRTWorker`] encounters a domain stop condition (like an [`EOF`] on [`stdin`]),
 ///      it returns [`Continuation::Stop`].
 ///    - On exit, [`run_worker_loop(worker, ...)`] returns, and the [`RRTWorker`] goes out
-///      of scope, triggering [`RAII`] cleanup on the OS resources it owns.
-///    - [`TerminationGuard::drop()`] (a local [`RAII`] guard) runs, transitioning the
-///      state to [`Stopped`] and calling [`notify_all()`] so new subscribers can spawn a
-///      fresh thread.
+///      of scope, triggering [RAII] cleanup on the OS resources it owns.
+///    - [`TerminationGuard::drop()`] (a local [RAII] guard) runs, transitioning the state
+///      to [`Stopped`] and calling [`notify_all()`] so new subscribers can spawn a fresh
+///      thread.
 /// 5. **Panic Exit** - if your [`block_until_ready_then_dispatch()`] implementation
 ///    panics, it does not take down the process. The framework catches it (via
 ///    [`catch_unwind`]), sends [`Shutdown(Panic)`] to subscribers, and exits the thread.
@@ -332,7 +333,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// │   │         │                       │                               │ │
 /// │   │         ▼                       ▼                               │ │
 /// │   │      Worker                  Interrupt                          │ │
-/// │   │    (owns Poll)         (wraps mio::Waker)                       │ │
+/// │   │    (owns Poll)           (wraps mio::Waker)                     │ │
 /// │   └─────────────────────────────────────────────────────────────────┘ │
 /// │                    │                       │                          │
 /// │                    ▼                       ▼                          │
@@ -369,12 +370,12 @@ pub fn try_subscribe<W: RRTWorker>(
 ///
 /// These are related but different concepts:
 ///
-/// | Term                     | Meaning                                         | Example                                 |
-/// | :----------------------- | :---------------------------------------------- | :-------------------------------------- |
-/// | **`const` expression**   | Value the compiler can compute at compile time  | `1 + 2`, `Mutex::new(None)`             |
-/// | **`const`** function     | Function callable in const context              | `const fn new() -> Option<T> { None }`  |
-/// | **`const` declaration**  | Read-only, no address (value is inlined)        | `const G: Mutex<T> = /* const expr */`  |
-/// | **`static` declaration** | Single instance, fixed addr, can be mutable     | `static G: Mutex<T> = /* const expr */` |
+/// | Term                     | Meaning                               | Example                                 |
+/// | :----------------------- | :------------------------------------ | :-------------------------------------- |
+/// | **`const` expression**   | Compiler can compute at compile time  | `1 + 2`, `Mutex::new(None)`             |
+/// | **`const`** function     | Function callable in const context    | `const fn new() -> Option<T> { None }`  |
+/// | **`const` declaration**  | Read-only, no addr (value is inlined) | `const G: Mutex<T> = /* const expr */`  |
+/// | **`static` declaration** | One instance, fixed addr, can be mut  | `static G: Mutex<T> = /* const expr */` |
 ///
 /// **Key point:** Both `static` and `const` declarations look nearly identical at the
 /// **declaration site**, but they have opposite behaviors at **use sites** (where you
@@ -456,7 +457,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// 1. The framework acquires the [`shared_state`] lock, transitions from [`Running`] to
 ///    [`Restarting`] (consuming the old [`RRTSoftwareInterrupt`]), **and immediately
 ///    releases the lock to begin dropping and recreating OS resources**.
-/// 2. The current [`RRTWorker`] is dropped and [`RAII`] cleanup releases OS resources.
+/// 2. The current [`RRTWorker`] is dropped and [RAII] cleanup releases OS resources.
 /// 3. The framework sleeps for the configured delay (see [`RestartPolicy`]).
 /// 4. [`RRTWorker::create_and_register_os_sources()`] is called to create a fresh
 ///    [`RRTWorker`] + [`RRTSoftwareInterrupt`] pair. The new [`RRTWorker`] allocates new
@@ -515,7 +516,6 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [`notify_all()`]: std::sync::Condvar::notify_all
 /// [`Output`]: super::RRTWorker::Output
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
 /// [`Restarting`]: super::ThreadState::Restarting
 /// [`RestartPolicy`]: super::RestartPolicy
@@ -554,6 +554,7 @@ pub fn try_subscribe<W: RRTWorker>(
 /// [broadcast channel]: tokio::sync::broadcast
 /// [generation]: Self::get_thread_generation
 /// [parent module documentation]: super
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [Static vs. Flexible Usage]: super#static-vs-flexible-usage
 /// [thread]: https://en.wikipedia.org/wiki/Thread_(computing)
 /// [two-phase setup]: super#two-phase-setup
@@ -736,7 +737,7 @@ impl<W: RRTWorker> RRT<W> {
     pub fn try_subscribe(
         &self,
         config: W::Config,
-    ) -> Result<SubscriberGuard<W>, SubscribeError> {
+    ) -> Result<SubscriberGuard<W>, SubscribeError<W::CreateError>> {
         try_subscribe::<W>(&self.sender, &self.shared_state, config)
     }
 
@@ -817,7 +818,7 @@ impl<W: RRTWorker> RRT<W> {
     ///     fn create_and_register_os_sources(
     ///         _config: Self::Config,
     ///         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ///     ) -> miette::Result<(Self, Self::Interrupt)> {
+    ///     ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
     ///         // ... implementation ...
     ///     }
     ///     // ...

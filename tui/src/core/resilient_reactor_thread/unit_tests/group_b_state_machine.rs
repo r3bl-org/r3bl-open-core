@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Continuation, InterruptHandle, RRTEvent, RRTSoftwareInterrupt, RRTWorker,
-            StopReason, ThreadLifecycleMonitor, ThreadState,
+            RRTWorkerAndInterrupt, StopReason, ThreadLifecycleMonitor, ThreadState,
             resilient_reactor_thread::TerminationGuard};
 use std::sync::{Arc,
                 atomic::{AtomicBool, Ordering}};
@@ -16,14 +16,19 @@ impl RRTSoftwareInterrupt for TestInterrupt {
     }
 }
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("test worker error")]
+struct TestCreateError;
+
 #[derive(Debug)]
 struct TestWorker;
 impl RRTWorker for TestWorker {
     type Interrupt = TestInterrupt;
+    type CreateError = TestCreateError;
     fn create_and_register_os_sources(
         _config: Self::Config,
         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         unimplemented!()
     }
     fn block_until_ready_then_dispatch(

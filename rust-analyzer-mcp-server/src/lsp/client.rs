@@ -147,13 +147,13 @@ impl RustAnalyzerClient {
     ///
     /// Returns [`McpServerError`] if the binary cannot be found, process spawning fails,
     /// or the initialization handshake times out.
-    pub fn start(&mut self) -> Result<(), McpServerError> {
+    pub fn try_start(&mut self) -> Result<(), McpServerError> {
         if self.is_running() {
             return ok!();
         }
 
-        let ra_path = Self::locate_rust_analyzer_binary()?;
-        let mut child = self.spawn_rust_analyzer_child_process(&ra_path)?;
+        let ra_path = Self::try_locate_rust_analyzer_binary()?;
+        let mut child = self.try_spawn_rust_analyzer_child_process(&ra_path)?;
 
         let lsp_stdin = child.stdin.take().ok_or_else(|| {
             McpServerError::ProcessPipe("Failed to capture stdin".to_string())
@@ -271,11 +271,11 @@ impl RustAnalyzerClient {
             }
         });
 
-        self.send_request(lsp_methods::INITIALIZE, Some(init_params))?;
-        self.send_notification(lsp_methods::INITIALIZED, Some(json!({})))?;
+        self.try_send_request(lsp_methods::INITIALIZE, Some(init_params))?;
+        self.try_send_notification(lsp_methods::INITIALIZED, Some(json!({})))?;
 
         // Request workspace reload to trigger initial check.
-        let _ignored = self.send_request("rust-analyzer/reloadWorkspace", None);
+        let _ignored = self.try_send_request("rust-analyzer/reloadWorkspace", None);
 
         self.handshake_status = HandshakeStatus::Initialized;
         ok!()
@@ -303,8 +303,8 @@ impl RustAnalyzerClient {
     /// Returns [`McpServerError`] if sending the shutdown request fails.
     pub fn shutdown(&mut self) -> Result<(), McpServerError> {
         if self.handshake_status == HandshakeStatus::Initialized {
-            let _ignored_shutdown = self.send_request(lsp_methods::SHUTDOWN, None);
-            let _ignored_exit = self.send_notification(lsp_methods::EXIT, None);
+            let _ignored_shutdown = self.try_send_request(lsp_methods::SHUTDOWN, None);
+            let _ignored_exit = self.try_send_notification(lsp_methods::EXIT, None);
         }
 
         self.lsp_writer = None;

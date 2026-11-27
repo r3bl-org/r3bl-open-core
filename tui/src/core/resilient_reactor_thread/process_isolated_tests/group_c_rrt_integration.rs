@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::fixtures::*;
-use crate::resilient_reactor_thread::{RRT, RRTEvent, ShutdownReason, ThreadState};
+use crate::resilient_reactor_thread::{RRT, RRTEvent, RRTWorkerAndInterrupt,
+                                      ShutdownReason, ThreadState};
 use std::time::{Duration, Instant};
 
 fn is_running(rrt: &RRT<TestWorker>) -> bool {
@@ -21,8 +22,10 @@ fn is_stopped(rrt: &RRT<TestWorker>) -> bool {
 pub fn test_subscribe_spawns_thread() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver =
-        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(3));
+    let _notify_receiver = setup_factory(
+        vec![Ok(RRTWorkerAndInterrupt { worker, interrupt })],
+        no_delay_policy(3),
+    );
 
     let rrt: RRT<TestWorker> = RRT::new();
     let guard = rrt.try_subscribe(()).expect("conversion error");
@@ -51,8 +54,10 @@ pub fn test_subscribe_spawns_thread() {
 pub fn test_subscribe_fast_path_reuse() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver =
-        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(3));
+    let _notify_receiver = setup_factory(
+        vec![Ok(RRTWorkerAndInterrupt { worker, interrupt })],
+        no_delay_policy(3),
+    );
 
     let rrt: RRT<TestWorker> = RRT::new();
     let _guard1 = rrt.try_subscribe(()).expect("conversion error");
@@ -88,7 +93,16 @@ pub fn test_subscribe_slow_path_after_termination() {
     let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
     let _notify_receiver = setup_factory(
-        vec![(Ok((worker1, interrupt1))), (Ok((worker2, interrupt2)))],
+        vec![
+            Ok(RRTWorkerAndInterrupt {
+                worker: worker1,
+                interrupt: interrupt1,
+            }),
+            Ok(RRTWorkerAndInterrupt {
+                worker: worker2,
+                interrupt: interrupt2,
+            }),
+        ],
         no_delay_policy(3),
     );
 
@@ -137,8 +151,10 @@ pub fn test_subscribe_slow_path_after_termination() {
 pub fn test_shutdown_received_by_subscriber() {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
 
-    let _notify_receiver =
-        setup_factory(vec![(Ok((worker, interrupt)))], no_delay_policy(0));
+    let _notify_receiver = setup_factory(
+        vec![Ok(RRTWorkerAndInterrupt { worker, interrupt })],
+        no_delay_policy(0),
+    );
 
     let rrt: RRT<TestWorker> = RRT::new();
     let guard = rrt.try_subscribe(()).expect("conversion error");
@@ -182,7 +198,16 @@ pub fn test_subscribe_after_panic_recovery() {
     let (worker2, interrupt2, _cmd_sender2) = create_test_resources();
 
     let _notify_receiver = setup_factory(
-        vec![(Ok((worker1, interrupt1))), (Ok((worker2, interrupt2)))],
+        vec![
+            Ok(RRTWorkerAndInterrupt {
+                worker: worker1,
+                interrupt: interrupt1,
+            }),
+            Ok(RRTWorkerAndInterrupt {
+                worker: worker2,
+                interrupt: interrupt2,
+            }),
+        ],
         no_delay_policy(3),
     );
 

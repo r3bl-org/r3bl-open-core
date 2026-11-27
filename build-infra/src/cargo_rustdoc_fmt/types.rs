@@ -99,9 +99,9 @@ pub enum FormatStatus {
     Unchanged,
 }
 
-/// A 1-indexed line number as displayed in a text editor or `IDE` gutter (`1..=N`).
+/// A 1-indexed line number as displayed in a text editor or IDE gutter (`1..=N`).
 ///
-/// Converted at the `CLI` / test boundary to a 0-based [`CRow`] storage coordinate via
+/// Converted at the CLI / test boundary to a 0-based [`CRow`] storage coordinate via
 /// [`EditorLineNum::to_c_row`] or [`EditorLineNum::to_c_row_range`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EditorLineNum(pub usize);

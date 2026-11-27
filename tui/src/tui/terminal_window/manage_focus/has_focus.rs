@@ -1,8 +1,20 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonError, CommonResult, FlexBox, FlexBoxId, InlineVec, inline_string,
-            throws, tiny_inline_string};
+use crate::{FlexBox, FlexBoxId, InlineVec};
 use std::fmt::Debug;
+
+/// Error returned by [`HasFocus::try_set_modal_id()`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum ModalFocusError {
+    #[error("Modal id can only be set if base id is already set")]
+    NoBaseFocusSet,
+
+    #[error("Modal id is already set to {current:?}; cannot set to {requested:?}")]
+    ModalAlreadySet {
+        current: Option<FlexBoxId>,
+        requested: FlexBoxId,
+    },
+}
 
 /// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
 /// of the [`FlexBox`] that has keyboard focus.
@@ -103,25 +115,19 @@ impl HasFocus {
     /// - A modal id is already set (cannot nest modal ids)
     ///
     /// [`reset_modal_id`]: HasFocus::reset_modal_id
-    pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult {
+    pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> Result<(), ModalFocusError> {
         throws!({
             // Must have a non modal id already set.
             if !self.is_set() {
-                let msg = "Modal id can only be set if id is already set. id is not set.";
-                return CommonError::new_error_result_with_only_msg(msg);
+                return Err(ModalFocusError::NoBaseFocusSet);
             }
 
             // Must not have a modal id already set.
             if self.is_modal_set() {
-                let msg = inline_string!(
-                    "Modal id is already set to {a}. Can't set it to {b}.",
-                    a = match self.get_id() {
-                        Some(id) => tiny_inline_string!("{id:?}"),
-                        None => tiny_inline_string!("None"),
-                    },
-                    b = tiny_inline_string!("{id:?}")
-                );
-                return CommonError::new_error_result_with_only_msg(&msg);
+                return Err(ModalFocusError::ModalAlreadySet {
+                    current: self.get_id(),
+                    requested: id,
+                });
             }
 
             // Ok to set modal id.
@@ -151,7 +157,6 @@ impl HasFocus {
 #[cfg(test)]
 mod has_focus_tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn works_with_normal_id() {
@@ -190,21 +195,10 @@ mod has_focus_tests {
         assert!(has_focus.is_empty());
         assert!(!has_focus.is_set());
 
-        let my_err_box = has_focus
+        let err = has_focus
             .try_set_modal_id(FlexBoxId::from(1))
-            .expect_err("conversion error");
-        assert_eq2!(my_err_box.is::<CommonError>(), true);
-
-        let my_err = my_err_box
-            .downcast_ref::<CommonError>()
-            .expect("conversion error");
-        let CommonError {
-            error_message: msg, ..
-        } = my_err;
-        assert_eq2!(
-            msg.as_ref().expect("conversion error"),
-            "Modal id can only be set if id is already set. id is not set."
-        );
+            .expect_err("expected ModalFocusError::NoBaseFocusSet");
+        assert_eq2!(err, ModalFocusError::NoBaseFocusSet);
 
         assert!(!has_focus.is_modal_set());
         assert!(!has_focus.is_modal_id(FlexBoxId::from(1)));
@@ -225,7 +219,13 @@ mod has_focus_tests {
         assert!(!has_focus.is_modal_id(FlexBoxId::from(1)));
         assert_eq2!(has_focus.get_id(), Some(FlexBoxId::from(2)));
 
-        assert!(has_focus.try_set_modal_id(FlexBoxId::from(3)).is_err());
+        assert_eq2!(
+            has_focus.try_set_modal_id(FlexBoxId::from(3)),
+            Err(ModalFocusError::ModalAlreadySet {
+                current: Some(FlexBoxId::from(2)),
+                requested: FlexBoxId::from(3),
+            })
+        );
         assert!(has_focus.is_modal_set());
         assert!(has_focus.is_modal_id(FlexBoxId::from(2)));
 

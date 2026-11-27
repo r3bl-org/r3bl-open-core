@@ -7,7 +7,7 @@
 //!
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::CommandOutputResult;
+use crate::ProcessExecutionOutcome;
 use portable_pty::{CommandBuilder, MasterPty, SlavePty};
 use std::ops::Deref;
 
@@ -87,7 +87,7 @@ impl From<u32> for PtyControlledChildExitStatus {
 
 impl From<PtyControlledChildExitStatus> for std::process::ExitStatus {
     fn from(status: PtyControlledChildExitStatus) -> Self {
-        CommandOutputResult::make_exit_status(status.exit_code())
+        ProcessExecutionOutcome::make_exit_status(status.exit_code())
     }
 }
 

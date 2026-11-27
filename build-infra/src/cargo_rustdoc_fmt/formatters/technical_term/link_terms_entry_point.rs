@@ -321,7 +321,7 @@ mod tests {
     use crate::cargo_rustdoc_fmt::cst::{FileChunk, SourceFileCst};
 
     fn test_registry() -> TechnicalTermDictionary {
-        TechnicalTermDictionary::from_seed(None).unwrap()
+        TechnicalTermDictionary::try_from_seed_file(None).unwrap()
     }
 
     #[test]

@@ -12,18 +12,17 @@
 
 #![rustfmt::skip]
 
-// Private modules (hide internal structure).
+// Attach.
 mod types;
 mod status_ops;
 mod branch_ops;
 mod file_ops;
 
-// Public re-exports (expose stable flat API).
+#[cfg(test)]
+mod git_test_fixtures;
+
+// Re-export.
 pub use types::*;
 pub use status_ops::*;
 pub use branch_ops::*;
 pub use file_ops::*;
-
-// Test fixtures module used by inner test modules in each of these files.
-#[cfg(test)]
-pub mod git_test_fixtures;

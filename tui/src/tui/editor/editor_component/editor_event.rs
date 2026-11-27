@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ClipboardService, DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut,
+use crate::{ClipboardService, DEBUG_CLIPBOARD, DeleteSelectionWith, EditorArgsMut,
             EditorBuffer, EditorEngine, InputEvent, Key, KeyPress, KeyState,
-            ModifierKeysMask, SelectMode, SpecialKey, VPSize,
-            editor_engine::engine_internal_api, fg_green, inline_string,
-            md_parser::md_parser_constants::NEW_LINE_CHAR, validate_scroll_on_resize};
+            ModifierKeysMask, NEW_LINE_CHAR, SelectMode, SpecialKey, VPSize,
+            editor_engine::engine_internal_api, fg_green, validate_scroll_on_resize};
 use std::fmt::Debug;
 
 /// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].
@@ -75,7 +74,7 @@ impl TryFrom<InputEvent> for EditorEvent {
 
     #[allow(clippy::too_many_lines)]
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
-        DEBUG_TUI_COPY_PASTE.then(|| {
+        DEBUG_CLIPBOARD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "🐥🐥🐥  EditorEvent::try_from",
@@ -372,7 +371,7 @@ impl EditorEvent {
 
         // Log paste operations for debugging.
         if is_paste {
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 tracing::debug! {
                     message = "📋📋📋 Text was pasted from clipboard",
                     clipboard_text = %text
@@ -544,7 +543,7 @@ impl EditorEvent {
                         );
                     }
                     Err(error) => {
-                        DEBUG_TUI_COPY_PASTE.then(|| {
+                        DEBUG_CLIPBOARD.then(|| {
                             tracing::debug! {
                                 message = "📋📋📋 Failed to paste the text from clipboard",
                                 error = ?error
@@ -580,7 +579,7 @@ impl EditorEvent {
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEngine,
                 EditorEngineConfig, EditorEvent, FileExtensionToken, LineMode,
-                SelectionAction, assert_eq2, c_caret, c_col, c_row, c_sel_line,
+                SelectionAction, c_caret, c_col, c_row, c_sel_line,
                 clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api};

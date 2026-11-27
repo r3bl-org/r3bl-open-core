@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::md_parser::md_parser_constants::NEW_LINE;
+use crate::NEW_LINE;
 use nom::{Parser,
           branch::alt,
           bytes::complete::tag,
@@ -45,7 +45,7 @@ pub fn take_text_in_single_line<'input>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use super::*;
-    use crate::{assert_eq2, fg_lizard_green};
+    use crate::fg_lizard_green;
 
     #[test]
     fn test_text_until_opt_eol() {

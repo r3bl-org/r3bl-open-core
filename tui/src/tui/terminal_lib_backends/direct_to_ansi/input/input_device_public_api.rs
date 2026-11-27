@@ -8,10 +8,11 @@
 //! [`input_device_impl`]: super::input_device_impl
 
 use super::{channel_types::{PollerEvent, SignalEvent, StdinEvent},
-            input_device_impl::{InputSubscriberGuard, global_input_resource}};
+            input_device_impl::{InputSubscriberGuard, global_input_resource},
+            mio_poller::MioPollWorkerCreateError};
 use crate::{InputEvent,
             core::resilient_reactor_thread::{RRTEvent, SubscribeError},
-            tui::DEBUG_TUI_SHOW_DIRECT_TO_ANSI};
+            tui::DEBUG_DIRECT_TO_ANSI};
 use std::fmt::Debug;
 use tokio::sync::broadcast::error::RecvError;
 
@@ -176,8 +177,8 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ ┌───────────────────────────────────────────────────────────────────────────┐ │
 /// │ │ TUI app A lifecycle                                                       │ │
 /// │ │                                                                           │ │
-/// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
-/// │ │  2. new() calls RRT::try_subscribe()                                      │ │
+/// │ │  1. DirectToAnsiInputDevice::try_new()                                    │ │
+/// │ │  2. try_new() calls RRT::try_subscribe()                                  │ │
 /// │ │  3. ThreadState::Stopped → Starting → Running                             │ │
 /// │ │       • Initializes channel + shared_state monitor                        │ │
 /// │ │       • Spawns mio-poller thread #1                                       │ │
@@ -192,8 +193,8 @@ use tokio::sync::broadcast::error::RecvError;
 /// │ ┌───────────────────────────────────────────────────────────────────────────┐ │
 /// │ │ TUI app B lifecycle                                                       │ │
 /// │ │                                                                           │ │
-/// │ │  1. DirectToAnsiInputDevice::new()                                        │ │
-/// │ │  2. new() calls RRT::try_subscribe()                                      │ │
+/// │ │  1. DirectToAnsiInputDevice::try_new()                                    │ │
+/// │ │  2. try_new() calls RRT::try_subscribe()                                  │ │
 /// │ │  3. ThreadState::Stopped → Starting → Running                             │ │
 /// │ │       • Re-enters Running with a fresh worker/waker pair                  │ │
 /// │ │       • Spawns mio-poller thread #2 (NOT the same as #1!)                 │ │
@@ -212,7 +213,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// **Key insight**: The [`mio_poller`] thread is NOT persistent across the lifetime of
 /// the process. Each app lifecycle spawns a new thread generation. The RRT state machine
-/// enables this by allowing [`new()`] to subscribe and spawn after prior exits.
+/// enables this by allowing [`try_new()`] to subscribe and spawn after prior exits.
 ///
 /// ## Why Keystrokes Aren't Lost During Transitions
 ///
@@ -250,7 +251,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// └──────────────────────────────┬───────────────────────────────────────────────┘
 ///                                │
 /// ┌──────────────────────────────▼───────────────────────────────────────────────┐
-/// │ App B starts, calls DirectToAnsiInputDevice::new()                           │
+/// │ App B starts, calls DirectToAnsiInputDevice::try_new()                       │
 /// │   • RRT::try_subscribe() checks thread state                                 │
 /// │   • If Running: reuses existing thread (no gap in reading)                   │
 /// │   • If Stopped: spawns new thread → reads kernel buffer → no data loss       │
@@ -266,7 +267,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// ## Call Chain (fallible + handle-first)
 ///
 /// ```text
-/// DirectToAnsiInputDevice::new()                      (fallible)
+/// DirectToAnsiInputDevice::try_new()                  (fallible)
 ///     ├─► claim_and_assert()                          (singleton gate)
 ///     └─► SINGLETON.try_subscribe()?                  (may spawn/restart thread)
 ///         └─► return Self { subscriber_guard }
@@ -281,7 +282,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// **Key points:**
 /// - [`DirectToAnsiInputDevice`] is a newtype holding [`SubscriberGuard`]
 /// - Global state ([`SINGLETON`]) persists across handle lifetimes
-/// - Eager subscription - each device subscribes at construction time in [`new()`]
+/// - Eager subscription - each device subscribes at construction time in [`try_new()`]
 /// - Handle-first fan-out - clone additional subscribers from existing guards
 /// - Fallible APIs - callers handle subscription setup failures explicitly
 ///
@@ -342,7 +343,7 @@ use tokio::sync::broadcast::error::RecvError;
 ///
 /// ```text
 /// ┌───────────────────────────────────────────────────────────────────────────┐
-/// │ 0. DirectToAnsiInputDevice::new() called                                  │
+/// │ 0. DirectToAnsiInputDevice::try_new() called                              │
 /// │    └─► try_subscribe() (eager, at construction time)                      │
 /// │        └─► If no thread running: spawns mio-poller thread                 │
 /// │                                                                           │
@@ -491,7 +492,6 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`mio`]: mio
 /// [`MioPollWorker`]: super::mio_poller::MioPollWorker
 /// [`more` flag pattern]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
-/// [`new()`]: Self::new
 /// [`next()`]: Self::next
 /// [`pty_mio_poller_thread_reuse_test`]:
 ///     crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_reuse_test
@@ -512,6 +512,7 @@ use tokio::sync::broadcast::error::RecvError;
 /// [`tokio::io::stdin()`]: tokio::io::stdin
 /// [`tokio::select!`]: tokio::select
 /// [`tokio::signal`]: tokio::signal
+/// [`try_new()`]: Self::try_new
 /// [`try_parse_input_event`]: crate::vt_100_terminal_input_parser::try_parse_input_event
 /// [`try_subscribe()`]: crate::RRT::try_subscribe
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
@@ -534,18 +535,18 @@ use tokio::sync::broadcast::error::RecvError;
 pub struct DirectToAnsiInputDevice {
     /// This device's subscription to the global input broadcast channel.
     ///
-    /// Initialized eagerly in [`new()`] to ensure the thread sees a receiver if one is
-    /// needed. This is critical for correct thread lifecycle management: if a device is
-    /// dropped and a new one created "immediately", the new device's subscription must
-    /// be visible to the thread when it checks [`receiver_count()`].
+    /// Initialized eagerly in [`try_new()`] to ensure the thread sees a receiver if one
+    /// is needed. This is critical for correct thread lifecycle management: if a device
+    /// is dropped and a new one created "immediately", the new device's subscription
+    /// must be visible to the thread when it checks [`receiver_count()`].
     ///
     /// Uses [`InputSubscriberGuard`] to wake the [`mio_poller`] thread when dropped,
     /// allowing thread lifecycle management.
     ///
     /// [`InputSubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
+    /// [`try_new()`]: Self::try_new
     pub subscriber_guard: InputSubscriberGuard,
 }
 
@@ -584,15 +585,15 @@ impl DirectToAnsiInputDevice {
     /// [`InputSubscriberGuard::try_subscribe()`]:
     ///     super::input_device_impl::InputSubscriberGuard::try_subscribe
     /// [`mio_poller`]: crate::direct_to_ansi::input::mio_poller
-    /// [`new()`]: Self::new
     /// [`receiver_count()`]: tokio::sync::broadcast::Sender::receiver_count
     /// [`stdin`]: std::io::stdin
     /// [`SubscribeError`]: crate::core::resilient_reactor_thread::SubscribeError
     /// [`SubscriberGuard`]: super::input_device_impl::InputSubscriberGuard
+    /// [`try_new()`]: Self::try_new
     /// [`try_subscribe()`]: Self::try_subscribe
     /// [race condition documentation]:
     ///     super::input_device_impl::InputSubscriberGuard#race-condition-and-correctness
-    pub fn new() -> Result<Self, SubscribeError> {
+    pub fn try_new() -> Result<Self, SubscribeError<MioPollWorkerCreateError>> {
         super::at_most_one_instance_assert::claim_and_assert();
         match global_input_resource::SINGLETON.try_subscribe(()) {
             Ok(subscriber_guard) => Ok(Self { subscriber_guard }),
@@ -612,14 +613,15 @@ impl DirectToAnsiInputDevice {
     ///
     /// This is a convenience wrapper around [`InputSubscriberGuard::try_subscribe()`]. It
     /// is intentionally capability-gated by `&self`: you can only call
-    /// [`try_subscribe()`] after successfully creating the primary device via [`new()`].
+    /// [`try_subscribe()`] after successfully creating the primary device via
+    /// [`try_new()`].
     ///
     /// # Recovery Guidance
     ///
     /// This method clones from an existing handle; it does not establish a new singleton
     /// ownership claim. If the input thread has shut down and you received
-    /// [`InputEvent::Shutdown`], allocate a fresh device with [`new()`] to re-enter the
-    /// full subscription path.
+    /// [`InputEvent::Shutdown`], allocate a fresh device with [`try_new()`] to re-enter
+    /// the full subscription path.
     ///
     /// See [`pty_mio_poller_subscribe_test`] for integration tests demonstrating
     /// broadcast semantics (both device and subscriber receive the same events).
@@ -632,12 +634,14 @@ impl DirectToAnsiInputDevice {
     /// [`InputSubscriberGuard::try_subscribe()`]:
     ///     super::input_device_impl::InputSubscriberGuard::try_subscribe
     /// [`mio_poller`]: super::mio_poller
-    /// [`new()`]: Self::new
     /// [`pty_mio_poller_subscribe_test`]:
     ///     crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_subscribe_test
     /// [`SubscribeError`]: crate::core::resilient_reactor_thread::SubscribeError
+    /// [`try_new()`]: Self::try_new
     /// [`try_subscribe()`]: Self::try_subscribe
-    pub fn try_subscribe(&self) -> Result<InputSubscriberGuard, SubscribeError> {
+    pub fn try_subscribe(
+        &self,
+    ) -> Result<InputSubscriberGuard, SubscribeError<MioPollWorkerCreateError>> {
         self.subscriber_guard.try_subscribe(())
     }
 
@@ -671,7 +675,7 @@ impl DirectToAnsiInputDevice {
     /// use tokio::signal;
     ///
     /// // Create device once at startup, reuse until program exit
-    /// let mut input_device = DirectToAnsiInputDevice::new()?;
+    /// let mut input_device = DirectToAnsiInputDevice::try_new()?;
     /// let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())
     ///     .map_err(|e| miette::miette!("Failed to setup signal handler: {}", e))?;
     ///
@@ -779,7 +783,7 @@ impl DirectToAnsiInputDevice {
     /// [Architecture]: Self#architecture
     /// [ESC key disambiguation]: Self#esc-key-disambiguation-crossterm-more-flag-pattern
     pub async fn next(&mut self) -> Option<InputEvent> {
-        // Receiver was subscribed eagerly in new() - just use it.
+        // Receiver was subscribed eagerly in try_new() - just use it.
         let subscriber_guard = &mut self.subscriber_guard;
 
         // Wait for fully-formed InputEvent instances through the broadcast channel.
@@ -798,7 +802,7 @@ impl DirectToAnsiInputDevice {
                 Err(RecvError::Lagged(skipped)) => {
                     // This receiver fell behind - some messages were dropped.
                     // Log and continue from the current position.
-                    DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                    DEBUG_DIRECT_TO_ANSI.then(|| {
                         tracing::warn!(
                             "DirectToAnsiInputDevice: receiver lagged, skipped {skipped} messages"
                         );
@@ -837,7 +841,7 @@ impl Debug for DirectToAnsiInputDevice {
 
 impl Default for DirectToAnsiInputDevice {
     fn default() -> Self {
-        Self::new().expect("Failed to initialize DirectToAnsiInputDevice")
+        Self::try_new().expect("Failed to initialize DirectToAnsiInputDevice")
     }
 }
 

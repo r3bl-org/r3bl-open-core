@@ -24,13 +24,12 @@ use miette::IntoDiagnostic;
 use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,
                SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR, SGR_FG_BRIGHT_YELLOW_STR,
                SGR_RESET_STR, TuiAvailabilityChooseExt, assert_terminal_is_interactive,
-               choose,
                core::pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
                ok,
-               readline_async::{HowToChoose, style::StyleSheet},
-               set_mimalloc_in_main, vp_height, vp_width};
+               readline_async::{HowToChoose, StyleSheet},
+               run_in_main_with_safe_stack, try_choose, vp_height, vp_width};
 use tokio::time::{Duration, sleep};
 
 // ANSI color constants for terminal output.
@@ -53,7 +52,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
             DefaultPtySessionConfig
                 + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
-        .start_async()?;
+        .try_start_async()?;
 
     // Spawn a task to handle output.
     let output_handle = tokio::spawn(async move {
@@ -217,7 +216,7 @@ async fn run_shell_demo() -> miette::Result<()> {
             DefaultPtySessionConfig
                 + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
-        .start_async()?;
+        .try_start_async()?;
 
     // Spawn output handler.
     let output_handle = tokio::spawn(async move {
@@ -303,9 +302,9 @@ async fn run_shell_demo() -> miette::Result<()> {
     ok!()
 }
 
-#[tokio::main]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     println!(
@@ -323,7 +322,7 @@ async fn main() -> miette::Result<()> {
     // Ask user which demo to run.
     let maybe_user_choice = {
         let mut default_io_devices = DefaultIoDevices::default();
-        choose(
+        try_choose(
             "🚀 Which PTY Demo would you like to run?",
             &[
                 "1. Run Both Demos (Python REPL + Shell Interruption)",
@@ -368,7 +367,7 @@ async fn main() -> miette::Result<()> {
     }
 
     println!(
-        "\n{GREEN}✨ Demo complete! The start() API successfully demonstrated:\n\
+        "\n{GREEN}✨ Demo complete! The try_start_async() API successfully demonstrated:\n\
         {GREEN}   • Sending commands to child processes\n\
         {GREEN}   • Receiving and processing output\n\
         {GREEN}   • Handling control characters (Ctrl-C, Ctrl-D)\n\

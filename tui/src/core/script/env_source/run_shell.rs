@@ -1,9 +1,23 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{args::BaseEnv, parser};
-use crate::{CommandOutputResult, DEBUG_ENV_SOURCE, EnvMap};
-use miette::miette;
-use std::{path::Path, process::Command};
+use crate::{ProcessExecutionOutcome, DEBUG_ENV_SOURCE, EnvMap};
+use std::{path::{Path, PathBuf},
+          process::Command};
+
+/// Error returned by [`try_source_and_export_env`] and [`crate::try_env_source`] when
+/// spawning the subshell process fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to spawn shell '{shell}' to source '{}'", script_path.display())]
+pub struct EnvSourceError {
+    /// Shell executable invoked (`"/bin/sh"` on Unix or `"cmd.exe"` on Windows).
+    pub shell: &'static str,
+    /// Target script file path passed to the shell.
+    pub script_path: PathBuf,
+    /// Underlying OS spawn error.
+    #[source]
+    pub src_err: std::io::Error,
+}
 
 /// Runs a shell to source the specified target script file and captures the resulting
 /// environment.
@@ -24,8 +38,7 @@ use std::{path::Path, process::Command};
 ///
 /// # Errors
 ///
-/// Returns an error if spawning the shell process fails, capturing output fails, or the
-/// command exits with an error status.
+/// Returns [`EnvSourceError`] if spawning the shell process fails.
 ///
 /// # Cross-platform
 ///
@@ -39,7 +52,7 @@ use std::{path::Path, process::Command};
 pub fn try_source_and_export_env(
     script_path: &Path,
     base_env: &BaseEnv,
-) -> miette::Result<EnvMap> {
+) -> Result<EnvMap, EnvSourceError> {
     #[cfg(unix)]
     {
         try_source_and_export_env_unix(script_path, base_env)
@@ -148,8 +161,7 @@ pub fn try_source_and_export_env(
 ///
 /// # Errors
 ///
-/// Returns an error if spawning `/bin/sh` fails, capturing output fails, or the shell
-/// process exits with an error status.
+/// Returns [`EnvSourceError`] if spawning `/bin/sh` fails.
 ///
 /// [`__bass.py`]: https://github.com/edc/bass/blob/master/functions/__bass.py
 /// [`bass`]: https://github.com/edc/bass
@@ -162,7 +174,7 @@ pub fn try_source_and_export_env(
 pub fn try_source_and_export_env_unix(
     script_path: &Path,
     base_env: &BaseEnv,
-) -> miette::Result<EnvMap> {
+) -> Result<EnvMap, EnvSourceError> {
     let mut cmd = Command::new("/bin/sh");
 
     // Configure hermetic initial environment if provided.
@@ -181,23 +193,24 @@ pub fn try_source_and_export_env_unix(
         .arg("env-source")
         .arg(script_path);
 
-    let cmd_output_result = cmd.output();
-    let output = match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::SpawnFailed(err) => {
+    let res_output = cmd.output();
+    let output = match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
             DEBUG_ENV_SOURCE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error!(
                     message = "Failed to spawn or execute /bin/sh for env_source",
                     script_path = %script_path.display(),
-                    error = %err
+                    error = %src_err
                 );
             });
-            return Err(miette!(
-                "Failed to spawn or execute /bin/sh for script {}: {err}",
-                script_path.display()
-            ));
+            return Err(EnvSourceError {
+                shell: "/bin/sh",
+                script_path: script_path.to_path_buf(),
+                src_err,
+            });
         }
-        CommandOutputResult::NonZeroExit(out) => {
+        ProcessExecutionOutcome::NonZeroExit(out) => {
             DEBUG_ENV_SOURCE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::warn!(
@@ -209,7 +222,7 @@ pub fn try_source_and_export_env_unix(
             });
             out
         }
-        CommandOutputResult::Success(out) => out,
+        ProcessExecutionOutcome::Success(out) => out,
     };
 
     let env_map = parser::parse_env_unix(&output.stdout);
@@ -236,8 +249,7 @@ pub fn try_source_and_export_env_unix(
 ///
 /// # Errors
 ///
-/// Returns an error if spawning `cmd.exe` fails, capturing output fails, or the shell
-/// process exits with an error status.
+/// Returns [`EnvSourceError`] if spawning `cmd.exe` fails.
 ///
 /// [`parse_env_windows`]: parser::parse_env_windows
 /// [`stderr`]: std::io::stderr
@@ -246,7 +258,7 @@ pub fn try_source_and_export_env_unix(
 pub fn try_source_and_export_env_windows(
     script_path: &Path,
     base_env: &BaseEnv,
-) -> miette::Result<EnvMap> {
+) -> Result<EnvMap, EnvSourceError> {
     let mut cmd = Command::new("cmd.exe");
 
     // Configure hermetic initial environment if provided.
@@ -267,23 +279,24 @@ pub fn try_source_and_export_env_windows(
         ));
     }
 
-    let cmd_output_result = cmd.output();
-    let output = match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::SpawnFailed(err) => {
+    let res_output = cmd.output();
+    let output = match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
             DEBUG_ENV_SOURCE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error!(
                     message = "Failed to spawn or execute cmd.exe for env_source",
                     script_path = %script_path.display(),
-                    error = %err
+                    error = %src_err
                 );
             });
-            return Err(miette!(
-                "Failed to spawn or execute cmd.exe for script {}: {err}",
-                script_path.display()
-            ));
+            return Err(EnvSourceError {
+                shell: "cmd.exe",
+                script_path: script_path.to_path_buf(),
+                src_err,
+            });
         }
-        CommandOutputResult::NonZeroExit(out) => {
+        ProcessExecutionOutcome::NonZeroExit(out) => {
             DEBUG_ENV_SOURCE.then(|| {
                 // % is Display, ? is Debug.
                 tracing::warn!(
@@ -295,7 +308,7 @@ pub fn try_source_and_export_env_windows(
             });
             out
         }
-        CommandOutputResult::Success(out) => out,
+        ProcessExecutionOutcome::Success(out) => out,
     };
 
     let env_map = parser::parse_env_windows(&output.stdout);

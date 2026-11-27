@@ -18,7 +18,7 @@
 //! ## Strategy: Overlapping Subscriptions
 //!
 //! The original test tried to race `drop(device_a)` against
-//! [`DirectToAnsiInputDevice::new()`] for device B. Under CPU load, the [`mio`]-poller
+//! [`DirectToAnsiInputDevice::try_new()`] for device B. Under CPU load, the [`mio`]-poller
 //! thread could wake and see `receiver_count() == 0` before the subscribe completed,
 //! causing it to exit (flaky failure).
 //!
@@ -39,8 +39,7 @@
 
 use crate::{GLYPH_COMPLETION, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_STEP,
             GLYPH_SUCCESS, GLYPH_WAITING, PtyTestContext, PtyTestMode,
-            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource},
-            generate_pty_test};
+            direct_to_ansi::{DirectToAnsiInputDevice, input::global_input_resource}};
 use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
@@ -100,6 +99,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: tests thread reuse with overlapping subscriptions. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{REUSE_READY}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -111,7 +112,7 @@ fn controlled() {
 
         // Step 1: Create device A.
         eprintln!("{GLYPH_STEP} Step 1: Creating device A...");
-        let mut device_a = DirectToAnsiInputDevice::new()
+        let mut device_a = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         // Read one event from device A.
@@ -139,7 +140,7 @@ fn controlled() {
         // Step 3: Drop device A and create device B.
         eprintln!("{GLYPH_STEP} Step 3: Dropping device A, creating device B...");
         drop(device_a);
-        let mut device_b = DirectToAnsiInputDevice::new()
+        let mut device_b = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         // Read one event from device B.

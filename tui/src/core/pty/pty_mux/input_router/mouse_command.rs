@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::MOUSE_SCROLL_BY_AMOUNT;
-use crate::{ActiveScreenBuffer, DEBUG_TUI_PTY_MUX, KeyState, MouseInput, MouseInputKind,
+use crate::{ActiveScreenBuffer, DEBUG_PTY_MUX, KeyState, MouseInput, MouseInputKind,
             MouseTrackingFormat, MouseTrackingMode, OfsBufVT100, PtyInputEvent,
             RangeBoundsResult, ScrollbackAmount, VPCol, VPRow, VPWidth, mouse_sgr,
             mouse_x10};
@@ -46,11 +46,11 @@ impl From<(&MouseInput, &OfsBufVT100)> for MouseCommand {
     /// [`Disabled`]: MouseTrackingMode::Disabled
     /// [`Enabled`]: MouseTrackingMode::Enabled
     /// [`mouse.format`]: MouseTrackingMode
-    /// [`mouse.mode`]: TerminalModeState::mouse_tracking
+    /// [`mouse.mode`]: crate::TerminalModeState::mouse_tracking_mode
     /// [`MouseTrackingFormat`]: MouseTrackingFormat
-    /// [`SGR`]: SgrCode
+    /// [`SGR`]: crate::SgrCode
     /// [virtual terminal tab]:
-    ///     pty_mux#virtual-terminal-architecture
+    ///     mod@crate::core::pty::pty_mux#virtual-terminal-architecture
     fn from(args: (&MouseInput, &OfsBufVT100)) -> MouseCommand {
         let (mouse_input, active_buffer) = args;
         match active_buffer.get_terminal_mode().mouse_tracking_mode {
@@ -102,7 +102,7 @@ impl MouseCommand {
                     MouseCommand::PanHistoryRight(MOUSE_SCROLL_BY_AMOUNT.into())
                 }
                 _ => {
-                    DEBUG_TUI_PTY_MUX.then(|| {
+                    DEBUG_PTY_MUX.then(|| {
                         tracing::debug!("Ignoring mouse event: {:?}", mouse_input.kind);
                     });
                     MouseCommand::Ignore
@@ -144,7 +144,7 @@ impl MouseCommand {
         };
 
         if let Some(bytes) = generated_bytes {
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 tracing::debug!(
                     "Forwarding mouse event ({:?}) as format {:?} bytes: {:?}",
                     mouse_input.kind,
@@ -155,7 +155,7 @@ impl MouseCommand {
 
             MouseCommand::ForwardToProcess(PtyInputEvent::Write(bytes))
         } else {
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::error! {
                     message = "MouseCommand::from",

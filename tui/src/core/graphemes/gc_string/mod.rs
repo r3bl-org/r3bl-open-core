@@ -14,7 +14,7 @@
 //! [module docs]: crate::graphemes
 
 // Submodules
-pub mod owned;
+mod owned;
 
 // Re-exports
 pub use owned::*;

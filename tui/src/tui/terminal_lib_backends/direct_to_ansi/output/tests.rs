@@ -127,7 +127,7 @@ mod screen_clearing_tests {
 #[cfg(test)]
 mod color_tests {
     use crate::{AnsiValue, SgrAttributeSequence, SgrColorSequence, TuiColor, TuiStyle,
-                TuiStyleAttribs, tui_color, tui_style_attrib};
+                TuiStyleAttribs, tui_style_attrib};
 
     #[test]
     fn test_reset_color() {

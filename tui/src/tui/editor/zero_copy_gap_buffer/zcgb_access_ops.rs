@@ -102,12 +102,12 @@
 //! operations safe and performant.
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
+//! [`from_utf8_lossy()`]: String::from_utf8_lossy
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt, CRow, LengthOps,
-            RangeExclusive, RangeValidityStatus, byte_index,
-            core::coordinates::bounds_check::RangeBoundsExt};
+            RangeBoundsExt, RangeExclusive, RangeValidityStatus, byte_index};
 use std::str::{from_utf8, from_utf8_unchecked};
 
 impl ZeroCopyGapBuffer {
@@ -495,7 +495,7 @@ mod benches {
         for i in 0..100 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(
+                .try_insert_text_at_grapheme(
                     c_row(i),
                     c_index(0),
                     "This is a test line with some content",
@@ -514,7 +514,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
             .expect("conversion error");
 
         b.iter(|| {
@@ -531,7 +531,7 @@ mod benches {
         for i in 0..20 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(c_row(i), c_index(0), &format!("Line {i}"))
+                .try_insert_text_at_grapheme(c_row(i), c_index(0), &format!("Line {i}"))
                 .expect("conversion error");
         }
 
@@ -548,7 +548,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Test line")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Test line")
             .expect("conversion error");
 
         b.iter(|| {
@@ -565,7 +565,7 @@ mod benches {
         for i in 0..50 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(c_row(i), c_index(0), "Hello 😀 World")
+                .try_insert_text_at_grapheme(c_row(i), c_index(0), "Hello 😀 World")
                 .expect("conversion error");
         }
 

@@ -92,7 +92,7 @@
 //! [`SGR`]: crate::SgrCode
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
-//! [`validation_tests`]: mod@crate::vt_100_terminal_input_parser::validation_tests
+//! [`validation_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100`]: crate::core::ansi::vt_100_terminal_input_parser
 //! [`XTerm`]: https://invisible-island.net/xterm/
@@ -100,53 +100,54 @@
 
 #![rustfmt::skip]
 
+// Attach.
 // These PTY tests use DirectToAnsiInputDevice which is Linux-only.
 // On macOS/Windows, Crossterm backend is used instead and these tests are skipped.
 // Non-Linux platforms (macOS/Windows) exclude these modules across all builds.
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_bracketed_paste_test;
+pub(crate) mod pty_bracketed_paste_test; // Cross-folder links (direct_to_ansi, pty_terminal_events_test).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_input_device_test;
+pub(crate) mod pty_input_device_test; // Cross-folder links (lib.rs, direct_to_ansi, input_device_impl).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_keyboard_modifiers_test;
+pub(crate) mod pty_keyboard_modifiers_test; // Cross-folder links (direct_to_ansi, input_device_impl).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_mouse_events_test;
+pub(crate) mod pty_mouse_events_test; // Cross-folder links (direct_to_ansi, input_device_impl).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_terminal_events_test;
+pub(crate) mod pty_terminal_events_test; // Cross-folder links (pty_test_child_impl, direct_to_ansi).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_utf8_text_test;
+pub(crate) mod pty_utf8_text_test; // Cross-folder links (direct_to_ansi, input_device_impl).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_keypad_and_special_keys_test;
+pub(crate) mod pty_keypad_and_special_keys_test; // Cross-folder link (direct_to_ansi integration_tests_stub).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_csi_u_keyboard_test;
+pub(crate) mod pty_csi_u_keyboard_test; // Cross-folder link (direct_to_ansi integration_tests_stub).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_sigwinch_test;
+pub(crate) mod pty_sigwinch_test; // Cross-folder links (direct_to_ansi, pty_terminal_events_test).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_mio_poller_thread_lifecycle_test;
+pub(crate) mod pty_mio_poller_thread_lifecycle_test; // Cross-folder links (direct_to_ansi, handler_stdin).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_mio_poller_thread_reuse_test;
+pub(crate) mod pty_mio_poller_thread_reuse_test; // Cross-folder links (direct_to_ansi, input_device_public_api).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_mio_poller_subscribe_test;
+pub(crate) mod pty_mio_poller_subscribe_test; // Cross-folder links (handler_stdin, input_device_public_api).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_mio_poller_singleton_test;
+mod pty_mio_poller_singleton_test;
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_osc_color_test;
+pub(crate) mod pty_osc_color_test; // Cross-folder link (backend_compat_input_test).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_osc_sender_test;
+pub(crate) mod pty_osc_sender_test; // Cross-folder link (backend_compat_input_test).
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_osc_safety_test;
+pub(crate) mod pty_osc_safety_test; // Cross-folder link (backend_compat_input_test).

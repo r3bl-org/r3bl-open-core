@@ -436,6 +436,7 @@ mod test_fixtures {
     /// be manually constructed.
     ///
     /// [`CSI`]: crate::CsiSequence
+    /// [`ParamsExt`]: super::ParamsExt
     /// [`Parser`]: vte::Parser
     /// [`VTE`]: mod@vte
     pub(super) fn process_csi_sequence_and_test<F>(sequence: &str, test_fn: F)
@@ -535,7 +536,7 @@ mod test_fixtures {
 ///
 /// [`VTE`]: mod@vte
 #[cfg(any(test, doc))]
-pub mod vte_params_behavior_validation {
+mod vte_params_behavior_validation {
     use super::{test_fixtures::process_csi_sequence_and_test, *};
 
     // ============================================================================================
@@ -748,7 +749,7 @@ pub mod vte_params_behavior_validation {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, doc))]
 mod extract_nth_all_tests {
     use super::{test_fixtures::process_csi_sequence_and_test, *};
 

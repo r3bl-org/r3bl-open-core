@@ -15,8 +15,7 @@ use crate::cargo_rustdoc_fmt::{
     cst::{DocBlockCst, DocNode, LinkReference, find_backtick_span},
     types::FormatStatus,
 };
-use r3bl_tui::{CRow, RangeBoundsExt, RangeOverlapResult};
-use rustc_hash::FxHashSet;
+use r3bl_tui::{CRow, HashSet, RangeBoundsExt, RangeOverlapResult};
 use std::{collections::BTreeMap, fmt::Write as _, ops::RangeInclusive};
 
 /// Result of parsing an inline Markdown link `[link_text](url)` from the start of a
@@ -109,14 +108,14 @@ fn convert_inline_links(text: &str) -> (String, Vec<(String, String)>) {
     }
 
     let mut link_info: Vec<(String, String)> = Vec::new();
-    let mut seen_urls: FxHashSet<String> = FxHashSet::default();
+    let mut seen_urls: HashSet<String> = HashSet::default();
     let converted = convert_inline_links_segment(text, &mut seen_urls, &mut link_info);
     (converted, link_info)
 }
 
 fn convert_inline_links_segment(
     text: &str,
-    seen_urls: &mut FxHashSet<String>,
+    seen_urls: &mut HashSet<String>,
     link_info: &mut Vec<(String, String)>,
 ) -> String {
     let bytes = text.as_bytes();

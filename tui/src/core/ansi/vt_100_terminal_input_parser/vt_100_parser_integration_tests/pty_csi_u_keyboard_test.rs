@@ -87,7 +87,7 @@ use crate::{ANSI_CSI_BRACKET, ANSI_CSI_U_CHAR, ANSI_OSC_CLOSE_BRACKET,
             KITTY_PUA_UP, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_NONE, MODIFIER_SHIFT,
             MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, MSG_TEST_RUNNING,
             PtyTestContext, PtyTestMode, csi_u, csi_u_codepoint,
-            csi_u_with_alternate_key, csi_u_with_event_type, generate_pty_test};
+            csi_u_with_alternate_key, csi_u_with_event_type};
 use std::{io::Write, time::Duration};
 
 generate_pty_test! {
@@ -199,7 +199,7 @@ fn controlled() {
 
     runtime.block_on(async {
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Starting...");
-        let mut input_device = DirectToAnsiInputDevice::new()
+        let mut input_device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Device created, reading events...");
 

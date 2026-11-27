@@ -9,9 +9,7 @@
 //!
 //! [`DA`]: crate::DaSequence
 //! [`DaSequence`]: crate::DaSequence
-//! [constants module design]: mod@crate::constants#design
-
-use crate::define_ansi_const;
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 // DA response sequence components.
 

@@ -83,6 +83,14 @@ fn test_env_map_insert_and_get() {
     map.insert("KEY".into(), "VAL".into());
     assert_eq!(map.get("KEY"), Some(&"VAL".into()));
 }
+
+// ❌ BAD: This tests thiserror's #[error("...")] derive macro (or covers manual Display
+// boilerplate that should have been #[derive(thiserror::Error, miette::Diagnostic)]).
+#[test]
+fn test_error_display_strings() {
+    assert!(!VersionParseErrorKind::WrongSegmentCount.to_string().is_empty());
+    assert!(!VersionParseErrorKind::InvalidMajor.to_string().is_empty());
+}
 ```
 
 ### Good: Branch-Targeted Testing of Custom Logic

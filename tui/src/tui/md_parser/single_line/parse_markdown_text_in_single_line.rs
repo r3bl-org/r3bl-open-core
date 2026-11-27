@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CheckboxParsePolicy, MdLineFragments, NEW_LINE, NUL_CHAR, ParseList,
-            parse_inline_fragments_until_eol_or_eoi, parse_null_padded_line::is};
+use crate::{CheckboxParsePolicy, MdLineFragments, NEW_LINE, NUL_CHAR, ParseList, is,
+            parse_inline_fragments_until_eol_or_eoi};
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_while},
           multi::many0,
@@ -105,7 +105,7 @@ mod inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2};
+    use crate::MdLineFragment;
 
     #[test]
     fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
@@ -141,7 +141,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_inner {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2};
+    use crate::MdLineFragment;
 
     #[test]
     fn test_parse_block_markdown_text_with_new_line() {
@@ -231,7 +231,7 @@ mod tests_parse_block_markdown_text_inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text {
     use super::*;
-    use crate::{HyperlinkData, MdLineFragment, assert_eq2};
+    use crate::{HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_parse_block_markdown_text_with_hyperlink_1() {

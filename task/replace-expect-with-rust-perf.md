@@ -3,7 +3,7 @@
 ## Overview
 
 The automated flamegraph benchmarking workflow
-(`./run.fish run-examples-flamegraph-fold --benchmark`, `/analyze-performance`) currently
+(`./run.fish examples-flamegraph-fold --benchmark`, `/analyze-performance`) currently
 relies on the external Unix tool `expect` to drive the `ex_editor` example headlessly in a
 pseudoterminal (PTY).
 
@@ -77,7 +77,7 @@ In `script_lib.fish`:
       driver under `perf record` instead of `expect`.
 - [ ] Remove `expect` checks and system package installation instructions from
       `script_lib.fish`.
-- [ ] Run `./run.fish run-examples-flamegraph-fold --benchmark` and verify
+- [ ] Run `./run.fish examples-flamegraph-fold --benchmark` and verify
       `flamegraph-benchmark.perf-folded` is generated successfully.
 - [ ] Compare sample distribution against `tui/flamegraph-benchmark-baseline.perf-folded`
       to ensure benchmark comparability.

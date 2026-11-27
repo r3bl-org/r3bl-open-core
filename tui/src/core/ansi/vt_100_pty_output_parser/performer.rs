@@ -213,7 +213,7 @@ use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                   vt_100_shim_cursor_ops, vt_100_shim_dsr_ops, vt_100_shim_line_ops,
                   vt_100_shim_margin_ops, vt_100_shim_mode_ops, vt_100_shim_osc_ops,
                   vt_100_shim_scroll_ops, vt_100_shim_sgr_ops, vt_100_shim_terminal_ops}};
-use crate::{DEBUG_TUI_VT100_PARSER,
+use crate::{DEBUG_VT100_PARSER,
             core::ansi::constants::{BACKSPACE, CARRIAGE_RETURN,
                                     CBT_CURSOR_BACKWARD_TAB, CHA_CURSOR_COLUMN,
                                     CHARSET_ASCII, CHARSET_DEC_GRAPHICS,
@@ -449,7 +449,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ) {
         // Discard malformed sequences - see module docs for rationale
         if ignore {
-            DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_VT100_PARSER.then(|| {
                 tracing::warn!(
                     "CSI {}: Discarding malformed sequence (VTE parser exceeded limits)",
                     dispatch_char
@@ -554,7 +554,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Tab handling is done via execute() with TAB character.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
                 });
             }
@@ -563,7 +563,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Reverse tab rarely used, complex tab stop tracking required
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
                 });
             }
@@ -572,7 +572,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Tab stops are application-specific, TUI apps manage their
                 // own. See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser)
                 // for rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI g: Tab Clear not implemented");
                 });
             }
@@ -581,7 +581,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: CUF already implemented, this is redundant
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI a: Horizontal Position Relative not implemented (use CUF instead)"
                 );
@@ -592,7 +592,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: CUD already implemented, this is redundant
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI e: Vertical Position Relative not implemented (use CUD instead)"
                 );
@@ -603,7 +603,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: CHA already implemented, this is redundant
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                     "CSI `: Horizontal Position Absolute not implemented (use CHA instead)"
                 );
@@ -614,7 +614,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI U: Next Page not supported in multiplexer");
                 });
             }
@@ -623,7 +623,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
                 });
             }
@@ -632,7 +632,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Hardware control not applicable in multiplexer.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
                 });
             }
@@ -641,7 +641,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Column insertion rarely used, complex for TUI apps
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI }}: DEC Insert Column not implemented");
                 });
             }
@@ -650,7 +650,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Column deletion rarely used, complex for TUI apps
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI |: DEC Delete Column not implemented");
                 });
             }
@@ -659,7 +659,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Window ops handled by terminal emulator, not multiplexer
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI t: Window manipulation not supported in multiplexer"
                     );
@@ -670,7 +670,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Cursor rendering handled by terminal emulator.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI q: Set Cursor Style not supported in multiplexer"
                     );
@@ -681,7 +681,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Private mode requests handled by parent terminal.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI p: DEC private sequences not supported in multiplexer"
                     );
@@ -692,7 +692,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Terminal parameters managed by parent emulator.
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!(
                         "CSI x: Request Terminal Parameters not supported in multiplexer"
                     );
@@ -703,7 +703,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Not needed: Rectangular operations complex, rarely used
                 // See [mod-level docs](crate::core::ansi::vt_100_pty_output_parser) for
                 // rationale
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
                 });
             }
@@ -712,7 +712,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             _ => {
                 // Unknown CSI sequence - safely ignore.
                 // Multiplexer passes through raw data, parent terminal handles unknowns.
-                DEBUG_TUI_VT100_PARSER.then(|| {
+                DEBUG_VT100_PARSER.then(|| {
                     tracing::warn!("CSI {}: Unknown CSI sequence", dispatch_char);
                 });
             }
@@ -902,7 +902,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
         // Discard malformed sequences - see module docs for rationale
         if ignore {
-            DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_VT100_PARSER.then(|| {
                 tracing::warn!(
                     "ESC {}: Discarding malformed sequence (VTE parser exceeded limits)",
                     char::from(byte)

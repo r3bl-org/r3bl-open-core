@@ -16,8 +16,8 @@
 //! 2. Then convert [`StyleUSSpanLine`] into a [`TuiStyledTexts`].
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::{RenderList, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts, tui_color,
-            tui_style_attrib, tui_styled_text};
+use crate::{RenderList, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts,
+            tui_style_attrib};
 use syntect::parsing::SyntaxSet;
 
 // Type aliases for syntect types.
@@ -165,9 +165,9 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use crate::{ConvertToPlainText, TuiStyledTexts, assert_eq2,
+    use crate::{ConvertToPlainText, TuiStyledTexts,
                 convert_span_line_from_syntect_to_tui_styled_texts,
-                get_cached_syntax_set, get_cached_theme, tui_color};
+                get_cached_syntax_set, get_cached_theme};
     use syntect::{easy::HighlightLines, highlighting::Style, util::LinesWithEndings};
 
     #[test]
@@ -253,8 +253,8 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use crate::{TuiStyledTexts, assert_eq2,
-                convert_span_line_from_syntect_to_tui_styled_texts, tui_color};
+    use crate::{TuiStyledTexts,
+                convert_span_line_from_syntect_to_tui_styled_texts};
 
     #[test]
     fn syntect_conversion() {
@@ -374,10 +374,8 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use crate::{CommonResult, InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet,
-                assert_eq2, ch, console_log, convert_style_from_syntect_to_tui,
-                get_tui_style, get_tui_styles, new_style, throws, tui_color,
-                tui_style_attrib, tui_style_id, tui_stylesheet};
+    use crate::{InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet, ch,
+                convert_style_from_syntect_to_tui, tui_style_attrib, tui_style_id};
     use smallvec::smallvec;
 
     #[test]
@@ -464,12 +462,12 @@ mod tests_convert_style_and_color {
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
-        let result = stylesheet.add_style(style1);
+        let result = stylesheet.try_add_style(style1);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
-        let result = stylesheet.add_style(style2);
+        let result = stylesheet.try_add_style(style2);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
@@ -510,12 +508,12 @@ mod tests_convert_style_and_color {
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
-        let result = stylesheet.add_style(style1);
+        let result = stylesheet.try_add_style(style1);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
-        let result = stylesheet.add_style(style2);
+        let result = stylesheet.try_add_style(style2);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
@@ -536,7 +534,7 @@ mod tests_convert_style_and_color {
     }
 
     #[test]
-    fn test_stylesheet_builder() -> CommonResult {
+    fn test_stylesheet_builder() -> miette::Result<()> {
         throws!({
             let id_2 = 2;
             let style1 = make_a_style(1);
@@ -602,7 +600,7 @@ mod tests_convert_style_and_color {
             );
             assert_eq2!(stylesheet.find_styles_by_ids(&[13, 41]), None);
             let style7 = make_a_style(7);
-            let result = stylesheet.add_style(style7);
+            let result = stylesheet.try_add_style(style7);
             result.expect("conversion error");
             assert_eq2!(stylesheet.styles.len(), 7);
             assert_eq2!(

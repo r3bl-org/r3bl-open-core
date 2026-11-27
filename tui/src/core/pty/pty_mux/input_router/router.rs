@@ -2,7 +2,7 @@
 
 use super::{super::ProcessManager, keyboard_command::KeyboardCommand,
             mouse_command::MouseCommand};
-use crate::{Continuation, DEBUG_TUI_PTY_MUX, InputEvent, VPSize};
+use crate::{Continuation, DEBUG_PTY_MUX, InputEvent, VPSize};
 
 /// Dynamic input event routing for the [`PTY`] multiplexer.
 ///
@@ -40,14 +40,14 @@ use crate::{Continuation, DEBUG_TUI_PTY_MUX, InputEvent, VPSize};
 pub fn handle_input(
     event: InputEvent,
     process_manager: &mut ProcessManager,
-) -> miette::Result<Continuation> {
+) -> Continuation {
     let focused_process_buffer = process_manager.focused_process_buffer();
 
     match event {
         InputEvent::Keyboard(key) => {
             // Decision - convert key press to command.
             let keyboard_command = KeyboardCommand::from((key, focused_process_buffer));
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "handle_input",
@@ -76,7 +76,7 @@ pub fn handle_input(
             // Decision - convert mouse input to command.
             let mouse_command =
                 MouseCommand::from((&mouse_input, focused_process_buffer));
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "handle_input",
@@ -113,7 +113,7 @@ pub fn handle_input(
         InputEvent::Shutdown(_) => {
             // Input thread died - signal exit so the mux doesn't hang waiting for
             // events that will never come.
-            return Ok(Continuation::Stop);
+            return Continuation::Stop;
         }
         _ => {
             // Other input events (Focus, BracketedPaste) are
@@ -121,7 +121,7 @@ pub fn handle_input(
         }
     }
 
-    Ok(Continuation::Continue)
+    Continuation::Continue
 }
 
 /// Handles terminal resize events.

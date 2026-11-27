@@ -4,14 +4,14 @@ use r3bl_tui::{InputDevice, IntoErr, OutputDevice, TuiAvailability,
                TuiAvailabilityChooseExt, assert_terminal_is_interactive, fg_slate_gray,
                ok,
                readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
-                                choose},
-               set_mimalloc_in_main, try_initialize_logging_global};
+                                try_choose},
+               run_in_main_with_safe_stack, try_initialize_logging_global};
 use std::io::Write;
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::needless_return)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize tracing w/ file writer.
@@ -27,7 +27,7 @@ async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
-    let user_choice = choose(
+    let user_choice = try_choose(
         Header::SingleLine("Choose one:".into()),
         &["one", "two", "three"],
         None,
@@ -65,12 +65,12 @@ async fn with_readline_async() -> miette::Result<()> {
     };
 
     // Start a task to write some output to the shared writer. This output should be
-    // paused (as long as choose() is active).
+    // paused (as long as try_choose() is active).
     tokio::spawn({
         let mut sw_1 = rl_ctx.clone_shared_writer();
         async move {
             // Wait a moment to write to the shared writer. Give the main thread a chance
-            // to start the choose() task, which will pause the shared writer output.
+            // to start the try_choose() task, which will pause the shared writer output.
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             tracing::debug!(">>> Starting task to write to shared writer");
             for i in 0..5 {
@@ -83,7 +83,7 @@ async fn with_readline_async() -> miette::Result<()> {
     // Get the item selected by the user (or none).
     let maybe_user_choice = {
         let mut terminal_guard = rl_ctx.acquire_modal_terminal();
-        choose(
+        try_choose(
             Header::SingleLine("Choose one:".into()),
             &["one", "two", "three"],
             None,
@@ -100,7 +100,7 @@ async fn with_readline_async() -> miette::Result<()> {
         ">>> Chosen {:<25}: {:?}",
         "(with readline_async)", maybe_user_choice
     );
-    rl_ctx.request_shutdown(Some(message.as_str())).await?;
+    rl_ctx.try_request_shutdown(Some(message.as_str())).await?;
     rl_ctx.await_shutdown().await;
 
     // The output to the shared writer should be visible now.

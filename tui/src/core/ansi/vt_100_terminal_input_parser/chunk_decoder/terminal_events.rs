@@ -84,7 +84,7 @@
 //! [`VT100InputEventIR::TerminalColorReport`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::TerminalColorReport
 //! [`VT100PasteModeIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100PasteModeIR
 //! [Bidirectional Communication]: mod@super::super#bidirectional-communication-user-input-vs-terminal-responses
-//! [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+//! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                                      VT100InputEventIR, VT100KeyCodeIR,
@@ -92,7 +92,7 @@ use super::{super::{ir_event_types::{ParsedInputEventIR, VT100FocusStateIR,
                     maybe_more::MaybeMore},
             csi_scanner::CsiParams,
             osc_scanner::OscScanResult};
-use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OscSequence, byte_offset,
+use crate::{DEBUG_DIRECT_TO_ANSI, HexSlice, OscSequence, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR,
                                     ANSI_OSC_CLOSE_BRACKET, FOCUS_GAINED_FINAL,
@@ -101,7 +101,7 @@ use crate::{DEBUG_TUI_SHOW_DIRECT_TO_ANSI, OscSequence, byte_offset,
                                     RESIZE_EVENT_PARSE_PARAM, RESIZE_TERMINATOR},
             vp_height, vp_width};
 
-pub mod csi {
+pub(super) mod csi {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -177,7 +177,7 @@ pub mod csi {
     }
 }
 
-pub mod osc {
+pub(crate) mod osc { // Cross-folder osc_codes/osc_sender/maybe_more links.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -251,12 +251,12 @@ pub mod osc {
     ///    For detailed security rationale on discarding inbound clipboard queries, see
     ///    [Why are [`OSC`] 52 read queries discarded?][osc-52-discard-rationale].
     ///
-    /// **Diagnostics**: When [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is enabled, parsing or
+    /// **Diagnostics**: When [`DEBUG_DIRECT_TO_ANSI`] is enabled, parsing or
     /// absorbing an [`OSC`] sequence logs structured telemetry with both raw hex bytes
     /// and string representation.
     ///
     /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-    /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+    /// [`DEBUG_DIRECT_TO_ANSI`]: crate::DEBUG_DIRECT_TO_ANSI
     /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
     /// [`MaybeMore::KernelDrained`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelDrained
     /// [`MaybeMore::KernelMayHaveMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore::KernelMayHaveMore
@@ -288,13 +288,13 @@ pub mod osc {
             OscScanResult::Complete(consumed) => {
                 let osc_seq_bytes = &chunk[..consumed.as_usize()];
                 let event = parse_osc_response(osc_seq_bytes);
-                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                DEBUG_DIRECT_TO_ANSI.then(|| {
                     let len = consumed.as_usize();
                     // % is Display, ? is Debug.
                     tracing::warn! {
                         message = "try_disambiguate_or_alt_bracket - parsed OSC sequence from stdin",
                         event = ?event,
-                        raw_osc_hex = %format!("{:02X?}", &chunk[..len]),
+                        raw_osc_hex = %HexSlice { inner: &chunk[..len] },
                         raw_osc_str = %String::from_utf8_lossy(&chunk[..len]),
                         consumed_bytes = len,
                     };
@@ -351,14 +351,14 @@ pub mod osc {
     /// - `OSC 10, 11, 12, 13, 14, 17, 19`: Decodes terminal color responses
     ///   ([`TerminalColorRole`]) into [`VT100InputEventIR::TerminalColorReport`]. These
     ///   responses arrive asynchronously on [`stdin`] in reply to queries constructed via
-    ///   [`OscSequence::ColorQuery`] or emitted via [`OscSender::send_color_query`].
+    ///   [`OscSequence::ColorQuery`] or emitted via [`OscSender::try_send_color_query`].
     /// - `OSC 52`: Inbound clipboard responses are ignored
     ///   ([`VT100InputEventIR::Ignored`]).
     /// - All other or malformed [`OSC`] sequences: safely ignored
     ///   ([`VT100InputEventIR::Ignored`]).
     ///
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
-    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
     /// [`stdin`]: std::io::stdin
     /// [`TerminalColorRole`]: crate::TerminalColorRole

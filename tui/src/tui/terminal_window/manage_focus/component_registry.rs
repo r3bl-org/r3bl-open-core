@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::HasFocus;
-use crate::{BoxedSafeComponent, CommonResult, ContainsResult, EventPropagation,
-            FlexBoxId, GlobalData, InputEvent};
-use rustc_hash::FxHashMap;
+use crate::{BoxedSafeComponent, ContainsResult, EventPropagation,
+            FlexBoxId, GlobalData, HashMap, InputEvent};
 use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
@@ -15,7 +14,7 @@ where
     _phantom: PhantomData<(S, AS)>,
 }
 
-pub type ComponentRegistryMap<S, A> = FxHashMap<FlexBoxId, BoxedSafeComponent<S, A>>;
+pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, BoxedSafeComponent<S, A>>;
 
 impl<S, AS> ComponentRegistry<S, AS>
 where
@@ -102,7 +101,7 @@ where
         input_event: InputEvent,
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation> {
+    ) -> miette::Result<EventPropagation> {
         // If component has focus, then route input_event to it. Return its
         // propagation enum.
         if let Some(component) = ComponentRegistry::try_to_get_focused_component(

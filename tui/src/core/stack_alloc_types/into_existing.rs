@@ -69,14 +69,45 @@
 //! [`fast_stringify`]: mod@crate::core::common::fast_strings#string-allocation-performance-strategy
 //! [`FastStringify`]: crate::FastStringify
 
-use crate::{CommonResult, DEFAULT_READ_BUFFER_SIZE, ok};
-use miette::{Context, IntoDiagnostic};
+use crate::DEFAULT_READ_BUFFER_SIZE;
 use smallstr::SmallString;
 use smallvec::Array;
 use std::{fs::File,
           io::{Read, Write},
           path::PathBuf,
           str::from_utf8};
+
+/// Error returned by [`read_from_file::try_read_file_path_into_inline_string`] and
+/// [`write_to_file::try_write_str_to_file`] when reading, writing, or [`UTF-8`] decoding
+/// fails.
+///
+/// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum InlineStringFileError {
+    /// Opening, creating, reading, or writing `path` failed.
+    #[error("Failed to read or write '{}'", path.display())]
+    Io {
+        /// File path involved in the I/O operation.
+        path: PathBuf,
+        /// Underlying OS I/O error.
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Read bytes from `path` were not valid [`UTF-8`].
+    ///
+    /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+    #[error("File '{}' contains invalid UTF-8", path.display())]
+    InvalidUtf8 {
+        /// File path whose contents failed [`UTF-8`] validation.
+        ///
+        /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+        path: PathBuf,
+        /// Underlying [`std::str::Utf8Error`].
+        #[source]
+        src_err: std::str::Utf8Error,
+    },
+}
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
@@ -198,8 +229,6 @@ macro_rules! join_fmt {
 
 #[cfg(test)]
 mod tests_join_fmt {
-    use crate::ok;
-
     struct Foo {
         items: Vec<String>,
     }
@@ -273,8 +302,6 @@ macro_rules! join_with_index_fmt {
 
 #[cfg(test)]
 mod tests_join_with_index_fmt {
-    use crate::ok;
-
     struct Foo {
         items: Vec<String>,
     }
@@ -336,23 +363,36 @@ pub mod read_from_file {
     pub fn try_read_file_path_into_inline_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         arg_path: impl Into<PathBuf>,
-    ) -> miette::Result<()> {
+    ) -> Result<(), InlineStringFileError> {
         // Open the file.
         let file_path: PathBuf = arg_path.into();
-        let mut file = File::open(&file_path)
-            .into_diagnostic()
-            .with_context(|| format!("Failed to open file {}", file_path.display()))?;
+        let mut file =
+            File::open(&file_path).map_err(|src_err| InlineStringFileError::Io {
+                path: file_path.clone(),
+                src_err,
+            })?;
 
         // Create a buffer to hold the file contents.
         let mut read_buffer = [0u8; DEFAULT_READ_BUFFER_SIZE];
 
         // Read the entire file's content in chunks and append to the SmallString.
         loop {
-            let num_bytes_read = file.read(&mut read_buffer).into_diagnostic()?;
+            let num_bytes_read = file.read(&mut read_buffer).map_err(|src_err| {
+                InlineStringFileError::Io {
+                    path: file_path.clone(),
+                    src_err,
+                }
+            })?;
             if num_bytes_read == 0 {
                 break;
             }
-            acc.push_str(from_utf8(&read_buffer[..num_bytes_read]).into_diagnostic()?);
+            let chunk = from_utf8(&read_buffer[..num_bytes_read]).map_err(|src_err| {
+                InlineStringFileError::InvalidUtf8 {
+                    path: file_path.clone(),
+                    src_err,
+                }
+            })?;
+            acc.push_str(chunk);
         }
 
         ok!()
@@ -365,20 +405,29 @@ pub mod write_to_file {
 
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - The file cannot be created (invalid path, permissions)
-    /// - Writing to the file fails
-    pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult {
-        let mut file = File::create(path).into_diagnostic()?;
-        file.write_all(contents.as_bytes()).into_diagnostic()?;
+    /// Returns [`InlineStringFileError::Io`] if creating or writing `path` fails.
+    pub fn try_write_str_to_file(
+        path: &PathBuf,
+        contents: &str,
+    ) -> Result<(), InlineStringFileError> {
+        let mut file =
+            File::create(path).map_err(|src_err| InlineStringFileError::Io {
+                path: path.clone(),
+                src_err,
+            })?;
+        file.write_all(contents.as_bytes()).map_err(|src_err| {
+            InlineStringFileError::Io {
+                path: path.clone(),
+                src_err,
+            }
+        })?;
         ok!()
     }
 }
 
 #[cfg(test)]
 mod tests_write_to_file {
-    use crate::{into_existing::write_to_file::try_write_str_to_file, ok,
-                try_create_temp_dir};
+    use crate::{try_create_temp_dir, write_to_file::try_write_str_to_file};
     use miette::IntoDiagnostic;
     use std::fs;
 
@@ -432,7 +481,7 @@ mod tests_write_to_file {
 #[cfg(test)]
 mod tests_read_from_file {
     use crate::{DEFAULT_DOCUMENT_SIZE, DocumentStorage, InlineString,
-                into_existing::read_from_file::try_read_file_path_into_inline_string,
+                read_from_file::try_read_file_path_into_inline_string,
                 try_create_temp_dir};
     use std::{fs::File, io::Write};
 

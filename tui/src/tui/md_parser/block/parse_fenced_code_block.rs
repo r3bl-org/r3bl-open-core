@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, CodeBlockLine,
-            CodeBlockLineContent, CodeBlockLines, NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR,
-            parse_null_padded_line::{is, trim_optional_leading_newline_and_nulls}};
+            CodeBlockLineContent, CodeBlockLines, NEW_LINE, NEWLINE_OR_NUL, NUL_CHAR, is,
+            trim_optional_leading_newline_and_nulls};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{is_not, tag, take_until, take_while},
@@ -188,7 +188,6 @@ fn convert_into_code_block_lines<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {

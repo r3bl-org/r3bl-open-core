@@ -1,10 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, MemoizedLenMap, OfsBuf,
-            OfsBufPool, OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport,
-            VPSize, core::glyphs, ok, spinner_impl,
-            telemetry::telemetry_sizing::TelemetryReportLineStorage};
+use crate::{DEBUG_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf, OfsBufPool,
+            OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport, VPSize,
+            get_next_tick_glyph_str, glyphs,
+            telemetry_sizing::TelemetryReportLineStorage};
 use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc::Sender;
 
@@ -87,7 +87,7 @@ impl HudData {
 
         // Tick the spinner
         self.tick_count = self.tick_count.wrapping_add(1);
-        let spinner_glyph = spinner_impl::spinner_render::get_next_tick_glyph_str(
+        let spinner_glyph = get_next_tick_glyph_str(
             &self.spinner_style,
             self.tick_count,
         );
@@ -122,7 +122,7 @@ where
         match &self.maybe_saved_ofs_buf {
             None => write!(f, "no saved ofs_buf")?,
             Some(ofs_buf) => {
-                if DEBUG_TUI_COMPOSITOR {
+                if DEBUG_COMPOSITOR {
                     write!(f, "{ofs_buf:?}")?;
                 } else {
                     write!(f, "ofs_buf saved from previous render")?;
@@ -139,17 +139,14 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     /// Creates a new instance of [`GlobalData`] with the given parameters.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the initial window size update fails.
+    #[must_use]
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,
         initial_size: VPSize,
         output_device: OutputDevice,
         ofs_buf_pool: OfsBufPool,
-    ) -> CommonResult<GlobalData<S, AS>>
+    ) -> GlobalData<S, AS>
     where
         AS: Debug + Default + Clone + Sync + Send,
     {
@@ -167,12 +164,12 @@ where
 
         it.set_size(initial_size);
 
-        Ok(it)
+        it
     }
 
     pub fn set_size(&mut self, new_size: VPSize) {
         self.window_size = new_size;
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = "main_event_loop -> Resize ⇲",

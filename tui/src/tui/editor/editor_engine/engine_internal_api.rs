@@ -5,7 +5,9 @@
 //! API.
 
 use super::{DeleteSelectionWith, SelectMode, caret_mut, content_mut};
-use crate::{ClipboardService, EditorArgsMut, EditorBuffer, EditorEngine, GapBufferLine,
+#[cfg(any(test, doc))]
+use crate::GapBufferLine;
+use crate::{ClipboardService, EditorArgsMut, EditorBuffer, EditorEngine,
             copy_to_clipboard};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
@@ -54,6 +56,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 
 pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
+#[cfg(any(test, doc))]
 #[must_use]
 pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<GapBufferLine<'_>> {
     buffer.get_line_at_c_caret()
@@ -125,8 +128,8 @@ pub fn copy_editor_selection_to_clipboard(
 #[cfg(test)]
 mod tests {
     use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer,
-                FileExtensionToken, SelectMode, assert_eq2, c_caret, c_col, c_len,
-                c_row, clipboard_test_fixtures::TestClipboard,
+                FileExtensionToken, SelectMode, c_caret, c_col, c_len, c_row,
+                clipboard_test_fixtures::TestClipboard,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api};
 

@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use r3bl_tui::{DefaultIoDevices, InlineString, TuiAvailabilityChooseExt, TuiColor,
-               assert_terminal_is_interactive, choose, cli_text_inline, get_size,
-               new_style, ok,
+               assert_terminal_is_interactive, cli_text_inline, new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
-               set_mimalloc_in_main, vp_height, vp_width};
+               run_in_main_with_safe_stack, try_choose, try_get_size, vp_height,
+               vp_width};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -54,12 +54,12 @@ struct QuestionData {
     correct_answer: String,
 }
 
-#[tokio::main]
-pub async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
-    let size = get_size()?;
+    let size = try_get_size()?;
 
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> =
@@ -80,7 +80,7 @@ pub async fn main() -> miette::Result<()> {
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
         let options = question_data.options.clone();
-        let maybe_user_choice = choose(
+        let maybe_user_choice = try_choose(
             question,
             options,
             Some(vp_height(max_height_row_count)),

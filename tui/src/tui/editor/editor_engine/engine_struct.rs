@@ -118,7 +118,7 @@ pub enum SyntaxHighlightMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, vp_height, vp_width};
+    use crate::{vp_height, vp_width};
 
     #[test]
     fn test_editor_engine_new() {

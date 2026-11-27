@@ -18,8 +18,8 @@ use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
             ByteLength, CCol, CIndex, CLength, CRow, CWidth, CursorBoundsCheck, DocSeg,
             GCStringOwned, GapBufferLine, LineMetadata, RangeExt, SegStringOwned,
-            byte_len, byte_offset, c_col, c_index, c_len, c_row, c_width,
-            segment_builder::build_segments_for_str};
+            build_segments_for_str, byte_len, byte_offset, c_col, c_index, c_len, c_row,
+            c_width};
 use std::ops::Range;
 
 impl ZeroCopyGapBuffer {
@@ -156,7 +156,7 @@ impl ZeroCopyGapBuffer {
     /// [`Some(CRow)`]: CRow
     pub fn insert_line(&mut self, arg_row_index: impl Into<CRow>) -> Option<CRow> {
         let row_index: CRow = arg_row_index.into();
-        match self.insert_empty_line(row_index) {
+        match self.try_insert_empty_line(row_index) {
             Ok(()) => Some(row_index),
             Err(_) => None,
         }
@@ -185,7 +185,7 @@ impl ZeroCopyGapBuffer {
         let grapheme_count = line_info.grapheme_count;
 
         if !grapheme_count.is_empty() {
-            let delete_res = self.delete_range(
+            let delete_res = self.try_delete_range(
                 row_index,
                 c_index(0u16),
                 grapheme_count.eol_cursor_position(),
@@ -195,7 +195,7 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        let insert_res = self.insert_text_at_grapheme(row_index, c_index(0u16), content);
+        let insert_res = self.try_insert_text_at_grapheme(row_index, c_index(0u16), content);
         if insert_res.is_err() {
             return None;
         }
@@ -205,7 +205,8 @@ impl ZeroCopyGapBuffer {
 
     pub fn push_line(&mut self, content: &str) {
         let line_idx = self.add_line();
-        drop(self.insert_text_at_grapheme(c_row(line_idx), c_index(0u16), content));
+        let _unused =
+            self.try_insert_text_at_grapheme(c_row(line_idx), c_index(0u16), content);
     }
 
     // Column-based operations.
@@ -223,7 +224,7 @@ impl ZeroCopyGapBuffer {
         let text_width = Self::calculate_text_display_width(text);
 
         // Perform the insertion.
-        match self.insert_text_at_grapheme(row_index, seg_idx, text) {
+        match self.try_insert_text_at_grapheme(row_index, seg_idx, text) {
             Ok(()) => Some(text_width),
             Err(_) => None,
         }
@@ -263,7 +264,7 @@ impl ZeroCopyGapBuffer {
         };
         let end_seg_index = c_index(actual_end);
 
-        let delete_res = self.delete_range(row_index, seg_idx, end_seg_index);
+        let delete_res = self.try_delete_range(row_index, seg_idx, end_seg_index);
         if delete_res.is_err() {
             return None;
         }
@@ -338,7 +339,7 @@ impl ZeroCopyGapBuffer {
         let append_pos = line_info.grapheme_count.eol_cursor_position();
 
         let insert_result =
-            self.insert_text_at_grapheme(base_row_index, append_pos, &second_line_text);
+            self.try_insert_text_at_grapheme(base_row_index, append_pos, &second_line_text);
         let Ok(()) = insert_result else {
             return None;
         };
@@ -577,13 +578,13 @@ mod tests {
         // Test insert_at_grapheme.
         assert!(
             storage
-                .insert_text_at_grapheme(c_row(0), c_index(5u16), " World")
+                .try_insert_text_at_grapheme(c_row(0), c_index(5u16), " World")
                 .is_ok()
         );
         assert_eq!(storage.get_line_content(c_row(0)), Some("Hello World"));
 
         // Test delete_at_grapheme.
-        assert!(storage.delete_grapheme_at(c_row(0), c_index(5u16)).is_ok());
+        assert!(storage.try_delete_grapheme_at(c_row(0), c_index(5u16)).is_ok());
         assert_eq!(storage.get_line_content(c_row(0)), Some("HelloWorld"));
     }
 
@@ -600,7 +601,7 @@ mod tests {
         // Insert more unicode.
         assert!(
             storage
-                .insert_text_at_grapheme(c_row(0), c_index(7u16), " 🌍")
+                .try_insert_text_at_grapheme(c_row(0), c_index(7u16), " 🌍")
                 .is_ok()
         );
         assert_eq!(storage.get_line_content(c_row(0)), Some("Hello 👋 🌍 世界"));

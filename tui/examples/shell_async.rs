@@ -89,16 +89,16 @@ use r3bl_tui::{SharedWriter, TuiAvailability, assert_terminal_is_interactive,
                                 ReadlineEvent::{BackTab, Eof, FnKey, Insert,
                                                 Interrupted, Line, PageDown, PageUp,
                                                 Resized, Tab, UnhandledKey}},
-               set_mimalloc_in_main};
+               run_in_main_with_safe_stack};
 use std::io::Write;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
             join,
             sync::broadcast};
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::needless_return)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Create a broadcast channel for shutdown.
@@ -111,13 +111,13 @@ async fn main() -> miette::Result<()> {
         stdin,
         stdout,
         stderr,
-    } = child_process_constructor::new("bash")?;
+    } = child_process_constructor::try_new("bash")?;
 
     // Create a `readline_async` instance.
     let terminal_async_constructor::TerminalAsyncHandle {
         rl_ctx: readline_async,
         shared_writer,
-    } = terminal_async_constructor::new(pid).await?;
+    } = terminal_async_constructor::try_new(pid).await?;
 
     // Create 2 tasks, join on them.
     // 1. monitor the output from the child process.
@@ -156,11 +156,13 @@ pub mod monitor_user_input_and_send_to_child {
         Resized,
     }
 
-    /// Converts a [`miette::Result`]`<ReadlineEvent>` to a [`ControlFlow`]. This
+    /// Converts a `Result<ReadlineEvent, ReadlineError>` to a [`ControlFlow`]. This
     /// leverages the type system to make it simpler to reason about what to do with
     /// the user input.
-    impl From<miette::Result<ReadlineEvent>> for ControlFlow {
-        fn from(result_readline_event: miette::Result<ReadlineEvent>) -> ControlFlow {
+    impl From<Result<ReadlineEvent, r3bl_tui::ReadlineError>> for ControlFlow {
+        fn from(
+            result_readline_event: Result<ReadlineEvent, r3bl_tui::ReadlineError>,
+        ) -> ControlFlow {
             match result_readline_event {
                 Ok(readline_event) => match readline_event {
                     Line(input) => {
@@ -199,12 +201,12 @@ pub mod monitor_user_input_and_send_to_child {
 
                 // Branch: Monitor readline_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
-                result_readline_event = rl_async.read_line() => {
+                result_readline_event = rl_async.try_read_line() => {
                     match ControlFlow::from(result_readline_event) {
                         ControlFlow::ShutdownKillChild => {
                             // We don't care about the result of the following operations.
                             child.kill().await.ok();
-                            rl_async.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await.ok();
+                            rl_async.try_request_shutdown(Some("❪◕‿◕❫ Goodbye")).await.ok();
                             shutdown_sender.send(()).ok();
                             break;
                         }
@@ -300,7 +302,7 @@ pub mod terminal_async_constructor {
     /// # Errors
     ///
     /// Returns an error if the terminal operations fail.
-    pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
+    pub async fn try_new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
             let prompt_str = inline_string!("┤{pid}├");
             let prompt_seg_1 = fg_slate_gray(&prompt_str).bg_moonlight_blue();
@@ -346,7 +348,7 @@ pub mod child_process_constructor {
     /// [`stderr`]: std::io::stderr
     /// [`stdin`]: std::io::stdin
     /// [`stdout`]: std::io::stdout
-    pub fn new(program: &str) -> miette::Result<ChildProcessHandle> {
+    pub fn try_new(program: &str) -> miette::Result<ChildProcessHandle> {
         let mut child: tokio::process::Child = tokio::process::Command::new(program)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())

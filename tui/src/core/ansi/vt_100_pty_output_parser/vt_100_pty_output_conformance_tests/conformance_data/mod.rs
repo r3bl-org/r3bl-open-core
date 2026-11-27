@@ -3,7 +3,8 @@
 // Allow doc_markdown - documentation explains internal test patterns where backticking
 // every function/type would reduce readability.
 // Allow test_attr_in_doctest - examples show test function structure for documentation.
-#![allow(clippy::doc_markdown, clippy::test_attr_in_doctest)]
+// Allow dead_code - reference conformance sequence library; not all helpers are called.
+#![allow(clippy::doc_markdown, clippy::test_attr_in_doctest, dead_code)]
 
 //! Conformance test data for [`VT-100`] [`ANSI`] sequence validation.
 //!
@@ -165,7 +166,7 @@
 //! modules -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::conformance_data::basic_sequences;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::conformance_data::basic_sequences;
 //!
 //! // Clear screen and move cursor to home
 //! let sequence = basic_sequences::clear_and_home();
@@ -182,7 +183,7 @@
 //! modules -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::conformance_data::styling_sequences;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::conformance_data::styling_sequences;
 //! use crate::ANSIBasicColor;
 //!
 //! // Apply colored text
@@ -200,7 +201,7 @@
 //! internal test data -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::conformance_data::{vim_sequences, tmux_sequences};
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::conformance_data::{vim_sequences, tmux_sequences};
 //!
 //! // Simulate vim status line
 //! let vim_status = vim_sequences::vim_status_line("NORMAL", 24);
@@ -218,13 +219,14 @@
 //! [`VT-100` spec]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-pub mod basic_sequences;
-pub mod cursor_sequences;
-pub mod display_sequences;
-pub mod edge_case_sequences;
-pub mod emacs_sequences;
-pub mod styling_sequences;
-pub mod tmux_sequences;
-pub mod vim_sequences;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod cursor_sequences; // Used by ansi_parser_public_api tests.
 
-// Re-export public functions that are actually used.
+// Attach. Folder-local (Intra-module).
+pub(super) mod basic_sequences;
+pub(super) mod display_sequences;
+pub(super) mod edge_case_sequences;
+pub(super) mod emacs_sequences;
+pub(super) mod styling_sequences;
+pub(super) mod tmux_sequences;
+pub(super) mod vim_sequences;

@@ -51,7 +51,7 @@
 //! [`RenderOpsLocalData`]: crate::tui::RenderOpsLocalData
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
-use crate::{CliTextInline, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, GCStringOwned, InlineString,
+use crate::{CliTextInline, DEBUG_DIRECT_TO_ANSI, GCStringOwned, InlineString,
             LockedOutputDevice, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, TermRowDelta, TuiColor, TuiStyle, VPCol,
             VPHeight, VPPos, VPSize,
@@ -463,7 +463,7 @@ mod helpers {
     pub fn flush(locked_output_device: LockedOutputDevice<'_>, log_msg: &str) {
         match locked_output_device.flush() {
             Ok(()) => {
-                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                DEBUG_DIRECT_TO_ANSI.then(|| {
                     tracing::info!(
                         message = "direct_to_ansi: ✅ Succeeded",
                         details = %log_msg
@@ -471,7 +471,7 @@ mod helpers {
                 });
             }
             Err(err) => {
-                DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+                DEBUG_DIRECT_TO_ANSI.then(|| {
                     tracing::error!(
                         message = "direct_to_ansi: ❌ Failed",
                         details = %log_msg,

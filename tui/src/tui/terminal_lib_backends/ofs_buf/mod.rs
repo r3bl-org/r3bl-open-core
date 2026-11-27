@@ -112,7 +112,7 @@
 //!
 //! ```text
 //! vt_100_pty_output_parser/ops/   ofs_buf/ofs_buf_vt_100/
-//! ├── vt_100_shim_char_ops      → ├── impl_char_ops    (print_char, ICH, DCH, ECH)
+//! ├── vt_100_shim_char_ops      → ├── impl_char_ops    (try_print_char, ICH, DCH, ECH)
 //! ├── vt_100_shim_control_ops   → ├── impl_control_ops (BS, TAB, LF, CR)
 //! ├── vt_100_shim_cursor_ops    → ├── impl_cursor_ops  (movement, positioning)
 //! ├── vt_100_shim_line_ops      → ├── impl_line_ops    (insert/delete lines)
@@ -141,9 +141,9 @@
 //! - `false`: Operation failed due to invalid input/bounds
 //!
 //! **Examples:**
-//! - [`set_char()`], [`fill_char_range()`], [`copy_chars_within_line()`]
-//! - [`clear_line()`], [`shift_lines_in_range()`]
-//! - [`insert_chars()`], [`delete_chars()`]
+//! - [`try_set_char()`], [`try_fill_char_range()`], [`try_copy_chars_within_line()`]
+//! - [`try_clear_line()`], [`try_shift_lines_in_range()`]
+//! - [`try_insert_chars()`], [`try_delete_chars()`]
 //!
 //! **Usage Pattern:**
 //! ```
@@ -153,10 +153,10 @@
 //! let pos = vp_pos(1, 1);
 //! let pixel_char = PixelChar::default();
 //! // In production code, failures are often ignored for terminal resilience
-//! buffer.set_char(pos, pixel_char);
+//! buffer.try_set_char(pos, pixel_char);
 //!
 //! // In development, use debug_assert! to catch issues early
-//! let success = buffer.set_char(pos, pixel_char);
+//! let success = buffer.try_set_char(pos, pixel_char);
 //! debug_assert!(success.is_ok(), "Failed to set char at {:?}", pos);
 //! ```
 //!
@@ -217,7 +217,7 @@
 //! vt100.get_active_screen_buffer_mut().set_cursor_pos(vp_row(1) + vp_col(1));
 //! let count = vp_len(1);
 //! vt100.insert_spaces(count);
-//! vt100.delete_chars(count);
+//! vt100.try_delete_chars(count);
 //! vt100.erase_chars(count);
 //!
 //! let row = vp_row(1);
@@ -226,7 +226,7 @@
 //! let dest = vp_col(2);
 //!
 //! // In internal operations with edge case awareness
-//! let success = vt100.primary_buffer_mut().copy_chars_within_line(
+//! let success = vt100.primary_buffer_mut().try_copy_chars_within_line(
 //!     row, source..end, dest);
 //! debug_assert!(success.is_ok() || source >= end,
 //!     "Failed to copy chars, range: {:?}..{:?}", source, end);
@@ -279,22 +279,17 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-//! [`bounds_check`]: crate::bounds_check
-//! [`clear_line()`]: crate::core::ansi::OfsBufVT100::clear_line
-//! [`copy_chars_within_line()`]: crate::tui::OfsBuf::copy_chars_within_line
+//! [`bounds_check`]: mod@crate::core::coordinates::bounds_check
 //! [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-//! [`delete_chars()`]: crate::core::ansi::OfsBufVT100::delete_chars
 //! [`diff()`]: crate::tui::OfsBuf::diff
-//! [`fill_char_range()`]: crate::tui::OfsBuf::fill_char_range
 //! [`Flat2DArray`]: crate::core::Flat2DArray
 //! [`get_char()`]: crate::tui::OfsBuf::get_char
 //! [`get_line()`]: crate::tui::OfsBuf::get_line
 //! [`handle_backspace()`]: crate::core::ansi::OfsBufVT100::handle_backspace
 //! [`handle_line_feed()`]: crate::core::ansi::OfsBufVT100::handle_line_feed
 //! [`handle_tab()`]: crate::core::ansi::OfsBufVT100::handle_tab
-//! [`IndexOps`]: crate::bounds_check::IndexOps
-//! [`insert_chars()`]: crate::core::ansi::OfsBufVT100::insert_chars
-//! [`LengthOps`]: crate::bounds_check::LengthOps
+//! [`IndexOps`]: crate::IndexOps
+//! [`LengthOps`]: crate::LengthOps
 //! [`move_cursor_down()`]: crate::core::ansi::OfsBufVT100::move_cursor_down
 //! [`move_cursor_left()`]: crate::core::ansi::OfsBufVT100::move_cursor_left
 //! [`move_cursor_right()`]: crate::core::ansi::OfsBufVT100::move_cursor_right
@@ -305,12 +300,17 @@
 //! [`Option<PixelCharDiffChunks>`]: std::option::Option
 //! [`Option<T>`]: std::option::Option
 //! [`PixelChar::Void`]: PixelChar::Void
-//! [`RangeBoundsExt`]: crate::bounds_check::RangeBoundsExt
+//! [`RangeBoundsExt`]: crate::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
 //! [`reset_all_style_attributes()`]: crate::core::ansi::OfsBufVT100::reset_all_style_attributes
-//! [`set_char()`]: crate::tui::OfsBuf::set_char
 //! [`set_foreground_color()`]: crate::core::ansi::OfsBufVT100::set_foreground_color
-//! [`shift_lines_in_range()`]: crate::core::ansi::OfsBufVT100::shift_lines_in_range
+//! [`try_clear_line()`]: crate::core::ansi::OfsBufVT100::try_clear_line
+//! [`try_copy_chars_within_line()`]: crate::tui::OfsBuf::try_copy_chars_within_line
+//! [`try_delete_chars()`]: crate::core::ansi::OfsBufVT100::try_delete_chars
+//! [`try_fill_char_range()`]: crate::tui::OfsBuf::try_fill_char_range
+//! [`try_insert_chars()`]: crate::core::ansi::OfsBufVT100::try_insert_chars
+//! [`try_set_char()`]: crate::tui::OfsBuf::try_set_char
+//! [`try_shift_lines_in_range()`]: crate::core::ansi::OfsBufVT100::try_shift_lines_in_range
 //! [`TuiStyle`]: crate::TuiStyle
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`VPPos`]: crate::core::VPPos
@@ -319,30 +319,20 @@
 
 #![rustfmt::skip]
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod paint_impl; // Cross-folder rustdoc links (terminal_lib_backends, compositor, direct_to_ansi, render_op).
+
+// Attach. Folder-local (Intra-module).
 mod bulk_ops;
 mod storage;
 mod core;
 mod line_level_ops;
 mod pixel_char;
 mod pixel_char_line;
-
-// Attach private modules (hide internal structure).
-// Some modules are conditionally public for documentation to allow rustdoc links.
-#[cfg(any(test, doc))]
-pub mod diff_chunks;
-#[cfg(not(any(test, doc)))]
 mod diff_chunks;
-#[cfg(any(test, doc))]
-pub mod char_ops;
-#[cfg(not(any(test, doc)))]
 mod char_ops;
-#[cfg(any(test, doc))]
-pub mod paint_impl;
-#[cfg(not(any(test, doc)))]
-mod paint_impl;
 
-// Re-export public API (flat, ergonomic surface).
+// Re-export.
 pub use diff_chunks::*;
 pub use core::*;
 pub use paint_impl::*;
@@ -350,5 +340,6 @@ pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use storage::*;
 
+// Test fixtures (crate-internal for docs and tests).
 #[cfg(any(test, doc))]
-pub mod test_fixtures_ofs_buf;
+pub(crate) mod test_fixtures_ofs_buf; // Shared OfsBuf test fixtures across parser and backend tests.

@@ -11,12 +11,12 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`CsiSequence`]: crate::CsiSequence
 //! [`SgrCode`]: crate::SgrCode
-//! [constants module design]: mod@crate::constants#design
+//! [constants module design]: mod@crate::core::ansi::constants#design
 
 use super::{ascii_byte_to_char,
             input_sequences::{ANSI_PARAM_SEPARATOR_CHAR, ANSI_PARAM_SEPARATOR_STR,
                               ANSI_SUBPARAM_SEPARATOR_CHAR, ASCII_QUESTION_MARK}};
-use crate::{core::ansi, define_ansi_const};
+use crate::core::ansi;
 
 // CSI sequence components.
 

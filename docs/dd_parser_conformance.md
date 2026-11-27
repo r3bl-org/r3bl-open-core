@@ -1,44 +1,44 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+<!-- BEGIN mktoc -->
 
 - [Parser Conformance Testing Plan](#parser-conformance-testing-plan)
-  - [Overview](#overview)
-  - [Current State](#current-state)
-  - [Goal](#goal)
-  - [Progress Tracking](#progress-tracking)
-    - [✅ Phase 1: Analysis](#-phase-1-analysis)
-    - [✅ Phase 2: Infrastructure Design](#-phase-2-infrastructure-design)
-    - [✅ Phase 3: Implementation Complete](#-phase-3-implementation-complete)
-    - [✅ Phase 4: Foundation Complete](#-phase-4-foundation-complete)
-  - [Test Data Categories](#test-data-categories)
+- [Overview](#overview)
+- [Current State](#current-state)
+- [Goal](#goal)
+- [Progress Tracking](#progress-tracking)
+    - [✅ Phase 1: Analysis](#✅-phase-1-analysis)
+    - [✅ Phase 2: Infrastructure Design](#✅-phase-2-infrastructure-design)
+    - [✅ Phase 3: Implementation Complete](#✅-phase-3-implementation-complete)
+    - [✅ Phase 4: Foundation Complete](#✅-phase-4-foundation-complete)
+- [Test Data Categories](#test-data-categories)
     - [Small Valid Inputs](#small-valid-inputs)
     - [Medium Valid Inputs](#medium-valid-inputs)
     - [Large Valid Inputs](#large-valid-inputs)
     - [Invalid Inputs](#invalid-inputs)
     - [Real World](#real-world)
-  - [Implementation Strategy](#implementation-strategy)
-  - [Type Structure](#type-structure)
+- [Implementation Strategy](#implementation-strategy)
+- [Type Structure](#type-structure)
     - [MdDocument](#mddocument)
     - [MdElement Variants](#mdelement-variants)
     - [MdLineFragment Variants](#mdlinefragment-variants)
-  - [Implementation Summary](#implementation-summary)
+- [Implementation Summary](#implementation-summary)
     - [What Was Done](#what-was-done)
     - [Key Patterns Established](#key-patterns-established)
-  - [Achievements](#achievements)
-    - [ALL 49 Tests Now Have Real Assertions! 🎉](#all-49-tests-now-have-real-assertions-)
+- [Achievements](#achievements)
+    - [ALL 49 Tests Now Have Real Assertions! 🎉](#all-49-tests-now-have-real-assertions-🎉)
     - [Testing Infrastructure](#testing-infrastructure)
     - [Key Benefits](#key-benefits)
-  - [Completion Summary](#completion-summary)
+- [Completion Summary](#completion-summary)
     - [What Was Accomplished](#what-was-accomplished)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END mktoc -->
 
 # Parser Conformance Testing Plan
 
 ## Overview
 
-Transform the existing snapshot tests in `parser_snapshot_tests.rs` from simple parse-and-ignore
-tests into real snapshot tests that verify the correctness of the parsed markdown structure.
+Transform the existing snapshot tests in `parser_snapshot_tests.rs` from simple
+parse-and-ignore tests into real snapshot tests that verify the correctness of the parsed
+markdown structure.
 
 ## Current State
 
@@ -72,13 +72,13 @@ Implement comprehensive snapshot tests that:
 ### ✅ Phase 3: Implementation Complete
 
 - [x] Helper functions for MdDocument assertions
-  - `assert_doc_len` - Verify document element count
-  - `assert_text_element` - Verify text with fragments
-  - `assert_heading_element` - Verify heading level and text
-  - `assert_title_element` - Verify metadata title
-  - `assert_tags_element` - Verify metadata tags
-  - `assert_authors_element` - Verify metadata authors
-  - `assert_date_element` - Verify metadata date
+    - `assert_doc_len` - Verify document element count
+    - `assert_text_element` - Verify text with fragments
+    - `assert_heading_element` - Verify heading level and text
+    - `assert_title_element` - Verify metadata title
+    - `assert_tags_element` - Verify metadata tags
+    - `assert_authors_element` - Verify metadata authors
+    - `assert_date_element` - Verify metadata date
 - [x] Convert small valid input tests (19 tests) - All converted with full assertions!
 - [x] Convert medium valid input tests (6 tests converted as examples)
 - [x] Implement legacy `test_parse` function for remaining tests
@@ -129,33 +129,33 @@ Implement comprehensive snapshot tests that:
 ## Implementation Strategy
 
 1. **Create assertion helpers** that can verify:
-   - MdElement types match expected
-   - Text content is correct
-   - Formatting is preserved
-   - Metadata is parsed correctly
-   - Lists maintain proper structure
-   - Code blocks preserve language and content
+    - MdElement types match expected
+    - Text content is correct
+    - Formatting is preserved
+    - Metadata is parsed correctly
+    - Lists maintain proper structure
+    - Code blocks preserve language and content
 
 2. **Pattern for each test**:
 
-   ```rust
-   fn test_x() {
-       let input = TEST_CONSTANT;
-       let (remainder, doc) = parse_markdown(input).unwrap();
-       assert_eq!(remainder, "");
+    ```rust
+    fn test_x() {
+        let input = TEST_CONSTANT;
+        let (remainder, doc) = parse_markdown(input).unwrap();
+        assert_eq!(remainder, "");
 
-       // Verify document structure
-       assert_eq!(doc.len(), expected_length);
+        // Verify document structure
+        assert_eq!(doc.len(), expected_length);
 
-       // Verify each element
-       match &doc[0] {
-           MdElement::Text(fragments) => {
-               // Assert fragment contents
-           },
-           // ... other cases
-       }
-   }
-   ```
+        // Verify each element
+        match &doc[0] {
+            MdElement::Text(fragments) => {
+                // Assert fragment contents
+            },
+            // ... other cases
+        }
+    }
+    ```
 
 3. **Use existing test patterns** from `parse_markdown.rs` as reference
 
@@ -195,45 +195,45 @@ Implement comprehensive snapshot tests that:
 
 1. **Created comprehensive assertion helpers** for all MdElement types
 2. **Converted all 19 small valid input tests** to real snapshot tests that verify:
-   - Empty strings and newlines produce correct empty documents
-   - Plain text is parsed correctly
-   - Inline formatting (bold, italic, code) is preserved
-   - Links and images maintain their structure
-   - Metadata fields are parsed correctly
-   - Unicode and emojis are preserved
-   - Complex documents have expected structure
+    - Empty strings and newlines produce correct empty documents
+    - Plain text is parsed correctly
+    - Inline formatting (bold, italic, code) is preserved
+    - Links and images maintain their structure
+    - Metadata fields are parsed correctly
+    - Unicode and emojis are preserved
+    - Complex documents have expected structure
 
 3. **Converted 5 medium tests as examples** showing patterns for:
-   - Multiple lines and headings
-   - All heading levels (H1-H6)
-   - Code blocks with language detection
-   - Checkboxes in lists
+    - Multiple lines and headings
+    - All heading levels (H1-H6)
+    - Code blocks with language detection
+    - Checkboxes in lists
 
 ### Key Patterns Established
 
 1. **Basic assertion pattern**:
 
-   ```rust
-   let (remainder, doc) = parse_markdown(input).unwrap();
-   assert_eq!(remainder, "");
-   assert_doc_len(&doc, expected_length);
-   // Then verify each element
-   ```
+    ```rust
+    let (remainder, doc) = parse_markdown(input).unwrap();
+    assert_eq!(remainder, "");
+    assert_doc_len(&doc, expected_length);
+    // Then verify each element
+    ```
 
 2. **Text verification pattern**:
 
-   ```rust
-   assert_text_element(&doc[0], &[
-       MdLineFragment::Plain("text"),
-       MdLineFragment::Bold("bold"),
-       // etc.
-   ]);
-   ```
+    ```rust
+    assert_text_element(&doc[0], &[
+        MdLineFragment::Plain("text"),
+        MdLineFragment::Bold("bold"),
+        // etc.
+    ]);
+    ```
 
 3. **Complex document verification**:
-   - Check for presence of expected element types
-   - Verify counts and structure
-   - Validate nested content
+    - Check for presence of expected element types
+    - Verify counts and structure
+    - Validate nested content
 
 ## Achievements
 
@@ -241,12 +241,12 @@ Implement comprehensive snapshot tests that:
 
 - **All 19 small valid input tests** - Complete verification of parsed structure
 - **All 17 medium valid input tests** - Comprehensive verification including:
-  - Multi-line documents and headings
-  - Lists (simple, nested, mixed types)
-  - Code blocks (with/without language, empty)
-  - Formatting edge cases and nested formatting
-  - Emoji handling
-  - Blog post structure
+    - Multi-line documents and headings
+    - Lists (simple, nested, mixed types)
+    - Code blocks (with/without language, empty)
+    - Formatting edge cases and nested formatting
+    - Emoji handling
+    - Blog post structure
 - **All 2 large valid input tests** - Complex document verification
 - **All 2 invalid input tests** - Graceful error handling
 - **1 jumbo real world test** - Full document validation
@@ -267,8 +267,8 @@ Implement comprehensive snapshot tests that:
 
 ## Completion Summary
 
-This task is now **100% complete**! All parser snapshot tests have been converted from simple
-parse-and-ignore tests to real snapshot tests with proper assertions.
+This task is now **100% complete**! All parser snapshot tests have been converted from
+simple parse-and-ignore tests to real snapshot tests with proper assertions.
 
 ### What Was Accomplished
 
@@ -278,5 +278,5 @@ parse-and-ignore tests to real snapshot tests with proper assertions.
 4. ✅ Tests provide meaningful validation of parser behavior
 5. ✅ All tests passing with comprehensive coverage
 
-The markdown parser now has a robust testing infrastructure that will catch any regressions or
-unintended changes in parsing behavior.
+The markdown parser now has a robust testing infrastructure that will catch any
+regressions or unintended changes in parsing behavior.

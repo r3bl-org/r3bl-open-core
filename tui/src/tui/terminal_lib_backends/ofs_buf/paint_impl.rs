@@ -77,7 +77,7 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind, GCStringOwned,
+use crate::{DEBUG_COMPOSITOR, DEBUG_RENDER_PIPELINE, FlushKind, GCStringOwned,
             InlineString, LockedOutputDevice, NarrowingCastToU16, OfsBuf, PixelChar,
             PixelCharDiffChunks, RenderOpCommon, RenderOpFlush, RenderOpOutput,
             RenderOpOutputVec, RenderOpsExec, TERMINAL_LIB_BACKEND, TerminalLibBackend,
@@ -136,7 +136,7 @@ pub fn paint_ofs_buf(
     }
 
     // Debug output.
-    DEBUG_TUI_SHOW_PIPELINE.then(|| {
+    DEBUG_RENDER_PIPELINE.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = "🎨 paint_ofs_buf ok 🟢",
@@ -182,7 +182,7 @@ pub fn paint_ofs_buf_diff(
     }
 
     // Debug output.
-    DEBUG_TUI_SHOW_PIPELINE.then(|| {
+    DEBUG_RENDER_PIPELINE.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = "🎨 paint_diff_ofs_buf ok 🟢",
@@ -329,7 +329,7 @@ pub fn render_ofs_buf(ofs_buf: &OfsBuf) -> RenderOpOutputVec {
 /// [`TuiStyle`]: TuiStyle
 #[must_use]
 pub fn render_ofs_buf_diff(diff_chunks: &PixelCharDiffChunks) -> RenderOpOutputVec {
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = "🎨 ofs_buf_paint_impl_crossterm::render_ofs_buf_diff() ok 🟢",
@@ -371,7 +371,7 @@ pub fn render_ofs_buf_diff(diff_chunks: &PixelCharDiffChunks) -> RenderOpOutputV
     it
 }
 
-pub mod render_helper {
+mod render_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -455,9 +455,9 @@ pub mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::{render_helper::style_eq, *};
-    use crate::{Flat2DArray, RenderOpsLocalData, VPWidth, assert_eq2,
-                compositor_render_ops_to_ofs_buf::print_text_with_attributes, new_style,
-                tui_color, vp_col, vp_height, vp_row, vp_width};
+    use crate::{Flat2DArray, RenderOpsLocalData, VPWidth,
+                compositor_render_ops_to_ofs_buf::try_print_text_with_attributes,
+                vp_col, vp_height, vp_row, vp_width};
 
     /// Helper function to make an `OfsBuf`.
     fn make_ofs_buf_plain_text() -> OfsBuf {
@@ -481,7 +481,7 @@ mod tests {
             ..Default::default()
         };
         let maybe_max_display_col_count: Option<VPWidth> = Some(vp_width(10));
-        print_text_with_attributes(
+        try_print_text_with_attributes(
             text,
             maybe_style.as_ref(),
             &mut ofs_buf,

@@ -163,7 +163,7 @@ mod test_fixtures {
         // Insert Unicode-rich content: "Hello 👋 世界!".
         // This includes: ASCII, emoji, CJK characters, punctuation
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello 👋 世界!")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello 👋 世界!")
             .expect("conversion error");
 
         buffer
@@ -310,7 +310,7 @@ mod tests_empty_line_edge_cases {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "test")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "test")
             .expect("conversion error");
 
         // Verify line is not empty.
@@ -320,7 +320,7 @@ mod tests_empty_line_edge_cases {
 
         // Clear the line by deleting all 4 graphemes.
         buffer
-            .delete_range(c_row(0), c_index(0u16), c_index(4u16))
+            .try_delete_range(c_row(0), c_index(0u16), c_index(4u16))
             .expect("conversion error");
 
         // Verify line is now empty.
@@ -493,7 +493,7 @@ mod tests_access_pattern_equivalence {
 
         // Insert complex Unicode: family emoji, combining chars, etc.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "a👨‍👩‍👧‍👦é🇺🇸")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "a👨‍👩‍👧‍👦é🇺🇸")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");

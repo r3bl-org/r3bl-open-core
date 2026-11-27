@@ -25,8 +25,7 @@
 //! [`DA`]: crate::DaSequence
 //! [`ESC`]: crate::EscSequence
 
-use crate::{BufTextStorage, DA1_VT220_COLOR_RESPONSE_STR, FastStringify,
-            generate_impl_display_for_fast_stringify};
+use crate::{BufTextStorage, DA1_VT220_COLOR_RESPONSE_STR, FastStringify};
 use std::fmt::{self};
 
 /// Builds Device Attributes (DA) response sequences.

@@ -74,12 +74,19 @@
 
 use super::{OfsBuf, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
-use crate::{ChUnit, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
-            GCStringOwned, MemoizedLenMap, NarrowingCastToU16, PixelChar, RangeExt,
-            RenderOpsLocalData, StringLength, TuiStyle, UNICODE_REPLACEMENT_CHAR, VPPos,
-            VPSize, VPWidth, WideningCastToUsize, ZOrder, ch,
+use crate::{ChUnit, DEBUG_COMPOSITOR, GCStringOwned, MemoizedLenMap, NarrowingCastToU16,
+            PixelChar, RangeExt, RenderOpsLocalData, StringLength, TuiStyle,
+            UNICODE_REPLACEMENT_CHAR, VPPos, VPRow, VPSize, VPWidth, WideningCastToUsize,
+            ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
-            inline_string, usize, vp_col, vp_width};
+            usize, vp_col, vp_width};
+
+/// Error returned when a render operation targets a row outside the offscreen buffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Display size too small for row {row:?}")]
+pub struct DisplaySizeTooSmallError {
+    pub row: VPRow,
+}
 
 impl RenderPipeline {
     /// Converts the render pipeline to an offscreen buffer.
@@ -112,7 +119,7 @@ impl RenderPipeline {
             }
         }
 
-        DEBUG_TUI_COMPOSITOR.then(|| {
+        DEBUG_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("ofs_buf {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
@@ -133,7 +140,7 @@ pub fn process_render_op(
     match render_op_ir {
         // IR-specific: PaintTextWithAttributes handles clipping and Unicode width
         RenderOpIR::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
-            let result_new_pos = print_text_with_attributes(
+            let result_new_pos = try_print_text_with_attributes(
                 arg_text_ref,
                 maybe_style_ref.as_ref(),
                 ofs_buf,
@@ -180,7 +187,7 @@ fn process_common_render_op(
 
         // ===== Incremental Rendering Operations - Complete implementation
         // These operations are executed both by the backend AND need to update buffer
-        // state for consistency and future extensibility (e.g., if choose() or
+        // state for consistency and future extensibility (e.g., if try_choose() or
         // readline_async migrates to use OfsBuf).
         RenderOpCommon::MoveCursorToColumn(col_index) => {
             ofs_buf.update_cursor_pos(|p| p.col_index = *col_index);
@@ -232,7 +239,7 @@ fn process_common_render_op(
             // when the ANSI sequences are interpreted.
             //
             // This approach ensures the cursor position stays in sync with actual output,
-            // which is important for consistency and future use cases (e.g., if choose()
+            // which is important for consistency and future use cases (e.g., if try_choose()
             // or readline_async migrates to use OfsBuf).
 
             // Calculate visible text width using memoized ANSI stripping (70x speedup).
@@ -346,7 +353,7 @@ fn process_common_render_op(
 ///
 /// # Errors
 ///
-/// Returns [`CommonErrorType::DisplaySizeTooSmall`] if the target row index exceeds
+/// Returns [`DisplaySizeTooSmallError`] if the target row index exceeds
 /// the offscreen buffer's available rows (i.e., when
 /// `ofs_buf.my_pos.row_index` is greater than or equal to the number of rows
 /// in `ofs_buf`).
@@ -354,13 +361,13 @@ fn process_common_render_op(
 /// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`Seg`]: crate::core::Seg
 /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
-pub fn print_text_with_attributes(
+pub fn try_print_text_with_attributes(
     string: &str,
     maybe_style_ref: Option<&TuiStyle>,
     ofs_buf: &mut OfsBuf,
     maybe_max_display_col_count: Option<VPWidth>,
     render_local_data: &RenderOpsLocalData,
-) -> CommonResult<VPPos> {
+) -> Result<VPPos, DisplaySizeTooSmallError> {
     // Get col and row index from `my_pos`.
     let display_col_index = ofs_buf.get_cursor_pos().col_index.as_usize_widening();
     let display_row_index = ofs_buf.get_cursor_pos().row_index;
@@ -379,13 +386,13 @@ pub fn print_text_with_attributes(
             Ok(line.to_vec())
         } else {
             // Clip vertically.
-            CommonError::new_error_result_with_only_type(
-                CommonErrorType::DisplaySizeTooSmall,
-            )
+            Err(DisplaySizeTooSmallError {
+                row: display_row_index,
+            })
         }
     }?;
 
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info! {
             message = %inline_string!(
@@ -417,7 +424,7 @@ pub fn print_text_with_attributes(
         render_local_data,
     );
 
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = %match maybe_style {
@@ -694,10 +701,8 @@ mod print_text_with_attributes_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Flat2DArray, NarrowingCastToU16, NarrowingCastToUsize, assert_eq2,
-                new_style, render_pipeline, tui_color, vp_col, vp_height, vp_pos,
-                vp_row, vp_width};
-    use rustc_hash::FxHashMap;
+    use crate::{Flat2DArray, HashMap, NarrowingCastToU16, NarrowingCastToUsize,
+                vp_col, vp_height, vp_pos, vp_row, vp_width};
 
     #[allow(clippy::too_many_lines)]
     #[test]
@@ -724,7 +729,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -783,7 +788,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -847,7 +852,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -908,7 +913,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -964,7 +969,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -1027,7 +1032,7 @@ mod tests {
             };
             let maybe_max_display_col_count = Some(vp_width(10));
 
-            print_text_with_attributes(
+            try_print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
                 &mut ofs_buf,
@@ -1146,7 +1151,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1222,7 +1227,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,
@@ -1357,7 +1362,7 @@ mod tests {
 
         let mut ofs_buf =
             OfsBuf::new(Flat2DArray::new_empty(window_size, PixelChar::Spacer));
-        let mut memoized_len_map = FxHashMap::default();
+        let mut memoized_len_map = HashMap::default();
         pipeline.compose_render_ops_into_ofs_buf(
             window_size,
             &mut ofs_buf,

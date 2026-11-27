@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{BLOCK_DOTS, BRAILLE_DOTS, GCStringOwned, InlineString, SpinnerColor,
             SpinnerStyle, SpinnerTemplate, VPWidth, contains_ansi_escape_sequence,
-            fg_color, inline_string, vp_width};
+            fg_color, vp_width};
 use std::ops::Not;
 
 pub fn render_tick(

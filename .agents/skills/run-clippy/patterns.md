@@ -1,12 +1,14 @@
 # Code Style Patterns and Examples
 
-This document provides detailed examples of good vs bad patterns for code style enforcement.
+This document provides detailed examples of good vs bad patterns for code style
+enforcement.
 
 ## Comment Punctuation Patterns
 
 ### Single-line Standalone Comments
 
 **✅ Good:**
+
 ```rust
 // Initialize the buffer with default values.
 let mut buffer = Vec::new();
@@ -21,6 +23,7 @@ for line in lines {
 ```
 
 **❌ Bad:**
+
 ```rust
 // Initialize the buffer with default values
 let mut buffer = Vec::new();
@@ -39,6 +42,7 @@ for line in lines {
 ### Multi-line Wrapped Comments
 
 **✅ Good (One Logical Sentence):**
+
 ```rust
 // This function performs complex validation by checking
 // multiple conditions across different data structures.
@@ -50,6 +54,7 @@ fn validate(data: &Data) -> bool {
 ```
 
 **❌ Bad (Period on Every Line):**
+
 ```rust
 // This function performs complex validation by checking.
 // multiple conditions across different data structures.
@@ -61,6 +66,7 @@ fn validate(data: &Data) -> bool {
 ```
 
 **❌ Bad (No Period at All):**
+
 ```rust
 // This function performs complex validation by checking
 // multiple conditions across different data structures
@@ -74,6 +80,7 @@ fn validate(data: &Data) -> bool {
 ### Multiple Independent Comments
 
 **✅ Good:**
+
 ```rust
 // Set up the initial state.
 let mut state = State::new();
@@ -98,6 +105,7 @@ loop {
 ```
 
 **❌ Bad:**
+
 ```rust
 // Set up the initial state
 let mut state = State::new();
@@ -133,9 +141,9 @@ loop {
 let checksum = bytes.iter().fold(0u8, |acc, &b| acc ^ b);
 ```
 
-Test: Can you combine into one sentence?
-→ "Calculate the checksum by iterating through all bytes and applying the XOR operation to each one."
-→ ✅ Yes, so it's wrapped. Period only at the end.
+Test: Can you combine into one sentence? → "Calculate the checksum by iterating through
+all bytes and applying the XOR operation to each one." → ✅ Yes, so it's wrapped. Period
+only at the end.
 
 **Example 2: Independent Comments (Separate Thoughts)**
 
@@ -146,11 +154,9 @@ Test: Can you combine into one sentence?
 process_data(&input, &output)?;
 ```
 
-Test: Can each line stand alone?
-→ "First, validate the input data." ✅ Complete thought
-→ "Then, transform it into the output format." ✅ Complete thought
-→ "Finally, write it to the file." ✅ Complete thought
-→ Each is independent. Each gets a period.
+Test: Can each line stand alone? → "First, validate the input data." ✅ Complete thought →
+"Then, transform it into the output format." ✅ Complete thought → "Finally, write it to
+the file." ✅ Complete thought → Each is independent. Each gets a period.
 
 ---
 
@@ -250,8 +256,8 @@ if flag {
 
 **Example: option_map_unwrap_or (Suppress)**
 
-Prefer explicit `.map(f).unwrap_or(default)` chaining over `.map_or(default, f)` for readability.
-Suppress the lint rather than refactoring:
+Prefer explicit `.map(f).unwrap_or(default)` chaining over `.map_or(default, f)` for
+readability. Suppress the lint rather than refactoring:
 
 ```rust
 // ✅ Preferred - explicit chaining
@@ -328,9 +334,13 @@ fn process_item(item: &Data) -> Result<Output> {
 
 ## Complex Trait Bounds Documentation
 
-When defining complex trait bounds (e.g., in a `where` clause with multiple trait constraints), format them clearly with block comments (`/* ... */`) aligned on the right to explain the purpose of each bound. This makes complex type acrobatics much easier to understand.
+When defining complex trait bounds (e.g., in a `where` clause with multiple trait
+constraints), format them clearly with block comments (`/* ... */`) aligned on the right
+to explain the purpose of each bound. This makes complex type acrobatics much easier to
+understand.
 
 **✅ Good:**
+
 ```rust
 where
     Self::IndexType:
@@ -340,6 +350,7 @@ where
 ```
 
 **❌ Bad:**
+
 ```rust
 where
     // Ensure index can check overflow against this length
@@ -412,13 +423,18 @@ use std::io::{self, Read};
 use std::fs::File;
 ```
 
-**cargo fmt will automatically organize imports when configured with `group_imports = "StdExternalCrate"`**
+**cargo fmt will automatically organize imports when configured with
+`group_imports = "StdExternalCrate"`**
 
 ### Clean Imports over Inline Absolute Paths (Mandatory)
 
-Do NOT write inline absolute paths like `crate::Type` or `crate::Size` inside function signatures or block bodies. Instead, import them cleanly via `use` statements at the top of the file, then reference the type directly. This keeps the code highly readable and reduces cognitive clutter.
+Do NOT write inline absolute paths like `crate::Type` or `crate::Size` inside function
+signatures or block bodies. Instead, import them cleanly via `use` statements at the top
+of the file, then reference the type directly. This keeps the code highly readable and
+reduces cognitive clutter.
 
 **✅ Good:**
+
 ```rust
 // At the top of the file:
 use crate::{Size, Pos, PixelChar};
@@ -431,6 +447,7 @@ pub fn render(size: Size, pos: Pos) -> PixelChar {
 ```
 
 **❌ Bad:**
+
 ```rust
 // Inline absolute references cluttering signatures and bodies:
 pub fn render(size: crate::Size, pos: crate::Pos) -> crate::PixelChar {
@@ -470,6 +487,7 @@ When running clippy, also verify module organization follows these patterns:
 ### Private Modules + Public Re-exports
 
 **✅ Good:**
+
 ```rust
 // mod.rs
 mod constants;  // Private
@@ -482,6 +500,7 @@ pub use helpers::*;
 ```
 
 **❌ Bad:**
+
 ```rust
 // mod.rs
 pub mod constants;  // Exposes internal structure
@@ -491,23 +510,36 @@ pub mod helpers;
 
 ---
 
-### Conditional Visibility
+### Crate-Internal Module Visibility
 
-**✅ Good (for docs and tests):**
+Because `--document-private-items` is enabled workspace-wide, do **not** use dual-arm
+`#[cfg(any(test, doc))]` / `#[cfg(not(any(test, doc)))]` shims on production modules.
+Default to **Folder-local (Intra-module)** `mod` for parent/sibling-only modules, and
+use **Crate-wide (Intra-crate)** `pub(crate) mod` (with a 1-line inline reason comment)
+only when ancestor or cousin modules outside the parent folder need path access in code,
+tests, or rustdoc links:
+
+**✅ Good (progressive-disclosure tier headers and inline `pub(crate) mod` reason):**
+
 ```rust
 // mod.rs
-#[cfg(any(test, doc))]
-pub mod internal_parser;
-#[cfg(not(any(test, doc)))]
-mod internal_parser;
 
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod internal_parser; // Cross-folder rustdoc module links and tests.
+
+// Attach. Folder-local (Intra-module).
+mod parent_or_sibling_only;
+
+// Re-export.
 pub use internal_parser::*;
+pub use parent_or_sibling_only::*;
 ```
 
-**❌ Bad:**
+**❌ Bad (leaks internal module path in public API):**
+
 ```rust
 // mod.rs
-pub mod internal_parser;  // Always public
+pub mod internal_parser; // Always public outside the crate.
 pub use internal_parser::*;
 ```
 
@@ -516,20 +548,22 @@ pub use internal_parser::*;
 ### Rustfmt Skip for Manual Alignment
 
 **When to use:**
+
 - Large mod.rs files with many exports
 - Deliberately structured code alignment for clarity
 
 **✅ Good:**
+
 ```rust
 // mod.rs
 
 #![rustfmt::skip]
 
-// Private modules
+// Attach.
 mod constants;
 mod types;
 
-// Public API
+// Re-export.
 pub use constants::*;
 pub use types::*;
 ```
@@ -538,15 +572,20 @@ pub use types::*;
 
 ## Attribute Documentation (allow/expect)
 
-When suppressing warnings or lints using `#[allow(...)]` or `#[expect(...)]`, always use the built-in `reason` parameter rather than placing an ad-hoc comment above the attribute. This ensures the reasoning is explicitly tied to the attribute at the compiler level and is properly formatted and idiomatic in modern Rust.
+When suppressing warnings or lints using `#[allow(...)]` or `#[expect(...)]`, always use
+the built-in `reason` parameter rather than placing an ad-hoc comment above the attribute.
+This ensures the reasoning is explicitly tied to the attribute at the compiler level and
+is properly formatted and idiomatic in modern Rust.
 
 **✅ Good:**
+
 ```rust
 #[allow(unused_imports, reason = "Used for shorter rustdoc link ref defs")]
 use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
 ```
 
 **❌ Bad:**
+
 ```rust
 // Used for shorter rustdoc link ref defs
 #[allow(unused_imports)]
@@ -561,9 +600,13 @@ use crate::core::ansi::vt_100_pty_output_parser::ParserGlobalState;
 
 ## Prefer `?` Operator / Early Returns over `.and_then()` (Mandatory)
 
-Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead, write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else` statements). The only acceptable exception is for boolean constant gating in tracing/logging calls if necessary, though even then, canonical Rust is preferred.
+Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead,
+write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else`
+statements). The only acceptable exception is for boolean constant gating in
+tracing/logging calls if necessary, though even then, canonical Rust is preferred.
 
 **✅ Good:**
+
 ```rust
 fn get_char(&self, pos: Pos) -> Option<PixelChar> {
     let row = self.get_row(pos.row_index)?;
@@ -573,6 +616,7 @@ fn get_char(&self, pos: Pos) -> Option<PixelChar> {
 ```
 
 **❌ Bad:**
+
 ```rust
 fn get_char(&self, pos: Pos) -> Option<PixelChar> {
     self.get_row(pos.row_index)
@@ -588,9 +632,14 @@ fn get_char(&self, pos: Pos) -> Option<PixelChar> {
 When running the `run-clippy` skill:
 
 - [ ] `cargo clippy --all-targets` shows no warnings
-- [ ] Comment punctuation follows rules (single-line: period, wrapped: period at end, independent: each gets period)
+- [ ] Comment punctuation follows rules (single-line: period, wrapped: period at end,
+      independent: each gets period)
 - [ ] Suppressed lints (`#[allow(...)]`) include the built-in `reason` parameter
 - [ ] No `.and_then()` used for Option/Result combinators (prefer `?` early returns)
+- [ ] Custom error enums/structs derive `thiserror::Error` and `miette::Diagnostic` (no
+      manual `Display` or `std::error::Error` impls), and serde unit enums use
+      `#[serde(rename_all = "...")]` instead of `#[serde(try_from = "String")]` +
+      `FromStr`/`TryFrom` boilerplate
 - [ ] Module organization follows private + re-export pattern where appropriate
 - [ ] Rustdoc reference-style links properly formatted (if applicable)
 - [ ] Tests pass after auto-fixes: `cargo test --all-targets`

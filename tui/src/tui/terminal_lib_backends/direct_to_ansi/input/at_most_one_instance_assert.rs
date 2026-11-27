@@ -39,7 +39,7 @@ pub fn claim_and_assert() {
     let device_already_exists = DEVICE_EXISTS.swap(true, Ordering::SeqCst);
     assert!(
         !device_already_exists,
-        "DirectToAnsiInputDevice::new() called while another device exists. \
+        "DirectToAnsiInputDevice::try_new() called while another device exists. \
          Use device.try_subscribe() (fallible) to get a guard, then guard.try_subscribe() \
          for additional receivers."
     );
@@ -57,7 +57,6 @@ pub fn release() { DEVICE_EXISTS.store(false, Ordering::SeqCst); }
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generate_isolated_process_test;
 
     generate_isolated_process_test!(
         test_at_most_one_instance_in_isolated_process,
@@ -77,7 +76,7 @@ mod tests {
     /// panic messages appear in the piped [`stderr`]. We must tolerate them.
     ///
     /// [`catch_unwind`]: std::panic::catch_unwind
-    /// [`generate_isolated_process_test!`]: crate::generate_isolated_process_test
+    /// [`generate_isolated_process_test!`]: macro@crate::generate_isolated_process_test
     /// [`spawn_isolated_process()`]: crate::spawn_isolated_process
     /// [`stderr`]: std::io::stderr
     fn controller_fn(output: std::process::Output) {

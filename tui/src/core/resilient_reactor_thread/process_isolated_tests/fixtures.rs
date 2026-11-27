@@ -2,10 +2,9 @@
 
 use crate::{BroadcastSender, Continuation,
             DeadlockPreventionPolicy::PanicOnAnyLockNesting, InterruptHandle, RRTEvent,
-            RRTSoftwareInterrupt, RRTWorker, RestartPolicy, ScopedMutex,
-            ThreadLifecycleMonitor, ThreadState,
-            core::resilient_reactor_thread::SubscriberGuard, run_worker_loop,
-            scoped_mutex};
+            RRTSoftwareInterrupt, RRTWorker, RRTWorkerAndInterrupt, RestartPolicy,
+            ScopedMutex, ThreadLifecycleMonitor, ThreadState,
+            core::resilient_reactor_thread::SubscriberGuard, run_worker_loop};
 use std::{collections::VecDeque,
           sync::{Arc, LazyLock,
                  atomic::{AtomicU32, Ordering},
@@ -36,6 +35,11 @@ impl RRTSoftwareInterrupt for TestInterrupt {
     }
 }
 
+/// Error type for [`TestWorker`] creation failures in isolated tests.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("{0}")]
+pub struct TestWorkerCreateError(pub &'static str);
+
 /// Test worker driven by a broadcast command channel.
 #[derive(Debug)]
 pub struct TestWorker {
@@ -48,11 +52,12 @@ impl RRTWorker for TestWorker {
     type Input = u8;
     type Output = TestEvent;
     type Interrupt = TestInterrupt;
+    type CreateError = TestWorkerCreateError;
 
     fn create_and_register_os_sources(
         _config: Self::Config,
         receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         TEST_FACTORY_STATE.write(|guard: &mut Option<TestFactoryState>| {
             let state = guard.as_mut().expect("TEST_FACTORY_STATE not initialized");
             state.create_count += 1;
@@ -62,10 +67,10 @@ impl RRTWorker for TestWorker {
             let res = state
                 .create_results
                 .pop_front()
-                .unwrap_or_else(|| Err(miette::miette!("TestWorker: no create results")));
+                .unwrap_or_else(|| Err(TestWorkerCreateError("TestWorker: no create results")));
 
             if let Ok(mut worker_interrupt) = res {
-                worker_interrupt.0.input_receiver = Some(receiver);
+                worker_interrupt.worker.input_receiver = Some(receiver);
                 Ok(worker_interrupt)
             } else {
                 res
@@ -110,7 +115,8 @@ impl RRTWorker for TestWorker {
 /// Shared state controlling [`TestWorker::create_and_register_os_sources()`] behavior.
 #[derive(Debug)]
 pub struct TestFactoryState {
-    pub create_results: VecDeque<miette::Result<(TestWorker, TestInterrupt)>>,
+    pub create_results:
+        VecDeque<Result<RRTWorkerAndInterrupt<TestWorker>, TestWorkerCreateError>>,
     pub create_count: u32,
     pub restart_policy: RestartPolicy,
     pub create_notify: Option<mpsc::Sender<()>>,
@@ -135,15 +141,20 @@ pub fn create_test_resources() -> (
     (worker, interrupt, cmd_sender)
 }
 
-/// Create a successful test worker and interrupt wrapped in a [`miette::Result`].
+/// Create a successful test worker and interrupt wrapped in a [`Result`].
 ///
 /// # Errors
 ///
 /// This function never actually returns an error, but returns [`Result`] to match the
 /// expected type signature in [`TestFactoryState`].
-pub fn create_ok_result() -> miette::Result<(TestWorker, TestInterrupt)> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "Returns Result to match TestFactoryState's create_results signature"
+)]
+pub fn create_ok_result(
+) -> Result<RRTWorkerAndInterrupt<TestWorker>, TestWorkerCreateError> {
     let (worker, interrupt, _cmd_sender) = create_test_resources();
-    Ok((worker, interrupt))
+    Ok(RRTWorkerAndInterrupt { worker, interrupt })
 }
 
 #[must_use]
@@ -164,7 +175,9 @@ pub fn create_shared_state(
 /// Panics if the [`TEST_FACTORY_STATE`] mutex is poisoned.
 #[allow(clippy::type_complexity)]
 pub fn setup_factory(
-    create_results_vec: Vec<miette::Result<(TestWorker, TestInterrupt)>>,
+    create_results_vec: Vec<
+        Result<RRTWorkerAndInterrupt<TestWorker>, TestWorkerCreateError>,
+    >,
     policy: RestartPolicy,
 ) -> mpsc::Receiver<()> {
     let (notify_sender, notify_receiver) = mpsc::channel();
@@ -215,6 +228,7 @@ pub fn get_create_count() -> u32 {
 /// # Panics
 ///
 /// Panics if the receiver has been dropped.
+#[allow(dead_code)] // Shared isolated-process test helper alongside send_cmd_via_guard.
 pub fn send_cmd(cmd_sender: &tokio::sync::broadcast::Sender<u8>, cmd: u8) {
     let _ = cmd_sender.send(cmd);
 }
@@ -235,7 +249,7 @@ pub fn send_cmd_via_guard(guard: &SubscriberGuard<TestWorker>, cmd: u8) {
     rt.block_on(async {
         guard
             .get_input_sender()
-            .send(cmd)
+            .try_send(cmd)
             .await
             .expect("conversion error");
     });

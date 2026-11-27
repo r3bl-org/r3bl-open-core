@@ -6,7 +6,7 @@
 /// This test uses a controller/controlled [`PTY`] pair to verify that:
 /// 1. [raw mode] can be enabled on a real [`PTY`].
 /// 2. [raw mode] can be disabled and terminal settings restored.
-/// 3. The [`RAII`] guard pattern works correctly.
+/// 3. The [RAII] guard pattern works correctly.
 ///
 /// # Run with:
 ///
@@ -14,12 +14,12 @@
 /// cargo test -p r3bl_tui test_raw_mode_pty -- --nocapture
 /// ```
 ///
-/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+/// [`PTY`]: crate::PtyPair#pty-primer
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+/// [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,
-            MSG_SUCCESS, PtyTestContext, PtyTestMode, RawModeGuard, generate_pty_test};
+            MSG_SUCCESS, PtyTestContext, PtyTestMode, RawModeGuard};
 use rustix::termios;
 use std::{io::Write,
           time::{Duration, Instant}};
@@ -33,7 +33,7 @@ generate_pty_test! {
 
 /// Controller process: verifies results. Receives [`PTY`] context from the macro.
 ///
-/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+/// [`PTY`]: crate::PtyPair#pty-primer
 fn controller(context: PtyTestContext) {
     let PtyTestContext {
         pty_pair,
@@ -105,6 +105,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: enables raw mode and reports results. The harness performs
 /// [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -124,7 +126,7 @@ fn controlled() {
     };
 
     // Enable raw mode using the guard.
-    let _guard = match RawModeGuard::new() {
+    let _guard = match RawModeGuard::try_new() {
         Ok(guard) => guard,
         Err(err) => {
             eprintln!("{GLYPH_WARNING} Controlled: Failed to enable raw mode: {err}");

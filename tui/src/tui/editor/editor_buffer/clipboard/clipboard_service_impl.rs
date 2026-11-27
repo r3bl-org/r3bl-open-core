@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ClipboardResult, ClipboardService};
-use crate::{ClipboardTarget, DEBUG_TUI_COPY_PASTE, OscSequence, ok};
+use crate::{ClipboardTarget, DEBUG_CLIPBOARD, OscSequence};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::Write;
 
@@ -17,7 +17,7 @@ use std::io::Write;
 /// by [`DEC`] Private Mode 2004 Bracketed Paste (`CSI 200 ~`).
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`try_to_get_content_from_clipboard`]:
 ///     ClipboardService::try_to_get_content_from_clipboard
 #[derive(Debug, Default, Clone, Copy)]
@@ -37,7 +37,7 @@ impl ClipboardService for Osc52Clipboard {
         write!(stdout, "{seq}")?;
         stdout.flush()?;
 
-        DEBUG_TUI_COPY_PASTE.then(|| {
+        DEBUG_CLIPBOARD.then(|| {
             if let OscSequence::ClipboardSet { data, .. } = &seq {
                 // % is Display, ? is Debug.
                 tracing::debug!(
@@ -105,7 +105,7 @@ impl ClipboardService for SystemClipboard {
             .and_then(|mut ctx| ctx.set_contents(content.clone()))
         {
             Ok(()) => {
-                DEBUG_TUI_COPY_PASTE.then(|| {
+                DEBUG_CLIPBOARD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "📋📋📋 Selected Text was copied to clipboard via copypasta",
@@ -115,7 +115,7 @@ impl ClipboardService for SystemClipboard {
                 ok!()
             }
             Err(copypasta_err) => {
-                DEBUG_TUI_COPY_PASTE.then(|| {
+                DEBUG_CLIPBOARD.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug!(
                         message = "📋📋📋 copypasta failed, falling back to OSC 52",
@@ -136,7 +136,7 @@ impl ClipboardService for SystemClipboard {
 }
 
 #[cfg(any(test, doc))]
-pub mod clipboard_test_fixtures {
+pub(crate) mod clipboard_test_fixtures { // Shared test clipboard used across editor_component and editor_engine tests.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

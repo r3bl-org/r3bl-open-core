@@ -1,21 +1,21 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppSignal, State};
-use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
-               ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
-               DialogComponent, DialogEngineConfig, DialogEngineMode, EditMode,
-               EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
-               FlexBox, FlexBoxId, GCStringOwned, GlobalData, HasEditorBuffers,
-               HasFocus, InlineString, InputEvent, ItemsOwned, Key, KeyPress,
-               LayoutDirection, LayoutManagement, LengthOps, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
-               RenderPipeline, SPACER_GLYPH, Surface, SurfaceProps, SurfaceRender,
-               SyntaxHighlightMode, TerminalWindowMainThreadSignal, TuiStylesheet,
-               VPSize, ZOrder, box_end, box_start, c_col, get_tui_style, glyphs,
-               inline_string, new_style, ok, render_component_in_current_box,
-               render_component_in_given_box, render_tui_styled_texts_into, req_size_pc,
-               send_signal, surface, throws_with_return, tui_color, tui_styled_text,
-               tui_styled_texts, tui_stylesheet, vp_col, vp_height, vp_row, vp_width};
+use r3bl_tui::{App, BoxedSafeApp, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI,
+               DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfig,
+               DialogEngineMode, EditMode, EditorBuffer, EditorComponent,
+               EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GCStringOwned,
+               GlobalData, HasEditorBuffers, HasFocus, InlineString, InputEvent,
+               ItemsOwned, Key, KeyPress, LayoutDirection, LayoutManagement, LengthOps,
+               LineMode, ModalFocusError, ModifierKeysMask, PerformPositioningAndSizing,
+               RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, SPACER_GLYPH,
+               Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal, TuiStylesheet, VPSize, ZOrder, box_end,
+               box_start, c_col, get_tui_style, glyphs, inline_string, new_style, ok,
+               render_component_in_current_box, render_component_in_given_box,
+               render_tui_styled_texts_into, req_size_pc, send_signal, surface,
+               throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
+               tui_stylesheet, vp_col, vp_height, vp_row, vp_width};
 use tokio::sync::mpsc::Sender;
 
 /// Constants for the ids.
@@ -47,11 +47,11 @@ mod impl_id {
 pub struct AppMain;
 
 mod constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI_MOD, State};
+    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI, State};
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct ex_rc::AppMain");
             });
@@ -93,7 +93,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Things from global scope.
             let GlobalData { state, .. } = global_data;
 
@@ -124,7 +124,7 @@ mod app_main_impl_app_trait {
             _global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             Ok(EventPropagation::ConsumedRender)
         }
 
@@ -133,12 +133,12 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let window_size = global_data.window_size;
 
             // Create a surface and then run the SurfaceRenderer
             // (ContainerSurfaceRender) on it.
-            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            let mut surface = surface!(stylesheet: stylesheet::try_create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
                 pos: vp_col(0) + vp_row(0),
@@ -257,21 +257,18 @@ mod modal_dialogs {
                 component_registry_map,
                 FlexBoxId::from(Id::SimpleDialog),
             );
-            return match activate_simple_modal(component_registry_map, has_focus, state) {
+            return match try_activate_simple_modal(
+                component_registry_map,
+                has_focus,
+                state,
+            ) {
                 Ok(()) => ModalActivateResult::Yes,
                 Err(err) => {
-                    match err.downcast_ref::<CommonError>() {
-                        // err is of concrete type CommonError.
-                        Some(common_error) => {
-                            // % is Display, ? is Debug.
-                            tracing::error!(
-                                message = "📣 Error activating simple modal",
-                                error = ?common_error
-                            );
-                        }
-                        // err is not of concrete type CommonError.
-                        _ => { /* do nothing */ }
-                    }
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = "📣 Error activating simple modal",
+                        error = ?err
+                    );
                     ModalActivateResult::No
                 }
             };
@@ -287,25 +284,18 @@ mod modal_dialogs {
                 component_registry_map,
                 FlexBoxId::from(Id::AutocompleteDialog),
             );
-            return match activate_autocomplete_modal(
+            return match try_activate_autocomplete_modal(
                 component_registry_map,
                 has_focus,
                 state,
             ) {
                 Ok(()) => ModalActivateResult::Yes,
                 Err(err) => {
-                    match err.downcast_ref::<CommonError>() {
-                        // err is of concrete type CommonError.
-                        Some(common_error) => {
-                            // % is Display, ? is Debug.
-                            tracing::error!(
-                                message = "📣 Error activating autocomplete modal",
-                                error = ?common_error
-                            );
-                        }
-                        // err is not of concrete type CommonError.
-                        _ => { /* do nothing */ }
-                    }
+                    // % is Display, ? is Debug.
+                    tracing::error!(
+                        message = "📣 Error activating autocomplete modal",
+                        error = ?err
+                    );
                     ModalActivateResult::No
                 }
             };
@@ -351,11 +341,11 @@ mod modal_dialogs {
         state.dialog_buffers.insert(id, dialog_buffer);
     }
 
-    fn activate_simple_modal(
+    fn try_activate_simple_modal(
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult {
+    ) -> Result<(), ModalFocusError> {
         // Initialize the dialog buffer with title & text.
         let title = "Simple Modal Dialog Title";
         let text = {
@@ -380,7 +370,7 @@ mod modal_dialogs {
             text,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal simple",
@@ -391,11 +381,11 @@ mod modal_dialogs {
         ok!()
     }
 
-    fn activate_autocomplete_modal(
+    fn try_activate_autocomplete_modal(
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult {
+    ) -> Result<(), ModalFocusError> {
         // Initialize the dialog buffer with title & text.
         let title = "Autocomplete Modal Dialog Title";
         let text = {
@@ -420,7 +410,7 @@ mod modal_dialogs {
             text,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal autocomplete",
@@ -447,7 +437,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Layout editor component, and render it.
             {
                 box_start! (
@@ -513,7 +503,7 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::Editor);
         has_focus.set_id(id);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -546,7 +536,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
@@ -601,7 +591,7 @@ mod populate_component_registry {
             }
         }
 
-        let result_stylesheet = stylesheet::create_stylesheet();
+        let result_stylesheet = stylesheet::try_create_stylesheet();
 
         let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalSimple,
@@ -632,7 +622,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message =
@@ -689,7 +679,7 @@ mod populate_component_registry {
             }
         }
 
-        let result_stylesheet = stylesheet::create_stylesheet();
+        let result_stylesheet = stylesheet::try_create_stylesheet();
 
         let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalAutocomplete,
@@ -720,7 +710,7 @@ mod populate_component_registry {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct DialogComponent (autocomplete) [ on_dialog_press ]"
@@ -733,7 +723,7 @@ mod stylesheet {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn try_create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style! {

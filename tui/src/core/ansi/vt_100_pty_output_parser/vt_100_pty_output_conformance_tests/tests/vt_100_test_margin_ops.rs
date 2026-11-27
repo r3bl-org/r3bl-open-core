@@ -17,7 +17,7 @@ use crate::{core::ansi::vt_100_pty_output_parser::CsiSequence, term_row};
 /// Tests for [`DECSTBM`] (Set Top and Bottom Margins) operations.
 ///
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
-pub mod decstbm_margins {
+mod decstbm_margins {
     use super::*;
 
     #[test]

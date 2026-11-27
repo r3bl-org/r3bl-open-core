@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{CRow, CSize, CWidth};
-use crate::{VPHeight, generate_canvas_length_type_impl};
+use crate::VPHeight;
 use std::ops::Add;
 
 /// 1-based vertical height or row count in the continuous storage buffer space (64-bit

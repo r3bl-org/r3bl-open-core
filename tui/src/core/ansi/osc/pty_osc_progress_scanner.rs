@@ -32,15 +32,15 @@ use crate::{LossyConvertToByte, Pc,
 /// ## Generating Sequences
 ///
 /// To generate and emit outbound `OSC 9;4` progress sequences to the terminal, use
-/// [`OscSender::send_set_progress`]. For outbound window titles and hyperlinks, see
-/// [`OscSender::send_set_title_and_tab`] and [`OscSender::send_set_hyperlink`].
+/// [`OscSender::try_send_set_progress`]. For outbound window titles and hyperlinks, see
+/// [`OscSender::try_send_set_title_and_tab`] and [`OscSender::try_send_set_hyperlink`].
 ///
 /// [`OfsBufVT100`]: crate::OfsBufVT100
 /// [`OSC`]: crate::OscSequence
 /// [`OscPtyEvent`]: crate::core::ansi::osc::OscPtyEvent
-/// [`OscSender::send_set_hyperlink`]: crate::OscSender::send_set_hyperlink
-/// [`OscSender::send_set_progress`]: crate::OscSender::send_set_progress
-/// [`OscSender::send_set_title_and_tab`]: crate::OscSender::send_set_title_and_tab
+/// [`OscSender::try_send_set_hyperlink`]: crate::OscSender::try_send_set_hyperlink
+/// [`OscSender::try_send_set_progress`]: crate::OscSender::try_send_set_progress
+/// [`OscSender::try_send_set_title_and_tab`]: crate::OscSender::try_send_set_title_and_tab
 /// [`OscSender`]: crate::OscSender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
@@ -57,7 +57,7 @@ impl Default for PtyOscProgressScanner {
 impl PtyOscProgressScanner {
     /// Creates a new empty [`OSC`] progress stream scanner.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -74,7 +74,7 @@ impl PtyOscProgressScanner {
     /// # Returns
     /// A vector of parsed [`OscPtyEvent`] instances from any complete sequences found.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn append_and_extract(&mut self, buffer: &[u8], n: usize) -> Vec<OscPtyEvent> {
         // Convert bytes to string and append to accumulated data.
@@ -99,7 +99,7 @@ impl PtyOscProgressScanner {
     /// * `Some(OscPtyEvent)` if a complete sequence was found and parsed.
     /// * `None` if no complete sequence is available.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub fn try_extract_next_sequence(&mut self) -> Option<OscPtyEvent> {
         // OSC sequence format "codes::OSC_PROGRESS_START {state};{progress}
         // codes::OSC_TERMINATOR_ST" Find start of OSC sequence.
@@ -132,7 +132,7 @@ impl PtyOscProgressScanner {
     /// * `Some(OscPtyEvent)` if parameters were valid.
     /// * `None` if parameters were malformed or state was unknown.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     #[must_use]
     pub fn try_parse_osc_params(&self, params: &str) -> Option<OscPtyEvent> {
         let parts: Vec<&str> = params.split(OSC_DELIMITER).collect();
@@ -164,7 +164,7 @@ impl PtyOscProgressScanner {
 mod tests {
     use super::*;
     use crate::{ANSI_PARAM_SEPARATOR_CHAR, OSC_PROGRESS_END, OSC_PROGRESS_START,
-                OSC_PROGRESS_STATE_UPDATE, pc};
+                OSC_PROGRESS_STATE_UPDATE};
 
     fn progress_update(pct: u8) -> OscPtyEvent {
         OscPtyEvent::ProgressUpdate(pc!(pct).unwrap())

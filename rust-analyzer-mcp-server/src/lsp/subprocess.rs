@@ -9,7 +9,7 @@ use crate::{constants::{debug_flags::DEBUG_LSP_CLIENT, lsp_framing},
                   protocol::table_types::{SafeDiagnosticsTable,
                                           SafePendingRequestsTable},
                   readiness_monitor::ServerReadinessMonitor}};
-use r3bl_tui::CommandOutputResult;
+use r3bl_tui::ProcessExecutionOutcome;
 use std::{io::{BufRead, BufReader, Read},
           path::{Path, PathBuf},
           process::{Child, Command, Stdio},
@@ -22,7 +22,7 @@ impl RustAnalyzerClient {
     /// # Errors
     ///
     /// Returns [`McpServerError::ProcessSpawn`] if `rust-analyzer` is not found.
-    pub fn locate_rust_analyzer_binary() -> Result<PathBuf, McpServerError> {
+    pub fn try_locate_rust_analyzer_binary() -> Result<PathBuf, McpServerError> {
         if let Ok(path) = which::which(lsp_framing::RUST_ANALYZER_BINARY) {
             return Ok(path);
         }
@@ -48,12 +48,12 @@ impl RustAnalyzerClient {
         #[cfg(not(windows))]
         let binary_locator = "which";
 
-        let cmd_output_result = Command::new(binary_locator)
+        let res_output = Command::new(binary_locator)
             .arg(lsp_framing::RUST_ANALYZER_BINARY)
             .output();
 
-        match CommandOutputResult::from(cmd_output_result) {
-            CommandOutputResult::Success(output) => {
+        match ProcessExecutionOutcome::from(res_output) {
+            ProcessExecutionOutcome::Success(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let first_line = stdout.lines().find(|line| !line.trim().is_empty());
                 match first_line {
@@ -63,7 +63,8 @@ impl RustAnalyzerClient {
                     )),
                 }
             }
-            CommandOutputResult::NonZeroExit(_) | CommandOutputResult::SpawnFailed(_) => {
+            ProcessExecutionOutcome::NonZeroExit(_)
+            | ProcessExecutionOutcome::SpawnFailed(_) => {
                 Err(McpServerError::ProcessSpawn(
                     "rust-analyzer binary not found in PATH".to_string(),
                 ))
@@ -79,7 +80,7 @@ impl RustAnalyzerClient {
     /// Returns [`McpServerError::ProcessSpawn`] if spawning the child process fails.
     ///
     /// [`stdio`]: std::io
-    pub fn spawn_rust_analyzer_child_process(
+    pub fn try_spawn_rust_analyzer_child_process(
         &self,
         ra_path: &Path,
     ) -> Result<Child, McpServerError> {
@@ -266,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_locate_rust_analyzer_binary_finds_binary() {
-        let binary_path = RustAnalyzerClient::locate_rust_analyzer_binary();
+        let binary_path = RustAnalyzerClient::try_locate_rust_analyzer_binary();
         assert!(
             binary_path.is_ok(),
             "rust-analyzer should be found in PATH in developer environment"

@@ -3,7 +3,7 @@
 //! Unit tests for modified sequences (Shift+Home, Ctrl+Home, etc.), unrecognized sequence
 //! purging, and [`OSC`] absorption / circuit-breaker streaming drain.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 
 use super::test_fixtures::*;
 
@@ -244,7 +244,7 @@ fn long_osc_sequence_not_purged_by_64_byte_limit() {
 /// - Terminator: Either BEL (0x07) or 7-bit ST ([`ESC`] \, 0x1B 0x5C).
 ///
 /// [`ESC`]: crate::EscSequence
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[test]
 fn osc_with_utf8_continuation_byte_0x9c_absorbed() {
     let mut parser = ChunkFramer::default();

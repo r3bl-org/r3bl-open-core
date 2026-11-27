@@ -162,6 +162,32 @@ sentences in documentation.**
 /// This is the main trait: implement it to add your logic.
 ```
 
+### No "Source of Truth (SOT)" Buzzwords
+
+**Never use phrases like `"Authoritative Source of Truth (SOT)"`,
+`"Single Source of Truth (SSOT)"`, `"Source of Truth (SOT)"`, or the acronyms `"SOT"` /
+`"SSOT"` in documentation, comments, or prose.**
+
+- They are strange robotic phrases, not natural human English.
+- They add zero information and act as pure noise.
+- State directly what the type, constant, or module is in plain English.
+
+```rust
+// ❌ Bad: Robotic noise
+/// Authoritative Source of Truth (SOT) URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Single Source of Truth (SSOT) schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+
+// ✅ Good: Direct human English
+/// URL for R3BL crate versions.
+pub const R3BL_VERSIONS_JSON_URL: &str = "https://r3bl.com/versions.jsonc";
+
+/// Schema for the centralized version manifest.
+pub struct VersionsManifest { ... }
+```
+
 ### Technical Terminology Precision
 
 **Use precise terms for the code lifecycle and generics to maintain low cognitive load.**
@@ -199,20 +225,35 @@ Rust hex escape syntax.**
 **Exception:** In Rust code, doctests, and byte literals, continue using `\x1B` or
 `0x1B` - that's actual Rust syntax the compiler needs.
 
-### Acronym Formatting: Always Backtick
+### Acronym & Initialism Formatting: Domain/Wire Identifiers vs. General Prose
 
-**All technical acronyms get backticks.** No exceptions - treat them as technical
-identifiers, not prose.
+Distinguish between **domain-specific / wire-level technical identifiers** (which get
+backticks) and **general computing / web / data-format initialisms** (which stay plain
+text). Putting everyday computing vocabulary in code font creates a "ransom-note" effect
+without adding semantic precision.
+
+#### What Gets Backticks: Terminal, Wire-Protocol, & OS Syscall/Signal Identifiers
+
+Backtick acronyms and mnemonics that represent **terminal protocols, escape sequences,
+character/byte encodings, or exact OS/libc/hardware primitives**:
+
+| Category                                            | Examples (Backticked)                                                                                                                                                                                                                                                          |
+| :-------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Terminal & Escape Sequence Protocols**            | `` `ANSI` ``, `` `VT-100` ``, `` `VT-220` ``, `` `CSI` ``, `` `OSC` ``, `` `SGR` ``, `` `ESC` ``, `` `DCS` ``, `` `DSR` ``, `` `SS3` ``, `` `DEC` ``, `` `DECSTBM` ``, `` `DECAWM` ``, `` `DECSC` ``, `` `DECRC` ``, `` `DECTCEM` ``, `` `X10` ``, `` `RXVT` ``, `` `URXVT` `` |
+| **Terminal & Multiplexing Subsystems**              | ``[`PTY`]``, ``[`TUI`]``, ``[`VTE`]``, `` `TTY` ``                                                                                                                                                                                                                             |
+| **Byte / Character / Color Encodings**              | `` `UTF-8` ``, `` `ASCII` ``, `` `RGB` ``, `` `EOF` ``, `` `BEL` ``, `` `CR` ``, `` `LF` ``, `` `C0` ``                                                                                                                                                                        |
+| **OS Signals, Errnos, Termios & Kernel Primitives** | `` `SIGWINCH` ``, `` `SIGINT` ``, `` `EINTR` ``, `` `EIO` ``, `` `EINVAL` ``, `` `POLLIN` ``, `` `EPOLLIN` ``, `` `ICANON` ``, `` `ECHO` ``, `` `VMIN` ``, `` `VTIME` ``, `` `FIFO` ``, `` `IOCP` ``                                                                           |
+| **Exact Protocol Verbs, Status Codes & Env Vars**   | `` `HEAD` ``, `` `GET` ``, `` `302` ``, `` `CI` ``, `` `$PATH` ``, `` `TERM` ``, `` `COLORTERM` ``, `` `NO_COLOR` ``                                                                                                                                                           |
 
 ```rust
-// ❌ Bad: Plain text acronyms
+// ❌ Bad: Plain text terminal/wire-protocol acronyms
 /// Uses ANSI escape sequences to parse PTY output via the VTE parser.
 
-// ✅ Good: All acronyms backticked
+// ✅ Good: Terminal/wire-protocol acronyms backticked
 /// Uses `ANSI` escape sequences to parse `PTY` output via the `VTE` parser.
 ```
 
-#### When Linking: Use ``[`ACRONYM`]``
+#### When Linking Backticked Acronyms: Use ``[`ACRONYM`]``
 
 When a backticked acronym has a useful link target, wrap it in `[` `]` to create a
 reference-style intra-doc link. **Prefer local links** when the target is a dependency in
@@ -229,14 +270,23 @@ external URLs (Wikipedia, man pages) only when no local target exists:
 
 Common linked acronyms and their targets:
 
-| Acronym     | Link Target                                                   | Source                 |
-| :---------- | :------------------------------------------------------------ | :--------------------- |
-| ``[`TUI`]`` | `crate::tui::TerminalWindow::main_event_loop`                 | Local (crate item)     |
-| ``[`VTE`]`` | `mod@vte`                                                     | Local (Cargo.toml dep) |
-| ``[`PTY`]`` | `https://en.wikipedia.org/wiki/Pseudoterminal`                | External (OS concept)  |
-| ``[`SSH`]`` | `https://en.wikipedia.org/wiki/Secure_Shell`                  | External (protocol)    |
-| ``[`TCP`]`` | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol` | External (protocol)    |
-| ``[`DCS`]`` | Spec URL or crate path as appropriate                         | Depends on context     |
+| Acronym        | Link Target                                                            | Source                         |
+| :------------- | :--------------------------------------------------------------------- | :----------------------------- |
+| ``[`TUI`]``    | `crate::tui::TerminalWindow::main_event_loop`                          | Local (crate item)             |
+| ``[`VTE`]``    | `mod@vte`                                                              | Local (Cargo.toml dep)         |
+| ``[`PTY`]``    | `https://en.wikipedia.org/wiki/Pseudoterminal`                         | External (OS concept)          |
+| ``[`SSH`]``    | `https://en.wikipedia.org/wiki/Secure_Shell`                           | External (protocol)            |
+| ``[`TCP`]``    | `https://en.wikipedia.org/wiki/Transmission_Control_Protocol`          | External (protocol)            |
+| ``[`DCS`]``    | Spec URL or crate path as appropriate                                  | Depends on context             |
+| `[RAII]`       | `https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization` | External (pedagogical pattern) |
+| ``[`SemVer`]`` | `https://semver.org/`                                                  | External (spec)                |
+
+> **Pedagogical & Spec Acronym Exception (`[RAII]`, `[`SemVer`]`)**: When an acronym
+> represents a specific design pattern or specification that benefits from a hover/click
+> definition for newcomers (see
+> [Pedagogical Links for Inclusivity](#pedagogical-links-for-inclusivity)), wrap it in
+> ``[`...`]`` with a reference link definition. When used unlinked in table cells or `//`
+> comments, keep it as plain text (`RAII`, `SemVer`).
 
 #### Without a Link: Plain Backticks
 
@@ -263,20 +313,29 @@ Software names are technical identifiers and get backticks:
 ```
 
 Common product names: `` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``, `` `GNOME VTE` ``,
-`` `st` `` (suckless terminal).
+`` `st` `` (suckless terminal), `` `glibc` ``.
 
 When linking to an external project: ``[`GNOME VTE`]: https://gitlab.gnome.org/GNOME/vte``
 
 #### What Stays Plain Text
 
-Standards body names and specification document identifiers stay as plain text - they are
-citation references, not technical identifiers:
+General English/UI/development initialisms, web/data-format names, general CS/hardware
+terms, time/checksum standards, and specification document identifiers stay as **plain
+text** (not backticked) because they are ordinary prose vocabulary, not wire-protocol or
+code identifiers:
 
-| Category                  | Examples                              |
-| :------------------------ | :------------------------------------ |
-| Spec document identifiers | ECMA-48, ITU-T Rec. T.416, ISO 8613-6 |
+| Category                                   | Examples (Plain Text)                                                         |
+| :----------------------------------------- | :---------------------------------------------------------------------------- |
+| **General UI & Dev Initialisms**           | CLI, IDE, UI, GUI, API, SDK, REPL, PR, CI/CD                                  |
+| **Web, Networking & Data Formats**         | URL, URI, HTTP, HTTPS, CDN, DNS, JSON, JSONC, TOML, YAML, XML, HTML, CSS, CSV |
+| **General CS, Compiler & Design Terms**    | AST, CST, LRU, SIMD (plus RAII and SemVer when unlinked)                      |
+| **General OS, Hardware & Toolchain Terms** | OS, CPU, GPU, RAM, I/O, ABI, FFI, IPC, PID, C, MSVC, POSIX                    |
+| **Time, Cryptography & Binary Units**      | UTC, ISO 8601, RFC 3339, SHA-256, MD5, KiB, MiB, GiB                          |
+| **Spec Document Identifiers**              | ECMA-48, ITU-T Rec. T.416, ISO 8613-6                                         |
 
-When linking a spec, use descriptive link text: `[ITU-T Rec. T.416]: https://...`
+When linking a multi-word spec or plain-text phrase to an external reference, use
+plain-text link syntax (`[ITU-T Rec. T.416]: https://...` or
+`[design pattern]: https://...`).
 
 #### DEC Private Modes
 
@@ -652,6 +711,26 @@ For sub-sections within a `##` heading, use **bold text** (`**bold**`) instead o
 to find it in the sidebar but can't. Bold text is visually similar but sets correct
 expectations.
 
+### Short, Meaningful Headings (Detail in the First Sentence)
+
+Keep headings in both rustdoc (`//!`, `///`) and Markdown files (`task/*.md`, `docs/*.md`)
+short and meaningful (typically 2-5 words). Overly long headings clutter the `cargo doc`
+sidebar and `mktoc` table of contents. Put parenthetical lists, type combinations, or
+extra context into the first sentence immediately following the heading.
+
+```markdown
+<!-- ❌ Bad: Overly long heading that bloats the TOC and sidebar -->
+
+### Algorithm 1: Session / Thread Completion to Future (`StdThreadRunner::run_async` + `ThreadJoinFuture<T>`)
+
+<!-- ✅ Good: Short heading + detail in the first sentence -->
+
+### Algorithm 1: One-Shot Thread Future
+
+Algorithm 1 (`StdThreadRunner::run_async` + `ThreadJoinFuture<T>`) bridges a dedicated OS
+thread or full interactive TUI session completion into a `std::future::Future`.
+```
+
 ### Inverted Pyramid
 
 Structure documentation with high-level concepts at the top, details below:
@@ -694,21 +773,26 @@ pub fn some_method(&self) -> Result<()> { /* ... */ }
 2. **Use reference-style links** - keep prose clean
 3. **Place all link definitions at bottom** of comment block
 4. **Include `()` for functions/methods** - distinguishes from types
+5. **Use short explicit link labels (`[text][alias]`) when a definition exceeds 90
+   chars** - keeps each link definition on one line (`comment_width = 90` in
+   `rustfmt.toml`)
 
 ### Link Source Priority
 
 When deciding local vs external links, follow this priority:
 
-| Priority | Source                   | Link Style     | Example                                          |
-| -------- | ------------------------ | -------------- | ------------------------------------------------ |
-| 1        | Code in this monorepo    | `crate::` path | `[`Foo`]: crate::module::Foo`                    |
-| 2        | Dependency in Cargo.toml | Crate path     | `[`mio`]: mio`                                   |
-| 3        | OS/CS/hardware terms     | External URL   | `[`epoll`]: https://manpages.debian.org/epoll.7` |
-| 4        | Pedagogical/domain terms | Wikipedia URL  | `[design pattern]: https://en.wikipedia.org/...` |
-| 5        | Non-dependency crates    | docs.rs URL    | `[`rayon`]: https://docs.rs/rayon`               |
+| Priority | Source                                        | Link Style     | Example                                          |
+| -------- | --------------------------------------------- | -------------- | ------------------------------------------------ |
+| 1        | Code in this monorepo                         | `crate::` path | `[`Foo`]: crate::module::Foo`                    |
+| 2        | `[dependencies]` in Cargo.toml                | Crate path     | `[`mio`]: mio`                                   |
+| 3        | OS/CS/hardware terms                          | External URL   | `[`epoll`]: https://manpages.debian.org/epoll.7` |
+| 4        | Pedagogical/domain terms                      | Wikipedia URL  | `[design pattern]: https://en.wikipedia.org/...` |
+| 5        | Non-dependency or `[dev-dependencies]` crates | docs.rs URL    | `[`mockito`]: https://docs.rs/mockito`           |
 
-**Key principle:** If it's in Cargo.toml, use local links (validated, offline-capable,
-version-matched).
+**Key principle:** If it's in `[dependencies]` in Cargo.toml, use local links (validated,
+offline-capable, version-matched). Cargo does **not** link `[dev-dependencies]` during
+`cargo doc`, so rustdocs compiled under `cfg(doc)` must link `[dev-dependencies]` via
+`https://docs.rs/<crate>`.
 
 ### Link All Symbols for Refactoring Safety
 
@@ -769,6 +853,32 @@ When you rename, move, or delete a symbol:
 ```rust
 /// This struct uses `Position` to track cursor location.
 ```
+
+### Long Link Definitions (> 90 Chars): Use Explicit Short Labels
+
+When a shorthand link definition like ``[`LongType::method`]: crate::...`` exceeds `90`
+characters (including the `/// ` or `//! ` prefix, matching `comment_width = 90` in
+`rustfmt.toml`), introduce a reference-style link with an explicit short label
+(`[text][alias]`) so the definition stays on a single line:
+
+```rust
+// ❌ Bad: Shorthand definition exceeds 90 chars and forces 2-line wrapping
+//! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]:
+//!     crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+
+// ✅ Good: Explicit short label keeps each definition on a single line (<= 90 chars)
+//! Handles [`DeferredUpgradeOutcome::handle_upgrade_on_exit`][on-exit] for
+//! [`CrateDistribution::ClosedSource`][cs] failures
+//! ([`UpgradeResolution::UpgradeFailed`][failed]).
+//!
+//! [cs]: crate::self_upgrade::CrateDistribution::ClosedSource
+//! [failed]: crate::self_upgrade::UpgradeResolution::UpgradeFailed
+//! [on-exit]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
+```
+
+Use short, descriptive, kebab-case aliases (e.g., `[cs]`, `[failed]`, `[latch]`,
+`[non-tty]`, `[notify]`, `[on-exit]`, `[panicked]`, `[prompt]`, `[rustup]`). See
+`link-patterns.md` for details.
 
 ### Linking to Dependency Crates
 
@@ -859,10 +969,14 @@ For operating system concepts, computer science terminology, or hardware referen
 | Pedagogical terms   | `en.wikipedia.org/wiki/` | `design pattern`, `RAII`, `file descriptor` |
 | Specs/RFCs          | Official spec sites      | ANSI escape codes, UTF-8                    |
 
-> [!IMPORTANT]
-> **Link Checker Safety (`lychee`)**:
-> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g. `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or drops connections for link checkers).
-> - **GNU tools & utilities**: Always link to Wikipedia (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker traffic).
+> [!IMPORTANT] **Link Checker Safety (`lychee`)**:
+>
+> - **Linux man pages**: Always use `https://manpages.debian.org/<name>.<sec>` (e.g.
+>   `https://manpages.debian.org/epoll.7`). Never use `man7.org` (frequently times out or
+>   drops connections for link checkers).
+> - **GNU tools & utilities**: Always link to Wikipedia
+>   (`https://en.wikipedia.org/wiki/...`), never `gnu.org` (drops automated link checker
+>   traffic).
 
 **Key distinction:**
 
@@ -882,10 +996,10 @@ high.
 ```rust
 // ✅ Good: Links pedagogical terms for inclusivity
 //! This [design pattern] avoids all of this and allows async code to...
-//! Resources are cleaned up via [`RAII`] when the guard is dropped.
+//! Resources are cleaned up via [RAII] when the guard is dropped.
 //!
 //! [design pattern]: https://en.wikipedia.org/wiki/Software_design_pattern
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 ```
 
 ```rust
@@ -1070,6 +1184,15 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 # (runs: cargo test --doc)
 ```
 
+> [!IMPORTANT] **Frequency Directive:** Do NOT run `./check.fish --quick-doc` or
+> `./check.fish --test` after minor, isolated doc comment edits. Fast typechecking
+> (`./check.fish --check`) is sufficient for routine edits. Run `--quick-doc` and doctests
+> only when:
+>
+> 1. Explicitly requested by the user (or running `/docs`).
+> 2. Performing a dedicated documentation refactoring pass.
+> 3. At final pre-commit verification before creating a commit or PR.
+
 > [!TIP] **Run in a Subagent:** Building workspace documentation and running doctests can
 > take 1 to 2+ minutes. Delegate these commands to a background subagent (`self`) with
 > `Model: "inherit"` so the active conversation with the user is not blocked.
@@ -1089,17 +1212,41 @@ Markdown text, backticks (e.g., `[start, start+len)`), or code blocks instead.
 
 ### Linking to Test Modules and Functions
 
+Workspace doc builds enable `--document-private-items` globally via `.cargo/config.toml`
+(`[build] rustdocflags`), `check_docs.fish` (`RUSTDOCFLAGS`), and each crate's
+`Cargo.toml` (`[package.metadata.docs.rs]`), alongside
+`[workspace.lints.rustdoc] private_intra_doc_links = "allow"` in the root `Cargo.toml`.
+
+Because private items and modules are documented directly across the workspace, production
+modules do **not** use dual-arm `#[cfg(any(test, doc))]` shims:
+
+- **Local production modules**: Use plain `mod` (e.g., `mod debug;` in
+  `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs` and
+  `mod input_device_public_api;` in
+  `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`).
+- **Crate-internal production modules**: Use `pub(crate) mod` when sibling modules, tests,
+  or `mod@crate::...` links need path access without exposing the module in the public API
+  (e.g., `pub(crate) mod output;` and `#[cfg(target_os = "linux")] pub(crate) mod input;`
+  in `direct_to_ansi/mod.rs`, and `pub(crate) mod input_device_impl;` in
+  `direct_to_ansi/input/mod.rs`).
+- **Test-only modules**: `--document-private-items` does **not** enable `cfg(test)`, so
+  `#[cfg(test)]` modules are omitted from the AST during `cargo doc`. Keep a single-arm
+  `#[cfg(any(test, doc))] pub(crate) mod ...;` guard on test-only modules (and single-arm
+  `#[cfg(any(test, doc))]` on doc-only test stubs such as `integration_tests_stub` in
+  `direct_to_ansi/input/mod.rs`), and keep `#[cfg_attr(not(doc), test)]` or
+  `#[cfg_attr(not(doc), tokio::test)]` on linked test functions.
+
 ```rust
 /// See [`test_example`] for actual usage.
 ///
 /// [`test_example`]: crate::tests::test_example
 ```
 
-Make test module visible to docs:
+Include a test-only module in the doc AST with single-arm `#[cfg(any(test, doc))]`:
 
 ```rust
 #[cfg(any(test, doc))]
-pub mod tests;
+pub(crate) mod tests;
 ```
 
 #### Platform-Specific Test Modules
@@ -1110,60 +1257,62 @@ pub mod tests;
 >
 > And the module is `#[cfg(test)]` only
 
-**Don't give up on links** - Add conditional visibility instead of using plain text:
+**Don't give up on links**: Keep the test-only module in the doc AST with single-arm
+`#[cfg(any(test, doc))]` and `pub(crate)` visibility instead of falling back to plain
+text:
 
 ```rust
-// Before (links won't resolve):
+// Before (omitted when cargo doc runs without cfg(test)):
 #[cfg(test)]
 mod backend_tests;
 
-// After (links resolve in docs):
+// After (included in doc AST and crate tests, excluded from release binaries):
 #[cfg(any(test, doc))]
-pub mod backend_tests;
+pub(crate) mod backend_tests;
 ```
 
 #### Cross-Platform Docs for Platform-Specific Code
 
-For code that only runs on specific platforms (e.g., Linux) but should have docs generated
-on **all platforms** (so developers on macOS can read them locally):
+Production modules that target a single platform simply keep their platform guard with
+`mod` or `pub(crate) mod` (for example,
+`#[cfg(target_os = "linux")] pub(crate) mod input;` in `direct_to_ansi/mod.rs`), without
+dual-arm `#[cfg(any(test, doc))]` fallbacks.
+
+For **test-only modules** that run on specific platforms (e.g., Linux) but should have
+docs generated on **all platforms** (so developers on macOS can read them locally), keep a
+single-arm `any(doc, ...)` guard:
 
 ```rust
 // ❌ Broken: Docs won't generate on macOS!
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod linux_only_module;
+pub(crate) mod linux_only_tests;
 
-// ✅ Fixed: Docs generate on all platforms, tests run only on Linux
+// ✅ Fixed: Docs generate on all platforms, tests run only on Linux (excluded from release)
 #[cfg(any(doc, all(target_os = "linux", test)))]
-pub mod linux_only_module;
-#[cfg(all(target_os = "linux", not(any(test, doc))))]
-mod linux_only_module;
-
-// Re-exports also need the doc condition
-#[cfg(any(target_os = "linux", doc))]
-pub use linux_only_module::*;
+pub(crate) mod linux_only_tests;
 ```
 
-**Key insight:** The `doc` cfg flag doesn't override other conditions -it's just another
-flag. Use `any(doc, ...)` to make documentation an **alternative path**, not an additional
-requirement:
+**Key insight:** The `doc` cfg flag does not override other conditions: it is just another
+flag. Use `any(doc, ...)` on test-only modules to make documentation an **alternative
+path**, not an additional requirement:
 
 | Pattern                                    | Meaning                 | Docs on macOS? |
 | :----------------------------------------- | :---------------------- | :------------- |
 | `all(target_os = "linux", any(test, doc))` | Linux AND (test OR doc) | ❌ No          |
 | `any(doc, all(target_os = "linux", test))` | doc OR (Linux AND test) | ✅ Yes         |
 
-**Apply at all levels** - If linking to a nested module, both parent and child modules
-need the visibility change. See `organize-modules` skill for complete patterns and
-examples.
+**Apply at all levels**: If linking to a nested test module, both parent and child
+test-only modules need the single-arm `#[cfg(any(...))]` AST inclusion and `pub(crate)`
+visibility. See `organize-modules` skill for complete patterns and examples.
 
 #### ⚠️ Unix Dependency Caveat
 
-The `cfg(any(doc, ...))` pattern assumes the module's code **compiles on all platforms**.
-When the module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`,
-`std::os::fd::AsRawFd`), use `cfg(any(all(unix, doc), ...))` instead to restrict doc
-builds to Unix platforms where the dependencies exist.
+The `cfg(any(doc, ...))` pattern on a test-only module assumes its code **compiles on all
+platforms**. When a test-only module uses Unix-only APIs (e.g., `mio::unix::SourceFd`,
+`signal_hook`, `std::os::fd::AsRawFd`), use `cfg(any(all(unix, doc), ...))` instead to
+restrict doc builds to Unix platforms where the dependencies exist.
 
-**Three-tier platform hierarchy for cfg doc patterns:**
+**Three-tier platform hierarchy for test-only cfg doc patterns:**
 
 | Module dependencies                                   | Pattern                                        | Docs on Linux | Docs on macOS | Docs on Windows |
 | :---------------------------------------------------- | :--------------------------------------------- | :------------ | :------------ | :-------------- |
@@ -1171,25 +1320,21 @@ builds to Unix platforms where the dependencies exist.
 | Unix APIs (`mio::unix`, `signal_hook`, `std::os::fd`) | `cfg(any(all(unix, doc), ...))`                | ✅            | ✅            | excluded        |
 | Linux-only APIs (hypothetical)                        | `cfg(any(all(target_os = "linux", doc), ...))` | ✅            | excluded      | excluded        |
 
-**Example - Unix-restricted doc build:**
+**Example (Unix-restricted test module doc build):**
 
 ```rust
-// Module uses mio::unix::SourceFd, signal_hook - Unix-only APIs.
+// Test-only module using mio::unix::SourceFd or signal_hook (Unix-only APIs).
 // Dependencies in Cargo.toml are gated with cfg(unix).
-// Doc builds are restricted to Unix where the dependencies exist.
+// Doc builds are restricted to Unix where the dependencies exist; tests run on Linux.
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
-pub mod input;
-#[cfg(all(target_os = "linux", not(any(test, doc))))]
-mod input;
-
-// Re-export also needs the unix-gated doc condition
-#[cfg(any(target_os = "linux", all(unix, doc)))]
-pub use input::*;
+pub(crate) mod linux_pty_tests;
 ```
 
 **Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard. If the dep
 uses `cfg(unix)`, gate docs with `all(unix, doc)`. If the dep uses
-`cfg(target_os = "linux")`, gate docs with `all(target_os = "linux", doc)`.
+`cfg(target_os = "linux")`, gate docs with `all(target_os = "linux", doc)`. For production
+modules (such as `input` in `direct_to_ansi/mod.rs`), use
+`#[cfg(target_os = "linux")] pub(crate) mod input;` without dual-arm `doc` shims.
 
 #### Cross-Platform Doctests with Platform-Specific APIs
 
@@ -1293,8 +1438,10 @@ Before committing documentation:
 - [ ] Follow-up sentences use explicit subjects ("This trait...", "This struct...")
 - [ ] Methods use third-person verbs (Creates, Returns, Checks - not Create, Return,
       Check)
-- [ ] Technical acronyms backticked (`` `ANSI` ``, `` `PTY` ``, `` `VTE` ``); linked when
-      target exists (``[`VTE`]``)
+- [ ] Terminal/wire-protocol/encoding/syscall acronyms backticked (`` `ANSI` ``,
+      `` `PTY` ``, `` `VTE` ``, `` `UTF-8` ``) and linked when target exists
+      (``[`VTE`]``); general prose initialisms (CLI, UI, API, URL, HTTP, JSON, JSONC, OS,
+      CPU, ABI, AST, CST, UTC, SHA-256) kept as plain text
 - [ ] Software product names backticked (`` `xterm` ``, `` `Alacritty` ``, `` `kitty` ``)
 - [ ] No dashes, en dashes, or em dashes (`-`, `–`, or `—`, endash/emdash) used to connect
       sentences or clauses (use proper punctuation or separate sentences)
@@ -1305,6 +1452,9 @@ Before committing documentation:
 - [ ] High-level concepts at module/trait level (inverted pyramid)
 - [ ] All links use reference-style with `crate::` paths
 - [ ] All link definitions at bottom of comment blocks
+- [ ] Link definitions > 90 chars use short explicit labels
+      (``[`LongSymbol`][alias]`` -> ``[alias]: crate::...``) so each definition stays on
+      one line
 - [ ] Constants use binary/byte literal/decimal (not hex)
 - [ ] Hex shown in comments for cross-reference
 - [ ] ANSI constants follow [Standardized Doc Template]
@@ -1341,15 +1491,7 @@ Before committing documentation:
 
 ## Related Skills
 
-- `check-code-quality` - Includes doc verification step
-- `organize-modules` - Re-export chains, conditional visibility for doc links
-- `run-clippy` - May suggest doc improvements | `/fix-md-tables` | Fix only markdown
-  tables |
-
----
-
-## Related Skills
-
-- `check-code-quality` - Includes doc verification step
-- `organize-modules` - Re-export chains, conditional visibility for doc links
-- `run-clippy` - May suggest doc improvements
+- `check-code-quality`: Includes doc verification step
+- `organize-modules`: Re-export chains, crate-internal `pub(crate) mod` visibility and doc
+  links
+- `run-clippy`: May suggest doc improvements

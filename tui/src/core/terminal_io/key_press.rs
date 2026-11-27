@@ -322,7 +322,7 @@ pub enum SpecialKey {
 ///
 /// [`crossterm`]: crossterm
 /// [Crossterm KeyCode::Char]: https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char
-pub mod convert_key_event {
+mod convert_key_event {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -365,7 +365,7 @@ pub mod convert_key_event {
         }
     }
 
-    pub mod impl_special_handling {
+    mod impl_special_handling {
         #[allow(clippy::wildcard_imports)]
         use super::*;
 

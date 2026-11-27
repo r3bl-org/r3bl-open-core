@@ -12,8 +12,8 @@
 //! [`IsInteractive`]: crate::TTYResult::IsInteractive
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
-use crate::{PtyTestContext, PtyTestMode, TTYResult, generate_pty_test,
-            is_fully_interactive, is_input_interactive, is_output_interactive};
+use crate::{PtyTestContext, PtyTestMode, TTYResult, is_fully_interactive,
+            is_input_interactive, is_output_interactive};
 use std::io::{BufRead, Write};
 
 generate_pty_test! {
@@ -63,6 +63,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     let is_input_interactive = is_input_interactive() == TTYResult::IsInteractive;
     let is_output_interactive = is_output_interactive() == TTYResult::IsInteractive;

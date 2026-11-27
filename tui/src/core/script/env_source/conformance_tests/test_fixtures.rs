@@ -3,12 +3,11 @@
 //! Test harness scaffolding and mock environment builders for `env-source` conformance
 //! tests.
 
-use crate::{EnvMap,
-            core::script::env_source::{BaseEnv, OutputFormat, try_env_source},
-            try_create_temp_dir};
+use crate::{BaseEnv, EnvMap, OutputFormat, try_create_temp_dir, try_env_source};
 use std::io::Write;
 
 /// Generates a deterministic hermetic mock initial environment for Unix.
+#[cfg(unix)]
 #[must_use]
 pub fn create_mock_initial_env_unix() -> EnvMap {
     let mut map = EnvMap::default();
@@ -20,6 +19,7 @@ pub fn create_mock_initial_env_unix() -> EnvMap {
 
 /// Generates a deterministic mock initial environment for Unix with an existing variable
 /// to be removed or unset.
+#[cfg(unix)]
 #[must_use]
 pub fn create_mock_initial_env_unix_with_existing_var() -> EnvMap {
     let mut map = create_mock_initial_env_unix();
@@ -28,6 +28,7 @@ pub fn create_mock_initial_env_unix_with_existing_var() -> EnvMap {
 }
 
 /// Generates a deterministic hermetic mock initial environment for Windows.
+#[cfg(windows)]
 #[must_use]
 pub fn create_mock_initial_env_windows() -> EnvMap {
     let mut map = EnvMap::default();
@@ -49,6 +50,7 @@ pub fn create_mock_initial_env_windows() -> EnvMap {
 
 /// Generates a deterministic mock initial environment for Windows with an existing
 /// variable to be removed or unset.
+#[cfg(windows)]
 #[must_use]
 pub fn create_mock_initial_env_windows_with_existing_var() -> EnvMap {
     let mut map = create_mock_initial_env_windows();
@@ -78,7 +80,7 @@ pub fn run_fixture_sh(
     let mut file = std::fs::File::create(&script_path).unwrap();
     file.write_all(fixture_content.as_bytes()).unwrap();
     file.flush().unwrap();
-    try_env_source(&script_path, output_format, base_env)
+    Ok(try_env_source(&script_path, output_format, base_env)?)
 }
 
 /// Helper to write a `.bat` script to a temporary directory and evaluate it via
@@ -103,5 +105,5 @@ pub fn run_fixture_bat(
     let mut file = std::fs::File::create(&script_path).unwrap();
     file.write_all(fixture_content.as_bytes()).unwrap();
     file.flush().unwrap();
-    try_env_source(&script_path, output_format, base_env)
+    Ok(try_env_source(&script_path, output_format, base_env)?)
 }

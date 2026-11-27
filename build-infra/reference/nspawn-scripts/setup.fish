@@ -35,6 +35,7 @@ function setup_user_configs -a machine_path
     create_fish_config $machine_path /root
     create_fish_config $machine_path /home/tester
     sudo chroot $machine_path chown -R tester:tester /home/tester
+    ensure_container_mdns_isolated $machine_path
 end
 
 function create_profile -a machine_path home_dir

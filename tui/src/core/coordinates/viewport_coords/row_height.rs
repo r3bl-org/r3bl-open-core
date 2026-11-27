@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::VPRow;
-use crate::{ChUnit, generate_length_type_impl};
+use crate::ChUnit;
 use std::hash::Hash;
 
 /// [`VPHeight`] is row count, i.e., the number of rows that a UI component occupies.

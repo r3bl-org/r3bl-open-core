@@ -126,7 +126,7 @@ pub mod branch_create_display {
         )
     }
 
-    /// This is the [`r3bl_tui::CommandRunResult::Noop`] message.
+    /// This is the [`r3bl_tui::CommandRunReport::Noop`] message.
     #[must_use]
     pub fn info_no_branch_created() -> InlineString {
         fmt::normal("No new branch was created.")

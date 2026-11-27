@@ -38,7 +38,7 @@ impl RustAnalyzerClient {
             "identifier": lsp_framing::RUST_ANALYZER_BINARY
         });
 
-        let response = self.send_request(lsp_methods::DIAGNOSTIC, Some(params))?;
+        let response = self.try_send_request(lsp_methods::DIAGNOSTIC, Some(params))?;
 
         let Some(items) = response.get("items") else {
             return Ok(json!([]));
@@ -50,7 +50,7 @@ impl RustAnalyzerClient {
     /// Aggregates compiler diagnostics from the local push notification cache and open
     /// documents.
     pub fn collect_cached_workspace_diagnostics(&mut self) -> DiagnosticsTable {
-        let mut aggregated = DiagnosticsTable::new();
+        let mut aggregated = DiagnosticsTable::default();
 
         // 1. Ingest all non-empty diagnostics cached from textDocument/publishDiagnostics
         //    notifications.
@@ -90,7 +90,7 @@ impl RustAnalyzerClient {
             "previousResultId": null
         });
 
-        let pull_response = self.send_request("workspace/diagnostic", Some(params));
+        let pull_response = self.try_send_request("workspace/diagnostic", Some(params));
 
         let report = RawWorkspaceDiagnosticsResult::classify(pull_response)
             .unwrap_or_else_fallback(|| self.collect_cached_workspace_diagnostics());
@@ -202,13 +202,13 @@ mod tests {
         let fallback_called = std::cell::Cell::new(false);
         let resolved = valid.unwrap_or_else_fallback(|| {
             fallback_called.set(true);
-            DiagnosticsTable::new()
+            DiagnosticsTable::default()
         });
         assert_eq!(resolved, json!({ "items": [] }));
         assert!(!fallback_called.get());
 
         let needs_fallback = RawWorkspaceDiagnosticsResult::NeedsCacheFallback;
-        let mut sample_map = DiagnosticsTable::new();
+        let mut sample_map = DiagnosticsTable::default();
         sample_map.insert(
             "file:///test.rs".to_string(),
             vec![json!({ "severity": 1 })],

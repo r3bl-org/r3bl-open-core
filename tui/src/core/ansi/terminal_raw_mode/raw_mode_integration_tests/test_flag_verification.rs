@@ -27,17 +27,17 @@
 //! [`ISIG`]: https://manpages.debian.org/termios.3
 //! [`make_raw()`]: rustix::termios::Termios::make_raw
 //! [`OPOST`]: https://manpages.debian.org/termios.3
-//! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+//! [`PTY`]: crate::PtyPair#pty-primer
 //! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [`VMIN`]: https://manpages.debian.org/termios.3
 //! [`VTIME`]: https://manpages.debian.org/termios.3
 //! [POSIX terminal API]: https://manpages.debian.org/termios.3
-//! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
+//! [raw mode]: mod@crate::core::ansi::terminal_raw_mode#raw-mode-vs-cooked-mode
 
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,
             MSG_SUCCESS, PtyTestContext, PtyTestMode, RawModeGuard, VMIN_RAW_MODE,
-            VTIME_RAW_MODE, generate_pty_test};
+            VTIME_RAW_MODE};
 use rustix::termios::{self, ControlModes, InputModes, LocalModes, OutputModes,
                       SpecialCodeIndex};
 use std::{io::Write,
@@ -113,6 +113,7 @@ fn controller(context: PtyTestContext) {
 /// Controlled process: enables raw mode and verifies specific [`termios`] flags. The
 /// harness performs [`std::process::exit(0)`] after this function returns.
 ///
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`termios`]: https://en.wikipedia.org/wiki/Termios
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
@@ -123,7 +124,7 @@ fn controlled() {
     let stdin = std::io::stdin();
 
     // Enable raw mode using the guard
-    let _guard = match RawModeGuard::new() {
+    let _guard = match RawModeGuard::try_new() {
         Ok(guard) => guard,
         Err(err) => {
             eprintln!("{GLYPH_WARNING} Controlled: Failed to enable raw mode: {err}");

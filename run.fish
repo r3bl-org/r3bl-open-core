@@ -111,22 +111,22 @@ function main
         case help --help -h
             print-help all
             # TUI-specific commands
-        case run-examples
-            run-examples $argv[2..-1]
-        case run-examples-flamegraph-svg
-            run-examples-flamegraph-svg
-        case run-examples-flamegraph-fold
+        case examples
+            examples $argv[2..-1]
+        case examples-flamegraph-svg
+            examples-flamegraph-svg
+        case examples-flamegraph-fold
             # Check for --benchmark flag
             if test (count $argv) -gt 1; and test "$argv[2]" = "--benchmark"
-                run-examples-flamegraph-fold --benchmark
+                examples-flamegraph-fold --benchmark
             else
-                run-examples-flamegraph-fold
+                examples-flamegraph-fold
             end
         case bench
             bench
             # cmdr-specific commands
-        case run-binaries
-            run-binaries
+        case binaries
+            binaries
         case install-cmdr
             install-cmdr
         case install-build-infra
@@ -210,10 +210,10 @@ function print-help
         echo "    "$c_green"check-full-watch-doc"$c_reset"  Watch files, run doc build only"
         echo ""
         echo $c_cyan"TUI-specific commands:"$c_reset
-        echo "    "$c_green"run-examples"$c_reset" "$c_blue"[--release] [--no-log]"$c_reset"        Run TUI examples"
-        echo "    "$c_green"run-examples-flamegraph-svg"$c_reset"                Generate SVG flamegraph"
-        echo "    "$c_green"run-examples-flamegraph-fold"$c_reset" "$c_blue"[--benchmark]"$c_reset" Generate perf-folded (use --benchmark for reproducible profiling)"
-        echo "    "$c_green"bench"$c_reset"                                      Run benchmarks"
+        echo "    "$c_green"examples"$c_reset" "$c_blue"[--release] [--no-log]"$c_reset"        Run TUI examples"
+        echo "    "$c_green"examples-flamegraph-svg"$c_reset"                Generate SVG flamegraph"
+        echo "    "$c_green"examples-flamegraph-fold"$c_reset" "$c_blue"[--benchmark]"$c_reset" Generate perf-folded (use --benchmark for reproducible profiling)"
+        echo "    "$c_green"bench"$c_reset"                                  Run benchmarks"
         echo ""
         echo $c_cyan"Local source package commands:"$c_reset
         echo "    "$c_green"install-cmdr"$c_reset"         Install cmdr binaries (edi, giti, rc, env-source) from source"
@@ -221,7 +221,7 @@ function print-help
         echo "    "$c_green"install-rust-analyzer-mcp-server"$c_reset" Install rust-analyzer MCP server from source"
         echo ""
         echo $c_cyan"cmdr-specific commands:"$c_reset
-        echo "    "$c_green"run-binaries"$c_reset"         Run edi, giti, rc, or env-source"
+        echo "    "$c_green"binaries"$c_reset"             Run edi, giti, rc, or env-source"
         echo "    "$c_green"test-cmdr-install-on-all-linux-distros"$c_reset
         echo "                             Test install on Ubuntu/Fedora/Arch (Linux only)"
         echo ""
@@ -286,7 +286,6 @@ end
 # - inferno: Fast stack trace visualizer
 # - lychee: Link checker for detecting URL rot in rustdoc comments
 # - typos-lsp: Language server protocol for typos source-code spell checker
-# - harper-ls: Language server for Harper grammar & spell checker
 # - typos-cli: Source code spell checker CLI (typos)
 # - cargo-llvm-cov: Source-based code coverage data generator
 # - cmdr: CLI apps (edi, giti, rc, env-source)
@@ -319,7 +318,6 @@ function install-cargo-tools
         "inferno" \
         "lychee" \
         "typos-lsp" \
-        "harper-ls" \
         "typos-cli" \
         "cargo-llvm-cov"
 
@@ -928,11 +926,11 @@ end
 # - Optional logging control
 #
 # Usage:
-#   fish run.fish run-examples              # Debug mode with logging
-#   fish run.fish run-examples --release    # Release mode with logging
-#   fish run.fish run-examples --no-log     # Debug mode without logging
-#   fish run.fish run-examples --release --no-log  # Release mode without logging
-function run-examples
+#   fish run.fish examples              # Debug mode with logging
+#   fish run.fish examples --release    # Release mode with logging
+#   fish run.fish examples --no-log     # Debug mode without logging
+#   fish run.fish examples --release --no-log  # Release mode without logging
+function examples
     # Ensure target symlink and backing store exist.
     set -l repo_root (cd (dirname (status --current-filename)) && pwd)
     $repo_root/check.fish --ensure-target >/dev/null 2>&1
@@ -985,8 +983,8 @@ end
 # - flamegraph.svg: Interactive visualization file
 #
 # Usage:
-#   fish run.fish run-examples-flamegraph-svg
-function run-examples-flamegraph-svg
+#   fish run.fish examples-flamegraph-svg
+function examples-flamegraph-svg
     set original_dir $PWD
     cd tui
 
@@ -1015,7 +1013,7 @@ end
 # input sequence that stress tests the rendering pipeline. This ensures that
 # .perf-folded files generated are comparable across code changes.
 #
-# Command: ./run.fish run-examples-flamegraph-fold --benchmark
+# Command: ./run.fish examples-flamegraph-fold --benchmark
 #
 # Benchmark methodology:
 # - 8-second continuous workload with 999 Hz sampling
@@ -1039,9 +1037,9 @@ end
 # - flamegraph-benchmark.perf-folded: Collapsed stack trace file (benchmark mode)
 #
 # Usage:
-#   fish run.fish run-examples-flamegraph-fold              # Interactive mode (manual input)
-#   fish run.fish run-examples-flamegraph-fold --benchmark  # Benchmark mode (automated, reproducible)
-function run-examples-flamegraph-fold
+#   fish run.fish examples-flamegraph-fold              # Interactive mode (manual input)
+#   fish run.fish examples-flamegraph-fold --benchmark  # Benchmark mode (automated, reproducible)
+function examples-flamegraph-fold
     set original_dir $PWD
     cd tui
 
@@ -1100,7 +1098,7 @@ end
 
 # cmdr-specific commands
 
-function run-binaries
+function binaries
     set original_dir $PWD
     cd cmdr
 
@@ -1271,14 +1269,14 @@ end
 #   fish run.fish log
 #
 # Prerequisites:
-#   Run 'fish run.fish run-examples' or 'fish run.fish run-binaries' first to generate logs
+#   Run 'fish run.fish examples' or 'fish run.fish binaries' first to generate logs
 function log
     clear
 
     set log_file "/tmp/r3bl_tui/log.txt"
 
     if not test -f $log_file
-        echo "No log file found at $log_file. Run 'fish run.fish run-examples' or 'fish run.fish run-binaries' with logging enabled first to generate logs."
+        echo "No log file found at $log_file. Run 'fish run.fish examples' or 'fish run.fish binaries' with logging enabled first to generate logs."
         return
     end
 

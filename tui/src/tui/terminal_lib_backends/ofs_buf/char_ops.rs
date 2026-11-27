@@ -5,9 +5,9 @@
 //! This module provides methods for reading, writing, filling, and copying individual
 //! characters or ranges of characters within the buffer.
 
-use super::{CanvasStorage, OfsBuf, PixelChar};
+use super::{CanvasStorage, OfsBuf, OfsBufBoundsError, PixelChar};
 use crate::{NarrowingCastToU16, RangeBoundsExt, RangeExclusive, RangeExt,
-            RangeValidityStatus, VPCol, VPPos, VPRow, ok, vp_len};
+            RangeValidityStatus, VPCol, VPPos, VPRow, vp_len};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl<S: CanvasStorage> OfsBuf<S> {
@@ -28,13 +28,17 @@ impl<S: CanvasStorage> OfsBuf<S> {
     /// # Panics
     ///
     /// Panics in debug builds if the character assignment fails despite being in bounds.
-    pub fn set_char(&mut self, pos: VPPos, char: PixelChar) -> miette::Result<()> {
+    pub fn try_set_char(
+        &mut self,
+        pos: VPPos,
+        char: PixelChar,
+    ) -> Result<(), OfsBufBoundsError> {
         let Some(row_slice) = self.get_row_mut(pos.row_index) else {
-            return Err(miette::miette!("Position out of bounds (row)"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: pos.row_index });
         };
 
         let Some(cell) = row_slice.get_mut(pos.col_index.as_usize()) else {
-            return Err(miette::miette!("Position out of bounds (col)"));
+            return Err(OfsBufBoundsError::ColOutOfBounds { col: pos.col_index });
         };
 
         *cell = char;
@@ -47,14 +51,14 @@ impl<S: CanvasStorage> OfsBuf<S> {
     /// # Errors
     ///
     /// Returns an error if the row or column range is out of bounds.
-    pub fn fill_char_range(
+    pub fn try_fill_char_range(
         &mut self,
         row: VPRow,
         col_range: RangeExclusive<VPCol>,
         char: PixelChar,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         let Some(row_slice) = self.get_row_mut(row) else {
-            return Err(miette::miette!("Row position out of bounds"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row });
         };
 
         let row_len = vp_len((row_slice.len()).as_u16_narrowing());
@@ -62,7 +66,10 @@ impl<S: CanvasStorage> OfsBuf<S> {
         if col_range.check_range_is_valid_for_length(row_len)
             != RangeValidityStatus::Valid
         {
-            return Err(miette::miette!("Column position out of bounds"));
+            return Err(OfsBufBoundsError::InvalidColRange {
+                start: col_range.start,
+                end: col_range.end,
+            });
         }
 
         row_slice[col_range.as_usize_range()].fill(char);
@@ -75,18 +82,18 @@ impl<S: CanvasStorage> OfsBuf<S> {
     /// # Errors
     ///
     /// Returns an error if the row or any column position is out of bounds.
-    pub fn copy_chars_within_line(
+    pub fn try_copy_chars_within_line(
         &mut self,
         row: VPRow,
         col_range: RangeExclusive<VPCol>,
         new_col_start: VPCol,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         if col_range.is_empty() {
             return ok!();
         }
 
         let Some(row_slice) = self.get_row_mut(row) else {
-            return Err(miette::miette!("Row index out of bounds"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row });
         };
 
         let row_len = vp_len((row_slice.len()).as_u16_narrowing());
@@ -94,7 +101,10 @@ impl<S: CanvasStorage> OfsBuf<S> {
         if col_range.check_range_is_valid_for_length(row_len)
             != RangeValidityStatus::Valid
         {
-            return Err(miette::miette!("Column range out of bounds"));
+            return Err(OfsBufBoundsError::InvalidColRange {
+                start: col_range.start,
+                end: col_range.end,
+            });
         }
 
         let col_offset = col_range.end - col_range.start;
@@ -103,7 +113,10 @@ impl<S: CanvasStorage> OfsBuf<S> {
         if dest_range.check_range_is_valid_for_length(row_len)
             != RangeValidityStatus::Valid
         {
-            return Err(miette::miette!("Column range out of bounds"));
+            return Err(OfsBufBoundsError::InvalidColRange {
+                start: dest_range.start,
+                end: dest_range.end,
+            });
         }
 
         row_slice.copy_within(col_range.as_usize_range(), new_col_start.as_usize());

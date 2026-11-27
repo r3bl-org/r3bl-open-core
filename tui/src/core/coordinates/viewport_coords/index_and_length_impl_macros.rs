@@ -1,7 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Code generation macros for dimension types. See [`crate::generate_index_type_impl!`]
-//! and [`crate::generate_length_type_impl!`].
+//! Code generation macros for dimension types. See [`generate_index_type_impl!`] and
+//! [`generate_length_type_impl!`].
+//!
+//! [`generate_index_type_impl!`]: crate::generate_index_type_impl
+//! [`generate_length_type_impl!`]: crate::generate_length_type_impl
 
 /// Generates complete implementation for index-like types (0-based positions).
 ///

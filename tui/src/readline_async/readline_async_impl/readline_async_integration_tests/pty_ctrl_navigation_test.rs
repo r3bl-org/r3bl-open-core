@@ -22,21 +22,21 @@
 //! ```
 //!
 //! [`ESC`]: crate::EscSequence
-//! [`LineState`]: crate::readline_async::readline_async_impl::LineState
+//! [`LineState`]: crate::LineState
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async_controlled_loop()`]:
 //!     super::readline_async_pty_test_fixtures::readline_async_controlled_loop
 
 use crate::{GLYPH_CONTROLLER, GLYPH_WAITING, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_LINE_PREFIX, PtyTestContext, PtyTestMode,
-            core::ansi::{generator::generate_keyboard_sequence,
-                         vt_100_terminal_input_parser::{VT100InputEventIR,
-                                                        VT100KeyCodeIR,
-                                                        VT100KeyModifiersIR}},
-            generate_pty_test, seg_index,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEventIR,
+                                                       VT100KeyCodeIR,
+                                                       VT100KeyModifiersIR},
+            generate_keyboard_sequence,
             readline_async::readline_async_impl::readline_async_integration_tests::readline_async_pty_test_fixtures::{
                 readline_async_controlled_loop, readline_async_controller_exit
-            }};
+            },
+            seg_index};
 use std::io::Write;
 
 generate_pty_test! {

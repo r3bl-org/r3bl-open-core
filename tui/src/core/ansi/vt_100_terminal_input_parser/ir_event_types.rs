@@ -6,17 +6,10 @@
 //!
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
-use crate::{ByteOffset, OSC_CODE_COLOR_REPORT_BACKGROUND, OSC_CODE_COLOR_REPORT_CURSOR,
-            OSC_CODE_COLOR_REPORT_FOREGROUND, OSC_CODE_COLOR_REPORT_HIGHLIGHT,
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND,
-            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND,
-            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND, RgbValue, TermPos, VPHeight,
-            VPWidth,
+use crate::{ByteOffset, TermPos, TerminalColorReport, VPHeight, VPWidth,
             core::ansi::constants::{MODIFIER_ALT, MODIFIER_CTRL,
                                     MODIFIER_PARAMETER_OFFSET, MODIFIER_SHIFT},
             terminal_io::KeyState};
-use std::{fmt::{Display, Formatter},
-          str::FromStr};
 
 /// Internal protocol event from [`VT-100`] parsing.
 ///
@@ -36,7 +29,6 @@ use std::{fmt::{Display, Formatter},
 /// │ • VT100KeyCodeIR, VT100KeyModifiersIR (keyboard)         │
 /// │ • VT100MouseButtonIR, VT100MouseActionIR (mouse)         │
 /// │ • VT100FocusStateIR, VT100PasteModeIR (terminal events)  │
-/// │ • TerminalColorReport, TerminalColorRole (color reports) │
 /// │ • VT100ScrollDirectionIR (scroll wheel)                  │
 /// └────────────────────────▲─────────────────────────────────┘
 ///                          │ (types used by all modules)
@@ -105,7 +97,7 @@ use std::{fmt::{Display, Formatter},
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`X10`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-/// [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+/// [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VT100InputEventIR {
     /// Keyboard event with character, modifiers, and key code.
@@ -143,14 +135,14 @@ pub enum VT100InputEventIR {
 
     /// Terminal foreground or background color query report ([`OSC`] 10 or 11).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     TerminalColorReport(TerminalColorReport),
 
     /// Protocol control sequence that is recognized and consumed, but does not generate
     /// an application-level input event (such as framed terminal query responses like
     /// [`OSC`] 52 or unhandled commands).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     Ignored,
 }
 
@@ -172,6 +164,7 @@ impl ParsedInputEventIR {
         }
     }
 
+    #[cfg(test)]
     #[must_use]
     pub fn consumed_usize(&self) -> usize { self.bytes_consumed.as_usize() }
 }
@@ -244,7 +237,7 @@ impl VT100KeyModifiersIR {
     /// [`ctrl`]: Self::ctrl
     /// [`shift`]: Self::shift
     #[must_use]
-    pub const fn has_modifiers(&self) -> bool {
+    pub const fn has_modifiers(self) -> bool {
         matches!(self.shift, KeyState::Pressed)
             || matches!(self.ctrl, KeyState::Pressed)
             || matches!(self.alt, KeyState::Pressed)
@@ -268,7 +261,7 @@ impl VT100KeyModifiersIR {
     /// [`MODIFIER_SHIFT`]: crate::core::ansi::constants::MODIFIER_SHIFT
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
     #[must_use]
-    pub const fn to_modifier_bits(&self) -> u8 {
+    pub const fn to_modifier_bits(self) -> u8 {
         let mut mask: u8 = 0;
         if let KeyState::Pressed = self.shift {
             mask |= MODIFIER_SHIFT;
@@ -297,7 +290,7 @@ impl VT100KeyModifiersIR {
     ///
     /// [`CSI`]: crate::CsiSequence
     #[must_use]
-    pub const fn to_csi_parameter(&self) -> u8 {
+    pub const fn to_csi_parameter(self) -> u8 {
         self.to_modifier_bits() + MODIFIER_PARAMETER_OFFSET
     }
 }
@@ -338,117 +331,6 @@ pub enum VT100PasteModeIR {
 pub enum VT100FocusStateIR {
     Gained,
     Lost,
-}
-
-/// Structured terminal color response decoded from an [`OSC`] 10, 11, 12, 13, 14, 17, or
-/// 19 sequence.
-///
-/// Contains the reported [`RgbValue`] and the functional [`TerminalColorRole`] it applies
-/// to.
-///
-/// [`OSC`]: crate::osc_codes::OscSequence
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TerminalColorReport {
-    pub role: TerminalColorRole,
-    pub color: RgbValue,
-}
-
-/// Functional role for a terminal color report sequence ([`OSC`] 10, 11, 12, 13, 14, 17,
-/// or 19).
-///
-/// # Omitted Sequences ([`OSC`] 15, 16, and 18)
-///
-/// In the [XTerm Control Sequences] specification for dynamic window colors ([`OSC`]
-/// 10-19), parameter codes 15, 16, and 18 are historically allocated to Tektronix 4014
-/// mode:
-/// - [`OSC`] 15: Tektronix foreground color.
-/// - [`OSC`] 16: Tektronix background color.
-/// - [`OSC`] 18: Tektronix cursor color.
-///
-/// Because modern terminal emulators do not implement Tektronix vector graphics
-/// emulation, these sequences are obsolete and omitted here. Only the [`VT-100`] text,
-/// cursor, pointer, and highlight color roles are supported.
-///
-/// [`OSC`]: crate::osc_codes::OscSequence
-/// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [XTerm Control Sequences]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TerminalColorRole {
-    /// Foreground color report ([`OSC`] 10).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Foreground,
-
-    /// Background color report ([`OSC`] 11).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Background,
-
-    /// Text cursor color report ([`OSC`] 12).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Cursor,
-
-    /// Mouse pointer foreground color report ([`OSC`] 13).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    MouseForeground,
-
-    /// Mouse pointer background color report ([`OSC`] 14).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    MouseBackground,
-
-    /// Highlight / selection background color report ([`OSC`] 17).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    Highlight,
-
-    /// Highlight / selection foreground color report ([`OSC`] 19).
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    HighlightForeground,
-}
-
-impl TerminalColorRole {
-    /// Returns the [`OSC`] parameter code for this color role.
-    ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
-    #[must_use]
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Foreground => OSC_CODE_COLOR_REPORT_FOREGROUND,
-            Self::Background => OSC_CODE_COLOR_REPORT_BACKGROUND,
-            Self::Cursor => OSC_CODE_COLOR_REPORT_CURSOR,
-            Self::MouseForeground => OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND,
-            Self::MouseBackground => OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND,
-            Self::Highlight => OSC_CODE_COLOR_REPORT_HIGHLIGHT,
-            Self::HighlightForeground => OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND,
-        }
-    }
-}
-
-impl FromStr for TerminalColorRole {
-    type Err = ();
-
-    fn from_str(code: &str) -> Result<Self, Self::Err> {
-        match code {
-            OSC_CODE_COLOR_REPORT_FOREGROUND => Ok(Self::Foreground),
-            OSC_CODE_COLOR_REPORT_BACKGROUND => Ok(Self::Background),
-            OSC_CODE_COLOR_REPORT_CURSOR => Ok(Self::Cursor),
-            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND => Ok(Self::MouseForeground),
-            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND => Ok(Self::MouseBackground),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT => Ok(Self::Highlight),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND => Ok(Self::HighlightForeground),
-            _ => Err(()),
-        }
-    }
-}
-
-impl Display for TerminalColorRole {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
 }
 
 /// Keyboard key codes.
@@ -551,104 +433,6 @@ mod tests {
                 alt: KeyState::NotPressed,
             }
         );
-    }
-
-    #[test]
-    fn test_terminal_color_role_display() {
-        assert_eq!(
-            TerminalColorRole::Foreground.as_str(),
-            OSC_CODE_COLOR_REPORT_FOREGROUND
-        );
-        assert_eq!(
-            TerminalColorRole::Background.as_str(),
-            OSC_CODE_COLOR_REPORT_BACKGROUND
-        );
-        assert_eq!(
-            TerminalColorRole::Cursor.as_str(),
-            OSC_CODE_COLOR_REPORT_CURSOR
-        );
-        assert_eq!(
-            TerminalColorRole::MouseForeground.as_str(),
-            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND
-        );
-        assert_eq!(
-            TerminalColorRole::MouseBackground.as_str(),
-            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND
-        );
-        assert_eq!(
-            TerminalColorRole::Highlight.as_str(),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT
-        );
-        assert_eq!(
-            TerminalColorRole::HighlightForeground.as_str(),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND
-        );
-
-        assert_eq!(
-            format!("{}", TerminalColorRole::Foreground),
-            OSC_CODE_COLOR_REPORT_FOREGROUND
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::Background),
-            OSC_CODE_COLOR_REPORT_BACKGROUND
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::Cursor),
-            OSC_CODE_COLOR_REPORT_CURSOR
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::MouseForeground),
-            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::MouseBackground),
-            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::Highlight),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT
-        );
-        assert_eq!(
-            format!("{}", TerminalColorRole::HighlightForeground),
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND
-        );
-    }
-
-    #[test]
-    fn test_terminal_color_role_from_str() {
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_FOREGROUND.parse(),
-            Ok(TerminalColorRole::Foreground)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_BACKGROUND.parse(),
-            Ok(TerminalColorRole::Background)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_CURSOR.parse(),
-            Ok(TerminalColorRole::Cursor)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_MOUSE_FOREGROUND.parse(),
-            Ok(TerminalColorRole::MouseForeground)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_MOUSE_BACKGROUND.parse(),
-            Ok(TerminalColorRole::MouseBackground)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT.parse(),
-            Ok(TerminalColorRole::Highlight)
-        );
-        assert_eq!(
-            OSC_CODE_COLOR_REPORT_HIGHLIGHT_FOREGROUND.parse(),
-            Ok(TerminalColorRole::HighlightForeground)
-        );
-
-        assert!("".parse::<TerminalColorRole>().is_err());
-        assert!("0".parse::<TerminalColorRole>().is_err());
-        assert!("20".parse::<TerminalColorRole>().is_err());
-        assert!("invalid".parse::<TerminalColorRole>().is_err());
     }
 
     #[test]

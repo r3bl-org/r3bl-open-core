@@ -39,7 +39,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
-use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
+use crate::{DEBUG_COMPOSITOR, DEBUG_RENDER_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OfsBuf, PixelCharDiffChunks, VPPos, VPSize,
             paint_ofs_buf, paint_ofs_buf_diff, render_ofs_buf, render_ofs_buf_diff};
 use std::fmt::Debug;
@@ -205,7 +205,7 @@ pub fn sanitize_and_save_abs_pos(
 }
 
 fn debug(orig_pos: VPPos, sanitized_pos: VPPos) {
-    DEBUG_TUI_COMPOSITOR.then(|| {
+    DEBUG_COMPOSITOR.then(|| {
         if sanitized_pos != orig_pos {
             // % is Display, ? is Debug.
             tracing::info!(
@@ -216,7 +216,7 @@ fn debug(orig_pos: VPPos, sanitized_pos: VPPos) {
         }
     });
 
-    DEBUG_TUI_SHOW_PIPELINE_EXPANDED.then(|| {
+    DEBUG_RENDER_PIPELINE_EXPANDED.then(|| {
         // % is Display, ? is Debug.
         tracing::info!(
             message = "pipeline : ⮺ Save the cursor position (sanitized) to SharedGlobalData",

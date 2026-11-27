@@ -64,7 +64,7 @@ pub fn sh() -> PtySessionBuilder {
 /// Returns a [`PtySessionBuilder`] configured to emit the given [`OSC`] sequence to
 /// [`stdout`].
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`stdout`]: std::io::stdout
 pub fn printf(osc_sequence: &str) -> PtySessionBuilder {
     #[cfg(unix)]

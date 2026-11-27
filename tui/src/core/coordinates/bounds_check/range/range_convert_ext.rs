@@ -203,7 +203,7 @@ use std::ops::RangeInclusive;
 /// VT-100 scroll region: vp_row(2)..=vp_row(6) (inclusive - both endpoints valid)
 ///
 /// To shift lines up within this region:
-///   buffer.shift_lines_in_range(
+///   buffer.try_shift_lines_in_range(
 ///       ShiftLinesDirection::Up,
 ///       (vp_row(2)..=vp_row(6)).to_exclusive(),  // Converts to vp_row(2)..vp_row(7)
 ///       len(1)
@@ -236,7 +236,7 @@ use std::ops::RangeInclusive;
 /// let scroll_region = vp_row(1)..=vp_row(4);
 ///
 /// // Shift lines within scroll region
-/// // buffer.shift_lines_in_range(ShiftLinesDirection::Up, scroll_region.to_exclusive(), vp_row(1));
+/// // buffer.try_shift_lines_in_range(ShiftLinesDirection::Up, scroll_region.to_exclusive(), vp_row(1));
 /// ```
 ///
 /// **Single-element range:**
@@ -254,7 +254,7 @@ use std::ops::RangeInclusive;
 /// - [`RangeBoundsExt`] - Range validation against content boundaries
 /// - [Module documentation] - Overview of bounds checking architecture
 ///
-/// [`canvas`]: mod@crate::canvas
+/// [`canvas`]: mod@crate::core::coordinates::canvas
 /// [`CRow`]: crate::CRow
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
 /// [`RangeExclusive`]: crate::RangeExclusive
@@ -265,8 +265,8 @@ use std::ops::RangeInclusive;
 /// [`VPRow`]: crate::VPRow
 /// [`VT-100`]:
 ///     mod@crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_scroll_ops
-/// [Interval Notation]: mod@crate::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 pub trait RangeConvertExt {
     /// The index type contained in this range.
     type IndexType;

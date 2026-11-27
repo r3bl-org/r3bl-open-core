@@ -4,7 +4,7 @@
 
 use super::{constants::ACCUMULATOR_INITIAL_CAPACITY,
             unparsed_buffer_action::UnparsedBufferAction};
-use crate::{ByteLength, ByteOffset, DEBUG_TUI_SHOW_DIRECT_TO_ANSI};
+use crate::{ByteLength, ByteOffset, DEBUG_DIRECT_TO_ANSI, HexSlice};
 
 /// Dedicated buffer accumulator for terminal input bytes.
 ///
@@ -45,6 +45,7 @@ impl ChunkAccumulator {
     /// Returns the number of accumulated bytes as a type-safe [`ByteLength`].
     ///
     /// [`ByteLength`]: crate::ByteLength
+    #[allow(dead_code)] // Convenience accessor retained on ChunkAccumulator.
     #[must_use]
     pub fn len(&self) -> ByteLength { ByteLength::from(self.buffer.len()) }
 
@@ -65,11 +66,11 @@ impl ChunkAccumulator {
     /// malformed or unrecognized escape sequences, logging diagnostic warnings when
     /// enabled.
     pub fn purge_malformed(&mut self) {
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             tracing::warn! {
                 message = "ChunkAccumulator::purge_malformed",
                 status = "discarding unrecognized/malformed escape sequence",
-                discarded_hex = %format!("{:02X?}", self.buffer),
+                discarded_hex = %HexSlice { inner: &self.buffer },
                 discarded_str = %String::from_utf8_lossy(&self.buffer),
                 buffer_len = self.buffer.len(),
             };
@@ -88,5 +89,6 @@ impl ChunkAccumulator {
     }
 
     /// Clear the accumulator buffer completely.
+    #[allow(dead_code)] // Convenience helper retained on ChunkAccumulator.
     pub fn clear(&mut self) { self.buffer.clear(); }
 }

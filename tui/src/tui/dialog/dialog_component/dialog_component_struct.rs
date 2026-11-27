@@ -1,12 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
+use crate::{Component, DEBUG_TUI, DialogEngine, DialogEngineApi,
             DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfig,
-            EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
-            HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
-            OnDialogPressFn, VPBoundingBox,
-            common::{CommonError, CommonErrorType, CommonResult},
-            ok};
+            DialogEngineError, EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId,
+            GlobalData, HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
+            OnDialogPressFn, VPBoundingBox};
 use std::fmt::Debug;
 
 /// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
@@ -47,7 +45,7 @@ where
     fn get_id(&self) -> FlexBoxId { self.data.id }
 
     /// This shim simply calls
-    /// [DialogEngineApi::render_engine] w/ all the
+    /// [DialogEngineApi::try_render_engine] w/ all the
     /// necessary arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
@@ -60,14 +58,14 @@ where
     /// 2. However, [`VPBoundingBox`] is saved for later use. And it is used to restrict
     ///    where the dialog can be placed on the screen.
     ///
-    /// [DialogEngineApi::render_engine]: DialogEngineApi::render_engine
+    /// [DialogEngineApi::try_render_engine]: DialogEngineApi::try_render_engine
     fn render(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         _current_box: FlexBox,         /* Ignore this. */
         surface_bounds: VPBoundingBox, /* Save this. */
         has_focus: &mut HasFocus,
-    ) -> CommonResult {
+    ) -> miette::Result<()> {
         // Unpack the global data.
         let GlobalData { state, .. } = global_data;
 
@@ -84,7 +82,8 @@ where
             Some(_) => {
                 let args =
                     DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
-                DialogEngineApi::render_engine(args)
+                DialogEngineApi::try_render_engine(args)?;
+                ok!()
             }
             None => ok!(),
         }
@@ -94,7 +93,7 @@ where
     /// [DialogEngineApi::apply_event] w/ all the necessary
     /// arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
-    /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
+    /// - User input (from [`TerminalWindow::main_event_loop`]): [`InputEvent`].
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
     ///
     /// Usually a component must have focus in order for the [`crate::App`] to
@@ -102,13 +101,14 @@ where
     /// in the first place.
     ///
     /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
+    /// [`TerminalWindow::main_event_loop`]: crate::TerminalWindow::main_event_loop
     /// [DialogEngineApi::apply_event]: DialogEngineApi::apply_event
     fn handle_event(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         input_event: InputEvent,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation> {
+    ) -> miette::Result<EventPropagation> {
         // Unpack the global data.
         let GlobalData {
             state,
@@ -135,12 +135,12 @@ where
                 id,
                 dialog_engine,
                 input_event,
-            )? {
+            ) {
                 // Handler user's choice.
                 DialogChoice(dialog_choice) => {
                     has_focus.reset_modal_id();
 
-                    DEBUG_TUI_MOD.then(|| {
+                    DEBUG_TUI.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug!(
                             message = "🐝 restore focus to non modal",
@@ -182,10 +182,7 @@ where
                 Noop => Ok(EventPropagation::Propagate),
             }
         } else {
-            let msg = format!(
-                "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {id:?}"
-            );
-            CommonError::new_error_result(CommonErrorType::NotFound, &msg)
+            Err(DialogEngineError::DialogBufferNotFound { id }.into())
         }
     }
 }

@@ -83,7 +83,7 @@ impl OfsBufVT100 {
     /// Moves cursor down one line. If at the bottom of the scroll region, it scrolls the
     /// region up by one line.
     pub fn handle_line_feed(&mut self) {
-        let _unused = self.index_down();
+        let _unused = self.try_index_down();
         self.get_parser_global_state_mut().clear_pending_wrap();
     }
 

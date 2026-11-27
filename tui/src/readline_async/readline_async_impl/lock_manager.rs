@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{LineState, ModalGuardToken, OutputDevice, PaintMode, SafeLineState,
-            disable_raw_mode};
+            try_disable_raw_mode};
 use std::io::Write;
 
 /// This struct acts as a "Traffic Cop" to prevent lock-inversion deadlocks between the
-/// keystroke event loop task ([`Readline::readline`]) that handles user input and the
+/// keystroke event loop task ([`Readline::try_readline`]) that handles user input and the
 /// line control task ([`process_line_control_signal`]) that handles concurrent output,
 /// pause/resume transitions, and flush signals from [`SharedWriter`] instances.
 ///
@@ -39,8 +39,8 @@ use std::io::Write;
 /// Both tasks need to acquire **both locks** simultaneously to perform their work, so
 /// that they don't clobber the terminal output.
 ///
-/// 1. **The Keystroke Task** (running [`Readline::readline`]): When the user presses a
-///    key, it needs the **line state lock 🔒** to mutate the prompt buffer, and the
+/// 1. **The Keystroke Task** (running [`Readline::try_readline`]): When the user presses
+///    a key, it needs the **line state lock 🔒** to mutate the prompt buffer, and the
 ///    **terminal output lock 🔒** to immediately draw the updated prompt to the screen.
 /// 2. **The Line Control Task** (running [`process_line_control_signal`]): When any
 ///    concurrent task sends text to the [`SharedWriter`], this task needs the **line
@@ -90,9 +90,9 @@ use std::io::Write;
 /// [`SharedWriter`]) hold their own cloned [`OutputDevice`] handle and write to it
 /// directly (they do not go through [`ReadlineLockManager`]).
 ///
-/// # Why use [`RAII`] instead of Typestate pattern?
+/// # Why use [RAII] instead of Typestate pattern?
 ///
-/// We chose an [`RAII`] Guard pattern ([`ModalTerminalGuard`]) combined with this dual
+/// We chose an [RAII] Guard pattern ([`ModalTerminalGuard`]) combined with this dual
 /// lock hierarchy rather than a strict typestate pattern by value, due to the extreme
 /// complexities of async terminal programming. A pure typestate approach struggles with
 /// the following realities of an **async** [`readline`]:
@@ -103,14 +103,14 @@ use std::io::Write;
 ///    ergonomically model independent, concurrent state transitions without exploding
 ///    into dozens of state combination structs.
 /// 2. **Ergonomics in Async Loops:** Transitioning typestates inside a continuous
-///    `read_line()` `loop {}` requires constant `self` re-assignment, which is fragile
-///    when dealing with async `?` early returns.
+///    `try_read_line()` `loop {}` requires constant `self` re-assignment, which is
+///    fragile when dealing with async `?` early returns.
 /// 3. **Terminal State Corruption:** If an async typestate drops or yields incorrectly,
 ///    multiple threads might write [`ANSI`] escape codes concurrently. A central lock
 ///    manager prevents this more reliably.
-/// 4. **Clean Shutdowns & Panics:** If the async executor panics halfway through,
-///    [`RAII`] `Drop` guarantees the terminal is safely restored from raw mode back to
-///    cooked mode, which typestates by value cannot natively guarantee on early returns.
+/// 4. **Clean Shutdowns & Panics:** If the async executor panics halfway through, [RAII]
+///    `Drop` guarantees the terminal is safely restored from raw mode back to cooked
+///    mode, which typestates by value cannot natively guarantee on early returns.
 ///
 /// # The Lifetime Tether Pattern
 ///
@@ -121,25 +121,23 @@ use std::io::Write;
 /// causing screen corruption.
 ///
 /// To truly prevent all concurrent writes at the memory level, modal functions like
-/// [`choose()`] would need to hold a [`MutexGuard`] for the terminal. However, because
-/// [`choose()`] is an `async` function that runs for a long time, holding a lock open
-/// across `.await` points is a severe anti-pattern in async Rust (it causes deadlocks and
-/// blocks other threads). Therefore, yielding a `&mut OutputDevice` tether is the best
-/// architectural compromise we can make to safely bind the lifetime of the UI modal to
-/// the pause state of the background [`Readline`] task.
+/// [`try_choose()`] would need to hold a [`MutexGuard`] for the terminal. However,
+/// because [`try_choose()`] is an `async` function that runs for a long time, holding a
+/// lock open across `.await` points is a severe anti-pattern in async Rust (it causes
+/// deadlocks and blocks other threads). Therefore, yielding a `&mut OutputDevice` tether
+/// is the best architectural compromise we can make to safely bind the lifetime of the UI
+/// modal to the pause state of the background [`Readline`] task.
 ///
 /// [1]: https://en.wikipedia.org/wiki/Coffman_conditions
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`Arc<Mutex>`]: std::sync::Arc
-/// [`choose()`]: crate::choose
 /// [`lock_both()`]: Self::lock_both
 /// [`lock_line_state()`]: Self::lock_line_state
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 /// [`MutexGuard`]: std::sync::MutexGuard
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`process_line_control_signal`]: crate::process_line_control_signal
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-/// [`Readline::readline`]: crate::Readline::readline
+/// [`Readline::try_readline`]: crate::Readline::try_readline
 /// [`readline`]: https://manpages.debian.org/readline.3
 /// [`ReadlineLockManager`]: Self
 /// [`SafeLineState`]: crate::SafeLineState
@@ -148,7 +146,9 @@ use std::io::Write;
 /// [`stdout`]: std::io::stdout
 /// [`tokio::spawn`]: tokio::spawn
 /// [`tokio`]: tokio
+/// [`try_choose()`]: crate::try_choose
 /// [channel processing task]: super::line_control_task::process_line_control_signal
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[allow(missing_debug_implementations)]
 pub struct ReadlineLockManager {
     /// State lock (acquired 1st): prompt buffer, cursor coordinates, and line editor
@@ -213,21 +213,21 @@ impl ReadlineLockManager {
     ///
     /// Used **ONLY** by [`ModalTerminalGuard::as_mut_tuple`] to provide the following
     /// `(&mut OutputDevice, &mut InputDevice)` to modal sub-applications (such as
-    /// [`crate::choose()`]). The [`ModalGuardToken`] witness guarantees this method can't
-    /// be called by anyone else.
+    /// [`crate::try_choose()`]). The [`ModalGuardToken`] witness guarantees this method
+    /// can't be called by anyone else.
     ///
     /// # Safety and Invariant Preservation
     ///
     /// Calling this method requires an exclusive `&mut self` borrow of
     /// [`ReadlineLockManager`] (which in turn requires an exclusive `&mut Readline`
     /// borrow) and a [`ModalGuardToken`] witness. This statically prevents concurrent
-    /// access from [`Readline::readline()`].
+    /// access from [`Readline::try_readline()`].
     ///
     /// [`ModalGuardToken`]: crate::ModalGuardToken
     /// [`ModalTerminalGuard::as_mut_tuple`]: crate::ModalTerminalGuard::as_mut_tuple
     /// [`MutexGuard`]: std::sync::MutexGuard
     /// [`OutputDevice`]: crate::OutputDevice
-    /// [`Readline::readline()`]: crate::Readline::readline
+    /// [`Readline::try_readline()`]: crate::Readline::try_readline
     /// [`Readline`]: crate::Readline
     /// [`ReadlineLockManager`]: Self
     pub(crate) fn exclusive_output_device(
@@ -252,13 +252,13 @@ impl ReadlineLockManager {
                 self.output_device_acquire_second
                     .lock_raw_poison_safe(|term| {
                         // We don't care about the result of this operation.
-                        drop(line_state.exit(term));
+                        drop(line_state.try_exit(term));
 
                         // We don't care about the result of this operation.
-                        // disable_raw_mode() is also poison-safe.
+                        // try_disable_raw_mode() is also poison-safe.
                         if self.output_device_acquire_second.paint_mode != PaintMode::Mock
                         {
-                            drop(disable_raw_mode());
+                            drop(try_disable_raw_mode());
                         }
                     });
             });

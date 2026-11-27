@@ -205,7 +205,7 @@
 //!    - A TUI app exits and drops its input device
 //!    - All async consumers finish and drop their receivers
 //!
-//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice::new()`]
+//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice::try_new()`]
 //!    call occurs, [`RRT::try_subscribe()`] observes [`ThreadState::Stopped`] and spawns
 //!    a new thread generation automatically. This allows sequential TUI apps in the same
 //!    process to share the input system seamlessly.
@@ -373,7 +373,7 @@
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
 //! [`CONTROL_D`]: crate::CONTROL_D
 //! [`crossterm`]: crossterm
-//! [`DirectToAnsiInputDevice::new()`]: super::DirectToAnsiInputDevice::new
+//! [`DirectToAnsiInputDevice::try_new()`]: super::DirectToAnsiInputDevice::try_new
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`EINTR`]: https://manpages.debian.org/errno.3
@@ -488,43 +488,18 @@
 
 #![rustfmt::skip]
 
-// RRT-based interrupt + worker types.
-#[cfg(any(test, doc))]
-pub mod mio_poll_interrupt;
-#[cfg(not(any(test, doc)))]
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod mio_poll_worker; // Cross-folder rustdoc link (chunk_decoder/mouse).
+pub(crate) mod handler_stdin; // Cross-folder rustdoc links (chunk_framer, vt_100_terminal_input_parser).
+
+// Attach. Folder-local (Intra-module).
 mod mio_poll_interrupt;
-
-#[cfg(any(test, doc))]
-pub mod mio_poll_worker;
-#[cfg(not(any(test, doc)))]
-mod mio_poll_worker;
-
-#[cfg(any(test, doc))]
-pub mod sources;
-#[cfg(not(any(test, doc)))]
 mod sources;
-
-#[cfg(any(test, doc))]
-pub mod dispatcher;
-#[cfg(not(any(test, doc)))]
 mod dispatcher;
-
-#[cfg(any(test, doc))]
-pub mod handler_signals;
-#[cfg(not(any(test, doc)))]
 mod handler_signals;
-
-#[cfg(any(test, doc))]
-pub mod handler_stdin;
-#[cfg(not(any(test, doc)))]
-mod handler_stdin;
-
-#[cfg(any(test, doc))]
-pub mod handler_software_interrupt;
-#[cfg(not(any(test, doc)))]
 mod handler_software_interrupt;
 
-// Re-export public API.
+// Re-export.
 pub use handler_stdin::*;
 pub use mio_poll_interrupt::*;
 pub use mio_poll_worker::*;

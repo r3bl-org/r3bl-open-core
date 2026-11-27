@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::seg_index::SegIndex;
-use crate::{ChUnit, LengthOps, generate_length_type_impl};
+use crate::{ChUnit, LengthOps};
 
 /// Represents a count of the number of [`grapheme`] segments inside of
 /// [`crate::GCStringOwned`]. The length is max index (zero based) + 1.

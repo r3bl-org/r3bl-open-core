@@ -2,33 +2,28 @@
 
 #![allow(clippy::literal_string_with_formatting_args)]
 
-// Private modules (hide internal structure)
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
 mod command_impl;
-mod crates_api;
+#[macro_use]
 mod directory_change;
+#[macro_use]
+mod temp_dir;
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod env_source; // Cross-folder rustdoc module link (tui/mod.rs).
+
+// Attach. Folder-local (Intra-module).
+mod fs_path;
+mod crates_api;
 mod directory_create;
 mod download;
-#[cfg(any(test, doc))]
-pub mod env_source;
-#[cfg(not(any(test, doc)))]
-mod env_source;
-#[cfg(any(test, doc))]
-pub mod environment;
-#[cfg(not(any(test, doc)))]
 mod environment;
-#[cfg(any(test, doc))]
-pub mod fs_path;
-#[cfg(not(any(test, doc)))]
-mod fs_path;
-#[cfg(any(test, doc))]
-pub mod git;
-#[cfg(not(any(test, doc)))]
 mod git;
 mod github_api;
 mod http_client;
 mod package_manager;
 mod permissions;
-mod temp_dir;
 
 // Re-export.
 pub use command_impl::*;
@@ -45,5 +40,3 @@ pub use http_client::*;
 pub use package_manager::*;
 pub use permissions::*;
 pub use temp_dir::*;
-
-pub const SCRIPT_MOD_DEBUG: bool = true;

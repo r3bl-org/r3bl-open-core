@@ -4,8 +4,8 @@ use super::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 use crate::ex_rc::app_main::animator_task::start_animator_task;
 use chrono::{DateTime, Local};
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
-               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
-               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD, EditMode,
+               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize,
+               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI, EditMode,
                EditorComponent, EditorEngineConfig, EventPropagation, FlexBoxId,
                GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
                InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement, LengthOps,
@@ -118,7 +118,7 @@ mod constructor {
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct ex_rc::AppWithLayout");
             });
@@ -185,7 +185,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Things from the app scope.
             let AppData { animator, .. } = &mut self.data;
 
@@ -220,7 +220,7 @@ mod app_main_impl_app_trait {
                 key: Key::Character('q'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
-                animator.stop()?;
+                animator.stop();
                 return Ok(EventPropagation::ExitMainEventLoop);
             }
 
@@ -240,7 +240,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let state = &mut global_data.state;
                 match action {
@@ -262,12 +262,12 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let window_size = global_data.window_size;
 
             // Create a surface and then run the SurfaceRenderer
             // (ContainerSurfaceRender) on it.
-            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            let mut surface = surface!(stylesheet: stylesheet::try_create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
                 pos: vp_col(0) + vp_row(0),
@@ -328,7 +328,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let component_id = FlexBoxId::from(Id::Editor);
             // Layout editor component, and render it.
             {
@@ -367,7 +367,7 @@ mod populate_component_registry {
 
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -404,7 +404,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
@@ -417,7 +417,7 @@ mod stylesheet {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn try_create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style! {

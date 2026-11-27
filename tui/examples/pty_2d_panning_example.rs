@@ -30,27 +30,26 @@
 //! - `Shift + Mouse Wheel Up/Down` to pan horizontally left/right.
 //! - `Ctrl+Q` to quit
 //!
-//! [`OSC`]: r3bl_tui::core::ansi::osc_codes::OscSequence
-//! [`pty_mux`]: r3bl_tui::core::pty_mux
-//! [`PTYMux`]: r3bl_tui::core::pty_mux::PTYMux
+//! [`OSC`]: r3bl_tui::OscSequence
+//! [`pty_mux`]: r3bl_tui::PTYMux
+//! [`PTYMux`]: r3bl_tui::PTYMux
 
 use r3bl_tui::{DefaultIoDevices, EventPropagation, InputEvent, IntoErr, Key, KeyPress,
-               KeyState, ModifierKeysMask, TuiAvailability, TuiAvailabilityChooseExt,
-               assert_terminal_is_interactive, choose,
-               core::pty_mux::{PTYMux, ProcessManager},
+               KeyState, ModifierKeysMask, PTYMux, ProcessManager, TuiAvailability,
+               TuiAvailabilityChooseExt, assert_terminal_is_interactive,
                is_command_available, ok,
-               readline_async::{HowToChoose, style::StyleSheet},
-               set_mimalloc_in_main, show_notification_non_blocking,
+               readline_async::{HowToChoose, StyleSheet},
+               run_in_main_with_safe_stack, show_notification_non_blocking, try_choose,
                try_initialize_logging_global, vp_width};
 use tracing_core::LevelFilter;
 
 const ENABLE_NOTIFICATIONS: bool = false;
 const VIRTUAL_TERMINAL_WIDTH: usize = 1000;
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::too_many_lines)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize logging to /tmp/r3bl_tui/log.txt.
@@ -83,7 +82,7 @@ async fn main() -> miette::Result<()> {
     // Ask user for confirmation before taking over screen.
     let maybe_user_choice = {
         let mut default_io_devices = DefaultIoDevices::default();
-        choose(
+        try_choose(
             "🚀 Ready to launch the 2D Panning multiplexer demo?",
             &["Yes, launch 2D Panning demo (Infinite Canvas)", "No, exit"],
             None,
@@ -136,9 +135,12 @@ async fn main() -> miette::Result<()> {
     println!();
 
     // Run the multiplexer event loop.
-    tracing::debug!("About to start multiplexer.run()");
-    let run_result = multiplexer.run().await;
-    tracing::debug!("multiplexer.run() completed with result: {:?}", run_result);
+    tracing::debug!("About to start multiplexer.try_run()");
+    let run_result = multiplexer.try_run().await;
+    tracing::debug!(
+        "multiplexer.try_run() completed with result: {:?}",
+        run_result
+    );
 
     // Check for any errors from the run.
     run_result?;

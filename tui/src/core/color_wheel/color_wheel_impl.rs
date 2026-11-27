@@ -107,7 +107,7 @@ use crate::{Ansi256GradientIndex, ArrayBoundsCheck, ArrayOverflowResult,
             generate_random_truecolor_gradient, generate_truecolor_gradient,
             get_gradient_array_for,
             glyphs::SPACER_GLYPH as SPACER,
-            tui_color, tui_styled_text, vp_idx, vp_len};
+            vp_idx, vp_len};
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 use std::{collections::hash_map::DefaultHasher,
@@ -1173,7 +1173,7 @@ mod lolcat_bg_helper {
 #[cfg(test)]
 mod tests_color_wheel_rgb {
     use super::*;
-    use crate::{ColorSupport, assert_eq2, global_color_support,
+    use crate::{ColorSupport, global_color_support,
                 tui_style::tui_style_attrib::{Bold, Dim},
                 tui_style_attribs};
     use serial_test::serial;
@@ -1977,67 +1977,6 @@ mod bench {
             }
             let _hash = hasher.finish();
         });
-    }
-
-    /// Benchmark: `FxHashMap` vs `HashMap` - Cache insertion performance
-    ///
-    /// Real-world flamegraph results:
-    /// - Before `FxHashMap`: 38M samples in `COLORIZATION_CACHE` hash operations
-    /// - After `FxHashMap`: Only 5M samples in `lolcat_into_string` (all operations)
-    /// - Performance improvement: 87% reduction in `ColorWheel` CPU usage
-    #[bench]
-    fn bench_fxhashmap_vs_hashmap_insert(b: &mut Bencher) {
-        use rustc_hash::{FxBuildHasher, FxHashMap};
-        use std::collections::HashMap;
-
-        // Create test keys.
-        let mut keys = Vec::new();
-        for i in 0..100 {
-            let key = color_wheel_cache::ColorWheelCacheKey::new(
-                &format!("Test string number {i}"),
-                &VecConfigs::new(),
-                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(None),
-                None,
-            );
-            keys.push(key);
-        }
-
-        // Test FxHashMap.
-        let fx_time = {
-            let start = std::time::Instant::now();
-            b.iter(|| {
-                let mut map: FxHashMap<
-                    color_wheel_cache::ColorWheelCacheKey,
-                    TuiStyledTexts,
-                > = FxHashMap::with_capacity_and_hasher(100, FxBuildHasher);
-                for key in &keys {
-                    map.insert(key.clone(), TuiStyledTexts::default());
-                }
-                test::black_box(map)
-            });
-            start.elapsed()
-        };
-
-        // Test standard HashMap.
-        let hash_time = {
-            let start = std::time::Instant::now();
-            b.iter(|| {
-                let mut map: HashMap<
-                    color_wheel_cache::ColorWheelCacheKey,
-                    TuiStyledTexts,
-                > = HashMap::with_capacity(100);
-                for key in &keys {
-                    map.insert(key.clone(), TuiStyledTexts::default());
-                }
-                test::black_box(map)
-            });
-            start.elapsed()
-        };
-
-        // The benchmark framework will show the actual performance.
-        // This is just to ensure both paths are tested.
-        test::black_box((fx_time, hash_time));
     }
 
     /// Benchmark: `LruCache` lookup performance

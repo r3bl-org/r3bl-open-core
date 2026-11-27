@@ -58,7 +58,7 @@
 //! [`OSC`] sequences are queued as events for later processing by the output renderer.
 //!
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
-//! [`test_osc_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
+//! [`test_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_osc_ops
 //! [`vt_100_impl_osc_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_osc_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self

@@ -3,17 +3,13 @@
 //! Stateful accumulator buffer and sequence classification engine for terminal input
 //! bytes. See [`ChunkAccumulator`].
 
-// Attach source files.
-mod accumulator_struct;
+// Attach.
+pub(super) mod constants;
 
-#[cfg(any(test, doc))]
-pub mod unparsed_buffer_action;
-#[cfg(not(any(test, doc)))]
+mod accumulator_struct;
 mod unparsed_buffer_action;
 
-pub mod constants;
-
-// Public re-exports (barrel export pattern).
+// Re-export.
 pub use accumulator_struct::*;
 pub use constants::*;
 pub use unparsed_buffer_action::*;

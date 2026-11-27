@@ -22,17 +22,17 @@
 //! cargo test -p r3bl_tui test_raw_mode_cycles -- --nocapture
 //! ```
 //!
-//! [`disable`]: crate::disable_raw_mode
-//! [`enable`]: crate::enable_raw_mode
+//! [`disable`]: crate::try_disable_raw_mode
+//! [`enable`]: crate::try_enable_raw_mode
 //! [`PENDIN`]: https://manpages.debian.org/termios.3
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
+//! [`SAVED_TERMIOS`]: crate::core::ansi::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 //! [`tcsetattr`]: https://manpages.debian.org/termios.3
 //! [`termios`]: https://en.wikipedia.org/wiki/Termios
 
 use crate::{BufReadExt, GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_SUCCESS,
             GLYPH_WAITING, GLYPH_WARNING, MSG_CONTROLLED_STARTING, MSG_FAILED,
-            MSG_SUCCESS, PtyTestContext, PtyTestMode, generate_pty_test};
+            MSG_SUCCESS, PtyTestContext, PtyTestMode};
 use rustix::termios;
 use std::{io::Write,
           time::{Duration, Instant}};
@@ -111,6 +111,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: performs multiple enable/disable cycles. The harness performs
 /// [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 #[allow(clippy::too_many_lines)]
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
@@ -138,7 +140,7 @@ fn controlled() {
         eprintln!("{GLYPH_CONTROLLED} Controlled: --- Cycle {cycle} ---");
 
         // Enable raw mode
-        if let Err(e) = crate::enable_raw_mode() {
+        if let Err(e) = crate::try_enable_raw_mode() {
             eprintln!(
                 "{GLYPH_WARNING} Controlled: Failed to enable raw mode in cycle {cycle}: {e}"
             );
@@ -173,7 +175,7 @@ fn controlled() {
         eprintln!("  {GLYPH_SUCCESS} Cycle {cycle}: Verified in raw mode");
 
         // Disable raw mode
-        if let Err(err) = crate::disable_raw_mode() {
+        if let Err(err) = crate::try_disable_raw_mode() {
             eprintln!(
                 "{GLYPH_WARNING} Controlled: Failed to disable raw mode in cycle {cycle}: {err}"
             );
@@ -217,7 +219,7 @@ fn controlled() {
 
     // Test calling enable() twice without disable() in between
     eprintln!("{GLYPH_CONTROLLED} Controlled: Testing double enable...");
-    if let Err(err) = crate::enable_raw_mode() {
+    if let Err(err) = crate::try_enable_raw_mode() {
         eprintln!(
             "{GLYPH_WARNING} Controlled: Failed first enable in double test: {err}"
         );
@@ -229,7 +231,7 @@ fn controlled() {
     // Second enable should not fail. SAVED_TERMIOS already holds the cooked
     // settings from the first enable, so the is_none() guard skips the save.
     // Raw mode is re-applied (harmless), and the saved cooked state is preserved.
-    if let Err(err) = crate::enable_raw_mode() {
+    if let Err(err) = crate::try_enable_raw_mode() {
         eprintln!(
             "{GLYPH_WARNING} Controlled: Failed second enable in double test: {err}"
         );
@@ -240,7 +242,7 @@ fn controlled() {
     eprintln!("  {GLYPH_SUCCESS} Double enable succeeded");
 
     // Disable should restore the cooked settings saved by the first enable.
-    if let Err(err) = crate::disable_raw_mode() {
+    if let Err(err) = crate::try_disable_raw_mode() {
         eprintln!(
             "{GLYPH_WARNING} Controlled: Failed to disable after double enable: {err}"
         );
@@ -275,7 +277,7 @@ fn controlled() {
 
     // Test calling disable() when already disabled (should be a safe no-op).
     eprintln!("{GLYPH_CONTROLLED} Controlled: Testing double disable...");
-    if let Err(err) = crate::disable_raw_mode() {
+    if let Err(err) = crate::try_disable_raw_mode() {
         eprintln!(
             "{GLYPH_WARNING} Controlled: Failed second disable in double test: {err}"
         );

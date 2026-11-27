@@ -2,7 +2,8 @@
 
 use crate::{Continuation,
             core::resilient_reactor_thread::{RRT, RRTEvent, RRTSoftwareInterrupt,
-                                             RRTWorker, RestartPolicy}};
+                                             RRTWorker, RRTWorkerAndInterrupt,
+                                             RestartPolicy}};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Debug)]
@@ -14,31 +15,37 @@ impl RRTSoftwareInterrupt for SmartInterrupt {
 
 #[derive(Debug)]
 pub struct SmartWorker {
+    #[allow(dead_code)] // Kept for Debug diagnostics when inspecting test workers.
     pub config_val: String,
     pub receiver: tokio::sync::broadcast::Receiver<String>,
 }
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("smart worker error")]
+pub struct SmartCreateError;
 
 impl RRTWorker for SmartWorker {
     type Config = String;
     type Input = String;
     type Output = String;
     type Interrupt = SmartInterrupt;
+    type CreateError = SmartCreateError;
 
     fn create_and_register_os_sources(
         config: Self::Config,
         receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         // Assert that the config is what we expect!
         assert_eq!(config, "test_config_value");
         CREATE_CALL_COUNTER.fetch_add(1, Ordering::SeqCst);
 
-        Ok((
-            SmartWorker {
+        Ok(RRTWorkerAndInterrupt {
+            worker: SmartWorker {
                 config_val: config,
                 receiver,
             },
-            SmartInterrupt,
-        ))
+            interrupt: SmartInterrupt,
+        })
     }
 
     fn block_until_ready_then_dispatch(
@@ -95,7 +102,7 @@ async fn test_smart_sender_retry_and_config() {
 
     // 3. Send normal message
     input_sender
-        .send("hello".to_string())
+        .try_send("hello".to_string())
         .await
         .expect("conversion error");
 
@@ -108,7 +115,7 @@ async fn test_smart_sender_retry_and_config() {
 
     // 4. Send "crash" command
     input_sender
-        .send("crash".to_string())
+        .try_send("crash".to_string())
         .await
         .expect("conversion error");
 
@@ -120,7 +127,7 @@ async fn test_smart_sender_retry_and_config() {
     // This is the core feature of the smart sender: we await the send. It will
     // seamlessly suspend and wait for the new worker to spawn, then deliver it to the
     // new tokio channel!
-    let send_result = input_sender.send("hello after crash".to_string()).await;
+    let send_result = input_sender.try_send("hello after crash".to_string()).await;
     assert!(
         send_result.is_ok(),
         "Smart sender should successfully retry"
@@ -138,7 +145,7 @@ async fn test_smart_sender_retry_and_config() {
 
     // 8. Clean up
     input_sender
-        .send("stop".to_string())
+        .try_send("stop".to_string())
         .await
         .expect("conversion error");
 }

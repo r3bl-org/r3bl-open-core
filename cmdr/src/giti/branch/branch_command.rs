@@ -3,14 +3,15 @@
 use crate::{common,
             common::ui_templates::prefix_single_select_instruction_header,
             giti::{BranchSubcommand, CLICommand, CommandRunDetails,
-                   get_giti_command_subcommand_names, handle_branch_checkout_command,
-                   handle_branch_delete_command, handle_branch_new_command, ui_str}};
+                   get_giti_command_subcommand_names,
+                   try_handle_branch_checkout_command,
+                   try_handle_branch_delete_command, try_handle_branch_new_command,
+                   ui_str}};
 use clap::ValueEnum;
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices,
-               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line,
-               inline_vec,
+use r3bl_tui::{CommandRunReport, DefaultIoDevices, TuiAvailabilityChooseExt,
+               cli_text_inline, cli_text_line, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
-               vp_height};
+               try_choose, vp_height};
 
 /// The main function to for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
@@ -19,28 +20,31 @@ use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices,
 /// # Errors
 ///
 /// Returns an error if any of the subcommands fail or if user interaction fails.
-pub async fn handle_branch_command(
+pub async fn try_handle_branch_command(
     sub_cmd: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+) -> miette::Result<CommandRunReport<CommandRunDetails>> {
     if let Some(subcommand) = sub_cmd {
         match subcommand {
             BranchSubcommand::Delete => {
-                handle_branch_delete_command(maybe_branch_name).await
+                try_handle_branch_delete_command(maybe_branch_name).await
             }
             BranchSubcommand::Checkout => {
-                handle_branch_checkout_command(maybe_branch_name).await
+                try_handle_branch_checkout_command(maybe_branch_name).await
             }
-            BranchSubcommand::New => handle_branch_new_command(maybe_branch_name).await,
+            BranchSubcommand::New => {
+                try_handle_branch_new_command(maybe_branch_name).await
+            }
         }
     } else {
-        prompt_for_sub_command().await
+        try_prompt_for_sub_command().await
     }
 }
 
 /// The user typed `giti branch` command with no subcommands. So prompt them for a
 /// subcommand.
-async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDetails>> {
+async fn try_prompt_for_sub_command()
+-> miette::Result<CommandRunReport<CommandRunDetails>> {
     let branch_subcommand_options =
         get_giti_command_subcommand_names(CLICommand::Branch {
             sub_cmd: None,
@@ -57,7 +61,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
 
     // Return the first item selected by the user.
     let maybe_user_choice = {
-        choose(
+        try_choose(
             header_with_instructions,
             branch_subcommand_options,
             Some(vp_height(20)),
@@ -72,7 +76,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
 
     // Early return if the user didn't select anything.
     let Some(user_choice) = maybe_user_choice else {
-        return Ok(CommandRunResult::Noop(
+        return Ok(CommandRunReport::Noop(
             ui_str::noop_msg(),
             CommandRunDetails::Noop,
         ));
@@ -80,7 +84,7 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
 
     // Early return if the user-chosen branch subcommand is not valid (can't be parsed).
     let Ok(branch_subcommand) = BranchSubcommand::from_str(&user_choice, true) else {
-        return Ok(CommandRunResult::Noop(
+        return Ok(CommandRunReport::Noop(
             ui_str::invalid_branch_sub_command_msg(),
             CommandRunDetails::Noop,
         ));
@@ -88,8 +92,8 @@ async fn prompt_for_sub_command() -> CommonResult<CommandRunResult<CommandRunDet
 
     // Actually process the user-selected branch subcommand.
     match branch_subcommand {
-        BranchSubcommand::Delete => handle_branch_delete_command(None).await,
-        BranchSubcommand::Checkout => handle_branch_checkout_command(None).await,
-        BranchSubcommand::New => handle_branch_new_command(None).await,
+        BranchSubcommand::Delete => try_handle_branch_delete_command(None).await,
+        BranchSubcommand::Checkout => try_handle_branch_checkout_command(None).await,
+        BranchSubcommand::New => try_handle_branch_new_command(None).await,
     }
 }

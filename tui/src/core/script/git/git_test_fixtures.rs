@@ -2,18 +2,14 @@
 
 //! Shared test infrastructure for git module tests.
 
-use crate::{InlineString, Run, TempDir, command, ok,
-            script::git::types::{git_command_args::GIT_ARG_INIT_BRANCH,
-                                 git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
-                                                     GIT_CMD_CONFIG, GIT_CMD_INIT,
-                                                     GIT_PROGRAM},
-                                 git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
-                                                   GIT_CONFIG_USER_EMAIL,
-                                                   GIT_CONFIG_USER_NAME},
-                                 test_config::{TEST_DEFAULT_BRANCH, TEST_EMAIL,
-                                               TEST_GPG_SIGN_DISABLED,
-                                               TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}},
-            try_create_temp_dir_and_cd, try_get_current_branch_name, try_write_file};
+use super::types::{git_command_args::GIT_ARG_INIT_BRANCH,
+                   git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT, GIT_CMD_CONFIG,
+                                       GIT_CMD_INIT, GIT_PROGRAM},
+                   git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN, GIT_CONFIG_USER_EMAIL,
+                                     GIT_CONFIG_USER_NAME},
+                   test_config::{TEST_DEFAULT_BRANCH, TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
+                                 TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}};
+use crate::{InlineString, Run, TempDir, try_get_current_branch_name, try_write_file};
 
 /// Helper function to setup a basic git repository with an initial commit. Returns a
 /// tuple of (`temp_dir_root`, `initial_branch_name`). When the `temp_dir_root` is
@@ -68,7 +64,7 @@ pub async fn helper_setup_git_repo_with_commit() -> miette::Result<(
         .await?;
 
     // Get current branch name.
-    let initial_branch = try_get_current_branch_name().await.0?;
+    let initial_branch = try_get_current_branch_name().await.result?;
     assert_eq!(initial_branch.as_str(), TEST_DEFAULT_BRANCH);
 
     ok!((tmp_dir_root, initial_branch))

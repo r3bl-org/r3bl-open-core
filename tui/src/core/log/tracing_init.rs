@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{DisplayPreference, WriterConfig};
-use crate::log::{rolling_file_appender_impl, tracing_config::TracingConfig};
+use super::{DisplayPreference, TracingInitError, WriterConfig,
+            rolling_file_appender_impl, tracing_config::TracingConfig};
 use tracing_core::LevelFilter;
 use tracing_subscriber::{Layer, registry::LookupSpan};
 
@@ -41,7 +41,7 @@ pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 /// - The file layer cannot be created
 pub fn try_create_layers(
     tracing_config: &TracingConfig,
-) -> miette::Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>> {
+) -> Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>, TracingInitError> {
     // Create the layers based on the writer configuration.
     let layers = {
         let mut return_it: Vec<Box<DynLayer<tracing_subscriber::Registry>>> = vec![];
@@ -59,17 +59,19 @@ pub fn try_create_layers(
         // ));
         // ``
 
-        let _unused = try_create_display_layer(
+        if let Some(layer) = create_display_layer(
             tracing_config.get_level_filter(),
             tracing_config.get_writer_config(),
-        )?
-        .map(|layer| return_it.push(layer));
+        ) {
+            return_it.push(layer);
+        }
 
-        let _unused = try_create_file_layer(
+        if let Some(layer) = try_create_file_layer(
             tracing_config.get_level_filter(),
             tracing_config.get_writer_config(),
-        )?
-        .map(|layer| return_it.push(layer));
+        )? {
+            return_it.push(layer);
+        }
 
         return_it
     };
@@ -83,17 +85,12 @@ pub fn try_create_layers(
 /// This is useful for composition of layers. There's more info in the docs
 /// [here].
 ///
-/// # Errors
-///
-/// Returns an error if:
-/// - The shared writer cannot be created or locked
-/// - The writer configuration is invalid
-///
 /// [here]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers
-pub fn try_create_display_layer<S>(
+#[must_use]
+pub fn create_display_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,
-) -> miette::Result<Option<Box<DynLayer<S>>>>
+) -> Option<Box<DynLayer<S>>>
 where
     S: tracing_core::Subscriber,
     for<'a> S: LookupSpan<'a>,
@@ -102,7 +99,7 @@ where
     let fmt_layer = create_fmt!();
 
     // Configure the writer based on the desired log target, and return it.
-    Ok(match writer_config {
+    match writer_config {
         WriterConfig::DisplayAndFile(display_pref, _)
         | WriterConfig::Display(display_pref) => match display_pref {
             DisplayPreference::Stdout => Some(Box::new(
@@ -127,7 +124,7 @@ where
             }
         },
         _ => None,
-    })
+    }
 }
 
 /// This erases the concrete type of the writer, and returns a boxed layer.
@@ -137,15 +134,14 @@ where
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The file appender cannot be created (invalid path, permissions)
-/// - The file path is invalid
+/// Returns [`TracingInitError`] if the file appender cannot be created (invalid path,
+/// permissions, or already initialized).
 ///
 /// [here]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers
 pub fn try_create_file_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,
-) -> miette::Result<Option<Box<DynLayer<S>>>>
+) -> Result<Option<Box<DynLayer<S>>>, TracingInitError>
 where
     S: tracing_core::Subscriber,
     for<'a> S: LookupSpan<'a>,
@@ -175,12 +171,11 @@ mod tests {
     use serial_test::serial;
 
     #[test]
-    fn test_try_create_display_layer() {
+    fn test_create_display_layer() {
         let level_filter = LevelFilter::DEBUG;
         let writer_config = WriterConfig::Display(DisplayPreference::Stdout);
         let layer: Option<Box<DynLayer<tracing_subscriber::Registry>>> =
-            try_create_display_layer(level_filter, writer_config)
-                .expect("conversion error");
+            create_display_layer(level_filter, writer_config);
 
         assert!(layer.is_some());
     }
@@ -252,7 +247,7 @@ mod fixtures {
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
     use super::{fixtures::get_expected, *};
-    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter};
     use smallvec::smallvec;
 
     #[tokio::test]
@@ -266,7 +261,7 @@ mod test_tracing_shared_writer_output {
             writer_config: WriterConfig::Display(display_pref),
             level_filter: LevelFilter::DEBUG,
         }
-        .install_thread_local()
+        .try_install_thread_local()
         .expect("conversion error");
 
         // Log some messages.

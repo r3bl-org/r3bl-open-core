@@ -5,11 +5,10 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, Flat2DA
             FlushKind, GCStringOwned, LengthOps, NarrowingCastToU16, OfsBuf,
             OfsBufVT100, OutputDevice, PixelChar, ProcessStatus, RangeExt,
             RenderOpsLocalData, SPACE_CHAR, ScrollbackAmount, TuiStyle, VPCol, VPPos,
-            VPRow, VPSize, Viewport, ViewportToCanvasExt, ok,
-            print_text_with_attributes,
-            tui::{DEBUG_TUI_PTY_MUX,
+            VPRow, VPSize, Viewport, ViewportToCanvasExt,
+            try_print_text_with_attributes,
+            tui::{DEBUG_PTY_MUX,
                   terminal_lib_backends::{paint_ofs_buf, render_ofs_buf}},
-            tui_color,
             tui_style_attrib::{self, Bold},
             tui_style_attribs, vp_col, vp_pos, vp_row, vp_width};
 use std::fmt::Debug;
@@ -70,7 +69,7 @@ impl OutputRenderer {
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()> {
+    ) {
         // Get the focused process's buffer.
         let focused_process_buffer = process_manager.focused_process_buffer();
 
@@ -105,8 +104,6 @@ impl OutputRenderer {
 
         // Paint the composite buffer to terminal.
         paint_buffer(&new_ofs_buf, output_device);
-
-        ok!()
     }
 
     /// Composites a virtual block cursor into the buffer.
@@ -163,7 +160,7 @@ impl OutputRenderer {
         let status_row_slice = &mut ofs_buf[last_row.as_usize()][col_range];
         status_row_slice.fill(spacer);
 
-        // Use print_text_with_attributes() to write styled text into the buffer. This
+        // Use try_print_text_with_attributes() to write styled text into the buffer. This
         // correctly handles Unicode display widths, grapheme clusters, and clipping. The
         // same code path used by the full rendering pipeline.
         let status_text = self.generate_status_text(process_manager);
@@ -176,7 +173,7 @@ impl OutputRenderer {
         // Position cursor at the start of the status bar row.
         ofs_buf.set_cursor_pos(vp_pos(vp_col(0), last_row));
 
-        match print_text_with_attributes(
+        match try_print_text_with_attributes(
             &status_text,
             Some(&status_style),
             ofs_buf,
@@ -274,8 +271,8 @@ impl OutputRenderer {
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()> {
-        self.render_from_active_buffer(output_device, process_manager)
+    ) {
+        self.render_from_active_buffer(output_device, process_manager);
     }
 
     /// Updates the terminal size used for status bar compositing.
@@ -296,7 +293,7 @@ impl OutputRenderer {
 /// a terminal emulator cursor. If interactive regions (like a find feature) are added to
 /// the chrome in the future, they will be handled by compositing another virtual caret.
 ///
-/// [`hide_cursor`]: TerminalModeController::hide_cursor
+/// [`hide_cursor`]: crate::TerminalModeController::hide_cursor
 fn paint_buffer(ofs_buf: &OfsBuf, output_device: &OutputDevice) {
     let render_ops = render_ofs_buf(ofs_buf);
     output_device.write(|out| {
@@ -309,7 +306,7 @@ fn paint_buffer(ofs_buf: &OfsBuf, output_device: &OutputDevice) {
     });
 }
 
-pub mod render_from_active_buffer_helpers {
+mod render_from_active_buffer_helpers {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -445,7 +442,7 @@ pub mod render_from_active_buffer_helpers {
 
         // Generate a structured trace log if the cursor was snapped backwards.
         if original_col != col_usize {
-            DEBUG_TUI_PTY_MUX.then(|| {
+            DEBUG_PTY_MUX.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info! {
                     message = "OutputRenderer::composite_virtual_cursor_into_buffer",
@@ -473,7 +470,7 @@ pub mod render_from_active_buffer_helpers {
             PixelChar::Void => {
                 // Fallback: If we hit a malformed buffer (e.g. Void at column 0), do
                 // nothing.
-                DEBUG_TUI_PTY_MUX.then(|| {
+                DEBUG_PTY_MUX.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "OutputRenderer::composite_virtual_cursor_into_buffer",
@@ -489,7 +486,7 @@ pub mod render_from_active_buffer_helpers {
     }
 }
 
-pub mod cursor_projection_helpers {
+mod cursor_projection_helpers {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 

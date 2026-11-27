@@ -68,7 +68,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// - `OfsBufVT100::render_to_ansi()` will call this renderer
 /// - `CliTextInline::Display` will use this renderer
-/// - `choose()` and `readline_async` will use this renderer
+/// - `try_choose()` and `readline_async` will use this renderer
 /// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use
 ///   this renderer
 ///
@@ -343,6 +343,8 @@ impl PixelCharRenderer {
     /// Apply a background color to the output.
     ///
     /// Similar to [`apply_fg_color`] but for background color.
+    ///
+    /// [`apply_fg_color`]: Self::apply_fg_color
     fn apply_bg_color(&mut self, color: TuiColor) {
         let sgr = Self::color_to_sgr(color, false);
         self.write_sgr(sgr);
@@ -398,8 +400,7 @@ impl Default for PixelCharRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SGR_BOLD_STR, SGR_ITALIC_STR, SGR_RESET_STR, SGR_UNDERLINE_STR,
-                new_style, tui_color};
+    use crate::{SGR_BOLD_STR, SGR_ITALIC_STR, SGR_RESET_STR, SGR_UNDERLINE_STR};
 
     #[test]
     fn test_render_plain_text_no_style() {

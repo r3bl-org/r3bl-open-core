@@ -5,7 +5,7 @@
 use crate::{Button, FunctionKey, InputEvent, Key, KeyPress, KeyState, LineState,
             ModifierKeysMask, MouseInput, MouseInputKind, ReadlineControlFlow,
             ReadlineError, ReadlineEvent, SafeHistory, SpecialKey, StdMutex, VPHeight,
-            VPSize, VPWidth, key_press, vp_col, vp_row};
+            VPSize, VPWidth, vp_col, vp_row};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent,
                        MouseEventKind};
 use std::{io::Write, sync::Arc};
@@ -59,7 +59,7 @@ pub fn apply_event_to_line_state_and_render(
 
     // Regular readline event handling - use the canonical InputEvent directly
     line_state
-        .apply_event_and_render(&input_event, term, self_safe_history)
+        .try_apply_event_and_render(&input_event, term, self_safe_history)
         .into()
 }
 
@@ -214,8 +214,8 @@ pub fn convert_crossterm_event_to_input_event(event: Event) -> Option<InputEvent
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CrosstermEventResult, History, InlineVec,
-                core::test_fixtures::StdoutMock, vp_height, vp_width};
+    use crate::{CrosstermEventResult, History, InlineVec, StdoutMock, vp_height,
+                vp_width};
     use smallvec::smallvec;
 
     fn get_input_vec() -> InlineVec<CrosstermEventResult> {
@@ -460,7 +460,7 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_generate_event_stream_pinned() {
-        use crate::core::test_fixtures::gen_input_stream;
+        use crate::gen_input_stream;
         use futures_util::StreamExt;
 
         let mut count = 0;

@@ -2,13 +2,12 @@
 
 use super::{AppSignal, State};
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
-               ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
-               EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
-               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, LengthOps,
-               RenderOpCommon, RenderOpIR, RenderOpIRVec, SpecialKey,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, VPBoundingBox,
-               VPPos, ZOrder, ch, glyphs, inline_string, ok, send_signal,
-               throws_with_return, vp_col, vp_row};
+               ColorWheelSpeed, Component, DEBUG_TUI, EventPropagation, FlexBox,
+               FlexBoxId, GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
+               InputEvent, Key, KeyPress, LengthOps, RenderOpCommon, RenderOpIR,
+               RenderOpIRVec, SpecialKey, TerminalWindowMainThreadSignal,
+               TextColorizationPolicy, VPBoundingBox, VPPos, ZOrder, ch, glyphs,
+               inline_string, ok, send_signal, throws_with_return, vp_col, vp_row};
 use smallvec::smallvec;
 
 #[derive(Debug, Clone, Default)]
@@ -62,7 +61,7 @@ mod column_render_component_impl_component_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             input_event: InputEvent,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let mut event_consumed = false;
 
@@ -136,7 +135,7 @@ mod column_render_component_impl_component_trait {
             current_box: FlexBox,
             _surface_bounds: VPBoundingBox, /* Ignore this. */
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Things from component scope.
             let ColumnComponentData { color_wheel, .. } = &mut self.data;
 
@@ -231,7 +230,7 @@ mod column_render_component_impl_component_trait {
             pipeline.push(ZOrder::Normal, render_ops);
 
             // Log pipeline.
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!(

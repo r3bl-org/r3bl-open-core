@@ -1,6 +1,12 @@
 ---
 name: organize-modules
-description: Apply private modules with public re-exports (barrel export) pattern for clean API design. Includes conditional visibility for docs and tests. Use when creating modules, organizing mod.rs files, or before creating commits.
+description:
+    Apply private modules with public re-exports (barrel export) pattern for clean API
+    design. Covers 3-tier visibility (`Folder-local`, `Crate-wide`, `Public`),
+    progressive-disclosure `// Attach.` and `// Re-export.` coordinator headers,
+    `#[macro_use]` propagation, `--document-private-items` doc visibility, and
+    single-arm `#[cfg(any(test, doc))]` for test-only modules. Use when creating
+    modules, organizing mod.rs files, or before creating commits.
 ---
 
 # Module Organization Best Practices
@@ -11,7 +17,7 @@ description: Apply private modules with public re-exports (barrel export) patter
 - Refactoring module structure
 - Organizing mod.rs files
 - Reviewing code that exposes internal structure
-- Making private types visible to documentation
+- Structuring internal module visibility for docs and tests
 - Before creating commits with module changes
 - When user says "organize modules", "refactor modules", "fix module structure", etc.
 
@@ -21,28 +27,30 @@ Follow these patterns for clean, maintainable module organization:
 
 ### Step 1: Apply the Recommended Pattern
 
-**Prefer private modules with public re-exports** (also known as the [barrel export] pattern) as
-the default pattern.
+**Prefer private modules with public re-exports** (also known as the [barrel export]
+pattern) as the default pattern.
 
 This provides a clean API while maintaining flexibility to refactor internal structure.
 
-[barrel export]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export#re-exporting_aggregating
+[barrel export]:
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export#re-exporting_aggregating
 
 ```rust
-// mod.rs - Module coordinator
+// mod.rs - Module coordinator.
 
-// Private modules (hide internal structure)
+// Attach.
 mod constants;
 mod types;
 mod helpers;
 
-// Public re-exports (expose stable API)
+// Re-export.
 pub use constants::*;
 pub use types::*;
 pub use helpers::*;
 ```
 
 **What this achieves:**
+
 - Clean, flat API for users
 - Internal structure is hidden and can be refactored freely
 - No namespace pollution from module names
@@ -56,219 +64,351 @@ For `mod.rs` files with deliberate manual alignment, prevent rustfmt from reform
 
 #![rustfmt::skip]
 
-// Private modules
+// Attach.
 mod constants;
 mod types;
 mod helpers;
 
-// Public re-exports
+// Re-export.
 pub use constants::*;
 pub use types::*;
 pub use helpers::*;
 ```
 
 **When to use rustfmt skip:**
+
 - Large `mod.rs` files with many exports
 - Deliberately structured code alignment for clarity
 - Manual grouping of related items (e.g., test fixtures)
 - Files where organization conveys semantic meaning
 
 **When NOT to use:**
+
 - Small, simple mod.rs files
 - When automatic formatting is preferred
 
-### Step 3: Apply Conditional Visibility for Docs and Tests
+### Step 3: 3-Tier Visibility & Progressive-Disclosure Coordinator Headers
 
-When you need a module to be:
-- **Private in production builds** (encapsulation)
-- **Public for documentation** (rustdoc links work)
-- **Public for tests** (test code can access internals)
+The workspace uses a 3-tier module visibility vocabulary:
 
-Use conditional compilation:
+| Declaration | Tier | Scope & Rules |
+| :--- | :--- | :--- |
+| `mod foo;` / `pub(super) mod foo;` | **Folder-local (Intra-module)** | Default minimum scope. Visible to parent `mod.rs` and folder siblings/descendants (and still documented via `--document-private-items`). |
+| `pub(crate) mod foo; // <reason>.` | **Crate-wide (Intra-crate)** | Cross-folder crate-internal path access (cousin folders, ancestor-to-grandchild `mod@crate::...` rustdoc links, or out-of-folder tests). Always include a 1-line inline reason comment. |
+| `pub mod foo;` | **Public (Inter-crate)** | Intentional public API namespace (domain hubs or explicit non-globbed namespaces). External crates can import paths through it. |
+
+#### Coordinator `mod.rs` Section Ordering (Progressive Disclosure)
+
+Structure module attachment and re-export blocks in `mod.rs` top-to-bottom as follows:
+
+1. **Top `#[macro_use]` block (only when needed):** Always place upward-propagating
+   macro modules first under:
+   `// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).`
+   **Never split a `#[macro_use]` block by visibility**, because textual macro expansion
+   depends on declaration order (add a 1-line inline reason comment to any
+   `pub(crate) mod` inside this block).
+2. **Non-`#[macro_use]` module attachments (Progressive Disclosure):**
+   - **Single-tier coordinator** (all remaining attachments share one tier, e.g., all
+     `mod` or all `pub mod`): use a single concise `// Attach.` header.
+   - **Mixed-tier coordinator** (2+ visibility tiers present): split wide-to-narrow with
+     explicit tier headers (include only tiers present in that file):
+     - `// Attach. Public (Inter-crate).`
+     - `// Attach. Crate-wide (Intra-crate).`
+     - `// Attach. Folder-local (Intra-module).`
+3. **Re-exports:** Always introduce barrel exports with `// Re-export.`.
+4. **Test and doc-only modules (when present):** Keep `#[cfg(test)]` and single-arm
+   `#[cfg(any(test, doc))]` test/fixture modules separated cleanly from production
+   attachments (preserving a 1-line inline reason comment on any `pub(crate) mod`).
+
+#### Documenting Private and Crate-Wide Items (`--document-private-items`)
+
+The workspace enables `--document-private-items` across all documentation workflows:
+
+- `.cargo/config.toml` (`[build] rustdocflags`) for local `cargo doc` and IDE runs.
+- `check_docs.fish` (`RUSTDOCFLAGS` in `run_cargo_doc`) for `./check.fish --quick-doc`,
+  `--doc`, `--watch-doc`, and `--full`.
+- `[package.metadata.docs.rs]` (`rustdoc-args`) in member `Cargo.toml` files (`tui`,
+  `cmdr`, `build-infra`, `rust-analyzer-mcp-server`, `analytics_schema`).
+- `[workspace.lints.rustdoc] private_intra_doc_links = "allow"` in root `Cargo.toml`,
+  allowing public items to link to `pub(crate)` and private internal items.
+
+Because `rustdoc` already documents private and `pub(crate)` items that exist in the AST,
+do **not** use dual-arm `#[cfg(any(test, doc))]` / negated-`cfg` fallback shims on
+production modules. Instead, default to **Folder-local** (`mod`) and widen to
+**Crate-wide** (`pub(crate) mod`) only as needed:
+
+- **`mod foo;` (Folder-local / Intra-module, default minimum scope)**: Use for all
+  internal modules unless cross-folder paths require widening. Because
+  `--document-private-items` generates HTML pages for private modules and items, **all
+  four** of these work with plain `mod foo;`:
+    1. HTML page generation for `foo` and every private item inside it.
+    2. **Parent-to-child** links and imports (`parent/mod.rs` linking to `mod@foo` or
+       `foo::Item`).
+    3. **Sibling-to-sibling** links and imports (`parent/sibling_a.rs` accessing
+       `mod@super::sibling_b` or `mod@crate::parent::sibling_b`, because children can see
+       private items of their ancestors).
+    4. **Descendant-to-ancestor-sibling** access (`parent/a/inner.rs` accessing
+       `crate::parent::b`).
+- **`pub(crate) mod foo;` (Crate-wide / Intra-crate, only when cross-folder paths fail)**:
+  Upgrade from `mod foo;` to `pub(crate) mod foo;` **only** when either of these two
+  cross-folder cases needs path access (flagged by `cargo check --workspace --all-targets`
+  or `./check.fish --quick-doc`), and document the reason with a 1-line inline comment:
+    1. **Cousin access across sibling folders**: `crate::folder_x::...` referenced from
+       `folder_y/` in Rust code, tests, or `mod@crate::folder_x::sub` rustdoc links.
+    2. **Ancestor-to-grandchild access**: `lib.rs` or `grandparent/mod.rs` architecture
+       tables linking down into `mod@crate::grandparent::parent::child` (in Rust, children
+       see parents' private `mod`, whereas parents cannot see children's private `mod`).
+
+Historical note: before `--document-private-items` was enabled workspace-wide, even
+parent-to-child and sibling-to-sibling doc links forced `#[cfg(any(test, doc))] pub mod`
+because `rustdoc` omitted HTML pages for private modules. Now **Folder-local** `mod` is
+always the default, and **Crate-wide** `pub(crate) mod` acts as an explicit signal that
+code, tests, or docs outside the folder depend on that module path.
 
 ```rust
-// mod.rs - Conditional visibility
+// mod.rs: Mixed-tier coordinator using Progressive Disclosure headers.
 
-#[cfg(any(test, doc))]
-pub mod internal_parser;
-#[cfg(not(any(test, doc)))]
-mod internal_parser;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod internal_parser; // Cross-folder rustdoc module links and integration tests.
 
-// Re-export items for the flat public API
+// Attach. Folder-local (Intra-module).
+mod helpers;
+
+// Re-export.
 pub use internal_parser::*;
 ```
 
-**How this works:**
-- In doc builds: Module is public → rustdoc can see and link to it
-- In test builds: Module is public → tests can access internals
-- In production builds: Module is private → internal implementation detail
+Both `mod` and `pub(crate) mod` remain hidden from the crate's public API and never
+trigger `ambiguous_glob_reexports` in `pub use *;` barrel exports, while staying
+documented under `--document-private-items`.
 
-**This pattern is frequently used with the `write-documentation` skill when fixing documentation
-links to private types.**
+#### Why `rustdoc` Still Requires `pub(crate) mod` for Cross-Folder Links
 
-#### When to Omit the Fallback Branch
-
-You can skip the `#[cfg(not(any(test, doc)))]` fallback when the module has **no code to compile
-in production**:
+Even with `--document-private-items` and `private_intra_doc_links = "allow"`, `rustdoc`
+still enforces `rustc`'s module privacy rules when resolving a path from the linking
+module's scope (`--document-private-items` controls HTML page generation and
+`private_intra_doc_links` controls the public-to-private lint, not path resolution):
 
 ```rust
-// ✅ OK to skip fallback - documentation-only module (no actual code)
-#[cfg(any(test, doc))]
-pub mod integration_tests_docs;
+pub mod a {
+    mod secret {}            // ❌ `mod@crate::a::secret` from `b` fails (`no item named secret in module a`)
+    pub(crate) mod shared {} // ✅ `mod@crate::a::shared` from `b` resolves; still hidden outside crate
+}
 
-// ✅ OK to skip fallback - all submodules are #[cfg(test)] anyway
-#[cfg(any(test, doc))]
-pub mod integration_tests;
+/// Links to [`a::shared`].
+///
+/// [`a::shared`]: mod@crate::a::shared
+pub mod b {}
 ```
 
-**Keep the fallback** when the module contains code that must compile in production (even if
-private):
+#### Single-Arm `#[cfg(any(test, doc))]` for Test-Only Modules
+
+Reserve single-arm `#[cfg(any(test, doc))]` (and platform variants such as
+`#[cfg(any(all(unix, doc), test))]` or `#[cfg(any(doc, all(target_os = "linux", test)))]`
+on `pub(crate) mod ...`) exclusively for **test-only modules** and documentation-only test
+stubs. Running `cargo doc` with `--document-private-items` documents private items present
+in the AST, but it does **not** enable `cfg(test)`. Single-arm gating keeps test modules
+in the AST for `cargo doc` and `cargo test` while excluding them from production and
+release builds:
 
 ```rust
-// ✅ Need fallback - module has actual code used in production
+// Test-only modules and documentation-only test stubs:
+// compiled in `cargo test` and present in the AST for `cargo doc`,
+// while excluded from production and release builds.
 #[cfg(any(test, doc))]
-pub mod internal_parser;
-#[cfg(not(any(test, doc)))]
-mod internal_parser;
+pub(crate) mod unit_tests;
 
-pub use internal_parser::*;  // Re-exports need the module to exist!
+#[cfg(any(test, doc))]
+pub(crate) mod integration_tests_docs;
 ```
 
 #### Integration Tests Module
 
-For modules that contain [`PTY`] integration tests (typically under `integration_tests/`),
-follow these rules:
+For modules that contain [`PTY`] integration tests (typically under
+`<module>_integration_tests/`), follow these rules:
 
 1.  **Dedicated Files**: Each complex test gets its own file.
-2.  **Module Documentation**: Use `//!` at the top of the file to document the test's intent.
-3.  **Run Instructions**: Always include a "Run with:" section at the top of the file
-    (see `write-documentation` skill for details).
-4.  **Conditional Visibility**: Parent modules must make these test modules public for
-    doc and test builds.
+2.  **Module Documentation**: Use `//!` at the top of the file to document the test's
+    intent.
+3.  **Run Instructions**: Always include a "Run with:" section at the top of the file (see
+    `write-documentation` skill for details).
+4.  **Single-Arm Test Gate**: Parent modules declare test-only modules with single-arm
+    `#[cfg(any(test, doc))] pub(crate) mod ...;` (plus platform gates when needed) so
+    rustdoc can resolve links without exposing test modules in the public API or shipping
+    test code in release builds.
 
 ```rust
-// integration_tests/mod.rs
+// <module>_integration_tests/mod.rs
 
 #[cfg(any(test, doc))]
-pub mod pty_feature_test;
+pub(crate) mod pty_feature_test;
 ```
 
 [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 #### Platform-Specific Modules with Cross-Platform Docs
 
-For modules that are **platform-specific but should have docs generated on all platforms**, use
-`any(doc, ...)` to separate documentation from runtime requirements:
+Separate platform-specific **production code** from platform-specific **test-only
+modules**:
+
+1. **Platform-specific production code** (such as `direct_to_ansi::input`): Gate directly
+   with the target platform `cfg` and `pub(crate) mod` (with zero dual-arm negated-`cfg`
+   fallbacks). Non-target platforms exclude the module across all builds:
 
 ```rust
-// ✅ Linux-only runtime, but docs build on all platforms
-#[cfg(any(doc, all(target_os = "linux", test)))]
-pub mod input;
-#[cfg(all(target_os = "linux", not(any(test, doc))))]
-mod input;
+// direct_to_ansi/mod.rs: Mixed-tier Linux-only production module.
 
-// Re-export also needs the doc condition
-#[cfg(any(target_os = "linux", doc))]
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod output; // Cross-folder rustdoc links.
+
+#[cfg(target_os = "linux")]
+pub(crate) mod input; // Linux-only input poller types and rustdoc links.
+
+// Attach. Folder-local (Intra-module).
+mod debug;
+
+// Re-export.
+pub use debug::*;
+pub use output::*;
+#[cfg(target_os = "linux")]
 pub use input::*;
+```
+
+2. **Platform-specific test-only modules (pure Rust, cross-platform docs)**: When a
+   test-only module compiles on all platforms and should have docs generated everywhere
+   while tests run only on Linux, use single-arm `any(doc, ...)`:
+
+```rust
+// ❌ Broken: Docs will not generate on macOS.
+#[cfg(all(target_os = "linux", any(test, doc)))]
+pub(crate) mod linux_only_tests;
+
+// ✅ Fixed: Docs generate on all platforms; tests run only on Linux.
+#[cfg(any(doc, all(target_os = "linux", test)))]
+pub(crate) mod linux_only_tests;
 ```
 
 **Key insight:** `rustdoc` runs the Rust compiler internally. When you write
-`#[cfg(all(target_os = "linux", any(test, doc)))]`, the `target_os = "linux"` check still excludes
-macOS/Windows **even during doc builds**. The `doc` cfg flag doesn't override other conditions: it's
-just another flag you can check.
+`#[cfg(all(target_os = "linux", any(test, doc)))]`, the `target_os = "linux"` check still
+excludes macOS and Windows **even during doc builds**. The `doc` cfg flag does not
+override other conditions: it is just another flag you can check.
 
 **The fix:** Use `any(doc, ...)` to make `doc` an alternative path:
-- `any(doc, all(target_os = "linux", test))` means: "docs on any platform OR tests on Linux"
-- `all(target_os = "linux", any(test, doc))` means: "Linux AND (tests OR docs)": **still requires
-  Linux!**
 
-**When you see broken doc links for platform-specific modules:**
-
-```rust
-// ❌ Broken: Docs won't generate on macOS
-#[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod linux_only_module;
-
-// ✅ Fixed: Docs generate on all platforms (if module code is platform-agnostic)
-#[cfg(any(doc, all(target_os = "linux", test)))]
-pub mod linux_only_module;
-#[cfg(all(target_os = "linux", not(any(test, doc))))]
-mod linux_only_module;
-```
+- `any(doc, all(target_os = "linux", test))` means: "docs on any platform OR tests on
+  Linux"
+- `all(target_os = "linux", any(test, doc))` means: "Linux AND (tests OR docs)" (still
+  requires Linux)
 
 #### ⚠️ Unix Dependency Caveat
 
-The `cfg(any(doc, ...))` pattern above assumes the module's code **compiles on all platforms**.
-When the module uses Unix-only APIs (e.g., `mio::unix::SourceFd`, `signal_hook`,
-`std::os::fd::AsRawFd`), restrict doc builds to Unix:
+The `cfg(any(doc, ...))` pattern above assumes the module's code **compiles on all
+platforms**. When a test-only module uses Unix-only APIs (e.g., `mio::unix::SourceFd`,
+`signal_hook`, `std::os::fd::AsRawFd`), restrict doc builds to Unix using a single-arm
+gate:
 
 ```rust
-// Module uses Unix-only APIs: restrict doc builds to Unix platforms
+// Test-only module uses Unix-only APIs: restrict doc builds to Unix platforms.
 #[cfg(any(all(unix, doc), all(target_os = "linux", test)))]
-pub mod input;
-#[cfg(all(target_os = "linux", not(any(test, doc))))]
-mod input;
-
-#[cfg(any(target_os = "linux", all(unix, doc)))]
-pub use input::*;
+pub(crate) mod integration_tests;
 ```
 
-**Three-tier hierarchy:**
+For Unix-only production modules (such as `raw_mode_unix`), gate directly with
+`#[cfg(unix)] pub(crate) mod raw_mode_unix;` without any `doc` or `test` arms.
 
-| Module dependencies | Pattern | Docs: Linux | Docs: macOS | Docs: Windows |
-| :------------------ | :------ | :---------- | :---------- | :------------ |
-| Platform-agnostic | `cfg(any(doc, ...))` | ✅ | ✅ | ✅ |
-| Unix APIs | `cfg(any(all(unix, doc), ...))` | ✅ | ✅ | excluded |
-| Linux-only APIs | `cfg(any(all(target_os = "linux", doc), ...))` | ✅ | excluded | excluded |
+**Three-tier hierarchy for test-only modules:**
 
-**Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in `Cargo.toml`.
+| Module dependencies | Pattern                                        | Docs: Linux | Docs: macOS | Docs: Windows |
+| :------------------ | :--------------------------------------------- | :---------- | :---------- | :------------ |
+| Platform-agnostic   | `cfg(any(doc, ...))`                           | ✅          | ✅          | ✅            |
+| Unix APIs           | `cfg(any(all(unix, doc), ...))`                | ✅          | ✅          | excluded      |
+| Linux-only APIs     | `cfg(any(all(target_os = "linux", doc), ...))` | ✅          | excluded    | excluded      |
 
-**Apply at all levels**: If the module is nested, both parent and child need the visibility
-change. Also update any re-exports:
+**Rule of thumb:** Match your `doc` cfg guard to your dependency's `cfg` guard in
+`Cargo.toml`.
+
+#### ⚠️ `[dev-dependencies]` Caveat (Two-Layer Split)
+
+Cargo does **not** have a `[doc-dependencies]` table and **never links
+`[dev-dependencies]`** (such as `mockito`, `serial_test`, `pretty_assertions`,
+`test_case`) during `cargo doc` (`cfg(doc)` = `true`, `cfg(test)` = `false`).
+
+When a test module parent is gated with `#[cfg(any(test, doc))]` so its documentation
+pages and intra-doc links build in `cargo doc`, use a **Two-Layer Split**:
+
+1. **Documentation & pure-`[dependencies]` layer (inherits `#[cfg(any(test, doc))]`)**:
+    - Module shells (`pub(crate) mod integration_tests;`, `pub(crate) mod my_test;`,
+      `pub(crate) mod test_fixtures;`) and their `//!` module-level rustdocs.
+    - Fixture submodules that only depend on `std` or `[dependencies]` (e.g.,
+      `pub(crate) mod constants;`, `pub(crate) mod jsonc_golden;`): do **not** add
+      redundant `#[cfg(test)]` to them, so rustdocs can link directly to their symbols
+      without leaking test constants into production modules.
+2. **Test-execution & `[dev-dependencies]` layer (`#[cfg(test)]`)**:
+    - Executable test blocks (`#[cfg(test)] mod tests { ... }`) and helper
+      functions/submodules that import `[dev-dependencies]` (e.g.,
+      `#[cfg(test)] pub(crate) mod http_server;` using `mockito`).
+    - Always add a brief comment above `#[cfg(test)]` fixture submodules explaining _why_
+      they are narrower than their `#[cfg(any(test, doc))]` parent (because
+      `[dev-dependencies]` are not linked during `cargo doc`).
+    - In `//!` rustdocs compiled under `cfg(doc)`, link to `[dev-dependencies]` crates via
+      `https://docs.rs/<crate>` rather than crate-path intra-doc links.
 
 ```rust
-// Parent module
-#[cfg(any(doc, all(target_os = "linux", test)))]
-pub mod integration_tests;
+// integration_tests/test_fixtures/mod.rs
+// (parent `integration_tests` is already `#[cfg(any(test, doc))]`)
 
-// Child modules inside integration_tests/mod.rs
-#[cfg(any(doc, all(target_os = "linux", test)))]
-pub mod pty_input_test;
+// Already non-production via parent `#[cfg(any(test, doc))]`.
+// Kept visible under `cfg(doc)` so rustdocs can link to fixture constants/builders.
+pub(crate) mod constants;
+pub(crate) mod jsonc_golden;
 
-// Re-exports
-#[cfg(any(target_os = "linux", doc))]
-pub use integration_tests::*;
+// Additionally gated behind `#[cfg(test)]` because `mockito` is a `[dev-dependency]` and
+// Cargo does not link `[dev-dependencies]` during `cargo doc` (`cfg(doc)`).
+#[cfg(test)]
+pub(crate) mod http_server;
+
+pub use constants::*;
+#[cfg(test)]
+pub use http_server::*;
+pub use jsonc_golden::*;
 ```
 
-### Step 4: Handle Transitive Visibility
+**Apply at nested levels**: Nested `#[cfg(...)]` attributes combine with logical AND, so
+child test modules inside a `#[cfg(any(all(unix, doc), all(target_os = "linux", test)))]`
+parent inherit that gate automatically (`pub(crate) mod pty_input_test;`). Production
+modules in the `direct_to_ansi` style (such as
+`#[cfg(target_os = "linux")] pub(crate) mod input;`) keep their production submodules
+unconditional (`pub(crate) mod mio_poller;`) and gate only test or doc stub submodules
+with single-arm `#[cfg(any(test, doc))]` (never re-exporting test modules into production
+APIs with `pub use`).
 
-**Important:** If a conditionally public module links to another module in its documentation,
-that target module must also be conditionally public.
+### Step 4: Handle Transitive Crate-Internal Path Access
+
+**Important:** If documentation in one module links to another module across the crate by
+path (for example, `mod@crate::parent::diff_chunks`), both the target module and every
+intermediate ancestor along that path must be at least `pub(crate) mod`.
 
 ```rust
-// mod.rs
+// mod.rs (single-tier Crate-wide coordinator)
 
-#[cfg(any(test, doc))]
-pub mod paint_impl;  // Contains docs that link to diff_chunks
-#[cfg(not(any(test, doc)))]
-mod paint_impl;
+// Attach.
+pub(crate) mod paint_impl; // Linked via crate::ofs_buf::paint_impl.
+pub(crate) mod diff_chunks; // Also pub(crate) mod so external modules can link to it.
 
-#[cfg(any(test, doc))]
-pub mod diff_chunks;  // Must also be conditionally public!
-#[cfg(not(any(test, doc)))]
-mod diff_chunks;
-
-// Re-export for public API
+// Re-export.
 pub use paint_impl::*;
 pub use diff_chunks::*;
 ```
 
-**Why:** Rustdoc needs to resolve all links in documentation. If `paint_impl` docs link to
-`diff_chunks`, rustdoc must be able to see `diff_chunks`.
+**Why:** Even with `--document-private-items`, Rust visibility rules govern path
+resolution across module boundaries. A plain `mod diff_chunks;` is only accessible from
+its parent module and descendants, whereas `pub(crate) mod diff_chunks;` makes the path
+resolvable anywhere inside the crate without exposing it in the public API.
 
 ### Step 5: Reference in Rustdoc
 
-When linking to conditionally public modules in documentation, use the `mod@` prefix:
+When linking to crate-internal (`pub(crate)`) or private modules in documentation, use the
+`mod@` prefix:
 
 ```rust
 /// See [`internal_parser`] for implementation details.
@@ -278,91 +418,106 @@ When linking to conditionally public modules in documentation, use the `mod@` pr
 
 See the `write-documentation` skill for complete details on rustdoc links.
 
-### Step 6: Multi-Level Barrel Exports and Rustdoc Search
+### Step 6: Multi-Level Barrel Exports (Never Combine `pub mod` with `pub use *;`)
 
-When rustdoc generates documentation, the search index includes all public items and
-modules. For multi-level barrel exports (`pub mod intermediate; pub use intermediate::*;`),
-the search index resolves the "shortest public path" for items. But rustdoc only generates
-HTML pages at the **canonical definition path**, not at the flattened re-export path.
+When rustdoc generates documentation, the search index includes every public item at its
+**shortest public path**, while rustdoc only builds HTML pages at the canonical definition
+path. Combining `pub mod intermediate;` with `pub use intermediate::*;` leaks internal
+submodules into the public API and creates mismatched or redundant search paths that
+previously motivated `#[doc(inline)]` shims.
 
-This means searching for an item re-exported via a barrel might produce a link to a page
-that doesn't exist (e.g., `core/ansi/csi/index.html` instead of
-`core/ansi/constants/csi/index.html`).
+**The root-cause fix:** Never declare barrel-exported implementation submodules as
+`pub mod`:
 
-**The fix:** Use `#[doc(inline)]` to re-export submodules at the parent level, but **only when**
-the intermediate module is a well-documented organizational hub (has module-level `//!` docs,
-organization tables, etc.) AND its submodules are `pub mod`.
+- Keep barrel-exported submodules as **Folder-local** (`mod`) or **Crate-wide**
+  (`pub(crate) mod` with a 1-line inline reason comment) and flatten consumers to import
+  from the public facade (`use crate::Item;` or `use my_crate::Item;`).
+- Reserve **Public (Inter-crate)** `pub mod` strictly for intentional API domain hubs and
+  explicit non-globbed namespaces (never glob-re-exported into a parent).
+- Do **not** add `#[doc(inline)]` re-export shims: with `--document-private-items`, every
+  `mod` and `pub(crate) mod` module is already documented and searchable at its canonical
+  path.
 
-| Intermediate module characteristics          | Action                       | Why                                                     |
-| :------------------------------------------- | :--------------------------- | :------------------------------------------------------ |
-| Public, has module docs, organization tables | Add `#[doc(inline)]`        | Submodules are discoverable via search; pages must exist |
-| Private with `pub use *;` only (pure barrel) | No action needed             | Submodules aren't in the search index at all             |
-| Public but no module docs (structural only)  | No action needed             | Not worth the doc noise; users won't search for these   |
-
-In the parent module's `mod.rs`, add explicit `#[doc(inline)]` re-exports alongside the
-existing glob re-export:
+| Coordinator pattern | Action | Why |
+| :--- | :--- | :--- |
+| Barrel export (`pub use child::*;`) | Use `mod child;` or `pub(crate) mod child; // <reason>.` | Keeps internal paths out of public API; avoids broken search paths without `#[doc(inline)]` |
+| Intentional namespace (`mouse_sgr`, domain hub) | Use `pub mod ns;` **without** `pub use ns::*;` | Canonical path is the only public path; zero search-index ambiguity |
 
 ```rust
-// Existing: keeps flat item access working
+// core/ansi/mod.rs
+
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod constants; // Cross-folder rustdoc module links (#design, mouse).
+
+// Attach. Folder-local (Intra-module).
+mod color;
+
+// Re-export.
+pub use color::*;
 pub use constants::*;
-
-// New: creates rustdoc pages at the parent path for searchability
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use constants::{csi, dsr};
 ```
-
-Always include the inline comment on `#[doc(inline)]` lines:
-```rust
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-```
-
-If the re-exported modules use conditional visibility (`#[cfg(any(test, doc))]`), add the
-guard with its own inline comment:
-```rust
-#[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use constants::{csi, dsr};
-```
-
-This creates pages at **both** paths (`ansi/csi/` AND `ansi/constants/csi/`), so rustdoc
-search links work regardless of which path the search index resolves.
 
 ### Step 7: Macro Module Organization
 
-For modules that define `#[macro_export]` macros, do NOT use `#[macro_use]` on module declarations.
-Instead, use explicit imports at call sites:
+For modules that define `#[macro_export]` macros consumed within the same crate, use
+`#[macro_use]` on the module declaration chain and order macro-defining modules BEFORE
+sibling consumer modules. Put them in their own top block under
+`// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).`
+and keep them in textual macro-dependency order (never split a `#[macro_use]` block by
+visibility). Do **NOT** import them with `use crate::macro_name;` or call them with
+`crate::macro_name!()` / `$crate::macro_name!()` inside macro bodies, as this triggers the
+`macro_expanded_macro_exports_accessed_by_absolute_paths` future-incompatibility lint
+([rust-lang/rust#52234](https://github.com/rust-lang/rust/issues/52234)):
 
 ```rust
-// mod.rs - Do NOT use #[macro_use]
-pub mod macros;  // ✅ Just declare the module
+// mod.rs - Two-block coordinator split preserves textual macro scope.
 
-// At each call site that uses the macro:
-use crate::my_macro;  // ✅ Explicit import
-my_macro!();
-```
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod my_domain_macros; // Must precede consumer_a/consumer_b even if visibilities mix.
 
-**Why:** `#[macro_use]` is a Rust 2015 pattern that depends on module declaration order and breaks
-silently when modules are reordered. `#[macro_export]` macros are available at the crate root in
-Rust 2018+, so `use crate::macro_name;` works everywhere.
+// Attach.
+pub mod consumer_a; // Uses my_macro!() directly without `use crate::my_macro;`.
 
-**Inner modules:** `use crate::macro_name;` imports do NOT propagate into child `mod` blocks.
-Each inner module that uses a macro needs its own import:
+// Re-export.
+pub use consumer_a::*;
 
-```rust
-use crate::ok;  // Available in this file's scope
+// consumer_a.rs
+fn example() {
+    my_macro!();
+}
 
 mod inner {
-    use crate::ok;  // Must import separately - parent scope doesn't propagate
-    fn example() { ok!() }
+    // Textual macro scope propagates into child `mod` blocks automatically.
+    fn helper() { my_macro!(); }
 }
 ```
 
-**Test-only macros:** Guard imports with `#[cfg(test)]` to avoid unused import warnings:
+**Why:** In Rust, `#[macro_export]` makes a macro available to external crates (and
+doctests) at the crate root (`use r3bl_tui::my_macro;`). Within the defining crate itself,
+resolving `#[macro_export]` macros through `crate::` or `$crate::` triggers the
+future-incompatibility lint when any `#[macro_export]` macro invocation is involved. Using
+`#[macro_use]` up the module hierarchy avoids absolute crate-root resolution internally
+while preserving `#[macro_export]` for external consumers.
 
-```rust
-#[cfg(test)]
-use crate::assert_eq2;
-```
+**Cross-calls inside `macro_rules!` bodies:** Inline the helper type/method expansion
+using `$crate::TypeName` (type and method paths do not trigger the lint) rather than
+calling `$crate::helper_macro!()`.
+
+**Minimal `#[macro_use]` Lifting (Lowest Common Ancestor):** Keep the macro module private
+(`#[macro_use] mod ansi_const_macros;`) and propagate `#[macro_use]` up through parent
+`mod.rs` files **only** as far as needed to reach the lowest common ancestor of all
+internal callers. If every caller lives inside the same submodule (for example,
+`constants/csi.rs` and `constants/esc.rs` calling `define_ansi_const!` inside
+`constants/`), put `#[macro_use] mod ansi_const_macros;` in `constants/mod.rs` and do
+**not** lift `#[macro_use]` onto `pub mod constants;` or higher ancestors.
+
+**Keep `#[macro_export]` on Shared and Documented Macros (Option A):** Annotate all shared
+and documented macros (even subsystem macros like `define_ansi_const!`) with
+`#[macro_export]` so `cargo doc` generates `macro.<name>.html` from `///` docs, bare
+[`my_macro!`] links resolve cleanly without `private_intra_doc_links`, and `no_run`
+doctests compile. Only single-file boilerplate macros used solely inside their own `.rs`
+file omit `#[macro_export]`.
 
 ### Step 8: File and Module Naming Conventions
 
@@ -370,7 +525,8 @@ Follow these conventions when naming files within modules:
 
 #### 1. Inception Collision Avoidance (`<name>_struct.rs` / `<name>_enum.rs`)
 
-When organizing code into subfolders, avoid creating a file whose base name is identical to its parent directory. This avoids "inception" redundancy and naming confusion in paths:
+When organizing code into subfolders, avoid creating a file whose base name is identical
+to its parent directory. This avoids "inception" redundancy and naming confusion in paths:
 
 ```text
 // ❌ Collision / Inception Anti-Pattern:
@@ -389,26 +545,48 @@ chunk_framer/
 ```
 
 **Rules:**
-- **Primary Struct**: When the colliding file houses the primary `struct` of that module, suffix it with `_struct.rs` (e.g., `accumulator_struct.rs`, `chunk_framer_struct.rs`, `circuit_breaker_struct.rs`, `engine_struct.rs`).
-- **Primary Enum**: When the colliding file houses the primary `enum` of that module, suffix it with `_enum.rs` (e.g., `parser_enum.rs`).
-- **Non-colliding files**: Files whose names differ from the parent directory keep their natural descriptive names **without** suffixes (e.g., `unparsed_buffer_action.rs`, `constants.rs`). Do NOT add `_struct` or `_enum` to non-colliding files.
+
+- **Primary Struct**: When the colliding file houses the primary `struct` of that module,
+  suffix it with `_struct.rs` (e.g., `accumulator_struct.rs`, `chunk_framer_struct.rs`,
+  `circuit_breaker_struct.rs`, `engine_struct.rs`).
+- **Primary Enum**: When the colliding file houses the primary `enum` of that module,
+  suffix it with `_enum.rs` (e.g., `parser_enum.rs`).
+- **Non-colliding files**: Files whose names differ from the parent directory keep their
+  natural descriptive names **without** suffixes (e.g., `unparsed_buffer_action.rs`,
+  `constants.rs`). Do NOT add `_struct` or `_enum` to non-colliding files.
 
 #### 2. Standalone Functions Entry Point (`<xyz>_entry_point.rs`)
 
-When a module has a file whose sole responsibility is providing top-level function entry points (such as pure functions, pipeline decoders, or event dispatchers) without primary structs or enums, name it `<xyz>_entry_point.rs`:
+When a module has a file whose sole responsibility is providing top-level function entry
+points (such as pure functions, pipeline decoders, or event dispatchers) without primary
+structs or enums, name it `<xyz>_entry_point.rs`:
 
 - `chunk_decoder_entry_point.rs` (houses `try_decode_input_event()`)
 - `input_parser_entry_point.rs` (houses `try_parse_input_event()`)
 
 #### 3. Public API Surface (`<xyz>_public_api.rs`)
 
-When a module explicitly segregates its external, user-facing API surface from internal implementation details, name the public facade `<xyz>_public_api.rs` (optionally paired with `<xyz>_internal_api.rs`):
+When a module explicitly segregates its external, user-facing API surface from internal
+implementation details, name the public facade `<xyz>_public_api.rs` (optionally paired
+with `<xyz>_internal_api.rs`):
 
 - `ansi_parser_public_api.rs`
 - `engine_public_api.rs` (paired with `engine_internal_api.rs`)
 - `scoped_mutex_public_api.rs`
 - `log_public_api.rs`
 - `input_device_public_api.rs`
+
+#### 4. Macro Module Files (`<domain>_macros.rs`)
+
+Never name a file generically `macros.rs`. Always use a domain-specific name (such as
+`ansi_const_macros.rs`, `canvas_index_and_length_impl_macros.rs`, `crossterm_macros.rs`,
+`editor_macros.rs`, `layout_macros.rs`, or `render_macros.rs`) so that:
+
+- Module filenames remain unique across the crate without colliding under wildcard
+  `pub use *;` barrel re-exports if any macro module is ever made visible in tests or
+  docs.
+- Single-file macro folders (such as a lone `mod.rs` paired with `macros.rs`) stay
+  flattened into `<domain>.rs` (for example, `tui/src/core/decl_macros.rs`).
 
 ## Benefits of This Pattern
 
@@ -417,12 +595,14 @@ When a module explicitly segregates its external, user-facing API surface from i
 Users import directly without unnecessary nesting:
 
 **✅ Good (flat, ergonomic):**
+
 ```rust
 use my_module::MyType;
 use my_module::CONSTANT;
 ```
 
 **❌ Bad (exposes internal structure):**
+
 ```rust
 use my_module::types::MyType;
 use my_module::constants::CONSTANT;
@@ -453,23 +633,40 @@ Internal reorganization doesn't break external code:
 Private module names don't pollute the namespace:
 
 ```rust
-// No conflicts with other `constants` modules in the crate
-mod constants;  // Private - name hidden
-pub use constants::*;  // Items public
+// No conflicts with other `constants` modules in the crate.
 
-// Elsewhere in the crate
-mod constants;  // No conflict! This is in a different scope
+// Attach.
+mod constants; // Folder-local (Intra-module): name hidden outside parent.
+
+// Re-export.
+pub use constants::*; // Items public.
+
+// Elsewhere in the crate.
+mod constants; // No conflict! This is in a different scope.
 ```
 
 **⚠️ Warning: Re-export Collisions with `pub mod`**
 
-While private module names don't collide, their **public contents** (including public submodules) will collide if they share the same name and are pulled into the same parent namespace via glob re-exports (`pub use module::*;`).
+While private module names don't collide, their **public contents** (including public
+submodules) will collide if they share the same name and are pulled into the same parent
+namespace via glob re-exports (`pub use module::*;`).
 
-If multiple modules in the same hierarchy have submodules with identical names (e.g., several `pub mod integration_tests;`), glob re-exporting them into a single parent module will cause **ambiguous re-export** errors, because the module names leak into the public API.
+If multiple modules in the same hierarchy have submodules with identical names (e.g.,
+several `pub mod integration_tests;`), glob re-exporting them into a single parent module
+will cause **ambiguous re-export** errors, because the module names leak into the public
+API.
 
 **How to solve test module collisions:**
-1. **The Default:** Make test modules private (`mod integration_tests;`). They do not need to be `pub` for `cargo test` to find them. This perfectly encapsulates the module, preventing namespace pollution and collisions.
-2. **The Rustdoc Exception:** If you *must* link to a test module in your documentation using intra-doc links, it must be `pub mod`. In this case, you **must** use a uniquely prefixed name (e.g., `pub mod vt_100_parser_integration_tests;` instead of `integration_tests`) to prevent it from colliding with other public test modules in the global namespace.
+
+1. **The Default:** Keep test modules **Folder-local** (`#[cfg(test)] mod unit_tests;`).
+   `cargo test` finds them automatically, and `--document-private-items` documents
+   non-test-gated modules without exposing module names in the public API.
+2. **The Rustdoc Exception:** If you *must* link to a test module across folders in your
+   documentation using intra-doc links, keep it **Crate-wide** behind single-arm
+   `#[cfg(any(test, doc))]` (`#[cfg(any(test, doc))] pub(crate) mod ...; // <reason>.`)
+   under `--document-private-items` instead of `pub mod`. Always use a uniquely prefixed
+   name (e.g., `pub(crate) mod vt_100_parser_integration_tests;`) to avoid collisions in
+   internal or doc paths.
 
 ### 4. Encapsulation
 
@@ -495,6 +692,7 @@ Module structure is an implementation detail, not part of the API:
 - Building a library with a stable public API
 
 **Example scenarios:**
+
 - Utility modules with helpers, types, constants
 - Internal parser implementation
 - Data structure implementations
@@ -515,8 +713,8 @@ pub mod backend;   // Backend-specific APIs
 // Users: use my_crate::backend::Database;
 ```
 
-**Why:** The separation is meaningful to users. They WANT to know if they're using frontend or
-backend APIs.
+**Why:** The separation is meaningful to users. They WANT to know if they're using
+frontend or backend APIs.
 
 #### 2. Large Feature Domains
 
@@ -594,6 +792,7 @@ mod color_ops {
 ```
 
 **Benefits:**
+
 - Single-file cohesion - everything related stays together
 - Easier navigation - no jumping between files
 - Clear grouping - `mod` keyword is more formal than comment banners
@@ -634,28 +833,26 @@ impl MyStruct {
 ```
 
 **This is a signal to formalize the grouping** using either inner modules (small file) or
-separate files (large file). Comment banners are informal and don't provide the same benefits
-as actual module boundaries (scoped imports, clear boundaries, IDE navigation).
+separate files (large file). Comment banners are informal and don't provide the same
+benefits as actual module boundaries (scoped imports, clear boundaries, IDE navigation).
 
 ## Complete Examples
 
-### Example 1: Simple Module Organization
+### Example 1: Simple Module Organization (Single-Tier `// Attach.`)
 
 ```rust
 // src/terminal/mod.rs
 
 #![rustfmt::skip]
 
-// Core types
+// Attach.
 mod position;
 mod size;
 mod style;
-
-// State management
 mod cursor;
 mod buffer;
 
-// Public API - flat exports
+// Re-export.
 pub use position::*;
 pub use size::*;
 pub use style::*;
@@ -664,58 +861,58 @@ pub use buffer::*;
 ```
 
 Usage:
+
 ```rust
-use terminal::{Position, Size, Style, Cursor, Buffer};
+use terminal::{Buffer, Cursor, Position, Size, Style};
 // Not: use terminal::position::Position;
 ```
 
-### Example 2: Conditional Visibility for Docs
+### Example 2: Mixed `Crate-wide` and `Folder-local` Modules
 
 ```rust
 // src/parser/mod.rs
 
-// Make internal modules public for docs and tests
-#[cfg(any(test, doc))]
-pub mod vt_100;
-#[cfg(not(any(test, doc)))]
-mod vt_100;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod vt_100; // Cross-folder rustdoc module link (renderer).
 
-#[cfg(any(test, doc))]
-pub mod escape_sequences;
-#[cfg(not(any(test, doc)))]
+// Attach. Folder-local (Intra-module).
 mod escape_sequences;
 
-// Public API
+// Re-export.
 pub use vt_100::*;
 pub use escape_sequences::*;
 ```
 
-Now rustdoc can link to these modules:
+Now both intra-folder sibling links (`mod`) and cross-folder cousin/ancestor links
+(`pub(crate) mod`) resolve:
+
 ```rust
-/// Uses [`vt_100`] for parsing.
-///
+// src/parser/mod.rs or src/parser/vt_100.rs (parent or sibling can link to plain `mod`):
+/// [`escape_sequences`]: mod@crate::parser::escape_sequences
+
+// src/renderer/mod.rs (cousin folder needs `pub(crate) mod vt_100;` on target):
 /// [`vt_100`]: mod@crate::parser::vt_100
 ```
 
-### Example 3: Mixed Public and Private Modules
+### Example 3: Mixed `Public` and `Folder-local` Modules
 
 ```rust
 // src/rendering/mod.rs
 
-// Public modules (API namespacing)
-pub mod backends;     // Different backend implementations
-pub mod widgets;      // UI widgets
+// Attach. Public (Inter-crate).
+pub mod backends; // Different backend implementations (not glob-re-exported).
+pub mod widgets;  // UI widgets (not glob-re-exported).
 
-// Private modules (internal implementation)
+// Attach. Folder-local (Intra-module).
 mod buffer;
 mod diff_engine;
 
-// Selective re-exports
-pub use buffer::RenderBuffer;  // This one is public
-// diff_engine stays internal
+// Re-export.
+pub use buffer::RenderBuffer; // This one is public; diff_engine stays internal.
 ```
 
 Usage:
+
 ```rust
 use rendering::backends::Crossterm;
 use rendering::widgets::Button;
@@ -736,80 +933,115 @@ pub mod helpers;
 
 **Problem:** Exposes internal structure, hard to refactor later.
 
-### ❌ Mistake 2: Forgetting Transitive Visibility
+### ❌ Mistake 2: Blocking Transitive Crate-Internal Path Access
 
 ```rust
-// mod.rs - Bad!
-#[cfg(any(test, doc))]
-pub mod a;  // Docs link to module b
+// mod.rs: Bad!
+pub(crate) mod a;  // External docs link to crate::parent::b
 
-mod b;  // Private! Rustdoc can't see it
+mod b;             // Parent-only private! Cross-module crate paths cannot see it.
 ```
 
-**Problem:** Rustdoc can't resolve links from `a` to `b`.
+**Problem:** Modules outside `parent` cannot resolve `mod@crate::parent::b` when `b` is
+plain `mod b;`.
 
 **Fix:**
-```rust
-#[cfg(any(test, doc))]
-pub mod a;
 
-#[cfg(any(test, doc))]
-pub mod b;  // Also conditionally public
-#[cfg(not(any(test, doc)))]
-mod b;
+```rust
+pub(crate) mod a;
+pub(crate) mod b;  // Also pub(crate) mod for crate-wide path resolution.
 ```
 
-### ❌ Mistake 3: Using Conditional Visibility Everywhere
+### ❌ Mistake 3: Using `#[cfg(any(test, doc))]` Shims on Production Modules
 
 ```rust
-// mod.rs - Overkill!
+// mod.rs: Bad! Production module gated behind test/doc cfg (or paired with a negated-cfg fallback).
 #[cfg(any(test, doc))]
 pub mod utils;
-#[cfg(not(any(test, doc)))]
-mod utils;
 ```
 
-**Problem:** Only use conditional visibility when:
-- Linking to the module in rustdoc, OR
-- Accessing the module from test code
+**Problem:** Dual-arm `#[cfg(any(test, doc))]` / negated-`cfg` shims are obsolete because
+`--document-private-items` documents private and `pub(crate)` modules directly, and a
+single-arm `#[cfg(any(test, doc))]` gate on a production module omits it from release
+builds.
 
-**Simple case:** If module items are re-exported and you don't need to link to the module itself,
-just use private modules.
+**Fix:**
+
+- Use `mod utils;` by default for parent-scoped and sibling-scoped production modules
+  whose items are re-exported via `pub use`.
+- Use `pub(crate) mod utils;` only when ancestor or cousin modules outside the parent
+  folder need path access in code, tests, or `mod@crate::...` rustdoc links.
+- Reserve single-arm `#[cfg(any(test, doc))] pub(crate) mod ...;` strictly for **test-only
+  modules**.
+
+### ❌ Mistake 4: Using `pub(crate) mod` Everywhere Instead of Default `mod`
+
+```rust
+// src/resilient_reactor_thread/mod.rs: Over-widened!
+pub(crate) mod rrt_worker; // Only referenced by parent/siblings inside this folder.
+```
+
+**Problem:** Marking every submodule **Crate-wide** (`pub(crate) mod`) hides which
+modules actually have cross-folder path dependencies from cousin modules, tests, or
+architecture tables.
+
+**Fix:** Default to **Folder-local** (`mod`) everywhere, and keep **Crate-wide**
+(`pub(crate) mod`) with a 1-line inline reason comment only where
+`cargo check --workspace --all-targets` or `./check.fish --quick-doc` requires
+cross-folder path resolution:
+
+```rust
+// src/resilient_reactor_thread/mod.rs: Tight minimum scope!
+mod rrt_worker; // Folder-local: parent-to-child and sibling links still resolve under --document-private-items.
+```
 
 ## Reporting Results
 
 After organizing modules:
 
-- ✅ Organized successfully → "Module structure organized with private modules and public re-exports!"
-- 🔧 Made conditionally public → Report which modules got conditional visibility
+- ✅ Organized successfully → "Module structure organized with private modules and public
+  re-exports!"
+- 🔧 Updated internal visibility → Report which production modules use `mod` vs
+  `pub(crate) mod`, and which test-only modules use single-arm `#[cfg(any(test, doc))]`
 - 📝 Manual review needed → List modules that may need public exposure for API reasons
 
 ## Supporting Files in This Skill
 
 This skill includes additional reference material:
 
-- **`examples.md`** - 8 complete, working examples of module organization for different scenarios: simple library with internal structure, conditional visibility for documentation, large crate with domain separation, test-only module visibility, gradual refactoring strategy, avoiding naming conflicts, macro exports, and file/module naming conventions. Each example shows full file structure and implementation. **Read this when:**
-  - Simple library module organization → Example 1
-  - Need conditional visibility for docs/tests → Example 2
-  - Large crate with multiple domains (graphics/audio/physics) → Example 3
-  - Test utilities that should only exist in test builds → Example 4
-  - Refactoring from public modules to private + re-exports → Example 5
-  - Avoiding module naming conflicts → Example 6
-  - Macro module exports (`#[macro_export]`) → Example 7
-  - File and module naming conventions (`_struct.rs`, `_entry_point.rs`, `_public_api.rs`) → Example 8
-  - Decision tree for when to use which pattern → End of file
+- **`examples.md`**: Complete, working examples of module organization for different
+  scenarios (simple library with internal structure, `pub(crate) mod` visibility for
+  documentation, large crate with domain separation, single-arm `#[cfg(any(test, doc))]`
+  test-only modules, gradual refactoring strategy, avoiding naming conflicts,
+  platform-specific docs, macro exports, and file/module naming conventions). Each example
+  shows full file structure and implementation. **Read this when:**
+    - Simple library module organization → Example 1
+    - Need `pub(crate) mod` visibility for docs and cross-module links → Example 2
+    - Large crate with multiple domains (graphics/audio/physics) → Example 3
+    - Test utilities excluded from production builds (`#[cfg(any(test, doc))]`) → Example
+      4
+    - Refactoring from public modules to private + re-exports → Example 5
+    - Avoiding module naming conflicts → Example 6
+    - Cross-platform docs for platform-specific code → Example 7
+    - Multi-level barrel exports without `#[doc(inline)]` → Example 8
+    - Macro module exports (`#[macro_export]`) and file/module naming conventions
+      (`_struct.rs`, `_entry_point.rs`, `_public_api.rs`) → Example 9 & Example 10
+    - Decision tree for when to use which pattern → Quick Decision Tree
 
 ## Related Skills
 
-- `write-documentation` - For documenting module organization and fixing intra-doc links (uses conditional visibility for linking private types)
-- `run-clippy` - Ensures mod.rs follows patterns
+- `write-documentation`: Documenting module organization and fixing intra-doc links (uses
+  `pub(crate) mod` and `--document-private-items` for linking internal types)
+- `run-clippy`: Ensures `mod.rs` follows module organization patterns
 
 ## Related Commands
 
 No dedicated command, but used by:
-- `/clippy` - Checks module organization as part of code quality
-- `/fix-intradoc-links` - Uses conditional visibility patterns from this skill
+
+- `/clippy`: Checks module organization as part of code quality
+- `/fix-intradoc-links`: Uses `pub(crate) mod` and `mod@` intra-doc link patterns from
+  this skill
 
 ## Related Agents
 
-- `clippy-runner` - Invokes this skill to enforce module patterns
+- `clippy-runner`: Invokes this skill to enforce module patterns

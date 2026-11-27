@@ -15,7 +15,7 @@ use std::io::BufRead;
 ///
 /// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
-/// [`PTY`]: crate::pty_pair#what-is-a-pty
+/// [`PTY`]: crate::PtyPair#pty-primer
 /// [`PtyPair`]: crate::PtyPair
 /// [POSIX `EOF` vs Linux `EIO`]: crate::PtyPair#posix-eof-vs-linux-eio
 pub trait BufReadExt: BufRead {

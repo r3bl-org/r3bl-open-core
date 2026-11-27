@@ -4,14 +4,13 @@
 
 use super::{apply_event_to_line_state_and_render,
             spawn_task_to_monitor_line_control_channel};
-use crate::{ChannelCapacity, CommonResultWithError, CursorBoundsCheck,
-            CursorPositionBoundsStatus, GCStringOwned, History, InputDevice, LineState,
-            LineStateControlSignal, OutputDevice, PaintMode, PauseBuffer,
-            PrintLineOnControlC, PrintLineOnEnter,
+use crate::{ChannelCapacity, CursorBoundsCheck, CursorPositionBoundsStatus,
+            GCStringOwned, History, InputDevice, LineState, LineStateControlSignal,
+            OutputDevice, PaintMode, PauseBuffer, PrintLineOnControlC, PrintLineOnEnter,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
             ReadlineControlFlow, ReadlineError, ReadlineEvent, ReadlineLockManager,
             SafeHistory, SafePauseBuffer, SegIndex, SharedWriter, StdMutex,
-            TerminalModeController, VPSize, ok};
+            TerminalModeController, VPSize};
 use std::sync::Arc;
 use tokio::{select, spawn,
             sync::{broadcast, mpsc},
@@ -29,10 +28,10 @@ use tokio::{select, spawn,
 /// For details on the underlying async orchestration, including [`Pin`] and [`Unpin`]
 /// requirements for [`tokio::select!`], see [Core Async Concepts].
 ///
-/// When you call [`Self::readline()`] it enters an infinite loop. During which you can
-/// type things into the multiline editor, which also displays the prompt. You can press
-/// up, down, left, right, etc. While in this loop other tasks can send messages to the
-/// `Readline` task via the `line` channel, using the
+/// When you call [`Self::try_readline()`] it enters an infinite loop. During which you
+/// can type things into the multiline editor, which also displays the prompt. You can
+/// press up, down, left, right, etc. While in this loop other tasks can send messages to
+/// the `Readline` task via the `line` channel, using the
 /// [`SharedWriter::line_state_control_channel_sender`].
 ///
 /// When you create a new [`Readline`] instance, a task, is started via
@@ -44,19 +43,19 @@ use tokio::{select, spawn,
 ///
 /// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
 /// the terminal to come out of raw mode. And all the buffers will be flushed. However,
-/// there are 2 ways to use this [`Readline::readline()`] in a loop or just as a one-off.
-/// Each time this function is called, you have to `await` it to return the user input or
-/// `Interrupted` or `Eof` signal.
+/// there are 2 ways to use this [`Readline::try_readline()`] in a loop or just as a
+/// one-off. Each time this function is called, you have to `await` it to return the user
+/// input or `Interrupted` or `Eof` signal.
 ///
 /// When creating a new [`ReadlineAsyncContext`] instance, you can use this repeatedly
 /// before dropping it. This is because the [`SharedWriter`] is cloned, and the terminal
 /// is kept in `raw mode` until the associated [`Readline`] is dropped.
 ///
 /// To fully terminate the session, you can call
-/// [`ReadlineAsyncContext::request_shutdown`] on it's "enclosing context". Then wait for
-/// that to complete by calling [`ReadlineAsyncContext::await_shutdown`]. If a
-/// `readline()` function is currently running, it will stop and be dropped as well! This
-/// is the beauty of non-blocking terminal input support!
+/// [`ReadlineAsyncContext::try_request_shutdown`] on it's "enclosing context". Then wait
+/// for that to complete by calling [`ReadlineAsyncContext::await_shutdown`]. If a
+/// `try_readline()` function is currently running, it will stop and be dropped as well!
+/// This is the beauty of non-blocking terminal input support!
 ///
 /// # Inputs and dependency injection
 ///
@@ -93,7 +92,7 @@ use tokio::{select, spawn,
 /// When an interactive terminal application is running, background tasks may concurrently
 /// write output via [`SharedWriter`] instances while a user is typing at the readline
 /// prompt, or while a specialized sub-UI (like a [`Spinner`] or a modal dialog such as
-/// [`choose()`]) is active.
+/// [`try_choose()`]) is active.
 ///
 /// To prevent display corruption, screen clobbering, and input confusion, the readline
 /// subsystem provides an integrated suspension architecture.
@@ -108,7 +107,7 @@ use tokio::{select, spawn,
 ///    and `Ctrl+D` (`Eof`) signals are processed.
 ///
 /// When the terminal is resumed:
-/// 1. The [`flush_internal()`] method is called.
+/// 1. The [`try_flush_internal()`] method is called.
 /// 2. It drains all queued messages from the [`PauseBuffer`] and flushes them to the
 ///    display so no background output is lost.
 /// 3. The prompt is re-displayed and normal keyboard input handling resumes.
@@ -131,7 +130,7 @@ use tokio::{select, spawn,
 ///      [`PauseBuffer`], and takes exclusive control over the terminal.
 ///    - Grants exclusive mutable access to `(InputDevice, OutputDevice)` via
 ///      [`ModalTerminalGuard`].
-///    - Ideal for interactive full-terminal sub-applications (like [`choose()`]) that
+///    - Ideal for interactive full-terminal sub-applications (like [`try_choose()`]) that
 ///      require dedicated ownership of keyboard input and screen rendering.
 ///
 /// ## State machine ([`PauseState`])
@@ -152,14 +151,14 @@ use tokio::{select, spawn,
 /// `Readline` struct allows reading lines of input from a terminal, without blocking the
 /// calling thread, while lines are output to the terminal concurrently.
 ///
-/// Terminal input is retrieved by calling [`Readline::readline()`], which returns each
-/// complete line of input once the user presses `Enter`.
+/// Terminal input is retrieved by calling [`Readline::try_readline()`], which returns
+/// each complete line of input once the user presses `Enter`.
 ///
 /// Each `Readline` instance is associated with one or more [`SharedWriter`] instances.
 ///
 /// Lines written to an associated `SharedWriter` are output:
-/// - While retrieving input with [`readline()`][Readline::readline].
-/// - By calling [`flush_internal()`].
+/// - While retrieving input with [`try_readline()`][Readline::try_readline].
+/// - By calling [`try_flush_internal()`].
 ///
 /// You can provide your own implementation of [`SafeRawTerminal`], like [`OutputDevice`],
 /// via [dependency injection], so that you can mock terminal output for testing. You can
@@ -172,9 +171,7 @@ use tokio::{select, spawn,
 /// See the [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety] section in the
 /// crate root documentation for why this is designed to be poison-safe.
 ///
-/// [`choose()`]: crate::choose
 /// [`crossterm::event::EventStream`]: https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html
-/// [`flush_internal()`]: crate::flush_internal
 /// [`LineState`]: crate::readline_async::LineState
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 /// [`PauseBuffer`]: crate::PauseBuffer
@@ -188,13 +185,15 @@ use tokio::{select, spawn,
 /// [`ReadlineAsyncContext::acquire_modal_terminal()`]: crate::ReadlineAsyncContext::acquire_modal_terminal
 /// [`ReadlineAsyncContext::await_shutdown`]: crate::readline_async::ReadlineAsyncContext::await_shutdown
 /// [`ReadlineAsyncContext::pause()`]: crate::ReadlineAsyncContext::pause
-/// [`ReadlineAsyncContext::read_line`]: crate::readline_async::ReadlineAsyncContext::read_line
-/// [`ReadlineAsyncContext::request_shutdown`]: crate::readline_async::ReadlineAsyncContext::request_shutdown
+/// [`ReadlineAsyncContext::try_read_line`]: crate::readline_async::ReadlineAsyncContext::try_read_line
+/// [`ReadlineAsyncContext::try_request_shutdown`]: crate::readline_async::ReadlineAsyncContext::try_request_shutdown
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`SafeRawTerminal`]: crate::core::SafeRawTerminal
 /// [`SharedWriter`]: crate::SharedWriter
 /// [`Spinner`]: crate::readline_async::Spinner
-/// [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
+/// [`try_choose()`]: crate::try_choose
+/// [`try_flush_internal()`]: crate::try_flush_internal
+/// [Core Async Concepts]: crate::try_main_event_loop_impl#core-async-concepts-pin-and-unpin
 /// [dependency injection]: https://developerlife.com/category/DI/
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]: crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(missing_debug_implementations)]
@@ -313,18 +312,22 @@ impl Readline {
         /* move */ shutdown_complete_sender: broadcast::Sender<()>,
         channel_capacity: ChannelCapacity,
         size: VPSize,
-    ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
+    ) -> Result<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
         // (try to eliminate jank). It makes it appear as if the cursor is animated into
         // place.
-        output_device.hide_cursor()?;
-        output_device.enable_line_wrap()?;
+        output_device
+            .hide_cursor()
+            .map_err(ReadlineError::TerminalIo)?;
+        output_device
+            .enable_line_wrap()
+            .map_err(ReadlineError::TerminalIo)?;
 
         // Enable raw mode (unless using a mock output device for testing). Drop will
         // disable raw mode.
         if output_device.paint_mode != PaintMode::Mock {
-            crate::enable_raw_mode()?;
+            crate::try_enable_raw_mode().map_err(ReadlineError::RawMode)?;
         }
 
         // Line control channel - signals are send to this channel to control `LineState`.
@@ -374,7 +377,8 @@ impl Readline {
         // Print the prompt.
         readline
             .lock_manager
-            .lock_both(|line_state, term| line_state.render_and_flush(term))?;
+            .lock_both(|line_state, term| line_state.render_and_flush(term))
+            .map_err(ReadlineError::IO)?;
 
         spawn({
             let output_device_clone = output_device.clone();
@@ -411,12 +415,9 @@ impl Readline {
     ///
     /// Returns an error if updating the prompt fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-    pub fn update_prompt(
-        &mut self,
-        prompt: &str,
-    ) -> CommonResultWithError<(), ReadlineError> {
+    pub fn try_update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
         self.lock_manager
-            .lock_both(|line_state, term| line_state.update_prompt(prompt, term))?;
+            .lock_both(|line_state, term| line_state.try_update_prompt(prompt, term))?;
         ok!()
     }
 
@@ -435,13 +436,18 @@ impl Readline {
     ///
     /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-    pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
-        self.lock_manager.output_device().clear_screen()?;
-        self.lock_manager.lock_both(|line_state, term| {
-            line_state.clear_and_render_and_flush(term)?;
-            term.flush()?;
-            Ok::<(), ReadlineError>(())
-        })?;
+    pub fn try_clear(&mut self) -> Result<(), ReadlineError> {
+        self.lock_manager
+            .output_device()
+            .clear_screen()
+            .map_err(ReadlineError::TerminalIo)?;
+        self.lock_manager
+            .lock_both(|line_state, term| -> std::io::Result<()> {
+                line_state.clear_and_render_and_flush(term)?;
+                term.flush()?;
+                ok!()
+            })
+            .map_err(ReadlineError::IO)?;
         ok!()
     }
 
@@ -508,7 +514,7 @@ impl Readline {
     /// [`ReadlineAsyncContext`] can be re-used, since the [`SharedWriter`] is cloned, and
     /// the terminal is kept in `raw mode` until the associated [`Readline`] is dropped.
     ///
-    /// Polling function for [`Self::readline`], manages all input and output. Returns
+    /// Polling function for [`Self::try_readline`], manages all input and output. Returns
     /// either an [`ReadlineEvent`] or an [`ReadlineError`].
     ///
     /// # Panics
@@ -525,9 +531,7 @@ impl Readline {
     /// Returns an error if reading input fails.
     ///
     /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
-    pub async fn readline(
-        &mut self,
-    ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
+    pub async fn try_readline(&mut self) -> Result<ReadlineEvent, ReadlineError> {
         let mut shutdown_complete_receiver = self.shutdown_complete_sender.subscribe();
 
         loop {

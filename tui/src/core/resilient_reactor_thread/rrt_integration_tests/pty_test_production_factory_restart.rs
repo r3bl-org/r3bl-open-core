@@ -12,9 +12,10 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::{Continuation, MioSoftwareInterrupt, PtyTestContext, PtyTestMode, RRT,
-            RRTEvent, RRTWorker, RestartPolicy, ThreadState, generate_pty_test,
+            RRTEvent, RRTWorker, RRTWorkerAndInterrupt, RestartPolicy, ThreadState,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::PollerEvent,
-                                                                mio_poller::MioPollWorker}};
+                                                                mio_poller::{MioPollWorker,
+                                                                             MioPollWorkerCreateError}}};
 use std::{io::{Write, stdout},
           sync::atomic::{AtomicU32, Ordering},
           thread::sleep,
@@ -60,6 +61,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     create_call_counter::reset();
 
@@ -110,21 +113,24 @@ struct RestartTestWorker {
 impl RRTWorker for RestartTestWorker {
     type Output = PollerEvent;
     type Interrupt = MioSoftwareInterrupt;
+    type CreateError = MioPollWorkerCreateError;
 
     fn create_and_register_os_sources(
         config: Self::Config,
         receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         create_call_counter::increment();
-        let (inner_worker, interrupt) =
-            MioPollWorker::create_and_register_os_sources(config, receiver)?;
-        Ok((
-            RestartTestWorker {
+        let RRTWorkerAndInterrupt {
+            worker: inner_worker,
+            interrupt,
+        } = MioPollWorker::create_and_register_os_sources(config, receiver)?;
+        Ok(RRTWorkerAndInterrupt {
+            worker: RestartTestWorker {
                 inner: inner_worker,
                 poll_count: 0,
             },
             interrupt,
-        ))
+        })
     }
 
     fn block_until_ready_then_dispatch(

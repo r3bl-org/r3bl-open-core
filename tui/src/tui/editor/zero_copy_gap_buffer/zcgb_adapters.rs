@@ -20,19 +20,20 @@
 
 #[cfg(test)]
 use crate::NUL_CHAR;
-use crate::{GCStringOwned, ZeroCopyGapBuffer,
-            md_parser::md_parser_constants::NEW_LINE_CHAR};
+use crate::{GCStringOwned, NEW_LINE_CHAR, ZeroCopyGapBuffer};
 
 /// Converts a slice of [`GCStringOwned`] lines into a [`ZeroCopyGapBuffer`].
 ///
 /// This function takes editor content lines (`&[GCStringOwned]`) and converts them into a
-/// [`ZeroCopyGapBuffer`] that can be passed to the [`super::parse_markdown()`] function.
+/// [`ZeroCopyGapBuffer`] that can be passed to the [`parse_markdown()`] function.
 ///
 /// # Arguments
 /// * `lines` - A slice of [`GCStringOwned`] lines from the editor
 ///
 /// # Returns
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
+///
+/// [`parse_markdown()`]: fn@crate::parse_markdown
 #[must_use]
 pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
     let mut buffer = ZeroCopyGapBuffer::with_capacity(lines.len());
@@ -47,7 +48,7 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
         // Insert the text at the beginning of the line.
         if !text.is_empty() {
             // Use insert_at_grapheme which is the public API.
-            let _unused = buffer.insert_text_at_grapheme(
+            let _unused = buffer.try_insert_text_at_grapheme(
                 crate::c_row(line_index),
                 crate::c_index(0),
                 text,
@@ -62,7 +63,7 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
 ///
 /// This function takes a string (typically from [`include_str!`] or test data) and
 /// converts it into a [`ZeroCopyGapBuffer`] that can be passed to the
-/// [`super::parse_markdown()`] function.
+/// [`parse_markdown()`] function.
 ///
 /// The string is split by newlines and each line is added to the buffer with proper null
 /// padding.
@@ -72,6 +73,8 @@ pub fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
 ///
 /// # Returns
 /// A [`ZeroCopyGapBuffer`] containing the converted content with proper null padding
+///
+/// [`parse_markdown()`]: fn@crate::parse_markdown
 #[must_use]
 pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
     // Handle empty string case.
@@ -96,7 +99,7 @@ pub fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 
         // Insert the text content if not empty.
         if !line_text.is_empty() {
-            let _unused = buffer.insert_text_at_grapheme(
+            let _unused = buffer.try_insert_text_at_grapheme(
                 crate::c_row(line_index),
                 crate::c_index(0),
                 line_text,
@@ -136,7 +139,7 @@ impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, c_height, c_row};
+    use crate::{c_height, c_row};
 
     #[test]
     fn test_convert_empty_lines() {

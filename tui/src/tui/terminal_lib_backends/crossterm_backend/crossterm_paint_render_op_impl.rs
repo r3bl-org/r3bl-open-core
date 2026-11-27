@@ -78,15 +78,15 @@ pub fn crossterm_op<T>(
     success_msg: &str,
     error_msg: &str,
 ) {
-    use crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+    use crate::tui::DEBUG_TERMINAL_BACKEND;
     match result {
         Ok(_) => {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TERMINAL_BACKEND.then(|| {
                 tracing::info!(message = success_msg, details = %log_msg);
             });
         }
         Err(err) => {
-            DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
+            DEBUG_TERMINAL_BACKEND.then(|| {
                 tracing::error!(message = error_msg, details = %log_msg, error = %err);
             });
         }

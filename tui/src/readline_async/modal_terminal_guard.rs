@@ -5,12 +5,12 @@
 use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransition,
             Readline};
 
-/// An [`RAII`] guard that grants exclusive access to the terminal devices
+/// An [RAII] guard that grants exclusive access to the terminal devices
 /// ([`OutputDevice`] and [`InputDevice`]) by temporarily suspending [`Readline`]
 /// operations.
 ///
-/// When a modal component (like [`crate::choose()`]) needs full control of the terminal,
-/// it acquires a [`ModalTerminalGuard`]. While the guard is held:
+/// When a modal component (like [`crate::try_choose()`]) needs full control of the
+/// terminal, it acquires a [`ModalTerminalGuard`]. While the guard is held:
 ///
 /// 1. The [`Readline`] instance's pause state is transitioned to
 ///    [`PauseState::PausedByModal`] (or [`PauseState::PausedByBoth`] if a spinner was
@@ -33,7 +33,8 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// pause coordinator rather than an absolute memory lock:
 ///
 /// - **Why not a [`MutexGuard`]?** Holding a lock across long-running `.await` points
-///   (such as [`choose()`]) is problematic in async Rust because it can cause deadlocks.
+///   (such as [`try_choose()`]) is problematic in async Rust because it can cause
+///   deadlocks.
 /// - **Limitation:** Because [`OutputDevice`] is cloneable, cloning it can technically
 ///   bypass this guard and write to the terminal concurrently, leading to display
 ///   corruption.
@@ -41,7 +42,6 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// For the complete design rationale, see the [Lifetime Tether Pattern] documentation in
 /// [`ReadlineLockManager`].
 ///
-/// [`choose()`]: crate::choose
 /// [`InputDevice`]: crate::InputDevice
 /// [`LineStateControlSignal::Flush`]: crate::LineStateControlSignal::Flush
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
@@ -51,10 +51,11 @@ use crate::{InputDevice, LineStateControlSignal, OutputDevice, PauseStateTransit
 /// [`PauseState::PausedByBoth`]: crate::PauseState::PausedByBoth
 /// [`PauseState::PausedByModal`]: crate::PauseState::PausedByModal
 /// [`PauseState::PausedBySpinner`]: crate::PauseState::PausedBySpinner
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`Readline`]: crate::Readline
 /// [`ReadlineLockManager`]: crate::ReadlineLockManager
+/// [`try_choose()`]: crate::try_choose
 /// [Lifetime Tether Pattern]: crate::ReadlineLockManager#the-lifetime-tether-pattern
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 #[allow(missing_debug_implementations)]
 pub struct ModalTerminalGuard<'a> {
     readline: &'a mut Readline,
@@ -78,8 +79,8 @@ impl<'a> ModalTerminalGuard<'a> {
 
     /// Provides mutable references to both the output device and input device as a tuple.
     ///
-    /// Designed for seamless use with [`crate::choose()`]. To understand why this yields
-    /// a `&mut OutputDevice` rather than a `MutexGuard`, see the [Lifetime Tether
+    /// Designed for seamless use with [`crate::try_choose()`]. To understand why this
+    /// yields a `&mut OutputDevice` rather than a `MutexGuard`, see the [Lifetime Tether
     /// Pattern].
     ///
     /// Internally constructs a [`ModalGuardToken`] witness to prove to
@@ -109,9 +110,9 @@ impl Drop for ModalTerminalGuard<'_> {
     }
 }
 
-// XMARK: Witness token usage to restrict access of a method w/out making it private
+// XMARK: Witness token (compile-time proof) to restrict access to a pub method
 
-/// A [witness token] that proves a [`ModalTerminalGuard`] is held.
+/// A [witness token] (compile-time proof) that proves a [`ModalTerminalGuard`] is held.
 ///
 /// ## Proof and Lifecycle Chain
 ///

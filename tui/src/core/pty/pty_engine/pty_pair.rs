@@ -4,6 +4,34 @@
 
 use super::{Controlled, ControlledChild, Controller, PtyCommand};
 use crate::VPSize;
+use std::path::PathBuf;
+
+/// Error returned by [`PTY`] pair creation, spawning, and session thread operations.
+///
+/// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum PtyError {
+    #[error("Working directory does not exist: '{}'", path.display())]
+    CwdNotFound { path: PathBuf },
+
+    #[error("Controlled PTY half was already consumed")]
+    ControlledAlreadyConsumed,
+
+    #[error("Failed to open PTY pair")]
+    OpenFailed(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+
+    #[error("Failed to spawn command inside PTY")]
+    SpawnCommandFailed(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+
+    #[error("PTY controller operation failed")]
+    ControllerFailed(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+
+    #[error("PTY I/O or thread spawn failed")]
+    Io(#[source] std::io::Error),
+
+    #[error("PTY orchestrator thread panicked")]
+    OrchestratorPanicked,
+}
 
 /// Owns both halves of a [`PTY`] pair and manages the controlled side's lifecycle.
 ///
@@ -430,10 +458,10 @@ use crate::VPSize;
 ///
 /// Your code (running in the parent process) makes two [`portable_pty`] calls indirectly
 /// by using [`PtyPair`]. Both of the following steps are combined in the primary
-/// [`PtyPair::open_and_spawn()`] method. Both controller and controlled [`fd`]s get
+/// [`PtyPair::try_open_and_spawn()`] method. Both controller and controlled [`fd`]s get
 /// created.
 ///
-/// 1. **[`portable_pty's openpty()`]** - Called by [`PtyPair::open_raw_pair()`], creates
+/// 1. **[`portable_pty's openpty()`]** - Called by [`PtyPair::try_open_raw_pair()`], creates
 ///    the initial [`PTY`] pair.
 ///    - Under the hood, this calls the POSIX [`openpty(3)`] system call, which opens
 ///      [`/dev/ptmx`] and creates the initial [`PTY`] pair.
@@ -441,10 +469,10 @@ use crate::VPSize;
 ///      process. We need the controlled [`fd`] in the next step to spawn the child.
 ///
 /// 2. **[`portable_pty's spawn_command()`]** - Called by
-///    [`PtyPair::spawn_command_and_close_controlled()`], spawns the child process with
+///    [`PtyPair::try_spawn_command_and_close_controlled()`], spawns the child process with
 ///    the given command.
 ///    - Builds a [`Command`] from the [`portable_pty's CommandBuilder`] passed to
-///      [`PtyPair::spawn_command_and_close_controlled()`].
+///      [`PtyPair::try_spawn_command_and_close_controlled()`].
 ///    - Wires the controlled [`fd`] to the child's [`stdin`]/[`stdout`]/[`stderr`] via
 ///      [`Command::stdin()`]/[`Command::stdout()`]/[`Command::stderr()`]. Then calls
 ///      [`Command::spawn()`], which internally calls [`fork()`] → [`dup2()`] → [`exec()`]
@@ -460,7 +488,7 @@ use crate::VPSize;
 ///    - Crucially, the parent's copy of the controlled [`fd`] (created in Step 1) is
 ///      completely unaffected - this is the bootstrap artifact that causes the deadlock
 ///      if not explicitly dropped 💣. And that is exactly what
-///      [`PtyPair::spawn_command_and_close_controlled()`] does.
+///      [`PtyPair::try_spawn_command_and_close_controlled()`] does.
 ///
 /// To understand why relying on [`portable_pty's spawn_command()`] alone leads to a
 /// deadlock, we must look at the system state immediately after spawning the child (at
@@ -520,7 +548,7 @@ use crate::VPSize;
 /// ```
 ///
 /// And this is where the `_and_close_controlled` part of
-/// [`PtyPair::spawn_command_and_close_controlled()`] comes into play to prevent this.
+/// [`PtyPair::try_spawn_command_and_close_controlled()`] comes into play to prevent this.
 /// This method spawns the child and immediately closes the parent's controlled [`fd`] in
 /// a single step, so the child process's copies are the only ones left. When the child
 /// exits, the kernel delivers [`EIO`]/[`EOF`] to the controller reader as expected 🙌.
@@ -556,7 +584,7 @@ use crate::VPSize;
 ///
 /// [`portable_pty::PtyPair`] has no API for closing one side independently (its two `pub`
 /// fields drop together). This struct wraps the controlled side in [`Option`] so
-/// [`PtyPair::spawn_command_and_close_controlled()`] can drop it while the controller
+/// [`PtyPair::try_spawn_command_and_close_controlled()`] can drop it while the controller
 /// stays alive.
 ///
 /// # POSIX [`EOF`] vs Linux [`EIO`]
@@ -589,8 +617,8 @@ use crate::VPSize;
 ///   even after the child process exits.
 /// - **Symptom**: Blocking [`read()`] on the controller side hangs forever instead of
 ///   returning [`EIO`] or [`EOF`].
-/// - **Solution**: [`PtyPair::open_and_spawn()`] (or
-///   [`PtyPair::spawn_command_and_close_controlled()`]) ensures the parent's copy is
+/// - **Solution**: [`PtyPair::try_open_and_spawn()`] (or
+///   [`PtyPair::try_spawn_command_and_close_controlled()`]) ensures the parent's copy is
 ///   closed immediately after spawning.
 ///
 /// ### 2. Buffer-full deadlock (Contrived Single-threaded Tests)
@@ -618,21 +646,21 @@ use crate::VPSize;
 /// value, so the deadlock described in [Resource-leaking deadlock] is structurally
 /// impossible.
 ///
-/// 1. [`PtyPair::open_and_spawn()`] is the primary way to spawn a child.
-///    [`PtyPair::spawn_command_and_close_controlled()`] is another way. Both close the
+/// 1. [`PtyPair::try_open_and_spawn()`] is the primary way to spawn a child.
+///    [`PtyPair::try_spawn_command_and_close_controlled()`] is another way. Both close the
 ///    parent's controlled [`fd`] immediately after spawning, so the child's copies are
 ///    the only ones left, eliminating any chance of [Resource-leaking deadlock].
 /// 2. [`PtyPair::into_controller()`] is the only way to extract an owned [`Controller`].
 ///    It drops the controlled side automatically if it is still open, as a safety net,
 ///    eliminating any chance of [Resource-leaking deadlock].
 ///
-/// The example below shows [`PtyPair::open_and_spawn()`] handling everything in a single
+/// The example below shows [`PtyPair::try_open_and_spawn()`] handling everything in a single
 /// call:
 ///
 /// ```no_run
 /// use r3bl_tui::{vp_height, vp_size, vp_width, PtyCommand, PtyPair};
 ///
-/// let (pty_pair, _child) = PtyPair::open_and_spawn(
+/// let (pty_pair, _child) = PtyPair::try_open_and_spawn(
 ///     vp_size(vp_width(80), vp_height(24)),
 ///     PtyCommand::new("top")
 /// ).expect("conversion error");
@@ -665,7 +693,7 @@ use crate::VPSize;
 /// Controlled (Box<dyn SlavePty>) → UnixSlavePty → PtyFd → FileDescriptor → close(fd)
 /// ```
 ///
-/// This is why [`PtyPair::spawn_command_and_close_controlled()`] works: it calls
+/// This is why [`PtyPair::try_spawn_command_and_close_controlled()`] works: it calls
 /// [`Option::take()`] to move the [`Controlled`] out, then drops it.
 ///
 /// # Inclusive terminology
@@ -725,9 +753,9 @@ use crate::VPSize;
 /// [`println!`]: std::println
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`PtyPair::into_controller()`]: PtyPair::into_controller
-/// [`PtyPair::open_raw_pair()`]: Self::open_raw_pair
-/// [`PtyPair::spawn_command_and_close_controlled()`]:
-///     Self::spawn_command_and_close_controlled
+/// [`PtyPair::try_open_raw_pair()`]: Self::try_open_raw_pair
+/// [`PtyPair::try_spawn_command_and_close_controlled()`]:
+///     Self::try_spawn_command_and_close_controlled
 /// [`PtySession`]: crate::PtySession
 /// [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 /// [`read()`]: https://manpages.debian.org/read.2
@@ -745,7 +773,7 @@ use crate::VPSize;
 /// [`std::io::stdin()`]: std::io::stdin
 /// [`std::io::stdout()`]: std::io::stdout
 /// [`std::read()`]: std::io::Read::read
-/// [`std::spawn()`]: Self::open_and_spawn
+/// [`std::spawn()`]: Self::try_open_and_spawn
 /// [`std::write()`]: std::io::Write::write
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
@@ -822,12 +850,12 @@ impl PtyPair {
     ///
     /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-    pub fn open_and_spawn(
+    pub fn try_open_and_spawn(
         arg_size: impl Into<VPSize>,
         command: PtyCommand,
-    ) -> miette::Result<(PtyPair, ControlledChild)> {
-        let mut pair = PtyPair::open_raw_pair(arg_size.into())?;
-        let child = PtyPair::spawn_command_and_close_controlled(&mut pair, command)?;
+    ) -> Result<(PtyPair, ControlledChild), PtyError> {
+        let mut pair = PtyPair::try_open_raw_pair(arg_size.into())?;
+        let child = PtyPair::try_spawn_command_and_close_controlled(&mut pair, command)?;
         Ok((pair, child))
     }
 
@@ -865,7 +893,7 @@ impl PtyPair {
 impl PtyPair {
     /// Opens a raw [`PTY`] pair without spawning a child process.
     ///
-    /// This is an internal implementation step used by [`PtyPair::open_and_spawn()`].
+    /// This is an internal implementation step used by [`PtyPair::try_open_and_spawn()`].
     ///
     /// - It is exposed as an associated function for use-cases that need to separate
     ///   [`PTY`] creation from spawning (e.g., tests that only need a raw [`Controller`]
@@ -879,7 +907,7 @@ impl PtyPair {
     /// [`PtyPair`] still holds the controlled [`fd`].
     ///
     /// You must either:
-    /// - Call [`PtyPair::spawn_command_and_close_controlled()`] to spawn and close the
+    /// - Call [`PtyPair::try_spawn_command_and_close_controlled()`] to spawn and close the
     ///   controlled [`fd`].
     /// - Call [`PtyPair::into_controller()`] which drops the controlled side as a safety
     ///   net.
@@ -894,20 +922,20 @@ impl PtyPair {
     /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Resource-leaking deadlock]: #resource-leaking-deadlock
-    pub fn open_raw_pair(
+    pub fn try_open_raw_pair(
         arg_pty_size: impl Into<portable_pty::PtySize>,
-    ) -> miette::Result<PtyPair> {
+    ) -> Result<PtyPair, PtyError> {
         let pty_size = arg_pty_size.into();
         let raw_pair = portable_pty::native_pty_system()
             .openpty(pty_size)
-            .map_err(|e| miette::miette!("Failed to open PTY: {e}"))?;
+            .map_err(|e| PtyError::OpenFailed(e.into()))?;
         Ok(PtyPair::from(raw_pair))
     }
 
     /// Spawns a command on the controlled side and immediately closes the controlled
     /// [`fd`].
     ///
-    /// This is an internal implementation step used by [`PtyPair::open_and_spawn()`]. It
+    /// This is an internal implementation step used by [`PtyPair::try_open_and_spawn()`]. It
     /// is exposed as an associated function for use-cases that need to separate [`PTY`]
     /// creation from spawning (e.g., tests that configure the pair before spawning).
     ///
@@ -932,19 +960,17 @@ impl PtyPair {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Resource-leaking deadlock]: #resource-leaking-deadlock
     /// [Two Types of Deadlocks]: #two-types-of-pty-deadlocks
-    pub fn spawn_command_and_close_controlled(
+    pub fn try_spawn_command_and_close_controlled(
         pair: &mut PtyPair,
         command: PtyCommand,
-    ) -> miette::Result<ControlledChild> {
-        let controlled = pair.maybe_controlled.as_ref().ok_or_else(|| {
-            miette::miette!(
-                "Controlled side already consumed - was this pair already spawned \
-                or created via open_and_spawn()?"
-            )
-        })?;
+    ) -> Result<ControlledChild, PtyError> {
+        let controlled = pair
+            .maybe_controlled
+            .as_ref()
+            .ok_or(PtyError::ControlledAlreadyConsumed)?;
         let child = controlled
             .spawn_command(command)
-            .map_err(|e| miette::miette!("{e:#}"))?;
+            .map_err(|e| PtyError::SpawnCommandFailed(e.into()))?;
         drop(pair.maybe_controlled.take());
         Ok(ControlledChild::from(child))
     }
@@ -963,18 +989,17 @@ impl From<portable_pty::PtyPair> for PtyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PtyCommand, core::pty::pty_engine::pty_size::DefaultPtySize, vp_height,
-                vp_width};
+    use crate::{DefaultPtySize, PtyCommand, vp_height, vp_width};
 
     #[test]
     fn test_open_raw_pair_default_size() {
-        let result = PtyPair::open_raw_pair(DefaultPtySize);
+        let result = PtyPair::try_open_raw_pair(DefaultPtySize);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_open_raw_pair_custom_size() {
-        let result = PtyPair::open_raw_pair(vp_width(100) + vp_height(30));
+        let result = PtyPair::try_open_raw_pair(vp_width(100) + vp_height(30));
         assert!(result.is_ok());
     }
 
@@ -993,7 +1018,7 @@ mod tests {
             cmd
         };
 
-        let result = PtyPair::open_and_spawn(DefaultPtySize, command);
+        let result = PtyPair::try_open_and_spawn(DefaultPtySize, command);
         assert!(result.is_ok());
         let (pty_pair, _child) = result.expect("conversion error");
         assert!(pty_pair.maybe_controlled.is_none());

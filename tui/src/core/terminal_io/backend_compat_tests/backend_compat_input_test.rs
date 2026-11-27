@@ -6,8 +6,8 @@
 //! Verifies both backends produce identical [`InputEvent`] for the same [`ANSI`]
 //! sequences when running in a real [`PTY`] environment, with the same terminal size and
 //! capabilities. Manually sets raw mode for each backend directly (not using the
-//! production [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
-//! [`TERMINAL_LIB_BACKEND`]).
+//! production [`terminal_raw_mode::try_enable_raw_mode()`] dispatcher which selects based
+//! on [`TERMINAL_LIB_BACKEND`]).
 //!
 //! # Platform
 //!
@@ -16,10 +16,10 @@
 //!
 //! The raw mode implementations used are:
 //!
-//! | Backend          | Raw Mode Implementation                                              |
-//! | ---------------- | -------------------------------------------------------------------- |
-//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`] (rustix-based) |
-//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                           |
+//! | Backend          | Raw Mode Implementation                                                  |
+//! | ---------------- | ------------------------------------------------------------------------ |
+//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`] (rustix-based) |
+//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                               |
 //!
 //! # Run with:
 //!
@@ -91,23 +91,21 @@
 //! [`pty_osc_sender_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_sender_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::try_enable_raw_mode
+//! [`terminal_raw_mode::try_enable_raw_mode()`]: crate::terminal_raw_mode::try_enable_raw_mode
 
 use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
             ASCII_DEL, CONTROL_A, CONTROL_C, CONTROL_ENTER, CONTROL_TAB,
             CrosstermInputDevice, DEFAULT_COL_WIDTH, DEFAULT_ROW_HEIGHT, EIO,
             FUNCTION_F5_CODE, GLYPH_CONTROLLED, GLYPH_FAILURE, GLYPH_SUCCESS,
-            GLYPH_WAITING, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
+            GLYPH_WAITING, HashMap, MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_CTRL_SHIFT,
             MODIFIER_SHIFT, MSG_CONTROLLED_READY, PtyPair, PtyTestChild,
             SPECIAL_DELETE_CODE, SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
             SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE,
-            SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL,
-            core::ansi::{generator::{alt_key, csi, csi_modified, csi_tilde, csi_u, ss3},
-                         terminal_raw_mode},
-            ok, retry_until_success_test, spawn_controlled_in_pty,
+            SS3_F1_FINAL, SS3_F2_FINAL, SS3_F3_FINAL, SS3_F4_FINAL, alt_key,
+            core::ansi::terminal_raw_mode, csi, csi_modified, csi_tilde, csi_u,
+            spawn_controlled_in_pty, ss3,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use rustc_hash::FxHashMap;
 use std::{fmt::Write as _,
           io::{BufRead, Write}};
 
@@ -216,10 +214,10 @@ fn run_single_test_attempt() -> Result<(), String> {
 /// [`PTY`] Controller Logic.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub mod controller {
+mod controller {
     use super::*;
 
-    /// Runs controller logic and collects events as a [`FxHashMap`].
+    /// Runs controller logic and collects events as a [`HashMap`].
     ///
     /// Used by the comparison test to directly capture events without printing. Returns a
     /// map of sequence description → EVENT string.
@@ -235,7 +233,7 @@ pub mod controller {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     pub fn run_and_collect(
         (backend_name, pty_pair, child): (&str, PtyPair, &PtyTestChild),
-    ) -> Result<FxHashMap<String, String>, String> {
+    ) -> Result<HashMap<String, String>, String> {
         let mut writer = pty_pair
             .controller()
             .take_writer()
@@ -250,7 +248,7 @@ pub mod controller {
         // after the signal is preserved in the reader's internal buffer.
         child.wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)?;
 
-        let mut events = FxHashMap::default();
+        let mut events = HashMap::default();
 
         for (desc, bytes) in generate_test_sequences::all() {
             writer
@@ -300,7 +298,7 @@ pub mod controller {
 /// Shared setup/teardown for controlled ([`PTY`] controlled side) processes.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub mod controlled_common {
+mod controlled_common {
     use super::*;
 
     /// Signal ready to controller. Call before enabling raw mode so newlines work.
@@ -366,7 +364,7 @@ pub mod controlled_common {
 }
 
 /// Crossterm backend controlled process.
-pub mod controlled_crossterm {
+mod controlled_crossterm {
     use super::*;
 
     /// Crossterm controlled process entry point.
@@ -397,12 +395,12 @@ pub mod controlled_crossterm {
 }
 
 /// `DirectToAnsi` backend controlled process.
-pub mod controlled_direct_to_ansi {
+mod controlled_direct_to_ansi {
     use super::*;
 
     /// `DirectToAnsi` controlled process entry point.
     ///
-    /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`] directly (the
+    /// Uses [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`] directly (the
     /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
     /// mode.
     ///
@@ -413,11 +411,11 @@ pub mod controlled_direct_to_ansi {
     /// [`tokio`]: tokio
     pub fn run() -> ! {
         // 1. Enable raw mode using DirectToAnsi raw mode (rustix-based).
-        drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
+        drop(terminal_raw_mode::raw_mode_unix::try_enable_raw_mode());
 
         let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
         runtime.block_on(async {
-            let mut device = DirectToAnsiInputDevice::new()
+            let mut device = DirectToAnsiInputDevice::try_new()
                 .expect("Failed to initialize DirectToAnsiInputDevice");
             // 2. Signal ready (AFTER poller is watching stdin).
             controlled_common::signal_ready();
@@ -429,7 +427,7 @@ pub mod controlled_direct_to_ansi {
 }
 
 /// Test Sequence Generation.
-pub mod generate_test_sequences {
+mod generate_test_sequences {
     use super::*;
 
     /// All test sequences for backend compatibility testing.

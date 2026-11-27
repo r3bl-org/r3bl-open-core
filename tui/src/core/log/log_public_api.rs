@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DisplayPreference, GlobalLogFileGuard, ThreadLocalLogFileGuard,
-            TracingConfig, WriterConfig, ok};
+            TracingConfig, TracingInitError, WriterConfig};
 use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
 pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";
@@ -71,7 +71,7 @@ pub const DEFAULT_LOG_FILE_NAME: &str = "/tmp/r3bl_tui/log.txt";
 /// [Global default tracing subscriber]: tracing::subscriber::set_global_default
 pub fn try_initialize_logging_global(
     arg_options: impl Into<TracingConfig>,
-) -> miette::Result<GlobalLogFileGuard> {
+) -> Result<GlobalLogFileGuard, TracingInitError> {
     let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
@@ -80,7 +80,7 @@ pub fn try_initialize_logging_global(
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
-    config.install_global()
+    config.try_install_global()
 }
 
 /// Thread local subscriber, which is thread local, and you can assign different ones to
@@ -126,7 +126,7 @@ pub fn try_initialize_logging_global(
 /// [Thread local tracing subscriber]: tracing::subscriber::set_default
 pub fn try_initialize_logging_thread_local(
     arg_options: impl Into<TracingConfig>,
-) -> miette::Result<Option<ThreadLocalLogFileGuard>> {
+) -> Result<Option<ThreadLocalLogFileGuard>, TracingInitError> {
     let config: TracingConfig = arg_options.into();
 
     // Early return if the level filter is off.
@@ -135,7 +135,7 @@ pub fn try_initialize_logging_thread_local(
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
-    config.install_thread_local().map(Some)
+    config.try_install_thread_local().map(Some)
 }
 
 /// This is a simple function that logs a message to a file. This is meant to be used when

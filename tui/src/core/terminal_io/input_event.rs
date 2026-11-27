@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-pub use crate::core::ansi::vt_100_terminal_input_parser::{TerminalColorReport,
-                                                          TerminalColorRole};
-use crate::{KeyPress, MouseInput, VPSize, core::resilient_reactor_thread::ShutdownReason};
+use crate::{KeyPress, MouseInput, TerminalColorReport, VPSize,
+            core::resilient_reactor_thread::ShutdownReason, vp_height, vp_width};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
@@ -112,7 +111,7 @@ pub enum InputEvent {
     /// Terminal dynamic color query report ([`OSC`] 10, 11, 12, 13, 14, 17, or 19).
     ///
     /// Emitted on [`stdin`] in response to dynamic color queries sent to the terminal via
-    /// [`OscSequence::ColorQuery`] or [`OscSender::send_color_query`]. Contains the
+    /// [`OscSequence::ColorQuery`] or [`OscSender::try_send_color_query`]. Contains the
     /// resolved [`RgbValue`] and the functional [`TerminalColorRole`]:
     ///
     /// | [`OSC`] Code | Role Variant                               | Description                      |
@@ -132,7 +131,7 @@ pub enum InputEvent {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
-    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
     /// [`RgbValue`]: crate::RgbValue
     /// [`stdin`]: std::io::stdin
@@ -223,9 +222,9 @@ mod helpers {
     }
 }
 
-pub(crate) mod converters {
-    use super::{CTEvent, Event, FocusEvent, InputEvent, KeyEvent, MouseEvent};
-    use crate::{vp_height, vp_width};
+mod converters {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl TryFrom<Event> for InputEvent {
         type Error = ();

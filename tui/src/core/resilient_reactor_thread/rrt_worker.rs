@@ -166,6 +166,14 @@ pub trait RRTSoftwareInterrupt: Send + Sync + Debug + 'static {
     fn trigger_software_interrupt(&self);
 }
 
+/// Coupled worker and software interrupt pair returned by
+/// [`RRTWorker::create_and_register_os_sources()`].
+#[derive(Debug)]
+pub struct RRTWorkerAndInterrupt<W: RRTWorker> {
+    pub worker: W,
+    pub interrupt: W::Interrupt,
+}
+
 /// A trait for implementing the blocking I/O worker on the [framework]-managed dedicated
 /// RRT thread.
 ///
@@ -306,6 +314,12 @@ pub trait RRTWorker: Send + Debug + 'static {
     /// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
     type Interrupt: RRTSoftwareInterrupt;
 
+    /// Error returned when [`create_and_register_os_sources()`] fails to create or
+    /// register OS resources.
+    ///
+    /// [`create_and_register_os_sources()`]: Self::create_and_register_os_sources
+    type CreateError: std::error::Error + miette::Diagnostic + Send + Sync + 'static;
+
     /// Creates OS resources, registers event sources, and returns a coupled worker +
     /// [interrupt handle] pair.
     ///
@@ -364,7 +378,7 @@ pub trait RRTWorker: Send + Debug + 'static {
     fn create_and_register_os_sources(
         config: Self::Config,
         receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)>
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError>
     where
         Self: Sized;
 

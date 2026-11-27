@@ -186,8 +186,8 @@
 //! test helpers -->
 //!
 //! ```ignore
-//! use crate::protocols::csi_codes::SgrColorSequence;
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
+//! use crate::SgrColorSequence;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
 //! // Raw escape strings (error-prone, unclear).
 //! let bad_fg = "\x1b[38:5:196m";  // What color index? Typo-prone!
@@ -229,12 +229,12 @@
 //!
 //! ```ignore
 //! // Extended colors
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //! let fg = fg_ansi256(196);      // → "\x1b[38:5:196m"
 //! let bg = bg_rgb(255, 128, 0);  // → "\x1b[48:2:255:128:0m"
 //!
 //! // DSR sequences
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::*;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::*;
 //! let cursor_pos = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
 //!
 //! // CSI sequences (via Display)
@@ -314,7 +314,7 @@
 //! and helpers -->
 //!
 //! ```ignore
-//! use crate::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
+//! use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::conformance_data::vim_sequences;
 //!
 //! // Create realistic terminal buffer
 //! let mut ofs_buf_vt_100 = OfsBufVT100::new_empty(vp_height(25) + vp_width(80));
@@ -335,11 +335,11 @@
 //! [`DsrSequence`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
 //! [`EscSequence`]: crate::EscSequence
-//! [`FastStringify`]: crate::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::FastStringify
 //! [`ofs_buf_vt_100`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf
 //! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
-//! [`OSC`]: crate::osc_codes::OscSequence
-//! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
+//! [`OscSequence`]: crate::OscSequence
 //! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
 //! [`SGR`]: crate::SgrCode
 //! [`SgrColorSequence`]: crate::SgrColorSequence
@@ -349,18 +349,19 @@
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [`vte`]: https://docs.rs/vte
 
+// Attach.
 #[cfg(any(test, doc))]
-pub mod conformance_data;
+pub(crate) mod conformance_data; // Used by ansi_parser_public_api tests.
 
 #[cfg(any(test, doc))]
-pub mod test_fixtures_vt_100_ansi_conformance; // Re-export existing test fixtures
+pub(crate) mod test_fixtures_vt_100_ansi_conformance; // Shared test fixtures (nz).
 
 #[cfg(any(test, doc))]
-pub use test_fixtures_vt_100_ansi_conformance::nz;
+pub(crate) mod test_sequence_generators; // Shared builders (dsr, parser tests).
 
 #[cfg(any(test, doc))]
-pub mod test_sequence_generators; // Test-only convenience generators for ANSI sequences
+pub(crate) mod tests; // Cross-folder ops shim rustdoc links.
 
-// Re-export test modules for both test and doc builds
+// Re-export.
 #[cfg(any(test, doc))]
-pub mod tests;
+pub(crate) use test_fixtures_vt_100_ansi_conformance::nz;

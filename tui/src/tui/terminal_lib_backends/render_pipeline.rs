@@ -55,8 +55,8 @@
 //! [rendering pipeline overview]: mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::{ZOrder, paint::paint};
-use crate::{FlushKind, GlobalData, LockedOutputDevice, RenderOpIRVec, ok,
-            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
+use crate::{FlushKind, GlobalData, LockedOutputDevice, RenderOpIRVec,
+            tui::DEBUG_RENDER_PIPELINE_EXPANDED};
 use std::{fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 use strum::EnumCount;
@@ -276,7 +276,7 @@ impl Debug for RenderPipeline {
             if count > 0 {
                 write!(f, "{DELIM}")?;
             }
-            if DEBUG_TUI_SHOW_PIPELINE_EXPANDED {
+            if DEBUG_RENDER_PIPELINE_EXPANDED {
                 write!(f, "[{z_order:?}] {vec_render_ops:?}")?;
             } else {
                 write!(f, "[{z_order:?}] {:?} RenderOpIRVec", vec_render_ops.len())?;

@@ -29,8 +29,8 @@
 ///
 /// [`.into()`]: Into::into
 /// [`MioPollWorker`]: crate::terminal_lib_backends::MioPollWorker
-/// [Main event loop]: crate::main_event_loop_impl
-/// [PTY input processing]: crate::pty_session::threads::writer::spawn_pty_writer_thread
+/// [Main event loop]: crate::try_main_event_loop_impl
+/// [PTY input processing]: crate::try_spawn_pty_writer_thread
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Continuation<E = ()> {
     /// Continue to the next iteration.

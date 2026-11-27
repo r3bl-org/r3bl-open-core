@@ -222,6 +222,7 @@ pub fn assert_plain_text_at(
 /// Creates a test buffer with specified dimensions. This provides a common way to create
 /// buffers for testing while allowing each test module to specify the size that makes
 /// sense for their tests.
+#[allow(dead_code)] // Shared test buffer constructor alongside create_vt100_test_buffer_with_size.
 #[must_use]
 pub fn create_test_buffer_flat_2d(
     buffer_width: VPWidth,

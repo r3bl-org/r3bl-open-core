@@ -148,7 +148,6 @@ pub enum EndsWithNewline {
 /// through [`SharedWriter::line_state_control_channel_sender`]. When transitioning from
 /// a paused state to [`NotPaused`], the line is automatically re-rendered.
 ///
-/// [`choose()`]: crate::choose
 /// [`LineStateControlSignal`]: crate::LineStateControlSignal
 /// [`NotPaused`]: PauseState::NotPaused
 /// [`PausedByBoth`]: PauseState::PausedByBoth
@@ -156,6 +155,7 @@ pub enum EndsWithNewline {
 /// [`PausedBySpinner`]: PauseState::PausedBySpinner
 /// [`SharedWriter::line_state_control_channel_sender`]: crate::SharedWriter::line_state_control_channel_sender
 /// [`Spinner`]: crate::readline_async::Spinner
+/// [`try_choose()`]: crate::try_choose
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PauseState {
     /// Normal operation: input is processed and output is rendered.
@@ -166,9 +166,9 @@ pub enum PauseState {
     /// [`Spinner`]: crate::readline_async::Spinner
     PausedBySpinner,
 
-    /// Suspended by an active modal interface (see [`choose()`]).
+    /// Suspended by an active modal interface (see [`try_choose()`]).
     ///
-    /// [`choose()`]: crate::choose
+    /// [`try_choose()`]: crate::try_choose
     PausedByModal,
 
     /// Suspended by both a spinner and a modal interface.
@@ -304,8 +304,8 @@ macro_rules! early_return_if_paused {
 mod tests {
     use super::{EndsWithNewline, LineState, PauseState, PauseStateTransition,
                 PrintLineOnControlC, PrintLineOnEnter};
-    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex,
-                core::test_fixtures::StdoutMock, seg_index, vp_col, vp_height, vp_width};
+    use crate::{GCStringOwned, History, InputEvent, Key, KeyPress, StdMutex, StdoutMock,
+                seg_index, vp_col, vp_height, vp_width};
     use std::sync::Arc;
 
     #[test]
@@ -380,7 +380,8 @@ mod tests {
         });
 
         safe_output_terminal.write(|term| {
-            let result = line.apply_event_and_render(&char_event, term, &safe_history);
+            let result =
+                line.try_apply_event_and_render(&char_event, term, &safe_history);
             assert!(matches!(result, Ok(None)));
         });
 
@@ -393,7 +394,8 @@ mod tests {
 
         // Now input should work.
         safe_output_terminal.write(|term| {
-            let result = line.apply_event_and_render(&char_event, term, &safe_history);
+            let result =
+                line.try_apply_event_and_render(&char_event, term, &safe_history);
             assert!(matches!(result, Ok(None)));
         });
 
@@ -461,7 +463,7 @@ mod tests {
 
         impl MockContext {
             fn operation(&self) -> Result<(), ()> {
-                crate::early_return_if_paused!(self @Unit);
+                early_return_if_paused!(self @Unit);
                 Err(())
             }
         }
@@ -485,7 +487,7 @@ mod tests {
 
         impl MockContext {
             fn operation(&self) -> Result<Option<()>, ()> {
-                crate::early_return_if_paused!(self @None);
+                early_return_if_paused!(self @None);
                 Ok(Some(()))
             }
         }

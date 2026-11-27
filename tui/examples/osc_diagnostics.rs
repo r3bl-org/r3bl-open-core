@@ -37,29 +37,29 @@
 //!
 //! ### Controls
 //!
-//! | Key             | Operation           | Description                                                                             |
-//! | :-------------- | :------------------ | :-------------------------------------------------------------------------------------- |
-//! | `Shift+1` / `!` | Background Color    | Query terminal background color ([`TerminalColorRole::Background`], `OSC 11`)           |
-//! | `Shift+2` / `@` | Foreground Color    | Query terminal foreground color ([`TerminalColorRole::Foreground`], `OSC 10`)           |
-//! | `Shift+3` / `#` | Cursor Color        | Query terminal cursor color ([`TerminalColorRole::Cursor`], `OSC 12`)                   |
-//! | `Shift+4` / `$` | All Color Roles     | Query all 7 supported terminal color roles (`OSC 10..19`)                               |
-//! | `Shift+5` / `%` | Terminal Title      | Set terminal title and tab header ([`OscSender::send_set_title_and_tab`], `OSC 0`)      |
-//! | `Shift+6` / `^` | Hyperlink           | Emit clickable terminal hyperlink ([`OscSender::send_set_hyperlink`], `OSC 8`)          |
-//! | `Shift+7` / `&` | Clipboard           | Copy text to system clipboard ([`OscSender::send_set_clipboard`], `OSC 52`)             |
-//! | `Shift+8` / `*` | Progress Bar        | Cycle simulated build progress percentage ([`OscSender::send_set_progress`], `OSC 9;4`) |
-//! | `Shift+9` / `(` | Run All Diagnostics | Sequentially execute all diagnostics in automated sequence                              |
-//! | `Shift+0` / `)` | Clear Event Log     | Clear event history log and received color query swatches                               |
-//! | `q` / `Ctrl+C`  | Quit                | Exit the diagnostics dashboard                                                          |
+//! | Key             | Operation           | Description                                                                                 |
+//! | :-------------- | :------------------ | :------------------------------------------------------------------------------------------ |
+//! | `Shift+1` / `!` | Background Color    | Query terminal background color ([`TerminalColorRole::Background`], `OSC 11`)               |
+//! | `Shift+2` / `@` | Foreground Color    | Query terminal foreground color ([`TerminalColorRole::Foreground`], `OSC 10`)               |
+//! | `Shift+3` / `#` | Cursor Color        | Query terminal cursor color ([`TerminalColorRole::Cursor`], `OSC 12`)                       |
+//! | `Shift+4` / `$` | All Color Roles     | Query all 7 supported terminal color roles (`OSC 10..19`)                                   |
+//! | `Shift+5` / `%` | Terminal Title      | Set terminal title and tab header ([`OscSender::try_send_set_title_and_tab`], `OSC 0`)      |
+//! | `Shift+6` / `^` | Hyperlink           | Emit clickable terminal hyperlink ([`OscSender::try_send_set_hyperlink`], `OSC 8`)          |
+//! | `Shift+7` / `&` | Clipboard           | Copy text to system clipboard ([`OscSender::try_send_set_clipboard`], `OSC 52`)             |
+//! | `Shift+8` / `*` | Progress Bar        | Cycle simulated build progress percentage ([`OscSender::try_send_set_progress`], `OSC 9;4`) |
+//! | `Shift+9` / `(` | Run All Diagnostics | Sequentially execute all diagnostics in automated sequence                                  |
+//! | `Shift+0` / `)` | Clear Event Log     | Clear event history log and received color query swatches                                   |
+//! | `q` / `Ctrl+C`  | Quit                | Exit the diagnostics dashboard                                                              |
 //!
 //! [`Crossterm`]: crate::TerminalLibBackend::Crossterm
 //! [`DirectToAnsi`]: crate::TerminalLibBackend::DirectToAnsi
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
 //! [`OSC`]: crate::OscSequence
-//! [`OscSender::send_set_clipboard`]: crate::OscSender::send_set_clipboard
-//! [`OscSender::send_set_hyperlink`]: crate::OscSender::send_set_hyperlink
-//! [`OscSender::send_set_progress`]: crate::OscSender::send_set_progress
-//! [`OscSender::send_set_title_and_tab`]: crate::OscSender::send_set_title_and_tab
+//! [`OscSender::try_send_set_clipboard`]: crate::OscSender::try_send_set_clipboard
+//! [`OscSender::try_send_set_hyperlink`]: crate::OscSender::try_send_set_hyperlink
+//! [`OscSender::try_send_set_progress`]: crate::OscSender::try_send_set_progress
+//! [`OscSender::try_send_set_title_and_tab`]: crate::OscSender::try_send_set_title_and_tab
 //! [`OscSender`]: crate::OscSender
 //! [`TERMINAL_LIB_BACKEND`]: crate::TERMINAL_LIB_BACKEND
 //! [`TerminalColorRole::Background`]: crate::TerminalColorRole::Background
@@ -69,24 +69,24 @@
 use crate::{app::{MAX_EVENT_LOG_ENTRIES, OscDiagnosticsApp},
             box_drawing::{Placement, detect_width, make_box_line},
             terminal_output::{clear_screen_and_home, cursor_to, flush, print_text}};
-use r3bl_tui::{CSI_PARAM_SEPARATOR, CSI_START, ClipboardTarget, InputDevice, InputEvent,
-               Key, KeyPress, KeyState, ModifierKeysMask, NarrowingCastToU16, OscSender,
-               OutputDevice, PaintMode, RgbValue, SGR_BG_EXTENDED, SGR_COLOR_MODE_RGB,
-               SGR_RESET_STR, SGR_SET_GRAPHICS, TERMINAL_LIB_BACKEND,
-               TerminalColorReport, TerminalColorRole, TerminalLibBackend,
-               TerminalModeController, WideningCastToUsize, ansi_output,
-               assert_terminal_is_interactive, get_size, ok, pc, set_mimalloc_in_main,
-               try_initialize_logging_global, vp_col, vp_row};
-use std::{collections::{HashMap, VecDeque},
-          time::Instant};
+use r3bl_tui::{CSI_PARAM_SEPARATOR, CSI_START, ClipboardTarget, HashMap, InputDevice,
+               InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+               NarrowingCastToU16, OscSender, OutputDevice, PaintMode, RgbValue,
+               SGR_BG_EXTENDED, SGR_COLOR_MODE_RGB, SGR_RESET_STR, SGR_SET_GRAPHICS,
+               TERMINAL_LIB_BACKEND, TerminalColorReport, TerminalColorRole,
+               TerminalLibBackend, TerminalModeController, WideningCastToUsize,
+               ansi_output, assert_terminal_is_interactive, ok, pc,
+               run_in_main_with_safe_stack, try_get_size, try_initialize_logging_global,
+               vp_col, vp_row};
+use std::{collections::VecDeque, time::Instant};
 use strip_ansi_escapes::strip_str;
 use tracing_core::LevelFilter;
 use ui::render;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-#[tokio::main]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize logging to `/tmp/r3bl_tui/log.txt`.
@@ -99,7 +99,7 @@ async fn main() -> miette::Result<()> {
 
     // Start raw mode and full screen TUI.
     let _raw_mode_guard = output_device.enter_raw_mode()?;
-    let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
+    let _fullscreen_tui_mode_guard = output_device.try_setup_full_screen_tui()?;
 
     let mut app = OscDiagnosticsApp::new();
     app.add_log("Dashboard initialized. Ready for OSC testing.");
@@ -125,7 +125,7 @@ async fn main() -> miette::Result<()> {
     }
 
     if matches!(output_device.paint_mode, PaintMode::Real) {
-        output_device.flush()?;
+        output_device.try_flush()?;
     }
 
     ok!()
@@ -167,7 +167,7 @@ mod app {
         #[must_use]
         pub fn new() -> Self {
             Self {
-                color_reports: HashMap::new(),
+                color_reports: HashMap::default(),
                 event_log: VecDeque::new(),
                 last_emitted_osc: None,
                 current_progress_step: 0,
@@ -390,7 +390,7 @@ mod app {
         ) -> miette::Result<()> {
             tracing::debug!(?role, osc_code = %role, "Sending terminal color query");
             let mut sender = OscSender::new(output_device);
-            sender.send_color_query(role)?;
+            sender.try_send_color_query(role)?;
             self.last_emitted_osc = Some(format!("ESC ] {role} ; ? ST"));
             self.add_log(format!("📤 Emitted query: {role:?} (OSC {role})"));
             ok!()
@@ -423,7 +423,7 @@ mod app {
             title: &str,
         ) -> miette::Result<()> {
             let mut sender = OscSender::new(output_device);
-            sender.send_set_title_and_tab(title)?;
+            sender.try_send_set_title_and_tab(title)?;
             self.last_emitted_osc = Some(format!("ESC ] 0 ; {title} ST"));
             self.add_log(format!("📤 Set terminal title: \"{title}\""));
             ok!()
@@ -435,8 +435,8 @@ mod app {
         ) -> miette::Result<()> {
             let mut sender = OscSender::new(output_device);
             let uri = "https://r3bl.com";
-            sender.send_set_hyperlink(uri, None::<&str>)?;
-            sender.send_clear_hyperlink()?;
+            sender.try_send_set_hyperlink(uri, None::<&str>)?;
+            sender.try_send_clear_hyperlink()?;
             self.last_emitted_osc =
                 Some(format!("ESC ] 8 ; ; {uri} ST ... ESC ] 8 ; ; ST"));
             self.add_log(format!("📤 Emitted OSC 8 hyperlink: {uri}"));
@@ -449,7 +449,7 @@ mod app {
             text: &str,
         ) -> miette::Result<()> {
             let mut sender = OscSender::new(output_device);
-            sender.send_set_clipboard(ClipboardTarget::System, text)?;
+            sender.try_send_set_clipboard(ClipboardTarget::System, text)?;
             self.last_emitted_osc = Some("ESC ] 52 ; c ; <base64> ST".to_string());
             self.add_log(format!("📤 Copied to clipboard via OSC 52: \"{text}\""));
             ok!()
@@ -472,11 +472,11 @@ mod app {
 
             let mut sender = OscSender::new(output_device);
             if let Some(pct) = current {
-                sender.send_set_progress(pct)?;
+                sender.try_send_set_progress(pct)?;
                 self.last_emitted_osc = Some(format!("ESC ] 9 ; 4 ; 1 ; {} ST", *pct));
                 self.add_log(format!("📤 Emitted progress: {pct:?}"));
             } else {
-                sender.send_clear_progress()?;
+                sender.try_send_clear_progress()?;
                 self.last_emitted_osc = Some("ESC ] 9 ; 4 ; 0 ; 0 ST".to_string());
                 self.add_log("📤 Emitted progress cleared");
             }
@@ -509,11 +509,11 @@ mod box_drawing {
     /// Fallback visual column width of all diagnostic dashboard boxes.
     pub const MAX_WIDTH: u16 = 73;
 
-    /// Detects current terminal column width via [`get_size()`], falling back to
+    /// Detects current terminal column width via [`try_get_size()`], falling back to
     /// [`MAX_WIDTH`].
     #[must_use]
     pub fn detect_width() -> u16 {
-        match get_size() {
+        match try_get_size() {
             Ok(size) if size.col_width.as_u16() > 0 => size.col_width.as_u16(),
             _ => MAX_WIDTH,
         }

@@ -421,7 +421,7 @@ impl<T: GetMemSize> GetMemSize for Flat2DArray<T> {
 /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
 /// [this video]: https://www.youtube.com/watch?v=tIrSvJFRxAg
 /// [virtual terminal tab]:
-///     crate::pty_mux#virtual-terminal-architecture
+///     mod@crate::core::pty::pty_mux#virtual-terminal-architecture
 #[derive(Debug)]
 pub struct Flat1DSimd<'a, T> {
     pub data: &'a [T],

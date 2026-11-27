@@ -1,13 +1,13 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::FlexBox;
-use crate::CommonResult;
-use std::{error::Error,
-          fmt::{Debug, Display, Result}};
 
 /// Main error struct.
-/// <https://learning-rust.github.io/docs/e7.custom_error_types.html>
-#[derive(Debug, Clone, miette::Diagnostic)]
+/// <https://learning-rust.github.io/docs/custom-error-types/>
+#[derive(Debug, Clone, thiserror::Error, miette::Diagnostic)]
+#[error(
+    "LayoutError {{ error_type: {error_type:?}, error_message: {error_message:?} }}"
+)]
 #[allow(dead_code)]
 pub struct LayoutError {
     pub error_type: LayoutErrorType,
@@ -29,15 +29,7 @@ pub enum LayoutErrorType {
     ContentCursorPositionUndefined,
 }
 
-/// Implement [`Error`] trait.
-impl Error for LayoutError {}
-
-/// Implement [`Display`] trait (needed by [`Error`] trait).
-impl Display for LayoutError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { Debug::fmt(self, f) }
-}
-
-/// Implement constructor that is compatible w/ [`CommonResult<T>`].
+/// Implement constructor helpers returning [`Result<T, LayoutError>`].
 impl LayoutError {
     /// Only [`LayoutError::error_type`] available, and no [`LayoutError::error_message`].
     ///
@@ -46,11 +38,11 @@ impl LayoutError {
     /// Always returns an error with the given error type.
     pub fn new_error_result_with_only_type<T>(
         err_type: LayoutErrorType,
-    ) -> CommonResult<T> {
-        core::result::Result::Err(miette::miette!(LayoutError {
+    ) -> Result<T, LayoutError> {
+        Err(LayoutError {
             error_type: err_type,
             error_message: None,
-        }))
+        })
     }
 
     /// Both [`LayoutError::error_type`] and [`LayoutError::error_message`] available.
@@ -61,11 +53,11 @@ impl LayoutError {
     pub fn new_error_result<T>(
         err_type: LayoutErrorType,
         msg: String,
-    ) -> CommonResult<T> {
-        core::result::Result::Err(miette::miette!(LayoutError {
+    ) -> Result<T, LayoutError> {
+        Err(LayoutError {
             error_type: err_type,
             error_message: Some(msg),
-        }))
+        })
     }
 
     #[must_use]
@@ -76,7 +68,7 @@ impl LayoutError {
 
 /// Unwrap the `$option`, and if `None` then return the given `$err_type`.
 /// Otherwise return the unwrapped `$option`. This macro must be called in a
-/// block that returns a `CommonResult<T>`.
+/// block that returns a `Result<T, LayoutError>`.
 #[macro_export]
 macro_rules! unwrap_or_err {
     ($option:expr, $err_type:expr) => {

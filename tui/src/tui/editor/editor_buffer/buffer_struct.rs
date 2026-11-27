@@ -3,13 +3,13 @@
 use super::{EditorBufferConfig, SelectionContainer, history::EditorHistory,
             render_cache::RenderCache};
 use crate::{CCaret, CCol, CHeight, CPos, CRow, CWidth, CursorPositionBoundsStatus,
-            DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
+            DEBUG_CLIPBOARD, DEBUG_TUI, DEFAULT_SYN_HI_FILE_EXT, DocSeg,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, NumericValue, TinyInlineString, VPCaret,
             VPSize, Viewport, ZeroCopyGapBuffer, format_as_kibibytes_with_commas,
-            glyphs, inline_string, locate_col, ok,
+            glyphs, locate_col,
             validate_buffer_mut::EditorBufferMutNoDrop, vp_caret, vp_col, vp_pos,
-            vp_row, with_mut};
+            vp_row};
 use std::fmt::{Debug, Display, Formatter};
 
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
@@ -258,7 +258,7 @@ pub struct EditorBuffer {
 /// [`CRow`]: crate::CRow
 /// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
 /// [`FlexBox`]: crate::tui::FlexBox
-/// [`gc_string`]: mod@crate::graphemes::gc_string
+/// [`gc_string`]: mod@crate::core::graphemes::gc_string
 /// [`GCStringOwned`]: crate::graphemes::GCStringOwned
 /// [`grapheme`]: https://unicode.org/reports/tr29/
 /// [`graphemes_module`]: crate::graphemes
@@ -339,7 +339,7 @@ mod construct {
                 ..Default::default()
             };
 
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::info!(
                     message = %inline_string!("Construct EditorBuffer {ch}", ch = glyphs::CONSTRUCT_GLYPH),
@@ -372,7 +372,7 @@ mod versions {
             let content_copy = self.content.clone();
             self.history.add(content_copy);
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🍎🍎🍎 add_content_to_undo_stack buffer",
@@ -395,7 +395,7 @@ mod versions {
                 self.content = content;
             }
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(
                     message = "🍎🍎🍎 undo buffer",
@@ -418,7 +418,7 @@ mod versions {
                 self.content = content;
             }
 
-            DEBUG_TUI_COPY_PASTE.then(|| {
+            DEBUG_CLIPBOARD.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🍎🍎🍎 redo buffer",
                     buffer = ?self
@@ -1016,8 +1016,7 @@ mod impl_debug {
 mod tests {
     use super::*;
     use crate::{CPos, EditorEngine, FileExtensionToken, FilePathToken, RingBuffer,
-                assert_eq2, c_caret, c_col, c_height, c_len, c_row, c_width, vp_caret,
-                vp_pos};
+                c_caret, c_col, c_height, c_len, c_row, c_width, vp_caret, vp_pos};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {

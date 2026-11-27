@@ -46,38 +46,32 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 //! [`Perform`]: vte::Perform
-//! [`pty_mux`]: mod@crate::core::pty_mux
+//! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`VTE`]: mod@vte
 
 #![rustfmt::skip]
 
-// Attach.
-pub mod ansi_parser_public_api;
-pub mod ofs_buf_vt_100;
-pub mod parser_state;
-pub mod performer;
-pub mod protocols;
-pub mod pty_response_event;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod ops; // Cross-folder conformance test rustdoc links.
+pub(crate) mod ops_impl_ofs_buf; // Cross-folder conformance test rustdoc links.
+pub(crate) mod performer; // Cross-folder rustdoc module link (screen_operations_rendered).
+pub(crate) mod vt_100_pty_output_conformance_tests; // Crate-wide test helpers (nz) and cross-folder rustdoc links.
+
+// Attach. Folder-local (Intra-module).
+mod ansi_parser_public_api;
 mod modes;
+mod ofs_buf_vt_100;
+mod parser_state;
+mod protocols;
+mod pty_response_event;
 
-// `VT-100` conformance tests module
-pub mod vt_100_pty_output_conformance_tests;
+// Test fixtures.
+#[cfg(any(test, doc))]
+mod test_fixtures_ofs_buf_vt_100;
 
-// Re-export for tests and docs.
-#[cfg(any(test, doc))]
-pub mod ops;
-#[cfg(not(any(test, doc)))]
-mod ops;
-#[cfg(any(test, doc))]
-pub mod ops_impl_ofs_buf;
-#[cfg(not(any(test, doc)))]
-mod ops_impl_ofs_buf;
-#[cfg(any(test, doc))]
-pub mod test_fixtures_ofs_buf_vt_100;
-
-// Re-export public API.
+// Re-export.
 pub use ansi_parser_public_api::*;
 pub use modes::*;
 pub use ofs_buf_vt_100::*;
@@ -86,8 +80,3 @@ pub use ops_impl_ofs_buf::*;
 pub use parser_state::*;
 pub use protocols::*;
 pub use pty_response_event::*;
-
-// Test fixtures for `OfsBufVT100`.
-#[cfg(any(test, doc))]
-#[allow(unused_imports)]
-pub use test_fixtures_ofs_buf_vt_100::*;

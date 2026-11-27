@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{CPos, CRow, CWidth, c_width};
-use crate::{VPWidth, generate_canvas_index_type_impl};
+use crate::VPWidth;
 use std::ops::Add;
 
 /// Absolute 0-based column index in the continuous storage buffer space (64-bit

@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, Surface, VPBoundingBox};
+use crate::{FlexBox, FlexBoxId, InputEvent, Surface, VPBoundingBox};
 use std::fmt::Debug;
 
 /// See [`crate::App`].
@@ -54,7 +54,7 @@ where
         current_box: FlexBox,
         surface_bounds: VPBoundingBox,
         has_focus: &mut HasFocus,
-    ) -> CommonResult;
+    ) -> miette::Result<()>;
 
     /// If this component has focus [`HasFocus`] then this method will be called to handle
     /// input event that is meant for it.
@@ -80,7 +80,7 @@ where
         global_data: &mut GlobalData<S, AS>,
         input_event: InputEvent,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation>;
+    ) -> miette::Result<EventPropagation>;
 }
 
 pub trait SurfaceRender<S, AS>
@@ -97,5 +97,5 @@ where
         global_data: &mut GlobalData<S, AS>,
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult;
+    ) -> miette::Result<()>;
 }

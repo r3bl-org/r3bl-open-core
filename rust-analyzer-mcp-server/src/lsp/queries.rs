@@ -25,7 +25,7 @@ impl RustAnalyzerClient {
         uri: DocumentUriRef<'_>,
         content: &str,
     ) -> Result<(), McpServerError> {
-        if self.open_documents.contains(&uri.to_string()) {
+        if self.open_documents.iter().any(|it| it == uri) {
             return ok!();
         }
 
@@ -38,7 +38,7 @@ impl RustAnalyzerClient {
             }
         });
 
-        self.send_notification(lsp_methods::DID_OPEN, Some(params))?;
+        self.try_send_notification(lsp_methods::DID_OPEN, Some(params))?;
         self.open_documents.push(uri.to_string());
 
         ok!()
@@ -60,7 +60,7 @@ impl RustAnalyzerClient {
             "position": { "line": line, "character": character }
         });
 
-        self.send_request(lsp_methods::HOVER, Some(params))
+        self.try_send_request(lsp_methods::HOVER, Some(params))
     }
 
     /// Requests symbol definition locations for a specific file position.
@@ -79,7 +79,7 @@ impl RustAnalyzerClient {
             "position": { "line": line, "character": character }
         });
 
-        self.send_request(lsp_methods::DEFINITION, Some(params))
+        self.try_send_request(lsp_methods::DEFINITION, Some(params))
     }
 
     /// Requests all references to the symbol at a given position across the workspace.
@@ -99,7 +99,7 @@ impl RustAnalyzerClient {
             "context": { "includeDeclaration": true }
         });
 
-        self.send_request(lsp_methods::REFERENCES, Some(params))
+        self.try_send_request(lsp_methods::REFERENCES, Some(params))
     }
 
     /// Requests context-aware code completion items for a given file position.
@@ -118,7 +118,7 @@ impl RustAnalyzerClient {
             "position": { "line": line, "character": character }
         });
 
-        self.send_request(lsp_methods::COMPLETION, Some(params))
+        self.try_send_request(lsp_methods::COMPLETION, Some(params))
     }
 
     /// Requests document outline symbols (functions, structs, traits, modules).
@@ -134,7 +134,7 @@ impl RustAnalyzerClient {
             "textDocument": { "uri": uri }
         });
 
-        self.send_request(lsp_methods::DOCUMENT_SYMBOL, Some(params))
+        self.try_send_request(lsp_methods::DOCUMENT_SYMBOL, Some(params))
     }
 
     /// Requests document formatting edits from `rust-analyzer`.
@@ -154,7 +154,7 @@ impl RustAnalyzerClient {
             }
         });
 
-        self.send_request(lsp_methods::FORMATTING, Some(params))
+        self.try_send_request(lsp_methods::FORMATTING, Some(params))
     }
 
     /// Checks whether an LSP diagnostic intersects the given selection line range.
@@ -236,7 +236,7 @@ impl RustAnalyzerClient {
             }
         });
 
-        self.send_request(lsp_methods::CODE_ACTION, Some(params))
+        self.try_send_request(lsp_methods::CODE_ACTION, Some(params))
     }
 }
 

@@ -15,11 +15,14 @@
 //! used by the specialized parsers.
 //!
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
-//! tests in [`crate::parse_fragments_in_a_line`].
+//! tests in [`parse_fragments_in_a_line`].
+//!
+//! [`parse_fragments_in_a_line`]: mod@super::parse_fragments_in_a_line
 
+use super::specialized_parser_delim_matchers;
 use crate::{BACK_TICK, DEBUG_MD_PARSER_STDOUT, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
             NEW_LINE_CHAR, NUL_CHAR, NUL_STR, STAR, UNDERSCORE, fg_blue, fg_magenta,
-            fg_red, is_any_of, specialized_parser_delim_matchers};
+            fg_red, is_any_of};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{tag, take_till1},
@@ -251,7 +254,6 @@ fn tuple7<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T, &T) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_parse_plain_text_with_null_padding() {

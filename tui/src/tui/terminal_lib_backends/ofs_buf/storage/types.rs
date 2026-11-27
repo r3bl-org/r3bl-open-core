@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{GetMemSize, PixelChar, RangeExclusive, VPLength, VPRow, Viewport,
-            ViewportPanValidity};
+use crate::{GetMemSize, OfsBufBoundsError, PixelChar, RangeExclusive, VPLength, VPRow,
+            Viewport, ViewportPanValidity};
 
 /// Abstract 2D storage engine backing an [`OfsBuf`].
 ///
@@ -27,9 +27,9 @@ use crate::{GetMemSize, PixelChar, RangeExclusive, VPLength, VPRow, Viewport,
 /// scrolling a line off the top (which is what normal screen apps expect terminal
 /// emulators to do). We initially added vertical scrollback by pairing [`OfsBuf`] with an
 /// external helper struct. However, spreading scrollback logic across multiple components
-/// fragmented state management and violated our Single Source of Truth principles (SSOT).
+/// fragmented state management.
 ///
-/// We introduced [`CanvasStorage`] to establish clean SSOT boundaries. This trait
+/// We introduced [`CanvasStorage`] to establish clean ownership boundaries. This trait
 /// decouples high-level buffer logic (drawing, styling, diffing) from physical memory
 /// layout, letting us plug in [`GrowableBuffer`]. [`GrowableBuffer`] uses a
 /// [`VecDeque`]-backed engine that unifies vertical scrollback history with 2D (Up/Down
@@ -85,7 +85,7 @@ use crate::{GetMemSize, PixelChar, RangeExclusive, VPLength, VPRow, Viewport,
 /// 3. [`pty_mux`] ([`mod.rs`]): UX & Parser Level — *The "How It's Triggered"* (Viewport
 ///    mechanics, mouse scroll vs horizontal pan, and [`VT-100`] parser cursor anchoring).
 ///
-/// [`Flat2DArray`]: crate::core::common::flat_2d_array::Flat2DArray
+/// [`Flat2DArray`]: crate::Flat2DArray
 /// [`get_viewport`]: Self::get_viewport
 /// [`growable_buffer.rs`]: crate::tui::GrowableBuffer
 /// [`GrowableBuffer`]: crate::tui::GrowableBuffer
@@ -261,7 +261,7 @@ pub trait CanvasStorage: GetMemSize {
         &mut self,
         row_index_1: VPRow,
         row_index_2: VPRow,
-    ) -> miette::Result<()>;
+    ) -> Result<(), OfsBufBoundsError>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

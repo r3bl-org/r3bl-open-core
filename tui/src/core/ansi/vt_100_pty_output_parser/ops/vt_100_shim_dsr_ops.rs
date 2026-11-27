@@ -52,13 +52,13 @@
 //!
 //! [`CSI`]: crate::CsiSequence
 //! [`DSR`]: crate::DsrSequence
-//! [`test_dsr_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
+//! [`test_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_dsr_ops
 //! [`vt_100_impl_dsr_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_dsr_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
 //! [ops module]: crate::core::ansi::vt_100_pty_output_parser::ops
 
-use crate::{DEBUG_TUI_VT100_PARSER,
+use crate::{DEBUG_VT100_PARSER,
             core::ansi::{generator::DsrRequestType,
                          vt_100_pty_output_parser::ansi_parser_public_api::AnsiToOfsBufPerformer}};
 
@@ -79,7 +79,7 @@ pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
             performer.ofs_buf_vt_100.handle_cursor_position_request();
         }
         DsrRequestType::Other(n) => {
-            DEBUG_TUI_VT100_PARSER.then(|| {
+            DEBUG_VT100_PARSER.then(|| {
                 tracing::warn!(
                     "CSI {}n (DSR): Unsupported device status report request",
                     n

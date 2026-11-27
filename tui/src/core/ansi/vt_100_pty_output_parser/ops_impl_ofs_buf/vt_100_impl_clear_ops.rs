@@ -2,7 +2,7 @@
 
 use crate::{ArrayBoundsCheck as _, ArrayOverflowResult, CursorBoundsCheck as _,
             NarrowingCastToU16, OfsBufVT100, PixelChar, RangeBoundsExt as _,
-            RangeExt as _, VPHeight, VPRow, glyphs::SPACER_GLYPH_CHAR, ok, vp_height,
+            RangeExt as _, VPHeight, VPRow, glyphs::SPACER_GLYPH_CHAR, vp_height,
             vp_width};
 use std::cmp::min;
 
@@ -65,7 +65,7 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails (though bounded safely).
-    pub fn erase_line_from_cursor_to_end(&mut self) -> miette::Result<()> {
+    pub fn erase_line_from_cursor_to_end(&mut self) {
         let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let cursor_col = self.get_active_screen_buffer().get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
@@ -76,7 +76,6 @@ impl OfsBufVT100 {
                 row[(cursor_col..).as_usize_range()].fill(empty_char);
             }
         }
-        ok!()
     }
 
     /// Clears the line from the beginning of the line to the cursor (for `EL 1` - Erase
@@ -107,7 +106,7 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails (though bounded safely).
-    pub fn erase_line_from_start_to_cursor(&mut self) -> miette::Result<()> {
+    pub fn erase_line_from_start_to_cursor(&mut self) {
         let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let cursor_col = self.get_active_screen_buffer().get_cursor_pos().col_index;
         let empty_char = self.create_empty_pixel_char();
@@ -117,7 +116,6 @@ impl OfsBufVT100 {
             let end_col = min(cursor_col.convert_to_length(), row_width);
             row[(..end_col).as_usize_range()].fill(empty_char);
         }
-        ok!()
     }
 
     /// Clears the entire current line (for `EL 2` - Erase in Line). All characters on the
@@ -147,15 +145,13 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails (though bounded safely).
-    pub fn erase_line_entire(&mut self) -> miette::Result<()> {
+    pub fn erase_line_entire(&mut self) {
         let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
 
         if let Some(row) = self.get_active_screen_buffer_mut().get_row_mut(cursor_row) {
             row.fill(empty_char);
         }
-
-        ok!()
     }
 
     /// Clears the display from the cursor to the end of the screen (for `ED 0` - Erase in
@@ -194,8 +190,8 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails.
-    pub fn erase_display_from_cursor_to_end(&mut self) -> miette::Result<()> {
-        self.erase_line_from_cursor_to_end()?;
+    pub fn erase_display_from_cursor_to_end(&mut self) {
+        self.erase_line_from_cursor_to_end();
 
         let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
@@ -207,8 +203,6 @@ impl OfsBufVT100 {
         let range_to_clear = (start_row..end_row).clamp_range_to(buffer_height);
 
         active_buf.fill_row_range(range_to_clear, empty_char);
-
-        ok!()
     }
 
     /// Clears the display from the beginning of the screen to the cursor (for `ED 1` -
@@ -248,8 +242,8 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails.
-    pub fn erase_display_from_start_to_cursor(&mut self) -> miette::Result<()> {
-        self.erase_line_from_start_to_cursor()?;
+    pub fn erase_display_from_start_to_cursor(&mut self) {
+        self.erase_line_from_start_to_cursor();
 
         let cursor_row = self.get_active_screen_buffer().get_cursor_pos().row_index;
         let empty_char = self.create_empty_pixel_char();
@@ -260,8 +254,6 @@ impl OfsBufVT100 {
             (VPRow::from(0)..cursor_row).clamp_range_to(vp_height(buffer_height));
 
         active_buf.fill_row_range(clear_range, empty_char);
-
-        ok!()
     }
 
     /// Clears the entire screen display (for `ED 2` - Erase in Display). All lines are
@@ -300,11 +292,10 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the operation fails.
-    pub fn erase_display_entire(&mut self) -> miette::Result<()> {
+    pub fn erase_display_entire(&mut self) {
         let empty_char = self.create_empty_pixel_char();
         self.get_active_screen_buffer_mut()
             .clear_viewport_with(empty_char);
-        ok!()
     }
 
     /// Clears the entire scrollback buffer (for `ED 3` - Erase in Display).
@@ -330,9 +321,8 @@ impl OfsBufVT100 {
     /// [1]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
     /// [2]: https://wezterm.org/config/lua/keyassignment/ClearScrollback.html
     /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
-    pub fn erase_display_scrollback(&mut self) -> miette::Result<()> {
+    pub fn erase_display_scrollback(&mut self) {
         self.primary_buffer_mut().clear_scrollback();
-        ok!()
     }
 }
 
@@ -381,8 +371,7 @@ mod tests {
     #[test]
     fn test_erase_line_from_cursor_to_end() {
         let mut buf = create_test_buffer();
-        buf.erase_line_from_cursor_to_end()
-            .expect("conversion error");
+        buf.erase_line_from_cursor_to_end();
 
         assert_char_eq(
             &buf.primary_buffer_mut()
@@ -407,8 +396,7 @@ mod tests {
     #[test]
     fn test_erase_line_from_start_to_cursor() {
         let mut buf = create_test_buffer();
-        buf.erase_line_from_start_to_cursor()
-            .expect("conversion error");
+        buf.erase_line_from_start_to_cursor();
 
         assert_char_eq(
             &buf.primary_buffer_mut()
@@ -439,8 +427,7 @@ mod tests {
     #[test]
     fn test_erase_display_from_cursor_to_end() {
         let mut buf = create_test_buffer();
-        buf.erase_display_from_cursor_to_end()
-            .expect("conversion error");
+        buf.erase_display_from_cursor_to_end();
 
         assert_char_eq(
             &buf.primary_buffer_mut()
@@ -476,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_bce_strips_attributes_but_keeps_bg_color() {
-        use crate::{tui_color, tui_style_attrib};
+        use crate::tui_style_attrib;
 
         let mut buf = create_test_buffer();
 
@@ -540,13 +527,13 @@ mod tests {
         assert!(buf.primary_buffer_mut().get_mem_size() > 0);
 
         // Clear the scrollback
-        buf.erase_display_scrollback().expect("conversion error");
+        buf.erase_display_scrollback();
 
         assert_eq!(buf.primary_buffer_mut().get_lines().len(), initial_len);
     }
 
     #[test]
-    fn test_erase_line_from_cursor_to_end_and_start_to_cursor() -> miette::Result<()> {
+    fn test_erase_line_from_cursor_to_end_and_start_to_cursor() {
         use crate::{vp_col, vp_row};
 
         let mut buf = create_test_buffer();
@@ -561,7 +548,7 @@ mod tests {
         }
 
         // Erase from cursor (col 2) to end of line
-        buf.erase_line_from_cursor_to_end()?;
+        buf.erase_line_from_cursor_to_end();
         let r0 = buf.get_active_screen_buffer().get_row(vp_row(0)).unwrap();
         assert_eq!(
             r0[0],
@@ -587,7 +574,7 @@ mod tests {
                 style: TuiStyle::default(),
             });
         }
-        buf.erase_line_from_start_to_cursor()?;
+        buf.erase_line_from_start_to_cursor();
         let r1 = buf.get_active_screen_buffer().get_row(vp_row(1)).unwrap();
         assert_eq!(r1[0], buf.create_empty_pixel_char());
         assert_eq!(r1[1], buf.create_empty_pixel_char());
@@ -599,7 +586,5 @@ mod tests {
                 style: TuiStyle::default()
             }
         );
-
-        Ok(())
     }
 }

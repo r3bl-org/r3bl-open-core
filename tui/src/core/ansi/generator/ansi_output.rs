@@ -58,7 +58,7 @@
 //! [`.into_bytes()`]: String::into_bytes()
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CsiSequence`]: crate::CsiSequence
-//! [`FastStringify`]: crate::fast_stringify::FastStringify
+//! [`FastStringify`]: crate::FastStringify
 //! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 use crate::{ColorTarget, SgrAttributeSequence, SgrColorSequence, TermRowDelta, TuiColor,
@@ -476,7 +476,7 @@ mod tests {
         use crate::{SGR_RESET_STR, TermCol, TermRowDelta, ansi_output};
 
         // Measure actual bytes produced by the 5 escape sequences used in
-        // print_line_and_advance:
+        // try_print_line_and_advance:
         // 1. cursor_to_column(`TermCol::ONE`)
         // 2. SGR_RESET_STR
         // 3. clear_current_line()

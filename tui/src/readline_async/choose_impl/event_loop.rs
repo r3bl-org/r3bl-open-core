@@ -1,9 +1,9 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::KeyPressReader;
-use crate::{CalculateResizeHint, CommonResult, FunctionComponent, InputDevice,
+use crate::{CalculateResizeHint, ChooseError, FunctionComponent, InputDevice,
             InputEvent, ItemsOwned, TTYResult, TerminalModeController,
-            emit_stderr_redirection_disclaimer, is_output_interactive, ok};
+            emit_stderr_redirection_disclaimer, is_output_interactive};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::large_enum_variant)]
@@ -20,12 +20,12 @@ pub enum EventLoopResult {
 /// # Errors
 ///
 /// Returns an error if the event loop encounters a terminal I/O error.
-pub async fn enter_event_loop_async<S: CalculateResizeHint>(
+pub async fn try_enter_event_loop_async<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
     mut on_keypress_fn: impl FnMut(&mut S, InputEvent) -> EventLoopResult,
     input_device: &mut InputDevice,
-) -> CommonResult<EventLoopResult> {
+) -> Result<EventLoopResult, ChooseError> {
     use EventLoopResult::ExitWithError;
 
     if let TTYResult::IsNotInteractive = is_output_interactive() {
@@ -34,7 +34,7 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
 
     emit_stderr_redirection_disclaimer();
 
-    run_before_event_loop(state, function_component)?;
+    try_run_before_event_loop(state, function_component)?;
 
     let return_this: EventLoopResult;
 
@@ -50,12 +50,14 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
             }
         } else {
             return_this = ExitWithError;
-            function_component.clear_viewport(state)?;
+            function_component
+                .clear_viewport(state)
+                .map_err(ChooseError::Io)?;
             break;
         }
     }
 
-    run_after_event_loop(function_component)?;
+    try_run_after_event_loop(function_component)?;
 
     Ok(return_this)
 }
@@ -63,12 +65,12 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
 /// # Errors
 ///
 /// Returns an error if the event loop encounters a terminal I/O error.
-pub fn enter_event_loop_sync<S: CalculateResizeHint>(
+pub fn try_enter_event_loop_sync<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
     mut on_keypress_fn: impl FnMut(&mut S, InputEvent) -> EventLoopResult,
     key_press_reader: &mut impl KeyPressReader,
-) -> CommonResult<EventLoopResult> {
+) -> Result<EventLoopResult, ChooseError> {
     use EventLoopResult::ExitWithError;
 
     if let TTYResult::IsNotInteractive = is_output_interactive() {
@@ -77,7 +79,7 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
 
     emit_stderr_redirection_disclaimer();
 
-    run_before_event_loop(state, function_component)?;
+    try_run_before_event_loop(state, function_component)?;
 
     let return_this: EventLoopResult;
 
@@ -94,34 +96,42 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
             }
         } else {
             return_this = ExitWithError;
-            function_component.clear_viewport(state)?;
+            function_component
+                .clear_viewport(state)
+                .map_err(ChooseError::Io)?;
             break;
         }
     }
 
-    run_after_event_loop(function_component)?;
+    try_run_after_event_loop(function_component)?;
 
     Ok(return_this)
 }
 
-fn run_before_event_loop<S: CalculateResizeHint>(
+fn try_run_before_event_loop<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
-) -> CommonResult {
-    function_component.get_output_device().hide_cursor()?;
-    crate::enable_raw_mode()?;
+) -> Result<(), ChooseError> {
+    function_component
+        .get_output_device()
+        .hide_cursor()
+        .map_err(ChooseError::TerminalIo)?;
+    crate::try_enable_raw_mode().map_err(ChooseError::RawMode)?;
 
     // First render before blocking the main thread for user input.
-    function_component.render(state)?;
+    function_component.render(state).map_err(ChooseError::Io)?;
 
     ok!()
 }
 
-fn run_after_event_loop<S: CalculateResizeHint>(
+fn try_run_after_event_loop<S: CalculateResizeHint>(
     function_component: &mut impl FunctionComponent<S>,
-) -> CommonResult {
-    function_component.get_output_device().show_cursor()?;
-    crate::disable_raw_mode()?;
+) -> Result<(), ChooseError> {
+    function_component
+        .get_output_device()
+        .show_cursor()
+        .map_err(ChooseError::TerminalIo)?;
+    crate::try_disable_raw_mode().map_err(ChooseError::RawMode)?;
     ok!()
 }
 

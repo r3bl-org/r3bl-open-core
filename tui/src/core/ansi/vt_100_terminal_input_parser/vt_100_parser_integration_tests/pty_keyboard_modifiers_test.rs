@@ -71,7 +71,6 @@ use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_
                          vt_100_terminal_input_parser::ir_event_types::{VT100InputEventIR,
                                                                         VT100KeyCodeIR,
                                                                         VT100KeyModifiersIR}},
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::Write, time::Duration};
 
@@ -152,6 +151,7 @@ fn controller(context: PtyTestContext) {
 /// performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
     println!("{MSG_CONTROLLED_STARTING}");
@@ -161,12 +161,12 @@ fn controlled() {
 
     runtime.block_on(async {
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Starting...");
-        let mut input_device = DirectToAnsiInputDevice::new()
+        let mut input_device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Device created, reading events...");
 
         // Signal to controller that we're ready to receive input. MUST be after
-        // DirectToAnsiInputDevice::new() so the mio poller thread is already
+        // DirectToAnsiInputDevice::try_new() so the mio poller thread is already
         // watching stdin before the controller sends any input through the PTY.
         println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("Failed to flush");

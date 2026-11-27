@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-pub mod fixtures;
-pub mod group_b_run_worker_loop;
-pub mod group_c_rrt_integration;
+// Attach.
+mod fixtures;
+mod group_b_run_worker_loop;
+mod group_c_rrt_integration;
 
-use crate::generate_isolated_process_test;
 use fixtures::controller_fn;
 
 #[test]

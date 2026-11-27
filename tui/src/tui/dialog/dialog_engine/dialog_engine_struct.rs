@@ -31,27 +31,27 @@ pub struct DialogEngine {
     /// - The colors it cycles through are "stable" meaning that once constructed via the
     ///   [`ColorWheel::new()`] (which sets the options that determine where the color
     ///   wheel starts when it is used). For eg, between repeated calls to
-    ///   [`DialogEngineApi::render_engine`] which uses the same [`ColorWheel`] instance,
+    ///   [`DialogEngineApi::try_render_engine`] which uses the same [`ColorWheel`] instance,
     ///   the generated colors will be the same.
     /// - If you want to change where the color wheel "begins", you have to change
     ///   [`ColorWheelConfig`] options used to create this instance.
     ///
     /// [`ColorWheel::new()`]: ColorWheel::new
-    /// [`DialogEngineApi::render_engine`]: crate::DialogEngineApi::render_engine
+    /// [`DialogEngineApi::try_render_engine`]: crate::DialogEngineApi::try_render_engine
     /// [`new()`]: DialogEngine::new
     pub color_wheel: ColorWheel,
 
     /// This is evaluated and saved when
-    /// [`DialogEngineApi::render_engine`] is
+    /// [`DialogEngineApi::try_render_engine`] is
     /// called. The dialog box is rendered outside of any layout [`crate::FlexBox`] or
     /// [`crate::Surface`], so it just paints itself to the screen on top of everything
     /// else.
     ///
-    /// [`DialogEngineApi::render_engine`]: crate::DialogEngineApi::render_engine
+    /// [`DialogEngineApi::try_render_engine`]: crate::DialogEngineApi::try_render_engine
     pub maybe_flex_box: Option<(
         /* window size: */ VPSize,
         /* mode: */ DialogEngineMode,
-        /* flex box calculated by render_engine(): */ PartialFlexBox,
+        /* flex box calculated by try_render_engine(): */ PartialFlexBox,
     )>,
 
     pub maybe_surface_bounds: Option<VPBoundingBox>,

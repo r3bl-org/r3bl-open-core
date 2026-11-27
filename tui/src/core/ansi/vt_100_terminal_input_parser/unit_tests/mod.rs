@@ -19,5 +19,6 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [parent module]: super#testing-strategy
 
+// Attach.
 #[cfg(any(test, doc))]
-pub mod generator_round_trip_tests;
+pub(crate) mod generator_round_trip_tests; // Linked by validation_tests.

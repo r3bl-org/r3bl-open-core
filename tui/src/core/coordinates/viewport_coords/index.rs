@@ -3,7 +3,7 @@
 //! Zero-based character position for terminal UI - see [`VPIndex`] type.
 
 use super::{VPLength, vp_len};
-use crate::{ChUnit, VPCol, VPRow, generate_index_type_impl};
+use crate::{ChUnit, VPCol, VPRow};
 use std::hash::Hash;
 
 /// Represents an index position in character units within a viewport.

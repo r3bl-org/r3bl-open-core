@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppSignal, ColumnComponent, State};
-use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
+use r3bl_tui::{App, BoxedSafeApp, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, Continuation, EventPropagation, FlexBoxId, GlobalData,
                HasFocus, InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement,
                LengthOps, PerformPositioningAndSizing, RenderOpCommon, RenderOpIR,
@@ -72,7 +72,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Try to handle left and right arrow key input events & return if handled.
             if let Continuation::Stop =
                 handle_focus::handle_focus_switch(input_event.clone(), has_focus)
@@ -95,7 +95,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let stack = &mut global_data.state.stack;
                 match action {
@@ -128,7 +128,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let window_size = global_data.window_size;
 
             // Create a surface and then run the SurfaceRenderer.
@@ -186,7 +186,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Layout and render the container.
             // Container - start.
             let id_container = FlexBoxId::from(Id::Container);
@@ -342,7 +342,7 @@ mod stylesheet {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style!(

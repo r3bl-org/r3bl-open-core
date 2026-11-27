@@ -139,7 +139,7 @@ impl RustAnalyzerClient {
     /// fails.
     ///
     /// [`stdin`]: std::io::stdin
-    pub fn send_notification(
+    pub fn try_send_notification(
         &mut self,
         method: &str,
         params: Option<Value>,
@@ -162,7 +162,8 @@ impl RustAnalyzerClient {
             })
         };
 
-        let body_bytes = serde_json::to_vec(&notification_json)?;
+        let body_bytes =
+            serde_json::to_vec(&notification_json).map_err(McpServerError::Json)?;
 
         let header = format!(
             "{}{}\r\n\r\n",
@@ -177,9 +178,13 @@ impl RustAnalyzerClient {
             };
         });
 
-        stdin_writer.write_all(header.as_bytes())?;
-        stdin_writer.write_all(&body_bytes)?;
-        stdin_writer.flush()?;
+        stdin_writer
+            .write_all(header.as_bytes())
+            .map_err(McpServerError::Io)?;
+        stdin_writer
+            .write_all(&body_bytes)
+            .map_err(McpServerError::Io)?;
+        stdin_writer.flush().map_err(McpServerError::Io)?;
 
         ok!()
     }
@@ -192,7 +197,7 @@ impl RustAnalyzerClient {
     /// Returns [`McpServerError::ClientNotAvailable`] if not connected,
     /// [`McpServerError::RequestCancelled`] on timeout, or
     /// [`McpServerError::Io`] / [`McpServerError::Json`] on failure.
-    pub fn send_request(
+    pub fn try_send_request(
         &mut self,
         method: &str,
         params: Option<Value>,
@@ -222,7 +227,8 @@ impl RustAnalyzerClient {
             })
         };
 
-        let body_bytes = serde_json::to_vec(&request_json)?;
+        let body_bytes =
+            serde_json::to_vec(&request_json).map_err(McpServerError::Json)?;
 
         let header = format!(
             "{}{}\r\n\r\n",
@@ -243,9 +249,13 @@ impl RustAnalyzerClient {
             .as_mut()
             .ok_or(McpServerError::ClientNotAvailable)?;
 
-        stdin_writer.write_all(header.as_bytes())?;
-        stdin_writer.write_all(&body_bytes)?;
-        stdin_writer.flush()?;
+        stdin_writer
+            .write_all(header.as_bytes())
+            .map_err(McpServerError::Io)?;
+        stdin_writer
+            .write_all(&body_bytes)
+            .map_err(McpServerError::Io)?;
+        stdin_writer.flush().map_err(McpServerError::Io)?;
 
         // Wait for response payload on single-use receiver with timeout.
         let timeout = Duration::from_secs(timing::LSP_REQUEST_TIMEOUT_SECS);
@@ -274,12 +284,13 @@ impl RustAnalyzerClient {
 mod tests {
     use super::*;
     use crate::lsp::readiness_types::IndexingStatus;
-    use std::{collections::HashMap, sync::Mutex};
+    use r3bl_tui::HashMap;
+    use std::sync::Mutex;
 
     #[test]
     fn test_process_incoming_json_routes_response_success() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
         let (tx, rx) = sync_channel(1);
         pending.lock().unwrap().insert(JsonRpcRequestId(42), tx);
@@ -300,8 +311,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_routes_response_error() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
         let (tx, rx) = sync_channel(1);
         pending.lock().unwrap().insert(JsonRpcRequestId(99), tx);
@@ -321,8 +332,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_caches_publish_diagnostics() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         let json_payload = r#"{
@@ -351,8 +362,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_updates_server_status_and_signals_condvar() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         let json_payload = r#"{
@@ -379,8 +390,8 @@ mod tests {
 
     #[test]
     fn test_process_incoming_json_handles_invalid_json() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
-        let diags = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
+        let diags = Arc::new(Mutex::new(HashMap::default()));
         let readiness_monitor = Arc::new(ServerReadinessMonitor::default());
 
         // Should not panic on malformed JSON
@@ -402,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_deliver_response_unknown_id_does_not_panic() {
-        let pending = Arc::new(Mutex::new(HashMap::new()));
+        let pending = Arc::new(Mutex::new(HashMap::default()));
         RustAnalyzerClient::deliver_response(
             &pending,
             JsonRpcRequestId(9999),

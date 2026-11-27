@@ -609,7 +609,6 @@ impl TransformColor for TuiColor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
     use test_case::test_case;
 
     #[test]

@@ -66,7 +66,7 @@
 //! [`CSI`]: crate::CsiSequence
 //! [`extract_nth_single_non_zero()`]: crate::ParamsExt::extract_nth_single_non_zero
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`test_char_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
+//! [`test_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_char_ops
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 //! [`vt_100_impl_char_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_char_ops
 //! [module-level Architecture Overview]: super#architecture-overview
@@ -84,15 +84,15 @@ use std::debug_assert_matches;
 /// **Behavior**: Characters to the right of cursor shift right, characters beyond margin
 /// are lost.
 ///
-/// See [`OfsBufVT100::insert_chars`] for the implementation of this
+/// See [`OfsBufVT100::try_insert_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::insert_chars`]: crate::core::ansi::OfsBufVT100::insert_chars
+/// [`OfsBufVT100::try_insert_chars`]: crate::core::ansi::OfsBufVT100::try_insert_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.insert_chars(how_many);
+    let result = performer.ofs_buf_vt_100.try_insert_chars(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
@@ -111,15 +111,15 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// **Behavior**: Characters to the right of cursor shift left, blanks are inserted at
 /// line end.
 ///
-/// See [`OfsBufVT100::delete_chars`] for the implementation of this
+/// See [`OfsBufVT100::try_delete_chars`] for the implementation of this
 /// shim.
 ///
-/// [`OfsBufVT100::delete_chars`]: crate::core::ansi::OfsBufVT100::delete_chars
+/// [`OfsBufVT100::try_delete_chars`]: crate::core::ansi::OfsBufVT100::try_delete_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.delete_chars(how_many);
+    let result = performer.ofs_buf_vt_100.try_delete_chars(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
@@ -137,14 +137,14 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// **Behavior**: Characters are replaced with blanks, no shifting occurs (unlike DCH).
 ///
-/// See [`OfsBufVT100::clear_chars`] for the implementation of this shim.
+/// See [`OfsBufVT100::try_clear_chars`] for the implementation of this shim.
 ///
-/// [`OfsBufVT100::clear_chars`]: crate::core::ansi::OfsBufVT100::clear_chars
+/// [`OfsBufVT100::try_clear_chars`]: crate::core::ansi::OfsBufVT100::try_clear_chars
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.clear_chars(how_many);
+    let result = performer.ofs_buf_vt_100.try_clear_chars(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
@@ -161,13 +161,13 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 /// **[`VT-100`] Behavior**: Character set translation applied if [`DEC`] graphics mode is
 /// active.
 ///
-/// See [`OfsBufVT100::print_char`] for the implementation of this shim.
+/// See [`OfsBufVT100::try_print_char`] for the implementation of this shim.
 ///
 /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-/// [`OfsBufVT100::print_char`]: crate::core::ansi::OfsBufVT100::print_char
+/// [`OfsBufVT100::try_print_char`]: crate::core::ansi::OfsBufVT100::try_print_char
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
-    let result = performer.ofs_buf_vt_100.print_char(ch);
+    let result = performer.ofs_buf_vt_100.try_print_char(ch);
     debug_assert_matches!(
         result,
         Ok(()),

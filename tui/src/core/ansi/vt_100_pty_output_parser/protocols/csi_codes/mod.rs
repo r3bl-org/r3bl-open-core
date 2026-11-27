@@ -12,7 +12,7 @@
 //! flexibility:
 //!
 //! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC
-//!   7` (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
+//!   7` (save cursor) or `ESC D` (move down one line). See [`EscSequence`] for details.
 //! - **[`CSI`] sequences** (modern approach): Parameterized commands like `ESC [ s` (save
 //!   cursor) or `ESC [ 5 B` (move down 5 lines). The parameters make them much more
 //!   flexible.
@@ -42,8 +42,8 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CSI`]: crate::CsiSequence
-//! [`esc_codes`]: crate::core::ansi::vt_100_pty_output_parser::protocols::esc_codes
 //! [`ESC`]: crate::EscSequence
+//! [`EscSequence`]: crate::EscSequence
 
 // Attach private module to avoid naming conflicts (hide inner details).
 mod erase_mode;

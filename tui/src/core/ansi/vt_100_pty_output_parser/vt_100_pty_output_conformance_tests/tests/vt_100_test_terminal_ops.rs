@@ -16,7 +16,7 @@ use crate::{CharacterSet, EscSequence, PixelChar, PixelCharLine, TuiStyle, VPPos
             vp_col, vp_row, vp_width};
 
 /// Tests for RIS (Reset to Initial State) operations.
-pub mod reset_initial_state {
+mod reset_initial_state {
     use super::*;
 
     #[test]
@@ -111,7 +111,7 @@ pub mod reset_initial_state {
 }
 
 /// Tests for character set selection operations.
-pub mod character_set_selection {
+mod character_set_selection {
     use super::*;
 
     #[test]

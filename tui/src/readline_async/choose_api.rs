@@ -1,20 +1,39 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEBUG_CHOOSE,
             EventLoopResult, Header, InlineString, InputDevice, InputEvent, IntoErr,
             ItemsOwned, Key, KeyPress, KeyState, ModifierKeysMask, OutputDevice,
-            SelectComponent, SpecialKey, State, StyleSheet, TerminalInteractiveStatus,
-            TuiAvailability, VPHeight, VPWidth, ch, check_is_terminal_interactive,
-            enter_event_loop_async, fg_green, get_size, inline_string,
-            tui::md_parser::md_parser_constants::SPACE_CHAR, usize};
+            RawModeError, SPACE_CHAR, SelectComponent, SpecialKey, State, StyleSheet,
+            TerminalInteractiveStatus, TerminalIoError, TuiAvailability, VPHeight,
+            VPWidth, ch, check_is_terminal_interactive, fg_green,
+            try_enter_event_loop_async, try_get_size, usize};
 use clap::ValueEnum;
 use std::{cmp::min, future::Future, pin::Pin};
+
+/// Errors that can occur while running the interactive [`try_choose`] picker.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum ChooseError {
+    /// Failed to write to or flush the terminal output device.
+    #[error("Terminal I/O failed")]
+    Io(#[source] std::io::Error),
+
+    /// Failed to toggle terminal raw mode.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    RawMode(RawModeError),
+
+    /// Failed to execute a terminal control operation (such as hiding or showing the
+    /// cursor).
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalIo(TerminalIoError),
+}
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
 /// Type alias for the pinned boxed future returned by the choose function.
 pub type ChooseFuture<'a> =
-    Pin<Box<dyn Future<Output = miette::Result<ItemsOwned>> + 'a>>;
+    Pin<Box<dyn Future<Output = Result<ItemsOwned, ChooseError>> + 'a>>;
 
 // XMARK: Box::pin a future that is larger than 16 KiB.
 
@@ -122,7 +141,7 @@ pub type ChooseFuture<'a> =
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`stderr`]: std::io::stderr
 /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
-pub fn choose<'a>(
+pub fn try_choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
     maybe_max_height: Option<VPHeight>,
@@ -140,9 +159,9 @@ pub fn choose<'a>(
         }
 
         TerminalInteractiveStatus::Available => {
-            let initial_size = match get_size() {
+            let initial_size = match try_get_size() {
                 Ok(size) => size,
-                Err(e) => return TuiAvailability::Broken(e),
+                Err(e) => return TuiAvailability::Broken(e.into()),
             };
 
             TuiAvailability::Available(Box::pin(async move {
@@ -190,7 +209,7 @@ pub fn choose<'a>(
                     style: stylesheet,
                 };
 
-                let res_user_input = enter_event_loop_async(
+                let res_user_input = try_enter_event_loop_async(
                     &mut state,
                     &mut function_component,
                     keypress_handler,
@@ -208,9 +227,9 @@ pub fn choose<'a>(
 }
 
 /// Extension trait for [`TuiAvailability<ChooseFuture<'a>>`] to provide a fluent API for
-/// common patterns of using the result of the [`choose`] function.
+/// common patterns of using the result of the [`try_choose`] function.
 ///
-/// The are two patterns of using the result of the [`choose`] function:
+/// The are two patterns of using the result of the [`try_choose`] function:
 /// 1. Single selection. For this we have [`get_first_result()`]. Call sites include
 ///    [`branch_checkout_command.rs`] and [`upgrade_check.rs`].
 /// 2. Multiple selection. For this we have [`get_all_results()`].
@@ -283,9 +302,9 @@ impl TuiAvailabilityChooseExt for TuiAvailability<ChooseFuture<'_>> {
 }
 
 /// This struct is provided for convenience to create a default set of IO devices which
-/// can be used in the [`choose`] function. The reason this has to be created outside of
-/// the [`choose`] function is because mutable references to these devices are passed to
-/// it, and it can't take ownership of them.
+/// can be used in the [`try_choose`] function. The reason this has to be created outside
+/// of the [`try_choose`] function is because mutable references to these devices are
+/// passed to it, and it can't take ownership of them.
 #[allow(missing_debug_implementations)]
 pub struct DefaultIoDevices {
     pub output_device: OutputDevice,
@@ -311,7 +330,7 @@ impl DefaultIoDevices {
 
 #[allow(clippy::needless_pass_by_value)]
 fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResult {
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport()",
@@ -381,7 +400,7 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
         _ => keypress_handler_helper::handle_other_keys(),
     };
 
-    DEVELOPMENT_MODE.then(|| {
+    DEBUG_CHOOSE.then(|| {
         // % is Display, ? is Debug.
         tracing::debug!(
             message = "👉 *after* keypress: locate_cursor_in_viewport()",
@@ -400,7 +419,7 @@ mod keypress_handler_helper {
         state: &mut State,
         size: crate::VPSize,
     ) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "🍎🍎🍎 keypress_handler() resize",
@@ -416,7 +435,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_down_key(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Down");
         });
@@ -439,7 +458,7 @@ mod keypress_handler_helper {
                 // Do nothing.
             }
         }
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "enter_event_loop()::state",
@@ -451,7 +470,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_up_key(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Up");
         });
@@ -477,7 +496,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_enter_key_multi_select(state: &State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Enter on multi-select",
@@ -492,7 +511,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_enter_key_single_select(state: &State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Enter",
@@ -508,7 +527,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_escape_or_ctrl_c() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Esc");
         });
@@ -516,7 +535,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_space_key_multi_select(state: &mut State) -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "Space on multi-select",
@@ -544,7 +563,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_space_key_default() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Space");
         });
@@ -552,7 +571,7 @@ mod keypress_handler_helper {
     }
 
     pub fn handle_other_keys() -> EventLoopResult {
-        DEVELOPMENT_MODE.then(|| {
+        DEBUG_CHOOSE.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(message = "Ignore key event");
         });

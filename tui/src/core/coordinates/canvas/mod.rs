@@ -208,7 +208,7 @@
 //! [`Flat2DArray`]: crate::core::Flat2DArray
 //! [`generate_index_type_impl!`]: crate::generate_index_type_impl
 //! [`GrowableBuffer`]: crate::tui::GrowableBuffer
-//! [`numeric_value`]: mod@crate::numeric_value
+//! [`numeric_value`]: mod@crate::core::coordinates::bounds_check::numeric_value
 //! [`NumericValue`]: crate::core::NumericValue
 //! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`Sub`]: std::ops::Sub

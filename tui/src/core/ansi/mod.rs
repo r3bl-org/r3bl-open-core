@@ -233,50 +233,32 @@
 //! [`SgrCode`]: crate::SgrCode
 //! [`TuiColor`]: crate::TuiColor
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`VT100KeyCodeIR`]: crate::vt_100_terminal_input_parser::VT100KeyCodeIR
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100KeyCodeIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
-//! [`vt_100_terminal_input_parser`]: mod@crate::vt_100_terminal_input_parser
+//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 //! [`VTE`]: mod@vte
 //! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 
 #![rustfmt::skip]
 
-// Public modules.
-pub mod constants;
-pub mod detect_color;
-pub mod osc;
-pub mod vt_100_terminal_input_parser;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod constants; // Cross-folder rustdoc module links (#design, mouse).
+pub(crate) mod osc; // Cross-folder rustdoc module links (direct_to_ansi, osc docs).
+pub(crate) mod terminal_raw_mode; // Cross-folder rustdoc module links and Unix raw-mode tests.
+pub(crate) mod vt_100_pty_output_parser; // Cross-folder rustdoc module links and conformance tests.
+// Production consumer (`DirectToAnsiInputDevice`) is Linux-only (macOS/Windows use
+// Crossterm); `test` and `doc` keep pure-Rust Sans-I/O tests and rustdocs active on all
+// platforms without `dead_code` warnings in non-Linux release builds.
+#[cfg(any(target_os = "linux", test, doc))]
+pub(crate) mod vt_100_terminal_input_parser; // Crate-internal IR parser (not re-exported in public API).
 
-// XMARK: conditional visibility for docs and test only
-
-// Private modules.
+// Attach. Folder-local (Intra-module).
 mod color;
-
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod generator;
-#[cfg(not(any(test, doc)))]
+mod detect_color;
 mod generator;
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod terminal_raw_mode;
-// This module is private in non-test, non-doc builds.
-#[cfg(not(any(test, doc)))]
-mod terminal_raw_mode;
-
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod vt_100_pty_output_parser;
-// This module is private in non-test, non-doc builds.
-#[cfg(not(any(test, doc)))]
-mod vt_100_pty_output_parser;
-
-// Re-export flat public API.
+// Re-export.
 pub use color::*;
 pub use constants::*;
 pub use generator::*;
@@ -285,14 +267,5 @@ pub use vt_100_pty_output_parser::*;
 pub use terminal_raw_mode::*;
 pub use detect_color::*;
 
-// Re-export test fixtures for testing purposes only.
 #[cfg(test)]
-pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
-
-// Rustdoc search link fixes.
-#[cfg(any(test, doc))] // Guard needed: constants sub-modules are only pub in doc/test builds.
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use constants::{csi, da, dsr, esc, generic, input_sequences, mouse, osc_constants, raw_mode_constants, sgr, utf8};
-#[cfg(any(test, doc))]
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use detect_color::detect_color_integration_tests::pty_test_color_detection;
+pub(crate) use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;

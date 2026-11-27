@@ -27,6 +27,9 @@ exclude = [
     # Test fixture URLs in test code (not meant to resolve).
     "^https?://test\\.com",
     "^https?://link1\\.com",
+    "^https?://wrong-url\\.com",
+    "^https?://127\\.0\\.0\\.1",
+    "^https?://localhost",
     # Placeholder images in markdown parser conformance test data.
     "^https?://via\\.placeholder\\.com/",
     # YouTube blocks automated link checkers (returns 404 to bots).
@@ -47,8 +50,16 @@ exclude = [
     # ACM Digital Library blocks automated link checkers (returns 403 to bots via Cloudflare).
     "^https?://(dl\\.)?acm\\.org/",
     "^https?://doi\\.org/10\\.1145/",
+    # invisible-island.net (XTerm docs) blocks automated link checkers (returns 403 to bots).
+    "^https?://invisible-island\\.net/",
     # Release tags not yet pushed to GitHub during release prep.
     "^https?://github\\.com/r3bl-org/r3bl-open-core/blob/v[0-9].*-tui/CHANGELOG\\.md",
+    # Base URL prefix for binary release downloads.
+    "^https?://github\\.com/r3bl-org/r3bl-binaries/releases/download$",
+    # Planned version manifest endpoint not yet published.
+    "^https?://r3bl\\.com/versions\\.jsonc$",
+    # Planned analytics reporting endpoint not yet published.
+    "^https?://r3bl\\.com/add_analytics_event$",
 ]
 
 # Exclude specific files from link checking.

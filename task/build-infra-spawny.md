@@ -7,6 +7,7 @@
 - [Overview](#overview)
     - [Systemd-nspawn Clean-Room Testing](#systemd-nspawn-clean-room-testing)
   - [Standardized mkosi Image Pipeline](#standardized-mkosi-image-pipeline)
+  - [Host Network Isolation](#host-network-isolation)
   - [Privilege Model & Execution Safety](#privilege-model--execution-safety)
   - [Unified CLI Architecture & Command Overview](#unified-cli-architecture--command-overview)
     - [Command Overview](#command-overview)
@@ -38,7 +39,6 @@
 - [Verification Matrix](#verification-matrix)
   - [Distro Coverage Matrix](#distro-coverage-matrix)
   - [Command Verification Checklist](#command-verification-checklist)
-
 <!-- END mktoc -->
 <!-- prettier-ignore-end -->
 
@@ -118,6 +118,44 @@ download scripts with `mkosi` (official systemd project tool):
   compatible) across Ubuntu, Fedora, and Arch. Base tools (`fish`, `curl`, `git`, `sudo`,
   `build-essential` / `base-devel`) are pre-installed in golden images.
 
+### Host Network Isolation
+
+Booting full `systemd` PID 1 containers (`systemd-nspawn -b`) inside the **host's shared
+network namespace** creates severe reliability and security hazards for the host machine:
+
+1. **mDNS & `.local` Hostname Hijacking**: Inside a newly booted guest OS,
+   `systemd-resolved` defaults to `MulticastDNS=yes` and `LLMNR=yes`, and services may
+   start `avahi-daemon`. When sharing the host network namespace, guest responders bind
+   the host's physical NICs on UDP ports `5353`/`5355`, collide with the host's own
+   `avahi-daemon`, and force the host to withdraw its records and rename itself
+   (`<host>-2.local`, `<host>-3.local`, ...), silently breaking LAN `.local` resolution.
+2. **Host Firewall & Routing Corruption**: Kernel firewall rules (`iptables`/`nftables`/
+   `ufw`), interfaces, and routes are scoped per network namespace. Granting
+   `CAP_NET_ADMIN` or executing outbound-blocking firewall commands inside a container
+   that shares the host's network namespace mutates the **host's** live firewall and
+   routing tables, risking immediate host SSH and network lockout.
+3. **Parallel Multi-Distro Port Collisions**: Booting Ubuntu, Fedora, and Arch
+   concurrently (`--distro all`) inside a single shared network namespace causes socket
+   collisions on `127.0.0.53:53`, UDP `5353`, and application test ports, while leaving
+   containers without distinct IP addresses.
+
+To prevent these failure modes by construction, `spawny` enforces a **two-layer network
+isolation architecture**:
+
+- **Layer 1 — Per-Container Network Namespace Isolation**: By default, `spawny` never
+  shares the host's network namespace. During `spawny setup`, a dedicated host NAT bridge
+  (`spawny0`, e.g., `10.88.0.1/24` with UFW forwarding enabled when host UFW is active) is
+  provisioned once, and every container boots with `--network-bridge=spawny0` (or
+  `--private-network` for ephemeral `--offline` runs). `CAP_NET_ADMIN` is granted strictly
+  within isolated container network namespaces (never in host network mode), and runtime
+  offline toggling (`--offline` / `spawny network <distro> off|on`) brings the container's
+  `host0` interface down/up inside its own netns rather than mutating `ufw`.
+- **Layer 2 — In-Image mDNS & LLMNR Suppression**: As defense-in-depth, every `mkosi`
+  image bakes in `MulticastDNS=no` and `LLMNR=no`
+  (`/etc/systemd/resolved.conf.d/99-spawny-disable-mdns.conf`) and masks
+  `avahi-daemon.service` and `avahi-daemon.socket`, ensuring guest daemons never emit
+  multicast DNS/LLMNR traffic under any boot mode.
+
 ### Privilege Model & Execution Safety
 
 - **Unprivileged CLI Execution**: `spawny` is executed as a regular user from any
@@ -148,9 +186,10 @@ download scripts with `mkosi` (official systemd project tool):
 **Flat, Intuitive Command Model**: `spawny` provides a single unified command interface
 where clean-room execution versus persistent sandbox execution is controlled via the
 standard `--ephemeral` (`-x`) flag. Both modes feature **unified auto-boot**
-(`systemd-nspawn -b -i <image.raw>`) with `--capability=CAP_NET_ADMIN`, ensuring `systemd`
-is PID 1, system services and daemons operate consistently, and commands execute via
-`nsenter`:
+(`systemd-nspawn -b -i <image.raw> --network-bridge=spawny0`, or `--private-network` for
+ephemeral `--offline`) with `--capability=CAP_NET_ADMIN` scoped strictly to the isolated
+container network namespace, ensuring `systemd` is PID 1, system services and daemons
+operate consistently without touching host networking, and commands execute via `nsenter`:
 
 ```text
 ╭─────────────────────────────────────────────────────────────────────────────╮
@@ -199,9 +238,11 @@ is PID 1, system services and daemons operate consistently, and commands execute
       execution across distros when `--distro all` is specified.
     - Without `--ephemeral`: Auto-boots or attaches to the persistent working container
       (`spawny-<distro>.raw`); all state changes persist on disk across commands.
-    - With `--offline`: Enforces true runtime network isolation (blocks all outbound
-      network traffic while preserving loopback), allowing offline test execution (e.g.
-      backup restoration) without container reboot.
+    - With `--offline`: Enforces true runtime network isolation inside the container's own
+      network namespace while preserving loopback (`--private-network` for ephemeral `-x`
+      runs; `ip link set host0 down`/`up` via `nsenter` for persistent sandboxes),
+      allowing offline test execution (e.g. backup restoration) without touching host
+      firewall rules.
 - `spawny script [--ephemeral|-x] [--distro <ubuntu|fedora|arch|all>] <test_script_path> [--offline] [--bind <h:c>] [--bind-ro <h:c>] [--env <K=V>] [--user <user>] [-w <dir>] [--timeout <sec>] [--cap <cap>]`:
   Mounts script and required parent directories into container(s), runs test suite, and
   captures report (with `--ephemeral` for clean-room testing or persistent for stateful
@@ -224,9 +265,10 @@ is PID 1, system services and daemons operate consistently, and commands execute
 - `spawny clean [<distro|all>]`: Recovers from unrecoverable crashes: force-kills stuck
   processes, unmounts lingering mounts, resets systemd scopes, and cleans orphaned
   ephemeral snapshots.
-- `spawny network <distro> <on|off|status>`: Queries or dynamically toggles runtime network
-  isolation inside the container without rebooting (powers real network isolation during
-  stateful test phases like backup restore).
+- `spawny network <distro> <on|off|status>`: Queries or dynamically toggles runtime
+  network isolation inside the container's own network namespace without rebooting
+  (`ip link set host0 up|down` and `host0` operstate inspection via `nsenter`, never
+  mutating host firewall rules).
 - `spawny start <distro>`: Manually boots container daemon in the background without
   attaching a shell.
 - `spawny stop <distro>`: Gracefully halts running container.
@@ -256,8 +298,9 @@ is PID 1, system services and daemons operate consistently, and commands execute
 │      ▼ (Ephemeral Clean-Room Execution)                    ▼ (Persistent)   │
 │  ┌────────────────────────────────────────┐   ┌────────────────────────┐    │
 │  │ Ephemeral Container Mount              │   │ Working Machine Image  │    │
-│  │ (systemd-nspawn -i <distro>.raw -x)    │   │ /var/lib/machines/     │    │
-│  │ - Kernel CoW loopback device           │   │   spawny-<distro>.raw  │    │
+│  │ (systemd-nspawn -i <distro>.raw -x     │   │ /var/lib/machines/     │    │
+│  │  --network-bridge=spawny0)             │   │   spawny-<distro>.raw  │    │
+│  │ - Kernel CoW loopback device           │   │ - Single-file reflink  │    │
 │  │ - RAII supervisor reaps on drop        │   │ - Single-file reflink  │    │
 │  │ - 0 RAM consumed by zygote; discarded  │   │   (<0.01s CoW pointer) │    │
 │  │   100% on container exit               │   │ - Mount-safe reset     │    │
@@ -287,7 +330,8 @@ is PID 1, system services and daemons operate consistently, and commands execute
 │ 2. Ephemeral Container Auto-Boot & RAII Supervisor Attachment               │
 │    - Generates unique machine ID (spawny-ephemeral-<distro>-<uuid>)         │
 │    - Spawns `systemd-nspawn -b -x -i <image.raw>`                           │
-│      with --resolv-conf=copy-uplink and --capability=CAP_NET_ADMIN          │
+│      with --network-bridge=spawny0 (or --private-network for --offline),    │
+│      netns-scoped --capability=CAP_NET_ADMIN, and --resolv-conf=copy-uplink │
 │    - Attaches RAII process supervisor guard to guarantee termination        │
 │    - Mounts host paths via --bind / --bind-ro (ArgAction::Append); sets -w  │
 │    - Waits for systemd boot readiness                                       │
@@ -403,10 +447,20 @@ is PID 1, system services and daemons operate consistently, and commands execute
     - `fedora/mkosi.conf`: Fedora 41 package list and repository configuration.
     - `arch/mkosi.conf`: Arch Linux rolling release package list and pacman keyring
       configuration.
+- `mkosi.extra/`: Static configuration overlays baked into every container image:
+    - `etc/systemd/resolved.conf.d/99-spawny-disable-mdns.conf`: Sets `MulticastDNS=no`
+      and `LLMNR=no` so guest `systemd-resolved` never binds UDP `5353`/`5355` or collides
+      with host mDNS even in fallback scenarios.
+    - `etc/systemd/network/80-spawny-host0.network`: Configures `[Match] Name=host0` and
+      `[Network] DHCP=yes` so guest `systemd-networkd` acquires an IP automatically over
+      the `spawny0` bridge on Ubuntu, Fedora, and Arch.
 - `mkosi.postinst.chroot`: Hermetic post-installation script executed inside container
   chroot namespaces:
     - Creates user `tester` (UID 1000, shell `/usr/bin/fish`) explicitly via `useradd -m`.
     - Configures passwordless sudo in `/etc/sudoers.d/tester`.
+    - Masks `avahi-daemon.service` and `avahi-daemon.socket` (`/dev/null` symlinks) so
+      guest tests cannot start a rogue mDNS responder, and enables
+      `systemd-networkd.service` so `host0` comes up automatically on boot.
     - Installs modern Rust via `rustup` for user `tester` over the enabled network,
       ensuring Rust 1.85+ (Rust 2024 edition compatibility).
     - Sets up `/etc/environment` to include `/home/tester/.cargo/bin` and
@@ -443,7 +497,8 @@ is PID 1, system services and daemons operate consistently, and commands execute
       safely build all three distro templates simultaneously without risking host disk
       exhaustion.
     - `host_paths`: Host filesystem locations (`ZYGOTES_DIR = "/var/lib/spawny/zygotes"`,
-      `MACHINES_DIR = "/var/lib/machines"`, `EPHEMERAL_CONFIG_PREFIX = "spawny-mkosi-"`).
+      `MACHINES_DIR = "/var/lib/machines"`, `EPHEMERAL_CONFIG_PREFIX = "spawny-mkosi-"`,
+      `BRIDGE_NAME = "spawny0"`).
 - `distro.rs`: Distro enumeration (`Ubuntu`, `Fedora`, `Arch`), paths
   (`/var/lib/spawny/zygotes/<distro>.raw` and `/var/lib/machines/spawny-<distro>.raw`),
   and container metadata. Generates unique machine IDs for ephemeral runs
@@ -488,9 +543,15 @@ is PID 1, system services and daemons operate consistently, and commands execute
       packages, and are strictly build-time tools (only needed during `spawny setup`).
     - Reports missing host packages with clear install instructions for the detected
       distro family (or installs them non-interactively via passwordless sudo).
+    - Provisions the dedicated `spawny0` host NAT bridge (`10.88.0.1/24` via
+      NetworkManager `shared` connection or `systemd-networkd`, plus UFW forwarding rules
+      for `spawny0` if host UFW is active) during `setup` and cleans it up during
+      `teardown`.
 - `machine.rs`: Machine lifecycle state machine (`NotFound`, `Stopped`, `Running`):
     - Unified container auto-boot (`systemd-nspawn -b -i <path.raw>`) with
-      `--capability=CAP_NET_ADMIN` and `--resolv-conf=copy-uplink`.
+      `--network-bridge=spawny0` by default (or `--private-network` when `--offline` /
+      `--private-network` is requested), `--capability=CAP_NET_ADMIN` (enforced invariant:
+      never passed without network namespace isolation), and `--resolv-conf=copy-uplink`.
     - Wait-for-boot polling with timeout.
     - Process execution via `nsenter` (dropping privileges to user `tester` using
       `DEFAULT_UID_STR` and `DEFAULT_GID_STR`, running inside `--workdir`). Injects
@@ -520,8 +581,9 @@ is PID 1, system services and daemons operate consistently, and commands execute
       resets failed systemd scopes before any disk artifact deletion.
 - `zygote.rs`: Golden snapshot management:
     - Ephemeral execution: Dispatches to `systemd-nspawn -b -x -i <image.raw>` with
-      `--capability=CAP_NET_ADMIN` and `--resolv-conf=copy-uplink`, managed via an RAII
-      supervisor guard.
+      `--network-bridge=spawny0` (or `--private-network` for `--offline` /
+      `--private-network`), netns-isolated `--capability=CAP_NET_ADMIN`, and
+      `--resolv-conf=copy-uplink`, managed via an RAII supervisor guard.
     - Mount-safe reset: Fast single-file Copy-on-Write restoration via `cp --reflink=auto`
       (BTRFS/XFS, `<0.01s`) or sparse copy (ext4, ~1-2s) after verifying zero active
       mounts and defensive path safety.
@@ -593,7 +655,7 @@ spawny
 - `--timeout <SECONDS>`: Maximum execution timeout for container commands before
   triggering graceful poweroff.
 - `--cap <CAPABILITY>`: Grants additional Linux capabilities (defaults include
-  `CAP_NET_ADMIN`).
+  `CAP_NET_ADMIN`, enforced only when network namespace isolation is active).
 - `--user <USER>`: Specifies execution user (defaults to `tester`, UID 1000).
 - `-w <PATH>` / `--workdir <PATH>`: Working directory inside container (defaults to
   `/home/tester`).
@@ -620,6 +682,9 @@ spawny
       (Condition 3). If missing or mismatched, emits the restart notice (Condition 2),
       gracefully restarts the container with the updated mounts, and executes the command.
     - Injects `HOME`, `USER`, and `DEFAULT_PATH` via container `/usr/bin/env` wrapper.
+    - Enforces `--offline` strictly inside the container's isolated netns
+      (`--private-network` for ephemeral `-x` runs; `ip link set host0 down`/`up` via
+      `nsenter` for persistent containers, never modifying host firewall rules).
     - Manages RAII process supervisor guard to guarantee container shutdown on exit.
     - Coordinates concurrent multi-distro runs with parallel output capture and progress
       spinners.
@@ -639,6 +704,8 @@ spawny
     - `ps`: Queries container leader PID and executes `ps f --forest` via `nsenter`.
     - `start` & `stop`: Boots or stops persistent background containers (`start` accepts
       optional `--bind` and `--bind-ro` to pre-configure daemon mounts).
+    - `network`: Queries or toggles `host0` link state inside the container's isolated
+      netns via `nsenter` (`ip link set host0 up|down` and `host0` operstate inspection).
     - `copy-to` & `copy-from`: Copies files or directories into or out of a running
       container by resolving `<distro>` to `spawny-<distro>` and delegating to
       `machinectl copy-to` / `machinectl copy-from` via sudo.
@@ -756,10 +823,11 @@ validation**:
       `DEFAULT_WORKDIR`, `DEFAULT_SHELL`; `host_defaults` for `MIN_HOST_FREE_DISK_BYTES`
       set to 20 GB, with rustdocs cross-referencing `OutputSize=15G` in `mkosi.conf`;
       `host_paths` for `ZYGOTES_DIR`, `MACHINES_DIR`, `UNIX_EXPORT_DIR`,
-      `EPHEMERAL_CONFIG_PREFIX`, `CONTAINER_NAME_PREFIX`, and `FORBIDDEN_DELETION_PATHS`
-      array, with rustdocs on `UNIX_EXPORT_DIR` explaining the host-container socket
-      bridge and why unmounting/cleanup is required after abrupt container termination).
-      Eliminates magic numbers/strings and avoids runtime string allocations.
+      `EPHEMERAL_CONFIG_PREFIX`, `CONTAINER_NAME_PREFIX`, `BRIDGE_NAME` (`"spawny0"`), and
+      `FORBIDDEN_DELETION_PATHS` array, with rustdocs on `UNIX_EXPORT_DIR` explaining the
+      host-container socket bridge and why unmounting/cleanup is required after abrupt
+      container termination). Eliminates magic numbers/strings and avoids runtime string
+      allocations.
 - [ ] Create `build-infra/mkosi/mkosi.conf` with shared base configuration specifying
       `Format=disk` (raw GPT disk image), `WithNetwork=yes` (network access enabled for
       chroot toolchain installation), and `OutputSize=15G` (preceded by a comment
@@ -767,12 +835,21 @@ validation**:
 - [ ] Create `build-infra/mkosi/mkosi.profiles/ubuntu/mkosi.conf` for Ubuntu 24.04 LTS.
 - [ ] Create `build-infra/mkosi/mkosi.profiles/fedora/mkosi.conf` for Fedora 41.
 - [ ] Create `build-infra/mkosi/mkosi.profiles/arch/mkosi.conf` for Arch Linux rolling.
+- [ ] Create
+      `build-infra/mkosi/mkosi.extra/etc/systemd/resolved.conf.d/99-spawny-disable-mdns.conf`
+      disabling `MulticastDNS=no` and `LLMNR=no` inside all images so guest
+      `systemd-resolved` never binds UDP `5353`/`5355`.
+- [ ] Create `build-infra/mkosi/mkosi.extra/etc/systemd/network/80-spawny-host0.network`
+      configuring `[Match] Name=host0` / `[Network] DHCP=yes` so guest `systemd-networkd`
+      brings up `host0` on the `spawny0` bridge across Ubuntu, Fedora, and Arch.
 - [ ] Create `build-infra/mkosi/mkosi.postinst.chroot` for hermetic setup: Creates user
       `tester` explicitly with home directory
       (`useradd -m -s /usr/bin/fish -u 1000 -U tester`). Configures passwordless sudo in
-      `/etc/sudoers.d/tester`. Installs Rust toolchain via `rustup` for user `tester` over
-      enabled network (ensuring Rust 1.85+ / edition 2024). Configures `/etc/environment`
-      to ensure `/home/tester/.cargo/bin` is in `$PATH`.
+      `/etc/sudoers.d/tester`. Masks `avahi-daemon.service` and `avahi-daemon.socket`
+      (`/dev/null` symlinks) and enables `systemd-networkd.service`. Installs Rust
+      toolchain via `rustup` for user `tester` over enabled network (ensuring Rust 1.85+ /
+      edition 2024). Configures `/etc/environment` to ensure `/home/tester/.cargo/bin` is
+      in `$PATH`.
 - [ ] Implement `build-infra/src/spawny/nspawn/system_info.rs`: Sudo pre-validation:
       unconditionally validates passwordless sudo via `sudo -n true`; fails fast with
       actionable error (`/etc/sudoers.d/spawny`) if disabled. Host distribution detection:
@@ -794,7 +871,9 @@ validation**:
       cross-installation unpackers (`-o RootDir=...`, `--installroot=...`) to assemble
       target `.raw` images without touching host packages, and they are strictly
       build-time prerequisites (only invoked during `spawny setup`). Validates terminal
-      interactivity.
+      interactivity. Checks/provisions the dedicated `spawny0` host NAT bridge
+      (`10.88.0.1/24` + UFW forwarding rule if host UFW is active) during `setup` and
+      cleans it up during `teardown`.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `build-infra/Cargo.toml`
@@ -802,6 +881,8 @@ validation**:
     - [ ] `build-infra/src/spawny/mod.rs`
     - [ ] `build-infra/src/spawny/constants.rs`
     - [ ] `build-infra/mkosi/mkosi.conf`
+    - [ ] `build-infra/mkosi/mkosi.extra/etc/systemd/resolved.conf.d/99-spawny-disable-mdns.conf`
+    - [ ] `build-infra/mkosi/mkosi.extra/etc/systemd/network/80-spawny-host0.network`
     - [ ] `build-infra/mkosi/mkosi.profiles/ubuntu/mkosi.conf`
     - [ ] `build-infra/mkosi/mkosi.profiles/fedora/mkosi.conf`
     - [ ] `build-infra/mkosi/mkosi.profiles/arch/mkosi.conf`
@@ -818,17 +899,20 @@ validation**:
       `/var/lib/machines/spawny-<distro>.raw`), and machine name mappings. Generates
       unique machine instance IDs for ephemeral runs (`spawny-ephemeral-<distro>-<uuid>`).
 - [ ] Implement `build-infra/src/spawny/nspawn/machine.rs`: Container auto-boot
-      (`systemd-nspawn -b -i <path.raw>`) with `--capability=CAP_NET_ADMIN` and
-      `--resolv-conf=copy-uplink`. Dynamically applies resource limits via
-      `--property=CPUQuota=...`, `--property=MemoryMax=...`, and `--private-network` if
-      provided. Wait-for-boot readiness polling with timeout. Process execution via
-      `nsenter` (dropping privileges using `DEFAULT_UID_STR` and `DEFAULT_GID_STR` from
-      `constants::container_defaults`, injecting `HOME`, `USER`, and `DEFAULT_PATH` via
-      container `/usr/bin/env`, working in `--workdir`). Interactive shell with internal
-      PTY wrapper (`/usr/bin/script -q /dev/null -c "/bin/bash --login"`). Displays entry
-      banner with exit instructions (`exit` / `Ctrl+D`) and command cancel (`Ctrl+C`).
-      Multi-stage shutdown escalation (`poweroff` -> `terminate` -> `kill` -> `pkill -9`
-      -> scope reset). Defensive path validation: verifies target paths strictly match
+      (`systemd-nspawn -b -i <path.raw>`) with `--network-bridge=spawny0` by default (or
+      `--private-network` when `--offline` / `--private-network` is requested),
+      `--capability=CAP_NET_ADMIN` (enforced invariant: never granted without network
+      namespace isolation), and `--resolv-conf=copy-uplink`. Dynamically applies resource
+      limits via `--property=CPUQuota=...` and `--property=MemoryMax=...`. Manages host
+      `spawny0` NAT bridge setup/teardown lifecycle. Wait-for-boot readiness polling with
+      timeout. Process execution via `nsenter` (dropping privileges using
+      `DEFAULT_UID_STR` and `DEFAULT_GID_STR` from `constants::container_defaults`,
+      injecting `HOME`, `USER`, and `DEFAULT_PATH` via container `/usr/bin/env`, working
+      in `--workdir`). Interactive shell with internal PTY wrapper
+      (`/usr/bin/script -q /dev/null -c "/bin/bash --login"`). Displays entry banner with
+      exit instructions (`exit` / `Ctrl+D`) and command cancel (`Ctrl+C`). Multi-stage
+      shutdown escalation (`poweroff` -> `terminate` -> `kill` -> `pkill -9` -> scope
+      reset). Defensive path validation: verifies target paths strictly match
       `/var/lib/machines/spawny-*`, `/var/lib/spawny/zygotes/*`, or
       `/run/systemd/nspawn/unix-export/spawny-*` before executing privileged removals
       (`rm -rf`). Mount safety: inspects `/proc/mounts`, cleanly unmounts lingering child
@@ -838,12 +922,13 @@ validation**:
       lingering mounts, and how `validate_deletion_path` prevents catastrophic host
       deletion.
 - [ ] Implement `build-infra/src/spawny/nspawn/zygote.rs`: Ephemeral execution: dispatches
-      to `systemd-nspawn -b -x -i <image.raw>` with `--capability=CAP_NET_ADMIN` and
-      `--resolv-conf=copy-uplink` (including resource limits `--property=CPUQuota=...`,
-      `--property=MemoryMax=...`, and `--private-network` if provided), managed via an
-      RAII supervisor guard. Mount-safe reset: fast single-file Copy-on-Write restoration
-      via `cp --reflink=auto` (BTRFS/XFS, `<0.01s`) or sparse copy (ext4, ~1-2s) after
-      mount safety and defensive path checks.
+      to `systemd-nspawn -b -x -i <image.raw>` with `--network-bridge=spawny0` (or
+      `--private-network` when `--offline` / `--private-network` is provided),
+      netns-isolated `--capability=CAP_NET_ADMIN`, and `--resolv-conf=copy-uplink`
+      (including resource limits `--property=CPUQuota=...` and
+      `--property=MemoryMax=...`), managed via an RAII supervisor guard. Mount-safe reset:
+      fast single-file Copy-on-Write restoration via `cp --reflink=auto` (BTRFS/XFS,
+      `<0.01s`) or sparse copy (ext4, ~1-2s) after mount safety and defensive path checks.
 - [ ] Implement `build-infra/src/spawny/nspawn/image_builder.rs`: Unpacks embedded `mkosi`
       configs to an ephemeral temporary directory (`tempfile::tempdir()`) with `0o755`
       permissions on scripts (or uses `--config-dir` override), invokes `mkosi` with
@@ -914,10 +999,11 @@ validation**:
       `Command::new("sudo")` explaining why host `Command::env()` fails due to sudo
       `env_reset` and how `/usr/bin/env` injects container-local PATH. Supports parallel
       execution across distros with unified coordinator spinner and output capture.
-      Runtime network isolation: When `--offline` is specified, blocks external outgoing
-      traffic (e.g. via container `ufw default deny outgoing` or loopback-only isolation)
-      during command execution and restores it on completion, enabling reliable offline
-      disaster recovery testing.
+      Runtime network isolation: When `--offline` is specified, isolates networking
+      strictly inside the container's netns (passing `--private-network` for ephemeral
+      `-x` runs, or toggling `ip link set host0 down`/`up` inside the container netns via
+      `nsenter` for persistent runs), preserving loopback and never mutating host firewall
+      rules.
 - [ ] Implement `build-infra/src/spawny/runner/shell_runner.rs`: Opens interactive TTY
       shell in persistent container via `nsenter` with PTY allocation (auto-booting if
       stopped), dropping privileges using `DEFAULT_UID_STR` and `DEFAULT_GID_STR`,
@@ -934,13 +1020,14 @@ validation**:
       disk artifacts), `status` / `list` (gathering machine and zygote states, bridging to
       `status_table::render()`), `ps` (querying leader PID and displaying container
       process tree via `machine::show_process_tree`), `network` (querying or dynamically
-      toggling runtime network isolation via `ufw` inside running persistent containers),
-      `start` and `stop` (manual container daemon management, with `start` accepting optional
-      `--bind` and `--bind-ro`),
-      `copy-to` and `copy-from` (delegating file and directory transfers to
-      `machinectl copy-to` / `machinectl copy-from` via sudo), `reset` (mount-safe CoW
-      restore via `cp --reflink=auto`), and `clean` (crash recovery clearing lingering
-      mounts, scopes, and processes).
+      toggling `host0` link state inside the container's isolated netns via `nsenter` with
+      `ip link set host0 down|up` and `host0` operstate inspection — never touching host
+      firewall rules), `start` and `stop` (manual container daemon management, with
+      `start` accepting optional `--bind` and `--bind-ro`), `copy-to` and `copy-from`
+      (delegating file and directory transfers to `machinectl copy-to` /
+      `machinectl copy-from` via sudo), `reset` (mount-safe CoW restore via
+      `cp --reflink=auto`), and `clean` (crash recovery clearing lingering mounts, scopes,
+      and processes).
 - [ ] Implement signal handling (`tokio::signal::ctrl_c`) for non-interactive runners,
       detaching signal handlers during interactive shell sessions.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
@@ -980,8 +1067,10 @@ validation**:
 **Comprehensive validation of spawny across distros before legacy retirement**:
 
 - [ ] Run `spawny setup --distro all` and verify `mkosi` builds Arch, Ubuntu, and Fedora
-      raw images (`.raw`) with pre-baked `rustup` toolchains.
-- [ ] Run `spawny status` and verify all machines and zygotes are registered.
+      raw images (`.raw`) with pre-baked `rustup` toolchains and provisions the `spawny0`
+      bridge.
+- [ ] Run `spawny status` and verify all machines and zygotes are registered (with
+      distinct per-container bridge IPs when booted).
 - [ ] Run `spawny run ubuntu "echo hello"` and verify auto-boot and state persistence.
 - [ ] Run `spawny reset ubuntu` and verify mount safety check and instant `<0.01s`
       single-file reflink restore.
@@ -991,6 +1080,10 @@ validation**:
 - [ ] Run
       `spawny run --ephemeral --distro all "cargo install r3bl-cmdr && giti --version"`
       and verify clean-room installation testing across distributions.
+- [ ] Verify host network safety: before and after `spawny setup`, parallel
+      `spawny run --ephemeral --distro all`, and `spawny network <distro> off|on`, confirm
+      host `avahi-daemon` still advertises `[<host>.local]` without `-N` suffix drift, UDP
+      `5353` shows zero guest collisions, and host UFW rules remain untouched.
 - [ ] Verify DNS resolution (`--resolv-conf=copy-uplink`) inside containers by running
       `curl` and `cargo --version`.
 - [ ] Run `./check.fish --check`, `--build`, `--clippy`, `--test` across the workspace.
@@ -1037,8 +1130,8 @@ validation**:
 - [ ] Verify that all in-container test scripts execute cleanly inside containers managed
       by `spawny`.
 - [ ] Replace legacy fish network isolation helpers (`isolate_from_network` and
-      `restore_network_access` in `tests/lib/test-helpers.fish`) with native `spawny --offline`
-      flag and `spawny network` runtime toggling.
+      `restore_network_access` in `tests/lib/test-helpers.fish`) with native
+      `spawny --offline` flag and `spawny network` runtime toggling.
 - [ ] Retire obsolete fish helper scripts in
       `/home/nazmul/github/notes/files/scripts/tests/` (`setup.fish`, `teardown.fish`,
       `lib/nspawn.fish`) only after the entire test suite passes under `spawny`.
@@ -1081,8 +1174,11 @@ validation**:
       and orphaned snapshots.
 - [ ] `spawny network <distro> <on|off|status>`: Runtime network isolation toggling and
       verification on persistent containers.
-- [ ] `spawny status`: Status table rendering via `r3bl_tui` (with `-v` for process
-      trees).
+- [ ] `spawny status`: Status table rendering via `r3bl_tui` (with `-v` for process trees
+      and distinct per-container `spawny0` bridge IPs).
+- [ ] Host network safety: Verify host `avahi-daemon` (`[<host>.local]`), UDP `5353`, and
+      host UFW rules remain unaffected during `spawny setup`, parallel `--distro all`, and
+      `spawny network off/on`.
 - [ ] `spawny copy-to <distro> <host_src> <container_dst>` and
       `spawny copy-from <distro> <container_src> <host_dst>`: File and directory transfer
       verification between host and running container.
@@ -1095,3 +1191,4 @@ validation**:
 <!-- cspell:words postinst Rootfs machinectl nsenter debootstrap userland sysusers -->
 <!-- cspell:words reflink Reflink procs overlayfs Passwordless poweroff passwordless chrooted -->
 <!-- cspell:words resolv chrooted reflinks eperm statvfs ttyname nopasswd cachyos installroot -->
+<!-- cspell:words netns mdns llmnr avahi operstate spawny -->

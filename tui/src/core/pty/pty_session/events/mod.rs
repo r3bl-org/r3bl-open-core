@@ -16,17 +16,13 @@
 
 #![rustfmt::skip]
 
-// Attach.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod key_press_generator; // Cross-folder rustdoc module link (protocol_conversion).
 
+// Attach. Folder-local (Intra-module).
 mod input;
-// Conditionally public for documentation and tests.
-#[cfg(any(test, doc))]
-pub mod key_press_generator;
-#[cfg(not(any(test, doc)))]
-mod key_press_generator;
 mod output;
 
 // Re-export.
-
 pub use input::*;
 pub use output::*;

@@ -108,7 +108,7 @@ pub enum UseRenderCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RenderOpCommon, assert_eq2, c_pos,
+    use crate::{RenderOpCommon, c_pos,
                 editor::test_fixtures_editor::mock_real_objects_for_editor, vp_height,
                 vp_width};
 

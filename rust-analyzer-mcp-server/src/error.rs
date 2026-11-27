@@ -57,11 +57,11 @@ pub enum McpServerError {
     ///
     /// [`stdio`]: std::io
     #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[source] std::io::Error),
 
     /// JSON serialization or deserialization error.
     #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
+    Json(#[source] serde_json::Error),
 
     /// Custom error message.
     #[error("{0}")]

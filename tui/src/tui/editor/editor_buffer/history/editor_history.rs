@@ -1,7 +1,7 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::history_cursor::{HistoryCursor, HistoryCursorLoc};
-use crate::{EditorContent, GetMemSize, RingBuffer, RingBufferHeap, get_mem_size};
+use crate::{EditorContent, GetMemSize, RingBuffer, RingBufferHeap, ring_buffer_size};
 use std::{fmt::{Debug, Formatter},
           mem::size_of};
 
@@ -30,7 +30,7 @@ pub struct EditorHistory {
 
 impl GetMemSize for EditorHistory {
     fn get_mem_size(&self) -> usize {
-        let versions_size = get_mem_size::ring_buffer_size(&self.versions);
+        let versions_size = ring_buffer_size(&self.versions);
         let current_index_field_size = size_of::<HistoryCursor>();
         versions_size + current_index_field_size
     }
@@ -165,7 +165,7 @@ mod impl_debug_format {
 #[cfg(test)]
 mod tests_editor_history_struct {
     use super::*;
-    use crate::{assert_eq2, c_index, c_len};
+    use crate::{c_index, c_len};
 
     #[test]
     fn test_editor_history_struct_one_item() {
@@ -277,8 +277,7 @@ mod tests_editor_history_struct {
 
 #[cfg(test)]
 mod tests_history_functions {
-    use crate::{EditorBuffer, HistoryCursor, RingBuffer, VPSize, assert_eq2, c_len,
-                c_row};
+    use crate::{EditorBuffer, HistoryCursor, RingBuffer, VPSize, c_len, c_row};
 
     fn set_single_line(buffer: &mut EditorBuffer, line: &str) {
         let buffer_mut = buffer.get_mut(VPSize::default());

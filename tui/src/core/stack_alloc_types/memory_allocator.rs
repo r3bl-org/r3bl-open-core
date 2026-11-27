@@ -1,37 +1,37 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// [`mimalloc`] is a replacement for the default global allocator. It's optimized
-/// for multi-threaded use cases where lots of small objects are created and
-/// destroyed. The default allocator is the system allocator that's optimized for
-/// single threaded use cases.
-///
-/// # Why `pub use`?
-///
-/// This re-export is required by [`set_mimalloc_in_main`]. When downstream crates
-/// (such as `cmdr` binaries or external apps) invoke [`set_mimalloc_in_main`], the
-/// macro expands to `$crate::mimalloc::MiMalloc`. Re-exporting `mimalloc` publicly
-/// here makes it accessible via `r3bl_tui` without requiring downstream crates to
-/// declare their own direct dependency on `mimalloc` in `Cargo.toml`.
-///
-/// [`mimalloc`] (by Microsoft):
-/// - <https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance>
-///
-/// [`mimalloc`]: mimalloc
-/// [`set_mimalloc_in_main`]: crate::set_mimalloc_in_main
+//! Global allocator ([`mimalloc`]), safe-stack startup macro
+//! ([`run_in_main_with_safe_stack!`]), and macro re-exports.
+//!
+//! # Global Allocator (`mimalloc`)
+//!
+//! [`mimalloc`] (by Microsoft) replaces the default system allocator, which is tuned for
+//! single-threaded workloads, with an allocator optimized for multi-threaded workloads
+//! where many small objects are created and destroyed. See [Performance notes][1] for
+//! more details.
+//!
+//! # Why `pub use` for `mimalloc` and [`tokio`]?
+//!
+//! Declarative macros (`macro_rules!`) expand inside the caller's crate, so paths inside
+//! them must resolve through `$crate::...`:
+//! - `pub use mimalloc;` lets [`set_mimalloc_in_main!`] expand to
+//!   `$crate::mimalloc::MiMalloc` without downstream crates declaring `mimalloc` in their
+//!   own `Cargo.toml`.
+//! - `pub use tokio;` lets the `async =>` arm of [`run_in_main_with_safe_stack!`] expand
+//!   to `$crate::tokio::runtime::Builder` without downstream crates declaring [`tokio`]
+//!   (or its `rt-multi-thread` / `macros` features) in their own `Cargo.toml`.
+//!
+//! [1]: https://github.com/microsoft/mimalloc?tab=readme-ov-file#performance
+//! [`mimalloc`]: mimalloc
+//! [`run_in_main_with_safe_stack!`]: crate::run_in_main_with_safe_stack
+//! [`set_mimalloc_in_main!`]: crate::set_mimalloc_in_main
+//! [`tokio`]: tokio
+
 pub use mimalloc;
+pub use tokio;
 
-#[macro_export]
-macro_rules! set_mimalloc_in_main {
-    () => {{
-        use $crate::mimalloc::MiMalloc;
-
-        #[global_allocator]
-        static GLOBAL: MiMalloc = MiMalloc;
-    }};
-}
-
-/// Ensures consistent stack size invariants for the application process across all
-/// operating systems.
+/// Ensures consistent stack size invariants and installs [`mimalloc`] as the global
+/// allocator for the application process across all operating systems.
 ///
 /// # Background & Cross-Platform Invariants
 ///
@@ -50,60 +50,130 @@ macro_rules! set_mimalloc_in_main {
 ///
 /// To ensure the code we write maintains the same invariants across all operating
 /// systems:
-/// - On Windows (`#[cfg(target_os = "windows")]`), this macro spawns the main logic
-///   inside a dedicated thread configured with an 8 MiB (`8 * 1024 * 1024` bytes) stack
-///   and joins it.
-/// - On non-Windows platforms (`#[cfg(not(target_os = "windows"))]`), it executes the
-///   main logic directly on the main thread with zero overhead.
+/// - Installs [`mimalloc`] as the `#[global_allocator]` via [`set_mimalloc_in_main!`] (so
+///   binaries do not need to call it separately; invoke this macro at most once per
+///   binary crate).
+/// - On Windows (`#[cfg(target_os = "windows")]`), spawns the main logic inside a
+///   dedicated thread configured with [`SAFE_STACK_SIZE_BYTES`] (`8 MiB`) and joins it.
+///   In `async =>` mode, also configures Tokio worker threads with
+///   [`SAFE_STACK_SIZE_BYTES`].
+/// - On non-Windows platforms (`#[cfg(not(target_os = "windows"))]`), executes the main
+///   logic directly on the main thread with zero overhead.
 ///
 /// # Panics
 ///
-/// This macro calls `.expect("conversion error")` on thread creation and join operations,
-/// which will panic if:
+/// This macro calls `.expect(...)` on Windows thread spawning/joining and (in `async =>`
+/// mode) on Tokio runtime initialization, which will panic if:
 /// - Thread spawning fails (e.g., insufficient system resources)
 /// - The spawned thread panics
+/// - Tokio runtime initialization fails
 ///
-/// These are considered fatal errors for application startup, similar to how the
-/// `#[tokio::main]` macro handles runtime initialization failures. If you need to use
-/// this macro in a function that returns `Result`, suppress the
-/// `clippy::unwrap_in_result` lint on that function.
+/// These are considered fatal startup errors; `clippy::unwrap_in_result` is suppressed
+/// inside the macro expansion so callers returning `Result` need no boilerplate lint
+/// attributes.
 ///
 /// # Usage
 ///
-/// ```no_run
-/// use r3bl_tui::{CommonResult, ok, run_with_safe_stack};
+/// **Synchronous entry point (`sync =>`):**
 ///
-/// fn main() -> CommonResult {
-///     run_with_safe_stack!(main_impl())
+/// ```no_run
+/// use r3bl_tui::{ok, run_in_main_with_safe_stack};
+///
+/// fn main() -> miette::Result<()> {
+///     run_in_main_with_safe_stack!(sync => try_main_impl())
 /// }
 ///
-/// // Note: tokio::main also uses .expect("conversion error") internally,
-/// // so the lint suppression is needed regardless of this macro's implementation.
-/// #[tokio::main]
-/// #[allow(clippy::unwrap_in_result)]
-/// async fn main_impl() -> CommonResult {
-///     // Your actual main logic here.
+/// fn try_main_impl() -> miette::Result<()> {
+///     // Your actual synchronous main logic here.
 ///     ok!()
 /// }
 /// ```
 ///
+/// **Asynchronous Tokio entry point (`async =>`):**
+///
+/// ```no_run
+/// use r3bl_tui::{ok, run_in_main_with_safe_stack};
+///
+/// fn main() -> miette::Result<()> {
+///     run_in_main_with_safe_stack!(async => try_main_impl())
+/// }
+///
+/// async fn try_main_impl() -> miette::Result<()> {
+///     // Your actual async main logic here (no `#[tokio::main]` needed).
+///     ok!()
+/// }
+/// ```
+///
+/// [`SAFE_STACK_SIZE_BYTES`]: crate::SAFE_STACK_SIZE_BYTES
+/// [`set_mimalloc_in_main!`]: crate::set_mimalloc_in_main
 /// [`SmallString`]: smallstr::SmallString
 /// [`SmallVec`]: smallvec::SmallVec
 #[macro_export]
-macro_rules! run_with_safe_stack {
-    ($main_fn:expr) => {{
-        // On Windows, run the main logic in a thread with larger stack.
-        #[cfg(target_os = "windows")]
+macro_rules! run_in_main_with_safe_stack {
+    (sync => $main_fn:expr) => {{
+        $crate::set_mimalloc_in_main!();
+
+        #[allow(clippy::unwrap_in_result)]
         {
-            let handle = std::thread::Builder::new()
-                .stack_size(8 * 1024 * 1024) // 8 MiB stack.
-                .spawn(|| $main_fn)
-                .expect("conversion error");
+            // On Windows, run the main logic in a thread with an 8 MiB stack.
+            #[cfg(target_os = "windows")]
+            {
+                let handle = std::thread::Builder::new()
+                    .stack_size($crate::SAFE_STACK_SIZE_BYTES)
+                    .spawn(|| $main_fn)
+                    .expect("Failed to spawn main thread with safe stack size");
 
-            handle.join().expect("conversion error")
+                handle.join().expect("Main thread panicked")
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            $main_fn
         }
+    }};
 
-        #[cfg(not(target_os = "windows"))]
-        $main_fn
+    (async => $main_fut:expr) => {{
+        $crate::run_in_main_with_safe_stack!(sync => {
+            #[allow(clippy::unwrap_in_result)]
+            {
+                let mut builder = $crate::tokio::runtime::Builder::new_multi_thread();
+                builder.enable_all();
+
+                #[cfg(target_os = "windows")]
+                builder.thread_stack_size($crate::SAFE_STACK_SIZE_BYTES);
+
+                builder
+                    .build()
+                    .expect("Failed building the Tokio runtime")
+                    .block_on($main_fut)
+            }
+        })
     }};
 }
+
+/// Installs [`mimalloc::MiMalloc`] as the binary's `#[global_allocator]`.
+///
+/// Prefer [`run_in_main_with_safe_stack!`] in `fn main()`, which invokes this macro
+/// automatically alongside Windows 8 MiB stack setup. Invoke directly only when you want
+/// [`mimalloc`] without the safe-stack thread wrapper, and at most once per binary crate
+/// (Rust allows only one `#[global_allocator]` per binary).
+///
+/// [`mimalloc::MiMalloc`]: mimalloc::MiMalloc
+/// [`run_in_main_with_safe_stack!`]: crate::run_in_main_with_safe_stack
+#[macro_export]
+macro_rules! set_mimalloc_in_main {
+    () => {{
+        use $crate::mimalloc::MiMalloc;
+
+        #[global_allocator]
+        static GLOBAL: MiMalloc = MiMalloc;
+    }};
+}
+
+/// Default safe stack size (`8 MiB`, `8_388_608` bytes) matching the Linux and macOS
+/// primary thread stack limit (`ulimit -s`).
+///
+/// Used by [`run_in_main_with_safe_stack!`] on Windows for both the spawned main thread
+/// and Tokio worker threads so stack-heavy code never hits Windows' 1 MiB PE default.
+///
+/// [`run_in_main_with_safe_stack!`]: crate::run_in_main_with_safe_stack
+pub const SAFE_STACK_SIZE_BYTES: usize = 8 * 1024 * 1024;

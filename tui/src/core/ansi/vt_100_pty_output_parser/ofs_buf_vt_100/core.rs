@@ -66,15 +66,15 @@ pub type AlternateBuffer = OfsBuf<Flat2DArray<PixelChar>>;
 /// [`OfsBufOpsVT100`]: crate::OfsBufOpsVT100
 /// [`OutputRenderer`]: crate::OutputRenderer
 /// [`PixelCharLine`]: crate::PixelCharLine
-/// [`pty_mux`]: crate::pty_mux
+/// [`pty_mux`]: mod@crate::core::pty::pty_mux
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`stdout`]: std::io::stdout
 /// [`VecDeque`]: std::collections::VecDeque
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [Canvas and Viewport concept]: mod@crate::core::coordinates::canvas#canvas-and-viewport-concept
-/// [multiplexer]: mod@crate::pty_mux
+/// [multiplexer]: mod@crate::core::pty::pty_mux
 /// [parser]: mod@crate::core::ansi::vt_100_pty_output_parser
-/// [virtual terminal]: crate::pty_mux#virtual-terminal-architecture
+/// [virtual terminal]: mod@crate::core::pty::pty_mux#virtual-terminal-architecture
 #[derive(Clone, Debug, PartialEq)]
 pub struct OfsBufVT100 {
     pub(super) primary_buffer: PrimaryBuffer,

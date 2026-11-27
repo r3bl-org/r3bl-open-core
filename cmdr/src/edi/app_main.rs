@@ -2,7 +2,7 @@
 
 use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
-               ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
+               ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI,
                DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfig,
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
@@ -63,11 +63,11 @@ mod impl_id {
 pub struct AppMain;
 
 mod app_main_constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI_MOD, State};
+    use super::{AppMain, AppSignal, BoxedSafeApp, DEBUG_TUI, State};
 
     impl Default for AppMain {
         fn default() -> Self {
-            DEBUG_TUI_MOD.then(|| {
+            DEBUG_TUI.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug!(message = "🪙 construct edi::AppMain");
             });
@@ -89,7 +89,7 @@ mod app_main_impl_app_trait {
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
-    use r3bl_tui::{CommonError, CommonResult, ok, send_signal};
+    use r3bl_tui::{ok, send_signal};
 
     impl App for AppMain {
         type S = State;
@@ -112,7 +112,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Handle Ctrl + s.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('s'),
@@ -136,7 +136,7 @@ mod app_main_impl_app_trait {
                 let result_open = open::that(link_url);
                 match result_open {
                     Ok(()) => {
-                        DEBUG_TUI_MOD.then(|| {
+                        DEBUG_TUI.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug!(
                                 message = "📣 Opened feedback link",
@@ -171,7 +171,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             match action {
                 AppSignal::SaveFile => {
                     // Save the file using information from state (editor buffer,
@@ -217,19 +217,16 @@ mod app_main_impl_app_trait {
                         ),
                     );
 
-                    if let Err(err) = modal_dialog_ask_for_filename_to_save_file::show(
+                    if let Err(err) = modal_dialog_ask_for_filename_to_save_file::try_show(
                         component_registry_map,
                         has_focus,
                         state,
                     ) {
-                        if let Some(common_error) = err.downcast_ref::<CommonError>() {
-                            // % is Display, ? is Debug.
-                            tracing::error!(
-                                message = "📣 Error activating simple modal",
-                                error = ?common_error
-                            );
-                        } else { /* do nothing */
-                        }
+                        // % is Display, ? is Debug.
+                        tracing::error!(
+                            message = "📣 Error activating simple modal",
+                            error = ?err
+                        );
                     }
 
                     return Ok(EventPropagation::ConsumedRender);
@@ -245,10 +242,10 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Create a surface and then run the SurfaceRenderer.
             // (ContainerSurfaceRender) on it.
-            let mut surface = surface!(stylesheet: stylesheet::create_stylesheet()?);
+            let mut surface = surface!(stylesheet: stylesheet::try_create_stylesheet()?);
 
             surface.surface_start(SurfaceProps {
                 pos: vp_col(0) + vp_row(0),
@@ -284,7 +281,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
-    use r3bl_tui::{CommonResult, InlineString, get_tui_style, ok, send_signal};
+    use r3bl_tui::{InlineString, ModalFocusError, get_tui_style, ok, send_signal};
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn initialize(
@@ -302,11 +299,11 @@ mod modal_dialog_ask_for_filename_to_save_file {
         state.dialog_buffers.insert(id, new_dialog_buffer);
     }
 
-    pub fn show(
+    pub fn try_show(
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
-    ) -> CommonResult {
+    ) -> Result<(), ModalFocusError> {
         // Initialize the dialog buffer with title & text.
         let title = "File name or path to save content to:";
         let text = "";
@@ -326,7 +323,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             text.into(),
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "📣 activate modal simple",
@@ -341,7 +338,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
     pub fn insert_component_into_registry(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
-        let result_stylesheet = stylesheet::create_stylesheet();
+        let result_stylesheet = stylesheet::try_create_stylesheet();
 
         let dialog_options = DialogEngineConfig {
             mode: DialogEngineMode::ModalSimple,
@@ -379,7 +376,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
                         let user_input_file_path = text.trim();
                         if !user_input_file_path.is_empty() {
-                            DEBUG_TUI_MOD.then(|| {
+                            DEBUG_TUI.then(|| {
                                 // % is Display, ? is Debug.
                                 tracing::debug!(
                                     message = "💾💾💾 About to save the new buffer with given filename",
@@ -447,7 +444,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             boxed_dialog_component,
         );
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message =
@@ -460,7 +457,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
 mod perform_layout {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use r3bl_tui::{CommonResult, ok};
+    use r3bl_tui::ok;
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -473,7 +470,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Layout editor component, and render it.
             {
                 box_start! (
@@ -530,7 +527,7 @@ mod populate_component_registry {
         let id = FlexBoxId::from(Id::ComponentEditor);
         has_focus.set_id(id);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("app_main init has_focus {ch}", ch = glyphs::FOCUS_GLYPH),
@@ -564,7 +561,7 @@ mod populate_component_registry {
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
-        DEBUG_TUI_MOD.then(|| {
+        DEBUG_TUI.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "app_main construct EditorComponent [ on_buffer_change ]"
@@ -575,9 +572,9 @@ mod populate_component_registry {
 
 mod stylesheet {
     use super::{Id, new_style, tui_color, tui_stylesheet};
-    use r3bl_tui::{CommonResult, TuiStylesheet, throws_with_return};
+    use r3bl_tui::{TuiStylesheet, throws_with_return};
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn try_create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style!(

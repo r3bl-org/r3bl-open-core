@@ -111,14 +111,14 @@
 //! ### 1. Birth (Spawning)
 //!
 //! It all begins when your app ([`TUI`] or [`readline_async`]) uses
-//! [`PtySessionBuilder::start()`] to start a session. This kicks off the **initialization
+//! [`PtySessionBuilder::try_start()`] to start a session. This kicks off the **initialization
 //! sequence** across all three layers.
 //!
-//! - **Session Layer**: [`PtySessionBuilder::start()`] orchestrates the entire startup.
+//! - **Session Layer**: [`PtySessionBuilder::try_start()`] orchestrates the entire startup.
 //!   First it uses the **Engine Layer** to spawn the child process in the [`PTY`]
 //!   environment (see [Child process perspective]), then wraps it in the **Thread Trio**
 //!   ([Reader], [Writer], [Orchestrator]), and finally sets up the [MPSC channels].
-//! - **Engine Layer**: Called by the **Session Layer**, [`PtyPair::open_and_spawn()`]
+//! - **Engine Layer**: Called by the **Session Layer**, [`PtyPair::try_open_and_spawn()`]
 //!   creates the OS-level [`PTY`] pair and spawns the child process. Crucially, it
 //!   immediately drops the parent's copy of the **controlled** file descriptor to prevent
 //!   [resource-leaking deadlocks] at birth.
@@ -177,7 +177,7 @@
 //! #### The Final Cleanup (RAII and the Drop Chain)
 //!
 //! When your app drops the [`PtySession`] handle, Rust's automatic resource management
-//! ([`RAII`]) triggers a cleanup chain across all internal components:
+//! ([RAII]) triggers a cleanup chain across all internal components:
 //!
 //! - **Session Layer**:
 //!   - The [MPSC channels] are closed when their halves are dropped.
@@ -187,7 +187,7 @@
 //!       Thread] handles.
 //! - **Engine Layer**:
 //!   - The [`Controller`] (from the [Engine Layer]) is dropped.
-//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [`RAII`] to guarantee that
+//!   - The [`PtyPair`] (and its inner [`MasterPty`]) leverages [RAII] to guarantee that
 //!     all OS-level file descriptors are closed. This eliminates the risk of
 //!     [resource-leaking deadlocks] and ensures a clean system state.
 //!
@@ -196,11 +196,11 @@
 //! Every active [`PTY`] session is powered by a set of specialized threads (the **Thread
 //! Trio**).
 //!
-//! | Thread           | Role             | Type         | Responsibility                                                                                        |
-//! | :--------------- | :--------------- | :----------- | :---------------------------------------------------------------------------------------------------- |
-//! | **Reader**       | 📥 [`PTY`] ➜ App | **Thread**   | [`spawn_pty_reader_thread()`]: Reads raw bytes, processes [`OSC`], sends events to App.               |
-//! | **Writer**       | 📤 App ➜ [`PTY`] | **Thread**   | [`spawn_pty_writer_thread()`]: Receives input events from App and writes them to [`stdin`].           |
-//! | **Orchestrator** | 🏁 Lifecycle     | **Thread**   | [`spawn_pty_orchestrator_thread()`]: Manages child process, waits for exit, and coordinates shutdown. |
+//! | Thread           | Role             | Type         | Responsibility                                                                                            |
+//! | :--------------- | :--------------- | :----------- | :-------------------------------------------------------------------------------------------------------- |
+//! | **Reader**       | 📥 [`PTY`] ➜ App | **Thread**   | [`try_spawn_pty_reader_thread()`]: Reads raw bytes, processes [`OSC`], sends events to App.               |
+//! | **Writer**       | 📤 App ➜ [`PTY`] | **Thread**   | [`try_spawn_pty_writer_thread()`]: Receives input events from App and writes them to [`stdin`].           |
+//! | **Orchestrator** | 🏁 Lifecycle     | **Thread**   | [`try_spawn_pty_orchestrator_thread()`]: Manages child process, waits for exit, and coordinates shutdown. |
 //!
 //! ## Technical Deep Dive
 //!
@@ -336,7 +336,7 @@
 //! - Cancellation Safety and Stream Corruption: Dropping an async future at an `.await`
 //!   point (e.g., within a [`select!`] branch) can abort read or write operations
 //!   mid-stream, leading to dropped bytes, corrupted state, or orphaned child processes.
-//! - Deterministic Cleanup: With synchronous threads, Rust's [`RAII`] guarantees clean,
+//! - Deterministic Cleanup: With synchronous threads, Rust's [RAII] guarantees clean,
 //!   linear teardown. Dropping the session handle cascades through the thread handles,
 //!   joins all background threads, closes OS file descriptors, and prevents zombie
 //!   processes.
@@ -349,7 +349,7 @@
 //! Choosing a synchronous core does not mean abandoning asynchronous applications.
 //! Applications driving complex interactive interfaces (such as terminal multiplexers or
 //! multi-stream event loops) can opt into the async interface via
-//! [`PtySessionBuilder::start_async()`], which returns an [`AsyncPtySession`]. This
+//! [`PtySessionBuilder::try_start_async()`], which returns an [`AsyncPtySession`]. This
 //! adapter uses lightweight bridge tasks to map synchronous channels into [`tokio`]
 //! channels for seamless integration with [`select!`].
 //!
@@ -393,8 +393,8 @@
 //!
 //! ## Main Types
 //!
-//! - [`PtySessionBuilder`]: Builder for configuring and starting sessions via [`start()`]
-//!   or [`start_async()`].
+//! - [`PtySessionBuilder`]: Builder for configuring and starting sessions via [`try_start()`]
+//!   or [`try_start_async()`].
 //! - [`PtySession`]: Synchronous [`PTY`] session handle.
 //! - [`AsyncPtySession`]: Asynchronous [`PTY`] session handle.
 //! - [`PtyOutputEvent`]: Unified events received from [`PTY`] processes.
@@ -421,39 +421,33 @@
 //! [`isatty()`]: https://manpages.debian.org/isatty.3
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`MasterPty`]: portable_pty::MasterPty
-//! [`OSC 9`]: crate::osc_codes::OscSequence
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC 9`]: crate::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`OutputEventReceiverHalf`]: crate::OutputEventReceiverHalf
 //! [`println!`]: std::println
 //! [`ProcessManager::handle_terminal_resize()`]: crate::ProcessManager::handle_terminal_resize
 //! [`ProcessManager::poll_all_processes()`]: crate::ProcessManager::poll_all_processes
 //! [`ProcessManager::send_input()`]: crate::ProcessManager::send_input
-//! [`pty-orchestrator`]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
-//! [`pty-reader`]: crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [`pty-writer`]: crate::pty_session::threads::writer::spawn_pty_writer_thread
+//! [`pty-orchestrator`]: crate::try_spawn_pty_orchestrator_thread
+//! [`pty-reader`]: crate::try_spawn_pty_reader_thread
+//! [`pty-writer`]: crate::try_spawn_pty_writer_thread
 //! [`pty_mux`]: mod@crate::core::pty::pty_mux
 //! [`pty` module]: mod@crate::core::pty
-//! [`PTY` Primer]: crate::pty_engine::pty_pair::PtyPair#pty-primer
+//! [`PTY` Primer]: crate::PtyPair#pty-primer
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PtyInputEvent`]: crate::PtyInputEvent
 //! [`PTYMux`]: crate::PTYMux
 //! [`PtyOutputEvent::Exit`]: crate::PtyOutputEvent::Exit
 //! [`PtyOutputEvent`]: crate::PtyOutputEvent
-//! [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
+//! [`PtyPair::try_open_and_spawn()`]: crate::PtyPair::try_open_and_spawn
 //! [`PtyPair`]: crate::PtyPair
 //! [`PtySession::child_process_termination_handle`]: field@crate::PtySession::child_process_termination_handle
 //! [`PtySession`]: crate::PtySession
-//! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
-//! [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
+//! [`PtySessionBuilder::try_start()`]: crate::PtySessionBuilder::try_start
+//! [`PtySessionBuilder::try_start_async()`]: crate::PtySessionBuilder::try_start_async
 //! [`PtySessionBuilder`]: crate::PtySessionBuilder
-//! [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`select!`]: tokio::select
-//! [`spawn_pty_orchestrator_thread()`]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
-//! [`spawn_pty_reader_thread()`]: crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [`spawn_pty_writer_thread()`]: crate::pty_session::threads::writer::spawn_pty_writer_thread
-//! [`start()`]: [`PtySessionBuilder::start()`]
-//! [`start_async()`]: crate::PtySessionBuilder::start_async
 //! [`stderr`]: std::io::stderr
 //! [`stdin`]: std::io::stdin
 //! [`stdout`]: std::io::stdout
@@ -464,33 +458,39 @@
 //! [`terminfo`]: https://en.wikipedia.org/wiki/Terminfo
 //! [`tmux`]: https://github.com/tmux/tmux
 //! [`tokio`]: tokio
+//! [`try_spawn_pty_orchestrator_thread()`]: crate::try_spawn_pty_orchestrator_thread
+//! [`try_spawn_pty_reader_thread()`]: crate::try_spawn_pty_reader_thread
+//! [`try_spawn_pty_writer_thread()`]: crate::try_spawn_pty_writer_thread
+//! [`try_start()`]: [`PtySessionBuilder::try_start()`]
+//! [`try_start_async()`]: crate::PtySessionBuilder::try_start_async
 //! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 //! [`write()`]: https://manpages.debian.org/write.2
 //! [`xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
 //! [accidental complexity]: https://www.youtube.com/watch?v=Cum5uN2634o
-//! [Child process perspective]: crate::pty_engine::pty_pair::PtyPair#child-process-perspective
-//! [Engine Layer]: crate::pty_engine
+//! [Child process perspective]: crate::PtyPair#child-process-perspective
+//! [Engine Layer]: mod@pty_engine
 //! [hub]: mod@crate::tui::terminal_lib_backends::direct_to_ansi#terminal-protocols--capabilities-hub
 //! [MPSC channels]: std::sync::mpsc
-//! [Orchestrator Thread]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
-//! [Orchestrator]: crate::pty_session::threads::orchestrator::spawn_pty_orchestrator_thread
+//! [Orchestrator Thread]: crate::try_spawn_pty_orchestrator_thread
+//! [Orchestrator]: crate::try_spawn_pty_orchestrator_thread
 //! [pseudoterminals]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [PTY Core Concept]: #the-pty-core-concept
-//! [Reader Thread]: crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [Reader]: crate::pty_session::threads::reader::spawn_pty_reader_thread
-//! [resource-leaking deadlocks]: crate::pty_engine::pty_pair::PtyPair#resource-leaking-deadlock
-//! [Session Layer]: crate::pty_session
+//! [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+//! [Reader Thread]: crate::try_spawn_pty_reader_thread
+//! [Reader]: crate::try_spawn_pty_reader_thread
+//! [resource-leaking deadlocks]: crate::PtyPair#resource-leaking-deadlock
+//! [Session Layer]: mod@pty_session
 //! [To Async or Not to Async: Building a Rust MCP Server for rust-analyzer]: https://developerlife.com/2026/08/22/to-async-or-not-to-async-rust-mcp-server/
-//! [What is a `TTY`]: crate::pty_engine::pty_pair::PtyPair#what-is-a-tty
-//! [Writer Thread]: crate::pty_session::threads::writer::spawn_pty_writer_thread
-//! [Writer]: crate::pty_session::threads::writer::spawn_pty_writer_thread
+//! [What is a `TTY`]: crate::PtyPair#what-is-a-tty
+//! [Writer Thread]: crate::try_spawn_pty_writer_thread
+//! [Writer]: crate::try_spawn_pty_writer_thread
 
 #![rustfmt::skip]
 
 // Attach.
-pub mod pty_engine;
-pub mod pty_mux;
-pub mod pty_session;
+pub(crate) mod pty_engine; // Cross-folder rustdoc links and PTY controller/controlled types.
+pub(crate) mod pty_mux; // Cross-folder rustdoc links (lib.rs, mode_ops) and mux tests.
+pub(crate) mod pty_session; // Cross-folder rustdoc links (lib.rs, upgrade_check).
 
 #[cfg(test)]
 mod e2e_tests;
@@ -499,8 +499,3 @@ mod e2e_tests;
 pub use pty_engine::*;
 pub use pty_mux::*;
 pub use pty_session::*;
-
-// Rustdoc search link fixes.
-
-#[doc(inline)] // Create doc pages at re-export path so rustdoc search links resolve.
-pub use pty_session::threads;

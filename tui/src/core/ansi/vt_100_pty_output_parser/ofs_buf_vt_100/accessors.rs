@@ -36,7 +36,7 @@ impl OfsBufVT100 {
     /// persist globally.
     ///
     /// [`DSR`]: crate::DsrSequence
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`SGR`]: crate::SgrCode
     #[must_use]
     pub fn get_parser_global_state(&self) -> &ParserGlobalState {

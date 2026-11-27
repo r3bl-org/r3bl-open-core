@@ -49,8 +49,7 @@ use crate::{PtyTestContext, PtyTestMode,
             core::resilient_reactor_thread::{RRTEvent, ThreadState},
             direct_to_ansi::{DirectToAnsiInputDevice,
                              input::{channel_types::{PollerEvent, StdinEvent},
-                                     global_input_resource::SINGLETON}},
-            generate_pty_test};
+                                     global_input_resource::SINGLETON}}};
 use std::{io::Write, time::Duration};
 
 /// Ready signal sent by controlled process after initialization.
@@ -121,6 +120,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: tests guard-centric multi-receiver functionality. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 #[allow(clippy::too_many_lines)]
 fn controlled() {
     println!("{SUBSCRIBE_READY}");
@@ -147,7 +148,7 @@ fn controlled() {
 
         // Step 2: Create device - this spawns the thread.
         eprintln!("Step 2: Creating device...");
-        let mut device = DirectToAnsiInputDevice::new()
+        let mut device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         assert!(
             is_running(),

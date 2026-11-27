@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 
 /// The primary reason this module exists is to be able to easily convert from a borrowed
 /// type to an owned type. This module is built to make it easy to use
-/// [`r3bl_tui::readline_async::choose()`] - it needs a list of items to allow the user to
+/// [`r3bl_tui::readline_async::try_choose()`] - it needs a list of items to allow the user to
 /// choose from.
 ///
 /// This list of items can be easily constructed from:
@@ -21,7 +21,7 @@ use std::ops::{Deref, DerefMut};
 /// [`InlineVec`] type is used to avoid heap allocations for small vectors,
 ///
 /// ["newtype" pattern]: https://youtu.be/3-Ika3mAOGQ?si=EgcSROsbgcM5hTIY
-/// [`r3bl_tui::readline_async::choose()`]: crate::readline_async::choose
+/// [`r3bl_tui::readline_async::try_choose()`]: crate::readline_async::try_choose
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ItemsOwned(pub InlineVec<InlineString>);
 
@@ -223,7 +223,6 @@ mod impl_deref_deref_mut {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inline_vec;
 
     #[test]
     fn test_use_with_choose() {

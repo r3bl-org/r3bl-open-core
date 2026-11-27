@@ -2,7 +2,7 @@
 
 //! # Readline Async, Choice Selection, and Spinner Modules
 //!
-//! This module provides asynchronous line editing, choice selection UI ([`choose()`]),
+//! This module provides asynchronous line editing, choice selection UI ([`try_choose()`]),
 //! modal terminal leases ([`ModalTerminalGuard`]), and animated spinners ([`Spinner`])
 //! for building interactive terminal applications.
 //!
@@ -25,7 +25,7 @@
 //! 1. **Interactive user input**: Live non-blocking line editing, cursor navigation,
 //!    history, and styled prompts.
 //! 2. **Concurrent background activity**: Spawned tasks writing logs, animated progress
-//!    spinners, or modal dialogs ([`choose()`]) without clobbering what the user is
+//!    spinners, or modal dialogs ([`try_choose()`]) without clobbering what the user is
 //!    typing.
 //!
 //! In this module, these responsibilities are divided between a high-level context, an
@@ -38,7 +38,7 @@
 //! │   let mut ctx = ReadlineAsyncContext::try_new(...).await?;             │
 //! │   let mut writer = ctx.clone_shared_writer(); // pass to tokio tasks   │
 //! │   loop {                                                               │
-//! │       let line = ctx.read_line().await?;                               │
+//! │       let line = ctx.try_read_line().await?;                           │
 //! │       // Process input or break...                                     │
 //! │   }                                                                    │
 //! └───────────────────┬───────────────────────────────┬────────────────────┘
@@ -75,7 +75,7 @@
 //!   (State lock, acquired 1st).
 //! - [`ModalTerminalGuard`]: **Exclusive Terminal Lease (RAII)**. Acquire via
 //!   [`ReadlineAsyncContext::acquire_modal_terminal()`] when a full-screen or modal
-//!   component (like [`choose()`]) needs exclusive control of input and output.
+//!   component (like [`try_choose()`]) needs exclusive control of input and output.
 //! - [`Spinner`]: **Animated Progress Indicator**. Displays indeterminate progress during
 //!   long-running tasks. Automatically pauses background writers to avoid visual
 //!   glitching.
@@ -103,7 +103,7 @@
 //!
 //!     // 3. Repeatedly read lines from the same context in a loop:
 //!     loop {
-//!         match ctx.read_line().await? {
+//!         match ctx.try_read_line().await? {
 //!             ReadlineEvent::Line(line) => {
 //!                 if line == "exit" {
 //!                     break;
@@ -116,7 +116,7 @@
 //!     }
 //!
 //!     // 4. Gracefully shutdown:
-//!     ctx.request_shutdown(Some("Goodbye!")).await?;
+//!     ctx.try_request_shutdown(Some("Goodbye!")).await?;
 //!     ctx.await_shutdown().await;
 //!     ok!()
 //! }
@@ -214,7 +214,7 @@
 //! - Control channel on [`SharedWriter`]: Mechanism used to manipulate the paused state
 //!   asynchronously.
 //! - [`ModalTerminalGuard`]: RAII guard granting exclusive mutable terminal access for
-//!   interactive modal components like [`choose()`].
+//!   interactive modal components like [`try_choose()`].
 //!
 //! The [`Readline::try_new`] or [`ReadlineAsyncContext::try_new`] create a line control
 //! channel to send and receive [`LineStateControlSignal`]:
@@ -268,7 +268,7 @@
 //!
 //! ## [`ReadlineAsyncContext::try_new()`], which is the main entry point for most use cases
 //!
-//! 1. To read user input, call [`ReadlineAsyncContext::read_line()`].
+//! 1. To read user input, call [`ReadlineAsyncContext::try_read_line()`].
 //! 2. You can call [`ReadlineAsyncContext::clone_shared_writer()`] to get a
 //!    [`SharedWriter`] instance that you can use to write to [`stdout`] concurrently,
 //!    using [`std::write!`] or [`std::writeln!`].
@@ -290,7 +290,7 @@
 //!   1. Read input from the user, via an async input device [`InputDevice`].
 //!   2. Generate output to the raw terminal via output device [`OutputDevice`].
 //!
-//! - Terminal input is retrieved by calling [`Readline::readline()`], which returns each
+//! - Terminal input is retrieved by calling [`Readline::try_readline()`], which returns each
 //!   complete line of input once the user presses Enter.
 //!
 //! - Each [`Readline`] instance is associated with one or more [`SharedWriter`]
@@ -300,7 +300,7 @@
 //! - Call [`Readline::try_new()`] to create a [`Readline`] instance and associated
 //!   [`SharedWriter`].
 //!
-//! - Call [`Readline::readline()`] (most likely in a loop) to receive a line of input
+//! - Call [`Readline::try_readline()`] (most likely in a loop) to receive a line of input
 //!   from the terminal.  The user entering the line can edit their input using the key
 //!   bindings listed under "Input Editing" below.
 //!
@@ -308,10 +308,10 @@
 //!   the user can retrieve it while editing a later line), call
 //!   [`Readline::add_history_entry()`].
 //!
-//! - Lines written to the associated [`SharedWriter`] while `readline()` is in progress
+//! - Lines written to the associated [`SharedWriter`] while `try_readline()` is in progress
 //!   will be output to the screen above the input line.
 //!
-//! - When done, call [`flush_internal()`] to ensure that all lines written to the
+//! - When done, call [`try_flush_internal()`] to ensure that all lines written to the
 //!   [`SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]
@@ -401,9 +401,7 @@
 //! - [Linux TTY and async Rust - Playlist on developerlife.com YT channel]
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`choose()`]: crate::choose
 //! [`Eof`]: crate::ReadlineEvent::Eof
-//! [`flush_internal()`]: crate::flush_internal
 //! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`InputDevice`]: crate::InputDevice
 //! [`LineState`]: crate::readline_async::LineState
@@ -416,9 +414,9 @@
 //! [`process::request_shutdown()`]: https://doc.rust-lang.org/std/process/fn.exit.html
 //! [`read_line()`]: std::io::Stdin::read_line
 //! [`Readline::add_history_entry()`]: crate::Readline::add_history_entry
-//! [`Readline::readline()`]: crate::Readline::readline
 //! [`Readline::try_new()`]: crate::Readline::try_new
 //! [`Readline::try_new`]: crate::Readline::try_new
+//! [`Readline::try_readline()`]: crate::Readline::try_readline
 //! [`readline_async`]: mod@crate::readline_async
 //! [`Readline`]: crate::Readline
 //! [`readline`]: https://manpages.debian.org/readline.3
@@ -428,21 +426,21 @@
 //!     crate::ReadlineAsyncContext::clone_shared_writer
 //! [`ReadlineAsyncContext::flush()`]: crate::ReadlineAsyncContext::flush
 //! [`ReadlineAsyncContext::pause`]: crate::ReadlineAsyncContext::pause
-//! [`ReadlineAsyncContext::read_line()`]: crate::ReadlineAsyncContext::read_line
 //! [`ReadlineAsyncContext::readline`]: field@crate::ReadlineAsyncContext::readline
 //! [`ReadlineAsyncContext::resume`]: crate::ReadlineAsyncContext::resume
 //! [`ReadlineAsyncContext::try_new()`]: crate::ReadlineAsyncContext::try_new
 //! [`ReadlineAsyncContext::try_new`]: crate::ReadlineAsyncContext::try_new
+//! [`ReadlineAsyncContext::try_read_line()`]: crate::ReadlineAsyncContext::try_read_line
 //! [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 //! [`ReadlineEvent`]: crate::ReadlineEvent
-//! [`request_shutdown`]: crate::ReadlineAsyncContext::request_shutdown
+//! [`request_shutdown`]: crate::ReadlineAsyncContext::try_request_shutdown
 //! [`rla_println!`]: macro@crate::rla_println
 //! [`rla_println_prefixed!`]: macro@crate::rla_println_prefixed
 //! [`SafeRawTerminal`]: crate::SafeRawTerminal
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`Spinner::try_start()`]: crate::Spinner::try_start
 //! [`Spinner`]: crate::Spinner
-//! [`spinner`]: mod@crate::readline_async::spinner
+//! [`spinner`]: mod@spinner
 //! [`std::io::Stdin::read_line()`]: std::io::Stdin::read_line
 //! [`std::write!`]: std::write
 //! [`std::writeln!`]: std::writeln
@@ -454,6 +452,8 @@
 //! [`tokio`]: tokio
 //! [`tracing_setup.rs`]: crate::TracingConfig
 //! [`tracing`]: tracing
+//! [`try_choose()`]: crate::try_choose
+//! [`try_flush_internal()`]: crate::try_flush_internal
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tty`]: https://manpages.debian.org/tty.4
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
@@ -482,16 +482,21 @@
 // XMARK: Prevent rustfmt from reformatting entire file.
 #![rustfmt::skip]
 
-// Attach sources.
-pub mod readline_async_api;
-pub mod choose_impl;
-pub mod readline_async_impl;
-pub mod choose_api;
-pub mod spinner;
-pub mod spinner_impl;
-pub mod modal_terminal_guard;
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
+mod choose_impl;
 
-// Re-export the public API.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod choose_api; // Cross-folder rustdoc module link (lib.rs).
+pub(crate) mod readline_async_api; // Cross-folder rustdoc module link (lib.rs).
+pub(crate) mod readline_async_impl; // Cross-folder integration test rustdoc links.
+
+// Attach. Folder-local (Intra-module).
+mod modal_terminal_guard;
+mod spinner;
+mod spinner_impl;
+
+// Re-export.
 pub use choose_api::*;
 pub use choose_impl::*;
 pub use readline_async_api::*;

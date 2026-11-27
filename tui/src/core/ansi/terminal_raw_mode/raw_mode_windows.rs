@@ -5,7 +5,7 @@
 //! On Windows, we delegate to Crossterm's raw mode implementation which handles
 //! the Windows Console API (`SetConsoleMode()`) correctly.
 
-use miette::IntoDiagnostic as _;
+use super::RawModeError;
 
 /// Enables raw mode on Windows using Crossterm.
 ///
@@ -17,9 +17,9 @@ use miette::IntoDiagnostic as _;
 ///
 /// # Errors
 ///
-/// Returns an error if the console mode cannot be changed.
-pub fn enable_raw_mode() -> miette::Result<()> {
-    crossterm::terminal::enable_raw_mode().into_diagnostic()
+/// Returns [`RawModeError::BackendIo`] if the console mode cannot be changed.
+pub fn try_enable_raw_mode() -> Result<(), RawModeError> {
+    crossterm::terminal::enable_raw_mode().map_err(RawModeError::BackendIo)
 }
 
 /// Disable raw mode on Windows using Crossterm.
@@ -29,7 +29,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 ///
 /// # Errors
 ///
-/// Returns an error if the console mode cannot be restored.
-pub fn disable_raw_mode() -> miette::Result<()> {
-    crossterm::terminal::disable_raw_mode().into_diagnostic()
+/// Returns [`RawModeError::BackendIo`] if the console mode cannot be restored.
+pub fn try_disable_raw_mode() -> Result<(), RawModeError> {
+    crossterm::terminal::disable_raw_mode().map_err(RawModeError::BackendIo)
 }

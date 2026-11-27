@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{AppSignal, State};
-use crate::{ENABLE_TRACE_EXAMPLES,
+use crate::{DEBUG_EXAMPLES,
             ex_app_no_layout::app_main::animator_task::start_animator_task};
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
-               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
+               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize,
                ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
                InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, NarrowingCastToU16,
@@ -211,12 +211,12 @@ mod app_main_impl_trait_app {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Things from the app scope.
             let AppData { animator, .. } = &mut self.data;
 
             throws_with_return!({
-                ENABLE_TRACE_EXAMPLES.then(|| {
+                DEBUG_EXAMPLES.then(|| {
                     // % is Display, ? is Debug.
                     tracing::info! {
                         message = "AppNoLayout::handle_event",
@@ -255,8 +255,7 @@ mod app_main_impl_trait_app {
                             // Override default behavior of 'x' key.
                             'x' => {
                                 event_consumed = false;
-                                // We don't care about the result of this operation.
-                                animator.stop().ok();
+                                animator.stop();
                             }
                             _ => {}
                         }
@@ -302,7 +301,7 @@ mod app_main_impl_trait_app {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let GlobalData { state, .. } = global_data;
 
@@ -332,7 +331,7 @@ mod app_main_impl_trait_app {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let state_string = inline_string!("{a:?}", a = global_data.state);
 
             let sample_line_of_text =

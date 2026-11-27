@@ -16,34 +16,35 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`DSR`]: crate::DsrSequence
 //! [`ESC`]: crate::EscSequence
-//! [`OSC`]: crate::osc_codes::OscSequence
-//! [`OscSequence`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
+//! [`OscSequence`]: crate::OscSequence
 //! [`SGR`]: crate::SgrCode
 
 #![rustfmt::skip]
 
-// Private modules (hide internal structure).
+// Attach. Public (Inter-crate).
+pub mod mouse_sgr;
+pub mod mouse_x10;
+pub mod ansi_output;
+
+// Attach. Folder-local (Intra-module).
 mod cli_text;
 mod dsr;
 mod esc;
 mod sgr_code;
 mod da;
 
-// Public modules for mouse sequences
-pub mod mouse_sgr;
-pub mod mouse_x10;
-pub mod ansi_output;
+// Test fixtures.
+#[cfg(any(test, doc))]
+mod ansi_input_test_fixtures;
 
-// Public re-exports (flat API).
-pub use cli_text::impl_cli_text_inline;
+// Re-export.
+pub(crate) use cli_text::impl_cli_text_inline;
 pub use cli_text::*;
 pub use dsr::*;
 pub use esc::*;
 pub use sgr_code::*;
 pub use da::*;
 
-// Test/doc-only modules.
-#[cfg(any(test, doc))]
-mod ansi_input_test_fixtures;
 #[cfg(any(test, doc))]
 pub use ansi_input_test_fixtures::*;

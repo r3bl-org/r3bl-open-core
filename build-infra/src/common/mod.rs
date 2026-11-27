@@ -2,8 +2,8 @@
 
 //! Shared utilities across all build tools.
 
-pub mod cargo_fmt_runner;
+pub mod run_cargo_fmt;
 pub mod workspace_utils;
 
-pub use cargo_fmt_runner::*;
+pub use run_cargo_fmt::*;
 pub use workspace_utils::*;

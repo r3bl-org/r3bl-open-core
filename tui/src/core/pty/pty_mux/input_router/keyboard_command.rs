@@ -4,7 +4,7 @@
 use crate::core::pty::pty_mux;
 use crate::{ActiveScreenBuffer, KeyPress, ModifierKeysMask, OfsBufVT100,
             PAGE_UP_OR_DOWN_SCROLL_BY_FACTOR, PtyInputEvent, ScrollbackAmount,
-            SpecialKey, key_press, vp_height};
+            SpecialKey, vp_height};
 
 /// Represents the explicit command to take for a keyboard event.
 #[derive(Debug)]
@@ -48,7 +48,7 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
     /// host terminal emulator (e.g., `Wezterm`, `iTerm2`). To justify our routing logic,
     /// we make the architectural assumption that the TUI app has placed this host
     /// terminal into the **Alternate Screen Buffer** (e.g., via
-    /// [`crate::ansi_output::terminal_modes::enter_alternate_screen`]).
+    /// [`enter_alternate_screen()`]).
     ///
     /// > This routing decision is based entirely on the active screen buffer and is
     /// > completely unrelated to whether the terminal is in [raw or cooked mode].
@@ -83,14 +83,15 @@ impl From<(KeyPress, &OfsBufVT100)> for KeyboardCommand {
     ///   command so the child process can handle it.
     ///
     /// [`Alacritty`]: https://alacritty.org/
-    /// [`crate::ansi_output::terminal_modes::enter_alternate_screen`]:
-    ///     crate::crate::ansi_output::terminal_modes::enter_alternate_screen
+    /// [`enter_alternate_screen()`]:
+    ///     crate::ansi_output::terminal_modes::enter_alternate_screen
     /// [`ForwardToProcess`]: KeyboardCommand::ForwardToProcess
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`PTYMux`]: crate::PTYMux
     /// [`ScrollHistoryBack`]: KeyboardCommand::ScrollHistoryBack
     /// [`ScrollHistoryForward`]: KeyboardCommand::ScrollHistoryForward
-    /// [raw or cooked mode]: crate::raw_mode::RawMode
+    /// [raw or cooked mode]:
+    ///     mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
     /// [virtual terminal tab]:
     ///     pty_mux#virtual-terminal-architecture
     fn from(args: (KeyPress, &OfsBufVT100)) -> KeyboardCommand {

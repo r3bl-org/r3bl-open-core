@@ -39,7 +39,7 @@
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`ArrayBoundsCheck`]: crate::core::ArrayBoundsCheck
-//! [`bounds_check`]: crate::bounds_check
+//! [`bounds_check`]: mod@crate::core::coordinates::bounds_check
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 //! [`grapheme`]: https://unicode.org/reports/tr29/
 //! [`PauseState`]: crate::PauseState
@@ -52,14 +52,17 @@
 
 #![rustfmt::skip]
 
-// Private modules organized by functional responsibility.
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+#[macro_use]
 mod core;
+
+// Attach.
 mod cursor;
 mod event_handlers;
 mod output;
 mod prompt;
 mod render;
 
-// Public re-exports (expose stable API).
+// Re-export.
 pub use core::*;
 pub use prompt::*;

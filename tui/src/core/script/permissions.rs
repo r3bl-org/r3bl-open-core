@@ -1,7 +1,44 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
-use std::{fs, path::Path};
+use std::{fs,
+          path::{Path, PathBuf}};
+
+/// Error returned by [`set_permission`] and [`try_set_file_executable`] when inspecting
+/// metadata or updating file mode bits fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum FilePermissionsError {
+    /// Failed to query filesystem metadata for `path`.
+    #[error("Failed to read metadata for '{}'", path.display())]
+    MetadataReadFailed {
+        /// Target path passed to [`fs::metadata`].
+        path: PathBuf,
+
+        /// Underlying OS I/O error.
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Target `path` exists on disk, and is not a regular file (e.g., a directory).
+    #[error("Path is not a regular file: '{}'", path.display())]
+    NotARegularFile {
+        /// Non-file path rejected by [`try_set_file_executable`].
+        path: PathBuf,
+    },
+
+    /// Failed to apply Unix mode bits (`mode`) to `path`.
+    #[error("Failed to set permissions ({mode:#o}) on '{}'", path.display())]
+    SetPermissionsFailed {
+        /// Target path passed to [`fs::set_permissions`].
+        path: PathBuf,
+
+        /// Requested Unix permission mode (e.g., `0o755`).
+        mode: u32,
+
+        /// Underlying OS I/O error.
+        #[source]
+        src_err: std::io::Error,
+    },
+}
 
 /// This is noop on Windows because Windows does not use the same permission model as
 /// Unix-like systems. It is determined by file extension and ACLs (Access Control Lists).
@@ -10,20 +47,33 @@ use std::{fs, path::Path};
 ///
 /// This function never returns an error on Windows.
 #[cfg(target_os = "windows")]
-pub fn set_permission(_file: impl AsRef<Path>, _mode: u32) -> miette::Result<()> {
-    crate::ok!()
+pub fn set_permission(
+    _file: impl AsRef<Path>,
+    _mode: u32,
+) -> Result<(), FilePermissionsError> {
+    ok!()
 }
 
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`FilePermissionsError::SetPermissionsFailed`] if:
 /// - The file does not exist
 /// - Insufficient permissions to change the file mode
 /// - I/O error occurs while setting permissions
 #[cfg(not(target_os = "windows"))]
-pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> miette::Result<()> {
+pub fn set_permission(
+    file: impl AsRef<Path>,
+    mode: u32,
+) -> Result<(), FilePermissionsError> {
     use std::{fs::Permissions, os::unix::fs::PermissionsExt};
-    fs::set_permissions(file, Permissions::from_mode(mode)).into_diagnostic()
+    let path = file.as_ref();
+    fs::set_permissions(path, Permissions::from_mode(mode)).map_err(|src_err| {
+        FilePermissionsError::SetPermissionsFailed {
+            path: path.to_path_buf(),
+            mode,
+            src_err,
+        }
+    })
 }
 
 /// Sets the file at the specified path to be executable by owner, group, and others.
@@ -33,17 +83,25 @@ pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> miette::Result<()> {
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The file does not exist
+/// Returns [`FilePermissionsError`] if:
+/// - The file does not exist ([`FilePermissionsError::MetadataReadFailed`])
 /// - The path points to a directory instead of a file
-/// - Insufficient permissions to change the file mode
-/// - I/O error occurs while setting permissions
-pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
+///   ([`FilePermissionsError::NotARegularFile`])
+/// - Insufficient permissions or I/O error occurs while setting permissions
+///   ([`FilePermissionsError::SetPermissionsFailed`])
+pub fn try_set_file_executable(file: impl AsRef<Path>) -> Result<(), FilePermissionsError> {
     let file = file.as_ref();
-    let metadata = fs::metadata(file).into_diagnostic()?;
+    let metadata = fs::metadata(file).map_err(|src_err| {
+        FilePermissionsError::MetadataReadFailed {
+            path: file.to_path_buf(),
+            src_err,
+        }
+    })?;
 
     if !metadata.is_file() {
-        return Err(miette::miette!("This is not a file: '{}'", file.display()));
+        return Err(FilePermissionsError::NotARegularFile {
+            path: file.to_path_buf(),
+        });
     }
 
     // Set execute permissions for owner, group, and others on this file. 755 means:
@@ -106,7 +164,10 @@ mod tests_permissions {
         fs::create_dir_all(&new_dir).expect("conversion error");
 
         let result = try_set_file_executable(&new_dir);
-        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(FilePermissionsError::NotARegularFile { .. })
+        ));
     }
 
     #[test]
@@ -119,6 +180,9 @@ mod tests_permissions {
 
         let non_existent_file = new_dir.join("non_existent_file.sh");
         let result = try_set_file_executable(&non_existent_file);
-        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(FilePermissionsError::MetadataReadFailed { .. })
+        ));
     }
 }

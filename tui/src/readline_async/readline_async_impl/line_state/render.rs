@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::core::LineState;
-use crate::{CSI_ERASE_DISPLAY_TO_END, early_return_if_paused, ok, vp_col};
+use crate::{CSI_ERASE_DISPLAY_TO_END, vp_col};
 use std::io::{self, Write};
 
 impl LineState {
@@ -68,7 +68,7 @@ impl LineState {
 mod tests {
     use super::*;
     use crate::{CHA_CURSOR_COLUMN, CSI_START, ED_ERASE_DISPLAY, ED_ERASE_TO_END,
-                GCStringOwned, core::test_fixtures::StdoutMock, vp_height, vp_width};
+                GCStringOwned, StdoutMock, vp_height, vp_width};
 
     #[test]
     fn test_clear_writes_escape_sequences() {

@@ -22,13 +22,13 @@
 //!
 //! [`epoll`]: https://manpages.debian.org/epoll.7
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
-//! [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+//! [`PTY`]: crate::PtyPair#pty-primer
 //! [`stdin`]: std::io::stdin
 
 use crate::{ANSI_ESC, BufReadExt, CONTROL_C, CONTROL_D, CONTROL_LF, GLYPH_CONTROLLED,
             GLYPH_CONTROLLER, GLYPH_SUCCESS, GLYPH_WAITING, GLYPH_WARNING,
             MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING, MSG_FAILED, MSG_RECEIVED,
-            PtyTestContext, PtyTestMode, generate_pty_test};
+            PtyTestContext, PtyTestMode};
 use std::{io::{Read, Write},
           time::Duration};
 
@@ -174,6 +174,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: enables raw mode and reads input byte-by-byte. The harness
 /// performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{MSG_CONTROLLED_STARTING}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -181,7 +183,7 @@ fn controlled() {
     eprintln!("{GLYPH_CONTROLLED} Controlled: Enabling raw mode...");
 
     // Enable raw mode
-    if let Err(err) = crate::enable_raw_mode() {
+    if let Err(err) = crate::try_enable_raw_mode() {
         eprintln!("{GLYPH_WARNING} Controlled: Failed to enable raw mode: {err}");
         println!("{MSG_FAILED} Could not enable raw mode");
         std::io::stdout().flush().expect("Failed to flush");
@@ -232,7 +234,7 @@ fn controlled() {
         }
     }
 
-    if let Err(err) = crate::disable_raw_mode() {
+    if let Err(err) = crate::try_disable_raw_mode() {
         eprintln!("{GLYPH_WARNING} Controlled: Failed to disable raw mode: {err}");
     }
 

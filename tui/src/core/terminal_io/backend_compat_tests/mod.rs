@@ -58,17 +58,17 @@
 //! [`test_pty_backend_crossterm`]: mod@backend_compat_input_test
 //! [`test_pty_backend_direct_to_ansi`]: mod@backend_compat_input_test
 
-// Public for docs and tests so intra-doc links resolve.
+// Attach.
 // DirectToAnsiInputDevice is Linux-only, so exclude on macOS and Windows across all
 // builds.
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod backend_compat_input_test;
+pub(crate) mod backend_compat_input_test; // Linked from spawn_controlled_in_pty docs.
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod backend_compat_output_test;
+pub(crate) mod backend_compat_output_test; // Linked from spawn_controlled_in_pty docs.
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_non_blocking_stdout_no_panic_test;
+mod pty_non_blocking_stdout_no_panic_test;
 
 #[cfg(all(target_os = "linux", any(test, doc)))]
-pub mod pty_terminal_mode_test;
+mod pty_terminal_mode_test;

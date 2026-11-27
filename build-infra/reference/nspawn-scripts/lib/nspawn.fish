@@ -170,6 +170,21 @@ end
 # Machine Lifecycle
 # ============================================================================
 
+function ensure_container_mdns_isolated -a machine_path -d "Disable mDNS/LLMNR inside nspawn containers so they never collide with host Avahi"
+    if not sudo test -d "$machine_path/etc"
+        return 0
+    end
+
+    # Disable mDNS & LLMNR in systemd-resolved inside the container
+    sudo mkdir -p "$machine_path/etc/systemd/resolved.conf.d"
+    printf '[Resolve]\nMulticastDNS=no\nLLMNR=no\n' | sudo tee "$machine_path/etc/systemd/resolved.conf.d/99-disable-mdns.conf" > /dev/null
+
+    # Mask avahi-daemon inside the container so it cannot bind host UDP 5353
+    sudo mkdir -p "$machine_path/etc/systemd/system"
+    sudo ln -sf /dev/null "$machine_path/etc/systemd/system/avahi-daemon.service"
+    sudo ln -sf /dev/null "$machine_path/etc/systemd/system/avahi-daemon.socket"
+end
+
 function boot_machine -a distro -d "Boot a machine with systemd as PID 1"
     set machine_name (get_machine_name $distro)
     set machine_path (get_machine_path $distro)
@@ -188,6 +203,7 @@ function boot_machine -a distro -d "Boot a machine with systemd as PID 1"
     end
 
     cleanup_stale_mounts $distro
+    ensure_container_mdns_isolated $machine_path
 
     # Bind mounts (read-only for safety)
     # Note: fish config in ~/.config/fish/ sources from /scripts/fish/

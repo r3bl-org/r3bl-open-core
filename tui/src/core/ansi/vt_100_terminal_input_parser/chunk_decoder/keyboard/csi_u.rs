@@ -25,7 +25,7 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// # Where These Sequences Come From
 ///
 /// These `CSI u` sequences are emitted by modern terminal emulators ([`Kitty`],
-/// [`Ghostty`], [`WezTerm`], etc.) after [`OutputDevice::setup_full_screen_tui()`]
+/// [`Ghostty`], [`WezTerm`], etc.) after [`OutputDevice::try_setup_full_screen_tui()`]
 /// activates progressive keyboard enhancement via [`enable_keyboard_enhancement()`][enh]
 /// (by writing `CSI > 1 u` to [`stdout`]).
 ///
@@ -55,13 +55,13 @@ use crate::{ByteOffset, NarrowingCastToU8, NarrowingCastToU16, byte_offset,
 /// [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 /// [`Ghostty`]: https://ghostty.org/
 /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-/// [`OutputDevice::setup_full_screen_tui()`]: crate::OutputDevice::setup_full_screen_tui
+/// [`OutputDevice::try_setup_full_screen_tui()`]: crate::OutputDevice::try_setup_full_screen_tui
 /// [`parse_decimal_digits()`]: super::super::csi_scanner::parse_decimal_digits
 /// [`stdout`]: std::io::stdout
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [enh]: crate::TerminalModeController::enable_keyboard_enhancement
 /// [Kitty Keyboard Protocol]: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
-/// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
+/// [no-ack]: mod@crate::core::ansi::vt_100_terminal_input_parser#progressive-keyboard-enhancement
 #[must_use]
 pub fn parse_csi_u_sequence(chunk: &[u8]) -> Option<ParsedInputEventIR> {
     let frame = Frame::try_extract(chunk)?;

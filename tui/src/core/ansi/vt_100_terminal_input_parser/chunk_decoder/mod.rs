@@ -70,7 +70,7 @@
 //! [`keyboard`]: mod@keyboard
 //! [`MaybeMore`]: crate::core::ansi::vt_100_terminal_input_parser::MaybeMore
 //! [`mouse`]: mod@mouse
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`SGR`]: crate::SgrCode
 //! [`terminal_events::osc::try_disambiguate_or_alt_bracket()`]: terminal_events::osc::try_disambiguate_or_alt_bracket
 //! [`terminal_events`]: mod@terminal_events
@@ -82,43 +82,18 @@
 //! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser#parser-architecture-and-mental-model
 //! [sans_io_arch]: mod@crate::core::ansi::vt_100_terminal_input_parser#parser-architecture-sans-io
 
-// Attach submodules with conditional visibility for documentation and testing.
-#[cfg(any(test, doc))]
-pub mod keyboard;
-#[cfg(not(any(test, doc)))]
-mod keyboard;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod keyboard; // Cross-folder rustdoc link (constants/mouse).
+pub(crate) mod mouse; // Cross-folder rustdoc link (ansi_input_test_fixtures).
+pub(crate) mod osc_scanner; // Cross-folder links (direct_to_ansi, backend_compat).
+pub(crate) mod terminal_events; // Cross-folder links (direct_to_ansi, osc).
+pub(crate) mod utf8; // Cross-folder rustdoc link (core/graphemes).
 
-#[cfg(any(test, doc))]
-pub mod mouse;
-#[cfg(not(any(test, doc)))]
-mod mouse;
-
-#[cfg(any(test, doc))]
-pub mod terminal_events;
-#[cfg(not(any(test, doc)))]
-mod terminal_events;
-
-#[cfg(any(test, doc))]
-pub mod utf8;
-#[cfg(not(any(test, doc)))]
-mod utf8;
-
-#[cfg(any(test, doc))]
-pub mod csi_scanner;
-#[cfg(not(any(test, doc)))]
+// Attach. Folder-local (Intra-module).
+mod chunk_decoder_entry_point;
 mod csi_scanner;
 
-#[cfg(any(test, doc))]
-pub mod osc_scanner;
-#[cfg(not(any(test, doc)))]
-mod osc_scanner;
-
-#[cfg(any(test, doc))]
-pub mod chunk_decoder_entry_point;
-#[cfg(not(any(test, doc)))]
-mod chunk_decoder_entry_point;
-
-// Public re-exports (barrel export pattern).
+// Re-export.
 pub use chunk_decoder_entry_point::*;
 #[allow(unused_imports)]
 pub use csi_scanner::*;

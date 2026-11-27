@@ -10,7 +10,7 @@ use super::{super::{channel_types::{PollerEvent, StdinEvent},
 use crate::{Continuation,
             core::{ansi::vt_100_terminal_input_parser::MaybeMore,
                    resilient_reactor_thread::RRTEvent},
-            tui::DEBUG_TUI_SHOW_MIO_POLLER};
+            tui::DEBUG_MIO_POLLER};
 use std::io::{ErrorKind, Read as _};
 use tokio::sync::broadcast::Sender;
 
@@ -60,7 +60,7 @@ use tokio::sync::broadcast::Sender;
 /// 1. In [`MioPollWorker::create_and_register_os_sources()`] we actually set non-blocking
 ///    mode explicitly on [`stdin`], using [`O_NONBLOCK`]. The original [`stdin`] flags
 ///    are saved to [`original_stdin_flags`] and restored in the [`Drop`] implementation
-///    ([`RAII`] guard) to prevent breaking the terminal.
+///    ([RAII] guard) to prevent breaking the terminal.
 /// 1. In this file, we use the non-blocking mode [`stdin`], to ensure that if the
 ///    [`stdin`] [`fd`] is empty, [`.read()`] returns immediately with
 ///    [`ErrorKind::WouldBlock`]. This allows the loop to break and yield back to the
@@ -106,7 +106,6 @@ use tokio::sync::broadcast::Sender;
 /// [`O_NONBLOCK`]: rustix::fs::OFlags::NONBLOCK
 /// [`original_stdin_flags`]: field@super::MioPollWorker::original_stdin_flags
 /// [`poll`]: mio::Poll::poll
-/// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [`RRTWorker`]: crate::RRTWorker
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
@@ -116,6 +115,7 @@ use tokio::sync::broadcast::Sender;
 /// [`test_pty_mio_poller_thread_lifecycle`]: crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_mio_poller_thread_lifecycle_test::test_pty_mio_poller_thread_lifecycle
 /// [`tokio`]: tokio
 /// [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+/// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 pub fn consume_stdin_input_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
@@ -136,7 +136,7 @@ pub fn consume_stdin_input_with_sender(
 
             Ok(0) => {
                 // EOF reached.
-                DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+                DEBUG_MIO_POLLER.then(|| {
                     tracing::debug!(message = "mio_poller thread: EOF (0 bytes)");
                 });
                 drop(sender.send(PollerEvent::Stdin(StdinEvent::Eof).into()));
@@ -159,7 +159,7 @@ pub fn consume_stdin_input_with_sender(
 
             Err(e) => {
                 // Other error - send and exit.
-                DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+                DEBUG_MIO_POLLER.then(|| {
                     tracing::debug!(
                         message = "mio_poller thread: read error",
                         error = ?e
@@ -183,7 +183,7 @@ pub fn parse_stdin_bytes_with_sender(
     bytes_read: usize,
     sender: &Sender<RRTEvent<PollerEvent>>,
 ) -> Continuation {
-    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+    DEBUG_MIO_POLLER.then(|| {
         tracing::debug!(message = "mio_poller thread: read bytes", bytes_read);
     });
 
@@ -206,7 +206,7 @@ pub fn parse_stdin_bytes_with_sender(
                     .is_err()
                 {
                     // Receiver dropped. Let run_worker_loop() evaluate shutdown.
-                    DEBUG_TUI_SHOW_MIO_POLLER.then(|| {
+                    DEBUG_MIO_POLLER.then(|| {
                         tracing::debug!(
                             message =
                                 "mio_poller thread: receiver dropped while sending input event"

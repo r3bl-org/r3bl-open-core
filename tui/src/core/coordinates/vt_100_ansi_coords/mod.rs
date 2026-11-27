@@ -58,7 +58,7 @@
 //! [`crossterm`]: crossterm
 //! [`CSI`]: crate::CsiSequence
 //! [`NonZeroU16`]: std::num::NonZeroU16
-//! [`viewport_coords`]: crate::coordinates::viewport_coords
+//! [`viewport_coords`]: super::viewport_coords
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 
 #![rustfmt::skip]

@@ -30,8 +30,8 @@
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
-//! - After [`insert_text_at_grapheme()`] - content already validated at insertion
-//! - After [`delete_grapheme_at()`] - removing valid [`UTF-8`] can't create invalid
+//! - After [`try_insert_text_at_grapheme()`] - content already validated at insertion
+//! - After [`try_delete_grapheme_at()`] - removing valid [`UTF-8`] can't create invalid
 //!   sequences
 //! - After bulk operations - operating on previously validated content
 //!
@@ -75,22 +75,25 @@
 //! ## Architectural Role
 //!
 //! This module sits in the **"trust zone"** of our [`UTF-8`] architecture:
-//! - **Input modules** ([`implementations::insert`]) validate [`UTF-8`] at boundaries
+//! - **Input modules** ([`zcgb_insert_ops`]) validate [`UTF-8`] at boundaries
 //! - **This module** trusts validated content and optimizes for performance
-//! - **Access modules** ([`implementations::access`]) provide zero-copy string access
+//! - **Access modules** ([`zcgb_access_ops`]) provide zero-copy string access
 //!
 //! The safety depends on the **architectural contract** that content entering
 //! the buffer is [`UTF-8`] validated, making subsequent operations safe.
 //!
-//! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+//! [`from_utf8_lossy()`]: String::from_utf8_lossy
+//! [`from_utf8_unchecked()`]: std::str::from_utf8_unchecked
 //! [`grapheme`]: https://unicode.org/reports/tr29/
-//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`try_delete_grapheme_at()`]: ZeroCopyGapBuffer::try_delete_grapheme_at
+//! [`try_insert_text_at_grapheme()`]: ZeroCopyGapBuffer::try_insert_text_at_grapheme
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+//! [`zcgb_access_ops`]: mod@super::zcgb_access_ops
+//! [`zcgb_insert_ops`]: mod@super::zcgb_insert_ops
 
-use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndexRangeExt, CRow, c_len, ok,
-            segment_builder::{build_doc_segments_for_str, calculate_doc_display_width}};
-use miette::{Result, miette};
+use super::{GapBufferError, ZeroCopyGapBuffer};
+use crate::{ByteIndexRangeExt, CRow, build_doc_segments_for_str, c_len,
+            calculate_doc_display_width};
 use std::str::from_utf8_unchecked;
 
 impl ZeroCopyGapBuffer {
@@ -112,9 +115,9 @@ impl ZeroCopyGapBuffer {
     /// - **After in-line operations** - Like find/replace within a single line
     ///
     /// Currently used by:
-    /// - [`insert_text_at_grapheme()`] - after inserting text
-    /// - [`delete_grapheme_at()`] - after deleting text
-    /// - [`delete_range()`] - after deleting multiple graphemes
+    /// - [`try_insert_text_at_grapheme()`] - after inserting text
+    /// - [`try_delete_grapheme_at()`] - after deleting text
+    /// - [`try_delete_range()`] - after deleting multiple graphemes
     ///
     /// # Arguments
     ///
@@ -141,25 +144,27 @@ impl ZeroCopyGapBuffer {
     /// runnable code -->
     /// ```ignore
     /// // After inserting text
-    /// buffer.rebuild_line_segments(line_index)?;
+    /// buffer.try_rebuild_line_segments(line_index)?;
     /// ```
     ///
-    /// [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
-    /// [`delete_range()`]: ZeroCopyGapBuffer::delete_range
     /// [`grapheme`]: https://unicode.org/reports/tr29/
-    /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+    /// [`try_delete_grapheme_at()`]: ZeroCopyGapBuffer::try_delete_grapheme_at
+    /// [`try_delete_range()`]: ZeroCopyGapBuffer::try_delete_range
+    /// [`try_insert_text_at_grapheme()`]: ZeroCopyGapBuffer::try_insert_text_at_grapheme
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    pub fn rebuild_line_segments(
+    pub fn try_rebuild_line_segments(
         &mut self,
         arg_line_index: impl Into<CRow>,
-    ) -> Result<()> {
+    ) -> Result<(), GapBufferError> {
         let line_index: CRow = arg_line_index.into();
         let line_idx = line_index.as_usize();
 
         // Get line info for content extraction.
-        let line_info = self
-            .get_line_info(line_index)
-            .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
+        let line_info = self.get_line_info(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_idx,
+            },
+        )?;
 
         // Extract content slice up to content_len boundary.
         // This ensures we don't read into null padding.
@@ -193,9 +198,11 @@ impl ZeroCopyGapBuffer {
         let grapheme_count = c_len(segments.len());
 
         // Update line info with new metadata.
-        let line_info = self.get_line_info_mut(line_index).ok_or_else(|| {
-            miette!("Line {} not found when updating segments", line_idx)
-        })?;
+        let line_info = self.get_line_info_mut(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_idx,
+            },
+        )?;
 
         line_info.grapheme_segments = segments;
         line_info.display_width = display_width;
@@ -225,7 +232,7 @@ impl ZeroCopyGapBuffer {
     /// # Performance Note
     ///
     /// This is more efficient than calling
-    /// [`rebuild_line_segments()`] multiple times
+    /// [`try_rebuild_line_segments()`] multiple times
     /// as it avoids repeated function call overhead for bulk operations.
     ///
     ///
@@ -235,7 +242,7 @@ impl ZeroCopyGapBuffer {
     /// constructors -->
     /// ```ignore
     /// // Rebuild segments for lines 0, 5, and 10
-    /// buffer.rebuild_line_segments_batch(&[c_row(0), c_row(5), c_row(10)])?;
+    /// buffer.try_rebuild_line_segments_batch(&[c_row(0), c_row(5), c_row(10)])?;
     /// ```
     ///
     /// # Arguments
@@ -253,13 +260,14 @@ impl ZeroCopyGapBuffer {
     /// not happen in normal operation as the buffer maintains [`UTF-8`] invariants.
     ///
     /// [`grapheme`]: https://unicode.org/reports/tr29/
-    /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
+    /// [`try_rebuild_line_segments()`]: Self::try_rebuild_line_segments
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    pub fn rebuild_line_segments_batch(&mut self, line_indices: &[CRow]) -> Result<()> {
+    pub fn try_rebuild_line_segments_batch(
+        &mut self,
+        line_indices: &[CRow],
+    ) -> Result<(), GapBufferError> {
         for &line_index in line_indices {
-            self.rebuild_line_segments(line_index).map_err(|e| {
-                miette!("Failed to rebuild line {}: {}", line_index.as_usize(), e)
-            })?;
+            self.try_rebuild_line_segments(line_index)?;
         }
         ok!()
     }
@@ -269,6 +277,7 @@ impl ZeroCopyGapBuffer {
 mod tests {
     use super::*;
     use crate::{NUL, c_col, c_index, c_row, c_width};
+    use miette::Result;
 
     #[test]
     fn test_rebuild_line_segments_empty_line() -> Result<()> {
@@ -276,7 +285,7 @@ mod tests {
         buffer.add_line();
 
         // Rebuild segments for empty line.
-        buffer.rebuild_line_segments(c_row(0))?;
+        buffer.try_rebuild_line_segments(c_row(0))?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
         assert_eq!(line_info.grapheme_segments.len(), 0);
@@ -292,7 +301,7 @@ mod tests {
         buffer.add_line();
 
         // Insert ASCII text.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
         assert_eq!(line_info.grapheme_segments.len(), 5);
@@ -308,7 +317,7 @@ mod tests {
         buffer.add_line();
 
         // Insert Unicode text with emoji.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi 👋 😀")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi 👋 😀")?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
         assert_eq!(line_info.grapheme_segments.len(), 6); // "H" "i" " " "👋" " " "😀"
@@ -326,11 +335,11 @@ mod tests {
         for i in 0..3 {
             buffer.add_line();
             let text = format!("Line {i}");
-            buffer.insert_text_at_grapheme(c_row(i), c_index(0u16), &text)?;
+            buffer.try_insert_text_at_grapheme(c_row(i), c_index(0u16), &text)?;
         }
 
         // Rebuild all lines at once.
-        buffer.rebuild_line_segments_batch(&[c_row(0), c_row(1), c_row(2)])?;
+        buffer.try_rebuild_line_segments_batch(&[c_row(0), c_row(1), c_row(2)])?;
 
         // Verify all lines were rebuilt correctly.
         for i in 0..3 {
@@ -349,7 +358,7 @@ mod tests {
         buffer.add_line();
 
         // Insert text that's shorter than line capacity.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Test")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Test")?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
         let buffer_start = line_info.buffer_start.as_usize();
@@ -365,7 +374,7 @@ mod tests {
         }
 
         // Rebuild segments - should only process "Test", not null padding.
-        buffer.rebuild_line_segments(c_row(0))?;
+        buffer.try_rebuild_line_segments(c_row(0))?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
         assert_eq!(line_info.grapheme_segments.len(), 4); // Only "Test"
@@ -381,7 +390,7 @@ mod tests {
         buffer.add_line();
 
         // Try to rebuild non-existent line.
-        let result = buffer.rebuild_line_segments(c_row(1));
+        let result = buffer.try_rebuild_line_segments(c_row(1));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
     }
@@ -392,8 +401,8 @@ mod tests {
         buffer.add_line();
 
         // Insert and then delete some text.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
-        buffer.delete_grapheme_at(c_row(0), c_index(1u16))?; // Delete 'e'
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")?;
+        buffer.try_delete_grapheme_at(c_row(0), c_index(1u16))?; // Delete 'e'
 
         // Segments should be rebuilt automatically by delete, but let's verify.
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -412,7 +421,7 @@ mod tests {
         buffer.add_line();
 
         // Insert all at once to show correct behavior.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "abcab😃")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "abcab😃")?;
 
         // Check the segments are positioned correctly.
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -441,10 +450,10 @@ mod tests {
         buffer.add_line();
 
         // First insert "abcab".
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "abcab")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "abcab")?;
 
         // Then append emoji separately.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(5u16), "😃")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(5u16), "😃")?;
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
 
@@ -471,10 +480,10 @@ mod tests {
         buffer.add_line();
 
         // Build up text incrementally.
-        buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "a")?;
-        buffer.insert_text_at_grapheme(c_row(0), c_index(1u16), "b")?;
-        buffer.insert_text_at_grapheme(c_row(0), c_index(2u16), "😃")?;
-        buffer.insert_text_at_grapheme(c_row(0), c_index(3u16), "c")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "a")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(1u16), "b")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(2u16), "😃")?;
+        buffer.try_insert_text_at_grapheme(c_row(0), c_index(3u16), "c")?;
 
         // Verify final segment positions.
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -519,7 +528,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(
+            .try_insert_text_at_grapheme(
                 c_row(0),
                 c_index(0u16),
                 "Hello, World! This is a test string.",
@@ -528,7 +537,7 @@ mod benches {
 
         b.iter(|| {
             buffer
-                .rebuild_line_segments(black_box(c_row(0)))
+                .try_rebuild_line_segments(black_box(c_row(0)))
                 .expect("conversion error");
         });
     }
@@ -538,12 +547,16 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello 👋 World 🌍 Test 🚀")
+            .try_insert_text_at_grapheme(
+                c_row(0),
+                c_index(0u16),
+                "Hello 👋 World 🌍 Test 🚀",
+            )
             .expect("conversion error");
 
         b.iter(|| {
             buffer
-                .rebuild_line_segments(black_box(c_row(0)))
+                .try_rebuild_line_segments(black_box(c_row(0)))
                 .expect("conversion error");
         });
     }
@@ -555,7 +568,7 @@ mod benches {
             .map(|i| {
                 buffer.add_line();
                 buffer
-                    .insert_text_at_grapheme(
+                    .try_insert_text_at_grapheme(
                         c_row(i),
                         c_index(0u16),
                         &format!("Line {i} content"),
@@ -567,7 +580,7 @@ mod benches {
 
         b.iter(|| {
             buffer
-                .rebuild_line_segments_batch(black_box(&indices))
+                .try_rebuild_line_segments_batch(black_box(&indices))
                 .expect("conversion error");
         });
     }

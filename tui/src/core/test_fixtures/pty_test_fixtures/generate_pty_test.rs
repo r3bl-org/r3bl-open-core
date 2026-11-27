@@ -220,16 +220,16 @@
 ///     mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests
 /// [`mode: PtyTestMode::Cooked`]: PtyTestMode::Cooked
 /// [`mode: PtyTestMode::Raw`]: PtyTestMode::Raw
-/// [`MSG_CONTROLLED_READY`]: crate::pty_test_fixtures::MSG_CONTROLLED_READY
+/// [`MSG_CONTROLLED_READY`]: crate::MSG_CONTROLLED_READY
 /// [`OfsBuf`]: crate::tui::OfsBuf
 /// [`println!()`]: std::println
 /// [`pty_pair.controller().try_clone_reader()`]:
 ///     portable_pty::MasterPty::try_clone_reader
 /// [`pty_pair.controller_mut().take_writer()`]: portable_pty::MasterPty::take_writer
 /// [`pty_pair: PtyPair`]: field@crate::PtyTestContext::pty_pair
-/// [`pty_types`]: mod@crate::pty_engine::pty_engine_types
+/// [`pty_types`]: mod@crate::core::pty::pty_engine::pty_engine_types
 /// [`pty`]: crate::core::pty
-/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+/// [`PTY`]: crate::PtyPair#pty-primer
 /// [`PtyTestChild`]: crate::PtyTestChild
 /// [`PtyTestContext`]: crate::PtyTestContext
 /// [`PtyTestWatchdog`]: crate::PtyTestWatchdog
@@ -244,7 +244,7 @@
 /// [`timeout`]: crate::PTY_TEST_WATCHDOG_TIMEOUT
 /// [`tokio`]: tokio
 /// [`wait()`]: portable_pty::Child::wait
-/// [`wait_for_ready()`]: crate::pty_test_fixtures::PtyTestChild::wait_for_ready
+/// [`wait_for_ready()`]: crate::PtyTestChild::wait_for_ready
 /// [`writer: ControllerWriter`]: field@crate::PtyTestContext::writer
 /// [raw mode]: crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 /// [standard terminal size]: crate::DefaultPtySize
@@ -331,7 +331,7 @@ macro_rules! generate_pty_test {
 
                 // Enable raw mode if requested by the test.
                 if $mode == $crate::PtyTestMode::Raw {
-                    if let Err(e) = $crate::enable_raw_mode() {
+                    if let Err(e) = $crate::try_enable_raw_mode() {
                         eprintln!("Failed to enable raw mode: {e}");
                     }
                 }
@@ -342,7 +342,7 @@ macro_rules! generate_pty_test {
                 // Restore cooked mode for correctness.
                 #[allow(unreachable_code)]
                 if $mode == $crate::PtyTestMode::Raw {
-                    drop($crate::disable_raw_mode());
+                    drop($crate::try_disable_raw_mode());
                 }
 
                 // Exit the process, so there is no recursion.
@@ -366,7 +366,7 @@ macro_rules! generate_pty_test {
             eprintln!("{} Controller: Spawning controlled process...",
                 $crate::GLYPH_CONTROLLER
             );
-            let (pty_pair, child) = PtyPair::open_and_spawn($crate::DefaultPtySize, cmd)
+            let (pty_pair, child) = PtyPair::try_open_and_spawn($crate::DefaultPtySize, cmd)
                 .expect("Failed to spawn controlled process");
             eprintln!("{} Controller: PTY pair created", $crate::GLYPH_CONTROLLED);
             eprintln!(

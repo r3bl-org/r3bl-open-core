@@ -1,12 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::HasEditorBuffers;
-use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
+use crate::{BoxedSafeComponent, Component, DEFAULT_SYN_HI_FILE_EXT,
             EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
             EditorEngineConfig, EventPropagation, FileExtensionToken, FlexBox,
             FlexBoxId, GlobalData, HasFocus, InputEvent, SystemClipboard,
             TerminalWindowMainThreadSignal, VPBoundingBox,
-            editor_engine::engine_public_api, ok};
+            editor_engine::engine_public_api};
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -39,7 +39,7 @@ where
 pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
-pub mod editor_component_impl_component_trait {
+mod editor_component_impl_component_trait {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -85,7 +85,7 @@ pub mod editor_component_impl_component_trait {
             current_box: FlexBox,
             _surface_bounds: VPBoundingBox, /* Ignore this. */
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let GlobalData { state, .. } = global_data;
 
             let EditorComponentData {
@@ -106,25 +106,27 @@ pub mod editor_component_impl_component_trait {
                 has_focus,
                 global_data.window_size,
                 &mut global_data.pipeline,
-            )
+            );
+            ok!()
         }
 
         /// This shim simply calls [`engine_public_api::apply_event`] w/ all the
         /// necessary arguments:
         /// - Global scope: [`GlobalData`] (containing app state).
-        /// - User input (from [`crate::main_event_loop`]): [`InputEvent`].
+        /// - User input (from [`TerminalWindow::main_event_loop`]): [`InputEvent`].
         ///
         /// Usually a component must have focus in order for the [`crate::App`] to
         /// [`route_event_to_focused_component`]
         /// in the first place.
         ///
         /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
+        /// [`TerminalWindow::main_event_loop`]: crate::TerminalWindow::main_event_loop
         fn handle_event(
             &mut self,
             global_data: &mut GlobalData<S, AS>,
             input_event: InputEvent,
             _: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             let GlobalData { state, .. } = global_data;
 
             let EditorComponentData {
@@ -150,7 +152,7 @@ pub mod editor_component_impl_component_trait {
                 editor_engine,
                 input_event,
                 &mut SystemClipboard,
-            )?;
+            );
 
             ok!(match result {
                 EditorEngineApplyEventResult::Applied => {
@@ -172,7 +174,7 @@ pub mod editor_component_impl_component_trait {
     }
 }
 
-pub mod constructor {
+mod constructor {
     use super::{BoxedSafeComponent, Debug, EditorComponent, EditorComponentData,
                 EditorEngine, EditorEngineConfig, FlexBoxId, HasEditorBuffers,
                 OnEditorBufferChangeFn};

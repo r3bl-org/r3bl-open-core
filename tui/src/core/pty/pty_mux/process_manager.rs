@@ -14,12 +14,12 @@
 use super::STATUS_BAR_HEIGHT;
 #[allow(unused_imports, reason = "Allows short rustdoc ref def links")]
 use crate::core::pty::pty_mux;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_TUI_PTY_PROCESS_MANAGER,
-            DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyInputEvent,
-            PtySessionConfigOption, ScrollbackAmount, VPSize, VPWidth,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_PTY_PROCESS_MANAGER,
+            DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyError, PtyInputEvent,
+            PtyMuxError, PtySessionConfigToken, ScrollbackAmount, VPSize, VPWidth,
             core::{osc::OscPtyEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
-            ok, vp_height};
+            vp_height};
 use std::fmt::{Debug, Formatter};
 
 /// Manages multiple [`PTY`] processes and handles switching between them.
@@ -83,7 +83,7 @@ pub struct Process {
 
     /// Terminal title set by [`OSC`] sequences ([`None`] if not set).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     pub terminal_title: Option<String>,
 
     /// Optional vertical viewport origin.
@@ -220,7 +220,7 @@ impl Process {
                 match event {
                     OscPtyEvent::SetTitleAndTab(title) => {
                         self.terminal_title = Some(title.clone());
-                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        DEBUG_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug! {
                                 message = "PtyProcess::process_pty_output_and_update_buffer",
@@ -242,7 +242,7 @@ impl Process {
             {
                 for response_event in pty_response_events {
                     let response_bytes = response_event.to_string().into_bytes();
-                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    DEBUG_PTY_PROCESS_MANAGER.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug! {
                             message = "PtyProcess::process_pty_output_and_update_buffer",
@@ -259,7 +259,7 @@ impl Process {
             }
             self.unrendered_output = UnrenderedOutput::Available;
 
-            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            DEBUG_PTY_PROCESS_MANAGER.then(|| {
                 // % is Display, ? is Debug.
                 tracing::trace! {
                     message = "PtyProcess::process_pty_output_and_update_buffer",
@@ -287,7 +287,7 @@ impl Process {
         {
             match event {
                 PtyOutputEvent::Output(data) => {
-                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    DEBUG_PTY_PROCESS_MANAGER.then(|| {
                         // % is Display, ? is Debug.
                         tracing::trace! {
                             message = "PtyProcess::try_get_output",
@@ -300,7 +300,7 @@ impl Process {
                 }
                 PtyOutputEvent::Exit(_status) => {
                     self.status = ProcessStatus::NotRunning;
-                    DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                    DEBUG_PTY_PROCESS_MANAGER.then(|| {
                         // % is Display, ? is Debug.
                         tracing::debug! {
                             message = "PtyProcess::try_get_output",
@@ -358,18 +358,17 @@ impl ProcessManager {
     /// # Errors
     ///
     /// Returns an error if any process cannot be started or spawned.
-    pub fn start_all_processes(&mut self) -> miette::Result<()> {
+    pub fn try_start_all_processes(&mut self) -> Result<(), PtyMuxError> {
         for i in 0..self.processes.len() {
             if self.processes[i].session.is_none()
-                && let Err(e) = self.spawn_process(i)
+                && let Err(src_err) = self.try_spawn_process(i)
             {
                 // Fail immediately if any process can't be started.
-                return Err(miette::miette!(
-                    "Failed to start process '{}' ({}): {}. Please ensure it's installed and in PATH.",
-                    self.processes[i].name,
-                    self.processes[i].command,
-                    e
-                ));
+                return Err(PtyMuxError::ProcessStartFailed {
+                    process_name: self.processes[i].name.clone(),
+                    command: self.processes[i].command.clone(),
+                    src_err,
+                });
             }
         }
         ok!()
@@ -398,7 +397,7 @@ impl ProcessManager {
         let old_index = self.focused_index;
         self.focused_index = index;
 
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "ProcessManager::switch_to",
@@ -414,12 +413,12 @@ impl ProcessManager {
     }
 
     /// Spawns a process at the given index.
-    fn spawn_process(&mut self, index: usize) -> miette::Result<()> {
+    fn try_spawn_process(&mut self, index: usize) -> Result<(), PtyError> {
         let process = &mut self.processes[index];
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
-                message = "ProcessManager::spawn_process",
+                message = "ProcessManager::try_spawn_process",
                 process_name = %process.name,
                 command = %process.command,
                 "Spawning process"
@@ -436,8 +435,8 @@ impl ProcessManager {
         // Use existing PtySessionBuilder with reduced size.
         let session = PtySessionBuilder::new(&process.command)
             .cli_args(&process.args)
-            .with_config(DefaultPtySessionConfig + PtySessionConfigOption::Size(pty_size))
-            .start()?;
+            .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(pty_size))
+            .try_start()?;
 
         process.session = Some(session);
         process.status = ProcessStatus::Running;
@@ -481,7 +480,7 @@ impl ProcessManager {
                     focused_had_output = true;
                 }
 
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::trace! {
                         message = "ProcessManager::poll_all_processes",
@@ -502,7 +501,7 @@ impl ProcessManager {
         if let Some(session) = &self.processes[self.focused_index].session
             && let Err(err) = session.tx_input_event.try_send(event)
         {
-            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            DEBUG_PTY_PROCESS_MANAGER.then(|| {
                 tracing::warn!("Ignored input for dead process: {}", err);
             });
         }
@@ -562,7 +561,7 @@ impl ProcessManager {
             col_width: new_size.col_width,
         };
 
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "ProcessManager::handle_terminal_resize",
@@ -586,7 +585,7 @@ impl ProcessManager {
                     .tx_input_event
                     .try_send(PtyInputEvent::Resize(pty_size));
 
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::handle_terminal_resize",
@@ -599,7 +598,7 @@ impl ProcessManager {
             }
         }
 
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "ProcessManager::handle_terminal_resize",
@@ -617,7 +616,7 @@ impl ProcessManager {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[allow(clippy::too_many_lines)]
     pub fn shutdown_all_processes(&mut self) {
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "ProcessManager::shutdown_all_processes",
@@ -627,7 +626,7 @@ impl ProcessManager {
         });
 
         for (index, process) in self.processes.iter_mut().enumerate() {
-            DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+            DEBUG_PTY_PROCESS_MANAGER.then(|| {
                 // % is Display, ? is Debug.
                 tracing::debug! {
                     message = "ProcessManager::shutdown_all_processes",
@@ -639,7 +638,7 @@ impl ProcessManager {
             });
 
             if let Some(mut session) = process.session.take() {
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::shutdown_all_processes",
@@ -652,7 +651,7 @@ impl ProcessManager {
                 // 1. First, kill the child process to ensure immediate termination.
                 match session.child_process_termination_handle.kill() {
                     Ok(()) => {
-                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        DEBUG_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug! {
                                 message = "ProcessManager::shutdown_all_processes",
@@ -662,7 +661,7 @@ impl ProcessManager {
                         });
                     }
                     Err(e) => {
-                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        DEBUG_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.
                             tracing::warn! {
                                 message = "ProcessManager::shutdown_all_processes",
@@ -679,7 +678,7 @@ impl ProcessManager {
                 // the process.
                 match session.tx_input_event.try_send(PtyInputEvent::Close) {
                     Ok(()) => {
-                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        DEBUG_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.
                             tracing::debug! {
                                 message = "ProcessManager::shutdown_all_processes",
@@ -689,7 +688,7 @@ impl ProcessManager {
                         });
                     }
                     Err(e) => {
-                        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                        DEBUG_PTY_PROCESS_MANAGER.then(|| {
                             // % is Display, ? is Debug.
                             tracing::warn! {
                                 message = "ProcessManager::shutdown_all_processes",
@@ -702,7 +701,7 @@ impl ProcessManager {
                 }
 
                 // Drop the session to clean up resources.
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::shutdown_all_processes",
@@ -711,7 +710,7 @@ impl ProcessManager {
                     };
                 });
                 drop(session);
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::shutdown_all_processes",
@@ -722,7 +721,7 @@ impl ProcessManager {
 
                 // Mark process as not running.
                 process.status = ProcessStatus::NotRunning;
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::shutdown_all_processes",
@@ -731,7 +730,7 @@ impl ProcessManager {
                     };
                 });
             } else {
-                DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+                DEBUG_PTY_PROCESS_MANAGER.then(|| {
                     // % is Display, ? is Debug.
                     tracing::debug! {
                         message = "ProcessManager::shutdown_all_processes",
@@ -742,7 +741,7 @@ impl ProcessManager {
             }
         }
 
-        DEBUG_TUI_PTY_PROCESS_MANAGER.then(|| {
+        DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
                 message = "ProcessManager::shutdown_all_processes",

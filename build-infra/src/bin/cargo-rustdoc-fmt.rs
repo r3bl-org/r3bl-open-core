@@ -4,14 +4,14 @@ use clap::Parser;
 use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor, FormatStatus,
                                            PassPolicy, RUST_FILE_EXTENSION,
                                            TechnicalTermDictionary, ui_str},
-                       common::{cargo_fmt_runner, workspace_utils}};
+                       common::{run_cargo_fmt, workspace_utils}};
 use r3bl_tui::{core::script::{try_get_changed_files_by_ext, try_is_git_repo},
                ok};
 use std::process;
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run().await {
+    if let Err(e) = try_run().await {
         eprintln!("Error: {e:?}");
         process::exit(1);
     }
@@ -59,12 +59,12 @@ fn strip_cargo_subcommand_injection() -> Vec<String> {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn run() -> miette::Result<()> {
+async fn try_run() -> miette::Result<()> {
     let args = strip_cargo_subcommand_injection();
 
     // Parse args
     let cli_arg = CLIArg::parse_from(&args);
-    cli_arg.validate()?;
+    cli_arg.try_validate()?;
     let options = cli_arg.to_format_options();
 
     // Get files to process
@@ -85,22 +85,21 @@ async fn run() -> miette::Result<()> {
         )
     } else if cli_arg.workspace {
         // --workspace flag: format entire workspace
-        let workspace_root = workspace_utils::get_workspace_root()?;
+        let workspace_root = workspace_utils::try_get_workspace_root()?;
         if cli_arg.verbose {
             println!("File discovery: Using --workspace flag (entire workspace)");
         }
         workspace_utils::find_rust_files(&workspace_root, &cli_arg.skip_folder_matches)
     } else {
         // Default: use git to find changed files
-        let (is_git_repo_result, _) = try_is_git_repo().await;
-        let is_git_repo = is_git_repo_result.map_err(|e| miette::miette!("{:?}", e))?;
+        let is_git_repo = try_is_git_repo().await.result?;
         if is_git_repo {
-            let (git_files_result, _) =
-                try_get_changed_files_by_ext(&[RUST_FILE_EXTENSION]).await;
-            let git_files = git_files_result.map_err(|e| miette::miette!("{:?}", e))?;
+            let git_files = try_get_changed_files_by_ext(&[RUST_FILE_EXTENSION])
+                .await
+                .result?;
             if git_files.is_empty() {
                 // No git changes, format entire workspace as fallback
-                let workspace_root = workspace_utils::get_workspace_root()?;
+                let workspace_root = workspace_utils::try_get_workspace_root()?;
                 if cli_arg.verbose {
                     println!(
                         "File discovery: No git changes found, using entire workspace"
@@ -121,7 +120,7 @@ async fn run() -> miette::Result<()> {
             }
         } else {
             // Not a git repo, format entire workspace as fallback
-            let workspace_root = workspace_utils::get_workspace_root()?;
+            let workspace_root = workspace_utils::try_get_workspace_root()?;
             if cli_arg.verbose {
                 println!("File discovery: Not a git repository, using entire workspace");
             }
@@ -140,7 +139,7 @@ async fn run() -> miette::Result<()> {
         .filter(|p| {
             p.exists()
                 && (cli_arg.lines_force.is_some()
-                    || !workspace_utils::should_skip_path(
+                    || !workspace_utils::is_path_in_skip_folder_matches(
                         p,
                         &cli_arg.skip_folder_matches,
                     ))
@@ -168,7 +167,7 @@ async fn run() -> miette::Result<()> {
     // Build the known-terms dictionary (once, shared across all files).
     // Uses the embedded seed file by default, or a custom file via --terms-file.
     let term_dict = if options.link_terms == PassPolicy::Enabled {
-        Some(TechnicalTermDictionary::from_seed(
+        Some(TechnicalTermDictionary::try_from_seed_file(
             cli_arg.terms_file.as_deref(),
         )?)
     } else {
@@ -222,7 +221,7 @@ async fn run() -> miette::Result<()> {
                     modified_files.len()
                 );
             }
-            cargo_fmt_runner::run_cargo_fmt_on_files(&modified_files, cli_arg.verbose)?;
+            run_cargo_fmt::try_run_cargo_fmt(&modified_files, cli_arg.verbose)?;
         }
     }
 

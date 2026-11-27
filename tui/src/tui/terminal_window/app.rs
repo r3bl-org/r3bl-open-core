@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
-use crate::{CommonResult, InputEvent};
+use crate::InputEvent;
 use std::fmt::Debug;
 
 /// An app is typically a holder for [`crate::ComponentRegistry`].
@@ -65,7 +65,7 @@ pub trait App {
         global_data: &mut GlobalData<Self::S, Self::AS>,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation>;
+    ) -> miette::Result<EventPropagation>;
 
     /// At a high level:
     /// - Use the `action` to dispatch an action to the store if needed.
@@ -83,7 +83,7 @@ pub trait App {
         global_data: &mut GlobalData<Self::S, Self::AS>,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation>;
+    ) -> miette::Result<EventPropagation>;
 
     /// Use the state to render the output (via [`crossterm`]). The state is immutable. If
     /// you want to change it then it should be done in the
@@ -102,5 +102,5 @@ pub trait App {
         global_data: &mut GlobalData<Self::S, Self::AS>,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
-    ) -> CommonResult;
+    ) -> miette::Result<()>;
 }

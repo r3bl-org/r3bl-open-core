@@ -7,13 +7,13 @@
 //!
 //! # Raw Mode
 //!
-//! For raw mode operations, use [`enable_raw_mode()`] and [`disable_raw_mode()`] from
+//! For raw mode operations, use [`try_enable_raw_mode()`] and [`try_disable_raw_mode()`] from
 //! the [`terminal_raw_mode`] module. These functions automatically dispatch to the
 //! correct implementation based on [`TERMINAL_LIB_BACKEND`].
 //!
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
-//! [`enable_raw_mode()`]: crate::enable_raw_mode
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
+//! [`try_disable_raw_mode()`]: crate::try_disable_raw_mode
+//! [`try_enable_raw_mode()`]: crate::try_enable_raw_mode
 
 /// Terminal library backend selection for the TUI system.
 ///

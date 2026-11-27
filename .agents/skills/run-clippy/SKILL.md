@@ -1,18 +1,22 @@
 ---
 name: run-clippy
-description: Run clippy linting, enforce comment punctuation rules, format code with cargo fmt, and verify module organization patterns. Use after code changes and before creating commits.
+description:
+    Run clippy linting, enforce comment punctuation rules, format code with cargo fmt, and
+    verify module organization patterns. Use after code changes and before creating
+    commits.
 ---
 
 # Clippy Fixes and Code Style Enforcement
 
 ## When to Use
 
-- After making code changes
-- Fixing clippy warnings
-- Ensuring comment punctuation consistency
-- Enforcing module organization patterns
-- Before creating commits
-- When user says "run clippy", "fix style", "format code", "check lints", etc.
+- When user explicitly invokes `/clippy` or says "run clippy", "fix style", "check lints",
+  etc.
+- Before creating commits or opening pull requests (as part of pre-commit quality check)
+- Fixing clippy warnings after being requested to do so
+
+> [!NOTE] Do NOT run clippy or test suites automatically after routine, isolated code
+> edits unless explicitly instructed.
 
 ## Instructions
 
@@ -34,6 +38,7 @@ cargo clippy --all-targets --fix --allow-dirty
 ```
 
 **Common clippy categories:**
+
 - **Correctness**: Potential bugs and logic errors (must fix)
 - **Performance**: Inefficient code patterns (should fix)
 - **Style**: Idiomatic Rust patterns (should fix)
@@ -42,7 +47,8 @@ cargo clippy --all-targets --fix --allow-dirty
 
 ### Step 2: Enforce Comment Punctuation
 
-Apply these punctuation rules to **all comments** (not rustdoc `///` or `//!`, but regular `//` comments) in the git working tree:
+Apply these punctuation rules to **all comments** (not rustdoc `///` or `//!`, but regular
+`//` comments) in the git working tree:
 
 #### Rule 1: Single-line Standalone Comments
 
@@ -73,18 +79,25 @@ Each gets its own period:
 #### How to Identify Wrapped vs Independent
 
 **Wrapped comments:**
+
 - The second line continues the grammatical structure of the first
 - Reads as one sentence if combined
 
 **Independent comments:**
+
 - Each line could stand alone as a complete thought
 - Separate sentences with distinct subjects
 
 ### Step 3: Enforce Clean Imports (No Inline Absolute Paths)
 
-Scan the changed files for any inline absolute paths (e.g., `crate::Type`, `crate::function!`) and replace them with proper `use` statements at the top of the file.
+Scan the changed files for any inline absolute paths (e.g., `crate::Type`,
+`crate::module::helper_fn`) and replace them with proper `use` statements at the top of
+the file. For crate-local `#[macro_export]` macros, strip the `crate::` prefix so they are
+invoked directly (e.g., `key_press!()` via `#[macro_use]`), and do **not** add
+`use crate::my_macro;`.
 
 **✅ Good:**
+
 ```rust
 use crate::{Size, Pos};
 
@@ -92,44 +105,63 @@ pub fn render(size: Size) -> Pos { ... }
 ```
 
 **❌ Bad:**
+
 ```rust
 pub fn render(size: crate::Size) -> crate::Pos { ... }
 ```
 
-*Note: Intra-doc links like `/// [`Type`]: crate::Type` are exempt from this rule and SHOULD use `crate::` paths.*
+_Note: Intra-doc links like `/// [`Type`]: crate::Type` are exempt from this rule and
+SHOULD use `crate::` paths._
 
 ### Step 4: Verify Module Organization
 
-Review all `mod.rs` files in the git working tree and ensure they follow the patterns from the `organize-modules` skill:
+Review all `mod.rs` files in the git working tree and ensure they follow the patterns from
+the `organize-modules` skill:
 
 **Check for:**
-- ✅ Private modules with public re-exports (preferred pattern)
-- ✅ Conditional visibility for docs/tests where needed: `#[cfg(any(test, doc))]`
-- ✅ Rustfmt skip directive if manual formatting is needed
-- ✅ Flat public API (avoid exposing internal structure)
 
-If module organization doesn't follow patterns, invoke the `organize-modules` skill for guidance.
+- ✅ **3-tier visibility discipline**: **Folder-local (Intra-module)** `mod` as default,
+  **Crate-wide (Intra-crate)** `pub(crate) mod` only when cross-folder paths require it
+  (with a 1-line inline reason comment), and **Public (Inter-crate)** `pub mod` only for
+  domain hubs or explicit non-globbed namespaces
+- ✅ **Progressive-disclosure `// Attach.` headers**: Single `// Attach.` when one tier is
+  present, or wide-to-narrow `// Attach. Public (Inter-crate).`,
+  `// Attach. Crate-wide (Intra-crate).`, `// Attach. Folder-local (Intra-module).` when
+  tiers mix
+- ✅ **Top `#[macro_use]` block**:
+  `// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).`
+  at the top in textual macro-dependency order (never split by visibility)
+- ✅ **Re-exports & root-cause cleanliness**: `// Re-export.` header for `pub use`,
+  single-arm `#[cfg(any(test, doc))]` reserved for test-only modules, zero `#[doc(inline)]`
+  barrel workarounds, and `#![rustfmt::skip]` when manual alignment is preserved
+
+If module organization doesn't follow patterns, invoke the `organize-modules` skill for
+guidance.
 
 ### Step 5: Verify Documentation Quality
 
 If working with rustdoc comments (`///` or `//!`):
 
-1. **Reference-style links**: Ensure backticked symbols use reference-style intra-doc links
+1. **Reference-style links**: Ensure backticked symbols use reference-style intra-doc
+   links
 2. **Link placement**: All reference-style links at bottom of comment block
 3. **Table formatting**: Markdown tables properly aligned
 
-If there are issues, invoke the `write-documentation` skill (or use `/fix-intradoc-links` command).
+If there are issues, invoke the `write-documentation` skill (or use `/fix-intradoc-links`
+command).
 
 ### Step 5: Run Tests if Needed
 
-If clippy fixes modify behavior or you're unsure about changes:
+If clippy fixes modify behavior, or if the user explicitly requested running tests:
 
 ```bash
 ./check.fish --test
 # (runs: cargo test --all-targets)
 ```
 
-Use the Task tool or `invoke_subagent` with `subagent_type='test-runner'` and `Model: "inherit"` if tests fail.
+> [!TIP] Delegate full test suite runs to a background subagent (`self` with
+> `Model: "inherit"`) to avoid blocking interactive conversation. If only a single test is
+> affected, run that test surgically with `cargo test -q <test_name>` instead.
 
 ### Step 6: Final Code Formatting
 
@@ -140,6 +172,7 @@ cargo fmt --all
 ```
 
 This applies:
+
 - Consistent indentation (4 spaces)
 - Line length limits (100 chars default)
 - Spacing around operators and braces
@@ -147,20 +180,33 @@ This applies:
 
 ### Step 7: Enforce Clean Imports
 
-Ensure that code does not use absolute inline paths like `crate::Type` or `crate::CONSTANT` inside function signatures or bodies. They must be cleanly imported via `use` statements at the top of the file.
+Ensure that code does not use absolute inline paths like `crate::Type` or
+`crate::CONSTANT` inside function signatures or bodies. They must be cleanly imported via
+`use` statements at the top of the file.
 
 ### Step 8: Handling Unwraps and Panics
 
-When addressing `clippy::unwrap_used` violations or manually reviewing code that can mathematically never fail:
-- **Avoid `.expect("...")`**. While `.expect()` provides a panic message at runtime, we prefer to keep string literals out of the logic flow for a cleaner aesthetic.
-- **Use `#[allow(clippy::unwrap_used, reason = "...")]`** instead of `.expect()`. The reason should explicitly state the mathematical or logical proof for why the `unwrap()` is safe.
-- **Fallbacks**: If the `unwrap()` is not mathematically proven safe and is truly fallible (e.g., file I/O), rewrite it using `if let Ok()` or propagate the error instead of panicking.
+When addressing `clippy::unwrap_used` violations or manually reviewing code that can
+mathematically never fail:
+
+- **Avoid `.expect("...")`**. While `.expect()` provides a panic message at runtime, we
+  prefer to keep string literals out of the logic flow for a cleaner aesthetic.
+- **Use `#[allow(clippy::unwrap_used, reason = "...")]`** instead of `.expect()`. The
+  reason should explicitly state the mathematical or logical proof for why the `unwrap()`
+  is safe.
+- **Fallbacks**: If the `unwrap()` is not mathematically proven safe and is truly fallible
+  (e.g., file I/O), rewrite it using `if let Ok()` or propagate the error instead of
+  panicking.
 
 ### Step 9: Prefer `?` Operator / Early Returns over `.and_then()` (Mandatory)
 
-Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead, write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else` statements). The only acceptable exception is for boolean constant gating in tracing/logging calls if necessary, though even then, canonical Rust is preferred.
+Do NOT use `.and_then()` for chaining `Option` or `Result` operations in code. Instead,
+write idiomatic Rust using early returns with the `?` operator (or `if let` / `let-else`
+statements). The only acceptable exception is for boolean constant gating in
+tracing/logging calls if necessary, though even then, canonical Rust is preferred.
 
 **✅ Good:**
+
 ```rust
 fn get_char(&self, pos: Pos) -> Option<PixelChar> {
     let row = self.get_row(pos.row_index)?;
@@ -170,11 +216,122 @@ fn get_char(&self, pos: Pos) -> Option<PixelChar> {
 ```
 
 **❌ Bad:**
+
 ```rust
 fn get_char(&self, pos: Pos) -> Option<PixelChar> {
     self.get_row(pos.row_index)
         .and_then(|row| row.get(pos.col_index.as_usize()))
         .copied()
+}
+```
+
+### Step 10: Derive Errors Instead of Writing Manual Error Boilerplate (Mandatory)
+
+1. **Custom Error Types Must Derive `thiserror::Error` and `miette::Diagnostic`**: Do NOT
+   manually implement `std::fmt::Display` or `std::error::Error` for custom error enums or
+   structs. Always derive `thiserror::Error` and `miette::Diagnostic` and annotate
+   variants/structs with `#[error("...")]`.
+2. **Unit Enums Must Use `#[serde(rename_all = "...")]` (or `strum`) Instead of Manual
+   `FromStr` / `TryFrom` Error Boilerplate**: When deserializing unit enums (e.g.,
+   `"open-source"` / `"closed-source"`), use `#[derive(Deserialize)]` with
+   `#[serde(rename_all = "kebab-case")]` (or `"snake_case"`, etc.) so `serde` derives the
+   parser and invalid-variant error automatically. Do NOT use
+   `#[serde(try_from = "String")]` + manual `FromStr` / `TryFrom<&str>` /
+   `TryFrom<String>` + custom error boilerplate on unit enums (reserve
+   `#[serde(try_from = "String")]` strictly for composite structs like
+   `CrateVersion { major, minor, patch }`).
+
+**✅ Good:**
+
+```rust
+// 1. Custom error enum for a composite struct parser:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum VersionParseErrorKind {
+    #[error("Invalid semantic version: expected 'MAJOR.MINOR.PATCH'")]
+    WrongSegmentCount,
+    #[error("Invalid u16 major version segment")]
+    InvalidMajor,
+}
+
+// 2. Unit enum deserialized directly via serde without manual FromStr/TryFrom error boilerplate:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrateDistribution {
+    OpenSource,
+    ClosedSource,
+}
+```
+
+**❌ Bad:**
+
+```rust
+// ❌ Manual Display & std::error::Error boilerplate:
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VersionParseErrorKind {
+    WrongSegmentCount,
+    InvalidMajor,
+}
+impl std::fmt::Display for VersionParseErrorKind { ... }
+impl std::error::Error for VersionParseErrorKind {}
+
+// ❌ Using #[serde(try_from = "String")] + FromStr/TryFrom boilerplate on a unit enum:
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(try_from = "String")]
+pub enum CrateDistribution {
+    OpenSource,
+    ClosedSource,
+}
+impl FromStr for CrateDistribution { ... }
+impl TryFrom<&str> for CrateDistribution { ... }
+impl TryFrom<String> for CrateDistribution { ... }
+```
+
+### Step 11: Enforce `maybe_` and `res_` Naming Conventions (Mandatory)
+
+Scan changed files for `Option<T>` and `Result<T, E>` bindings, fields, and parameters:
+
+- **`Option<T>` (`maybe_`)**: Local variables, struct fields, and function parameters
+  holding `Option<T>` must start with `maybe_` (e.g., `let maybe_viewport`,
+  `maybe_style: Option<TuiStyle>`, `maybe_max_height: Option<ChUnit>`).
+- **`Result<T, E>` (`res_`)**: Local variables and function parameters holding
+  `Result<T, E>` must start with `res_` (e.g., `let res_bytes`, `res_io: Result<()>`).
+- **Unwrapped values drop the prefix**: Bindings extracted via `if let`, `match`,
+  `let-else`, or `?` must drop the prefix (e.g., `if let Some(style) = maybe_style`,
+  `let bytes = res_bytes?;`).
+
+**✅ Good:**
+
+```rust
+pub struct Panel {
+    pub maybe_style: Option<TuiStyle>,
+}
+
+fn render(maybe_max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let res_bytes = serialize(panel);
+    let bytes = res_bytes?;
+
+    if let Some(style) = panel.maybe_style {
+        apply_style(style, maybe_max_height, &bytes);
+    }
+    Ok(())
+}
+```
+
+**❌ Bad:**
+
+```rust
+pub struct Panel {
+    pub style: Option<TuiStyle>,
+}
+
+fn render(max_height: Option<ChUnit>, panel: &Panel) -> miette::Result<()> {
+    let bytes = serialize(panel);
+    let inner = bytes?;
+
+    if let Some(s) = panel.style {
+        apply_style(s, max_height, &inner);
+    }
+    Ok(())
 }
 ```
 
@@ -191,12 +348,14 @@ After completing all steps, report concisely:
 
 This skill includes additional reference material:
 
-- **`patterns.md`** - Comprehensive examples of code style patterns including comment punctuation rules (20+ examples), clippy lint categories with fixes, cargo fmt formatting rules, and module organization quick checks. **Read this when:**
-  - Need examples of proper comment punctuation (wrapped vs independent)
-  - Understanding clippy lint categories (correctness, performance, style)
-  - See good vs bad examples for specific lints
-  - Quick module organization checks
-  - Understanding cargo fmt rules (indentation, line length, imports)
+- **`patterns.md`** - Comprehensive examples of code style patterns including comment
+  punctuation rules (20+ examples), clippy lint categories with fixes, cargo fmt
+  formatting rules, and module organization quick checks. **Read this when:**
+    - Need examples of proper comment punctuation (wrapped vs independent)
+    - Understanding clippy lint categories (correctness, performance, style)
+    - See good vs bad examples for specific lints
+    - Quick module organization checks
+    - Understanding cargo fmt rules (indentation, line length, imports)
 
 ## Related Skills
 

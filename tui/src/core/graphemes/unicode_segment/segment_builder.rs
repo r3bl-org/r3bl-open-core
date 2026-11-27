@@ -174,7 +174,6 @@ pub fn calculate_doc_display_width(segments: &[DocSeg]) -> CWidth {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_build_segments_ascii() {

@@ -243,7 +243,7 @@ pub mod global_color_support {
 /// [`OSC`] 8 support. This approach is future-proof as most modern terminals (2018+)
 /// support [`OSC`] 8.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [exclusion list]: https://inclusivenaming.org/word-lists/tier-1/
 pub mod global_hyperlink_support {
     #[allow(clippy::wildcard_imports)]
@@ -275,7 +275,7 @@ pub mod global_hyperlink_support {
     ///   (default)
     /// - [`HyperlinkSupport::NotSupported`] - Terminal is known to lack [`OSC`] 8 support
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     #[must_use]
     pub fn detect() -> HyperlinkSupport {
         // Check for global override first.
@@ -366,7 +366,7 @@ pub mod global_hyperlink_support {
 /// Like color detection, this function is expensive due to environment variable. lookups
 /// and should only be called through [`global_hyperlink_support::detect()`].
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`rxvt`]: https://en.wikipedia.org/wiki/Rxvt
 /// [`urxvt`]: https://en.wikipedia.org/wiki/Rxvt-unicode
 /// [`xterm`]: https://en.wikipedia.org/wiki/Xterm
@@ -541,7 +541,7 @@ pub enum ColorSupport {
 
 /// Represents hyperlink ([`OSC`] 8) support in the terminal.
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum HyperlinkSupport {
     NotSupported,
@@ -655,7 +655,6 @@ mod tests {
     //! To avoid global state contamination (from env vars and static variables), these
     //! tests are run in an isolated process.
     use super::*;
-    use crate::generate_isolated_process_test;
 
     generate_isolated_process_test!(
         test_all_color_support_detection_sequentially_in_isolated_process,

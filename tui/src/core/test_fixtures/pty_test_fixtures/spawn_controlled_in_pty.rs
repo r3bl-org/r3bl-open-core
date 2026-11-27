@@ -68,15 +68,15 @@ use crate::{PtyCommand, PtyPair, PtyTestChild, vp_height, vp_width};
 ///   [`InputEvent`]s).
 ///
 /// [`backend_compat_input_test`]:
-///     mod@crate::backend_compat_tests::backend_compat_input_test
+///     mod@crate::core::terminal_io::backend_compat_tests::backend_compat_input_test
 /// [`backend_compat_output_test`]:
-///     mod@crate::backend_compat_tests::backend_compat_output_test
+///     mod@crate::core::terminal_io::backend_compat_tests::backend_compat_output_test
 /// [`EIO`]: https://manpages.debian.org/errno.3
 /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
 /// [`generate_pty_test!`]: crate::generate_pty_test
 /// [`InputEvent`]: crate::InputEvent
 /// [`OfsBuf`]: crate::tui::OfsBuf
-/// [`PTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-pty
+/// [`PTY`]: crate::PtyPair#pty-primer
 #[must_use]
 pub fn spawn_controlled_in_pty<'a>(
     backend: &'a str,
@@ -97,7 +97,7 @@ pub fn spawn_controlled_in_pty<'a>(
     cmd.args(["--test-threads", "1", "--nocapture", test_name]);
 
     let (pty_pair, child) =
-        PtyPair::open_and_spawn(vp_width(cols) + vp_height(rows), cmd)
+        PtyPair::try_open_and_spawn(vp_width(cols) + vp_height(rows), cmd)
             .expect("Failed to spawn controlled process");
 
     (backend, pty_pair, PtyTestChild::new(child))

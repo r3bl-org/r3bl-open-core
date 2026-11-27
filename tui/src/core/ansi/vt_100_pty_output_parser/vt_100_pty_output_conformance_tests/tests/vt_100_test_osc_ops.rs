@@ -2,10 +2,10 @@
 
 //! Tests for [`OSC`] (Operating System Command) sequences.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{core::osc::{OscPtyEvent, osc_codes::OscSequence},
+use crate::{OscPtyEvent, OscSequence,
             ofs_buf::test_fixtures_ofs_buf::*};
 
 #[test]

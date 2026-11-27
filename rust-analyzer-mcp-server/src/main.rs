@@ -25,7 +25,7 @@ fn main() -> Result<()> {
     let workspace_path = cli_arg.resolve_workspace_path();
 
     // Create and run the MCP server over stdio.
-    RustAnalyzerMCPServer::start(workspace_path)?;
+    RustAnalyzerMCPServer::try_start(workspace_path)?;
 
     ok!()
 }

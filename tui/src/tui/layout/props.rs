@@ -26,7 +26,7 @@ pub struct SurfaceProps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, VPPos, ok, req_size_pc, vp_height, vp_pos, vp_width};
+    use crate::{VPPos, vp_height, vp_pos, vp_width};
     use smallvec::smallvec;
 
     #[test]
@@ -39,7 +39,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flex_box_props_custom() -> CommonResult {
+    fn test_flex_box_props_custom() -> miette::Result<()> {
         let props = FlexBoxProps {
             id: FlexBoxId::from(10),
             dir: LayoutDirection::Horizontal,

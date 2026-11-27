@@ -34,6 +34,7 @@ impl ControlledChild {
     /// [wezterm PR 7709]: https://github.com/wezterm/wezterm/pull/7709
     #[must_use]
     pub fn clone_termination_handle(&self) -> ControlledChildTerminationHandle {
+        // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
         #[cfg(windows)]
         if let Some(killer) = WindowsProcessKiller::try_from_child(&*self.inner) {
             return Box::new(killer);

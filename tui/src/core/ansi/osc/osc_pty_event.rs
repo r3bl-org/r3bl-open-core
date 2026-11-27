@@ -2,7 +2,7 @@
 
 //! [`OSC`] event types emitted by child processes running in a [`PTY`].
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 
 use crate::Pc;
@@ -71,7 +71,7 @@ use crate::Pc;
 /// [`CSI`]: crate::CsiSequence
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`DSR`]: crate::DsrSequence
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscSender`]: crate::OscSender
 /// [`OscSequence`]: crate::core::ansi::osc::OscSequence
 /// [`pty`]: crate::core::pty
@@ -83,27 +83,27 @@ use crate::Pc;
 pub enum OscPtyEvent {
     /// Set specific progress value 0-100% ([`OSC`] 9;4 state 1).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     ProgressUpdate(Pc),
     /// Clear/remove progress indicator ([`OSC`] 9;4 state 0).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     ProgressCleared,
     /// Build error occurred ([`OSC`] 9;4 state 2).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     BuildError,
     /// Indeterminate progress - build is running but no
     /// specific progress ([`OSC`] 9;4 state 3).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     IndeterminateProgress,
     /// Hyperlink ([`OSC`] 8) with URI and display text.
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     Hyperlink { uri: String, text: String },
     /// Set terminal window title and tab name ([`OSC`] 0).
     ///
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     SetTitleAndTab(String),
 }

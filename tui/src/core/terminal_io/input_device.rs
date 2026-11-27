@@ -122,7 +122,7 @@ impl InputDevice {
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {
         Self::DirectToAnsi(
-            DirectToAnsiInputDevice::new()
+            DirectToAnsiInputDevice::try_new()
                 .expect("Failed to initialize DirectToAnsiInputDevice"),
         )
     }

@@ -19,7 +19,7 @@ use std::cmp::min;
 
 /// Tests for basic TAB character (0x09) functionality.
 /// The current implementation uses fixed 8-column tab stops.
-pub mod basic_tab_operations {
+mod basic_tab_operations {
     use super::*;
 
     #[test]
@@ -199,7 +199,7 @@ pub mod basic_tab_operations {
 }
 
 /// Tests for tab operations with edge cases and boundary conditions.
-pub mod tab_edge_cases {
+mod tab_edge_cases {
     use super::*;
 
     #[test]

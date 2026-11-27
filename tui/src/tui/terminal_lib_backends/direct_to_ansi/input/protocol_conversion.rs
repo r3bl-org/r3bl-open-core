@@ -265,10 +265,8 @@ fn convert_key_code_to_keypress(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FunctionKey, KeyState, NarrowingCastToU16, RgbValue, TermPos, VPHeight,
-                VPWidth,
-                core::ansi::vt_100_terminal_input_parser::{TerminalColorReport,
-                                                           TerminalColorRole}};
+    use crate::{FunctionKey, KeyState, NarrowingCastToU16, RgbValue, TermPos,
+                TerminalColorReport, TerminalColorRole, VPHeight, VPWidth};
 
     // MARK: Keyboard conversion tests
 

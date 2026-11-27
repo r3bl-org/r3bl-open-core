@@ -3,6 +3,8 @@
 use crate::{Continuation,
             core::resilient_reactor_thread::{InputSender, InterruptHandle, RRTEvent,
                                              RRTSoftwareInterrupt, RRTWorker,
+                                             RRTWorkerAndInterrupt,
+                                             RRTWorkerStoppedError,
                                              ThreadLifecycleMonitor, ThreadState}};
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -14,6 +16,10 @@ impl RRTSoftwareInterrupt for DummyInterrupt {
     fn trigger_software_interrupt(&self) {}
 }
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("dummy worker error")]
+struct DummyCreateError;
+
 #[derive(Debug)]
 struct DummyWorker;
 
@@ -22,11 +28,12 @@ impl RRTWorker for DummyWorker {
     type Input = String;
     type Output = ();
     type Interrupt = DummyInterrupt;
+    type CreateError = DummyCreateError;
 
     fn create_and_register_os_sources(
         _config: Self::Config,
         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         unimplemented!()
     }
 
@@ -50,14 +57,14 @@ async fn test_input_sender_waits_for_restart() {
 
     let msg = "hello smart sender".to_string();
 
-    // Spawn a Tokio task that calls input_sender.send. It should block because the
+    // Spawn a Tokio task that calls input_sender.try_send. It should block because the
     // state is currently `Restarting`.
     let sender_task = tokio::spawn({
         let input_sender = InputSender {
             shared_state: monitor.clone(),
         };
         let msg = msg.clone();
-        async move { input_sender.send(msg).await }
+        async move { input_sender.try_send(msg).await }
     });
 
     // Yield back to the Tokio runtime to allow the spawned task to reach the await point
@@ -98,6 +105,6 @@ async fn test_input_sender_fails_if_stopped() {
     let msg = "should fail".to_string();
 
     // Send should immediately fail because state is permanently Stopped.
-    let result = input_sender.send(msg).await;
-    assert!(result.is_err(), "Sender task should fail when Stopped");
+    let result = input_sender.try_send(msg).await;
+    assert_eq!(result, Err(RRTWorkerStoppedError));
 }

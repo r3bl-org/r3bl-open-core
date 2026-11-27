@@ -9,7 +9,7 @@ use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal, OsSt
                ok,
                readline_async::{PrintLineOnControlC, PrintLineOnEnter, Readline,
                                 ReadlineAsyncContext, ReadlineEvent, Spinner},
-               rla_println, set_mimalloc_in_main, tui_color};
+               rla_println, run_in_main_with_safe_stack, tui_color};
 use smallvec::smallvec;
 use std::{fs,
           io::Write,
@@ -138,10 +138,10 @@ impl Default for State {
     }
 }
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::needless_return)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     let prompt = {
@@ -180,7 +180,7 @@ async fn main() -> miette::Result<()> {
             _ = interval_2_task.tick() => {
                 task_2::tick(&mut state, &mut rl_ctx.clone_shared_writer());
             },
-            result_readline_event = rl_ctx.read_line() => {
+            result_readline_event = rl_ctx.try_read_line() => {
                 match result_readline_event {
                     Ok(readline_event) => {
                         match readline_event {
@@ -192,7 +192,7 @@ async fn main() -> miette::Result<()> {
                                 let control_flow = process_input_event::process(
                                     user_input, mut_state, shared_writer, readline)?;
                                 if let ControlFlow::Break(()) = control_flow {
-                                    rl_ctx.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
+                                    rl_ctx.try_request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
                                     rl_ctx.await_shutdown().await;
                                     break;
                                 }
@@ -209,7 +209,7 @@ async fn main() -> miette::Result<()> {
                             }
                             // Ctrl+D, Ctrl+C.
                             ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                                rl_ctx.request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
+                                rl_ctx.try_request_shutdown(Some("❪◕‿◕❫ Goodbye")).await?;
                                 rl_ctx.await_shutdown().await;
                                 break;
                             }

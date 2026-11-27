@@ -8,7 +8,7 @@
 //! # Why [`PTY`] isolation?
 //!
 //! It uses [`PTY`] isolation because [`Readline::drop()`] unconditionally calls
-//! [`disable_raw_mode()`], which modifies the global [`SAVED_TERMIOS`] static and alters
+//! [`try_disable_raw_mode()`], which modifies the global [`SAVED_TERMIOS`] static and alters
 //! the terminal settings (specifically the [`ONLCR`] flag) of the process that runs it.
 //! Without [`PTY`] isolation, these tests would mutate the `cargo test` runner's own
 //! terminal, causing the "staircase effect" (newlines moving the cursor down but not back
@@ -23,19 +23,19 @@
 //! cargo test -p r3bl_tui test_pty_editor_state -- --nocapture
 //! ```
 //!
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`ONLCR`]: https://manpages.debian.org/tty_ioctl.4
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`Readline`]: crate::Readline
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
-//! [child process's `TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
+//! [`try_disable_raw_mode()`]: crate::try_disable_raw_mode
+//! [child process's `TTY`]: crate::PtyPair#what-is-a-tty
 
 use crate::{ChannelCapacity, CursorPositionBoundsStatus, GCStringOwned, GLYPH_FAILURE,
             GLYPH_SUCCESS, History, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, ReadlineControlFlow, StdMutex,
             apply_event_to_line_state_and_render,
-            convert_crossterm_event_to_input_event, generate_pty_test, seg_index,
+            convert_crossterm_event_to_input_event, seg_index,
             vp_height, vp_width};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use std::{io::Write, sync::Arc};
@@ -85,6 +85,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {

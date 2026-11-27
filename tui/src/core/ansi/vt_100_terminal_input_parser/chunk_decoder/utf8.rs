@@ -205,7 +205,7 @@
 //! [`VPCol`]: crate::VPCol
 //! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
 //! [`VT100KeyCodeIR::Char`]: crate::core::ansi::vt_100_terminal_input_parser::VT100KeyCodeIR::Char
-//! [parent module documentation]: mod@crate::vt_100_terminal_input_parser
+//! [parent module documentation]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 use super::super::ir_event_types::{ParsedInputEventIR, VT100InputEventIR,
                                    VT100KeyCodeIR, VT100KeyModifiersIR};
@@ -373,7 +373,7 @@ fn decode_utf8(char_bytes: &[u8]) -> Option<char> {
 /// see the [testing strategy] documentation.
 ///
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-/// [testing strategy]: mod@crate::vt_100_terminal_input_parser#testing-strategy
+/// [testing strategy]: mod@crate::core::ansi::vt_100_terminal_input_parser#testing-strategy
 #[cfg(test)]
 mod tests {
     use super::*;

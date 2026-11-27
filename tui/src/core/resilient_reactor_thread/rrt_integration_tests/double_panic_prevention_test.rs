@@ -6,15 +6,15 @@
 //! # Why [`PTY`] isolation?
 //!
 //! It uses [`PTY`] isolation because [`Readline::drop()`] unconditionally calls
-//! [`disable_raw_mode()`].
+//! [`try_disable_raw_mode()`].
 //!
-//! [`disable_raw_mode()`] modifies the global [`SAVED_TERMIOS`] static and alters the
+//! [`try_disable_raw_mode()`] modifies the global [`SAVED_TERMIOS`] static and alters the
 //! terminal settings (specifically the [`ONLCR`] flag) of the process that runs it.
 //! Without [`PTY`] isolation, this test would mutate the `cargo test` runner's own
 //! terminal, causing the "staircase effect" (newlines moving the cursor down but not back
 //! to column 0) in the test output.
 //!
-//! By running the test in a [`PTY`], [`disable_raw_mode()`] only affects the child
+//! By running the test in a [`PTY`], [`try_disable_raw_mode()`] only affects the child
 //! process's [`TTY`], leaving the developer's terminal environment untouched.
 //!
 //! # How it works
@@ -34,7 +34,6 @@
 //! cargo test -p r3bl_tui test_double_panic_prevention -- --nocapture
 //! ```
 //!
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`drop()`]: Readline::drop()
 //! [`into_inner()`]: std::sync::Mutex::into_inner
 //! [`ONLCR`]: https://manpages.debian.org/tty_ioctl.4
@@ -42,13 +41,14 @@
 //! [`Readline::drop()`]: Readline::drop()
 //! [`SAVED_TERMIOS`]: crate::terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS
 //! [`SIGABRT`]: https://manpages.debian.org/signal.7
-//! [`TTY`]: crate::core::pty::pty_engine::pty_pair#what-is-a-tty
+//! [`try_disable_raw_mode()`]: crate::try_disable_raw_mode
+//! [`TTY`]: crate::PtyPair#what-is-a-tty
 
 use crate::{CaughtPanicResult, ChannelCapacity, GLYPH_CONTROLLED, GLYPH_CONTROLLER,
             GLYPH_FAILURE, GLYPH_SUCCESS, InputDevice, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, Readline, extract_panic_message,
-            generate_pty_test, vp_height, vp_width};
+            vp_height, vp_width};
 use std::{io::Write, panic::catch_unwind, process::exit};
 use tokio::sync::broadcast;
 
@@ -122,6 +122,8 @@ fn controller(context: PtyTestContext) {
 }
 
 /// The harness performs [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     const EXPECTED_SECOND_PANIC_MSG: &str = "Second panic triggering drop()";
 

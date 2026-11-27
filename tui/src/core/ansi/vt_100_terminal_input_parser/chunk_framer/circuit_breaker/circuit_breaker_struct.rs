@@ -2,7 +2,7 @@
 
 use super::{OscDrainReason, OscDrainResult};
 use crate::{ANSI_BEL, ANSI_ESC, ANSI_ST_7BIT_TRANSPORT_ENCODING_LEN, ANSI_ST_FINAL,
-            ByteOffset, CARRIAGE_RETURN, DEBUG_TUI_SHOW_DIRECT_TO_ANSI, LINE_FEED,
+            ByteOffset, CARRIAGE_RETURN, DEBUG_DIRECT_TO_ANSI, LINE_FEED,
             MAX_OSC_DRAIN_BYTES, byte_offset};
 use tracing::Level;
 
@@ -56,7 +56,7 @@ use tracing::Level;
 /// [`MAX_OSC_SEQUENCE_LENGTH`]: crate::MAX_OSC_SEQUENCE_LENGTH
 /// [`Open`]: Self::Open
 /// [`OpenAwaitingSt`]: Self::OpenAwaitingSt
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 /// [`OscDrainReason`]: OscDrainReason
 /// [`OscDrainResult::undrained_bytes()`]: OscDrainResult::undrained_bytes
 /// [`OscDrainResult`]: OscDrainResult
@@ -87,7 +87,7 @@ pub enum OscCircuitBreaker {
     /// [`ANSI_BEL`]: crate::ANSI_BEL
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ChunkFramer::process_incoming_bytes()`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::ChunkFramer::process_incoming_bytes
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     Open {
         /// Total bytes drained so far across chunks (bounded by
@@ -118,7 +118,7 @@ pub enum OscCircuitBreaker {
     ///
     /// [`ANSI_ESC`]: crate::ANSI_ESC
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [State Machine Lifecycle]: Self#state-machine-lifecycle
     OpenAwaitingSt {
         /// Total bytes drained so far across chunks (bounded by
@@ -133,7 +133,7 @@ impl OscCircuitBreaker {
     /// Trips the circuit breaker to [`Self::Open`] with the specified initial count of
     /// drained bytes (typically the byte displacement of the purged accumulator).
     ///
-    /// Logs a warning at [`Level::WARN`] when [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`] is
+    /// Logs a warning at [`Level::WARN`] when [`DEBUG_DIRECT_TO_ANSI`] is
     /// enabled.
     ///
     /// > This [article] has more details on mutable reborrowing. `&mut *self` breaks down
@@ -148,13 +148,13 @@ impl OscCircuitBreaker {
     ///   sequence was detected and purged.
     ///
     /// [`ByteOffset`]: crate::ByteOffset
-    /// [`DEBUG_TUI_SHOW_DIRECT_TO_ANSI`]: crate::DEBUG_TUI_SHOW_DIRECT_TO_ANSI
+    /// [`DEBUG_DIRECT_TO_ANSI`]: crate::DEBUG_DIRECT_TO_ANSI
     /// [`Level::WARN`]: tracing::Level::WARN
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     pub fn trip(&mut self, already_drained_byte_count: ByteOffset) {
         let breaker = &mut *self; // Mutable reborrow.
 
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             tracing::warn! {
                 message = "OscCircuitBreaker::trip",
                 status = "tripping circuit breaker for runaway OSC sequence",
@@ -201,7 +201,7 @@ impl OscCircuitBreaker {
     ) -> OscDrainResult<'a> {
         let breaker = &mut *self; // Mutable reborrow.
 
-        DEBUG_TUI_SHOW_DIRECT_TO_ANSI.then(|| {
+        DEBUG_DIRECT_TO_ANSI.then(|| {
             // % is Display, ? is Debug.
             match level {
                 Level::WARN => {
@@ -258,7 +258,7 @@ impl OscCircuitBreaker {
     /// [`ANSI_ST_7BIT_TRANSPORT_ENCODING`]: crate::ANSI_ST_7BIT_TRANSPORT_ENCODING
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`MAX_OSC_DRAIN_BYTES`]: crate::MAX_OSC_DRAIN_BYTES
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [`stdin`]: std::io::stdin
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
@@ -326,7 +326,7 @@ impl OscCircuitBreaker {
     /// [`ANSI_ST_FINAL`]: crate::ANSI_ST_FINAL
     /// [`ByteOffset`]: crate::ByteOffset
     /// [`ESC`]: crate::EscSequence
-    /// [`OSC`]: crate::osc_codes::OscSequence
+    /// [`OSC`]: crate::OscSequence
     /// [article]: https://developerlife.com/2026/09/25/rust-reborrowing/
     fn handle_awaiting_st<'a>(
         &mut self,

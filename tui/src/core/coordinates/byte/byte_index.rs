@@ -2,11 +2,9 @@
 
 //! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
 
-use crate::{ArrayBoundsCheck, ByteLength, ByteOffset, ChUnit, NarrowingCastToUsize,
-            VPIndex, WideningCastToUsize,
-            bounds_check::{IndexOps, NumericConversions, NumericValue,
-                           StorageCoordinate},
-            usize};
+use crate::{ArrayBoundsCheck, ByteLength, ByteOffset, ChUnit, IndexOps,
+            NarrowingCastToUsize, NumericConversions, NumericValue, StorageCoordinate,
+            VPIndex, WideningCastToUsize, usize};
 use std::ops::{Add, AddAssign, Deref, DerefMut, Range, Sub, SubAssign};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
@@ -361,9 +359,9 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        use rustc_hash::FxHashSet;
+        use crate::HashSet;
 
-        let mut set = FxHashSet::default();
+        let mut set = HashSet::default();
         let index1 = byte_index(42);
         let index2 = byte_index(42);
         let index3 = byte_index(24);
@@ -496,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_byte_index_range_boundary_compatibility() {
-        use crate::{RangeValidityStatus, bounds_check::RangeBoundsExt};
+        use crate::{RangeBoundsExt, RangeValidityStatus};
         use std::ops::Range;
 
         let start = byte_index(5);

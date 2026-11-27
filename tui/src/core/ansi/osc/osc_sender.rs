@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{ClipboardTarget, OscPtyEvent, osc_codes::OscSequence};
-use crate::{Pc, TerminalColorRole, core::terminal_io::OutputDevice, ok};
-use miette::IntoDiagnostic;
+use super::{ClipboardTarget, OscPtyEvent, OscSequence};
+use crate::{Pc, TerminalColorRole,
+            core::terminal_io::{OutputDevice, TerminalIoError}};
 
 /// Sender for emitting [`OSC`] (Operating System Command) sequences to the terminal's
 /// standard output ([`stdout`]).
@@ -42,8 +42,8 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OscSequence`]: crate::OscSequence
-    pub fn send_sequence(&mut self, sequence: &OscSequence) -> miette::Result<()> {
-        self.write_sequence(&sequence.to_string())
+    pub fn try_send_sequence(&mut self, sequence: &OscSequence) -> Result<(), TerminalIoError> {
+        self.try_write_sequence(&sequence.to_string())
     }
 
     /// Dispatches an [`OscPtyEvent`] as the corresponding outbound sequence.
@@ -53,13 +53,13 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OscPtyEvent`]: crate::OscPtyEvent
-    pub fn send_event(&mut self, event: OscPtyEvent) -> miette::Result<()> {
+    pub fn try_send_event(&mut self, event: OscPtyEvent) -> Result<(), TerminalIoError> {
         match event {
-            OscPtyEvent::SetTitleAndTab(text) => self.send_set_title_and_tab(&text),
-            OscPtyEvent::ProgressUpdate(percent) => self.send_set_progress(percent),
-            OscPtyEvent::ProgressCleared => self.send_clear_progress(),
+            OscPtyEvent::SetTitleAndTab(text) => self.try_send_set_title_and_tab(&text),
+            OscPtyEvent::ProgressUpdate(percent) => self.try_send_set_progress(percent),
+            OscPtyEvent::ProgressCleared => self.try_send_clear_progress(),
             OscPtyEvent::Hyperlink { uri, text: _ } => {
-                self.send_set_hyperlink(&uri, None)
+                self.try_send_set_hyperlink(&uri, None)
             }
             _ => ok!(),
         }
@@ -92,9 +92,9 @@ impl<'a> OscSender<'a> {
     /// [`stdin`]: std::io::stdin
     /// [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser
     /// [osc-platform-support]: mod@crate::core::ansi::osc#platform--backend-availability
-    pub fn send_color_query(&mut self, role: TerminalColorRole) -> miette::Result<()> {
+    pub fn try_send_color_query(&mut self, role: TerminalColorRole) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::ColorQuery(role);
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     /// Sends a query for the terminal's default text background color ([`OSC`] 11).
@@ -104,19 +104,19 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_background_color_query(&mut self) -> miette::Result<()> {
-        self.send_color_query(TerminalColorRole::Background)
+    pub fn try_send_background_color_query(&mut self) -> Result<(), TerminalIoError> {
+        self.try_send_color_query(TerminalColorRole::Background)
     }
 
-    /// Short alias for [`send_background_color_query`].
+    /// Short alias for [`try_send_background_color_query`].
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the output device fails.
     ///
-    /// [`send_background_color_query`]: Self::send_background_color_query
-    pub fn send_bg_color_query(&mut self) -> miette::Result<()> {
-        self.send_background_color_query()
+    /// [`try_send_background_color_query`]: Self::try_send_background_color_query
+    pub fn try_send_bg_color_query(&mut self) -> Result<(), TerminalIoError> {
+        self.try_send_background_color_query()
     }
 
     /// Sends a query for the terminal's default text foreground color ([`OSC`] 10).
@@ -126,19 +126,19 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_foreground_color_query(&mut self) -> miette::Result<()> {
-        self.send_color_query(TerminalColorRole::Foreground)
+    pub fn try_send_foreground_color_query(&mut self) -> Result<(), TerminalIoError> {
+        self.try_send_color_query(TerminalColorRole::Foreground)
     }
 
-    /// Short alias for [`send_foreground_color_query`].
+    /// Short alias for [`try_send_foreground_color_query`].
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the output device fails.
     ///
-    /// [`send_foreground_color_query`]: Self::send_foreground_color_query
-    pub fn send_fg_color_query(&mut self) -> miette::Result<()> {
-        self.send_foreground_color_query()
+    /// [`try_send_foreground_color_query`]: Self::try_send_foreground_color_query
+    pub fn try_send_fg_color_query(&mut self) -> Result<(), TerminalIoError> {
+        self.try_send_foreground_color_query()
     }
 
     /// Sends a query for the terminal's text cursor color ([`OSC`] 12).
@@ -148,8 +148,8 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_cursor_color_query(&mut self) -> miette::Result<()> {
-        self.send_color_query(TerminalColorRole::Cursor)
+    pub fn try_send_cursor_color_query(&mut self) -> Result<(), TerminalIoError> {
+        self.try_send_color_query(TerminalColorRole::Cursor)
     }
 
     // -------------------------------------------------------------------------
@@ -164,9 +164,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_title_and_tab(&mut self, text: &str) -> miette::Result<()> {
+    pub fn try_send_set_title_and_tab(&mut self, text: &str) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::SetTitleAndIcon(text.to_string());
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     /// Sets terminal window title using [`OSC`] 2 sequence.
@@ -176,9 +176,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_title(&mut self, text: &str) -> miette::Result<()> {
+    pub fn try_send_set_title(&mut self, text: &str) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::SetTitle(text.to_string());
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     /// Sets terminal icon name using [`OSC`] 1 sequence.
@@ -188,9 +188,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_icon(&mut self, text: &str) -> miette::Result<()> {
+    pub fn try_send_set_icon(&mut self, text: &str) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::SetIcon(text.to_string());
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     // -------------------------------------------------------------------------
@@ -204,9 +204,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_progress(&mut self, percent: Pc) -> miette::Result<()> {
+    pub fn try_send_set_progress(&mut self, percent: Pc) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::ProgressUpdate(percent);
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     /// Clears / removes the terminal taskbar or tab progress indicator using [`OSC`] 9;4.
@@ -216,9 +216,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_clear_progress(&mut self) -> miette::Result<()> {
+    pub fn try_send_clear_progress(&mut self) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::ProgressCleared;
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     // -------------------------------------------------------------------------
@@ -232,16 +232,16 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_hyperlink(
+    pub fn try_send_set_hyperlink(
         &mut self,
         uri: &str,
         maybe_link_correlation_id: Option<&str>,
-    ) -> miette::Result<()> {
+    ) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::HyperlinkStart {
             uri: uri.to_string(),
             maybe_link_correlation_id: maybe_link_correlation_id.map(ToString::to_string),
         };
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     /// Closes a hyperlink using [`OSC`] 8 end sequence.
@@ -251,9 +251,9 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_clear_hyperlink(&mut self) -> miette::Result<()> {
+    pub fn try_send_clear_hyperlink(&mut self) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::HyperlinkEnd;
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     // -------------------------------------------------------------------------
@@ -267,16 +267,16 @@ impl<'a> OscSender<'a> {
     /// Returns an error if writing to the output device fails.
     ///
     /// [`OSC`]: crate::OscSequence
-    pub fn send_set_clipboard(
+    pub fn try_send_set_clipboard(
         &mut self,
         target: ClipboardTarget,
         data: &str,
-    ) -> miette::Result<()> {
+    ) -> Result<(), TerminalIoError> {
         let sequence = OscSequence::ClipboardSet {
             target,
             data: data.to_string(),
         };
-        self.send_sequence(&sequence)
+        self.try_send_sequence(&sequence)
     }
 
     // -------------------------------------------------------------------------
@@ -286,10 +286,10 @@ impl<'a> OscSender<'a> {
     /// Low-level method to write an [`OSC`] sequence directly to the output device.
     ///
     /// [`OSC`]: crate::OscSequence
-    fn write_sequence(&mut self, sequence: &str) -> miette::Result<()> {
+    fn try_write_sequence(&mut self, sequence: &str) -> Result<(), TerminalIoError> {
         self.output_device.write(|writer| {
-            write!(writer, "{sequence}").into_diagnostic()?;
-            Ok::<(), miette::Report>(())
+            write!(writer, "{sequence}").map_err(TerminalIoError::Io)?;
+            Ok::<(), TerminalIoError>(())
         })?;
         ok!()
     }
@@ -298,16 +298,16 @@ impl<'a> OscSender<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{OutputDevice, OutputDeviceExt, pc};
+    use crate::{OutputDevice, OutputDeviceExt};
 
     #[test]
     fn test_osc_sender_send_set_progress() {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
-        sender.send_set_progress(pc!(50).unwrap()).unwrap();
+        sender.try_send_set_progress(pc!(50).unwrap()).unwrap();
         assert_eq!(mock.get_copy_of_buffer_as_string(), "\x1b]9;4;1;50\x1b\\");
 
-        sender.send_clear_progress().unwrap();
+        sender.try_send_clear_progress().unwrap();
         assert_eq!(
             mock.get_copy_of_buffer_as_string(),
             "\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"
@@ -318,7 +318,7 @@ mod tests {
     fn test_osc_sender_send_set_title_and_tab() {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
-        sender.send_set_title_and_tab("My Title").unwrap();
+        sender.try_send_set_title_and_tab("My Title").unwrap();
         assert_eq!(mock.get_copy_of_buffer_as_string(), "\x1b]0;My Title\x07");
     }
 
@@ -326,7 +326,7 @@ mod tests {
     fn test_osc_sender_send_set_title() {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
-        sender.send_set_title("Window").unwrap();
+        sender.try_send_set_title("Window").unwrap();
         assert_eq!(mock.get_copy_of_buffer_as_string(), "\x1b]2;Window\x07");
     }
 
@@ -334,7 +334,7 @@ mod tests {
     fn test_osc_sender_send_set_icon() {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
-        sender.send_set_icon("Icon").unwrap();
+        sender.try_send_set_icon("Icon").unwrap();
         assert_eq!(mock.get_copy_of_buffer_as_string(), "\x1b]1;Icon\x07");
     }
 
@@ -343,14 +343,14 @@ mod tests {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
         sender
-            .send_set_hyperlink("https://example.com", None)
+            .try_send_set_hyperlink("https://example.com", None)
             .unwrap();
         assert_eq!(
             mock.get_copy_of_buffer_as_string(),
             "\x1b]8;;https://example.com\x07"
         );
 
-        sender.send_clear_hyperlink().unwrap();
+        sender.try_send_clear_hyperlink().unwrap();
         assert_eq!(
             mock.get_copy_of_buffer_as_string(),
             "\x1b]8;;https://example.com\x07\x1b]8;;\x07"
@@ -359,7 +359,7 @@ mod tests {
         let (output_device_with_id, mock_with_id) = OutputDevice::new_mock();
         let mut sender_with_id = OscSender::new(&output_device_with_id);
         sender_with_id
-            .send_set_hyperlink("https://example.com", Some("id123"))
+            .try_send_set_hyperlink("https://example.com", Some("id123"))
             .unwrap();
         assert_eq!(
             mock_with_id.get_copy_of_buffer_as_string(),
@@ -371,9 +371,9 @@ mod tests {
     fn test_osc_sender_send_color_queries() {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
-        sender.send_bg_color_query().unwrap();
-        sender.send_fg_color_query().unwrap();
-        sender.send_cursor_color_query().unwrap();
+        sender.try_send_bg_color_query().unwrap();
+        sender.try_send_fg_color_query().unwrap();
+        sender.try_send_cursor_color_query().unwrap();
         assert_eq!(
             mock.get_copy_of_buffer_as_string(),
             "\x1b]11;?\x07\x1b]10;?\x07\x1b]12;?\x07"
@@ -385,7 +385,7 @@ mod tests {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
         sender
-            .send_set_clipboard(ClipboardTarget::System, "Hello")
+            .try_send_set_clipboard(ClipboardTarget::System, "Hello")
             .unwrap();
         assert_eq!(
             mock.get_copy_of_buffer_as_string(),
@@ -395,7 +395,7 @@ mod tests {
         let (output_device_primary, mock_primary) = OutputDevice::new_mock();
         let mut sender_primary = OscSender::new(&output_device_primary);
         sender_primary
-            .send_set_clipboard(ClipboardTarget::Primary, "World")
+            .try_send_set_clipboard(ClipboardTarget::Primary, "World")
             .unwrap();
         assert_eq!(
             mock_primary.get_copy_of_buffer_as_string(),
@@ -408,22 +408,22 @@ mod tests {
         let (output_device, mock) = OutputDevice::new_mock();
         let mut sender = OscSender::new(&output_device);
         sender
-            .send_event(OscPtyEvent::SetTitleAndTab("EventTitle".to_string()))
+            .try_send_event(OscPtyEvent::SetTitleAndTab("EventTitle".to_string()))
             .unwrap();
         sender
-            .send_event(OscPtyEvent::ProgressUpdate(pc!(75).unwrap()))
+            .try_send_event(OscPtyEvent::ProgressUpdate(pc!(75).unwrap()))
             .unwrap();
-        sender.send_event(OscPtyEvent::ProgressCleared).unwrap();
+        sender.try_send_event(OscPtyEvent::ProgressCleared).unwrap();
         sender
-            .send_event(OscPtyEvent::Hyperlink {
+            .try_send_event(OscPtyEvent::Hyperlink {
                 uri: "https://example.com".to_string(),
                 text: "Example".to_string(),
             })
             .unwrap();
         // Wildcard no-op branch should not write anything new to the buffer.
-        sender.send_event(OscPtyEvent::BuildError).unwrap();
+        sender.try_send_event(OscPtyEvent::BuildError).unwrap();
         sender
-            .send_event(OscPtyEvent::IndeterminateProgress)
+            .try_send_event(OscPtyEvent::IndeterminateProgress)
             .unwrap();
 
         assert_eq!(

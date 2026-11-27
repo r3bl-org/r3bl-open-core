@@ -6,7 +6,6 @@
 //!
 //! [here]: https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg
 
-use crate::ok;
 use miette::Diagnostic;
 use std::{env, fs,
           fs::File,
@@ -116,10 +115,10 @@ pub enum FsOpError {
     InvalidName(String),
 
     #[error("Failed to perform fs operation directory: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(#[source] std::io::Error),
 }
 
-pub type FsOpResult<T> = miette::Result<T, FsOpError>;
+pub type FsOpResult<T> = Result<T, FsOpError>;
 
 /// Checks whether the directory exist. If won't provide any errors if there are
 /// permissions issues or the directory is invalid. Use [`try_directory_exists`] if you
@@ -262,7 +261,7 @@ pub fn try_write_file(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{try_create_temp_dir, with_saved_pwd};
+    use crate::try_create_temp_dir;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
@@ -702,8 +701,6 @@ mod tests {
         #[cfg(unix)]
         test_try_change_directory_invalid_name();
     }
-
-    use crate::generate_isolated_process_test;
 
     generate_isolated_process_test!(
         /// This test function runs all the tests that change the current working

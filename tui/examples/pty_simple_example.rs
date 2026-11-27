@@ -8,17 +8,16 @@
 
 use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
                TerminalModeController, ansi_output, assert_terminal_is_interactive,
-               core::{get_size,
-                      pty::{AsyncPtySession, ControlSequence, CursorKeyMode,
+               core::{pty::{AsyncPtySession, ControlSequence, CursorKeyMode,
                             DefaultPtySessionConfig, PtyInputEvent, PtyOutputEvent,
                             PtySessionBuilder, PtySessionConfigToken},
                       terminal_io::{InputDevice, OutputDevice},
-                      try_initialize_logging_global},
-               ok, set_mimalloc_in_main, vp_col, vp_row};
+                      try_get_size, try_initialize_logging_global},
+               ok, run_in_main_with_safe_stack, vp_col, vp_row};
 
-#[tokio::main]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Initialize logging to /tmp/r3bl_tui/log.txt.
@@ -31,14 +30,14 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to /tmp/r3bl_tui/log.txt");
     println!();
 
-    let terminal_size = get_size()?;
+    let terminal_size = try_get_size()?;
 
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::default();
 
     // Start raw mode and full screen TUI.
     let _raw_mode_guard = output_device.enter_raw_mode()?;
-    let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
+    let _fullscreen_tui_mode_guard = output_device.try_setup_full_screen_tui()?;
     tracing::debug!("Raw mode and full screen TUI started");
 
     // Clear screen and reset cursor.
@@ -60,7 +59,7 @@ async fn main() -> miette::Result<()> {
 
     let session = PtySessionBuilder::new("htop")
         .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(terminal_size))
-        .start_async()?;
+        .try_start_async()?;
 
     tracing::debug!("htop process started successfully");
 
@@ -70,7 +69,7 @@ async fn main() -> miette::Result<()> {
     // Cleanup.
     tracing::debug!("Starting cleanup");
     // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here.
-    output_device.flush()?;
+    output_device.try_flush()?;
     tracing::debug!("Raw mode and full screen TUI ended, cleanup complete");
 
     println!("👋 Goodbye!");

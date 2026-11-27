@@ -3,6 +3,7 @@
 // Attach.
 pub mod constants;
 pub mod fmt;
+pub mod r3bl_file_paths;
 pub mod ui_templates;
 
 // Re-export.

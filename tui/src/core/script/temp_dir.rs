@@ -1,10 +1,22 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::friendly_random_id::generate_friendly_random_id;
-use miette::IntoDiagnostic;
+use crate::generate_friendly_random_id;
 use std::{fmt::{Display, Formatter},
           ops::Deref,
-          path::Path};
+          path::{Component, Path, PathBuf}};
+
+/// Error returned by [`try_create_temp_dir`] when creating the temporary directory on
+/// disk fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create temporary directory '{}'", path.display())]
+pub struct TempDirError {
+    /// Temporary directory path passed to [`std::fs::create_dir_all`].
+    pub path: PathBuf,
+
+    /// Underlying OS filesystem error.
+    #[source]
+    pub src_err: std::io::Error,
+}
 
 #[derive(Debug)]
 pub struct TempDir {
@@ -26,14 +38,17 @@ impl TempDir {
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`TempDirError`] if:
 /// - The temp directory cannot be created due to insufficient permissions
 /// - The file system is full
 /// - I/O errors occur during directory creation
-pub fn try_create_temp_dir() -> miette::Result<TempDir> {
+pub fn try_create_temp_dir() -> Result<TempDir, TempDirError> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(generate_friendly_random_id().as_str());
-    std::fs::create_dir_all(&new_temp_dir).into_diagnostic()?;
+    std::fs::create_dir_all(&new_temp_dir).map_err(|src_err| TempDirError {
+        path: new_temp_dir.clone(),
+        src_err,
+    })?;
     Ok(TempDir {
         inner: new_temp_dir,
     })
@@ -155,10 +170,112 @@ impl AsRef<Path> for TempDir {
     fn as_ref(&self) -> &Path { &self.inner }
 }
 
+/// Error returned by [`TempDirChildPath::try_new`] when `sub_dir` is absolute or
+/// contains a parent-directory (`..`) component.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error(
+    "sub_dir must be relative and not contain parent components: {}",
+    path.display()
+)]
+pub struct TempDirChildPathError {
+    /// Invalid path rejected by [`TempDirChildPath::try_new`].
+    pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TempDirChildPath {
+    inner: PathBuf,
+}
+
+impl TempDirChildPath {
+    /// Creates a [`TempDirChildPath`] guaranteed to stay inside `parent`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TempDirChildPathError`] if `arg_sub_dir` is absolute or contains a
+    /// parent-directory (`..`) component.
+    pub fn try_new(
+        parent: &TempDir,
+        arg_sub_dir: impl AsRef<Path>,
+    ) -> Result<Self, TempDirChildPathError> {
+        let sub_dir = arg_sub_dir.as_ref();
+        let is_relative = sub_dir.is_relative();
+        let has_parent_in_component =
+            sub_dir.components().any(|c| c == Component::ParentDir);
+        if !is_relative || has_parent_in_component {
+            return Err(TempDirChildPathError {
+                path: sub_dir.to_path_buf(),
+            });
+        }
+        let child = parent.inner.join(sub_dir);
+        Ok(Self { inner: child })
+    }
+
+    #[must_use]
+    pub fn as_path_buf(&self) -> PathBuf { self.inner.clone() }
+}
+
+/// Needed for `fs::metadata` and `File::options().open()`.
+impl AsRef<Path> for TempDirChildPath {
+    fn as_ref(&self) -> &Path { &self.inner }
+}
+
+/// Allow easy access to inner [`PathBuf`] for APIs that expect it.
+impl Deref for TempDirChildPath {
+    type Target = std::path::PathBuf;
+
+    fn deref(&self) -> &Self::Target { &self.inner }
+}
+
+#[cfg(test)]
+mod tests_temp_dir_child_path {
+    use super::*;
+    use crate::try_create_temp_dir;
+
+    #[test]
+    #[allow(clippy::missing_errors_doc)]
+    fn test_try_new_valid_relative_and_empty() -> miette::Result<()> {
+        let temp_dir = try_create_temp_dir()?;
+        let child = TempDirChildPath::try_new(&temp_dir, "child")?;
+        assert_eq!(child.inner, temp_dir.inner.join("child"));
+
+        let nested = TempDirChildPath::try_new(&temp_dir, "a/b/c")?;
+        assert_eq!(nested.inner, temp_dir.inner.join("a/b/c"));
+
+        let root_itself = TempDirChildPath::try_new(&temp_dir, "")?;
+        assert_eq!(root_itself.inner, temp_dir.inner.join(""));
+        Ok(())
+    }
+
+    #[test]
+    #[allow(clippy::missing_errors_doc)]
+    fn test_try_new_rejects_absolute_and_parent_dir_traversal() -> miette::Result<()> {
+        let temp_dir = try_create_temp_dir()?;
+        let abs_path = std::env::temp_dir();
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, &abs_path),
+            Err(TempDirChildPathError { path: abs_path })
+        );
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, "../escape"),
+            Err(TempDirChildPathError {
+                path: PathBuf::from("../escape")
+            })
+        );
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, "a/../../escape"),
+            Err(TempDirChildPathError {
+                path: PathBuf::from("a/../../escape")
+            })
+        );
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests_temp_dir {
     use super::*;
-    use crate::{fg_lizard_green, ok};
+    use crate::fg_lizard_green;
 
     /// On Windows, `remove_dir_all()` may return before the OS fully removes the
     /// directory (due to antivirus, indexer, or "delete on close" semantics). This

@@ -228,22 +228,22 @@
 //! [YouTube developerlife.com channel]: https://youtu.be/v3tMwr_ysPg
 
 // Attach.
-pub mod block;
-pub mod convert_to_plain_text;
-pub mod extended;
-pub mod fragment;
-pub mod md_parser_constants;
-pub mod md_parser_types;
-pub mod parse_markdown;
-pub mod single_line;
+mod block;
+mod convert_to_plain_text;
+mod extended;
+mod fragment;
+mod md_parser_constants;
+mod md_parser_types;
+mod parse_markdown;
+mod single_line;
 
 // Test modules
 #[cfg(any(test, doc))]
-pub mod conformance_test_data;
+mod conformance_test_data;
 #[cfg(test)]
-pub mod parser_bench_tests;
+mod parser_bench_tests;
 #[cfg(test)]
-pub mod parser_snapshot_tests;
+mod parser_snapshot_tests;
 
 // Re-export.
 pub use block::*;

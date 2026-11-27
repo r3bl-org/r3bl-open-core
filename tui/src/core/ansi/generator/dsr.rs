@@ -27,7 +27,7 @@
 
 use crate::{BufTextStorage, CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END,
             DSR_RESPONSE_START, DSR_STATUS_OK_RESPONSE_STR, FastStringify, ParamsExt,
-            TermCol, TermRow, generate_impl_display_for_fast_stringify, ok};
+            TermCol, TermRow};
 use std::fmt::{self};
 
 // [`DSR`] request types for parsing incoming [`DSR`] [`CSI`] sequences.
@@ -115,8 +115,8 @@ mod impl_dsr_request_type {
 /// [`Display`]: std::fmt::Display
 /// [`DSR` spec]: https://en.wikipedia.org/wiki/ANSI_escape_code#DSR
 /// [`DSR`]: crate::DsrSequence
-/// [`OSC`]: crate::osc_codes::OscSequence
-/// [`OscSequence`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
+/// [`OscSequence`]: crate::OscSequence
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DsrSequence {
     /// Terminal OK status response - `ESC [ 0 n`.
@@ -195,7 +195,7 @@ generate_impl_display_for_fast_stringify!(DsrSequence);
 mod tests {
     use super::*;
     use crate::core::ansi::constants::DSR_STATUS_OK_FULL_RESPONSE;
-    use crate::vt_100_pty_output_conformance_tests::{
+    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::{
         nz, test_sequence_generators::dsr_builders::dsr_cursor_position_response,
     };
     use crate::{term_col, term_row};

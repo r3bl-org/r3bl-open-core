@@ -3,9 +3,7 @@
 use crate::{BufTextStorage, CCol, FastStringify, GCStringOwned, InlineString, InlineVec,
             PixelChar, PixelCharRenderer, SgrCode, TuiColor, TuiStyle, TuiStyleAttribs,
             UNICODE_REPLACEMENT_CHAR, VPWidth, c_col,
-            generate_impl_display_for_fast_stringify,
             impl_cli_text_inline::CliTextConvertOptions,
-            inline_string, ok, tui_color,
             tui_style_attrib::{Bold, Dim, Italic, Strikethrough, Underline}};
 // use std::fmt::Result;
 use strum_macros::EnumCount;
@@ -153,7 +151,7 @@ macro_rules! cli_text_lines {
     }};
 }
 
-pub mod impl_cli_text_inline {
+pub(crate) mod impl_cli_text_inline { // Used by backend paint impls.
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -942,7 +940,7 @@ generate_impl_display_for_fast_stringify!(CliTextInline);
 mod tests {
     use super::{dim, impl_cli_text_inline::CliTextConvertOptions};
     use crate::{CliTextInline, ColorSupport, InlineVec, PixelChar, TuiColor, TuiStyle,
-                TuiStyleAttribs, c_col, global_color_support, ok, tui_color,
+                TuiStyleAttribs, c_col, global_color_support,
                 tui_style::tui_style_attrib::Bold, tui_style_attribs, vp_width};
     use pretty_assertions::assert_eq;
     use serial_test::serial;

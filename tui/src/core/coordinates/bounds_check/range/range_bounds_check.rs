@@ -234,8 +234,8 @@ use std::ops::{Add, RangeInclusive};
 /// [`to_len()`]: RangeBoundsExt::to_len
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-/// [Interval Notation]: mod@crate::bounds_check#interval-notation
-/// [Module documentation]: mod@crate::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 #[rustfmt::skip]
 pub trait RangeBoundsExt
 where

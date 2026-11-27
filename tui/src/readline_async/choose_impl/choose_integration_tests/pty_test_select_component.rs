@@ -3,7 +3,6 @@
 use crate::{BufReadExt, ColorSupport, FunctionComponent, GLYPH_CONTROLLER, Header,
             HowToChoose, ItemsOwned, MSG_SUCCESS, OutputDevice, OutputDeviceExt,
             PtyTestContext, PtyTestMode, SelectComponent, State, StyleSheet, ch,
-            generate_pty_test,
             global_color_support::{clear_override, set_override}};
 use std::time::{Duration, Instant};
 

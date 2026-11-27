@@ -12,21 +12,26 @@
 //! - `expected_output/windows/`: Expected golden outputs (`.ps1`, `.json`, `.env`).
 
 // Unix test data constants.
+#[cfg(unix)]
 pub const INPUT_CARGO_ENV_SH: &str = include_str!("input/unix/cargo_env.sh");
 pub const EXPECTED_CARGO_ENV_FISH: &str =
     include_str!("expected_output/unix/cargo_env.fish");
 
+#[cfg(unix)]
 pub const INPUT_SANITIZED_USER_PROFILE_SH: &str =
     include_str!("input/unix/sanitized_user_profile.sh");
 pub const EXPECTED_SANITIZED_USER_PROFILE_FISH: &str =
     include_str!("expected_output/unix/sanitized_user_profile.fish");
 
+#[cfg(unix)]
 pub const INPUT_NOISY_SCRIPT_SH: &str = include_str!("input/unix/noisy_script.sh");
 pub const EXPECTED_NOISY_SCRIPT_FISH: &str =
     include_str!("expected_output/unix/noisy_script.fish");
 
+#[cfg(unix)]
 pub const INPUT_HOMEBREW_ENV_SH: &str = include_str!("input/unix/homebrew_env.sh");
 
+#[cfg(unix)]
 pub const INPUT_EDGE_CASES_SH: &str = include_str!("input/unix/edge_cases.sh");
 pub const EXPECTED_EDGE_CASES_FISH: &str =
     include_str!("expected_output/unix/edge_cases.fish");
@@ -36,14 +41,17 @@ pub const EXPECTED_EDGE_CASES_ENV_UNIX: &str =
     include_str!("expected_output/unix/edge_cases.env");
 
 // Windows test data constants.
+#[cfg(windows)]
 pub const INPUT_CARGO_ENV_BAT: &str = include_str!("input/windows/cargo_env.bat");
 pub const EXPECTED_CARGO_ENV_POWERSHELL: &str =
     include_str!("expected_output/windows/cargo_env.ps1");
 
+#[cfg(windows)]
 pub const INPUT_NOISY_SCRIPT_BAT: &str = include_str!("input/windows/noisy_script.bat");
 pub const EXPECTED_NOISY_SCRIPT_POWERSHELL: &str =
     include_str!("expected_output/windows/noisy_script.ps1");
 
+#[cfg(windows)]
 pub const INPUT_EDGE_CASES_BAT: &str = include_str!("input/windows/edge_cases.bat");
 pub const EXPECTED_EDGE_CASES_POWERSHELL: &str =
     include_str!("expected_output/windows/edge_cases.ps1");

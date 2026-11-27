@@ -18,7 +18,7 @@
 
 use crate::{DefaultIoDevices, MSG_CONTROLLED_READY, MSG_LINE_PREFIX, MSG_SUCCESS,
             PtyTestContext, PtyTestMode, SharedWriter, Spinner, SpinnerColor,
-            SpinnerStyle, SpinnerTemplate, TuiAvailability, generate_pty_test};
+            SpinnerStyle, SpinnerTemplate, TuiAvailability};
 use std::{io::Write, time::Duration};
 
 const QUANTUM: Duration = Duration::from_millis(100);
@@ -69,6 +69,8 @@ mod test_pty_spinner_color {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
@@ -155,6 +157,8 @@ mod test_pty_spinner_no_color {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
@@ -242,6 +246,8 @@ mod test_pty_spinner_message_update {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {

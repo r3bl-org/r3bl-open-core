@@ -294,7 +294,6 @@ pub fn update_selection_from_anchor_and_active_carets(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq2;
 
     #[test]
     fn test_anchor_state_classification() {

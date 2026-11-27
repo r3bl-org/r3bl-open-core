@@ -75,7 +75,7 @@
 
 use crate::{GLYPH_CONTROLLED, GLYPH_CONTROLLER, GLYPH_CONTROLLER_CLEANUP, GLYPH_SUCCESS,
             GLYPH_WAITING, InputEvent, MSG_CONTROLLED_READY, MSG_CONTROLLED_STARTING,
-            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode, generate_pty_test,
+            MSG_TEST_RUNNING, PtyTestContext, PtyTestMode,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::Write, time::Duration};
 
@@ -195,6 +195,7 @@ fn controller(context: PtyTestContext) {
 /// [`std::process::exit(0)`] after this function returns.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+/// [`std::process::exit(0)`]: std::process::exit
 /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 fn controlled() {
     // Print to stdout immediately to confirm controlled is starting.
@@ -206,7 +207,7 @@ fn controlled() {
 
     runtime.block_on(async {
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Starting...");
-        let mut input_device = DirectToAnsiInputDevice::new()
+        let mut input_device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Device created, reading events...");
 

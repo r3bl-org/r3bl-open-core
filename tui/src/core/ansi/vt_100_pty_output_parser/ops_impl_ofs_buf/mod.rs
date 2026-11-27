@@ -33,7 +33,7 @@
 //!
 //! Each file corresponds directly to a file in `vt_100_pty_output_parser/ops/`:
 //!
-//! - [`vt_100_impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
+//! - [`vt_100_impl_char_ops`] - Character operations (`try_print_char`, ICH, DCH, ECH)
 //! - [`vt_100_impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
 //! - [`vt_100_impl_cursor_ops`] - Cursor movement operations
 //! - [`vt_100_impl_dsr_ops`] - Device Status Report operations
@@ -135,79 +135,23 @@
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 pub const TAB_STOP_WIDTH: usize = 8;
 
-// Attach modules - conditionally public for documentation and testing.
-// These modules contain impl blocks for OfsBufVT100 and are accessed by
-// the parser shim layer. Making them conditionally public allows rustdoc links
-// to work while keeping them private in release builds.
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_ansi_panning;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_ansi_panning;
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod vt_100_impl_char_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_clear_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_control_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_cursor_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_da_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_dsr_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_line_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_margin_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_mode_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_osc_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_scroll_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_sgr_ops; // Cross-folder shim/test rustdoc links.
+pub(crate) mod vt_100_impl_terminal_ops; // Cross-folder shim/test rustdoc links.
 
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_char_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_char_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_clear_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_clear_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_control_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_control_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_cursor_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_cursor_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_dsr_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_dsr_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_line_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_line_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_margin_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_margin_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_mode_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_mode_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_osc_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_osc_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_scroll_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_scroll_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_sgr_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_sgr_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_terminal_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_terminal_ops;
-
-#[cfg(any(test, doc))]
-pub mod vt_100_impl_da_ops;
-#[cfg(not(any(test, doc)))]
-pub(super) mod vt_100_impl_da_ops;
+// Attach. Folder-local (Intra-module).
+mod vt_100_impl_ansi_panning;
 
 // Note: Individual modules are accessed by the parser shim layer
 // (vt_100_pty_output_parser). No re-exports needed here since the impl blocks extend

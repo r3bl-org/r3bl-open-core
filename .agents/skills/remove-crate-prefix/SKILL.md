@@ -31,14 +31,11 @@ pub fn render(size: Size) -> Pos { ... }
 pub fn render(size: crate::Size) -> crate::Pos { ... }
 ```
 
-## Exceptions
+## Exceptions & Macro Rules
 
-- **Declarative Macros (`macro_rules!`)**: Do NOT apply this refactor inside declarative macros, and NEVER touch or remove the `$crate::` prefix. Modifying `$crate::` will result in a syntax error because it turns a built-in macro keyword into an undeclared macro variable.
-- Macro invocations often require absolute paths (e.g., `crate::key_press!`). This rule
-  primarily targets structs, traits, and enums (e.g., `crate::ModifierKeysMask`).
-- Sometimes in generated code or highly isolated scopes, a `use crate::{...}` block
-  directly inside a function or `if` block is preferred over a file-level import to
-  minimize scope pollution.
+- **Declarative Macros (`macro_rules!`)**: Keep `$crate::` for non-macro items (types, traits, functions) inside `macro_rules!` bodies; removing `$crate::` causes a syntax error. However, do NOT call sibling `#[macro_export]` helper macros via `$crate::helper_macro!()`, because that triggers `macro_expanded_macro_exports_accessed_by_absolute_paths`.
+- **Crate-local `#[macro_export]` macros**: Do NOT import crate-local macros with `use crate::my_macro;` or call them via `crate::my_macro!()`. Modules propagate macros via `#[macro_use]` in declaration order, so invoke them unqualified (e.g., `key_press!`, `throws!`, `ok!`) and strip `crate::` without adding a `use` import.
+- **Scoped imports**: Sometimes in generated code or highly isolated scopes, a `use crate::{...}` block directly inside a function or `if` block is preferred over a file-level import to minimize scope pollution.
 
 ## Execution
 

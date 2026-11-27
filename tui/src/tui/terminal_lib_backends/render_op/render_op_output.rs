@@ -37,7 +37,7 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::{InlineString, LockedOutputDevice, RenderOpsLocalData, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend, TuiStyle, VPSize, ok,
+            TerminalLibBackend, TuiStyle, VPSize,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi}};
 use std::{fmt::{Debug, Formatter},
@@ -115,7 +115,7 @@ impl RenderOpOutputVec {
 
     /// Routes a single Output render operation to the appropriate backend implementation.
     ///
-    /// This is a private helper for the [`ExecutableRenderOps::execute_all()`] trait
+    /// This is a private helper for the [`RenderOpsExec::execute_all()`] trait
     /// method. It acts as a dispatcher, selecting the correct terminal library
     /// backend (Crossterm or `DirectAnsi`) and delegating the actual rendering work.
     ///
@@ -129,6 +129,8 @@ impl RenderOpOutputVec {
     ///   - Used for bounds checking to prevent off-screen rendering
     /// - `locked_output_device`: Thread-safe access to terminal output
     ///   - Backend queues commands to this output device
+    ///
+    /// [`RenderOpsExec::execute_all()`]: crate::RenderOpsExec::execute_all
     fn route_paint_render_op_output_to_backend(
         render_local_data: &mut RenderOpsLocalData,
         render_op_output: &RenderOpOutput,

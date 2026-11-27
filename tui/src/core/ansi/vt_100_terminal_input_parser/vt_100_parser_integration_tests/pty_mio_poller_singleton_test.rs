@@ -3,12 +3,12 @@
 //! [`PTY`]-based integration test for [`DirectToAnsiInputDevice`] singleton semantics.
 //!
 //! Tests that only one [`DirectToAnsiInputDevice`] can exist at a time, and that calling
-//! [`new()`] twice panics with a helpful message.
+//! [`try_new()`] twice panics with a helpful message.
 //!
 //! Tests that:
-//! 1. First [`new()`] succeeds
-//! 2. Second [`new()`] panics with message guiding to use [`try_subscribe()`]
-//! 3. After dropping the first device, [`new()`] succeeds again
+//! 1. First [`try_new()`] succeeds
+//! 2. Second [`try_new()`] panics with message guiding to use [`try_subscribe()`]
+//! 3. After dropping the first device, [`try_new()`] succeeds again
 //!
 //! ## Test Flow
 //!
@@ -34,12 +34,11 @@
 //! cargo test -p r3bl_tui test_pty_mio_poller_singleton -- --nocapture
 //! ```
 //!
-//! [`new()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::new
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`try_new()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::try_new
 //! [`try_subscribe()`]: crate::direct_to_ansi::DirectToAnsiInputDevice::try_subscribe
 
 use crate::{CaughtPanicResult, PtyTestContext, PtyTestMode, extract_panic_message,
-            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::io::Write;
 
@@ -88,6 +87,8 @@ fn controller(context: PtyTestContext) {
 
 /// Controlled process: tests singleton device semantics. The harness performs
 /// [`std::process::exit(0)`] after this function returns.
+///
+/// [`std::process::exit(0)`]: std::process::exit
 fn controlled() {
     println!("{SINGLETON_READY}");
     std::io::stdout().flush().expect("Failed to flush");
@@ -96,19 +97,19 @@ fn controlled() {
 
     // Step 1: First device creation should succeed.
     eprintln!("Step 1: Creating first device...");
-    let device1 = DirectToAnsiInputDevice::new()
+    let device1 = DirectToAnsiInputDevice::try_new()
         .expect("Failed to initialize DirectToAnsiInputDevice");
     eprintln!("  First device created successfully");
 
     // Step 2: Second device creation should panic.
     eprintln!("Step 2: Attempting to create second device (should panic)...");
     let result: CaughtPanicResult = std::panic::catch_unwind(|| {
-        let _device2 = DirectToAnsiInputDevice::new();
+        let _device2 = DirectToAnsiInputDevice::try_new();
     });
 
     assert!(
         result.is_err(),
-        "Expected new() to panic when device already exists"
+        "Expected try_new() to panic when device already exists"
     );
 
     // Verify panic message mentions subscribe().
@@ -116,7 +117,7 @@ fn controlled() {
 
     assert_eq!(
         panic_msg,
-        "DirectToAnsiInputDevice::new() called while another device exists. \
+        "DirectToAnsiInputDevice::try_new() called while another device exists. \
          Use device.try_subscribe() (fallible) to get a guard, then guard.try_subscribe() \
          for additional receivers."
     );
@@ -129,7 +130,7 @@ fn controlled() {
 
     // Step 4: New device creation should succeed after drop.
     eprintln!("Step 4: Creating new device after drop...");
-    let _device3 = DirectToAnsiInputDevice::new()
+    let _device3 = DirectToAnsiInputDevice::try_new()
         .expect("Failed to initialize DirectToAnsiInputDevice");
     eprintln!("  New device created successfully after drop");
 

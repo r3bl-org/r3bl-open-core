@@ -45,8 +45,8 @@ use std::debug_assert_matches;
 #[macro_export]
 macro_rules! convert_u16_to_ascii_str_slice {
     ($num:expr) => {
-        $crate::core::stack_alloc_types::u16_impl::convert_u16_to_str_slice(
-            &$crate::core::stack_alloc_types::u16_impl::u16_to_u8_array($num),
+        $crate::u16_impl::convert_u16_to_str_slice(
+            &$crate::u16_impl::u16_to_u8_array($num),
         )
     };
 }
@@ -88,8 +88,8 @@ macro_rules! convert_u16_to_ascii_str_slice {
 #[macro_export]
 macro_rules! convert_usize_to_ascii_str_slice {
     ($num:expr) => {
-        $crate::core::stack_alloc_types::usize_impl::convert_usize_to_str_slice(
-            &$crate::core::stack_alloc_types::usize_impl::usize_to_u8_array($num),
+        $crate::usize_impl::convert_usize_to_str_slice(
+            &$crate::usize_impl::usize_to_u8_array($num),
         )
     };
 }
@@ -196,7 +196,7 @@ pub mod u16_impl {
     /// # Examples
     ///
     /// ```
-    /// use r3bl_tui::stack_alloc_types::u16_impl::{
+    /// use r3bl_tui::u16_impl::{
     ///     u16_to_u8_array, convert_u16_to_str_slice
     /// };
     ///
@@ -248,7 +248,7 @@ pub mod u16_impl {
     /// # Examples
     ///
     /// ```
-    /// use r3bl_tui::stack_alloc_types::u16_impl::{u16_to_u8_array, convert_u16_to_str_slice};
+    /// use r3bl_tui::u16_impl::{u16_to_u8_array, convert_u16_to_str_slice};
     ///
     /// let num = 123_u16;
     /// let array = u16_to_u8_array(num);

@@ -52,10 +52,10 @@ impl MioSoftwareInterrupt {
     /// Returns [`SoftwareInterruptCreationError`] if the OS resource cannot be created.
     ///
     /// [`eventfd`]: https://manpages.debian.org/eventfd.2
-    pub fn create_and_register_synthetic_software_interrupt_source(
+    pub fn try_create_and_register_synthetic_software_interrupt_source(
         registry: &mio::Registry,
         token: mio::Token,
-    ) -> miette::Result<Self> {
+    ) -> Result<Self, SoftwareInterruptCreationError> {
         let mio_waker =
             mio::Waker::new(registry, token).map_err(SoftwareInterruptCreationError)?;
         Ok(Self { mio_waker })

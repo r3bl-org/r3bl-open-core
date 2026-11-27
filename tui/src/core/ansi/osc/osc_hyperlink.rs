@@ -2,9 +2,9 @@
 
 //! Helper functions for creating [`OSC`] 8 hyperlink sequences.
 //!
-//! [`OSC`]: crate::osc_codes::OscSequence
+//! [`OSC`]: crate::OscSequence
 
-use super::osc_codes::OscSequence;
+use super::OscSequence;
 use std::path::Path;
 
 /// Creates an [`OSC`] 8 hyperlink sequence.
@@ -18,12 +18,12 @@ use std::path::Path;
 ///
 /// # Example
 /// ```
-/// use r3bl_tui::core::osc::osc_hyperlink::format_hyperlink;
+/// use r3bl_tui::format_hyperlink;
 /// let link = format_hyperlink("https://example.com", "Example");
 /// assert_eq!(link, "\u{1b}]8;;https://example.com\u{7}Example\u{1b}]8;;\u{7}");
 /// ```
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[must_use]
 pub fn format_hyperlink(uri: &str, text: &str) -> String {
     let start = OscSequence::HyperlinkStart {
@@ -48,14 +48,14 @@ pub fn format_hyperlink(uri: &str, text: &str) -> String {
 ///
 /// # Example
 /// ```
-/// use r3bl_tui::core::osc::osc_hyperlink::format_file_hyperlink;
+/// use r3bl_tui::format_file_hyperlink;
 /// use std::path::Path;
 /// let path = Path::new("/home/user/document.txt");
 /// let link = format_file_hyperlink(path);
 /// // Result will be a clickable link showing the path
 /// ```
 ///
-/// [`OSC`]: crate::osc_codes::OscSequence
+/// [`OSC`]: crate::OscSequence
 #[must_use]
 pub fn format_file_hyperlink(path: &Path) -> String {
     let display_text = path.display().to_string();

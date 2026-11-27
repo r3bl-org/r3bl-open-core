@@ -1,11 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! One-based byte size measurements - see [`ByteLength`] type.
-use crate::{ArrayBoundsCheck, ByteIndex, ChUnit, NarrowingCastToUsize, VPLength,
-            WideningCastToUsize,
-            bounds_check::{LengthOps, NumericConversions, NumericValue,
-                           StorageCoordinate},
-            byte_index, usize};
+use crate::{ArrayBoundsCheck, ByteIndex, ChUnit, LengthOps, NarrowingCastToUsize,
+            NumericConversions, NumericValue, StorageCoordinate, VPLength,
+            WideningCastToUsize, byte_index, usize};
 use std::ops::{Add, Deref, DerefMut, Sub};
 
 /// Represents a byte length measurement (1-based).
@@ -311,9 +309,9 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        use rustc_hash::FxHashSet;
+        use crate::HashSet;
 
-        let mut set = FxHashSet::default();
+        let mut set = HashSet::default();
         let length1 = byte_len(42);
         let length2 = byte_len(42);
         let length3 = byte_len(24);

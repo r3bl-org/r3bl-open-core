@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{reader::spawn_pty_reader_thread, writer::spawn_pty_writer_thread};
-use crate::{ControlledChild, Controller, PtyControlledChildExitStatus, PtyInputEvent,
-            PtyOrchestratorHandle, PtyOutputEvent, PtySessionConfig};
-use miette::miette;
+use super::{reader::try_spawn_pty_reader_thread, writer::try_spawn_pty_writer_thread};
+use crate::{ControlledChild, Controller, PtyControlledChildExitStatus, PtyError,
+            PtyInputEvent, PtyOrchestratorHandle, PtyOutputEvent, PtySessionConfig};
 use std::sync::{Arc, Mutex,
                 mpsc::{Receiver, SyncSender}};
 
@@ -36,19 +35,19 @@ use std::sync::{Arc, Mutex,
 /// [`ConPTY`]:
 ///     https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session
 /// [`PtySession`]: crate::PtySession
-/// [Session Layer]: mod@crate::pty_session
-pub fn spawn_pty_orchestrator_thread(
+/// [Session Layer]: mod@crate::core::pty::pty_session
+pub fn try_spawn_pty_orchestrator_thread(
     mut controlled_child: ControlledChild,
     controller: Controller,
     input_event_ch_tx_half: SyncSender<PtyInputEvent>,
     input_event_ch_rx_half: Receiver<PtyInputEvent>,
     output_event_ch_tx_half: SyncSender<PtyOutputEvent>,
     arg_config: impl Into<PtySessionConfig>,
-) -> miette::Result<PtyOrchestratorHandle> {
+) -> Result<PtyOrchestratorHandle, PtyError> {
     // Take writer.
     let controller_writer = controller
         .take_writer()
-        .map_err(|e| miette!("Failed to take writer: {}", e))?;
+        .map_err(|e| PtyError::ControllerFailed(e.into()))?;
 
     // Windows needs mut writer.
     #[cfg(target_os = "windows")]
@@ -57,11 +56,11 @@ pub fn spawn_pty_orchestrator_thread(
     // Take reader.
     let controller_reader = controller
         .try_clone_reader()
-        .map_err(|e| miette!("Failed to clone reader: {}", e))?;
+        .map_err(|e| PtyError::ControllerFailed(e.into()))?;
 
     // Windows needs reader handshake.
     #[cfg(target_os = "windows")]
-    let controller_reader = impl_windows_conpty::perform_conpty_handshake(
+    let controller_reader = impl_windows_conpty::try_perform_conpty_handshake(
         controller_reader,
         &mut controller_writer,
         &controlled_child,
@@ -72,17 +71,17 @@ pub fn spawn_pty_orchestrator_thread(
 
     let handle = std::thread::Builder::new()
         .name("pty-orchestrator".into())
-        .spawn(move || -> miette::Result<PtyControlledChildExitStatus> {
+        .spawn(move || -> Result<PtyControlledChildExitStatus, PtyError> {
             let shared_controller = Arc::new(Mutex::new(Some(controller)));
 
             // Spawn background threads.
-            let reader_thread_handle = spawn_pty_reader_thread(
+            let reader_thread_handle = try_spawn_pty_reader_thread(
                 controller_reader,
                 output_event_ch_tx_half.clone(),
                 config,
             )?;
 
-            let writer_thread_handle = spawn_pty_writer_thread(
+            let writer_thread_handle = try_spawn_pty_writer_thread(
                 controller_writer,
                 shared_controller.clone(),
                 input_event_ch_rx_half,
@@ -90,9 +89,7 @@ pub fn spawn_pty_orchestrator_thread(
             )?;
 
             // Wait for the child process to exit.
-            let status = controlled_child
-                .wait()
-                .map_err(|e| miette!("Child process wait failed: {}", e))?;
+            let status = controlled_child.wait().map_err(PtyError::Io)?;
 
             let status = PtyControlledChildExitStatus { inner: status };
 
@@ -118,7 +115,7 @@ pub fn spawn_pty_orchestrator_thread(
 
             Ok(status)
         })
-        .map_err(|e| miette!("Failed to spawn pty-orchestrator thread: {e}"))?;
+        .map_err(PtyError::Io)?;
 
     Ok(handle)
 }
@@ -126,9 +123,11 @@ pub fn spawn_pty_orchestrator_thread(
 #[cfg(target_os = "windows")]
 mod impl_windows_conpty {
     use crate::{ControlledChild, ControllerReader, ControllerWriter,
-                DSR_CURSOR_POSITION_ORIGIN_RESPONSE, DSR_CURSOR_POSITION_REQUEST};
-    use miette::miette;
+                DSR_CURSOR_POSITION_ORIGIN_RESPONSE, DSR_CURSOR_POSITION_REQUEST,
+                PtyError};
     use std::io::{Cursor, Read, Write};
+
+    // XMARK: BUG workaround for upstream portable-pty (wezterm) crate problems.
 
     /// Performs the Windows [`ConPTY`] initialization handshake.
     ///
@@ -147,11 +146,11 @@ mod impl_windows_conpty {
     /// [`DSR`]: crate::DSR_CURSOR_POSITION_REQUEST
     /// [`origin response`]: crate::DSR_CURSOR_POSITION_ORIGIN_RESPONSE
     /// [`portable_pty`]: portable_pty
-    pub fn perform_conpty_handshake(
+    pub fn try_perform_conpty_handshake(
         mut reader: ControllerReader,
         writer: &mut ControllerWriter,
         controlled_child: &ControlledChild,
-    ) -> miette::Result<ControllerReader> {
+    ) -> Result<ControllerReader, PtyError> {
         let mut buf = [0u8; 1024];
         let mut leftover = Vec::new();
         let expected_dsr = DSR_CURSOR_POSITION_REQUEST.as_bytes();
@@ -161,9 +160,7 @@ mod impl_windows_conpty {
                 break;
             }
 
-            let bytes_read = reader
-                .read(&mut buf)
-                .map_err(|e| miette!("Failed to read ConPTY handshake: {}", e))?;
+            let bytes_read = reader.read(&mut buf).map_err(PtyError::Io)?;
 
             if bytes_read == 0 {
                 break;
@@ -176,12 +173,8 @@ mod impl_windows_conpty {
             {
                 writer
                     .write_all(DSR_CURSOR_POSITION_ORIGIN_RESPONSE.as_bytes())
-                    .map_err(|e| {
-                        miette!("Failed to write ConPTY handshake response: {}", e)
-                    })?;
-                writer.flush().map_err(|e| {
-                    miette!("Failed to flush ConPTY handshake response: {}", e)
-                })?;
+                    .map_err(PtyError::Io)?;
+                writer.flush().map_err(PtyError::Io)?;
 
                 // Preserve any bytes before or after the DSR request.
                 leftover.extend_from_slice(&buf[..dsr_start_idx]);

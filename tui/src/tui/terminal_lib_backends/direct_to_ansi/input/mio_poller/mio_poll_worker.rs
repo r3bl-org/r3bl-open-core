@@ -21,13 +21,14 @@
 use super::handler_stdin::consume_stdin_input_with_sender;
 use super::{super::{channel_types::{PollerEvent, StdinEvent},
                     paste_state_machine::PasteCollectionState},
-            MioSoftwareInterrupt, SourceKindReady,
+            MioSoftwareInterrupt, SoftwareInterruptCreationError, SourceKindReady,
             dispatcher::dispatch_with_sender,
             handler_stdin::STDIN_READ_BUFFER_SIZE,
             sources::SourceRegistry};
 use crate::{Continuation,
             core::{ansi::vt_100_terminal_input_parser::ChunkFramer,
-                   resilient_reactor_thread::{RRTEvent, RRTWorker}}};
+                   resilient_reactor_thread::{RRTEvent, RRTWorker,
+                                              RRTWorkerAndInterrupt}}};
 use miette::Diagnostic;
 use mio::{Events, Interest, Poll, unix::SourceFd};
 use signal_hook::consts::SIGWINCH;
@@ -123,6 +124,7 @@ pub struct MioPollWorker {
 impl RRTWorker for MioPollWorker {
     type Output = PollerEvent;
     type Interrupt = MioSoftwareInterrupt;
+    type CreateError = MioPollWorkerCreateError;
 
     /// Creates a new [`mio`] poll worker and [`MioSoftwareInterrupt`] pair.
     ///
@@ -143,7 +145,8 @@ impl RRTWorker for MioPollWorker {
     ///
     /// # Errors
     ///
-    /// Returns [`miette::Report`] if any OS resource creation or registration fails.
+    /// Returns [`MioPollWorkerCreateError`] if any OS resource creation or registration
+    /// fails.
     ///
     /// [`consume_stdin_input_with_sender()`]:
     ///     super::handler_stdin::consume_stdin_input_with_sender
@@ -158,19 +161,22 @@ impl RRTWorker for MioPollWorker {
     fn create_and_register_os_sources(
         _config: Self::Config,
         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ) -> miette::Result<(Self, Self::Interrupt)> {
+    ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
         // Create mio::Poll (epoll on Linux, kqueue on macOS).
-        let poll_handle = Poll::new().map_err(PollCreationError)?;
+        let poll_handle = Poll::new()
+            .map_err(PollCreationError)
+            .map_err(MioPollWorkerCreateError::PollCreation)?;
         let mio_registry = poll_handle.registry();
 
         // CONTROL PLANE: Administrative Signals
         // Register synthetic software interrupt (mio::Waker / eventfd).
 
         // Create waker from poll's registry (must be created BEFORE registering sources).
-        let software_interrupt = MioSoftwareInterrupt::create_and_register_synthetic_software_interrupt_source(
+        let software_interrupt = MioSoftwareInterrupt::try_create_and_register_synthetic_software_interrupt_source(
             mio_registry,
             SourceKindReady::SoftwareInterrupt.to_token(),
-        )?;
+        )
+        .map_err(MioPollWorkerCreateError::SoftwareInterruptCreation)?;
 
         // DATA PLANE: User Payload Traffic
         // Register real hardware/OS sources (stdin, signals).
@@ -189,24 +195,27 @@ impl RRTWorker for MioPollWorker {
                 SourceKindReady::Stdin.to_token(),
                 Interest::READABLE,
             )
-            .map_err(StdinRegistrationError)?;
+            .map_err(StdinRegistrationError)
+            .map_err(MioPollWorkerCreateError::StdinRegistration)?;
 
         // Convert SIGWINCH into a file descriptor via signal-hook-mio adapter.
         // mio::Registry only monitors file descriptors, not raw OS signals directly.
         // signal_hook crate uses the self-pipe trick: when SIGWINCH arrives, the signal
         // handler writes 1 byte to an internal pipe whose read-end FD is registered here.
         let mut signals = signal_hook_mio::v1_0::Signals::new([SIGWINCH])
-            .map_err(SignalCreationError)?;
+            .map_err(SignalCreationError)
+            .map_err(MioPollWorkerCreateError::SignalCreation)?;
         mio_registry
             .register(
                 &mut signals,
                 SourceKindReady::Signals.to_token(),
                 Interest::READABLE,
             )
-            .map_err(SignalRegistrationError)?;
+            .map_err(SignalRegistrationError)
+            .map_err(MioPollWorkerCreateError::SignalRegistration)?;
 
-        Ok((
-            MioPollWorker {
+        Ok(RRTWorkerAndInterrupt {
+            worker: MioPollWorker {
                 poll_handle,
                 ready_events_buffer: Events::with_capacity(EVENTS_CAPACITY),
                 sources: SourceRegistry { stdin, signals },
@@ -215,8 +224,8 @@ impl RRTWorker for MioPollWorker {
                 paste_collection_state: PasteCollectionState::Inactive,
                 original_stdin_flags,
             },
-            software_interrupt,
-        ))
+            interrupt: software_interrupt,
+        })
     }
 
     /// Blocks until at least one I/O source is ready, then dispatches events - see
@@ -298,12 +307,12 @@ impl MioPollWorker {
 impl Drop for MioPollWorker {
     /// Restores the original [`stdin`] file status flags when the worker is dropped.
     ///
-    /// This is an [`RAII`] guard that ensures we don't permanently leave the terminal's
+    /// This is an [RAII] guard that ensures we don't permanently leave the terminal's
     /// [`stdin`] in non-blocking mode if the poller thread panics or the application
     /// exits. Failing to do so would break the user's shell after the application exits.
     ///
-    /// [`RAII`]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     /// [`stdin`]: std::io::stdin
+    /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
     fn drop(&mut self) {
         if let Some(original_flags) = self.original_stdin_flags {
             let _ = rustix::fs::fcntl_setfl(&self.sources.stdin, original_flags);
@@ -314,6 +323,30 @@ impl Drop for MioPollWorker {
 // ╭──────────────────────────────────────────────────────────╮
 // │ Diagnostic error types for worker creation failures      │
 // ╰──────────────────────────────────────────────────────────╯
+
+/// Unified error returned by [`MioPollWorker::create_and_register_os_sources()`].
+#[derive(Debug, thiserror::Error, Diagnostic)]
+pub enum MioPollWorkerCreateError {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    PollCreation(PollCreationError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SoftwareInterruptCreation(SoftwareInterruptCreationError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    StdinRegistration(StdinRegistrationError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SignalCreation(SignalCreationError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SignalRegistration(SignalRegistrationError),
+}
 
 /// Failed to create [`mio::Poll`] ([`epoll`]/[`kqueue`] creation failed).
 ///

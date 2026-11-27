@@ -35,7 +35,7 @@ use std::io::Write;
 ///
 /// When [`stdin`] is redirected:
 /// 1. `stdin.isatty()` returns `false`
-/// 2. `enable_raw_mode()` falls back to opening `/dev/tty`
+/// 2. `try_enable_raw_mode()` falls back to opening `/dev/tty`
 /// 3. Raw mode is successfully enabled via `/dev/tty`
 /// 4. Terminal settings can be verified through `/dev/tty`
 ///
@@ -89,7 +89,7 @@ fn test_dev_tty_fallback_manual() {
 
     // Try to enable raw mode - should succeed via /dev/tty fallback
     println!("🔧 Testing raw mode with /dev/tty fallback...");
-    match crate::enable_raw_mode() {
+    match crate::try_enable_raw_mode() {
         Ok(()) => {
             println!("   {GLYPH_SUCCESS} Raw mode enabled successfully!");
             println!();
@@ -170,7 +170,7 @@ fn test_dev_tty_fallback_manual() {
 
     // Disable raw mode
     println!("{GLYPH_CONTROLLER_CLEANUP} Cleaning up...");
-    match crate::disable_raw_mode() {
+    match crate::try_disable_raw_mode() {
         Ok(()) => {
             println!("   {GLYPH_SUCCESS} Raw mode disabled successfully");
         }

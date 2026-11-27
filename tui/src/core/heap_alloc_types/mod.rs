@@ -19,9 +19,11 @@
 //!
 //! # See Also
 //!
-//! - [`crate::stack_alloc_types`] - Stack-allocated types for performance-critical paths
+//! - [`crate::core::stack_alloc_types`] - Stack-allocated types for performance-critical paths
 
-pub mod parse_list;
+// Attach. Upward #[macro_use] propagation.
+#[macro_use]
+mod parse_list;
 
 // Re-export.
 pub use parse_list::*;

@@ -36,7 +36,7 @@
 //! [`Condvar`]: std::sync::Condvar
 //! [`Mutex`]: std::sync::Mutex
 //! [`reset`]: ServerReadinessMonitor::reset
-//! [`ServerReadiness`]: crate::lsp::ServerReadiness
+//! [`ServerReadiness`]: crate::lsp::readiness_types::ServerReadiness
 //! [`update`]: ServerReadinessMonitor::update
 //! [`wait_until_indexed`]: ServerReadinessMonitor::wait_until_indexed
 //! [Server Readiness Flow]: mod@crate#server-readiness--background-indexing-synchronization

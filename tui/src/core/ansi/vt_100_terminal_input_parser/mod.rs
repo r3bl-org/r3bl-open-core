@@ -117,7 +117,7 @@
 //!     [`TerminalColorReport`].
 //!   - _Outbound ([`stdout`])_: `ESC ] <code> ; ? BEL` (e.g., `ESC ] 10 ; ? BEL`,
 //!     `ESC ] 11 ; ? BEL`), constructed via [`OscSequence::ColorQuery`] or emitted via
-//!     [`OscSender::send_color_query`].
+//!     [`OscSender::try_send_color_query`].
 //!   - _Inbound ([`stdin`])_:
 //!     - `ESC ] <code> ; rgb:rrrr/gggg/bbbb BEL` (or `ESC \` ST terminator)
 //! - **Device Status / Cursor Position ([`CSI`] 6n)**:
@@ -229,7 +229,7 @@
 //!
 //! 2. **Dynamic colors enable adaptive theming and styling**: Modern terminals support
 //!    querying their active color palette. Originating queries are emitted via
-//!    [`OscSequence::ColorQuery`] or [`OscSender::send_color_query`]. Parsing foreground
+//!    [`OscSequence::ColorQuery`] or [`OscSender::try_send_color_query`]. Parsing foreground
 //!    ([`OSC`] 10), background ([`OSC`] 11), cursor ([`OSC`] 12), mouse pointer
 //!    ([`OSC`] 13, 14), and selection highlight ([`OSC`] 17, 19) reports gives TUI
 //!    applications the metadata needed to dynamically adapt syntax highlighting,
@@ -361,11 +361,11 @@
 //! [`MaybeMore`]: MaybeMore
 //! [`mio`]: mio
 //! [`MioPollWorker`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::mio_poller::MioPollWorker
-//! [`observe_terminal`]: crate::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
+//! [`observe_terminal`]: crate::core::ansi::vt_100_terminal_input_parser::validation_tests::observe_real_interactive_terminal_input_events::observe_terminal
 //! [`Osc52Clipboard`]: crate::Osc52Clipboard
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
-//! [`OscCircuitBreaker`]: crate::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+//! [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker
+//! [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
 //! [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
 //! [`process_incoming_bytes()`]: ChunkFramer::process_incoming_bytes
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
@@ -381,18 +381,18 @@
 //! [`stdout`]: std::io::stdout
 //! [`SystemClipboard`]: crate::SystemClipboard
 //! [`TerminalColorReport`]: crate::TerminalColorReport
-//! [`try_parse_input_event()`]: crate::vt_100_terminal_input_parser::try_parse_input_event
-//! [`UnparsedBufferAction`]: crate::vt_100_terminal_input_parser::chunk_framer::UnparsedBufferAction
+//! [`try_parse_input_event()`]: crate::core::ansi::vt_100_terminal_input_parser::try_parse_input_event
+//! [`UnparsedBufferAction`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::UnparsedBufferAction
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`validation_tests`]: mod@validation_tests
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [`VT100FocusStateIR`]: crate::vt_100_terminal_input_parser::VT100FocusStateIR
-//! [`VT100InputEventIR::Focus`]: crate::vt_100_terminal_input_parser::VT100InputEventIR::Focus
-//! [`VT100InputEventIR::Ignored`]: crate::vt_100_terminal_input_parser::VT100InputEventIR::Ignored
-//! [`VT100InputEventIR::Paste`]: crate::vt_100_terminal_input_parser::VT100InputEventIR::Paste
-//! [`VT100InputEventIR::TerminalColorReport`]: crate::vt_100_terminal_input_parser::VT100InputEventIR::TerminalColorReport
-//! [`VT100InputEventIR`]: crate::vt_100_terminal_input_parser::VT100InputEventIR
-//! [`VT100PasteModeIR`]: crate::vt_100_terminal_input_parser::VT100PasteModeIR
+//! [`VT100FocusStateIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100FocusStateIR
+//! [`VT100InputEventIR::Focus`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Focus
+//! [`VT100InputEventIR::Ignored`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Ignored
+//! [`VT100InputEventIR::Paste`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::Paste
+//! [`VT100InputEventIR::TerminalColorReport`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR::TerminalColorReport
+//! [`VT100InputEventIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100InputEventIR
+//! [`VT100PasteModeIR`]: crate::core::ansi::vt_100_terminal_input_parser::VT100PasteModeIR
 //! [`vt_100_parser_integration_tests`]: mod@vt_100_parser_integration_tests
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 //! [`WezTerm`]: https://wezfurlong.org/wezterm/
@@ -403,41 +403,27 @@
 // Skip rustfmt for rest of file.
 #![rustfmt::skip]
 
-// Public API re-export from private module.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod chunk_decoder; // Accessed by direct_to_ansi input, graphemes, osc.
+pub(crate) mod chunk_framer; // Accessed by integration tests and rustdoc links.
+pub(crate) mod ir_event_types; // Accessed by integration tests (VT100InputEventIR).
+
+// Attach. Folder-local (Intra-module).
+#[cfg(any(test, doc))]
 mod input_parser_entry_point;
-pub use input_parser_entry_point::*;
+mod maybe_more;
 
-// Framing incoming bytes from stdin.
+// Tests.
 #[cfg(any(test, doc))]
-pub mod chunk_framer;
-#[cfg(not(any(test, doc)))]
-pub(crate) mod chunk_framer;
+pub(crate) mod unit_tests; // Cross-folder rustdoc link from validation_tests.
+#[cfg(any(test, doc))]
+pub(crate) mod validation_tests; // Cross-folder rustdoc link from term_pos and tests.
+#[cfg(any(test, doc))]
+pub(crate) mod vt_100_parser_integration_tests; // Referenced by lib.rs, direct_to_ansi, pty.
+
+// Re-export.
 pub use chunk_framer::*;
-
-// Decoding framed sequences into input event IR.
 #[cfg(any(test, doc))]
-pub mod chunk_decoder;
-#[cfg(not(any(test, doc)))]
-pub(crate) mod chunk_decoder;
-
-// Shared AST Types.
-#[cfg(any(test, doc))]
-pub mod ir_event_types;
-#[cfg(not(any(test, doc)))]
-pub(crate) mod ir_event_types;
+pub use input_parser_entry_point::*;
 pub use ir_event_types::*;
-
-// Stream Availability Heuristics.
-#[cfg(any(test, doc))]
-pub mod maybe_more;
-#[cfg(not(any(test, doc)))]
-pub(crate) mod maybe_more;
 pub use maybe_more::*;
-
-// Three-tier test architecture.
-#[cfg(any(test, doc))]
-pub mod validation_tests;
-#[cfg(any(test, doc))]
-pub mod unit_tests;
-#[cfg(any(test, doc))]
-pub mod vt_100_parser_integration_tests;

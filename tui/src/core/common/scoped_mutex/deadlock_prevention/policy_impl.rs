@@ -8,7 +8,7 @@
 //! [`DeadlockPreventionGuard`]: super::DeadlockPreventionGuard
 
 use super::{ADDRESS_SIZE, DeadlockPreventionPolicy, constants};
-use crate::{ScopedMutex, ok};
+use crate::ScopedMutex;
 use miette::Diagnostic;
 use smallvec::SmallVec;
 use std::cell::RefCell;
@@ -283,7 +283,6 @@ pub enum SharedLedgerError {
 #[cfg(test)]
 mod tests_shared_ledger_state_machine {
     use super::*;
-    use crate::scoped_mutex;
     use DeadlockPreventionPolicy::*;
 
     #[test]

@@ -7,9 +7,9 @@
 //! This module implements line-level operations that correspond to [`ANSI`] line
 //! sequences. These include:
 //!
-//! - `IL` (Insert Lines) - [`shift_lines_in_range()`] (Down)
-//! - `DL` (Delete Lines) - [`shift_lines_in_range()`] (Up)
-//! - `EL` (Erase Line) - [`clear_line()`]
+//! - `IL` (Insert Lines) - [`try_shift_lines_in_range()`] (Down)
+//! - `DL` (Delete Lines) - [`try_shift_lines_in_range()`] (Up)
+//! - `EL` (Erase Line) - [`try_clear_line()`]
 //!
 //! All operations maintain [`VT-100`] compliance and handle proper line manipulation
 //! within scroll regions as specified in [`VT-100`] documentation.
@@ -52,16 +52,14 @@
 //! scroll region, the operation is skipped entirely.
 //!
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-//! [`clear_line()`]: OfsBufVT100::clear_line
-//! [`shift_lines_in_range()`]: OfsBufVT100::shift_lines_in_range
+//! [`try_clear_line()`]: OfsBufVT100::try_clear_line
+//! [`try_shift_lines_in_range()`]: OfsBufVT100::try_shift_lines_in_range
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-//! [Interval Notation]: crate::bounds_check#interval-notation
+//! [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 
-use crate::{OfsBufVT100, PixelChar, RangeExclusive, ShiftLinesDirection, VPHeight,
-            VPLength, VPRow,
-            core::coordinates::bounds_check::{RangeBoundsExt, RangeConvertExt,
-                                              RangeValidityStatus},
-            ok};
+use crate::{OfsBufBoundsError, OfsBufVT100, PixelChar, RangeBoundsExt, RangeConvertExt,
+            RangeExclusive, RangeValidityStatus, ShiftLinesDirection, VPHeight,
+            VPLength, VPRow};
 
 impl OfsBufVT100 {
     /// Clear an entire line by filling it with blank characters.
@@ -71,10 +69,10 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the row is out of bounds.
-    pub fn clear_line(&mut self, row: VPRow) -> miette::Result<()> {
+    pub fn try_clear_line(&mut self, row: VPRow) -> Result<(), OfsBufBoundsError> {
         let active_buf = self.get_active_screen_buffer_mut();
         let Some(row_data) = active_buf.get_row_mut(row) else {
-            return Err(miette::miette!("Row index {row:?} out of bounds"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row });
         };
         row_data.fill(PixelChar::Spacer);
         ok!()
@@ -98,19 +96,22 @@ impl OfsBufVT100 {
     /// [`IL`]: https://vt100.net/docs/vt510-rm/IL.html
     /// [`SD`]: https://vt100.net/docs/vt510-rm/SD.html
     /// [`SU`]: https://vt100.net/docs/vt510-rm/SU.html
-    pub fn shift_lines_in_range(
+    pub fn try_shift_lines_in_range(
         &mut self,
         direction: ShiftLinesDirection,
         row_range: RangeExclusive<VPRow>,
         arg_shift_by: impl Into<VPLength>,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         let shift_by: VPLength = arg_shift_by.into();
         let row_height = self.get_active_screen_buffer().get_viewport().get_height();
 
         if row_range.check_range_is_valid_for_length(row_height)
             != RangeValidityStatus::Valid
         {
-            return Err(miette::miette!("Invalid row range"));
+            return Err(OfsBufBoundsError::InvalidRowRange {
+                start: row_range.start,
+                end: row_range.end,
+            });
         }
 
         self.get_active_screen_buffer_mut().shift_lines_in_range(
@@ -139,11 +140,11 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    pub fn insert_lines_at(
+    pub fn try_insert_lines_at(
         &mut self,
         row_index: VPRow,
         how_many: VPHeight,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         // Get scroll region as an inclusive range.
         let scroll_region = self.get_scroll_range_inclusive();
 
@@ -155,10 +156,10 @@ impl OfsBufVT100 {
 
         let scroll_bottom = *scroll_region.end();
 
-        // Use shift_lines_in_range to shift lines down by how_many positions (vacated
+        // Use try_shift_lines_in_range to shift lines down by how_many positions (vacated
         // lines are automatically filled with blanks).
         let exclusive_range = (row_index..=scroll_bottom).to_exclusive();
-        self.shift_lines_in_range(ShiftLinesDirection::Down, exclusive_range, how_many)
+        self.try_shift_lines_in_range(ShiftLinesDirection::Down, exclusive_range, how_many)
     }
 
     /// Delete multiple lines at the specified row position.
@@ -177,11 +178,11 @@ impl OfsBufVT100 {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
-    pub fn delete_lines_at(
+    pub fn try_delete_lines_at(
         &mut self,
         row_index: VPRow,
         how_many: VPHeight,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         // Get scroll region as an inclusive range.
         let scroll_region = self.get_scroll_range_inclusive();
 
@@ -191,10 +192,10 @@ impl OfsBufVT100 {
             return ok!();
         }
 
-        // Use shift_lines_in_range to shift lines up by how_many positions (vacated lines
+        // Use try_shift_lines_in_range to shift lines up by how_many positions (vacated lines
         // are automatically filled with blanks).
         let exclusive_range = (row_index..=*scroll_region.end()).to_exclusive();
-        self.shift_lines_in_range(ShiftLinesDirection::Up, exclusive_range, how_many)
+        self.try_shift_lines_in_range(ShiftLinesDirection::Up, exclusive_range, how_many)
     }
 }
 
@@ -229,7 +230,7 @@ mod tests_line_ops {
         }
 
         // Clear the line.
-        let result = buffer.clear_line(test_row);
+        let result = buffer.try_clear_line(test_row);
         assert!(result.is_ok());
 
         // Verify all characters are now spacers.
@@ -243,7 +244,7 @@ mod tests_line_ops {
     #[test]
     fn test_clear_line_out_of_bounds() {
         let mut buffer = create_test_buffer();
-        let result = buffer.clear_line(vp_row(10)); // Out of bounds
+        let result = buffer.try_clear_line(vp_row(10)); // Out of bounds
         assert!(result.is_err());
     }
 
@@ -260,7 +261,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
-        let result = buffer.shift_lines_in_range(
+        let result = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Up,
             vp_row(1)..vp_row(4),
             vp_len(1),
@@ -321,7 +322,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
-        let result = buffer.shift_lines_in_range(
+        let result = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Down,
             vp_row(1)..vp_row(4),
             vp_len(1),
@@ -388,7 +389,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 1 line at row 1.
-        let result = buffer.insert_lines_at(vp_row(1), vp_height(1));
+        let result = buffer.try_insert_lines_at(vp_row(1), vp_height(1));
         assert!(result.is_ok());
 
         // Verify: blank line at row 1, A's at row 2, B's at row 3, C's lost.
@@ -420,7 +421,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to insert at row 0 (outside scroll region) - should be no-op.
-        let result = buffer.insert_lines_at(vp_row(0), vp_height(1));
+        let result = buffer.try_insert_lines_at(vp_row(0), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 0 unchanged.
@@ -430,7 +431,7 @@ mod tests_line_ops {
         }
 
         // Try to insert at row 4 (outside scroll region) - should be no-op.
-        let result = buffer.insert_lines_at(vp_row(4), vp_height(1));
+        let result = buffer.try_insert_lines_at(vp_row(4), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 4 unchanged.
@@ -459,7 +460,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Delete 1 line at row 1.
-        let result = buffer.delete_lines_at(vp_row(1), vp_height(1));
+        let result = buffer.try_delete_lines_at(vp_row(1), vp_height(1));
         assert!(result.is_ok());
 
         // Verify: B's at row 1, C's at row 2, blank line at row 3.
@@ -491,7 +492,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(4), &create_test_line(&['Y', 'Y', 'Y', 'Y']));
 
         // Try to delete at row 0 (outside scroll region) - should be no-op.
-        let result = buffer.delete_lines_at(vp_row(0), vp_height(1));
+        let result = buffer.try_delete_lines_at(vp_row(0), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 0 unchanged.
@@ -501,7 +502,7 @@ mod tests_line_ops {
         }
 
         // Try to delete at row 4 (outside scroll region) - should be no-op.
-        let result = buffer.delete_lines_at(vp_row(4), vp_height(1));
+        let result = buffer.try_delete_lines_at(vp_row(4), vp_height(1));
         assert!(result.is_ok());
 
         // Verify row 4 unchanged.
@@ -530,7 +531,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(2), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Insert 2 lines at row 0.
-        let result = buffer.insert_lines_at(vp_row(0), vp_height(2));
+        let result = buffer.try_insert_lines_at(vp_row(0), vp_height(2));
         assert!(result.is_ok());
 
         // Verify: 2 blank lines at rows 0-1, A's at row 2, B's at row 3, C's at row 4.
@@ -577,7 +578,7 @@ mod tests_line_ops {
         // Insert 10 lines starting at row 2 (inside scroll region [1..=4], but row_index
         // > scroll_top). Lines available from row 2 to row 4 = 3 lines.
         // how_many = 10 (exceeds 3).
-        let result = buffer.insert_lines_at(vp_row(2), vp_height(10));
+        let result = buffer.try_insert_lines_at(vp_row(2), vp_height(10));
         assert!(result.is_ok());
 
         // Verify:
@@ -624,7 +625,7 @@ mod tests_line_ops {
             buffer.set_line(vp_row(4), &create_test_line(&['E', 'E', 'E', 'E']));
 
         // Delete 2 lines at row 0.
-        let result = buffer.delete_lines_at(vp_row(0), vp_height(2));
+        let result = buffer.try_delete_lines_at(vp_row(0), vp_height(2));
         assert!(result.is_ok());
 
         // Verify: C's at row 0, D's at row 1, E's at row 2, blanks at rows 3-4.
@@ -671,7 +672,7 @@ mod tests_line_ops {
         // Delete 10 lines starting at row 2 (inside scroll region [1..=4], but row_index
         // > scroll_top). Lines available from row 2 to row 4 = 3 lines.
         // how_many = 10 (exceeds 3).
-        let result = buffer.delete_lines_at(vp_row(2), vp_height(10));
+        let result = buffer.try_delete_lines_at(vp_row(2), vp_height(10));
         assert!(result.is_ok());
 
         // Verify:

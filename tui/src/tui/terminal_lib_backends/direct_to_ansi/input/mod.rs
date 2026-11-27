@@ -88,46 +88,22 @@
 //! [macOS `/dev/tty` polling blog post]: https://nathancraddock.com/blog/macos-dev-tty-polling/
 //! [mio issue]: https://github.com/tokio-rs/mio/issues/1377
 
-// Private submodules - organized by functional concern.
+// Attach. Crate-wide (Intra-crate).
+pub(crate) mod paste_state_machine; // Cross-folder rustdoc link (direct_to_ansi).
+pub(crate) mod mio_poller; // Cross-folder poller types and rustdoc links (backpressure_stdout, core/ansi, rrt).
+pub(crate) mod channel_types; // Cross-folder PollerEvent/StdinEvent imports and rustdoc links (rrt tests).
+pub(crate) mod protocol_conversion; // Cross-folder rustdoc links (pty, vt_100_terminal_input_parser).
+
+// Attach. Folder-local (Intra-module).
 mod input_device_public_api;
-
-// Conditionally public for documentation.
-#[cfg(any(test, doc))]
-pub mod input_device_impl;
-#[cfg(not(any(test, doc)))]
 mod input_device_impl;
-
-// Conditionally public for documentation.
-#[cfg(any(test, doc))]
-pub mod paste_state_machine;
-#[cfg(not(any(test, doc)))]
-mod paste_state_machine;
-
-#[cfg(any(test, doc))]
-pub mod mio_poller;
-#[cfg(not(any(test, doc)))]
-mod mio_poller;
-
-#[cfg(any(test, doc))]
-pub mod channel_types;
-#[cfg(not(any(test, doc)))]
-mod channel_types;
-
-#[cfg(any(test, doc))]
-pub mod protocol_conversion;
-#[cfg(not(any(test, doc)))]
-mod protocol_conversion;
-
-#[cfg(any(test, doc))]
-pub mod at_most_one_instance_assert;
-#[cfg(not(any(test, doc)))]
 mod at_most_one_instance_assert;
 
-// Re-exports - flatten the public API.
+// Re-export.
 pub use input_device_impl::*;
 pub use input_device_public_api::*;
 pub use mio_poller::*;
 
 // Documentation-only module pointing to actual PTY tests location.
 #[cfg(any(test, doc))]
-pub mod integration_tests_stub;
+pub(crate) mod integration_tests_stub; // Cross-folder rustdoc module links (direct_to_ansi, output tests).

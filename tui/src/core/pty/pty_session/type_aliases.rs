@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::events::{PtyInputEvent, PtyOutputEvent};
-use crate::PtyControlledChildExitStatus;
+use crate::{PtyControlledChildExitStatus, PtyError};
 use std::{sync::mpsc::{Receiver, SyncSender},
           thread::JoinHandle};
 use tokio::{sync::mpsc::{Receiver as AsyncReceiver, Sender as AsyncSender},
@@ -10,13 +10,14 @@ use tokio::{sync::mpsc::{Receiver as AsyncReceiver, Sender as AsyncSender},
 /// Type alias for the orchestrator thread handle used in [`PTY`] sessions.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub type PtyOrchestratorHandle = JoinHandle<miette::Result<PtyControlledChildExitStatus>>;
+pub type PtyOrchestratorHandle =
+    JoinHandle<Result<PtyControlledChildExitStatus, PtyError>>;
 
 /// Type alias for the async orchestrator handle.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 pub type AsyncPtyOrchestratorHandle =
-    TokioJoinHandle<miette::Result<PtyControlledChildExitStatus>>;
+    TokioJoinHandle<Result<PtyControlledChildExitStatus, PtyError>>;
 
 /// Type alias for an output event receiver half of a synchronous channel.
 ///

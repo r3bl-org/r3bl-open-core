@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{CLength, c_len};
-use crate::{VPLength, generate_canvas_index_type_impl};
+use crate::VPLength;
 
 /// Generic 0-based 1D index in the continuous storage buffer space (64-bit [`Canvas`]
 /// domain).

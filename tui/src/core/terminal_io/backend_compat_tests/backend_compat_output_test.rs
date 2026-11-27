@@ -9,8 +9,8 @@
 //! a **snapshot test** that compares whether both backends produce the same rendered
 //! output for the same given terminal size and capabilities in a real [`PTY`]
 //! environment. Manually sets raw mode for each backend directly (not using the
-//! production [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
-//! [`TERMINAL_LIB_BACKEND`]).
+//! production [`terminal_raw_mode::try_enable_raw_mode()`] dispatcher which selects based
+//! on [`TERMINAL_LIB_BACKEND`]).
 //!
 //! # Platform
 //!
@@ -18,10 +18,10 @@
 //! "linux"))]` because [`DirectToAnsi`] is currently Linux-only. The raw mode
 //! implementations used are:
 //!
-//! | Backend          | Raw Mode Implementation                                                    |
-//! | ---------------- | -------------------------------------------------------------------------- |
-//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] ([`rustix`]-based) |
-//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                                 |
+//! | Backend          | Raw Mode Implementation                                                        |
+//! | ---------------- | ------------------------------------------------------------------------------ |
+//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode()`] ([`rustix`]-based) |
+//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                                     |
 //!
 //! # Run with:
 //!
@@ -37,7 +37,7 @@
 //!
 //! Each backend test manually:
 //! 1. Sets raw mode for each backend directly (**not** using the production
-//!    [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
+//!    [`terminal_raw_mode::try_enable_raw_mode()`] dispatcher which selects based on
 //!    [`TERMINAL_LIB_BACKEND`]).
 //! 2. Set color capabilities to Truecolor using [`global_color_support::set_override`].
 //!
@@ -119,9 +119,9 @@
 //!     crate::direct_to_ansi::RenderOpPaintImplDirectToAnsi
 //! [`rustix`]: https://docs.rs/rustix
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`]:
-//!     crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode()`]:
+//!     crate::terminal_raw_mode::raw_mode_unix::try_enable_raw_mode
+//! [`terminal_raw_mode::try_enable_raw_mode()`]: crate::terminal_raw_mode::try_enable_raw_mode
 //! [`TerminalLibBackend::Crossterm`]: crate::tui::TerminalLibBackend::Crossterm
 //! [`TerminalLibBackend::DirectToAnsi`]: crate::tui::TerminalLibBackend::DirectToAnsi
 
@@ -129,12 +129,12 @@ use crate::{ColorSupport, EIO, InlineString, MSG_CONTROLLED_READY, OfsBufVT100,
             OutputDevice, PixelChar, PtyPair, PtyTestChild, RenderOpOutput,
             RenderOpPaint, RenderOpsLocalData, TuiStyle, TuiStyleAttribs,
             core::ansi::terminal_raw_mode,
-            global_color_support, ok,
+            global_color_support,
             render_op::RenderOpCommon,
-            retry_until_success_test, spawn_controlled_in_pty,
+            spawn_controlled_in_pty,
             terminal_lib_backends::{crossterm_backend::PaintRenderOpImplCrossterm,
                                     direct_to_ansi::RenderOpPaintImplDirectToAnsi},
-            tui_color, tui_style_attrib, vp_col, vp_height, vp_row, vp_width};
+            tui_style_attrib, vp_col, vp_height, vp_row, vp_width};
 use std::{cmp::min,
           fmt::Write as _,
           io::{Read, Write}};
@@ -262,7 +262,7 @@ fn run_single_test_attempt() -> Result<(), String> {
 /// [`PTY`] Controller Logic - captures all raw bytes.
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-pub mod controller {
+mod controller {
     use super::*;
 
     /// Capture all raw [`ANSI`] bytes from the controlled process.
@@ -346,7 +346,7 @@ pub mod controller {
 }
 
 /// Crossterm backend controlled process.
-pub mod controlled_crossterm {
+mod controlled_crossterm {
     use super::*;
 
     /// Crossterm controlled process entry point.
@@ -407,12 +407,12 @@ pub mod controlled_crossterm {
 }
 
 /// `DirectToAnsi` backend controlled process.
-pub mod controlled_direct_to_ansi {
+mod controlled_direct_to_ansi {
     use super::*;
 
     /// `DirectToAnsi` controlled process entry point.
     ///
-    /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode()`] directly (the
+    /// Uses [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode()`] directly (the
     /// [`rustix`]-based implementation) to explicitly test the `DirectToAnsi` backend's
     /// raw mode.
     ///
@@ -428,7 +428,7 @@ pub mod controlled_direct_to_ansi {
         std::io::stdout().flush().expect("Failed to flush");
 
         // 2. Enable raw mode using DirectToAnsi's raw mode (rustix-based).
-        drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
+        drop(terminal_raw_mode::raw_mode_unix::try_enable_raw_mode());
 
         // 3. Set color support to Truecolor for consistent output.
         global_color_support::set_override(ColorSupport::Truecolor);
@@ -469,7 +469,7 @@ pub mod controlled_direct_to_ansi {
 }
 
 /// Test Render Operations Generation.
-pub mod generate_test_render_ops {
+mod generate_test_render_ops {
     use super::*;
 
     /// All test render operation sequences for backend compatibility testing.

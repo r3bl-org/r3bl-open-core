@@ -18,7 +18,7 @@
 
 use crate::{ChannelCapacity, InputDevice, LineStateControlSignal, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
-            PtyTestMode, Readline, generate_pty_test, vp_height, vp_width};
+            PtyTestMode, Readline, vp_height, vp_width};
 use std::io::Write;
 use tokio::{sync::broadcast, time::Duration};
 
@@ -71,6 +71,8 @@ mod test_pty_readline {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
@@ -93,7 +95,7 @@ mod test_pty_readline {
             )
             .expect("conversion error");
 
-            let result = readline.readline().await;
+            let result = readline.try_readline().await;
             println!("ReadlineEvent: {result:?}");
 
             println!("{MSG_SUCCESS}");
@@ -150,6 +152,8 @@ mod test_pty_pause_resume {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {
@@ -250,6 +254,8 @@ mod test_pty_pause_resume_with_output {
     }
 
     /// The harness performs [`std::process::exit(0)`] after this function returns.
+    ///
+    /// [`std::process::exit(0)`]: std::process::exit
     fn controlled() {
         let rt = tokio::runtime::Runtime::new().expect("conversion error");
         rt.block_on(async {

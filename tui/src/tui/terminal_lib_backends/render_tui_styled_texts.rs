@@ -20,11 +20,10 @@ pub fn render_tui_styled_texts_into(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, TuiStylesheet, ZOrder, assert_eq2, console_log,
-                render_pipeline, throws};
+    use crate::{TuiStylesheet, ZOrder};
 
     #[test]
-    fn test_styled_text_renders_correctly() -> CommonResult {
+    fn test_styled_text_renders_correctly() -> miette::Result<()> {
         throws!({
             let texts = test_helper::create_styled_text()?;
             let mut render_ops = RenderOpIRVec::new();
@@ -43,10 +42,8 @@ mod tests {
 
     mod test_helper {
         use super::*;
-        use crate::{new_style, throws_with_return, tui_color, tui_styled_text,
-                    tui_styled_texts, tui_stylesheet};
 
-        pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
+        pub fn create_styled_text() -> miette::Result<TuiStyledTexts> {
             throws_with_return!({
                 let stylesheet = create_stylesheet()?;
                 let maybe_style1 = stylesheet.find_style_by_id(1);
@@ -65,7 +62,7 @@ mod tests {
             })
         }
 
-        pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+        pub fn create_stylesheet() -> miette::Result<TuiStylesheet> {
             throws_with_return!({
                 tui_stylesheet! {
                     new_style! {

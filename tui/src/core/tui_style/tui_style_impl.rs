@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{TuiColor, TuiStyleAttribs, tui_style_attrib};
-use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
-            tiny_inline_string};
+use crate::{ChUnit, InlineVecStr, TinyInlineString, ch};
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign, Deref}};
@@ -25,7 +24,7 @@ use std::{fmt::{Display, Formatter},
 /// // Faded blue:TuiColor::Rgb { r: 85, g: 85, b: 255 }
 /// let mut stylesheet = TuiStylesheet::new();
 ///
-/// let _ = stylesheet.add_styles(smallvec::smallvec![
+/// let _ = stylesheet.try_add_styles(smallvec::smallvec![
 ///     TuiStyle {
 ///         id: Some(TuiStyleId(0)),
 ///         attribs: TuiStyleAttribs {
@@ -396,7 +395,6 @@ mod impl_style {
 #[cfg(test)]
 mod test_style {
     use super::*;
-    use crate::{assert_eq2, tui_color};
 
     #[test]
     fn test_all_fields_in_style() {

@@ -53,7 +53,7 @@
 //!
 //! [`cursor_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops::vt_100_shim_cursor_ops
 //! [`ESC`]: crate::EscSequence
-//! [`test_terminal_ops`]: crate::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
+//! [`test_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::tests::vt_100_test_terminal_ops
 //! [`vt_100_impl_terminal_ops`]: crate::core::ansi::vt_100_pty_output_parser::ops_impl_ofs_buf::vt_100_impl_terminal_ops
 //! [module-level Architecture Overview]: super#architecture-overview
 //! [module-level documentation]: self
@@ -84,7 +84,7 @@ fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
 /// [`DECSTBM`]: https://vt100.net/docs/vt510-rm/DECSTBM.html
 pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     clear_buffer(performer);
-    let _unused = performer.ofs_buf_vt_100.erase_display_scrollback();
+    performer.ofs_buf_vt_100.erase_display_scrollback();
 
     // Reset cursor to home position.
     performer

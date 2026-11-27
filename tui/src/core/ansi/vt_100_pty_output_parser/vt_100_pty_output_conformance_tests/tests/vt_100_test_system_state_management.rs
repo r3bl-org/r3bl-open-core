@@ -19,7 +19,7 @@ use crate::{ANSIBasicColor, AutoWrapMode, CharacterSet, EraseDisplayMode, PixelC
 /// Tests for cursor save/restore with active [`SGR`] styling attributes.
 ///
 /// [`SGR`]: crate::SgrCode
-pub mod cursor_save_restore_with_attributes {
+mod cursor_save_restore_with_attributes {
     use super::*;
 
     #[test]
@@ -178,7 +178,7 @@ pub mod cursor_save_restore_with_attributes {
 }
 
 /// Tests for character set state preservation across operations.
-pub mod character_set_state_management {
+mod character_set_state_management {
     use super::*;
 
     #[test]
@@ -289,7 +289,7 @@ pub mod character_set_state_management {
 }
 
 /// Tests for scroll region interactions with cursor and state management.
-pub mod scroll_region_state_interactions {
+mod scroll_region_state_interactions {
     use super::*;
 
     #[test]
@@ -425,7 +425,7 @@ pub mod scroll_region_state_interactions {
 }
 
 /// Tests for complex state combinations and edge cases.
-pub mod complex_state_combinations {
+mod complex_state_combinations {
     use super::*;
     use crate::AutoWrapMode;
 

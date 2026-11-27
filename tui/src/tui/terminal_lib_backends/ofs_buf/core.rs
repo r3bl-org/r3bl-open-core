@@ -6,11 +6,31 @@
 //! and primary delegation down to its `Flat2DArray` backing store.
 
 use super::pixel_char::PixelChar;
-use crate::{CanvasStorage, Flat2DArray, GetMemSize, RangeExt, VPHeight, VPPos, VPRow,
-            VPSize, ch, fg_green, inline_string, vp_size};
+use crate::{CanvasStorage, Flat2DArray, GetMemSize, RangeExt, VPCol, VPHeight, VPPos,
+            VPRow, VPSize, ch, fg_green, vp_size};
 use std::{fmt::{self, Debug},
           mem::size_of,
           ops::{Deref, DerefMut}};
+
+/// Error returned when an [`OfsBuf`] mutation receives an out-of-bounds position,
+/// invalid range, or empty operation after clamping.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum OfsBufBoundsError {
+    #[error("Row {row:?} is out of viewport bounds")]
+    RowOutOfBounds { row: VPRow },
+
+    #[error("Column {col:?} is out of viewport bounds")]
+    ColOutOfBounds { col: VPCol },
+
+    #[error("Column range {start:?}..{end:?} is invalid for line width")]
+    InvalidColRange { start: VPCol, end: VPCol },
+
+    #[error("Row range {start:?}..{end:?} is invalid for viewport height")]
+    InvalidRowRange { start: VPRow, end: VPRow },
+
+    #[error("Character count is zero after clamping")]
+    EmptyOperation,
+}
 
 /// Core terminal screen buffer structure with [`VT-100`]/[`ANSI`] support.
 ///
@@ -41,8 +61,8 @@ use std::{fmt::{self, Debug},
 /// This struct is implemented as a generic shell over a [`CanvasStorage`] backend
 /// (`storage: S`):
 /// - It natively owns all the complex 2D grid mathematics (e.g., [`diff()`]), cursor
-///   bounds checking, and character placement logic (e.g., [`set_char()`],
-///   [`copy_chars_within_line()`]).
+///   bounds checking, and character placement logic (e.g., [`try_set_char()`],
+///   [`try_copy_chars_within_line()`]).
 /// - It delegates raw memory operations (allocating, fetching rows, shifting lines) to
 ///   the injected `S` ([`CanvasStorage`]).
 ///
@@ -61,17 +81,17 @@ use std::{fmt::{self, Debug},
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 /// [`AnsiToOfsBufPerformer`]: crate::core::ansi::AnsiToOfsBufPerformer
 /// [`apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
-/// [`copy_chars_within_line()`]: OfsBuf::copy_chars_within_line
 /// [`DI`]: https://en.wikipedia.org/wiki/Dependency_injection
 /// [`diff()`]: OfsBuf::diff
-/// [`Flat2DArray`]: crate::core::common::flat_2d_array::Flat2DArray
+/// [`Flat2DArray`]: crate::Flat2DArray
 /// [`GrowableBuffer`]: crate::tui::GrowableBuffer
 /// [`OfsBufVT100::apply_ansi_bytes`]: crate::core::ansi::OfsBufVT100::apply_ansi_bytes
 /// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 /// [`Perform`]: vte::Perform
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`RenderOpCommon`]: enum@crate::tui::RenderOpCommon
-/// [`set_char()`]: OfsBuf::set_char
+/// [`try_copy_chars_within_line()`]: OfsBuf::try_copy_chars_within_line
+/// [`try_set_char()`]: OfsBuf::try_set_char
 /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser

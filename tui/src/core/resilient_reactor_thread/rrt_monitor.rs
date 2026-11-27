@@ -328,7 +328,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     }
 
     /// Updates the current [`ThreadState`] and logs the transition (if
-    /// [`DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD`] is enabled).
+    /// [`DEBUG_RESILIENT_REACTOR_THREAD`] is enabled).
     ///
     /// # Ownership & Chain of Custody
     ///
@@ -365,8 +365,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     /// }
     /// ```
     ///
-    /// [`DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD`]:
-    ///     crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD
+    /// [`DEBUG_RESILIENT_REACTOR_THREAD`]: crate::DEBUG_RESILIENT_REACTOR_THREAD
     /// [`lock()`]: Self::lock()
     /// [`wait_until()`]: Self::wait_until()
     #[allow(clippy::elidable_lifetime_names)]
@@ -375,7 +374,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         guard: MutexGuard<'this, ThreadState<W>>,
         new_state: ThreadState<W>,
     ) -> MutexGuard<'this, ThreadState<W>> {
-        crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+        crate::DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "RRT: State transition.",
@@ -391,7 +390,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         let guard = self.state_monitor.set_state(guard, new_state);
 
         // Automatically wake up both sync OS threads (waiting in try_subscribe) and async
-        // Tokio tasks (waiting in InputSender::send) once the state stabilizes.
+        // Tokio tasks (waiting in InputSender::try_send) once the state stabilizes.
         match thread_state_status {
             ThreadStateStatus::Stable => {
                 self.smart_sender_notify.notify_all();
@@ -418,7 +417,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     where
         F: FnOnce(&mut ThreadState<W>),
     {
-        crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+        crate::DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "RRT: State mutation via closure.",
@@ -445,7 +444,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
     where
         F: FnOnce(&ThreadState<W>) -> R,
     {
-        crate::DEBUG_TUI_SHOW_RESILIENT_REACTOR_THREAD.then(|| {
+        crate::DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
             // % is Display, ? is Debug.
             tracing::debug!(
                 message = "RRT: State read via closure.",

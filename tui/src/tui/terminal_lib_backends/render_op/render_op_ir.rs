@@ -70,7 +70,7 @@
 //!     mod@crate::terminal_lib_backends#rendering-pipeline-architecture
 
 use super::RenderOpCommon;
-use crate::{InlineString, TuiStyle, ok};
+use crate::{InlineString, TuiStyle};
 use std::{fmt::{Debug, Formatter},
           ops::{AddAssign, Deref, DerefMut}};
 

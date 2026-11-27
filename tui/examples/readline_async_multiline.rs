@@ -35,12 +35,12 @@
 use miette::IntoDiagnostic;
 use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               rla_println, set_mimalloc_in_main};
+               rla_println, run_in_main_with_safe_stack};
 use std::io::Write;
 
-#[tokio::main]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     let mut rl_ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
@@ -59,7 +59,7 @@ async fn main() -> miette::Result<()> {
         writeln!(shared_writer, "line 1").into_diagnostic()?;
         writeln!(shared_writer, "line 2").into_diagnostic()?;
 
-        let event = rl_ctx.read_line().await?;
+        let event = rl_ctx.try_read_line().await?;
 
         match event {
             ReadlineEvent::Line(line) => {
@@ -96,7 +96,7 @@ async fn main() -> miette::Result<()> {
     }
 
     rl_ctx
-        .request_shutdown(Some("Shutting down test..."))
+        .try_request_shutdown(Some("Shutting down test..."))
         .await?;
     rl_ctx.await_shutdown().await;
 
