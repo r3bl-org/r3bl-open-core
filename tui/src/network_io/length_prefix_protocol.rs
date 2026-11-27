@@ -3,14 +3,56 @@
 //! This module is standalone, you can use it any project that needs to communicate
 //! between a client and a server using a length-prefix, binary payload, protocol.
 
-use super::{compress, json_serde};
+use super::{compress::{self, CompressionError},
+            json_serde::{self, JsonSerdeError}};
 use crate::{LengthPrefixType, NarrowingCastToUsize};
-use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::{io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
                  BufWriter},
             time::timeout};
+
+/// Error returned by [`handshake`] and [`byte_io`] protocol operations.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum LengthPrefixProtocolError {
+    /// Handshake did not complete within [`protocol_constants::TIMEOUT_DURATION`].
+    #[error("Handshake timed out")]
+    HandshakeTimeout(#[source] tokio::time::error::Elapsed),
+
+    /// Peer sent an unexpected protocol magic number.
+    #[error("Invalid protocol magic number: expected {expected:#x}, got {actual:#x}")]
+    InvalidMagicNumber { expected: u64, actual: u64 },
+
+    /// Peer sent an unsupported protocol version.
+    #[error("Invalid protocol version: expected {expected}, got {actual}")]
+    InvalidProtocolVersion { expected: u64, actual: u64 },
+
+    /// Received payload length prefix exceeded [`protocol_constants::MAX_PAYLOAD_SIZE`].
+    #[error("Payload size {size} exceeds maximum allowed {max}")]
+    PayloadTooLarge { size: u64, max: u64 },
+
+    /// Outgoing payload byte length could not fit into [`LengthPrefixType`].
+    #[error("Payload byte length {size} exceeds protocol length integer bounds")]
+    PayloadLengthOverflow {
+        size: usize,
+        #[source]
+        src_err: std::num::TryFromIntError,
+    },
+
+    /// Underlying async stream read, write, or flush failed.
+    #[error("Protocol stream I/O failed")]
+    Io(#[source] std::io::Error),
+
+    /// Payload compression or decompression failed.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Compression(CompressionError),
+
+    /// Payload JSON serialization or deserialization failed.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    JsonSerde(JsonSerdeError),
+}
 
 pub mod protocol_constants {
     use super::Duration;
@@ -41,29 +83,21 @@ pub mod handshake {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - The handshake times out
-    /// - The magic number validation fails
-    /// - I/O errors occur during read/write operations
+    /// Returns [`LengthPrefixProtocolError`] if the handshake times out, magic number
+    /// validation fails, or stream I/O fails.
     pub async fn try_connect_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
-    ) -> miette::Result<()> {
-        let result = timeout(
+    ) -> Result<(), LengthPrefixProtocolError> {
+        let res_timeout = timeout(
             protocol_constants::TIMEOUT_DURATION,
             try_connect(read_half, write_half),
         )
         .await;
 
-        match result {
-            Ok(Err(handshake_err)) => Err(miette::miette!(
-                "Handshake failed due to: {}",
-                handshake_err.root_cause()
-            )),
-            Err(_elapsed_err) => Err(miette::miette!("Handshake timed out")),
-            _ => {
-                ok!()
-            }
+        match res_timeout {
+            Ok(res_handshake) => res_handshake,
+            Err(elapsed) => Err(LengthPrefixProtocolError::HandshakeTimeout(elapsed)),
         }
     }
 
@@ -71,26 +105,35 @@ pub mod handshake {
     async fn try_connect<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
-    ) -> miette::Result<()> {
+    ) -> Result<(), LengthPrefixProtocolError> {
         // Send the magic number.
         write_half
             .write_u64(protocol_constants::MAGIC_NUMBER)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Send the protocol version.
         write_half
             .write_u64(protocol_constants::PROTOCOL_VERSION)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Flush the buffer.
-        write_half.flush().await.into_diagnostic()?;
+        write_half
+            .flush()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Read the magic number back from the server.
-        let received_magic_number = read_half.read_u64().await.into_diagnostic()?;
+        let received_magic_number = read_half
+            .read_u64()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
         if received_magic_number != protocol_constants::MAGIC_NUMBER {
-            return Err(miette::miette!("Invalid protocol magic number"));
+            return Err(LengthPrefixProtocolError::InvalidMagicNumber {
+                expected: protocol_constants::MAGIC_NUMBER,
+                actual: received_magic_number,
+            });
         }
 
         ok!()
@@ -100,30 +143,21 @@ pub mod handshake {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - The handshake times out
-    /// - The magic number validation fails
-    /// - I/O errors occur during read/write operations
+    /// Returns [`LengthPrefixProtocolError`] if the handshake times out, magic number or
+    /// version validation fails, or stream I/O fails.
     pub async fn try_accept_or_timeout<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
-    ) -> miette::Result<()> {
-        let result = timeout(
+    ) -> Result<(), LengthPrefixProtocolError> {
+        let res_timeout = timeout(
             protocol_constants::TIMEOUT_DURATION,
             try_accept(read_half, write_half),
         )
-        .await
-        .into_diagnostic();
+        .await;
 
-        match result {
-            Ok(handshake_result) => match handshake_result {
-                Ok(()) => ok!(),
-                Err(handshake_err) => Err(miette::miette!(
-                    "Handshake failed due to: {}",
-                    handshake_err.root_cause()
-                )),
-            },
-            Err(_elapsed_err) => Err(miette::miette!("Handshake timed out")),
+        match res_timeout {
+            Ok(res_handshake) => res_handshake,
+            Err(elapsed) => Err(LengthPrefixProtocolError::HandshakeTimeout(elapsed)),
         }
     }
 
@@ -131,24 +165,36 @@ pub mod handshake {
     async fn try_accept<W: AsyncWrite + Unpin, R: AsyncRead + Unpin>(
         read_half: &mut R,
         write_half: &mut W,
-    ) -> miette::Result<()> {
+    ) -> Result<(), LengthPrefixProtocolError> {
         // Read and validate the magic number.
-        let received_magic_number = read_half.read_u64().await.into_diagnostic()?;
+        let received_magic_number = read_half
+            .read_u64()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
         if received_magic_number != protocol_constants::MAGIC_NUMBER {
-            return Err(miette::miette!("Invalid protocol magic number"));
+            return Err(LengthPrefixProtocolError::InvalidMagicNumber {
+                expected: protocol_constants::MAGIC_NUMBER,
+                actual: received_magic_number,
+            });
         }
 
         // Read and validate the protocol version.
-        let received_protocol_version = read_half.read_u64().await.into_diagnostic()?;
+        let received_protocol_version = read_half
+            .read_u64()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
         if received_protocol_version != protocol_constants::PROTOCOL_VERSION {
-            return Err(miette::miette!("Invalid protocol version"));
+            return Err(LengthPrefixProtocolError::InvalidProtocolVersion {
+                expected: protocol_constants::PROTOCOL_VERSION,
+                actual: received_protocol_version,
+            });
         }
 
         // Write the magic number back to the client.
         write_half
             .write_u64(protocol_constants::MAGIC_NUMBER)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         ok!()
     }
@@ -203,30 +249,40 @@ pub mod byte_io {
     pub async fn try_write<W: AsyncWrite + Unpin, T: Serialize>(
         buf_writer: &mut BufWriter<W>,
         data: &T,
-    ) -> miette::Result<()> {
+    ) -> Result<(), LengthPrefixProtocolError> {
         // Try to serialize the data.
-        let payload_buffer = json_serde::try_serialize(data)?;
+        let payload_buffer = json_serde::try_serialize(data)
+            .map_err(LengthPrefixProtocolError::JsonSerde)?;
 
         // Compress the payload.
-        let payload_buffer = compress::compress(&payload_buffer)?;
+        let payload_buffer = compress::try_compress(&payload_buffer)
+            .map_err(LengthPrefixProtocolError::Compression)?;
 
         // Write the length prefix number of bytes.
         let payload_size = payload_buffer.len();
         let payload_size_u64 =
-            LengthPrefixType::try_from(payload_size).into_diagnostic()?;
+            LengthPrefixType::try_from(payload_size).map_err(|src_err| {
+                LengthPrefixProtocolError::PayloadLengthOverflow {
+                    size: payload_size,
+                    src_err,
+                }
+            })?;
         buf_writer
             .write_u64(payload_size_u64)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Write the payload.
         buf_writer
             .write_all(&payload_buffer)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Flush the buffer.
-        buf_writer.flush().await.into_diagnostic()?;
+        buf_writer
+            .flush()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         ok!()
     }
@@ -239,23 +295,26 @@ pub mod byte_io {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - Reading from the buffer fails
-    /// - The payload size exceeds the maximum allowed size
-    /// - Decompression of the payload fails
-    /// - Deserialization of the data fails
+    /// Returns [`LengthPrefixProtocolError`] if reading, size validation, decompression,
+    /// or deserialization fails.
     ///
     /// [tokio testing]: https://tokio.rs/tokio/topics/testing
     pub async fn try_read<R: AsyncRead + Unpin, T: for<'d> Deserialize<'d>>(
         buf_reader: &mut BufReader<R>,
-    ) -> miette::Result<T> {
+    ) -> Result<T, LengthPrefixProtocolError> {
         // Read the length prefix number of bytes.
-        let size_of_payload = buf_reader.read_u64().await.into_diagnostic()?;
+        let size_of_payload = buf_reader
+            .read_u64()
+            .await
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Ensure that the payload size is within the expected range.
         if size_of_payload > protocol_constants::MAX_PAYLOAD_SIZE {
             // Adjust this threshold as needed.
-            return Err(miette::miette!("Payload size is too large"));
+            return Err(LengthPrefixProtocolError::PayloadTooLarge {
+                size: size_of_payload,
+                max: protocol_constants::MAX_PAYLOAD_SIZE,
+            });
         }
 
         // Read the payload.
@@ -266,13 +325,15 @@ pub mod byte_io {
         buf_reader
             .read_exact(&mut payload_buffer)
             .await
-            .into_diagnostic()?;
+            .map_err(LengthPrefixProtocolError::Io)?;
 
         // Decompress the payload.
-        let payload_buffer = compress::decompress(&payload_buffer)?;
+        let payload_buffer = compress::try_decompress(&payload_buffer)
+            .map_err(LengthPrefixProtocolError::Compression)?;
 
         // Deserialize the payload.
-        let payload_buffer = json_serde::try_deserialize::<T>(&payload_buffer)?;
+        let payload_buffer = json_serde::try_deserialize::<T>(&payload_buffer)
+            .map_err(LengthPrefixProtocolError::JsonSerde)?;
         Ok(payload_buffer)
     }
 }

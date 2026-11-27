@@ -98,7 +98,7 @@ use std::debug_assert_matches;
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf_vt_100.index_down();
+    let result = performer.ofs_buf_vt_100.try_index_down();
     debug_assert_matches!(
         result,
         Ok(()),
@@ -122,7 +122,7 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html
 /// [module-level documentation]: self
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
-    let result = performer.ofs_buf_vt_100.reverse_index_up();
+    let result = performer.ofs_buf_vt_100.try_reverse_index_up();
     debug_assert_matches!(
         result,
         Ok(()),
@@ -143,7 +143,7 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// [module-level documentation]: self
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.scroll_buffer_up(how_many);
+    let result = performer.ofs_buf_vt_100.try_scroll_buffer_up(how_many);
     debug_assert_matches!(
         result,
         Ok(()),
@@ -164,7 +164,7 @@ pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
 /// [module-level documentation]: self
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = params.extract_nth_single_non_zero(0).get().into();
-    let result = performer.ofs_buf_vt_100.scroll_buffer_down(how_many);
+    let result = performer.ofs_buf_vt_100.try_scroll_buffer_down(how_many);
     debug_assert_matches!(
         result,
         Ok(()),

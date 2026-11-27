@@ -171,7 +171,7 @@
 //!
 //! ### Connection to This Module
 //!
-//! The [`enable_raw_mode`] and [`disable_raw_mode`] functions use the same underlying
+//! The [`try_enable_raw_mode`] and [`try_disable_raw_mode`] functions use the same underlying
 //! mechanism as `stty` — the POSIX [`termios`] API. On Unix systems, this module calls
 //! `tcgetattr()` and `tcsetattr()` (via the [`rustix`] crate) to manipulate the same
 //! terminal flags that `stty` controls. For details on the [`termios`] struct fields
@@ -208,7 +208,7 @@
 //! use r3bl_tui::RawModeGuard;
 //!
 //! {
-//!     let _guard = RawModeGuard::new().expect("Failed to enable raw mode");
+//!     let _guard = RawModeGuard::try_new().expect("Failed to enable raw mode");
 //!     // Terminal is now in raw mode
 //!     // ... process ANSI escape sequences ...
 //! } // Raw mode automatically disabled when guard is dropped
@@ -217,11 +217,11 @@
 //! Alternatively, you can manually control raw mode:
 //!
 //! ```no_run
-//! use r3bl_tui::{enable_raw_mode, disable_raw_mode};
+//! use r3bl_tui::{try_enable_raw_mode, try_disable_raw_mode};
 //!
-//! enable_raw_mode().expect("Failed to enable raw mode");
+//! try_enable_raw_mode().expect("Failed to enable raw mode");
 //! // ... process input ...
-//! disable_raw_mode().expect("Failed to disable raw mode");
+//! try_disable_raw_mode().expect("Failed to disable raw mode");
 //! ```
 //!
 //! [`Alacritty`]: https://alacritty.org/

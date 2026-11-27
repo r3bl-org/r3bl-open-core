@@ -171,56 +171,56 @@ fn controlled() {
 
     // 1. Title and Icon.
     osc_sender
-        .send_set_title_and_tab(constants::TITLE_AND_ICON_TEXT)
+        .try_send_set_title_and_tab(constants::TITLE_AND_ICON_TEXT)
         .expect("Failed to send title and icon");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 2. Title only.
     osc_sender
-        .send_set_title(constants::TITLE_ONLY_TEXT)
+        .try_send_set_title(constants::TITLE_ONLY_TEXT)
         .expect("Failed to send title only");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 3. Hyperlink with correlation ID.
     osc_sender
-        .send_set_hyperlink(constants::HYPERLINK_URI, Some(constants::HYPERLINK_ID))
+        .try_send_set_hyperlink(constants::HYPERLINK_URI, Some(constants::HYPERLINK_ID))
         .expect("Failed to send hyperlink start");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 4. Hyperlink close.
     osc_sender
-        .send_clear_hyperlink()
+        .try_send_clear_hyperlink()
         .expect("Failed to send clear hyperlink");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 5. Progress update.
     osc_sender
-        .send_set_progress(pc!(constants::PROGRESS_PERCENT).unwrap())
+        .try_send_set_progress(pc!(constants::PROGRESS_PERCENT).unwrap())
         .expect("Failed to send progress update");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 6. Progress clear.
     osc_sender
-        .send_clear_progress()
+        .try_send_clear_progress()
         .expect("Failed to send clear progress");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 7. System clipboard copy.
     osc_sender
-        .send_set_clipboard(ClipboardTarget::System, constants::CLIPBOARD_SYSTEM_DATA)
+        .try_send_set_clipboard(ClipboardTarget::System, constants::CLIPBOARD_SYSTEM_DATA)
         .expect("Failed to send system clipboard");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");
 
     // 8. Primary clipboard copy.
     osc_sender
-        .send_set_clipboard(ClipboardTarget::Primary, constants::CLIPBOARD_PRIMARY_DATA)
+        .try_send_set_clipboard(ClipboardTarget::Primary, constants::CLIPBOARD_PRIMARY_DATA)
         .expect("Failed to send primary clipboard");
     println!();
     std::io::stdout().flush().expect("Failed to flush stdout");

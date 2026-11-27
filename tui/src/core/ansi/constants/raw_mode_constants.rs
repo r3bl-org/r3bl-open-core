@@ -15,7 +15,8 @@
 //! │  └─ RawModeGuard struct for render pipeline integration      │
 //! ├──────────────────────────────────────────────────────────────┤
 //! │  terminal_raw_mode/ (Mid-level)                              │
-//! │  └─ enable_raw_mode(), disable_raw_mode(), RawModeGuard      │
+//! │  └─ try_enable_raw_mode(), try_disable_raw_mode(),           │
+//! │     RawModeGuard                                             │
 //! ├──────────────────────────────────────────────────────────────┤
 //! │  constants/raw_mode_constants.rs (This module - Low-level) ◄─│
 //! │  └─ VMIN_RAW_MODE, VTIME_RAW_MODE                            │

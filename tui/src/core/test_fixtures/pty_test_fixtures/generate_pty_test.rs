@@ -331,7 +331,7 @@ macro_rules! generate_pty_test {
 
                 // Enable raw mode if requested by the test.
                 if $mode == $crate::PtyTestMode::Raw {
-                    if let Err(e) = $crate::enable_raw_mode() {
+                    if let Err(e) = $crate::try_enable_raw_mode() {
                         eprintln!("Failed to enable raw mode: {e}");
                     }
                 }
@@ -342,7 +342,7 @@ macro_rules! generate_pty_test {
                 // Restore cooked mode for correctness.
                 #[allow(unreachable_code)]
                 if $mode == $crate::PtyTestMode::Raw {
-                    drop($crate::disable_raw_mode());
+                    drop($crate::try_disable_raw_mode());
                 }
 
                 // Exit the process, so there is no recursion.
@@ -366,7 +366,7 @@ macro_rules! generate_pty_test {
             eprintln!("{} Controller: Spawning controlled process...",
                 $crate::GLYPH_CONTROLLER
             );
-            let (pty_pair, child) = PtyPair::open_and_spawn($crate::DefaultPtySize, cmd)
+            let (pty_pair, child) = PtyPair::try_open_and_spawn($crate::DefaultPtySize, cmd)
                 .expect("Failed to spawn controlled process");
             eprintln!("{} Controller: PTY pair created", $crate::GLYPH_CONTROLLED);
             eprintln!(

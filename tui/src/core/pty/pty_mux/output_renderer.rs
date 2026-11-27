@@ -6,7 +6,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorVisibilityMode, Flat2DA
             OfsBufVT100, OutputDevice, PixelChar, ProcessStatus, RangeExt,
             RenderOpsLocalData, SPACE_CHAR, ScrollbackAmount, TuiStyle, VPCol, VPPos,
             VPRow, VPSize, Viewport, ViewportToCanvasExt,
-            print_text_with_attributes,
+            try_print_text_with_attributes,
             tui::{DEBUG_PTY_MUX,
                   terminal_lib_backends::{paint_ofs_buf, render_ofs_buf}},
             tui_style_attrib::{self, Bold},
@@ -69,7 +69,7 @@ impl OutputRenderer {
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()> {
+    ) {
         // Get the focused process's buffer.
         let focused_process_buffer = process_manager.focused_process_buffer();
 
@@ -104,8 +104,6 @@ impl OutputRenderer {
 
         // Paint the composite buffer to terminal.
         paint_buffer(&new_ofs_buf, output_device);
-
-        ok!()
     }
 
     /// Composites a virtual block cursor into the buffer.
@@ -162,7 +160,7 @@ impl OutputRenderer {
         let status_row_slice = &mut ofs_buf[last_row.as_usize()][col_range];
         status_row_slice.fill(spacer);
 
-        // Use print_text_with_attributes() to write styled text into the buffer. This
+        // Use try_print_text_with_attributes() to write styled text into the buffer. This
         // correctly handles Unicode display widths, grapheme clusters, and clipping. The
         // same code path used by the full rendering pipeline.
         let status_text = self.generate_status_text(process_manager);
@@ -175,7 +173,7 @@ impl OutputRenderer {
         // Position cursor at the start of the status bar row.
         ofs_buf.set_cursor_pos(vp_pos(vp_col(0), last_row));
 
-        match print_text_with_attributes(
+        match try_print_text_with_attributes(
             &status_text,
             Some(&status_style),
             ofs_buf,
@@ -273,8 +271,8 @@ impl OutputRenderer {
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()> {
-        self.render_from_active_buffer(output_device, process_manager)
+    ) {
+        self.render_from_active_buffer(output_device, process_manager);
     }
 
     /// Updates the terminal size used for status bar compositing.

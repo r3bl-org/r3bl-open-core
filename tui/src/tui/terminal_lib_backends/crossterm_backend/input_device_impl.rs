@@ -4,7 +4,7 @@ use crate::{CrosstermEventResult, DEBUG_TERMINAL_BACKEND, InputEvent,
             PinnedInputStream};
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
-use miette::IntoDiagnostic;
+use std::io;
 
 /// Crossterm-based input device implementation.
 ///
@@ -40,11 +40,12 @@ impl CrosstermInputDevice {
     /// - The terminal is not available
     ///
     /// [`crossterm`]: crossterm
-    async fn next_raw(&mut self) -> miette::Result<crossterm::event::Event> {
+    async fn try_next_raw(&mut self) -> io::Result<crossterm::event::Event> {
         match self.resource.next().fuse().await {
-            Some(it) => it.into_diagnostic(),
-            None => Err(miette::miette!(
-                "Failed to get next event from input source."
+            Some(it) => it,
+            None => Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Failed to get next event from input source.",
             )),
         }
     }
@@ -53,7 +54,7 @@ impl CrosstermInputDevice {
 impl CrosstermInputDevice {
     pub async fn next(&mut self) -> Option<InputEvent> {
         loop {
-            let maybe_result_event = self.next_raw().fuse().await;
+            let maybe_result_event = self.try_next_raw().fuse().await;
             match maybe_result_event {
                 Ok(event) => {
                     let input_event = InputEvent::try_from(event);

@@ -59,7 +59,7 @@ pub fn apply_event_to_line_state_and_render(
 
     // Regular readline event handling - use the canonical InputEvent directly
     line_state
-        .apply_event_and_render(&input_event, term, self_safe_history)
+        .try_apply_event_and_render(&input_event, term, self_safe_history)
         .into()
 }
 

@@ -1,13 +1,12 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{KeyPress, VPSize};
-use miette::Report as ErrorReport;
+use crate::{KeyPress, RawModeError, TerminalIoError, VPSize};
 use std::{io, num::NonZeroU8, time::Duration};
 use thiserror::Error;
 
-/// Events emitted by [`Readline::readline()`].
+/// Events emitted by [`Readline::try_readline()`].
 ///
-/// [`Readline::readline()`]: crate::Readline::readline
+/// [`Readline::try_readline()`]: crate::Readline::try_readline
 #[derive(Debug, PartialEq, Clone)]
 pub enum ReadlineEvent {
     /// The user entered a line of text.
@@ -55,7 +54,7 @@ pub enum ReadlineEvent {
 pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
     Duration::from_millis(66);
 
-/// Internal control flow for the [`readline()`] method. This is used primarily to make
+/// Internal control flow for the [`try_readline()`] method. This is used primarily to make
 /// testing easier.
 ///
 /// # Result Conversion
@@ -72,7 +71,7 @@ pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
 ///    machine loop.
 ///
 /// [`.into()`]: Into::into
-/// [`readline()`]: crate::Readline::readline
+/// [`try_readline()`]: crate::Readline::try_readline
 #[derive(Debug, PartialEq, Clone)]
 pub enum ReadlineControlFlow<T, E> {
     ReturnOk(T),
@@ -90,7 +89,7 @@ impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
     }
 }
 
-/// Error returned from [`readline()`]. Such errors generally require specific procedures
+/// Error returned from [`try_readline()`]. Such errors generally require specific procedures
 /// to recover from.
 ///
 /// # High-Fidelity Diagnostics
@@ -99,20 +98,25 @@ impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
 /// reporting with help text and error codes. Use [`.into_diagnostic()`] to convert this
 /// into a [`miette::Report`].
 ///
-/// # Implicit Conversions
-///
-/// - **From Report**: Supports implicit conversion from [`miette::Report`] (via
-///   [`From<ErrorReport>`]).
-///
 /// [`.into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
-/// [`readline()`]: crate::Readline::readline
+/// [`try_readline()`]: crate::Readline::try_readline
 #[derive(Debug, Error, miette::Diagnostic)]
 pub enum ReadlineError {
     /// An internal I/O error occurred.
     #[error(transparent)]
-    IO(#[from] io::Error),
+    IO(io::Error),
 
-    /// `readline()` was called after the [`SharedWriter`] was dropped and everything
+    /// A terminal I/O or mode operation failed.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalIo(TerminalIoError),
+
+    /// A raw mode operation failed.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    RawMode(RawModeError),
+
+    /// `try_readline()` was called after the [`SharedWriter`] was dropped and everything
     /// written to the `SharedWriter` was already output.
     ///
     /// [`SharedWriter`]: crate::SharedWriter
@@ -120,20 +124,9 @@ pub enum ReadlineError {
     Closed,
 }
 
-/// For convenience, convert [`ErrorReport`] to [`ReadlineError`], so that
-/// [`into_diagnostic()`] works.
-///
-/// [`into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
-impl From<ErrorReport> for ReadlineError {
-    fn from(report: ErrorReport) -> ReadlineError {
-        ReadlineError::IO(io::Error::other(format!("{report}")))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use miette::miette;
 
     #[test]
     fn test_readline_control_flow_from_result() {
@@ -157,17 +150,5 @@ mod tests {
             ReadlineControlFlow::from(err),
             ReadlineControlFlow::ReturnError("test error")
         );
-    }
-
-    #[test]
-    fn test_readline_error_from_error_report() {
-        let report = miette!("custom diagnostic error");
-        let error = ReadlineError::from(report);
-        match error {
-            ReadlineError::IO(io_err) => {
-                assert!(io_err.to_string().contains("custom diagnostic error"));
-            }
-            ReadlineError::Closed => panic!("expected IO error variant"),
-        }
     }
 }

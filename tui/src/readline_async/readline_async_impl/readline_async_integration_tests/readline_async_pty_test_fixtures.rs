@@ -100,7 +100,7 @@ pub fn readline_async_controlled_loop(initial_text: &str, initial_cursor: SegInd
 
                             // Apply event
                             let result = safe_output_terminal.write(|term| {
-                                line_state.apply_event_and_render(&event, term, &safe_history)
+                                line_state.try_apply_event_and_render(&event, term, &safe_history)
                             });
 
                             match result {

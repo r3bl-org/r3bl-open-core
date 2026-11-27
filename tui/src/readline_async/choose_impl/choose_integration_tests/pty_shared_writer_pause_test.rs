@@ -1,15 +1,15 @@
 // Copyright (c) 2025-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! [`PTY`]-based integration test verifying that [`ModalTerminalGuard`] correctly manages
-//! terminal suspension and sends [`Flush`] when [`choose()`] completes.
+//! terminal suspension and sends [`Flush`] when [`try_choose()`] completes.
 //!
-//! The controlled process runs [`choose()`] under [`ModalTerminalGuard`] with real I/O
-//! devices in a real [`PTY`], collects the [`LineStateControlSignal`]s from the lease,
-//! and prints them to [`stdout`]. The controller sends keystrokes via the [`PTY`] writer,
-//! reads the signal output, and asserts correctness.
+//! The controlled process runs [`try_choose()`] under [`ModalTerminalGuard`] with real
+//! I/O devices in a real [`PTY`], collects the [`LineStateControlSignal`]s from the
+//! lease, and prints them to [`stdout`]. The controller sends keystrokes via the [`PTY`]
+//! writer, reads the signal output, and asserts correctness.
 //!
-//! [`choose()`] handles switching in and out of [raw mode] on its own, which is why this
-//! test is run in [`PtyTestMode::Cooked`].
+//! [`try_choose()`] handles switching in and out of [raw mode] on its own, which is why
+//! this test is run in [`PtyTestMode::Cooked`].
 //!
 //! # Run with:
 //!
@@ -17,17 +17,17 @@
 //! cargo test -p r3bl_tui test_shared_writer_pause_works -- --nocapture
 //! ```
 //!
-//! [`choose()`]: crate::choose
 //! [`Flush`]: crate::LineStateControlSignal::Flush
 //! [`LineStateControlSignal`]: crate::LineStateControlSignal
 //! [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`stdout`]: std::io::stdout
+//! [`try_choose()`]: crate::try_choose
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 
 use crate::{ChannelCapacity, Header, InputDevice, MSG_CONTROLLED_READY, MSG_LINE_PREFIX,
             MSG_SUCCESS, ModalTerminalGuard, OutputDevice, PtyTestContext, PtyTestMode,
-            Readline, TuiAvailabilityChooseExt, choose, generate_keyboard_sequence,
+            Readline, TuiAvailabilityChooseExt, generate_keyboard_sequence, try_choose,
             vp_height, vp_width,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
@@ -60,10 +60,10 @@ fn controller(context: PtyTestContext) {
         .wait_for_ready(&mut buf_reader, MSG_CONTROLLED_READY)
         .expect("conversion error");
 
-    // Give choose() time to render and start its event loop.
+    // Give try_choose() time to render and start its event loop.
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // Send Down, Down, Enter to drive choose() to completion.
+    // Send Down, Down, Enter to drive try_choose() to completion.
     for code in [
         VT100KeyCodeIR::Down,
         VT100KeyCodeIR::Down,
@@ -79,7 +79,7 @@ fn controller(context: PtyTestContext) {
     }
 
     // Read signal lines printed by the controlled process. Use `contains`
-    // because choose()'s ANSI rendering may precede the signal on the same line.
+    // because try_choose()'s ANSI rendering may precede the signal on the same line.
     let result = child.read_until_marker(&mut buf_reader, MSG_SUCCESS, |line| {
         line.contains(MSG_LINE_PREFIX)
     });
@@ -105,15 +105,15 @@ fn controller(context: PtyTestContext) {
     child.drain_and_wait(buf_reader, pty_pair);
 }
 
-/// Controlled: runs [`choose()`] under [`ModalTerminalGuard`] with real I/O, collects
+/// Controlled: runs [`try_choose()`] under [`ModalTerminalGuard`] with real I/O, collects
 /// [`LineStateControlSignal`]s, prints them to [`stdout`] for the controller to verify.
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
-/// [`choose()`]: crate::choose
 /// [`LineStateControlSignal`]: crate::LineStateControlSignal
 /// [`ModalTerminalGuard`]: crate::ModalTerminalGuard
 /// [`std::process::exit(0)`]: std::process::exit
 /// [`stdout`]: std::io::stdout
+/// [`try_choose()`]: crate::try_choose
 fn controlled() {
     let rt = tokio::runtime::Runtime::new().expect("conversion error");
     rt.block_on(async {
@@ -141,10 +141,10 @@ fn controlled() {
         println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("conversion error");
 
-        // Run choose() with real I/O devices under ModalTerminalGuard.
+        // Run try_choose() with real I/O devices under ModalTerminalGuard.
         {
             let mut guard = ModalTerminalGuard::acquire(&mut readline);
-            let _unused = choose(
+            let _unused = try_choose(
                 Header::SingleLine("Choose:".into()),
                 &["one", "two", "three"],
                 None,

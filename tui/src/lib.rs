@@ -271,7 +271,7 @@
 //!    non-blocking, allowing background tasks and spinners to print concurrently without
 //!    pausing line editing or blocking your main thread.
 //!
-//! 2. 📑 **Inline / Partial TUI ([`choose()`])**: Single-shot interactive multi-select
+//! 2. 📑 **Inline / Partial TUI ([`try_choose()`])**: Single-shot interactive multi-select
 //!    dialogs that enter raw mode and render inline in terminal scrollback without taking
 //!    over the screen or disrupting the back buffer (similar to `fzf` in spirit).
 //!
@@ -290,7 +290,7 @@
 //! **Power via Composition**: Designed to be [loosely coupled and strongly coherent], you
 //! can pick and choose only what you need or compose them seamlessly within a single
 //! application. Transition smoothly from a non-blocking [`readline_async`] prompt into an
-//! inline [`choose()`] menu, launch a full-screen [`TUI`] for complex tasks, or
+//! inline [`try_choose()`] menu, launch a full-screen [`TUI`] for complex tasks, or
 //! orchestrate background [`PTY`] subprocesses in virtual [`PTYMux`] buffers, all sharing
 //! application state without process restarts.
 //!
@@ -516,7 +516,7 @@
 //! | :-------------------------------------- | :------------------------ | :------------------------------------------ | :----------------------------------------------------------------------- |
 //! | [`TerminalWindow::main_event_loop()`]   | Full TUI framework        | [`TuiAvailability<MainEventLoopFuture>`]    | Complex, multi-component apps with layouts, dialogs, and custom logic.   |
 //! | [`ReadlineAsyncContext::try_new()`]     | Async Readline            | [`TuiAvailability<ReadlineAsyncContext>`]   | CLI-style line input, REPLs, and background logging.                     |
-//! | [`choose()`]                            | Interactive Selection     | [`TuiAvailability<ChooseFuture>`]           | Prompting user to select one or more items from a list.                  |
+//! | [`try_choose()`]                        | Interactive Selection     | [`TuiAvailability<ChooseFuture>`]           | Prompting user to select one or more items from a list.                  |
 //! | [`PTYMuxBuilder::build()`]              | Terminal Multiplexer      | [`TuiAvailability<PTYMux>`]                 | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI.   |
 //! | [`Spinner::try_start()`]                | Indeterminate Progress    | [`TuiAvailability<Spinner>`]                | Long-running tasks needing visual feedback (standalone or embedded).     |
 //!
@@ -720,13 +720,13 @@
 //!
 //! ```bash
 //! # Run examples interactively (choose from list)
-//! fish run.fish run-examples
+//! fish run.fish examples
 //!
 //! # Run examples with release optimizations
-//! fish run.fish run-examples --release
+//! fish run.fish examples --release
 //!
 //! # Run examples without logging
-//! fish run.fish run-examples --no-log
+//! fish run.fish examples --no-log
 //! ```
 //!
 //! You can also run examples directly:
@@ -748,18 +748,18 @@
 //! fish run.fish log
 //!
 //! # Terminal 2: Run examples interactively
-//! fish run.fish run-examples
+//! fish run.fish examples
 //! ```
 //!
 //! ## TUI-Specific Commands
 //!
-//! | Command                                        | Description                                        |
-//! | :--------------------------------------------- | :------------------------------------------------- |
-//! | `fish run.fish run-examples`                   | Run TUI examples interactively with options        |
-//! | `fish run.fish run-examples-flamegraph-svg`    | Generate SVG flamegraph for performance analysis   |
-//! | `fish run.fish run-examples-flamegraph-fold`   | Generate perf-folded format for analysis           |
-//! | `fish run.fish bench`                          | Run benchmarks with real-time output               |
-//! | `fish run.fish log`                            | Monitor log files with smart detection             |
+//! | Command                                    | Description                                        |
+//! | :----------------------------------------- | :------------------------------------------------- |
+//! | `fish run.fish examples`                   | Run TUI examples interactively with options        |
+//! | `fish run.fish examples-flamegraph-svg`    | Generate SVG flamegraph for performance analysis   |
+//! | `fish run.fish examples-flamegraph-fold`   | Generate perf-folded format for analysis           |
+//! | `fish run.fish bench`                      | Run benchmarks with real-time output               |
+//! | `fish run.fish log`                        | Monitor log files with smart detection             |
 //!
 //! ## Testing and Development
 //!
@@ -917,7 +917,7 @@
 //!     },
 //!     controlled: || {
 //!         // Runs in PTY controlled - fully interactive terminal
-//!         let mut input_device = DirectToAnsiInputDevice::new()
+//!         let mut input_device = DirectToAnsiInputDevice::try_new()
 //!             .expect("Failed to initialize DirectToAnsiInputDevice");
 //!         println!("CONTROLLED_READY");
 //!         process_terminal_events(&input_device);
@@ -965,7 +965,7 @@
 //!   analysis
 //! - **Automated benchmarking**: Reproducible flamegraph data for comparing performance
 //!   across code changes
-//!   - Command: `./run.fish run-examples-flamegraph-fold --benchmark`
+//!   - Command: `./run.fish examples-flamegraph-fold --benchmark`
 //!   - Uses scripted `ex_editor` input sequence that stress tests the rendering pipeline
 //!   - Ensures `.perf-folded` files are comparable across commits
 //!   - 8-second continuous workload with 999 Hz sampling for accurate hot path capture
@@ -999,7 +999,7 @@
 //!
 //! ```bash
 //! # Generate reproducible benchmark data
-//! ./run.fish run-examples-flamegraph-fold --benchmark
+//! ./run.fish examples-flamegraph-fold --benchmark
 //!
 //! # Analyze with Claude Code (detects regressions, suggests optimizations)
 //! # Use the /check-regression command or invoke the analyze-performance skill
@@ -1010,7 +1010,7 @@
 //! ```text
 //! Make code change
 //!      ↓
-//! Run: ./run.fish run-examples-flamegraph-fold --benchmark
+//! Run: ./run.fish examples-flamegraph-fold --benchmark
 //!      ↓
 //! Analyze: Compare flamegraph-benchmark.perf-folded vs baseline
 //!      ↓
@@ -1449,7 +1449,7 @@
 //! };
 //! ```
 //! This ensures that even if a prior panic corrupted the state, the terminal restoration
-//! logic can still attempt to call [`disable_raw_mode()`] and exit gracefully.
+//! logic can still attempt to call [`try_disable_raw_mode()`] and exit gracefully.
 //! [`ScopedMutex`] provides the [`lock_raw()`] method specifically for this purpose.
 //!
 //! ## Deadlock Prevention: Scoped Access vs. Chain of Custody
@@ -1946,7 +1946,7 @@
 //!
 //! - **Use Case**: Simple interactive prompts, CLI tools with basic interaction,
 //!   partial-TUI
-//! - **Example**: Readline input, interactive selection menus ([`choose()`]), form inputs
+//! - **Example**: Readline input, interactive selection menus ([`try_choose()`]), form inputs
 //! - **Pipeline**: [`CliTextInline`] → [`PixelChar`] array → [`PixelCharRenderer`] → [`ANSI`]
 //!   bytes → Terminal
 //! - **Benefits**:
@@ -3066,7 +3066,7 @@
 //!         it => return it.into_err(),
 //!     };
 //!
-//!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
+//!     multiplexer.try_run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
 //!     ok!()
 //! }
 //! ```
@@ -3252,7 +3252,6 @@
 //! [`CCol`]: crate::CCol
 //! [`CHeight`]: crate::CHeight
 //! [`child`]: field@PtyTestContext::child
-//! [`choose()`]: crate::choose
 //! [`ChUnit`]: crate::ChUnit
 //! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`Component::handle_event()`]: crate::Component::handle_event
@@ -3270,7 +3269,6 @@
 //! [`Deref`]: std::ops::Deref
 //! [`direct_to_ansi`]: crate::direct_to_ansi
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`disable_raw_mode()`]: crate::disable_raw_mode
 //! [`EditorBuffer`]: crate::EditorBuffer
 //! [`EditorEngine::apply_event()`]: crate::apply_event
 //! [`EditorEngine::render_engine()`]: crate::render_engine
@@ -3312,7 +3310,7 @@
 //! [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
 //! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+//! [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
 //! [`OscSender`]: crate::core::ansi::osc::OscSender
 //! [`OscSequence`]: crate::core::ansi::osc::OscSequence
 //! [`output_device.enter_raw_mode()`]: crate::OutputDevice::enter_raw_mode
@@ -3329,7 +3327,7 @@
 //! [`pty_pair`]: field@PtyTestContext::pty_pair
 //! [`pty_test_fixtures`]: mod@crate::core::test_fixtures::pty_test_fixtures
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-//! [`PTYMux::run()`]: crate::PTYMux::run
+//! [`PTYMux::try_run()`]: crate::PTYMux::try_run
 //! [`PTYMux`]: crate::PTYMux
 //! [`PTYMuxBuilder::build()`]: crate::PTYMuxBuilder::build
 //! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
@@ -3406,6 +3404,8 @@
 //! [`tokio`]: tokio
 //! [`tracing::error!`]: tracing::error
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
+//! [`try_choose()`]: crate::try_choose
+//! [`try_disable_raw_mode()`]: crate::try_disable_raw_mode
 //! [`try_pan_viewport_to`]: crate::CanvasStorage::try_pan_viewport_to
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples

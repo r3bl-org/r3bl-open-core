@@ -3,7 +3,7 @@
 //! [`PTY`]-based integration tests for [`SAVED_TERMIOS`] poison recovery.
 //!
 //! This test verifies that even if the internal [`SAVED_TERMIOS`] mutex is poisoned by a
-//! panic, [`enable_raw_mode()`] and [`disable_raw_mode()`] can still function correctly
+//! panic, [`try_enable_raw_mode()`] and [`try_disable_raw_mode()`] can still function correctly
 //! by using [`into_inner()`] to recover the data.
 //!
 //! # Why [`PTY`] isolation?
@@ -28,8 +28,8 @@
 
 use crate::{CaughtPanicResult, GLYPH_SUCCESS, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, PtyTestContext, PtyTestMode,
-            disable_raw_mode, enable_raw_mode, extract_panic_message,
-            terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS};
+            extract_panic_message, terminal_raw_mode::raw_mode_unix::SAVED_TERMIOS,
+            try_disable_raw_mode, try_enable_raw_mode};
 use rustix::termios::Termios;
 use std::{io::{Write, stdout},
           sync::{LockResult, MutexGuard}};
@@ -93,9 +93,10 @@ fn controlled() {
         assert!(result.is_err());
     });
 
-    // 3. Call disable_raw_mode().
+    // 3. Call try_disable_raw_mode().
     // It should NOT return an error because it uses into_inner() to recover.
-    disable_raw_mode().expect("disable_raw_mode() should succeed (poison-safe)");
+    try_disable_raw_mode()
+        .expect("try_disable_raw_mode() should succeed (poison-safe)");
 
     // 4. Verify SAVED_TERMIOS is now None and the lock is still poisoned.
     SAVED_TERMIOS.lock_raw(|result: LockResult<MutexGuard<Option<Termios>>>| {
@@ -103,11 +104,12 @@ fn controlled() {
         assert!(guard.is_none(), "SAVED_TERMIOS should be None");
     });
 
-    // 5. Future enable_raw_mode() should succeed (it also uses into_inner()).
-    enable_raw_mode().expect("enable_raw_mode() should succeed (poison-safe)");
+    // 5. Future try_enable_raw_mode() should succeed (it also uses into_inner()).
+    try_enable_raw_mode().expect("try_enable_raw_mode() should succeed (poison-safe)");
 
     // 6. Cleanup.
-    disable_raw_mode().expect("disable_raw_mode() should succeed (poison-safe)");
+    try_disable_raw_mode()
+        .expect("try_disable_raw_mode() should succeed (poison-safe)");
 
     println!("{GLYPH_SUCCESS} test_saved_termios_poisoning_recovery passed");
     println!("{MSG_SUCCESS}");

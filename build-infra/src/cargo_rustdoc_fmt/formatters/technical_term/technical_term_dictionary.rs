@@ -8,7 +8,21 @@
 //! compile time, or from a custom file provided via `--terms-file`.
 
 use r3bl_tui::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Errors returned when loading or parsing the technical term link dictionary.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum TechnicalTermDictionaryError {
+    #[error("Failed to read terms file '{}'", path.display())]
+    ReadTermsFile {
+        path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    #[error("Failed to parse technical terms JSON5 seed")]
+    ParseSeedFailed(#[source] json5::Error),
+}
 
 /// Embedded seed file (JSON5 format with comments).
 const EMBEDDED_SEED: &str = include_str!("known_technical_term_link_dictionary.jsonc");
@@ -26,14 +40,20 @@ impl TechnicalTermDictionary {
     /// # Errors
     ///
     /// Returns an error if the terms file cannot be read or parsed.
-    pub fn from_seed(terms_file: Option<&Path>) -> miette::Result<Self> {
+    pub fn try_from_seed_file(
+        terms_file: Option<&Path>,
+    ) -> Result<Self, TechnicalTermDictionaryError> {
         let seed_content = match terms_file {
-            Some(path) => std::fs::read_to_string(path)
-                .map_err(|err| miette::miette!("Failed to read terms file: {err}"))?,
+            Some(path) => std::fs::read_to_string(path).map_err(|src_err| {
+                TechnicalTermDictionaryError::ReadTermsFile {
+                    path: path.into(),
+                    src_err,
+                }
+            })?,
             None => EMBEDDED_SEED.to_string(),
         };
 
-        let terms = parse_seed(&seed_content)?;
+        let terms = try_parse_seed_content(&seed_content)?;
         Ok(Self { terms })
     }
 
@@ -65,9 +85,10 @@ impl TechnicalTermDictionary {
 }
 
 /// Parses the seed file content (JSON5 format) into a term-to-target map.
-fn parse_seed(content: &str) -> miette::Result<HashMap<String, String>> {
-    json5::from_str(content)
-        .map_err(|err| miette::miette!("Failed to parse seed file: {err}"))
+fn try_parse_seed_content(
+    content: &str,
+) -> Result<HashMap<String, String>, TechnicalTermDictionaryError> {
+    json5::from_str(content).map_err(TechnicalTermDictionaryError::ParseSeedFailed)
 }
 
 #[cfg(test)]
@@ -76,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_parse_embedded_seed() {
-        let registry = TechnicalTermDictionary::from_seed(None).unwrap();
+        let registry = TechnicalTermDictionary::try_from_seed_file(None).unwrap();
         assert!(!registry.is_empty());
 
         // Check internal crate terms.
@@ -99,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_terms_longest_first() {
-        let registry = TechnicalTermDictionary::from_seed(None).unwrap();
+        let registry = TechnicalTermDictionary::try_from_seed_file(None).unwrap();
         let terms = registry.terms_longest_first();
 
         // "`VT-100` spec" (14 chars) should come before "VT-100" (6 chars).
@@ -110,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_all_seed_terms_present() {
-        let registry = TechnicalTermDictionary::from_seed(None).unwrap();
+        let registry = TechnicalTermDictionary::try_from_seed_file(None).unwrap();
 
         // Internal Rust types.
         for term in ["CSI", "SGR", "ESC", "DSR", "OSC", "pty"] {
@@ -162,24 +183,28 @@ mod tests {
     }
 
     #[test]
-    fn test_from_seed_custom_file_and_error_branches() {
+    fn test_try_from_seed_file_custom_file_and_error_branches() {
         let dir = tempfile::TempDir::new().unwrap();
         let valid_path = dir.path().join("terms.jsonc");
         std::fs::write(&valid_path, r#"{ "CSI": "crate::CsiSequence" }"#).unwrap();
-        let dict = TechnicalTermDictionary::from_seed(Some(&valid_path)).unwrap();
+        let dict =
+            TechnicalTermDictionary::try_from_seed_file(Some(&valid_path)).unwrap();
         assert_eq!(dict.get("CSI"), Some("crate::CsiSequence"));
 
         // Non-existent file error branch.
-        assert!(
-            TechnicalTermDictionary::from_seed(Some(Path::new(
+        assert!(matches!(
+            TechnicalTermDictionary::try_from_seed_file(Some(Path::new(
                 "/nonexistent/terms.jsonc"
-            )))
-            .is_err()
-        );
+            ))),
+            Err(TechnicalTermDictionaryError::ReadTermsFile { .. })
+        ));
 
         // Malformed JSON5 error branch.
         let bad_json_path = dir.path().join("bad_json.jsonc");
         std::fs::write(&bad_json_path, "{ unclosed").unwrap();
-        assert!(TechnicalTermDictionary::from_seed(Some(&bad_json_path)).is_err());
+        assert!(matches!(
+            TechnicalTermDictionary::try_from_seed_file(Some(&bad_json_path)),
+            Err(TechnicalTermDictionaryError::ParseSeedFailed(_))
+        ));
     }
 }

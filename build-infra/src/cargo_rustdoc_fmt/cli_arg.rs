@@ -11,7 +11,7 @@ use crate::cargo_rustdoc_fmt::{constants::{DEFAULT_SKIP_FOLDER_MATCH,
                                types::{EditorLineNum, ExecutionMode, FormatOptions,
                                        PassPolicy, Verbosity, editor_line_num}};
 use clap::Parser;
-use r3bl_tui::CRow;
+use r3bl_tui::{CRow, ok};
 use std::{num::IntErrorKind, ops::RangeInclusive, path::PathBuf};
 
 /// Format Markdown tables, links, technical terms, and code fences in Rust
@@ -95,7 +95,7 @@ pub struct CLIArg {
         long = "lines-force",
         alias = "lines",
         value_name = "RANGE",
-        value_parser = parse_line_range,
+        value_parser = try_parse_line_range,
         allow_hyphen_values = true,
         conflicts_with_all = ["terms_only", "terms_file", "workspace", "skip_folder_matches"]
     )]
@@ -108,49 +108,69 @@ pub struct CLIArg {
     pub paths: Vec<PathBuf>,
 }
 
+/// Error returned when [`CLIArg::try_validate`] detects invalid CLI arguments.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum CliValidationError {
+    #[error(
+        "--lines-force requires an explicit target file path (e.g. 'cargo rustdoc-fmt --lines-force 10:20 src/lib.rs')"
+    )]
+    MissingTargetPath,
+
+    #[error(
+        "--lines-force only supports formatting a single file at a time, but {count} paths were provided"
+    )]
+    MultiplePathsProvided { count: usize },
+
+    #[error("File not found: '{}'", path.display())]
+    FileNotFound { path: PathBuf },
+
+    #[error(
+        "--lines-force requires a file, but directory was provided: '{}'",
+        path.display()
+    )]
+    DirectoryProvided { path: PathBuf },
+
+    #[error(
+        "--lines-force requires a Rust source file (.rs), but got: '{}'",
+        path.display()
+    )]
+    NotRustFile { path: PathBuf },
+}
+
 impl CLIArg {
     /// Validates CLI arguments for semantic consistency.
     ///
     /// # Errors
     ///
-    /// Returns an error if:
+    /// Returns [`CliValidationError`] if:
     /// - `--lines-force` is specified without an explicit target file path.
     /// - More than one target file path is provided with `--lines-force`.
     /// - The specified path does not exist, is a directory, or is not a `.rs` file.
-    pub fn validate(&self) -> miette::Result<()> {
+    pub fn try_validate(&self) -> Result<(), CliValidationError> {
         if self.lines_force.is_some() {
             if self.paths.is_empty() {
-                return Err(miette::miette!(
-                    "--lines-force requires an explicit target file path (e.g. 'cargo rustdoc-fmt --lines-force 10:20 src/lib.rs')"
-                ));
+                return Err(CliValidationError::MissingTargetPath);
             }
             if self.paths.len() > 1 {
-                return Err(miette::miette!(
-                    "--lines-force only supports formatting a single file at a time, but {} paths were provided",
-                    self.paths.len()
-                ));
+                return Err(CliValidationError::MultiplePathsProvided {
+                    count: self.paths.len(),
+                });
             }
             let path = &self.paths[0];
             if !path.exists() {
-                return Err(miette::miette!("File not found: '{}'", path.display()));
+                return Err(CliValidationError::FileNotFound { path: path.clone() });
             }
             if path.is_dir() {
-                return Err(miette::miette!(
-                    "--lines-force requires a file, but directory was provided: '{}'",
-                    path.display()
-                ));
+                return Err(CliValidationError::DirectoryProvided { path: path.clone() });
             }
             let is_rs = path
                 .extension()
                 .is_some_and(|ext| ext.eq_ignore_ascii_case(RUST_FILE_EXTENSION));
             if !is_rs {
-                return Err(miette::miette!(
-                    "--lines-force requires a Rust source file (.rs), but got: '{}'",
-                    path.display()
-                ));
+                return Err(CliValidationError::NotRustFile { path: path.clone() });
             }
         }
-        Ok(())
+        ok!()
     }
 
     /// Converts CLI arguments to [`FormatOptions`].
@@ -187,7 +207,9 @@ impl CLIArg {
 ///
 /// Returns [`LineRangeError`] if the input is empty, contains zero or negative line
 /// numbers, is open-ended, has multiple delimiters, or has `start > end`.
-pub fn parse_line_range(range_str: &str) -> Result<RangeInclusive<CRow>, LineRangeError> {
+pub fn try_parse_line_range(
+    range_str: &str,
+) -> Result<RangeInclusive<CRow>, LineRangeError> {
     let trimmed = range_str.trim();
     if trimmed.is_empty() {
         return Err(LineRangeError::EmptyInput);
@@ -384,7 +406,10 @@ mod tests {
             paths: vec![],
             ..Default::default()
         };
-        assert!(cli.validate().is_err());
+        assert_eq!(
+            cli.try_validate(),
+            Err(CliValidationError::MissingTargetPath)
+        );
 
         // Multiple paths.
         let cli = CLIArg {
@@ -392,15 +417,22 @@ mod tests {
             paths: vec![PathBuf::from("a.rs"), PathBuf::from("b.rs")],
             ..Default::default()
         };
-        assert!(cli.validate().is_err());
+        assert_eq!(
+            cli.try_validate(),
+            Err(CliValidationError::MultiplePathsProvided { count: 2 })
+        );
 
         // Nonexistent path.
+        let missing = PathBuf::from("/nonexistent_file_xyz_123.rs");
         let cli = CLIArg {
             lines_force: Some(range_10_20.clone()),
-            paths: vec![PathBuf::from("/nonexistent_file_xyz_123.rs")],
+            paths: vec![missing.clone()],
             ..Default::default()
         };
-        assert!(cli.validate().is_err());
+        assert_eq!(
+            cli.try_validate(),
+            Err(CliValidationError::FileNotFound { path: missing })
+        );
 
         let temp_dir = TempDir::new().unwrap();
 
@@ -410,17 +442,25 @@ mod tests {
             paths: vec![temp_dir.path().to_path_buf()],
             ..Default::default()
         };
-        assert!(cli.validate().is_err());
+        assert_eq!(
+            cli.try_validate(),
+            Err(CliValidationError::DirectoryProvided {
+                path: temp_dir.path().to_path_buf()
+            })
+        );
 
         // Non-Rust file (.txt instead of .rs).
         let txt_file = temp_dir.path().join("notes.txt");
         std::fs::write(&txt_file, "hello").unwrap();
         let cli = CLIArg {
             lines_force: Some(range_1_1.clone()),
-            paths: vec![txt_file],
+            paths: vec![txt_file.clone()],
             ..Default::default()
         };
-        assert!(cli.validate().is_err());
+        assert_eq!(
+            cli.try_validate(),
+            Err(CliValidationError::NotRustFile { path: txt_file })
+        );
 
         // Valid .rs file succeeds.
         let rs_file = temp_dir.path().join("valid.rs");
@@ -430,7 +470,7 @@ mod tests {
             paths: vec![rs_file],
             ..Default::default()
         };
-        assert!(cli.validate().is_ok());
+        assert!(cli.try_validate().is_ok());
     }
 
     #[test]
@@ -469,7 +509,7 @@ mod tests {
     #[test]
     fn test_parse_line_range_valid() {
         // Colon syntax (1-indexed CLI input "10:20" -> 0-based c_row(9)..=c_row(19)).
-        let range = parse_line_range("10:20").unwrap();
+        let range = try_parse_line_range("10:20").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
@@ -477,26 +517,26 @@ mod tests {
         assert_eq!(range, c_row(9)..=c_row(19));
 
         // Hyphen syntax.
-        let range = parse_line_range("10-20").unwrap();
+        let range = try_parse_line_range("10-20").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
         );
 
         // Rust range syntax.
-        let range = parse_line_range("10..20").unwrap();
+        let range = try_parse_line_range("10..20").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
         );
-        let range = parse_line_range("10..=20").unwrap();
+        let range = try_parse_line_range("10..=20").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
         );
 
         // Single line (1-indexed line 42 -> 0-based c_row(41)..=c_row(41)).
-        let range = parse_line_range("42").unwrap();
+        let range = try_parse_line_range("42").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(42), editor_line_num(42))
@@ -504,12 +544,12 @@ mod tests {
         assert_eq!(range, c_row(41)..=c_row(41));
 
         // Whitespace handling.
-        let range = parse_line_range(" 10 : 20 ").unwrap();
+        let range = try_parse_line_range(" 10 : 20 ").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
         );
-        let range = parse_line_range(" 10 ..= 20 ").unwrap();
+        let range = try_parse_line_range(" 10 ..= 20 ").unwrap();
         assert_eq!(
             range,
             EditorLineNum::to_c_row_range(editor_line_num(10), editor_line_num(20))
@@ -520,45 +560,45 @@ mod tests {
     fn test_parse_line_range_errors() {
         // Empty.
         assert_eq!(
-            parse_line_range("").unwrap_err(),
+            try_parse_line_range("").unwrap_err(),
             LineRangeError::EmptyInput
         );
         assert_eq!(
-            parse_line_range("   ").unwrap_err(),
+            try_parse_line_range("   ").unwrap_err(),
             LineRangeError::EmptyInput
         );
 
         // Negative numbers.
         assert_eq!(
-            parse_line_range("-5").unwrap_err(),
+            try_parse_line_range("-5").unwrap_err(),
             LineRangeError::NegativeLineNumber
         );
         assert_eq!(
-            parse_line_range("-10:20").unwrap_err(),
+            try_parse_line_range("-10:20").unwrap_err(),
             LineRangeError::NegativeLineNumber
         );
         assert_eq!(
-            parse_line_range("10:-20").unwrap_err(),
+            try_parse_line_range("10:-20").unwrap_err(),
             LineRangeError::NegativeLineNumber
         );
 
         // Zero.
         assert_eq!(
-            parse_line_range("0").unwrap_err(),
+            try_parse_line_range("0").unwrap_err(),
             LineRangeError::ZeroLineNumber
         );
         assert_eq!(
-            parse_line_range("0:10").unwrap_err(),
+            try_parse_line_range("0:10").unwrap_err(),
             LineRangeError::ZeroLineNumber
         );
         assert_eq!(
-            parse_line_range("10:0").unwrap_err(),
+            try_parse_line_range("10:0").unwrap_err(),
             LineRangeError::ZeroLineNumber
         );
 
         // Start > End.
         assert_eq!(
-            parse_line_range("20:10").unwrap_err(),
+            try_parse_line_range("20:10").unwrap_err(),
             LineRangeError::StartGreaterThanEnd {
                 start: editor_line_num(20),
                 end: editor_line_num(10),
@@ -567,53 +607,53 @@ mod tests {
 
         // Open ended.
         assert_eq!(
-            parse_line_range("10:").unwrap_err(),
+            try_parse_line_range("10:").unwrap_err(),
             LineRangeError::OpenEndedRange
         );
         assert_eq!(
-            parse_line_range(":20").unwrap_err(),
+            try_parse_line_range(":20").unwrap_err(),
             LineRangeError::OpenEndedRange
         );
         assert_eq!(
-            parse_line_range("10..").unwrap_err(),
+            try_parse_line_range("10..").unwrap_err(),
             LineRangeError::OpenEndedRange
         );
         assert_eq!(
-            parse_line_range("..20").unwrap_err(),
+            try_parse_line_range("..20").unwrap_err(),
             LineRangeError::OpenEndedRange
         );
 
         // Multiple delimiters.
         assert_eq!(
-            parse_line_range("10:20:30").unwrap_err(),
+            try_parse_line_range("10:20:30").unwrap_err(),
             LineRangeError::MultipleDelimiters
         );
         assert_eq!(
-            parse_line_range("10..20..30").unwrap_err(),
+            try_parse_line_range("10..20..30").unwrap_err(),
             LineRangeError::MultipleDelimiters
         );
         assert_eq!(
-            parse_line_range("10--20").unwrap_err(),
+            try_parse_line_range("10--20").unwrap_err(),
             LineRangeError::MultipleDelimiters
         );
 
         // Non-numeric.
         assert!(matches!(
-            parse_line_range("abc").unwrap_err(),
+            try_parse_line_range("abc").unwrap_err(),
             LineRangeError::InvalidNumber(_)
         ));
         assert!(matches!(
-            parse_line_range("10:abc").unwrap_err(),
+            try_parse_line_range("10:abc").unwrap_err(),
             LineRangeError::InvalidNumber(_)
         ));
 
         // Integer overflow.
         assert_eq!(
-            parse_line_range("999999999999999999999999999999").unwrap_err(),
+            try_parse_line_range("999999999999999999999999999999").unwrap_err(),
             LineRangeError::IntegerOverflow
         );
         assert_eq!(
-            parse_line_range("1:999999999999999999999999999999").unwrap_err(),
+            try_parse_line_range("1:999999999999999999999999999999").unwrap_err(),
             LineRangeError::IntegerOverflow
         );
     }

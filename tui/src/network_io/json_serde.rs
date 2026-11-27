@@ -6,8 +6,20 @@
 //! deserializing data structures to/from bytes for network transmission.
 
 use crate::{Buffer, BufferAtom};
-use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
+
+/// Error returned by [`try_serialize`] and [`try_deserialize`] when JSON encoding or
+/// decoding fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum JsonSerdeError {
+    /// Failed to serialize a value into JSON bytes.
+    #[error("Failed to serialize JSON payload")]
+    SerializeFailed(#[source] serde_json::Error),
+
+    /// Failed to deserialize a value from JSON bytes.
+    #[error("Failed to deserialize JSON payload")]
+    DeserializeFailed(#[source] serde_json::Error),
+}
 
 /// Serialize the payload to JSON bytes. Returns a [Buffer]. `T` must implement the
 /// [Serialize] trait.
@@ -18,14 +30,12 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The data cannot be serialized to JSON format
-/// - The serialization encounters an I/O error
-pub fn try_serialize<T: Serialize>(data: &T) -> miette::Result<Buffer> {
-    serde_json::to_vec(data).into_diagnostic()
+/// Returns [`JsonSerdeError::SerializeFailed`] if the data cannot be serialized to JSON.
+pub fn try_serialize<T: Serialize>(data: &T) -> Result<Buffer, JsonSerdeError> {
+    serde_json::to_vec(data).map_err(JsonSerdeError::SerializeFailed)
 }
 
-/// Deserialize a JSON byte buffer into type `T`. Returns a [`miette::Result`] of `T`.
+/// Deserialize a JSON byte buffer into type `T`.
 ///
 /// # Arguments
 ///
@@ -34,14 +44,12 @@ pub fn try_serialize<T: Serialize>(data: &T) -> miette::Result<Buffer> {
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The buffer contains invalid JSON data
-/// - The data cannot be deserialized into type T
-/// - The buffer is corrupted or incomplete
+/// Returns [`JsonSerdeError::DeserializeFailed`] if the buffer contains invalid JSON or
+/// cannot be deserialized into `T`.
 pub fn try_deserialize<T: for<'de> Deserialize<'de>>(
     buffer: &[BufferAtom],
-) -> miette::Result<T> {
-    serde_json::from_slice(buffer).into_diagnostic()
+) -> Result<T, JsonSerdeError> {
+    serde_json::from_slice(buffer).map_err(JsonSerdeError::DeserializeFailed)
 }
 
 #[cfg(test)]

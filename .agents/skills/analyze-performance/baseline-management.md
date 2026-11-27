@@ -158,9 +158,9 @@ Ensure the new performance is real and repeatable:
 
 ```bash
 # Run multiple times
-./run.fish run-examples-flamegraph-fold --benchmark
-./run.fish run-examples-flamegraph-fold --benchmark
-./run.fish run-examples-flamegraph-fold --benchmark
+./run.fish examples-flamegraph-fold --benchmark
+./run.fish examples-flamegraph-fold --benchmark
+./run.fish examples-flamegraph-fold --benchmark
 
 # Compare results - should be consistent
 ```
@@ -271,7 +271,7 @@ When comparing baseline to current:
 
 **Initial State:**
 ```bash
-$ ./run.fish run-examples-flamegraph-fold --benchmark
+$ ./run.fish examples-flamegraph-fold --benchmark
 # Results: render_loop 3500 samples
 ```
 
@@ -288,10 +288,10 @@ render_loop: 3500 samples
 
 **Test new performance:**
 ```bash
-$ ./run.fish run-examples-flamegraph-fold --benchmark
+$ ./run.fish examples-flamegraph-fold --benchmark
 # Results: render_loop 2800 samples  (-20%!)
 
-$ ./run.fish run-examples-flamegraph-fold --benchmark
+$ ./run.fish examples-flamegraph-fold --benchmark
 # Results: render_loop 2850 samples  (consistent!)
 ```
 
@@ -353,7 +353,7 @@ git commit "perf: update baseline"  # NO!!!
 
 ```bash
 # One run, seems faster
-$ ./run.fish run-examples-flamegraph-fold --benchmark
+$ ./run.fish examples-flamegraph-fold --benchmark
 # Update baseline immediately  # NO!!!
 ```
 

@@ -32,15 +32,15 @@ use crate::{LossyConvertToByte, Pc,
 /// ## Generating Sequences
 ///
 /// To generate and emit outbound `OSC 9;4` progress sequences to the terminal, use
-/// [`OscSender::send_set_progress`]. For outbound window titles and hyperlinks, see
-/// [`OscSender::send_set_title_and_tab`] and [`OscSender::send_set_hyperlink`].
+/// [`OscSender::try_send_set_progress`]. For outbound window titles and hyperlinks, see
+/// [`OscSender::try_send_set_title_and_tab`] and [`OscSender::try_send_set_hyperlink`].
 ///
 /// [`OfsBufVT100`]: crate::OfsBufVT100
 /// [`OSC`]: crate::OscSequence
 /// [`OscPtyEvent`]: crate::core::ansi::osc::OscPtyEvent
-/// [`OscSender::send_set_hyperlink`]: crate::OscSender::send_set_hyperlink
-/// [`OscSender::send_set_progress`]: crate::OscSender::send_set_progress
-/// [`OscSender::send_set_title_and_tab`]: crate::OscSender::send_set_title_and_tab
+/// [`OscSender::try_send_set_hyperlink`]: crate::OscSender::try_send_set_hyperlink
+/// [`OscSender::try_send_set_progress`]: crate::OscSender::try_send_set_progress
+/// [`OscSender::try_send_set_title_and_tab`]: crate::OscSender::try_send_set_title_and_tab
 /// [`OscSender`]: crate::OscSender
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`vt_100_terminal_input_parser`]: crate::core::ansi::vt_100_terminal_input_parser

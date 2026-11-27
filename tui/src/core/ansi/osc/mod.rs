@@ -45,7 +45,7 @@
 //!   - `ESC ] 8 ; [params] ; uri ST ... ESC ] 8 ; ; ST`,
 //!   - or without params `ESC ] 8 ; ; uri ST ... ESC ] 8 ; ; ST`.
 //! - **Window Title and Tabs (`OSC 0`, `OSC 1`, `OSC 2`)**: Setting window title and tab
-//!   names via [`OscSender::send_set_title_and_tab`].
+//!   names via [`OscSender::try_send_set_title_and_tab`].
 //! - **System Clipboard (`OSC 52`)**: Copying text to the host system clipboard or
 //!   primary selection buffer over [`stdout`] in remote or headless terminal sessions.
 //!
@@ -87,8 +87,8 @@
 //! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
 //! [`OscPtyEvent`]: crate::core::ansi::osc::OscPtyEvent
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
-//! [`OscSender::send_set_title_and_tab`]: crate::core::ansi::osc::OscSender::send_set_title_and_tab
+//! [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
+//! [`OscSender::try_send_set_title_and_tab`]: crate::core::ansi::osc::OscSender::try_send_set_title_and_tab
 //! [`OscSender`]: crate::core::ansi::osc::OscSender
 //! [`OscSequence::ClipboardSet`]: crate::core::ansi::osc::OscSequence::ClipboardSet
 //! [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery

@@ -13,7 +13,7 @@ fn test_osc_capture_enabled() {
                 + PtySessionConfigToken::CaptureOsc
                 + PtySessionConfigToken::NoCaptureOutput,
         )
-        .start()
+        .try_start()
         .expect("Failed to spawn read-only session");
 
     // 1. Wait for completion.
@@ -43,7 +43,7 @@ fn test_osc_capture_disabled() {
     let osc_seq = OscSequence::ProgressUpdate(pc!(75).unwrap()).to_string();
     let session = cross_platform_commands::printf(&osc_seq)
         .with_config(DefaultPtySessionConfig + PtySessionConfigToken::NoCaptureOutput)
-        .start()
+        .try_start()
         .expect("Failed to spawn read-only session");
 
     // 1. Wait for completion.

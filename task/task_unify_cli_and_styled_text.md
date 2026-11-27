@@ -983,7 +983,7 @@ Establish baseline for next phases:
 cargo bench --package r3bl_tui 2>/dev/null || echo "No benchmarks yet"
 
 # Generate flamegraph for comparison with Phase 6 results
-./run.fish run-examples-flamegraph-fold --benchmark 2>/dev/null || \
+./run.fish examples-flamegraph-fold --benchmark 2>/dev/null || \
   echo "Flamegraph tools not available, skip this step"
 ```
 
@@ -1050,7 +1050,7 @@ chars, InlineString might be better. If mostly <10 chars, SmallString is fine.
 2. **Profile with Flamegraph**: Check if allocation shows up
 
     ```bash
-    ./run.fish run-examples-flamegraph-fold --benchmark
+    ./run.fish examples-flamegraph-fold --benchmark
     ```
 
 3. **Try Alternative** (e.g., InlineString)
@@ -1350,7 +1350,7 @@ cargo clippy --all-targets
 cargo fmt --check
 
 # Performance comparison (optional)
-./run.fish run-examples-flamegraph-fold --benchmark
+./run.fish examples-flamegraph-fold --benchmark
 ```
 
 ## Risk Mitigation

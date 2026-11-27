@@ -18,7 +18,7 @@
 //! ## Strategy: Overlapping Subscriptions
 //!
 //! The original test tried to race `drop(device_a)` against
-//! [`DirectToAnsiInputDevice::new()`] for device B. Under CPU load, the [`mio`]-poller
+//! [`DirectToAnsiInputDevice::try_new()`] for device B. Under CPU load, the [`mio`]-poller
 //! thread could wake and see `receiver_count() == 0` before the subscribe completed,
 //! causing it to exit (flaky failure).
 //!
@@ -112,7 +112,7 @@ fn controlled() {
 
         // Step 1: Create device A.
         eprintln!("{GLYPH_STEP} Step 1: Creating device A...");
-        let mut device_a = DirectToAnsiInputDevice::new()
+        let mut device_a = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         // Read one event from device A.
@@ -140,7 +140,7 @@ fn controlled() {
         // Step 3: Drop device A and create device B.
         eprintln!("{GLYPH_STEP} Step 3: Dropping device A, creating device B...");
         drop(device_a);
-        let mut device_b = DirectToAnsiInputDevice::new()
+        let mut device_b = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         // Read one event from device B.

@@ -117,7 +117,7 @@
 //!     [`TerminalColorReport`].
 //!   - _Outbound ([`stdout`])_: `ESC ] <code> ; ? BEL` (e.g., `ESC ] 10 ; ? BEL`,
 //!     `ESC ] 11 ; ? BEL`), constructed via [`OscSequence::ColorQuery`] or emitted via
-//!     [`OscSender::send_color_query`].
+//!     [`OscSender::try_send_color_query`].
 //!   - _Inbound ([`stdin`])_:
 //!     - `ESC ] <code> ; rgb:rrrr/gggg/bbbb BEL` (or `ESC \` ST terminator)
 //! - **Device Status / Cursor Position ([`CSI`] 6n)**:
@@ -229,7 +229,7 @@
 //!
 //! 2. **Dynamic colors enable adaptive theming and styling**: Modern terminals support
 //!    querying their active color palette. Originating queries are emitted via
-//!    [`OscSequence::ColorQuery`] or [`OscSender::send_color_query`]. Parsing foreground
+//!    [`OscSequence::ColorQuery`] or [`OscSender::try_send_color_query`]. Parsing foreground
 //!    ([`OSC`] 10), background ([`OSC`] 11), cursor ([`OSC`] 12), mouse pointer
 //!    ([`OSC`] 13, 14), and selection highlight ([`OSC`] 17, 19) reports gives TUI
 //!    applications the metadata needed to dynamically adapt syntax highlighting,
@@ -365,7 +365,7 @@
 //! [`Osc52Clipboard`]: crate::Osc52Clipboard
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
 //! [`OscCircuitBreaker`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_framer::OscCircuitBreaker
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+//! [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
 //! [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
 //! [`process_incoming_bytes()`]: ChunkFramer::process_incoming_bytes
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal

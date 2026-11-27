@@ -5,9 +5,9 @@ use super::types::{LocalBranchInfo,
                                       GIT_ARG_FORMAT, GIT_ARG_REFNAME_SHORT,
                                       GIT_ARG_SHOW_CURRENT},
                    git_command_names::{GIT_CMD_BRANCH, GIT_CMD_CHECKOUT, GIT_PROGRAM}};
-use crate::{InlineString, ItemsOwned, ResultAndCommand, Run};
+use crate::{InlineString, ItemsOwned, CommandRunOutcome, Run};
 
-pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
+pub async fn try_get_current_branch_name() -> CommandRunOutcome<InlineString> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_BRANCH, GIT_ARG_SHOW_CURRENT,
@@ -19,21 +19,26 @@ pub async fn try_get_current_branch_name() -> ResultAndCommand<InlineString> {
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let current_branch = String::from_utf8_lossy(&output)
         .trim_end_matches('\n')
         .to_string();
 
-    (Ok(current_branch.into()), cmd)
+    CommandRunOutcome {
+        result: Ok(current_branch.into()),
+        command: cmd,
+    }
 }
 
 pub async fn try_checkout_existing_local_branch(
     branch_name: &str,
-) -> ResultAndCommand<()> {
+) -> CommandRunOutcome<()> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_CHECKOUT, branch_name
@@ -45,15 +50,20 @@ pub async fn try_checkout_existing_local_branch(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
-    (ok!(), cmd)
+    CommandRunOutcome {
+        result: ok!(),
+        command: cmd,
+    }
 }
 
-pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndCommand<()> {
+pub async fn try_create_and_switch_to_branch(branch_name: &str) -> CommandRunOutcome<()> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_CHECKOUT, GIT_ARG_CREATE_BRANCH, branch_name
@@ -65,15 +75,20 @@ pub async fn try_create_and_switch_to_branch(branch_name: &str) -> ResultAndComm
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
-    (ok!(), cmd)
+    CommandRunOutcome {
+        result: ok!(),
+        command: cmd,
+    }
 }
 
-pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> {
+pub async fn try_delete_branches(branches: &ItemsOwned) -> CommandRunOutcome<()> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_BRANCH, GIT_ARG_DELETE_FORCE,
@@ -86,12 +101,17 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
-    (ok!(), cmd)
+    CommandRunOutcome {
+        result: ok!(),
+        command: cmd,
+    }
 }
 
 /// Gets all the local branches as a tuple.
@@ -107,15 +127,21 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 ///   ```
 ///
 /// 2. The second item in the tuple contains [`LocalBranchInfo`].
-pub async fn try_get_local_branches() -> ResultAndCommand<(ItemsOwned, LocalBranchInfo)> {
-    let (res, cmd) = try_get_branch_info().await;
+pub async fn try_get_local_branches() -> CommandRunOutcome<(ItemsOwned, LocalBranchInfo)> {
+    let CommandRunOutcome {
+        result: res,
+        command: cmd,
+    } = try_get_branch_info().await;
     let Ok(info) = res else {
         #[allow(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res.unwrap_err();
-        return (Err(report), cmd);
+        let err = res.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let mut items_owned = ItemsOwned::with_capacity(info.other_branches.len() + 1);
@@ -128,33 +154,45 @@ pub async fn try_get_local_branches() -> ResultAndCommand<(ItemsOwned, LocalBran
 
     let tuple = (items_owned, info);
 
-    (Ok(tuple), cmd)
+    CommandRunOutcome {
+        result: Ok(tuple),
+        command: cmd,
+    }
 }
 
 /// Returns information about local git branches:
 /// 1. The currently checked out branch.
 /// 2. List of other local branches (excluding the current one).
-async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
+async fn try_get_branch_info() -> CommandRunOutcome<LocalBranchInfo> {
     // Get all branches first.
-    let (res, cmd) = try_execute_git_command_to_get_branches().await;
+    let CommandRunOutcome {
+        result: res,
+        command: cmd,
+    } = try_execute_git_command_to_get_branches().await;
     let Ok(all_branches) = res else {
         #[allow(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res.unwrap_err();
-        return (Err(report), cmd);
+        let err = res.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     // Get current branch.
-    let (res, _cmd) = try_get_current_branch_name().await;
+    let res = try_get_current_branch_name().await.result;
     let Ok(current_branch) = res else {
         #[allow(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res.unwrap_err();
-        return (Err(report), cmd);
+        let err = res.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     // Filter out current branch from all branches to get other branches.
@@ -168,11 +206,14 @@ async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
         other_branches,
     };
 
-    (Ok(info), cmd)
+    CommandRunOutcome {
+        result: Ok(info),
+        command: cmd,
+    }
 }
 
 pub(super) async fn try_execute_git_command_to_get_branches()
--> ResultAndCommand<ItemsOwned> {
+-> CommandRunOutcome<ItemsOwned> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_BRANCH, GIT_ARG_FORMAT, GIT_ARG_REFNAME_SHORT,
@@ -184,9 +225,11 @@ pub(super) async fn try_execute_git_command_to_get_branches()
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let output_string = String::from_utf8_lossy(&output);
@@ -194,7 +237,10 @@ pub(super) async fn try_execute_git_command_to_get_branches()
     for line in output_string.lines() {
         branches.push(line.into());
     }
-    (Ok(branches), cmd)
+    CommandRunOutcome {
+        result: Ok(branches),
+        command: cmd,
+    }
 }
 
 #[cfg(test)]
@@ -211,7 +257,7 @@ mod tests {
                 let _temp_dir_root = try_create_temp_dir_and_cd!();
 
                 // Assert that running command will error out before `git init` is run.
-                assert!(try_get_current_branch_name().await.0.is_err());
+                assert!(try_get_current_branch_name().await.result.is_err());
             } // Drop temp_dir_root here (which cleans up that folder).
 
             // Setup new git folder.
@@ -222,7 +268,7 @@ mod tests {
                 ) = helper_setup_git_repo_with_commit().await?;
 
                 // Get initial branch name.
-                let name = try_get_current_branch_name().await.0?;
+                let name = try_get_current_branch_name().await.result?;
                 assert_eq!(name, initial_branch_name);
 
                 // Create and switch to a new branch.
@@ -231,7 +277,7 @@ mod tests {
                     .await?;
 
                 // Get current branch name after switch.
-                let new_feature_branch = try_get_current_branch_name().await.0?;
+                let new_feature_branch = try_get_current_branch_name().await.result?;
 
                 // Verify branch name has changed.
                 assert_eq!(new_feature_branch, "feature-branch");
@@ -256,11 +302,11 @@ mod tests {
                     .await?;
 
             // Checkout the test branch.
-            let res = try_checkout_existing_local_branch("test-branch").await.0;
+            let res = try_checkout_existing_local_branch("test-branch").await.result;
             assert!(res.is_ok());
 
             // Get current branch after checkout.
-            let current_branch = try_get_current_branch_name().await.0?;
+            let current_branch = try_get_current_branch_name().await.result?;
 
             // Verify current branch is now the test branch.
             assert_eq!(current_branch, "test-branch");
@@ -269,7 +315,7 @@ mod tests {
             // Try to checkout a non-existent branch (should fail).
             let res = try_checkout_existing_local_branch("nonexistent-branch")
                 .await
-                .0;
+                .result;
             assert!(res.is_err());
 
             ok!(())
@@ -284,18 +330,18 @@ mod tests {
             ) = helper_setup_git_repo_with_commit().await?;
 
             // Create a new branch and switch to it.
-            let res = try_create_and_switch_to_branch("new-feature").await.0;
+            let res = try_create_and_switch_to_branch("new-feature").await.result;
             assert!(res.is_ok());
 
             // Get current branch after creating and switching.
-            let current_branch = try_get_current_branch_name().await.0?;
+            let current_branch = try_get_current_branch_name().await.result?;
 
             // Verify current branch is now the new branch.
             assert_eq!(current_branch, "new-feature");
             assert_ne!(current_branch, initial_branch);
 
             // Ensure the branch exists in the list of branches.
-            let (_, branch_info) = try_get_local_branches().await.0?;
+            let (_, branch_info) = try_get_local_branches().await.result?;
             assert_eq!(branch_info.exists_locally("new-feature"), BranchExists::Yes);
 
             ok!(())
@@ -310,7 +356,7 @@ mod tests {
             ) = helper_setup_git_repo_with_commit().await?;
 
             // Should fail to delete the current branch.
-            let res = try_delete_branches(&initial_branch.into()).await.0;
+            let res = try_delete_branches(&initial_branch.into()).await.result;
             assert!(res.is_err());
 
             // Create some branches.
@@ -328,7 +374,7 @@ mod tests {
                     .await?;
 
             // Verify branches exist.
-            let (_, branch_info) = try_get_local_branches().await.0?;
+            let (_, branch_info) = try_get_local_branches().await.result?;
 
             assert_eq!(branch_info.exists_locally("main"), BranchExists::Yes);
 
@@ -339,11 +385,11 @@ mod tests {
             // Delete branches.
             let res = try_delete_branches(&inline_vec!["branch1", "branch2"].into())
                 .await
-                .0;
+                .result;
             assert!(res.is_ok());
 
             // Verify branches are deleted.
-            let (_, branch_info) = try_get_local_branches().await.0?;
+            let (_, branch_info) = try_get_local_branches().await.result?;
 
             assert_eq!(branch_info.exists_locally("branch1"), BranchExists::No);
             assert_eq!(branch_info.exists_locally("branch2"), BranchExists::No);
@@ -371,7 +417,7 @@ mod tests {
                     .await?;
 
             // Get local branches.
-            let (items_owned, branch_info) = try_get_local_branches().await.0?;
+            let (items_owned, branch_info) = try_get_local_branches().await.result?;
             // Verify `items_owned` list is correct.
             {
                 // Verify current branch is the same as the initial branch.
@@ -402,7 +448,7 @@ mod tests {
                     .await?;
 
             // Get local branches again.
-            let (items_owned, branch_info) = try_get_local_branches().await.0?;
+            let (items_owned, branch_info) = try_get_local_branches().await.result?;
             {
                 // Verify the current branch is now "branch1".
                 assert_eq!(branch_info.current_branch.as_str(), "branch1");
@@ -470,7 +516,7 @@ mod tests {
                     .await?;
 
             // Get all branches.
-            let branches = try_execute_git_command_to_get_branches().await.0?;
+            let branches = try_execute_git_command_to_get_branches().await.result?;
 
             // Verify all branches are listed.
             assert!(branches.iter().any(|b| b == &initial_branch));

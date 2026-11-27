@@ -6,8 +6,8 @@
 //! Verifies both backends produce identical [`InputEvent`] for the same [`ANSI`]
 //! sequences when running in a real [`PTY`] environment, with the same terminal size and
 //! capabilities. Manually sets raw mode for each backend directly (not using the
-//! production [`terminal_raw_mode::enable_raw_mode()`] dispatcher which selects based on
-//! [`TERMINAL_LIB_BACKEND`]).
+//! production [`terminal_raw_mode::try_enable_raw_mode()`] dispatcher which selects based
+//! on [`TERMINAL_LIB_BACKEND`]).
 //!
 //! # Platform
 //!
@@ -16,10 +16,10 @@
 //!
 //! The raw mode implementations used are:
 //!
-//! | Backend          | Raw Mode Implementation                                              |
-//! | ---------------- | -------------------------------------------------------------------- |
-//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`] (rustix-based) |
-//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                           |
+//! | Backend          | Raw Mode Implementation                                                  |
+//! | ---------------- | ------------------------------------------------------------------------ |
+//! | [`DirectToAnsi`] | [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`] (rustix-based) |
+//! | [`Crossterm`]    | [`crossterm::terminal::enable_raw_mode()`]                               |
 //!
 //! # Run with:
 //!
@@ -91,8 +91,8 @@
 //! [`pty_osc_sender_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_osc_sender_test
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
-//! [`terminal_raw_mode::enable_raw_mode()`]: crate::terminal_raw_mode::enable_raw_mode
-//! [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::enable_raw_mode
+//! [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`]: crate::terminal_raw_mode::raw_mode_unix::try_enable_raw_mode
+//! [`terminal_raw_mode::try_enable_raw_mode()`]: crate::terminal_raw_mode::try_enable_raw_mode
 
 use crate::{ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
             ASCII_DEL, CONTROL_A, CONTROL_C, CONTROL_ENTER, CONTROL_TAB,
@@ -400,7 +400,7 @@ mod controlled_direct_to_ansi {
 
     /// `DirectToAnsi` controlled process entry point.
     ///
-    /// Uses [`terminal_raw_mode::raw_mode_unix::enable_raw_mode`] directly (the
+    /// Uses [`terminal_raw_mode::raw_mode_unix::try_enable_raw_mode`] directly (the
     /// rustix-based implementation) to explicitly test the `DirectToAnsi` backend's raw
     /// mode.
     ///
@@ -411,11 +411,11 @@ mod controlled_direct_to_ansi {
     /// [`tokio`]: tokio
     pub fn run() -> ! {
         // 1. Enable raw mode using DirectToAnsi raw mode (rustix-based).
-        drop(terminal_raw_mode::raw_mode_unix::enable_raw_mode());
+        drop(terminal_raw_mode::raw_mode_unix::try_enable_raw_mode());
 
         let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
         runtime.block_on(async {
-            let mut device = DirectToAnsiInputDevice::new()
+            let mut device = DirectToAnsiInputDevice::try_new()
                 .expect("Failed to initialize DirectToAnsiInputDevice");
             // 2. Signal ready (AFTER poller is watching stdin).
             controlled_common::signal_ready();

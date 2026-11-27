@@ -2,7 +2,7 @@
 
 use super::{args::{BaseEnv, OutputFormat},
             diff,
-            run_shell::try_source_and_export_env};
+            run_shell::{EnvSourceError, try_source_and_export_env}};
 pub use crate::EnvMap;
 use crate::VarsOsExt;
 use std::{env::vars_os, path::PathBuf};
@@ -129,7 +129,7 @@ pub fn try_env_source(
     script_path: impl Into<PathBuf>,
     output_format: OutputFormat,
     base_env: BaseEnv,
-) -> miette::Result<String> {
+) -> Result<String, EnvSourceError> {
     let script_path = script_path.into();
     let mutated_env = try_source_and_export_env(&script_path, &base_env)?;
 

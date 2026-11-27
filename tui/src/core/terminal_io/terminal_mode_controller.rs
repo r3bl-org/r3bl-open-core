@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{OutputDevice, RawModeGuard, TERMINAL_LIB_BACKEND, TerminalLibBackend,
-            ansi_output};
+use crate::{OutputDevice, RawModeError, RawModeGuard, TERMINAL_LIB_BACKEND,
+            TerminalIoError, TerminalLibBackend, ansi_output};
 use crossterm::{QueueableCommand,
                 cursor::{Hide, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
@@ -10,7 +10,6 @@ use crossterm::{QueueableCommand,
                         PushKeyboardEnhancementFlags},
                 terminal::{Clear, ClearType, DisableLineWrap, EnableLineWrap,
                            EnterAlternateScreen, LeaveAlternateScreen}};
-use miette::IntoDiagnostic;
 
 /// Provides an ergonomic API to explicitly control global terminal states (modes):
 /// - Raw mode vs Cooked mode.
@@ -40,7 +39,7 @@ pub trait TerminalModeController {
     /// Returns an error if the platform's raw mode API fails.
     ///
     /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-    fn enter_raw_mode(&self) -> miette::Result<RawModeGuard>;
+    fn enter_raw_mode(&self) -> Result<RawModeGuard, RawModeError>;
 
     /// Switches to alternate screen buffer for full-screen applications.
     ///
@@ -59,7 +58,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn enter_alternate_screen(&self) -> miette::Result<()>;
+    fn enter_alternate_screen(&self) -> Result<(), TerminalIoError>;
 
     /// Exits alternate screen buffer and restores original screen content.
     ///
@@ -75,7 +74,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn exit_alternate_screen(&self) -> miette::Result<()>;
+    fn exit_alternate_screen(&self) -> Result<(), TerminalIoError>;
 
     /// Hide cursor (make it invisible).
     ///
@@ -91,7 +90,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn hide_cursor(&self) -> miette::Result<()>;
+    fn hide_cursor(&self) -> Result<(), TerminalIoError>;
 
     /// Show cursor (make it visible).
     ///
@@ -106,7 +105,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn show_cursor(&self) -> miette::Result<()>;
+    fn show_cursor(&self) -> Result<(), TerminalIoError>;
 
     /// Enables mouse event tracking (clicks, movement, scroll).
     ///
@@ -125,7 +124,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn enable_mouse_tracking(&self) -> miette::Result<()>;
+    fn enable_mouse_tracking(&self) -> Result<(), TerminalIoError>;
 
     /// Disables mouse event tracking.
     ///
@@ -142,7 +141,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn disable_mouse_tracking(&self) -> miette::Result<()>;
+    fn disable_mouse_tracking(&self) -> Result<(), TerminalIoError>;
 
     /// Enables bracketed paste mode for distinguishing pasted text.
     ///
@@ -162,7 +161,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn enable_bracketed_paste(&self) -> miette::Result<()>;
+    fn enable_bracketed_paste(&self) -> Result<(), TerminalIoError>;
 
     /// Disables bracketed paste mode.
     ///
@@ -178,7 +177,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn disable_bracketed_paste(&self) -> miette::Result<()>;
+    fn disable_bracketed_paste(&self) -> Result<(), TerminalIoError>;
 
     /// Enables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
     ///
@@ -218,7 +217,7 @@ pub trait TerminalModeController {
     /// [`vt_100_terminal_input_parser`]: crate::vt_100_terminal_input_parser
     /// [enable]: crate::ansi_output::terminal_modes::enable_keyboard_enhancement
     /// [no-ack]: mod@crate::vt_100_terminal_input_parser#progressive-keyboard-enhancement
-    fn enable_keyboard_enhancement(&self) -> miette::Result<()>;
+    fn enable_keyboard_enhancement(&self) -> Result<(), TerminalIoError>;
 
     /// Disables progressive keyboard enhancement ([`Kitty`] keyboard protocol).
     ///
@@ -234,7 +233,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`Kitty`]: https://sw.kovidgoyal.net/kitty/
-    fn disable_keyboard_enhancement(&self) -> miette::Result<()>;
+    fn disable_keyboard_enhancement(&self) -> Result<(), TerminalIoError>;
 
     /// Enables line wrapping at the right margin.
     ///
@@ -246,7 +245,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn enable_line_wrap(&self) -> miette::Result<()>;
+    fn enable_line_wrap(&self) -> Result<(), TerminalIoError>;
 
     /// Disables line wrapping at the right margin.
     ///
@@ -258,7 +257,7 @@ pub trait TerminalModeController {
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
     /// [`DEC`]: https://en.wikipedia.org/wiki/Digital_Equipment_Corporation
-    fn disable_line_wrap(&self) -> miette::Result<()>;
+    fn disable_line_wrap(&self) -> Result<(), TerminalIoError>;
 
     /// Clears the entire terminal screen.
     ///
@@ -269,167 +268,177 @@ pub trait TerminalModeController {
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
     /// [`CSI`]: crate::CsiSequence
-    fn clear_screen(&self) -> miette::Result<()>;
+    fn clear_screen(&self) -> Result<(), TerminalIoError>;
 }
 
 impl TerminalModeController for OutputDevice {
-    fn enter_raw_mode(&self) -> miette::Result<RawModeGuard> { RawModeGuard::new() }
+    fn enter_raw_mode(&self) -> Result<RawModeGuard, RawModeError> {
+        RawModeGuard::try_new()
+    }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn enter_alternate_screen(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn enter_alternate_screen(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(EnterAlternateScreen).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(EnterAlternateScreen)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::enter_alternate_screen();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn exit_alternate_screen(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| {
+    fn exit_alternate_screen(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(LeaveAlternateScreen).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(LeaveAlternateScreen)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::exit_alternate_screen();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn hide_cursor(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn hide_cursor(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(Hide).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(Hide)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::cursor_visibility::hide_cursor();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn show_cursor(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| {
+    fn show_cursor(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(Show).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(Show)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::cursor_visibility::show_cursor();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn enable_mouse_tracking(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn enable_mouse_tracking(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(EnableMouseCapture).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(EnableMouseCapture)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::enable_mouse_tracking();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn disable_mouse_tracking(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| {
+    fn disable_mouse_tracking(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(DisableMouseCapture).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(DisableMouseCapture)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::disable_mouse_tracking();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn enable_bracketed_paste(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn enable_bracketed_paste(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(EnableBracketedPaste).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(EnableBracketedPaste)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::enable_bracketed_paste();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn disable_bracketed_paste(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| {
+    fn disable_bracketed_paste(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(DisableBracketedPaste).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(DisableBracketedPaste)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::disable_bracketed_paste();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn enable_keyboard_enhancement(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn enable_keyboard_enhancement(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
                     let result = writer
@@ -446,24 +455,25 @@ impl TerminalModeController for OutputDevice {
                         {
                             return ok!();
                         }
-                        return Err(e).into_diagnostic();
+                        return Err(e);
                     }
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::enable_keyboard_enhancement();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Teardown method: Poison-safe to prevent [Double Panic Abort] during drop.
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
-    fn disable_keyboard_enhancement(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| {
+    fn disable_keyboard_enhancement(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
                     let result = writer
@@ -478,71 +488,75 @@ impl TerminalModeController for OutputDevice {
                         {
                             return ok!();
                         }
-                        return Err(e).into_diagnostic();
+                        return Err(e);
                     }
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi =
                         ansi_output::terminal_modes::disable_keyboard_enhancement();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn enable_line_wrap(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn enable_line_wrap(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(EnableLineWrap).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(EnableLineWrap)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::enable_line_wrap();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn disable_line_wrap(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn disable_line_wrap(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(DisableLineWrap).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(DisableLineWrap)?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::terminal_modes::disable_line_wrap();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 
     /// Setup method: Fail-fast if the terminal is poisoned.
-    fn clear_screen(&self) -> miette::Result<()> {
-        self.write(|writer| {
+    fn clear_screen(&self) -> Result<(), TerminalIoError> {
+        self.write(|writer| -> std::io::Result<()> {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    writer.queue(Clear(ClearType::All)).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.queue(Clear(ClearType::All))?;
+                    writer.flush()?;
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     let ansi = ansi_output::screen_clearing::clear_screen();
-                    writer.write_all(ansi.as_bytes()).into_diagnostic()?;
-                    writer.flush().into_diagnostic()?;
+                    writer.write_all(ansi.as_bytes())?;
+                    writer.flush()?;
                 }
             }
             ok!()
         })
+        .map_err(TerminalIoError::Io)
     }
 }

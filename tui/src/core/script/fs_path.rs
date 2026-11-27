@@ -115,10 +115,10 @@ pub enum FsOpError {
     InvalidName(String),
 
     #[error("Failed to perform fs operation directory: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(#[source] std::io::Error),
 }
 
-pub type FsOpResult<T> = miette::Result<T, FsOpError>;
+pub type FsOpResult<T> = Result<T, FsOpError>;
 
 /// Checks whether the directory exist. If won't provide any errors if there are
 /// permissions issues or the directory is invalid. Use [`try_directory_exists`] if you

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppSignal, SingleColumnComponent, State};
-use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
+use r3bl_tui::{App, BoxedSafeApp, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
                InputEvent, LayoutDirection, LayoutManagement, LengthOps,
                PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
@@ -70,7 +70,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
                 input_event,
@@ -85,7 +85,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let stack = &mut global_data.state.stack;
                 match action {
@@ -118,7 +118,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let window_size = global_data.window_size;
 
             // Create a surface and then run the SurfaceRenderer.
@@ -171,7 +171,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             // Layout ColumnRenderComponent and render it.
             let component_id = FlexBoxId::from(Id::Column);
             // Layout column component, and render it.
@@ -222,7 +222,7 @@ mod stylesheet {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
               new_style!(id: {Id::Container} padding: {ch(1)}),

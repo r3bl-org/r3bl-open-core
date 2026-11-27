@@ -1,9 +1,40 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, MkdirOptions, ScopedMutex,
-            try_mkdir};
+use crate::{DeadlockPreventionPolicy::PanicOnAnyLockNesting, FsOpError, MkdirOptions,
+            ScopedMutex, try_mkdir};
 use std::{path::PathBuf, sync::LazyLock};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
+
+/// Error returned when initializing the tracing subscriber or rolling log file appender
+/// fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum TracingInitError {
+    /// Rolling log file writer was already created in this process.
+    #[error("Rolling log file writer has already been initialized")]
+    LogFileWriterAlreadyInitialized,
+
+    /// Configured log file path has no parent directory component.
+    #[error("Log file path '{}' has no parent directory", path.display())]
+    MissingParentDirectory {
+        /// Path passed to [`try_create`].
+        path: PathBuf,
+    },
+
+    /// Configured log file path has no file name component.
+    #[error("Log file path '{}' has no file name", path.display())]
+    MissingFileName {
+        /// Path passed to [`try_create`].
+        path: PathBuf,
+    },
+
+    /// Creating intermediate log parent directories failed.
+    #[error("Failed to create log directory")]
+    CreateLogDirectoryFailed(#[source] FsOpError),
+
+    /// A global tracing subscriber has already been installed in this process.
+    #[error("Global tracing subscriber has already been set")]
+    GlobalSubscriberAlreadySet(#[source] tracing_subscriber::util::TryInitError),
+}
 
 /// Keeps the background writer thread alive for the lifetime of the process. If this
 /// guard is dropped, the background thread exits and buffered logs are flushed.
@@ -62,31 +93,26 @@ pub static ROLLING_LOG_FILE_WRITER_GUARD: LazyLock<
 /// [`Mutex<Option>`]: std::sync::Mutex
 /// [`Mutex`]: std::sync::Mutex
 #[allow(clippy::unwrap_in_result, clippy::redundant_closure_for_method_calls)]
-pub fn try_create(path_str: &str) -> miette::Result<NonBlocking> {
+pub fn try_create(path_str: &str) -> Result<NonBlocking, TracingInitError> {
     // Can only init this once per process.
     if ROLLING_LOG_FILE_WRITER_GUARD.read(Option::is_some) {
-        return Err(miette::miette!("Rolling file appender already created"));
+        return Err(TracingInitError::LogFileWriterAlreadyInitialized);
     }
 
     let path = PathBuf::from(&path_str);
 
-    let parent = path.parent().ok_or_else(|| {
-        miette::miette!(
-            format!("Can't access current folder {}. It might not exist, or don't have required permissions.",
-            path.display())
-        )
-    })?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| TracingInitError::MissingParentDirectory { path: path.clone() })?;
 
     if !parent.as_os_str().is_empty() {
-        try_mkdir(parent, MkdirOptions::CreateIntermediateDirectories)?;
+        try_mkdir(parent, MkdirOptions::CreateIntermediateDirectories)
+            .map_err(TracingInitError::CreateLogDirectoryFailed)?;
     }
 
-    let file_stem = path.file_name().ok_or_else(|| {
-        miette::miette!(format!(
-        "Can't access file name {}. It might not exist, or don't have required permissions.",
-        path.display()
-    ))
-    })?;
+    let file_stem = path
+        .file_name()
+        .ok_or_else(|| TracingInitError::MissingFileName { path: path.clone() })?;
 
     let rolling_file_appender = tracing_appender::rolling::never(parent, file_stem);
     let (non_blocking_rolling_file_appender, guard) =

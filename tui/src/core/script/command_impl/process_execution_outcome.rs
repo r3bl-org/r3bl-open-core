@@ -14,25 +14,25 @@ use std::{io::{Error as IoError, Result as IoResult},
 ///
 /// Standard library and Tokio process executions return [`IoResult<Output>`]. This
 /// representation conflates operating system execution failures with application-level
-/// failures. [`CommandOutputResult`] makes all three states explicit, eliminating nested
+/// failures. [`ProcessExecutionOutcome`] makes all three states explicit, eliminating nested
 /// match expressions and boolean blindness.
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use r3bl_tui::CommandOutputResult;
+/// use r3bl_tui::ProcessExecutionOutcome;
 /// use std::process::Command;
 ///
-/// let cmd_output_result = Command::new("echo").arg("hello").output();
-/// let res = CommandOutputResult::from(cmd_output_result);
-/// match res {
-///     CommandOutputResult::Success(output) => {
+/// let res_output = Command::new("echo").arg("hello").output();
+/// let outcome = ProcessExecutionOutcome::from(res_output);
+/// match outcome {
+///     ProcessExecutionOutcome::Success(output) => {
 ///         assert!(output.status.success());
 ///     }
-///     CommandOutputResult::NonZeroExit(output) => {
+///     ProcessExecutionOutcome::NonZeroExit(output) => {
 ///         eprintln!("Command failed with status: {}", output.status);
 ///     }
-///     CommandOutputResult::SpawnFailed(err) => {
+///     ProcessExecutionOutcome::SpawnFailed(err) => {
 ///         eprintln!("Failed to spawn command: {err}");
 ///     }
 /// }
@@ -41,7 +41,7 @@ use std::{io::{Error as IoError, Result as IoResult},
 /// [`IoResult<Output>`]: std::io::Result
 /// [`Output`]: std::process::Output
 #[derive(Debug)]
-pub enum CommandOutputResult {
+pub enum ProcessExecutionOutcome {
     /// Process was successfully spawned and exited with zero status (success).
     Success(Output),
     /// Process was successfully spawned, but exited with non-zero status.
@@ -51,22 +51,22 @@ pub enum CommandOutputResult {
     SpawnFailed(IoError),
 }
 
-impl From<IoResult<Output>> for CommandOutputResult {
+impl From<IoResult<Output>> for ProcessExecutionOutcome {
     fn from(result: IoResult<Output>) -> Self {
         match result {
             Ok(output) => {
                 if output.status.success() {
-                    CommandOutputResult::Success(output)
+                    ProcessExecutionOutcome::Success(output)
                 } else {
-                    CommandOutputResult::NonZeroExit(output)
+                    ProcessExecutionOutcome::NonZeroExit(output)
                 }
             }
-            Err(err) => CommandOutputResult::SpawnFailed(err),
+            Err(err) => ProcessExecutionOutcome::SpawnFailed(err),
         }
     }
 }
 
-impl CommandOutputResult {
+impl ProcessExecutionOutcome {
     /// Constructs a [`std::process::ExitStatus`] directly from an integer exit code.
     ///
     /// The Rust standard library does not provide a cross-platform constructor to create
@@ -135,60 +135,60 @@ mod tests {
     #[test]
     fn test_from_io_result_success() {
         let output = Output {
-            status: CommandOutputResult::make_exit_status(0),
+            status: ProcessExecutionOutcome::make_exit_status(0),
             stdout: b"success output".to_vec(),
             stderr: Vec::new(),
         };
-        let res = CommandOutputResult::from(Ok(output));
-        match res {
-            CommandOutputResult::Success(out) => {
+        let outcome = ProcessExecutionOutcome::from(Ok(output));
+        match outcome {
+            ProcessExecutionOutcome::Success(out) => {
                 assert!(out.status.success());
                 assert_eq!(out.stdout, b"success output");
             }
-            _ => panic!("Expected CommandOutputResult::Success"),
+            _ => panic!("Expected ProcessExecutionOutcome::Success"),
         }
     }
 
     #[test]
     fn test_from_io_result_nonzero_exit() {
         let output = Output {
-            status: CommandOutputResult::make_exit_status(1),
+            status: ProcessExecutionOutcome::make_exit_status(1),
             stdout: Vec::new(),
             stderr: b"error output".to_vec(),
         };
-        let res = CommandOutputResult::from(Ok(output));
-        match res {
-            CommandOutputResult::NonZeroExit(out) => {
+        let outcome = ProcessExecutionOutcome::from(Ok(output));
+        match outcome {
+            ProcessExecutionOutcome::NonZeroExit(out) => {
                 assert!(!out.status.success());
                 assert_eq!(out.stderr, b"error output");
             }
-            _ => panic!("Expected CommandOutputResult::NonZeroExit"),
+            _ => panic!("Expected ProcessExecutionOutcome::NonZeroExit"),
         }
     }
 
     #[test]
     fn test_from_io_result_spawn_failed() {
         let err = IoError::new(ErrorKind::NotFound, "executable not found");
-        let res = CommandOutputResult::from(Err(err));
-        match res {
-            CommandOutputResult::SpawnFailed(err) => {
+        let outcome = ProcessExecutionOutcome::from(Err(err));
+        match outcome {
+            ProcessExecutionOutcome::SpawnFailed(err) => {
                 assert_eq!(err.kind(), ErrorKind::NotFound);
             }
-            _ => panic!("Expected CommandOutputResult::SpawnFailed"),
+            _ => panic!("Expected ProcessExecutionOutcome::SpawnFailed"),
         }
     }
 
     #[test]
     fn test_make_exit_status() {
-        let success = CommandOutputResult::make_exit_status(0);
+        let success = ProcessExecutionOutcome::make_exit_status(0);
         assert!(success.success());
         assert_eq!(success.code(), Some(0));
 
-        let failure = CommandOutputResult::make_exit_status(1);
+        let failure = ProcessExecutionOutcome::make_exit_status(1);
         assert!(!failure.success());
         assert_eq!(failure.code(), Some(1));
 
-        let custom = CommandOutputResult::make_exit_status(42);
+        let custom = ProcessExecutionOutcome::make_exit_status(42);
         assert_eq!(custom.code(), Some(42));
     }
 }

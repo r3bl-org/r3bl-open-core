@@ -80,7 +80,7 @@ pub fn run_fixture_sh(
     let mut file = std::fs::File::create(&script_path).unwrap();
     file.write_all(fixture_content.as_bytes()).unwrap();
     file.flush().unwrap();
-    try_env_source(&script_path, output_format, base_env)
+    Ok(try_env_source(&script_path, output_format, base_env)?)
 }
 
 /// Helper to write a `.bat` script to a temporary directory and evaluate it via
@@ -105,5 +105,5 @@ pub fn run_fixture_bat(
     let mut file = std::fs::File::create(&script_path).unwrap();
     file.write_all(fixture_content.as_bytes()).unwrap();
     file.flush().unwrap();
-    try_env_source(&script_path, output_format, base_env)
+    Ok(try_env_source(&script_path, output_format, base_env)?)
 }

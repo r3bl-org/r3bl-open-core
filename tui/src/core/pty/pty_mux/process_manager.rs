@@ -15,8 +15,8 @@ use super::STATUS_BAR_HEIGHT;
 #[allow(unused_imports, reason = "Allows short rustdoc ref def links")]
 use crate::core::pty::pty_mux;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, DEBUG_PTY_PROCESS_MANAGER,
-            DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyInputEvent,
-            PtySessionConfigToken, ScrollbackAmount, VPSize, VPWidth,
+            DefaultPtySessionConfig, LengthOps, OfsBufVT100, PtyError, PtyInputEvent,
+            PtyMuxError, PtySessionConfigToken, ScrollbackAmount, VPSize, VPWidth,
             core::{osc::OscPtyEvent,
                    pty::{PtyOutputEvent, PtySession, PtySessionBuilder}},
             vp_height};
@@ -358,18 +358,17 @@ impl ProcessManager {
     /// # Errors
     ///
     /// Returns an error if any process cannot be started or spawned.
-    pub fn start_all_processes(&mut self) -> miette::Result<()> {
+    pub fn try_start_all_processes(&mut self) -> Result<(), PtyMuxError> {
         for i in 0..self.processes.len() {
             if self.processes[i].session.is_none()
-                && let Err(e) = self.spawn_process(i)
+                && let Err(src_err) = self.try_spawn_process(i)
             {
                 // Fail immediately if any process can't be started.
-                return Err(miette::miette!(
-                    "Failed to start process '{}' ({}): {}. Please ensure it's installed and in PATH.",
-                    self.processes[i].name,
-                    self.processes[i].command,
-                    e
-                ));
+                return Err(PtyMuxError::ProcessStartFailed {
+                    process_name: self.processes[i].name.clone(),
+                    command: self.processes[i].command.clone(),
+                    src_err,
+                });
             }
         }
         ok!()
@@ -414,12 +413,12 @@ impl ProcessManager {
     }
 
     /// Spawns a process at the given index.
-    fn spawn_process(&mut self, index: usize) -> miette::Result<()> {
+    fn try_spawn_process(&mut self, index: usize) -> Result<(), PtyError> {
         let process = &mut self.processes[index];
         DEBUG_PTY_PROCESS_MANAGER.then(|| {
             // % is Display, ? is Debug.
             tracing::debug! {
-                message = "ProcessManager::spawn_process",
+                message = "ProcessManager::try_spawn_process",
                 process_name = %process.name,
                 command = %process.command,
                 "Spawning process"
@@ -437,7 +436,7 @@ impl ProcessManager {
         let session = PtySessionBuilder::new(&process.command)
             .cli_args(&process.args)
             .with_config(DefaultPtySessionConfig + PtySessionConfigToken::Size(pty_size))
-            .start()?;
+            .try_start()?;
 
         process.session = Some(session);
         process.status = ProcessStatus::Running;

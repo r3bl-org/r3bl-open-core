@@ -108,13 +108,16 @@ _Meta Task: Prepare v0.8.0 Release_
 - [ ] [binaries-self-upgrade-support.md](binaries-self-upgrade-support.md)
 - [ ] [http-testing-in-roc.md](http-testing-in-roc.md)
 - [ ] [cleanup-miette-error-sloppiness.md](cleanup-miette-error-sloppiness.md)
+- [ ] [remove-smallvec-and-smallstr.md](remove-smallvec-and-smallstr.md)
 - [ ] [main thread rendering issue](https://github.com/r3bl-org/r3bl-open-core/issues/495)
 - [ ] [two-static-meanings-article.md](two-static-meanings-article.md)
 - [ ] [const-expr-witness-token-article.md](const-expr-witness-token-article.md)
+- [ ] [error-design-pattern-article.md](error-design-pattern-article.md)
 - [x] [consolidate_config_and_cache_paths.md](done/consolidate_config_and_cache_paths.md)
 - [ ] [make-0.8.0-release.md](make-0.8.0-release.md)
 - [ ] [replace-expect-with-rust-perf.md](replace-expect-with-rust-perf.md)
-- [ ] [telemetry-server.md](telemetry-server.md)
+- [ ] Deploy new telemetry backend and re-enable `ANALYTICS_REPORTING_ENABLED` in
+      `cmdr/src/analytics_client/report_analytics.rs`
 - [ ] [r3bl-cmdr-prompty.md](r3bl-cmdr-prompty.md)
 - [ ] [build-infra-spawny.md](build-infra-spawny.md)
 - [ ] TODO - dl article on eliminate off by one errors (for which we already have a video)

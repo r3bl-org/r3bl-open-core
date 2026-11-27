@@ -285,7 +285,7 @@
 //!    completely imperceptible to the user.
 //!
 //! 4. **The Synchronous Event Loop:** In
-//!    [`RustAnalyzerMCPServer::enter_main_event_loop`], the main thread runs a
+//!    [`RustAnalyzerMCPServer::try_enter_main_event_loop`], the main thread runs a
 //!    single-threaded line reader with no lock contention. Each MCP request is consumed,
 //!    translated into an LSP request, synchronously resolved against [`rust-analyzer`],
 //!    and the response is written back to [`stdout`] before the next line is read.
@@ -304,19 +304,19 @@
 //!
 //! 1. Main Thread (`main`):
 //!    - Spawned by: OS (Process entry).
-//!    - Function: [`RustAnalyzerMCPServer::enter_main_event_loop`].
+//!    - Function: [`RustAnalyzerMCPServer::try_enter_main_event_loop`].
 //!    - Purpose: Drives the MCP event loop: reads newline-delimited MCP requests from
 //!      client [`stdin`], translates them to LSP requests, writes to [`rust-analyzer`]
 //!      [`stdin`], waits on reply channels, and writes MCP responses to client
 //!      [`stdout`].
 //! 2. Stdout Reader Thread (`lsp-stdout-reader`):
-//!    - Spawned by: [`RustAnalyzerClient::start`].
+//!    - Spawned by: [`RustAnalyzerClient::try_start`].
 //!    - Function: [`spawn_stdout_reader_thread`].
 //!    - Purpose: Continuously reads `Content-Length` framed JSON-RPC from
 //!      [`rust-analyzer`]'s [`stdout`]: dispatches response payloads to the waiting main
 //!      thread via `pending_requests`, and stores compiler diagnostics in `diagnostics`.
 //! 3. Stderr Reader Thread (`lsp-stderr-reader`):
-//!    - Spawned by: [`RustAnalyzerClient::start`].
+//!    - Spawned by: [`RustAnalyzerClient::try_start`].
 //!    - Function: [`spawn_stderr_reader_thread`].
 //!    - Purpose: Continuously drains the [`rust-analyzer`] [`stderr`] pipe to prevent OS
 //!      kernel pipe buffer deadlocks (64 KiB limit), and outputs structured logs when
@@ -342,7 +342,7 @@
 //!
 //! 1. **Eager Subprocess Startup**: The MCP server eagerly spawns and initializes
 //!    [`rust-analyzer`] upon main loop entry
-//!    ([`RustAnalyzerMCPServer::enter_main_event_loop`]).
+//!    ([`RustAnalyzerMCPServer::try_enter_main_event_loop`]).
 //! 2. **Readiness Monitoring**: The server subscribes to `experimental/serverStatus`
 //!    notifications and monitors indexing progress via [`ServerReadinessMonitor`].
 //! 3. **AST Query Gating**: AST inspection tools (`hover`, `definition`, `references`,
@@ -353,7 +353,7 @@
 //!
 //! ```text
 //! ┌─────────────────────────────────────────────────────────────────────────────────┐
-//! │ 1. Eager Startup (RustAnalyzerMCPServer::enter_main_event_loop)                 │
+//! │ 1. Eager Startup (RustAnalyzerMCPServer::try_enter_main_event_loop)             │
 //! │    - Immediately spawn rust-analyzer child process upon server start.           │
 //! │    - Perform initialize handshake in parallel with MCP client connection.       │
 //! │    - Advertise capability: "experimental": { "serverStatusNotification": true } │
@@ -403,8 +403,8 @@
 //! [`mcp`]: crate::mcp
 //! [`McpServerError`]: crate::error::McpServerError
 //! [`rust-analyzer`]: https://rust-analyzer.github.io/
-//! [`RustAnalyzerClient::start`]: crate::lsp::RustAnalyzerClient::start
-//! [`RustAnalyzerMCPServer::enter_main_event_loop`]: crate::mcp::RustAnalyzerMCPServer::enter_main_event_loop
+//! [`RustAnalyzerClient::try_start`]: crate::lsp::RustAnalyzerClient::try_start
+//! [`RustAnalyzerMCPServer::try_enter_main_event_loop`]: crate::mcp::RustAnalyzerMCPServer::try_enter_main_event_loop
 //! [`ServerReadinessMonitor`]: crate::lsp::ServerReadinessMonitor
 //! [`spawn_stderr_reader_thread`]: crate::lsp::RustAnalyzerClient::spawn_stderr_reader_thread
 //! [`spawn_stdout_reader_thread`]: crate::lsp::RustAnalyzerClient::spawn_stdout_reader_thread

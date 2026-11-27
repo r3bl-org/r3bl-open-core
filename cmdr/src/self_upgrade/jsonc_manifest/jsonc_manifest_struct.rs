@@ -3,7 +3,6 @@
 use super::{super::{VERSIONS_JSONC_FILE, versions_manifest_keys},
             CrateMetadata, CrateName, EndpointUrl, JsoncScalar};
 use jsonc_parser::{ParseOptions, cst::CstRootNode};
-use miette::IntoDiagnostic;
 use r3bl_tui::{HashMap, ok};
 use serde::Deserialize;
 
@@ -156,11 +155,34 @@ pub struct JsoncManifest {
 pub enum JsoncParseError {
     /// Invalid JSONC syntax (unterminated string/comment, unexpected token, etc.).
     #[error("Invalid JSONC syntax in manifest: {0}")]
-    InvalidSyntax(#[from] jsonc_parser::errors::ParseError),
+    InvalidSyntax(#[source] jsonc_parser::errors::ParseError),
 
     /// Valid JSONC syntax, and missing or invalid [`JsoncManifest`] schema fields.
     #[error("Manifest does not match expected schema: {0}")]
-    InvalidSchema(#[from] serde_json::Error),
+    InvalidSchema(#[source] serde_json::Error),
+}
+
+/// Error returned by [`JsoncManifest::try_update_crate_in_jsonc`] when the existing
+/// manifest fails validation, cannot be parsed into a [`CstRootNode`], or does not
+/// contain an entry for the requested crate.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum JsoncUpdateError {
+    /// Existing manifest failed JSONC syntax or [`JsoncManifest`] schema validation.
+    #[error("Existing manifest failed validation")]
+    InvalidManifest(#[source] JsoncParseError),
+
+    /// Failed to parse the JSONC document into a Concrete Syntax Tree ([`CstRootNode`]).
+    #[error("Failed to parse JSONC into CST")]
+    CstParseFailed(#[source] jsonc_parser::errors::ParseError),
+
+    /// No existing entry for `crate_name` was found in `file`.
+    #[error("Crate '{crate_name}' not found in {file}")]
+    CrateNotFound {
+        /// Crate name looked up under `crates`.
+        crate_name: String,
+        /// Manifest filename where the lookup failed.
+        file: &'static str,
+    },
 }
 
 impl JsoncManifest {
@@ -179,9 +201,10 @@ impl JsoncManifest {
         let value = jsonc_parser::parse_to_serde_value::<serde_json::Value>(
             jsonc_str,
             &ParseOptions::default(),
-        )?;
+        )
+        .map_err(JsoncParseError::InvalidSyntax)?;
 
-        Ok(serde_json::from_value::<Self>(value)?)
+        serde_json::from_value::<Self>(value).map_err(JsoncParseError::InvalidSchema)
     }
 
     /// Updates an existing crate's [`CrateMetadata`] in-place inside a JSONC
@@ -205,8 +228,9 @@ impl JsoncManifest {
     ///
     /// # Errors
     ///
-    /// Returns an error if `jsonc_str` is not valid JSONC or does not contain an
-    /// existing valid entry for `crate_name`.
+    /// Returns [`JsoncUpdateError::InvalidManifest`] if `jsonc_str` fails syntax or
+    /// schema validation, [`JsoncUpdateError::CstParseFailed`] if CST parsing fails, or
+    /// [`JsoncUpdateError::CrateNotFound`] if no entry exists for `crate_name`.
     ///
     /// [`CRATE_DISTRIBUTION`]: crate::self_upgrade::versions_manifest_keys::CRATE_DISTRIBUTION
     /// [`CstRootNode`]: jsonc_parser::cst::CstRootNode
@@ -216,16 +240,17 @@ impl JsoncManifest {
         jsonc_str: &str,
         crate_name: &CrateName,
         metadata: &CrateMetadata,
-    ) -> miette::Result<String> {
+    ) -> Result<String, JsoncUpdateError> {
         use versions_manifest_keys::CRATES;
 
         // Validate that `jsonc_str` conforms to the `JsoncManifest` schema.
-        let _unused = Self::try_parse_jsonc(jsonc_str)?;
+        let _unused =
+            Self::try_parse_jsonc(jsonc_str).map_err(JsoncUpdateError::InvalidManifest)?;
 
         // Parse the JSONC string into a Concrete Syntax Tree (CST) for
         // comment-preserving in-place mutation.
-        let cst_root_node =
-            CstRootNode::parse(jsonc_str, &ParseOptions::default()).into_diagnostic()?;
+        let cst_root_node = CstRootNode::parse(jsonc_str, &ParseOptions::default())
+            .map_err(JsoncUpdateError::CstParseFailed)?;
 
         // Create this closure so that we can use `?` to return early.
         let maybe_entry_updated_fn = || -> Option<()> {
@@ -239,10 +264,13 @@ impl JsoncManifest {
             metadata.try_update_cst_object(&crate_object)
         };
 
-        // If the closure returns `None`, it means the crate was not found, so we
-        // bail.
+        // If the closure returns `None`, it means the crate was not found, so we return
+        // a typed error.
         if maybe_entry_updated_fn().is_none() {
-            miette::bail!("Crate '{crate_name}' not found in {VERSIONS_JSONC_FILE}");
+            return Err(JsoncUpdateError::CrateNotFound {
+                crate_name: crate_name.to_string(),
+                file: VERSIONS_JSONC_FILE,
+            });
         }
 
         // Convert CST back to a formatted String, preserving all comments and
@@ -424,13 +452,39 @@ mod tests {
             crate_distribution: CrateDistribution::OpenSource,
             released_on: CrateReleaseDate::try_parse("2026-10-18T00:00:00Z").unwrap(),
         };
-        let res_update = JsoncManifest::try_update_crate_in_jsonc(
+        let err = JsoncManifest::try_update_crate_in_jsonc(
             jsonc,
             &"missing-crate".into(),
             &meta,
-        );
-        assert!(res_update.is_err());
-        assert!(res_update.unwrap_err().to_string().contains("missing-crate"));
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            JsoncUpdateError::CrateNotFound {
+                ref crate_name,
+                file,
+            } if crate_name == "missing-crate" && file == VERSIONS_JSONC_FILE
+        ));
+    }
+
+    #[test]
+    fn test_jsonc_manifest_update_invalid_manifest() {
+        let bad_jsonc = r#"{ "crates": "#;
+        let meta = CrateMetadata {
+            version: CrateVersion::try_parse("0.0.1").unwrap(),
+            crate_distribution: CrateDistribution::OpenSource,
+            released_on: CrateReleaseDate::try_parse("2026-10-18T00:00:00Z").unwrap(),
+        };
+        assert!(matches!(
+            JsoncManifest::try_update_crate_in_jsonc(
+                bad_jsonc,
+                &"r3bl-cmdr".into(),
+                &meta,
+            ),
+            Err(JsoncUpdateError::InvalidManifest(
+                JsoncParseError::InvalidSyntax(_)
+            ))
+        ));
     }
 
     #[test]

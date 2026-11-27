@@ -23,7 +23,7 @@ When delegating performance benchmarking and flamegraph collection to a backgrou
 Run the automated benchmark script to collect current performance data:
 
 ```bash
-./run.fish run-examples-flamegraph-fold --benchmark
+./run.fish examples-flamegraph-fold --benchmark
 ```
 
 **What this does:**
@@ -172,7 +172,7 @@ main;render_loop;diff_algorithm;compare 30
 ```
 1. Make code change
    ↓
-2. Run: ./run.fish run-examples-flamegraph-fold --benchmark
+2. Run: ./run.fish examples-flamegraph-fold --benchmark
    ↓
 3. Analyze flamegraph vs baseline
    ↓

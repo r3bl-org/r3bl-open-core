@@ -3,9 +3,9 @@
 use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
                     EndpointUrl, UpgradeConfig, archive, upgrade_reasons},
             ReleaseAsset, ReleaseTarget, Sha256Digest, UpgradeSource,
-            create_output_device_for_feedback_channel, download_and_verify_archive,
-            extract_and_apply_archive, get_current_bin_name,
-            report_upgrade_source_error, run_source_build_with_spinner, ui_strings};
+            create_output_device_for_feedback_channel, get_current_bin_name,
+            report_upgrade_source_error, run_source_build_with_spinner,
+            try_download_and_verify_archive, try_extract_and_apply_archive, ui_strings};
 use r3bl_tui::{FilePermissionsError, HttpClientError, OutputDevice, Spinner,
                SpinnerStyle, TempDirError, TuiAvailability, try_create_temp_dir};
 use std::{io, path::PathBuf, process::ExitStatus, time::Duration};
@@ -38,7 +38,7 @@ use std::{io, path::PathBuf, process::ExitStatus, time::Duration};
 /// [`Upgrading`]: crate::self_upgrade::Upgrading
 /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
 /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
-pub async fn perform_upgrade(
+pub async fn try_perform_upgrade(
     config: &UpgradeConfig,
     metadata: &CrateMetadata,
     binaries_release_base_url: &EndpointUrl,
@@ -73,7 +73,7 @@ pub async fn perform_upgrade(
             sha256_url,
             pinned_version,
         } => {
-            execute_release_archive_or_fallback(
+            try_execute_release_archive_or_fallback(
                 config,
                 metadata.crate_distribution,
                 &archive_url,
@@ -92,7 +92,7 @@ pub async fn perform_upgrade(
                     &pinned_version_str,
                 ),
             );
-            execute_source_build_step(
+            try_execute_source_build_step(
                 config,
                 &pinned_version_str,
                 true,
@@ -111,7 +111,7 @@ pub async fn perform_upgrade(
 ///
 /// Returns [`UpgradeError`] if downloading, verifying, replacing the binary, or
 /// falling back to source build fails.
-pub async fn execute_release_archive_or_fallback(
+pub async fn try_execute_release_archive_or_fallback(
     config: &UpgradeConfig,
     distribution: CrateDistribution,
     archive_url: &str,
@@ -121,7 +121,7 @@ pub async fn execute_release_archive_or_fallback(
     bin_name: &str,
 ) -> Result<(), UpgradeError> {
     let pinned_version_str = pinned_version.to_string();
-    match download_and_replace_release_archive(
+    match try_download_and_replace_release_archive(
         config.get_crate_name(),
         &pinned_version_str,
         archive_url,
@@ -166,7 +166,7 @@ pub async fn execute_release_archive_or_fallback(
                     fallback_source,
                     UpgradeSource::BuildFromSourceRustup { .. }
                 );
-                return execute_source_build_step(
+                return try_execute_source_build_step(
                     config,
                     &pinned_version_str,
                     use_rustup,
@@ -196,7 +196,7 @@ pub async fn execute_release_archive_or_fallback(
 ///
 /// Returns [`UpgradeError`] if the cargo install or rustup toolchain command fails or
 /// exits with a non-zero status.
-pub async fn execute_source_build_step(
+pub async fn try_execute_source_build_step(
     config: &UpgradeConfig,
     pinned_version: &str,
     use_rustup: bool,
@@ -257,14 +257,14 @@ pub async fn execute_source_build_step(
 ///
 /// Returns [`UpgradeError`] if the download fails, is canceled, fails SHA-256
 /// verification, or cannot replace the executable.
-pub async fn download_and_replace_release_archive(
+pub async fn try_download_and_replace_release_archive(
     crate_name: &str,
     pinned_version: &str,
     archive_url: &str,
     sha256_url: &str,
     output_device: OutputDevice,
 ) -> Result<(), UpgradeError> {
-    let temp_dir = try_create_temp_dir()?;
+    let temp_dir = try_create_temp_dir().map_err(UpgradeError::TempDirCreateFailed)?;
 
     let archive_path = temp_dir.join(ReleaseAsset::format_archive_filename(
         crate_name,
@@ -288,7 +288,7 @@ pub async fn download_and_replace_release_archive(
     };
 
     let res_step = async {
-        download_and_verify_archive(
+        try_download_and_verify_archive(
             crate_name,
             pinned_version,
             archive_url,
@@ -299,7 +299,7 @@ pub async fn download_and_replace_release_archive(
         .await?;
 
         let extract_dir = temp_dir.join(archive::EXTRACTED_DIR_NAME);
-        extract_and_apply_archive(&archive_path, &extract_dir)?;
+        try_extract_and_apply_archive(&archive_path, &extract_dir)?;
         Ok(())
     }
     .await;
@@ -347,12 +347,12 @@ pub enum UpgradeError {
     /// Failed to construct the HTTP client for archive or checksum downloads.
     #[error(transparent)]
     #[diagnostic(transparent)]
-    HttpClientCreateFailed(#[from] HttpClientError),
+    HttpClientCreateFailed(HttpClientError),
 
     /// Failed to create a temporary staging directory on disk.
     #[error(transparent)]
     #[diagnostic(transparent)]
-    TempDirCreateFailed(#[from] TempDirError),
+    TempDirCreateFailed(TempDirError),
 
     /// Network, HTTP status, or stream error while downloading the `.tar.gz` archive or
     /// `.sha256` file.
@@ -390,7 +390,7 @@ pub enum UpgradeError {
     /// Failed to mark an extracted binary executable (`0o755`).
     #[error(transparent)]
     #[diagnostic(transparent)]
-    SetExecutableFailed(#[from] FilePermissionsError),
+    SetExecutableFailed(FilePermissionsError),
 
     /// Current running executable path lacked a valid [`UTF-8`] filename or parent
     /// directory.

@@ -60,10 +60,11 @@ use crate::{DEBUG_ANALYTICS_CLIENT, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscPtyEvent, OutputDevice,
                Spinner, SpinnerStyle, StyleSheet, TerminalInteractiveStatus,
                TuiAvailability, TuiAvailabilityChooseExt, check_is_terminal_interactive,
-               choose, cli_text_inline, cli_text_line,
+               cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
-               inline_string, try_get_latest_release_version_from_crates_io, vp_height};
+               inline_string, try_choose, try_get_latest_release_version_from_crates_io,
+               vp_height};
 use smallvec::smallvec;
 use std::{env::current_exe,
           io::{Error, ErrorKind},
@@ -182,7 +183,7 @@ pub async fn show_exit_message(context: ExitContext) {
         }
 
         // Get the first item selected by the user.
-        let maybe_user_choice = choose(
+        let maybe_user_choice = try_choose(
             header_with_instructions,
             yes_no_options,
             Some(vp_height(yes_no_options.len())),
@@ -268,7 +269,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
     // Use Output mode to capture rustup's output for progress display.
     let mut session = PtySessionBuilder::new("rustup")
         .cli_args(["toolchain", "install", "nightly", "--force"])
-        .start_async()
+        .try_start_async()
         .map_err(Error::other)?;
 
     loop {
@@ -319,7 +320,7 @@ async fn run_cargo_install_with_progress(
     let mut session = PtySessionBuilder::new("cargo")
         .cli_args(["+nightly", "install", crate_name])
         .with_config(DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc)
-        .start_async()
+        .try_start_async()
         .map_err(Error::other)?;
 
     loop {

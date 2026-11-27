@@ -203,7 +203,7 @@ use std::ops::RangeInclusive;
 /// VT-100 scroll region: vp_row(2)..=vp_row(6) (inclusive - both endpoints valid)
 ///
 /// To shift lines up within this region:
-///   buffer.shift_lines_in_range(
+///   buffer.try_shift_lines_in_range(
 ///       ShiftLinesDirection::Up,
 ///       (vp_row(2)..=vp_row(6)).to_exclusive(),  // Converts to vp_row(2)..vp_row(7)
 ///       len(1)
@@ -236,7 +236,7 @@ use std::ops::RangeInclusive;
 /// let scroll_region = vp_row(1)..=vp_row(4);
 ///
 /// // Shift lines within scroll region
-/// // buffer.shift_lines_in_range(ShiftLinesDirection::Up, scroll_region.to_exclusive(), vp_row(1));
+/// // buffer.try_shift_lines_in_range(ShiftLinesDirection::Up, scroll_region.to_exclusive(), vp_row(1));
 /// ```
 ///
 /// **Single-element range:**

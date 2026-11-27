@@ -4,8 +4,8 @@ use super::{Completed, StateMarker, UpgradeFailedError, UpgradeResolution,
             super::thread_runner::ThreadRunner};
 use crate::{CrateMetadata, DEBUG_SELF_UPGRADE, EndpointUrl, PromptUpgradeDecision,
             UpgradeActionOnExit, UpgradeError, UpgradeJourney,
-            format_upgrade_available_notice, get_current_bin_name, perform_upgrade,
-            prompt_user_to_upgrade};
+            format_upgrade_available_notice, get_current_bin_name,
+            prompt_user_to_upgrade, try_perform_upgrade};
 
 /// Typestate while an upgrade or interactive exit prompt is actively executing on the
 /// current thread (`Checking -> Upgrading` for [`UpgradeStrategy::Immediate`];
@@ -43,16 +43,16 @@ impl UpgradeJourney<Upgrading> {
         }
     }
 
-    /// Executes an immediate (`--upgrade`) installation via [`perform_upgrade`], touches
+    /// Executes an immediate (`--upgrade`) installation via [`try_perform_upgrade`], touches
     /// the `1h` cooldown timestamp file if and only if installation succeeded, and
     /// consumes `self` into [`UpgradeJourney<Completed>`].
     ///
-    /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
+    /// [`try_perform_upgrade`]: crate::self_upgrade::try_perform_upgrade
     #[must_use]
     pub(in crate::self_upgrade) async fn execute_immediate_upgrade(
         self,
     ) -> UpgradeJourney<Completed> {
-        match perform_upgrade(
+        match try_perform_upgrade(
             &self.config,
             &self.state.metadata,
             &self.state.binaries_release_base_url,
@@ -64,7 +64,7 @@ impl UpgradeJourney<Upgrading> {
                 self.into_completed(UpgradeResolution::Upgraded)
             }
             Err(err) => self.into_completed(UpgradeResolution::UpgradeFailed(
-                UpgradeFailedError::from(err),
+                UpgradeFailedError::PerformUpgrade(err),
             )),
         }
     }
@@ -97,11 +97,13 @@ impl UpgradeJourney<Upgrading> {
                 let binaries_release_base_url = &self.state.binaries_release_base_url;
                 ThreadRunner::run_blocking(config, async || {
                     resolve_upgrade_result(
-                        perform_upgrade(config, metadata, binaries_release_base_url).await,
+                        try_perform_upgrade(config, metadata, binaries_release_base_url).await,
                     )
                 })
                 .unwrap_or_else(|err| {
-                    UpgradeResolution::UpgradeFailed(UpgradeFailedError::from(err))
+                    UpgradeResolution::UpgradeFailed(UpgradeFailedError::ThreadRunner(
+                        err,
+                    ))
                 })
             }
             UpgradeActionOnExit::PromptToUpgrade => {
@@ -123,13 +125,15 @@ impl UpgradeJourney<Upgrading> {
                             UpgradeResolution::DeclinedByUser
                         }
                         PromptUpgradeDecision::UpgradeNow => resolve_upgrade_result(
-                            perform_upgrade(config, metadata, binaries_release_base_url)
+                            try_perform_upgrade(config, metadata, binaries_release_base_url)
                                 .await,
                         ),
                     },
                 )
                 .unwrap_or_else(|err| {
-                    UpgradeResolution::UpgradeFailed(UpgradeFailedError::from(err))
+                    UpgradeResolution::UpgradeFailed(UpgradeFailedError::ThreadRunner(
+                        err,
+                    ))
                 })
             }
         };
@@ -162,6 +166,8 @@ impl UpgradeJourney<Upgrading> {
 fn resolve_upgrade_result(res_upgrade: Result<(), UpgradeError>) -> UpgradeResolution {
     match res_upgrade {
         Ok(()) => UpgradeResolution::Upgraded,
-        Err(err) => UpgradeResolution::UpgradeFailed(UpgradeFailedError::from(err)),
+        Err(err) => {
+            UpgradeResolution::UpgradeFailed(UpgradeFailedError::PerformUpgrade(err))
+        }
     }
 }

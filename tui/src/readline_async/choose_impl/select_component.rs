@@ -1,15 +1,15 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, CliTextInline, CommonResult, DEBUG_CHOOSE, FunctionComponent,
-            GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            RangeExt, SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
+use crate::{ChUnit, CliTextInline, DEBUG_CHOOSE, FunctionComponent, GCStringOwned,
+            Header, HowToChoose, InlineString, InlineVec, OutputDevice, RangeExt,
+            SGR_RESET_STR, State, StyleSheet, TERMINAL_LIB_BACKEND, TermCol,
             TermRowDelta, TerminalLibBackend, TuiStyle, VPHeight, ansi_output, c_col,
             ch, cli_text_inline, fg_blue, get_spaces, get_terminal_width, usize,
             vp_height, vp_width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 style::{Print, ResetColor},
                 terminal::{Clear, ClearType}};
-use miette::IntoDiagnostic;
+use std::io;
 
 #[allow(missing_debug_implementations)]
 pub struct SelectComponent {
@@ -48,14 +48,14 @@ impl FunctionComponent<State> for SelectComponent {
 
     /// Allocates space and prints the lines. The bring the cursor back to the start of
     /// the lines.
-    fn render(&mut self, state: &mut State) -> CommonResult {
+    fn render(&mut self, state: &mut State) -> io::Result<()> {
         let render_context = render_helper::RenderContext::new(self, state);
 
         render_helper::log_render_debug_info(state, &render_context);
 
         self.allocate_viewport_height_space(state)?;
 
-        render_helper::render_header(
+        render_helper::try_render_header(
             &mut self.output_device,
             &state.header,
             &self.style.header_style,
@@ -63,21 +63,20 @@ impl FunctionComponent<State> for SelectComponent {
             render_context.start_display_col_offset,
         )?;
 
-        render_helper::render_items(
+        render_helper::try_render_items(
             &mut self.output_device,
             state,
             &self.style,
             &render_context,
         )?;
 
-        render_helper::move_cursor_back_to_start(
+        render_helper::try_move_cursor_back_to_start(
             &mut self.output_device,
             render_context.items_viewport_height,
             render_context.header_viewport_height,
         )?;
 
-        self.output_device
-            .write(|out| out.flush().into_diagnostic())?;
+        self.output_device.write(std::io::Write::flush)?;
 
         ok!()
     }
@@ -150,15 +149,15 @@ mod render_helper {
         });
     }
 
-    pub fn render_header(
+    pub fn try_render_header(
         output_device: &mut OutputDevice,
         header: &Header,
         header_style: &TuiStyle,
         vp_width: ChUnit,
         start_display_col_offset: usize,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         match header {
-            Header::SingleLine(header_text) => render_single_line_header(
+            Header::SingleLine(header_text) => try_render_single_line_header(
                 output_device,
                 header_text,
                 header_style,
@@ -166,18 +165,18 @@ mod render_helper {
                 start_display_col_offset,
             ),
             Header::MultiLine(header_lines) => {
-                render_multi_line_header(output_device, header_lines, vp_width)
+                try_render_multi_line_header(output_device, header_lines, vp_width)
             }
         }
     }
 
-    fn render_single_line_header(
+    fn try_render_single_line_header(
         output_device: &mut OutputDevice,
         header_text: &str,
         header_style: &TuiStyle,
         vp_width: ChUnit,
         start_display_col_offset: usize,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         let mut header_text =
             [get_spaces(start_display_col_offset).as_ref(), header_text].join("");
 
@@ -185,14 +184,14 @@ mod render_helper {
 
         let styled_header = cli_text_inline(&header_text, *header_style).to_string();
 
-        print_line_and_advance(output_device, &[&styled_header])
+        try_print_line_and_advance(output_device, &[&styled_header])
     }
 
-    fn render_multi_line_header(
+    fn try_render_multi_line_header(
         output_device: &mut OutputDevice,
         header_lines: &InlineVec<InlineVec<CliTextInline>>,
         max_width: ChUnit,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         // Subtract 3 from viewport width because we need to add "..." to the
         // end of the line.
         let mut available_space_col_count: ChUnit = max_width - 3;
@@ -282,15 +281,15 @@ mod render_helper {
             .collect::<Vec<String>>()
             .join("\r\n");
 
-        print_line_and_advance(output_device, &[&multi_line_header_text])
+        try_print_line_and_advance(output_device, &[&multi_line_header_text])
     }
 
-    pub fn render_items(
+    pub fn try_render_items(
         output_device: &mut OutputDevice,
         state: &State,
         style: &StyleSheet,
         render_context: &RenderContext,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         // Print each line in viewport.
         let vp_range = ..render_context.items_viewport_height;
         for viewport_row in vp_range.as_index_iter() {
@@ -309,7 +308,7 @@ mod render_helper {
                 render_context.start_display_col_offset,
             );
 
-            render_single_item(
+            try_render_single_item(
                 output_device,
                 &row_context,
                 &row_prefix,
@@ -436,13 +435,13 @@ mod render_helper {
         }
     }
 
-    fn render_single_item(
+    fn try_render_single_item(
         output_device: &mut OutputDevice,
         row_context: &ItemRowContext,
         row_prefix: &str,
         data_style: &TuiStyle,
         vp_width: ChUnit,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         let data_item = [row_prefix, row_context.data_item.as_str()].join("");
         let data_item: String = clip_string_to_width_with_ellipsis(data_item, vp_width);
         let data_item_gcs = GCStringOwned::from(&data_item);
@@ -460,18 +459,18 @@ mod render_helper {
         // Apply the same style to padding to ensure background color extends.
         let styled_padding = cli_text_inline(&padding_right, *data_style).to_string();
 
-        print_line_and_advance(output_device, &[&styled_item, &styled_padding])
+        try_print_line_and_advance(output_device, &[&styled_item, &styled_padding])
     }
 
     /// Clears the current line, prints the provided text slices with styling resets,
     /// and advances the cursor to the next line.
-    fn print_line_and_advance(
+    fn try_print_line_and_advance(
         output_device: &mut OutputDevice,
         slices: &[&str],
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
-                output_device.write(|writer| -> miette::Result<()> {
+                output_device.write(|writer| -> io::Result<()> {
                     queue_commands_no_lock! {
                         writer,
                         // Bring the caret back to the start of line.
@@ -495,7 +494,7 @@ mod render_helper {
                 })?;
             }
             TerminalLibBackend::DirectToAnsi => {
-                output_device.write(|writer| -> miette::Result<()> {
+                output_device.write(|writer| -> io::Result<()> {
                     let payload_len: usize = slices.iter().map(|s| s.len()).sum();
                     let capacity =
                         ansi_output::estimate_capacity::render_line_capacity_hint(
@@ -514,7 +513,7 @@ mod render_helper {
                         TermRowDelta::ONE,
                     ));
                     buf.push_str(SGR_RESET_STR);
-                    writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                    writer.write_all(buf.as_bytes())?;
                     ok!()
                 })?;
             }
@@ -523,11 +522,11 @@ mod render_helper {
         ok!()
     }
 
-    pub fn move_cursor_back_to_start(
+    pub fn try_move_cursor_back_to_start(
         output_device: &mut OutputDevice,
         items_viewport_height: VPHeight,
         header_viewport_height: VPHeight,
-    ) -> CommonResult {
+    ) -> io::Result<()> {
         let total_lines = (items_viewport_height + header_viewport_height).as_u16();
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
@@ -538,10 +537,10 @@ mod render_helper {
             }
             TerminalLibBackend::DirectToAnsi => {
                 if let Some(delta) = TermRowDelta::new(total_lines) {
-                    output_device.write(|writer| -> miette::Result<()> {
+                    output_device.write(|writer| -> io::Result<()> {
                         let ansi =
                             ansi_output::cursor_movement::cursor_previous_line(delta);
-                        writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                        writer.write_all(ansi.as_bytes())?;
                         ok!()
                     })?;
                 }

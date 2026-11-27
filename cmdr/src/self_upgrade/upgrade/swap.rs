@@ -16,7 +16,7 @@ use std::{env::current_exe,
 /// # Errors
 ///
 /// Returns [`UpgradeError`] if archive extraction or binary swapping fails.
-pub fn extract_and_apply_archive(
+pub fn try_extract_and_apply_archive(
     archive_path: &Path,
     extract_dir: &Path,
 ) -> Result<(), UpgradeError> {
@@ -25,13 +25,13 @@ pub fn extract_and_apply_archive(
         src_err,
     })?;
     let extracted_files =
-        archive_extraction::extract_archive_files(archive_path, extract_dir)?;
+        archive_extraction::try_extract_archive_files(archive_path, extract_dir)?;
     if extracted_files.is_empty() {
         return Err(UpgradeError::EmptyArchive {
             archive_path: archive_path.to_path_buf(),
         });
     }
-    binary_replacement::apply_extracted_binaries(&extracted_files)
+    binary_replacement::try_apply_extracted_binaries(&extracted_files)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ pub mod archive_extraction {
     ///
     /// Returns [`UpgradeError::ArchiveExtractFailed`] if decompression or extraction
     /// fails, or [`UpgradeError::SetExecutableFailed`] if setting file permissions fails.
-    pub fn extract_archive_files(
+    pub fn try_extract_archive_files(
         archive_path: &Path,
         extract_dir: &Path,
     ) -> Result<Vec<PathBuf>, UpgradeError> {
@@ -76,7 +76,8 @@ pub mod archive_extraction {
             };
             let dest_path = extract_dir.join(base_name);
             entry.unpack(&dest_path).map_err(map_extract_err)?;
-            try_set_file_executable(&dest_path)?;
+            try_set_file_executable(&dest_path)
+                .map_err(UpgradeError::SetExecutableFailed)?;
             extracted_files.push(dest_path);
         }
 
@@ -121,7 +122,7 @@ pub mod binary_replacement {
     /// Returns [`UpgradeError::BinarySwapFailed`] or
     /// [`UpgradeError::InvalidCurrentExePath`] if the current executable path cannot be
     /// resolved or if `self_replace` fails.
-    pub fn apply_extracted_binaries(
+    pub fn try_apply_extracted_binaries(
         extracted_files: &[PathBuf],
     ) -> Result<(), UpgradeError> {
         let current_exe_path = current_exe()
@@ -212,7 +213,7 @@ mod tests {
         let extract_dir = temp_dir.join("out");
         fs::create_dir_all(&extract_dir).unwrap();
         let extracted =
-            archive_extraction::extract_archive_files(&archive_path, &extract_dir)
+            archive_extraction::try_extract_archive_files(&archive_path, &extract_dir)
                 .unwrap();
         assert_eq2!(extracted.len(), 1);
         assert!(extracted[0].ends_with("giti"));
@@ -264,7 +265,7 @@ mod tests {
         }
 
         let extract_dir = temp_dir.join("out");
-        let res_extract = extract_and_apply_archive(&archive_path, &extract_dir);
+        let res_extract = try_extract_and_apply_archive(&archive_path, &extract_dir);
         assert!(matches!(
             res_extract,
             Err(UpgradeError::EmptyArchive { ref archive_path })

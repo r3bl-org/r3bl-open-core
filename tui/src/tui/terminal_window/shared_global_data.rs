@@ -1,9 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{CommonResult, DEBUG_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf,
-            OfsBufPool, OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport,
-            VPSize, get_next_tick_glyph_str, glyphs,
+use crate::{DEBUG_COMPOSITOR, DEBUG_TUI, MemoizedLenMap, OfsBuf, OfsBufPool,
+            OutputDevice, RenderPipeline, SpinnerStyle, TelemetryHudReport, VPSize,
+            get_next_tick_glyph_str, glyphs,
             telemetry_sizing::TelemetryReportLineStorage};
 use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc::Sender;
@@ -139,17 +139,14 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     /// Creates a new instance of [`GlobalData`] with the given parameters.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the initial window size update fails.
+    #[must_use]
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,
         initial_size: VPSize,
         output_device: OutputDevice,
         ofs_buf_pool: OfsBufPool,
-    ) -> CommonResult<GlobalData<S, AS>>
+    ) -> GlobalData<S, AS>
     where
         AS: Debug + Default + Clone + Sync + Send,
     {
@@ -167,7 +164,7 @@ where
 
         it.set_size(initial_size);
 
-        Ok(it)
+        it
     }
 
     pub fn set_size(&mut self, new_size: VPSize) {

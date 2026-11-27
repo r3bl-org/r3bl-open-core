@@ -183,7 +183,7 @@ fn controlled() {
     eprintln!("{GLYPH_CONTROLLED} Controlled: Enabling raw mode...");
 
     // Enable raw mode
-    if let Err(err) = crate::enable_raw_mode() {
+    if let Err(err) = crate::try_enable_raw_mode() {
         eprintln!("{GLYPH_WARNING} Controlled: Failed to enable raw mode: {err}");
         println!("{MSG_FAILED} Could not enable raw mode");
         std::io::stdout().flush().expect("Failed to flush");
@@ -234,7 +234,7 @@ fn controlled() {
         }
     }
 
-    if let Err(err) = crate::disable_raw_mode() {
+    if let Err(err) = crate::try_disable_raw_mode() {
         eprintln!("{GLYPH_WARNING} Controlled: Failed to disable raw mode: {err}");
     }
 

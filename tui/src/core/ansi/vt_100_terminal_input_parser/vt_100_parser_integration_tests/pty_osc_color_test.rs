@@ -37,7 +37,7 @@
 //! 2. **[`PTY`] Controlled (System Under Test / TUI Input Engine)**:
 //!    - Represents the real TUI application running inside the child subprocess connected
 //!      to the controlled side of the [`PTY`].
-//!    - Requests colors via [`OscSender::send_color_query`], which writes query bytes to
+//!    - Requests colors via [`OscSender::try_send_color_query`], which writes query bytes to
 //!      [`stdout`].
 //!    - Initializes [`DirectToAnsiInputDevice`].
 //!    - Behind the scenes, the background [`mio`] polling thread watches [`stdin`],
@@ -81,7 +81,7 @@
 //! [`OSC 52`]: crate::core::ansi::osc::OscSequence::ClipboardSet
 //! [`OSC_QUERY`]: crate::core::ansi::constants::OSC_QUERY
 //! [`OSC`]: crate::core::ansi::osc::OscSequence
-//! [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+//! [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
 //! [`OscSequence::try_parse()`]: crate::core::ansi::osc::OscSequence::try_parse
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`RGB`]: https://en.wikipedia.org/wiki/RGB_color_model
@@ -225,13 +225,13 @@ fn controller(context: PtyTestContext) {
 /// [`PTY`] Controlled: Queries terminal colors and verifies decoded events.
 ///
 /// Runs inside the child process connected to the controlled side of the [`PTY`].
-/// Exercises [`OscSender::send_color_query`] on [`stdout`], and uses the Sans-IO
+/// Exercises [`OscSender::try_send_color_query`] on [`stdout`], and uses the Sans-IO
 /// [`DirectToAnsiInputDevice`] to frame and decode inbound response bytes on [`stdin`].
 ///
 /// The harness performs [`std::process::exit(0)`] after this function returns.
 ///
 /// [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-/// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+/// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`std::process::exit(0)`]: std::process::exit
 /// [`stdin`]: std::io::stdin
@@ -245,7 +245,7 @@ fn controlled() {
 
     runtime.block_on(async {
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Starting...");
-        let mut input_device = DirectToAnsiInputDevice::new()
+        let mut input_device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         eprintln!("{GLYPH_CONTROLLED} PTY Controlled: Device created, ready...");
 
@@ -263,7 +263,7 @@ fn controlled() {
             let role = case.role;
             // Send query to stdout via `OscSender`.
             osc_sender
-                .send_color_query(role)
+                .try_send_color_query(role)
                 .expect("Failed to send color query via OscSender");
             println!();
             std::io::stdout().flush().expect("Failed to flush query");

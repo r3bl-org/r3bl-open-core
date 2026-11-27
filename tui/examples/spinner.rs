@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ARTIFICIAL_UI_DELAY, CommonResult, DELAY_MS, DELAY_UNIT, IntoErr,
-               OutputDevice, SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor, SpinnerStyle,
+use r3bl_tui::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT, IntoErr, OutputDevice,
+               SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor, SpinnerStyle,
                SpinnerTemplate, TuiAvailability, assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
-               set_mimalloc_in_main, underline};
+               run_in_main_with_safe_stack, underline};
 use std::{io::Write, time::Duration};
 use tokio::{spawn,
             task::JoinError,
@@ -17,14 +17,11 @@ macro_rules! println_with_flush {
     };
 }
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::needless_return)]
 #[allow(clippy::unwrap_in_result)]
-// Note: The `tokio::main` macro internally calls `.expect("Failed building the Runtime")`
-// when initializing the Tokio runtime. This is unavoidable and safe, as runtime creation
-// failure is a fatal error that should panic. The lint must be suppressed here.
-pub async fn main() -> CommonResult {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     // Without readline.

@@ -161,7 +161,10 @@ impl<W: RRTWorker> SubscriberGuard<W> {
     /// [`Running`]: crate::resilient_reactor_thread::ThreadState::Running
     /// [`Stopped`]: crate::resilient_reactor_thread::ThreadState::Stopped
     /// [`try_subscribe()`]: crate::resilient_reactor_thread::try_subscribe
-    pub fn try_subscribe(&self, config: W::Config) -> Result<Self, SubscribeError> {
+    pub fn try_subscribe(
+        &self,
+        config: W::Config,
+    ) -> Result<Self, SubscribeError<W::CreateError>> {
         super::try_subscribe(&self.sender, &self.interrupt_on_drop.shared_state, config)
     }
 }
@@ -251,6 +254,10 @@ mod drop_order_tests {
         }
     }
 
+    #[derive(Debug, thiserror::Error, miette::Diagnostic)]
+    #[error("drop order test worker creation error")]
+    struct DropOrderTestError;
+
     #[derive(Debug)]
     struct DropOrderTestWorker;
 
@@ -259,11 +266,12 @@ mod drop_order_tests {
         type Input = ();
         type Output = ();
         type Interrupt = DropOrderInterrupt;
+        type CreateError = DropOrderTestError;
 
         fn create_and_register_os_sources(
             _config: Self::Config,
             _receiver: broadcast::Receiver<Self::Input>,
-        ) -> miette::Result<(Self, Self::Interrupt)> {
+        ) -> Result<super::super::RRTWorkerAndInterrupt<Self>, Self::CreateError> {
             unimplemented!("Not used in drop-order test")
         }
 

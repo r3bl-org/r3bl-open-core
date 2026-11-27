@@ -24,7 +24,7 @@ mod tests {
     /// Builds a deterministic registry from the embedded seed file for golden-file
     /// tests.
     fn test_registry() -> TechnicalTermDictionary {
-        TechnicalTermDictionary::from_seed(None).unwrap()
+        TechnicalTermDictionary::try_from_seed_file(None).unwrap()
     }
 
     /// Normalize CRLF to LF for cross-platform test compatibility.

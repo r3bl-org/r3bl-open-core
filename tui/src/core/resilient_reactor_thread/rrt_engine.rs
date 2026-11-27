@@ -3,9 +3,9 @@
 //! Internal engine implementation for the Resilient Reactor Thread (RRT) pattern. See
 //! [`run_worker_loop`] for details.
 
-use super::{BroadcastSender, InterruptHandle, RRTEvent, RRTWorker, RestartPolicy,
-            RetryLoopExhaustion, ShutdownReason, StopReason, TerminationGuard,
-            ThreadLifecycleMonitor, ThreadState};
+use super::{BroadcastSender, InterruptHandle, RRTEvent, RRTWorker,
+            RRTWorkerAndInterrupt, RestartPolicy, RetryLoopExhaustion, ShutdownReason,
+            StopReason, TerminationGuard, ThreadLifecycleMonitor, ThreadState};
 use crate::{DEBUG_RESILIENT_REACTOR_THREAD, core::common::Continuation};
 use std::{panic::{AssertUnwindSafe, catch_unwind},
           sync::Arc,
@@ -294,7 +294,10 @@ pub fn perform_restart_retry_loop<W: RRTWorker>(
             tokio::sync::broadcast::channel(W::INPUT_CHANNEL_CAPACITY);
 
         match W::create_and_register_os_sources(config.clone(), input_receiver) {
-            Ok((new_worker, new_interrupt)) => {
+            Ok(RRTWorkerAndInterrupt {
+                worker: new_worker,
+                interrupt: new_interrupt,
+            }) => {
                 DEBUG_RESILIENT_REACTOR_THREAD.then(|| {
                     tracing::info!(message = "RRT: Restart successful.");
                 });

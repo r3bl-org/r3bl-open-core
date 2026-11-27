@@ -3,8 +3,9 @@
 //! Thread lifecycle manager and entry point for the Resilient Reactor Thread (RRT)
 //! pattern. See [`RRT`] for details.
 
-use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker, SubscribeError,
-            SubscriberGuard, ThreadLifecycleMonitor, ThreadState, run_worker_loop};
+use super::{BroadcastSender, InputSender, InterruptHandle, RRTWorker,
+            RRTWorkerAndInterrupt, SubscribeError, SubscriberGuard,
+            ThreadLifecycleMonitor, ThreadState, run_worker_loop};
 use crate::{DEBUG_RESILIENT_REACTOR_THREAD, core::common::AtomicU8Ext};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::broadcast;
@@ -31,7 +32,7 @@ pub fn try_subscribe<W: RRTWorker>(
     sender: &BroadcastSender<W::Output>,
     shared_state: &Arc<ThreadLifecycleMonitor<W>>,
     config: W::Config,
-) -> Result<SubscriberGuard<W>, SubscribeError> {
+) -> Result<SubscriberGuard<W>, SubscribeError<W::CreateError>> {
     let state_guard = shared_state.block_until_stable_state_reached();
 
     let (strategy, mut state_guard) =
@@ -65,7 +66,7 @@ pub fn try_subscribe<W: RRTWorker>(
                 tokio::sync::broadcast::channel(W::INPUT_CHANNEL_CAPACITY);
 
             // Allocate OS resources (outside the lock).
-            let (worker, interrupt) =
+            let RRTWorkerAndInterrupt { worker, interrupt } =
                 match W::create_and_register_os_sources(config.clone(), input_receiver) {
                     Ok(pair) => pair,
                     Err(err) => {
@@ -736,7 +737,7 @@ impl<W: RRTWorker> RRT<W> {
     pub fn try_subscribe(
         &self,
         config: W::Config,
-    ) -> Result<SubscriberGuard<W>, SubscribeError> {
+    ) -> Result<SubscriberGuard<W>, SubscribeError<W::CreateError>> {
         try_subscribe::<W>(&self.sender, &self.shared_state, config)
     }
 
@@ -817,7 +818,7 @@ impl<W: RRTWorker> RRT<W> {
     ///     fn create_and_register_os_sources(
     ///         _config: Self::Config,
     ///         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-    ///     ) -> miette::Result<(Self, Self::Interrupt)> {
+    ///     ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
     ///         // ... implementation ...
     ///     }
     ///     // ...

@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ActiveScreenBuffer, List, OfsBufVT100, PixelChar, PixelCharDiffChunks,
-            RangeExclusive, RangeExt, VPCol, VPHeight, VPPos, VPRow, vp_height,
-            vp_width};
+use crate::{ActiveScreenBuffer, List, OfsBufBoundsError, OfsBufVT100, PixelChar,
+            PixelCharDiffChunks, RangeExclusive, RangeExt, VPCol, VPHeight, VPPos,
+            VPRow, vp_height, vp_width};
 use std::cmp::min;
 
 impl OfsBufVT100 {
@@ -58,9 +58,13 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the row is out of bounds.
-    pub fn set_line(&mut self, row: VPRow, line: &[PixelChar]) -> miette::Result<()> {
+    pub fn set_line(
+        &mut self,
+        row: VPRow,
+        line: &[PixelChar],
+    ) -> Result<(), OfsBufBoundsError> {
         let Some(slice) = self.get_active_screen_buffer_mut().get_row_mut(row) else {
-            return Err(miette::miette!("out of bounds"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row });
         };
 
         let copy_len = min(line.len(), slice.len());
@@ -83,20 +87,20 @@ impl OfsBufVT100 {
     /// # Errors
     ///
     /// Returns an error if the position is out of bounds.
-    pub fn set_char(&mut self, pos: VPPos, char: PixelChar) -> miette::Result<()> {
+    pub fn set_char(&mut self, pos: VPPos, char: PixelChar) -> Result<(), OfsBufBoundsError> {
         self.get_active_screen_buffer_mut().set_char(pos, char)
     }
 
     /// # Errors
     ///
     /// Returns an error if either row is out of bounds.
-    pub fn swap_lines(&mut self, row1: VPRow, row2: VPRow) -> miette::Result<()> {
+    pub fn swap_lines(&mut self, row1: VPRow, row2: VPRow) -> Result<(), OfsBufBoundsError> {
         match self.get_terminal_mode().active_screen_buffer {
             ActiveScreenBuffer::Primary => {
-                self.primary_buffer_mut().swap_lines(row1, row2)
+                self.primary_buffer_mut().try_swap_lines(row1, row2)
             }
             ActiveScreenBuffer::Alternate => {
-                self.get_alternate_buffer_mut().swap_lines(row1, row2)
+                self.get_alternate_buffer_mut().try_swap_lines(row1, row2)
             }
         }
     }
@@ -109,7 +113,7 @@ impl OfsBufVT100 {
         row: VPRow,
         col_range: RangeExclusive<VPCol>,
         char: PixelChar,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         self.get_active_screen_buffer_mut()
             .fill_char_range(row, col_range, char)
     }
@@ -122,7 +126,7 @@ impl OfsBufVT100 {
         row: VPRow,
         source_range: RangeExclusive<VPCol>,
         dest_start: VPCol,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         self.get_active_screen_buffer_mut().copy_chars_within_line(
             row,
             source_range,

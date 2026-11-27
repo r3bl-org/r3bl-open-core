@@ -205,7 +205,7 @@
 //!    - A TUI app exits and drops its input device
 //!    - All async consumers finish and drop their receivers
 //!
-//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice::new()`]
+//!    **The thread is restartable**: When the next [`DirectToAnsiInputDevice::try_new()`]
 //!    call occurs, [`RRT::try_subscribe()`] observes [`ThreadState::Stopped`] and spawns
 //!    a new thread generation automatically. This allows sequential TUI apps in the same
 //!    process to share the input system seamlessly.
@@ -373,7 +373,7 @@
 //! [`consume_stdin_input_with_sender()`]: handler_stdin::consume_stdin_input_with_sender
 //! [`CONTROL_D`]: crate::CONTROL_D
 //! [`crossterm`]: crossterm
-//! [`DirectToAnsiInputDevice::new()`]: super::DirectToAnsiInputDevice::new
+//! [`DirectToAnsiInputDevice::try_new()`]: super::DirectToAnsiInputDevice::try_new
 //! [`DirectToAnsiInputDevice`]: super::DirectToAnsiInputDevice
 //! [`dispatch_with_sender()`]: dispatcher::dispatch_with_sender
 //! [`EINTR`]: https://manpages.debian.org/errno.3

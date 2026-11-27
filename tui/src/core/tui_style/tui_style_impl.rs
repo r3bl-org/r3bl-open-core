@@ -24,7 +24,7 @@ use std::{fmt::{Display, Formatter},
 /// // Faded blue:TuiColor::Rgb { r: 85, g: 85, b: 255 }
 /// let mut stylesheet = TuiStylesheet::new();
 ///
-/// let _ = stylesheet.add_styles(smallvec::smallvec![
+/// let _ = stylesheet.try_add_styles(smallvec::smallvec![
 ///     TuiStyle {
 ///         id: Some(TuiStyleId(0)),
 ///         attribs: TuiStyleAttribs {

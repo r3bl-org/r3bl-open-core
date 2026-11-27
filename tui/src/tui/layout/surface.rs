@@ -2,8 +2,8 @@
 
 use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
             LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
-use crate::{CommonResult, InlineVec, ReqSizePc, TuiStyle, TuiStylesheet, VPBoundingBox,
-            VPPos, VPSize, vp_col, vp_height, vp_row, vp_width};
+use crate::{InlineVec, ReqSizePc, TuiStyle, TuiStylesheet, VPBoundingBox, VPPos, VPSize,
+            vp_col, vp_height, vp_row, vp_width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.
@@ -45,7 +45,7 @@ impl LayoutManagement for Surface {
     fn surface_start(
         &mut self,
         SurfaceProps { pos, size }: SurfaceProps,
-    ) -> CommonResult {
+    ) -> Result<(), LayoutError> {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
@@ -64,7 +64,7 @@ impl LayoutManagement for Surface {
         });
     }
 
-    fn surface_end(&mut self) -> CommonResult {
+    fn surface_end(&mut self) -> Result<(), LayoutError> {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
@@ -79,17 +79,17 @@ impl LayoutManagement for Surface {
         });
     }
 
-    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
+    fn box_start(&mut self, flex_box_props: FlexBoxProps) -> Result<(), LayoutError> {
         throws!({
             if self.no_boxes_added() {
-                self.add_root_box(flex_box_props)
+                self.add_root_box(flex_box_props);
             } else {
-                self.add_non_root_box(flex_box_props)
-            }?;
+                self.add_non_root_box(flex_box_props)?;
+            }
         });
     }
 
-    fn box_end(&mut self) -> CommonResult {
+    fn box_end(&mut self) -> Result<(), LayoutError> {
         throws!({
             // Expect stack not to be empty!
             if self.no_boxes_added() {
@@ -108,7 +108,7 @@ impl LayoutManagement for Surface {
 
 impl PerformPositioningAndSizing for Surface {
     /// Gets the last box on the stack (if none found then return Err).
-    fn current_box(&mut self) -> CommonResult<&mut FlexBox> {
+    fn current_box(&mut self) -> Result<&mut FlexBox, LayoutError> {
         // Expect stack of boxes not to be empty!
         if self.no_boxes_added() {
             LayoutError::new_error_result_with_only_type(
@@ -163,7 +163,7 @@ impl PerformPositioningAndSizing for Surface {
     fn update_insertion_pos_for_next_box(
         &mut self,
         allocated_size: VPSize,
-    ) -> CommonResult<VPPos> {
+    ) -> Result<VPPos, LayoutError> {
         let current_box = self.current_box()?;
         let current_insertion_pos = current_box.insertion_pos_for_next_box;
 
@@ -197,7 +197,10 @@ impl PerformPositioningAndSizing for Surface {
     ///
     /// [`insertion_pos_for_next_box`]: FlexBox::insertion_pos_for_next_box
     /// [`VPPos`]: crate::VPPos
-    fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
+    fn add_non_root_box(
+        &mut self,
+        flex_box_props: FlexBoxProps,
+    ) -> Result<(), LayoutError> {
         throws!({
             let container_box = self.current_box()?;
             let container_bounds = container_box.bounds.bounds_size;
@@ -234,25 +237,23 @@ impl PerformPositioningAndSizing for Surface {
 
     /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized &
     /// positioned.
-    fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult {
-        throws!({
-            let ReqSizePc {
-                width_pc,
-                height_pc,
-            } = flex_box_props.requested_size_percent;
+    fn add_root_box(&mut self, flex_box_props: FlexBoxProps) {
+        let ReqSizePc {
+            width_pc,
+            height_pc,
+        } = flex_box_props.requested_size_percent;
 
-            let bounds_size = {
-                let width_val = width_pc.apply_to(*self.bounds.bounds_size.col_width);
-                let height_val = height_pc.apply_to(*self.bounds.bounds_size.row_height);
-                vp_width(width_val) + vp_height(height_val)
-            };
+        let bounds_size = {
+            let width_val = width_pc.apply_to(*self.bounds.bounds_size.col_width);
+            let height_val = height_pc.apply_to(*self.bounds.bounds_size.row_height);
+            vp_width(width_val) + vp_height(height_val)
+        };
 
-            self.stack_of_boxes.push(make_root_box_with_style(
-                flex_box_props,
-                self.bounds.origin_pos,
-                bounds_size,
-            ));
-        });
+        self.stack_of_boxes.push(make_root_box_with_style(
+            flex_box_props,
+            self.bounds.origin_pos,
+            bounds_size,
+        ));
     }
 }
 
@@ -378,12 +379,12 @@ fn cascade_styles(
 
 #[cfg(test)]
 mod test_surface_2_col_complex {
-    use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
+    use crate::{FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, TuiStylesheet, ch, vp_col,
                 vp_height, vp_row, vp_width};
 
     #[test]
-    fn test_surface_2_col_complex() -> CommonResult {
+    fn test_surface_2_col_complex() -> miette::Result<()> {
         throws!({
             let mut surface = Surface {
                 stylesheet: dsl_stylesheet()?,
@@ -402,8 +403,8 @@ mod test_surface_2_col_complex {
     }
 
     /// Main container "container".
-    fn create_main_container(surface: &mut Surface) -> CommonResult {
-        fn make_container_assertions(surface: &Surface) -> CommonResult {
+    fn create_main_container(surface: &mut Surface) -> miette::Result<()> {
+        fn make_container_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let layout_item =
                     surface.stack_of_boxes.first().expect("conversion error");
@@ -466,8 +467,8 @@ mod test_surface_2_col_complex {
     }
 
     /// Left column 1.
-    fn create_left_col(surface: &mut Surface) -> CommonResult {
-        fn make_left_col_assertions(surface: &Surface) -> CommonResult {
+    fn create_left_col(surface: &mut Surface) -> miette::Result<()> {
+        fn make_left_col_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let layout_item =
                     surface.stack_of_boxes.last().expect("conversion error");
@@ -521,8 +522,8 @@ mod test_surface_2_col_complex {
     }
 
     /// Right column 2.
-    fn create_right_col(surface: &mut Surface) -> CommonResult {
-        fn make_right_col_assertions(surface: &Surface) -> CommonResult {
+    fn create_right_col(surface: &mut Surface) -> miette::Result<()> {
+        fn make_right_col_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let current_box =
                     surface.stack_of_boxes.last().expect("conversion error");
@@ -573,7 +574,7 @@ mod test_surface_2_col_complex {
     }
 
     /// Creates a stylesheet containing styles using DSL.
-    fn dsl_stylesheet() -> CommonResult<TuiStylesheet> {
+    fn dsl_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style!(
@@ -601,12 +602,12 @@ mod test_surface_2_col_complex {
 
 #[cfg(test)]
 mod test_surface_2_col_simple {
-    use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
+    use crate::{FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, TuiStylesheet, vp_col,
                 vp_height, vp_row, vp_width};
 
     #[test]
-    fn test_surface_2_col_simple() -> CommonResult {
+    fn test_surface_2_col_simple() -> miette::Result<()> {
         throws!({
             let mut surface = Surface {
                 stylesheet: dsl_stylesheet()?,
@@ -625,8 +626,8 @@ mod test_surface_2_col_simple {
     }
 
     /// Main container 0.
-    fn create_main_container(surface: &mut Surface) -> CommonResult {
-        fn make_container_assertions(surface: &Surface) -> CommonResult {
+    fn create_main_container(surface: &mut Surface) -> miette::Result<()> {
+        fn make_container_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let layout_item =
                     surface.stack_of_boxes.first().expect("conversion error");
@@ -668,8 +669,8 @@ mod test_surface_2_col_simple {
     }
 
     /// Left column 1.
-    fn create_left_col(surface: &mut Surface) -> CommonResult {
-        fn make_left_col_assertions(surface: &Surface) -> CommonResult {
+    fn create_left_col(surface: &mut Surface) -> miette::Result<()> {
+        fn make_left_col_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let layout_item =
                     surface.stack_of_boxes.last().expect("conversion error");
@@ -721,8 +722,8 @@ mod test_surface_2_col_simple {
     }
 
     /// Right column 2.
-    fn create_right_col(surface: &mut Surface) -> CommonResult {
-        fn make_right_col_assertions(surface: &Surface) -> CommonResult {
+    fn create_right_col(surface: &mut Surface) -> miette::Result<()> {
+        fn make_right_col_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let current_box =
                     surface.stack_of_boxes.last().expect("conversion error");
@@ -772,7 +773,7 @@ mod test_surface_2_col_simple {
     }
 
     /// Creates a stylesheet containing styles using DSL.
-    fn dsl_stylesheet() -> CommonResult<TuiStylesheet> {
+    fn dsl_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style!(
@@ -796,13 +797,13 @@ mod test_surface_2_col_simple {
 
 #[cfg(test)]
 mod test_surface_offset_origin {
-    use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
+    use crate::{FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, vp_col, vp_height, vp_row,
                 vp_width};
 
     #[test]
-    fn test_surface_horizontal_non_zero_origin() -> CommonResult {
-        fn make_container_assertions(surface: &Surface) -> CommonResult {
+    fn test_surface_horizontal_non_zero_origin() -> miette::Result<()> {
+        fn make_container_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let container = surface.stack_of_boxes.first().expect("conversion error");
                 assert_eq2!(container.bounds.origin_pos, vp_col(0) + vp_row(5));
@@ -810,7 +811,7 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child1_assertions(surface: &Surface) -> CommonResult {
+        fn make_child1_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let child = surface.stack_of_boxes.last().expect("conversion error");
                 // First child starts at the container's insertion start = (0, 5).
@@ -818,7 +819,7 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child2_assertions(surface: &Surface) -> CommonResult {
+        fn make_child2_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let child = surface.stack_of_boxes.last().expect("conversion error");
                 // Second child row must equal the container's row (5), NOT 0.
@@ -871,8 +872,8 @@ mod test_surface_offset_origin {
     }
 
     #[test]
-    fn test_surface_vertical_non_zero_origin() -> CommonResult {
-        fn make_container_assertions(surface: &Surface) -> CommonResult {
+    fn test_surface_vertical_non_zero_origin() -> miette::Result<()> {
+        fn make_container_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let container = surface.stack_of_boxes.first().expect("conversion error");
                 assert_eq2!(container.bounds.origin_pos, vp_col(5) + vp_row(0));
@@ -880,14 +881,14 @@ mod test_surface_offset_origin {
             });
         }
 
-        fn make_child1_assertions(surface: &Surface) -> CommonResult {
+        fn make_child1_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let child = surface.stack_of_boxes.last().expect("conversion error");
                 assert_eq2!(child.bounds.origin_pos, vp_col(5) + vp_row(0));
             });
         }
 
-        fn make_child2_assertions(surface: &Surface) -> CommonResult {
+        fn make_child2_assertions(surface: &Surface) -> miette::Result<()> {
             throws!({
                 let child = surface.stack_of_boxes.last().expect("conversion error");
                 // Second child column must equal the container's column (5), NOT 0.

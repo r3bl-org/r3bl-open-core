@@ -27,6 +27,7 @@ exclude = [
     # Test fixture URLs in test code (not meant to resolve).
     "^https?://test\\.com",
     "^https?://link1\\.com",
+    "^https?://wrong-url\\.com",
     "^https?://127\\.0\\.0\\.1",
     "^https?://localhost",
     # Placeholder images in markdown parser conformance test data.
@@ -57,6 +58,8 @@ exclude = [
     "^https?://github\\.com/r3bl-org/r3bl-binaries/releases/download$",
     # Planned version manifest endpoint not yet published.
     "^https?://r3bl\\.com/versions\\.jsonc$",
+    # Planned analytics reporting endpoint not yet published.
+    "^https?://r3bl\\.com/add_analytics_event$",
 ]
 
 # Exclude specific files from link checking.

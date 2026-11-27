@@ -2,13 +2,13 @@
 
 // Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
 #[macro_use]
-mod command_runner;
+mod command_run;
 
 // Attach.
-mod command_output_result;
-mod command_run_result;
+mod command_run_report;
+mod process_execution_outcome;
 
 // Re-export.
-pub use command_output_result::*;
-pub use command_run_result::*;
-pub use command_runner::*;
+pub use command_run::*;
+pub use command_run_report::*;
+pub use process_execution_outcome::*;

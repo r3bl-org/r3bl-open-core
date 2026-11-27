@@ -1,9 +1,20 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DEBUG_SCRIPT, InlineString};
-use miette::IntoDiagnostic;
 use std::{env, path::Path};
 use strum_macros::{Display, EnumString};
+
+/// Error returned by [`try_get`] and [`try_get_path_prefixed`] when reading an
+/// environment variable fails.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to read environment variable '{key}'")]
+pub struct EnvVarError {
+    /// Environment variable key requested.
+    pub key: EnvKeys,
+    /// Underlying [`env::VarError`].
+    #[source]
+    pub src_err: env::VarError,
+}
 
 #[cfg(target_os = "windows")]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";
@@ -54,17 +65,23 @@ pub fn gen_path_env_vars(path_value: &str) -> EnvVars {
 
 /// # Errors
 ///
-/// Returns an error if the environment variable is not set.
-pub fn try_get(key: EnvKeys) -> miette::Result<String> {
-    env::var(key.to_string()).into_diagnostic()
+/// Returns [`EnvVarError`] if the environment variable is not set or is not valid
+/// [`Unicode`].
+///
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
+pub fn try_get(key: EnvKeys) -> Result<String, EnvVarError> {
+    env::var(key.to_string()).map_err(|src_err| EnvVarError { key, src_err })
 }
 
 /// # Errors
 ///
-/// Returns an error if the PATH environment variable is not set.
+/// Returns [`EnvVarError`] if the `PATH` environment variable is not set or is not valid
+/// [`Unicode`].
+///
+/// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 pub fn try_get_path_prefixed(
     prefix_path: impl AsRef<Path>,
-) -> miette::Result<InlineString> {
+) -> Result<InlineString, EnvVarError> {
     let path = try_get(EnvKeys::Path)?;
     let add_to_path = inline_string!(
         "{}{}{}",

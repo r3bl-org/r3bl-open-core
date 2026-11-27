@@ -3,10 +3,10 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use crate::{ClipboardService, CommonResult, DEBUG_CLIPBOARD, DEBUG_TUI,
-            DEBUG_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
-            EditorEvent, FlexBox, GapBufferLine, HasFocus, InlineString, InputEvent,
-            Key, KeyPress, NarrowingCastToU16, PrettyPrintDebug, RangeBoundsResult,
+use crate::{ClipboardService, DEBUG_CLIPBOARD, DEBUG_SYN_HI, DEBUG_TUI,
+            DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine, EditorEvent,
+            FlexBox, GapBufferLine, HasFocus, InlineString, InputEvent, Key, KeyPress,
+            MdParseError, NarrowingCastToU16, PrettyPrintDebug, RangeBoundsResult,
             RangeConstructExt, RenderArgs, RenderOpCommon, RenderOpIR, RenderOpIRVec,
             RenderPipeline, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
             SyntaxHighlightPipeline, VPHeight, VPRow, VPSize, VPWidth, Viewport,
@@ -71,18 +71,13 @@ fn input_event_matches_navigation_keys(input_event: &InputEvent) -> bool {
 }
 
 /// Event based interface for the editor. This converts the [`InputEvent`] into an
-/// [`EditorEvent`] and then executes it. Returns a new [`EditorBuffer`] if the operation
-/// was applied otherwise returns [None].
-///
-/// # Errors
-///
-/// Returns an error if the event processing fails.
+/// [`EditorEvent`] and then executes it. Returns whether the event was applied.
 pub fn apply_event(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
     input_event: InputEvent,
     clipboard: &mut impl ClipboardService,
-) -> CommonResult<EditorEngineApplyEventResult> {
+) -> EditorEngineApplyEventResult {
     let editor_config = &engine.config_options;
 
     // If in ReadOnly mode, filter out all input events that are not navigation keys, by
@@ -90,7 +85,7 @@ pub fn apply_event(
     if let EditMode::ReadOnly = editor_config.edit_mode
         && !input_event_matches_navigation_keys(&input_event)
     {
-        return Ok(EditorEngineApplyEventResult::NotApplied);
+        return EditorEngineApplyEventResult::NotApplied;
     }
 
     if let Ok(editor_event) = EditorEvent::try_from(input_event) {
@@ -112,15 +107,12 @@ pub fn apply_event(
             buffer.add();
         }
 
-        Ok(EditorEngineApplyEventResult::Applied)
+        EditorEngineApplyEventResult::Applied
     } else {
-        Ok(EditorEngineApplyEventResult::NotApplied)
+        EditorEngineApplyEventResult::NotApplied
     }
 }
 
-/// # Errors
-///
-/// Returns an error if the rendering operation fails.
 pub fn render_engine(
     engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
@@ -128,7 +120,7 @@ pub fn render_engine(
     has_focus: &mut HasFocus,
     window_size: VPSize,
     pipeline: &mut RenderPipeline,
-) -> CommonResult {
+) {
     engine.current_box = current_box.into();
 
     if buffer.is_empty() {
@@ -150,8 +142,6 @@ pub fn render_engine(
 
         pipeline.push(ZOrder::Normal, render_ops);
     }
-
-    ok!()
 }
 
 pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVec) {
@@ -429,7 +419,7 @@ mod syn_hi_r3bl_path {
         mut render_ops: &mut RenderOpIRVec,
         editor_engine: &mut EditorEngine,
         max_display_col_count: VPWidth,
-    ) -> CommonResult {
+    ) -> Result<(), MdParseError> {
         throws!({
             // Save some values that are needed later. But are copied here to avoid.
             // multiple borrows.
@@ -730,8 +720,7 @@ mod tests {
             key_press! { @char ModifierKeysMask::new().with_ctrl(), 'z' },
         );
 
-        let result = apply_event(&mut buffer, &mut engine, undo_event, &mut clipboard)
-            .expect("conversion error");
+        let result = apply_event(&mut buffer, &mut engine, undo_event, &mut clipboard);
         assert!(matches!(result, EditorEngineApplyEventResult::Applied));
 
         // Verify AST cache was cleared (after our fix)
@@ -747,8 +736,7 @@ mod tests {
             key_press! { @char ModifierKeysMask::new().with_ctrl(), 'y' },
         );
 
-        let result = apply_event(&mut buffer, &mut engine, redo_event, &mut clipboard)
-            .expect("conversion error");
+        let result = apply_event(&mut buffer, &mut engine, redo_event, &mut clipboard);
         assert!(matches!(result, EditorEngineApplyEventResult::Applied));
 
         // Verify AST cache was cleared.
@@ -770,8 +758,7 @@ mod tests {
             let insert_event = InputEvent::Keyboard(key_press! { @char 'a' });
 
             let result =
-                apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard)
-                    .expect("conversion error");
+                apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard);
             assert!(matches!(result, EditorEngineApplyEventResult::Applied));
             assert!(engine.ast_cache_is_empty());
         }
@@ -786,8 +773,7 @@ mod tests {
                 InputEvent::Keyboard(key_press! { @special SpecialKey::Delete });
 
             let result =
-                apply_event(&mut buffer, &mut engine, delete_event, &mut clipboard)
-                    .expect("conversion error");
+                apply_event(&mut buffer, &mut engine, delete_event, &mut clipboard);
             assert!(matches!(result, EditorEngineApplyEventResult::Applied));
             assert!(engine.ast_cache_is_empty());
         }
@@ -808,8 +794,7 @@ mod tests {
                 InputEvent::Keyboard(key_press! { @special SpecialKey::Backspace });
 
             let result =
-                apply_event(&mut buffer, &mut engine, backspace_event, &mut clipboard)
-                    .expect("conversion error");
+                apply_event(&mut buffer, &mut engine, backspace_event, &mut clipboard);
             assert!(matches!(result, EditorEngineApplyEventResult::Applied));
             assert!(engine.ast_cache_is_empty());
         }
@@ -837,8 +822,7 @@ mod tests {
         ];
 
         for event in nav_events {
-            let result = apply_event(&mut buffer, &mut engine, event, &mut clipboard)
-                .expect("conversion error");
+            let result = apply_event(&mut buffer, &mut engine, event, &mut clipboard);
             assert!(matches!(result, EditorEngineApplyEventResult::Applied));
             // Navigation should NOT clear the AST cache.
             assert!(!engine.ast_cache_is_empty());
@@ -857,15 +841,13 @@ mod tests {
         // Try to insert a character in readonly mode.
         let insert_event = InputEvent::Keyboard(key_press! { @char 'a' });
 
-        let result = apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard)
-            .expect("conversion error");
+        let result = apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard);
         assert!(matches!(result, EditorEngineApplyEventResult::NotApplied));
 
         // Navigation should still work.
         let nav_event = InputEvent::Keyboard(key_press! { @special SpecialKey::Right });
 
-        let result = apply_event(&mut buffer, &mut engine, nav_event, &mut clipboard)
-            .expect("conversion error");
+        let result = apply_event(&mut buffer, &mut engine, nav_event, &mut clipboard);
         assert!(matches!(result, EditorEngineApplyEventResult::Applied));
     }
 
@@ -938,8 +920,7 @@ mod tests {
             &mut has_focus,
             window_size,
             &mut pipeline,
-        )
-        .expect("render_engine should succeed");
+        );
 
         // Verify: Check that row 20 is NOT rendered (the 21st c_row, 0-indexed)
         // because viewport bounds are [0, 20) exclusive.

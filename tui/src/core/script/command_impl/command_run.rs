@@ -1,10 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::CommandOutputResult;
-use miette::{Context, IntoDiagnostic};
-use std::process::Stdio;
-use tokio::{io::AsyncWriteExt,
-            process::{Child, Command}};
+use crate::ProcessExecutionOutcome;
+use std::process::{ExitStatus, Stdio};
+use tokio::{io::AsyncWriteExt, process::Child};
 
 /// Disambiguate the [`tokio::process::Command`] type from the [`std::process::Command`]
 /// type. Here are the key differences between them:
@@ -24,6 +22,94 @@ use tokio::{io::AsyncWriteExt,
 ///
 /// [`tokio`]: tokio
 pub type TokioCommand = tokio::process::Command;
+
+/// Extension trait on [`TokioCommand`] for running a command non-interactively and
+/// returning its captured [`stdout`] bytes with typed [`CommandRunError`] diagnostics.
+///
+/// Use this trait (typically alongside [`command!`]) when you want ergonomic method
+/// syntax (`cmd.run().await`) instead of calling [`try_run`] directly and manually checking
+/// [`std::process::Output::status`].
+///
+/// [`command!`]: crate::command
+/// [`stdout`]: std::io::stdout
+pub trait Run {
+    /// Executes the command non-interactively with piped [`stdin`], [`stdout`], and
+    /// [`stderr`], returning the captured [`stdout`] bytes on zero exit status.
+    ///
+    /// Delegates to [`try_run`]. The returned future is [`Send`], so it can be awaited
+    /// inside spawned Tokio tasks.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CommandRunError`] if:
+    /// - The command program does not exist or cannot be executed
+    ///   ([`CommandRunError::SpawnFailed`]).
+    /// - The command exits with a non-zero status ([`CommandRunError::NonZeroExit`]).
+    ///
+    /// [`stderr`]: std::io::stderr
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    fn run(
+        &mut self,
+    ) -> impl std::future::Future<Output = Result<Vec<u8>, CommandRunError>> + Send;
+}
+
+impl Run for TokioCommand {
+    async fn run(&mut self) -> Result<Vec<u8>, CommandRunError> { try_run(self).await }
+}
+
+/// Outcome of running a [`TokioCommand`] together with the [`TokioCommand`] that was
+/// executed.
+#[derive(Debug)]
+pub struct CommandRunOutcome<T> {
+    /// The result produced by the command that executed.
+    pub result: Result<T, CommandRunError>,
+
+    /// The command that was executed to produce the result. This can be used for
+    /// display, logging, or auditing.
+    pub command: TokioCommand,
+}
+
+/// Error returned by [`Run::run`], [`try_run`], and [`try_pipe`] when spawning, piping, or
+/// waiting on a child process fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum CommandRunError {
+    /// Failed to start the command process.
+    #[error("Command '{program}' failed to start")]
+    SpawnFailed {
+        /// Program name or path passed to [`TokioCommand`].
+        program: String,
+        /// Underlying OS spawn error.
+        #[source]
+        src_err: std::io::Error,
+    },
+
+    /// Command ran to completion and exited with a non-zero status.
+    #[error("Command '{cmd_str}' exited with non-zero status {status}: {stderr}")]
+    NonZeroExit {
+        /// Debug representation of the executed command.
+        cmd_str: String,
+        /// Non-zero exit status returned by the child process.
+        status: ExitStatus,
+        /// Captured [`stderr`] decoded as lossy [`UTF-8`].
+        ///
+        /// [`stderr`]: std::io::stderr
+        /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
+        stderr: String,
+    },
+
+    /// Writing piped bytes to a child process [`stdin`] failed.
+    ///
+    /// [`stdin`]: std::io::stdin
+    #[error("Pipe I/O failed while running '{program}'")]
+    PipeIo {
+        /// Program name of the receiving command in a pipeline.
+        program: String,
+        /// Underlying OS I/O error.
+        #[source]
+        src_err: std::io::Error,
+    },
+}
 
 /// This macro to create a [`TokioCommand`] that receives a set of arguments and
 /// returns it.
@@ -141,54 +227,16 @@ macro_rules! command {
     }};
 }
 
-pub trait Run {
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The command program does not exist or cannot be executed
-    /// - The command fails with a non-zero exit status
-    /// - I/O errors occur during command execution
-    fn run(
-        &mut self,
-    ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
-
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The command program does not exist or cannot be executed
-    /// - The command fails with a non-zero exit status
-    /// - I/O errors occur during command execution
-    fn run_interactive(
-        &mut self,
-    ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
-}
-
-impl Run for TokioCommand {
-    #[allow(clippy::missing_errors_doc)]
-    async fn run(&mut self) -> miette::Result<Vec<u8>> { run(self).await }
-
-    #[allow(clippy::missing_errors_doc)]
-    async fn run_interactive(&mut self) -> miette::Result<Vec<u8>> {
-        run_interactive(self).await
-    }
-}
-
 #[macro_export]
 macro_rules! bail_command_ran_and_failed {
-        ($command:expr, $status:expr, $stderr:expr) => {
-            use $crate::{fg_lizard_green, fg_frozen_blue, fg_magenta};
-        return Err(miette::miette!(
-            "{name} failed\n{cmd_label}: '{cmd:?}'\n{status_label}: '{status}'\n{stderr_label}: '{stderr}'",
-            cmd_label = fg_lizard_green("[command]"),
-            status_label = fg_lizard_green("[status]"),
-            stderr_label = fg_lizard_green("[stderr]"),
-            name = fg_frozen_blue(stringify!($command)),
-            cmd = $command,
-            status = fg_magenta(&format!("{:?}", $status)),
-            stderr = fg_magenta(&String::from_utf8_lossy(&$stderr)),
-        ));
-        };
-    }
+    ($command:expr, $status:expr, $stderr:expr) => {
+        return Err($crate::CommandRunError::NonZeroExit {
+            cmd_str: format!("{:?}", $command),
+            status: $status,
+            stderr: String::from_utf8_lossy(&$stderr).into_owned(),
+        });
+    };
+}
 
 /// This command is not allowed to have user interaction. It does not inherit the
 /// [`stdin`], [`stdout`], [`stderr`] from the parent (aka current) process.
@@ -197,78 +245,38 @@ macro_rules! bail_command_ran_and_failed {
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`CommandRunError`] if:
 /// - The command program does not exist or cannot be executed
-/// - The command fails with a non-zero exit status
-/// - I/O errors occur during command execution
+///   ([`CommandRunError::SpawnFailed`])
+/// - The command fails with a non-zero exit status ([`CommandRunError::NonZeroExit`])
 ///
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
-pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
+pub async fn try_run(command: &mut TokioCommand) -> Result<Vec<u8>, CommandRunError> {
     // Try to run command (might be unable to run it if the program is invalid).
-    let cmd_output_result = command
+    let res_output = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
         .await;
 
-    match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::Success(output) => ok!(output.stdout),
-        CommandOutputResult::NonZeroExit(output) => {
+    match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::Success(output) => ok!(output.stdout),
+        ProcessExecutionOutcome::NonZeroExit(output) => {
             bail_command_ran_and_failed!(command, output.status, output.stderr);
         }
-        CommandOutputResult::SpawnFailed(err) => Err(err)
-            .into_diagnostic()
-            .wrap_err_with(|| miette::miette!("Unable to run command: {:?}", command)),
-    }
-}
-
-/// This command is allowed to have full user interaction. It inherits the [`stdin`],
-/// [`stdout`], [`stderr`] from the parent (aka current) process.
-///
-/// See the tests for examples of how to use this.
-///
-/// Here's an example which will block on user input from an interactive terminal if
-/// executed:
-///
-/// ```
-/// use r3bl_tui::command;
-///
-/// let mut command_one = command!(
-///     program => "/usr/bin/bash",
-///     args => "-c", "read -p 'Enter your input: ' input"
-/// );
-/// ```
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The command program does not exist or cannot be executed
-/// - The command fails with a non-zero exit status
-/// - I/O errors occur during command execution
-///
-/// [`stderr`]: std::io::stderr
-/// [`stdin`]: std::io::stdin
-/// [`stdout`]: std::io::stdout
-pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
-    // Try to run command (might be unable to run it if the program is invalid).
-    let cmd_output_result = command
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .await;
-
-    match CommandOutputResult::from(cmd_output_result) {
-        CommandOutputResult::Success(output) => ok!(output.stdout),
-        CommandOutputResult::NonZeroExit(output) => {
-            bail_command_ran_and_failed!(command, output.status, output.stderr);
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
+            Err(CommandRunError::SpawnFailed {
+                program: command
+                    .as_std()
+                    .get_program()
+                    .to_string_lossy()
+                    .into_owned(),
+                src_err,
+            })
         }
-        CommandOutputResult::SpawnFailed(err) => Err(err)
-            .into_diagnostic()
-            .wrap_err_with(|| miette::miette!("Unable to run command: {:?}", command)),
     }
 }
 
@@ -293,33 +301,39 @@ pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
 ///
 /// # Errors
 ///
-/// Returns an error if:
+/// Returns [`CommandRunError`] if:
 /// - Either command program does not exist or cannot be executed
-/// - Either command fails with a non-zero exit status
-/// - I/O errors occur during command execution or piping
+///   ([`CommandRunError::SpawnFailed`])
+/// - Either command fails with a non-zero exit status ([`CommandRunError::NonZeroExit`])
+/// - Writing piped bytes to `command_two` fails ([`CommandRunError::PipeIo`])
 ///
 /// [`stderr`]: std::io::stderr
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
-pub async fn pipe(
-    command_one: &mut Command,
-    command_two: &mut Command,
-) -> miette::Result<String> {
+pub async fn try_pipe(
+    command_one: &mut TokioCommand,
+    command_two: &mut TokioCommand,
+) -> Result<String, CommandRunError> {
     // Run the first command & get the output.
     let command_one = command_one
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     // Try to run command_one (might be unable to run it if the program is invalid).
-    let cmd_output_result_one = command_one.output().await;
-    let command_one_stdout = match CommandOutputResult::from(cmd_output_result_one) {
-        CommandOutputResult::Success(output) => output.stdout,
-        CommandOutputResult::NonZeroExit(output) => {
+    let res_output_one = command_one.output().await;
+    let command_one_stdout = match ProcessExecutionOutcome::from(res_output_one) {
+        ProcessExecutionOutcome::Success(output) => output.stdout,
+        ProcessExecutionOutcome::NonZeroExit(output) => {
             bail_command_ran_and_failed!(command_one, output.status, output.stderr);
         }
-        CommandOutputResult::SpawnFailed(err) => {
-            return Err(err).into_diagnostic().wrap_err_with(|| {
-                miette::miette!("Unable to run command_one: {:?}", command_one)
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
+            return Err(CommandRunError::SpawnFailed {
+                program: command_one
+                    .as_std()
+                    .get_program()
+                    .to_string_lossy()
+                    .into_owned(),
+                src_err,
             });
         }
     };
@@ -329,38 +343,46 @@ pub async fn pipe(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    let command_two_program = command_two
+        .as_std()
+        .get_program()
+        .to_string_lossy()
+        .into_owned();
     let mut child_handle: Child =
         command_two
             .spawn()
-            .into_diagnostic()
-            .wrap_err(miette::miette!(
-                "Unable to run command_two: {:?}",
-                command_two
-            ))?;
+            .map_err(|src_err| CommandRunError::SpawnFailed {
+                program: command_two_program.clone(),
+                src_err,
+            })?;
     if let Some(mut child_stdin) = child_handle.stdin.take() {
         child_stdin
             .write_all(&command_one_stdout)
             .await
-            .into_diagnostic()?;
+            .map_err(|src_err| CommandRunError::PipeIo {
+                program: command_two_program.clone(),
+                src_err,
+            })?;
     }
-    let cmd_output_result_two = child_handle.wait_with_output().await;
-    match CommandOutputResult::from(cmd_output_result_two) {
-        CommandOutputResult::Success(output) => {
+    let res_output_two = child_handle.wait_with_output().await;
+    match ProcessExecutionOutcome::from(res_output_two) {
+        ProcessExecutionOutcome::Success(output) => {
             ok!(String::from_utf8_lossy(&output.stdout).to_string())
         }
-        CommandOutputResult::NonZeroExit(output) => {
+        ProcessExecutionOutcome::NonZeroExit(output) => {
             bail_command_ran_and_failed!(command_two, output.status, output.stderr);
         }
-        CommandOutputResult::SpawnFailed(err) => {
-            Err(err).into_diagnostic().wrap_err_with(|| {
-                miette::miette!("Unable to run command_two: {:?}", command_two)
+        ProcessExecutionOutcome::SpawnFailed(src_err) => {
+            Err(CommandRunError::SpawnFailed {
+                program: command_two_program,
+                src_err,
             })
         }
     }
 }
 
 #[cfg(test)]
-mod tests_command_runner {
+mod tests_command_run {
     use super::*;
     use crate::ItemsOwned;
 
@@ -388,17 +410,6 @@ mod tests_command_runner {
 
         // This captures the output.
         assert_eq!(String::from_utf8_lossy(&output), "Hello, world!\n");
-
-        // This dumps the output to the parent process' stdout & is captured by
-        // tokio::process::Command but not by std::process::Command.
-        let output = command!(
-            program => "echo",
-            args => "Hello, world!",
-        )
-        .run_interactive()
-        .await
-        .expect("conversion error");
-        assert_eq!(String::from_utf8_lossy(&output), "Hello, world!\n");
     }
 
     /// Windows variant: `echo` is a shell builtin (no `echo.exe`), so we
@@ -420,15 +431,6 @@ mod tests_command_runner {
         .await
         .expect("conversion error");
 
-        assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
-
-        let output = command!(
-            program => "cmd",
-            args => "/c", "echo", "Hello,", "world!",
-        )
-        .run_interactive()
-        .await
-        .expect("conversion error");
         assert_eq!(String::from_utf8_lossy(&output).trim(), "Hello, world!");
     }
 
@@ -463,7 +465,7 @@ mod tests_command_runner {
             program => "bash",
             args => "-c", "read -p 'Enter your input: ' input"
         );
-        let result = pipe(&mut command_one, &mut command_two).await;
+        let result = try_pipe(&mut command_one, &mut command_two).await;
         // This is not an error when using tokio::process::Command. However, when using
         // std::process::Command, this will result in an error.
         assert_eq!("", result.expect("conversion error"));
@@ -471,7 +473,7 @@ mod tests_command_runner {
 
     #[tokio::test]
     async fn test_pipe_invalid_command() {
-        let result = pipe(
+        let result = try_pipe(
             &mut command!(
                 program => "does_not_exist",
                 args => "Hello, world!",
@@ -500,11 +502,10 @@ mod tests_command_runner {
         .await;
 
         match result {
-            Err(err) => {
-                let err_str = format!("{err:?}");
-                assert!(err_str.contains("failed"));
+            Err(CommandRunError::NonZeroExit { status, .. }) => {
+                assert_eq!(status.code(), Some(42));
             }
-            Ok(_) => panic!("Expected error from non-zero exit status"),
+            other => panic!("Expected NonZeroExit(42), got: {other:?}"),
         }
     }
 }

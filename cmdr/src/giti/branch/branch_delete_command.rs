@@ -6,12 +6,11 @@ use crate::{AnalyticsAction, common,
             giti::{BranchDeleteDetails, CommandRunDetails,
                    ui_str::{self}},
             report_analytics};
-use r3bl_tui::{BranchExists, CliTextInline, CommandRunResult, CommonResult,
+use r3bl_tui::{BranchExists, CliTextInline, CommandRunOutcome, CommandRunReport,
                DefaultIoDevices, InlineString, InlineVec, ItemsOwned,
-               TuiAvailabilityChooseExt, choose, cli_text_inline, cli_text_line,
-               inline_vec,
+               TuiAvailabilityChooseExt, cli_text_inline, cli_text_line, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
-               try_delete_branches, try_get_local_branches, vp_height};
+               try_choose, try_delete_branches, try_get_local_branches, vp_height};
 use smallvec::smallvec;
 
 /// The main function for `giti branch delete` command.
@@ -22,9 +21,9 @@ use smallvec::smallvec;
 /// - Git operations fail
 /// - User interaction fails
 /// - Branch deletion fails (protected branch, not found, etc.)
-pub async fn handle_branch_delete_command(
+pub async fn try_handle_branch_delete_command(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+) -> miette::Result<CommandRunReport<CommandRunDetails>> {
     report_analytics::start_task_to_generate_event(
         String::new(),
         AnalyticsAction::GitiBranchDelete,
@@ -37,13 +36,12 @@ pub async fn handle_branch_delete_command(
         // - branch_name does not exist locally.
         // - branch_name is the same as the current branch.
         let branch_name: InlineString = branch_name.trim().into();
-        let (res, _cmd) = try_get_local_branches().await;
-        let (_, branch_info) = res?;
+        let (_, branch_info) = try_get_local_branches().await.result?;
         if branch_name.is_empty()
             || branch_info.exists_locally(&branch_name) == BranchExists::No
             || branch_info.current_branch == branch_name
         {
-            return Ok(CommandRunResult::Noop(
+            return Ok(CommandRunReport::Noop(
                 ui_str::branch_delete_display::info_unable_to_msg(),
                 details::empty(),
             ));
@@ -54,18 +52,18 @@ pub async fn handle_branch_delete_command(
         let (confirm_header, confirm_options) =
             user_interaction::create_confirmation_prompt(&branch_to_delete);
         let selected_action =
-            user_interaction::get_user_confirmation(confirm_header, confirm_options)
+            user_interaction::try_get_user_confirmation(confirm_header, confirm_options)
                 .await?;
 
         match selected_action {
             // Actually delete the branch.
             parse_user_choice::Selection::Delete => {
-                return command_execute::delete_selected_branches(&branch_to_delete)
+                return command_execute::try_delete_selected_branches(&branch_to_delete)
                     .await;
             }
             // Do nothing.
             parse_user_choice::Selection::ExitProgram => {
-                return Ok(CommandRunResult::Noop(
+                return Ok(CommandRunReport::Noop(
                     ui_str::branch_delete_display::info_chose_not_to_msg(),
                     details::empty(),
                 ));
@@ -75,17 +73,16 @@ pub async fn handle_branch_delete_command(
 
     // Only proceed if some local branches exist (can't delete anything if there aren't
     // any).
-    let (res, _cmd) = try_get_local_branches().await;
-    if let Ok((_, branch_info)) = res
+    if let Ok((_, branch_info)) = try_get_local_branches().await.result
         && !branch_info.other_branches.is_empty()
     {
         let maybe_branches =
-            user_interaction::select_branches_to_delete(branch_info.other_branches)
+            user_interaction::try_select_branches_to_delete(branch_info.other_branches)
                 .await?;
 
         // If the user didn't select any branches, we don't need to do anything.
         let Some(branches) = maybe_branches else {
-            return Ok(CommandRunResult::Noop(
+            return Ok(CommandRunReport::Noop(
                 ui_str::branch_delete_display::info_chose_not_to_msg(),
                 details::empty(),
             ));
@@ -94,15 +91,15 @@ pub async fn handle_branch_delete_command(
         let (confirm_header, confirm_options) =
             user_interaction::create_confirmation_prompt(&branches);
         let selected_action =
-            user_interaction::get_user_confirmation(confirm_header, confirm_options)
+            user_interaction::try_get_user_confirmation(confirm_header, confirm_options)
                 .await?;
 
         if let parse_user_choice::Selection::Delete = selected_action {
-            return command_execute::delete_selected_branches(&branches).await;
+            return command_execute::try_delete_selected_branches(&branches).await;
         }
     }
 
-    Ok(CommandRunResult::Noop(
+    Ok(CommandRunReport::Noop(
         ui_str::branch_delete_display::info_chose_not_to_msg(),
         details::empty(),
     ))
@@ -134,9 +131,9 @@ mod user_interaction {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn select_branches_to_delete(
+    pub async fn try_select_branches_to_delete(
         branch_options: ItemsOwned,
-    ) -> CommonResult<Option<ItemsOwned>> {
+    ) -> miette::Result<Option<ItemsOwned>> {
         let header_with_instructions = {
             let last_line = cli_text_line![cli_text_inline(
                 ui_str::branch_delete_display::select_branches_msg_raw(),
@@ -147,7 +144,7 @@ mod user_interaction {
 
         let maybe_results = {
             let mut default_io_devices = DefaultIoDevices::default();
-            choose(
+            try_choose(
                 header_with_instructions,
                 branch_options,
                 Some(vp_height(20)),
@@ -202,10 +199,10 @@ mod user_interaction {
         }
     }
 
-    pub async fn get_user_confirmation(
+    pub async fn try_get_user_confirmation(
         header_text: InlineString,
         confirmation_options: ItemsOwned,
-    ) -> CommonResult<parse_user_choice::Selection> {
+    ) -> miette::Result<parse_user_choice::Selection> {
         // Apply one style to the first line of the header, and another style to the rest
         // of the lines. Then prefix with the instruction header.
         let header_with_instructions = {
@@ -234,7 +231,7 @@ mod user_interaction {
 
         let user_choice = {
             let mut default_io_devices = DefaultIoDevices::default();
-            choose(
+            try_choose(
                 header_with_instructions,
                 confirmation_options,
                 Some(vp_height(20)),
@@ -255,25 +252,28 @@ mod command_execute {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn delete_selected_branches(
+    pub async fn try_delete_selected_branches(
         branches: &ItemsOwned,
-    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
         debug_assert!(!branches.is_empty());
-        let (res_output, cmd) = try_delete_branches(branches).await;
+        let CommandRunOutcome {
+            result: res_output,
+            command: cmd,
+        } = try_delete_branches(branches).await;
         match res_output {
             Ok(()) => {
-                let it = CommandRunResult::Run(
+                let it = CommandRunReport::Run(
                     ui_str::branch_delete_display::info_success_msg(branches),
                     details::with_details(branches.clone()),
                     cmd,
                 );
                 Ok(it)
             }
-            Err(report) => {
-                let it = CommandRunResult::Fail(
+            Err(err) => {
+                let it = CommandRunReport::Fail(
                     ui_str::branch_delete_display::error_failed_msg(branches, None),
                     cmd,
-                    report,
+                    err.into(),
                 );
                 Ok(it)
             }

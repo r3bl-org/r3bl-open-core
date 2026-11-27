@@ -15,7 +15,7 @@ impl<S: CanvasStorage> OfsBuf<S> {
         let mut applied_count = 0;
 
         for (pos, char) in changes {
-            if self.set_char(pos, char).is_ok() {
+            if self.try_set_char(pos, char).is_ok() {
                 applied_count += 1;
             }
         }

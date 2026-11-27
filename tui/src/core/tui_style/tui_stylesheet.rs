@@ -1,7 +1,13 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::TuiStyle;
-use crate::{CommonError, CommonResult, InlineVec, TuiStyleId};
+use crate::{InlineVec, TuiStyleId};
+
+/// Error returned when adding a [`TuiStyle`] without a defined [`TuiStyleId`] to a
+/// [`TuiStylesheet`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Style id must be defined")]
+pub struct StylesheetError;
 
 #[derive(Default, Debug, Clone)]
 pub struct TuiStylesheet {
@@ -56,13 +62,11 @@ impl TuiStylesheet {
 
     /// # Errors
     ///
-    /// Returns an error if the style id is not defined.
-    pub fn add_style(&mut self, style: TuiStyle) -> CommonResult {
+    /// Returns [`StylesheetError`] if the style id is not defined.
+    pub fn try_add_style(&mut self, style: TuiStyle) -> Result<(), StylesheetError> {
         throws!({
             if style.id.is_none() {
-                return CommonError::new_error_result_with_only_msg(
-                    "Style id must be defined",
-                );
+                return Err(StylesheetError);
             }
             self.styles.push(style);
         });
@@ -70,11 +74,14 @@ impl TuiStylesheet {
 
     /// # Errors
     ///
-    /// Returns an error if any of the styles have undefined ids.
-    pub fn add_styles(&mut self, styles: InlineVec<TuiStyle>) -> CommonResult {
+    /// Returns [`StylesheetError`] if any of the styles have undefined ids.
+    pub fn try_add_styles(
+        &mut self,
+        styles: InlineVec<TuiStyle>,
+    ) -> Result<(), StylesheetError> {
         throws!({
             for style in styles {
-                self.add_style(style)?;
+                self.try_add_style(style)?;
             }
         });
     }
@@ -119,18 +126,17 @@ impl TuiStylesheet {
 
 /// Macro to make building [`TuiStylesheet`] easy.
 ///
-/// This returns a [`CommonResult`] because it checks to see that all [`TuiStyle`]s that
-/// are added have an `id`. If they don't, then an a [`CommonError`] is thrown. This is to
-/// ensure that valid styles are added to a stylesheet. Without an `id`, they can't be
-/// retrieved after they're added here, rendering them useless.
+/// This uses `?` to propagate [`StylesheetError`] when any added [`TuiStyle`] is missing
+/// an `id`. Without an `id`, styles can't be retrieved after they're added here, rendering
+/// them useless.
 ///
 /// Here's an example.
 /// ```
 /// # use r3bl_tui::{
 ///     ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet,
-///     CommonResult, throws_with_return, TuiStylesheet, tui_style_attrib, TuiStyleId
+///     throws_with_return, TuiStylesheet, tui_style_attrib, TuiStyleId
 /// };
-/// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
+/// fn create_tui_stylesheet() -> miette::Result<TuiStylesheet> {
 ///   throws_with_return!({
 ///     tui_stylesheet! {
 ///         TuiStyle {
@@ -183,18 +189,20 @@ macro_rules! tui_stylesheet {
 pub trait TryAdd<OtherType = Self> {
     /// # Errors
     ///
-    /// Returns an error if the operation fails (e.g., invalid style data).
-    fn try_add(&mut self, other: OtherType) -> CommonResult;
+    /// Returns [`StylesheetError`] if the operation fails (e.g., missing style id).
+    fn try_add(&mut self, other: OtherType) -> Result<(), StylesheetError>;
 }
 
 impl TryAdd<TuiStyle> for TuiStylesheet {
     #[allow(clippy::missing_errors_doc)]
-    fn try_add(&mut self, other: TuiStyle) -> CommonResult { self.add_style(other) }
+    fn try_add(&mut self, other: TuiStyle) -> Result<(), StylesheetError> {
+        self.try_add_style(other)
+    }
 }
 
 impl TryAdd<InlineVec<TuiStyle>> for TuiStylesheet {
     #[allow(clippy::missing_errors_doc)]
-    fn try_add(&mut self, other: InlineVec<TuiStyle>) -> CommonResult {
-        self.add_styles(other)
+    fn try_add(&mut self, other: InlineVec<TuiStyle>) -> Result<(), StylesheetError> {
+        self.try_add_styles(other)
     }
 }

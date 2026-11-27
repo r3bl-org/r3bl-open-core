@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{GetMemSize, PixelChar, RangeExclusive, VPLength, VPRow, Viewport,
-            ViewportPanValidity};
+use crate::{GetMemSize, OfsBufBoundsError, PixelChar, RangeExclusive, VPLength, VPRow,
+            Viewport, ViewportPanValidity};
 
 /// Abstract 2D storage engine backing an [`OfsBuf`].
 ///
@@ -261,7 +261,7 @@ pub trait CanvasStorage: GetMemSize {
         &mut self,
         row_index_1: VPRow,
         row_index_2: VPRow,
-    ) -> miette::Result<()>;
+    ) -> Result<(), OfsBufBoundsError>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

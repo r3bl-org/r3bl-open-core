@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::CanvasStorage;
-use crate::{CPos, CRow, CanvasRangeExt, GetMemSize, PixelChar, PixelCharLine,
-            RangeBoundsResult, RangeExclusive, RangeValidityStatus, ScrollbackAmount,
-            ShiftLinesDirection, StorageLineLimit, VPLength, VPRow, VPSize, Viewport,
-            ViewportToCanvasExt, scrollback_amount, vp_height};
+use crate::{CPos, CRow, CanvasRangeExt, GetMemSize, OfsBufBoundsError, PixelChar,
+            PixelCharLine, RangeBoundsResult, RangeExclusive, RangeValidityStatus,
+            ScrollbackAmount, ShiftLinesDirection, StorageLineLimit, VPLength, VPRow,
+            VPSize, Viewport, ViewportToCanvasExt, scrollback_amount, vp_height};
 use std::{cmp::{max, min},
           collections::VecDeque};
 
@@ -412,11 +412,12 @@ impl CanvasStorage for GrowableBuffer {
         &mut self,
         row_index_1: VPRow,
         row_index_2: VPRow,
-    ) -> miette::Result<()> {
-        if self.viewport.contains_row(row_index_1) != RangeBoundsResult::Within
-            || self.viewport.contains_row(row_index_2) != RangeBoundsResult::Within
-        {
-            return Err(miette::miette!("Row index out of bounds"));
+    ) -> Result<(), OfsBufBoundsError> {
+        if self.viewport.contains_row(row_index_1) != RangeBoundsResult::Within {
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: row_index_1 });
+        }
+        if self.viewport.contains_row(row_index_2) != RangeBoundsResult::Within {
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: row_index_2 });
         }
 
         let abs_row_1 = self.viewport.to_canvas(row_index_1);

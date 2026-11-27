@@ -196,12 +196,12 @@ pub mod archive_server {
     ///         is `2xx` (`is_success()`).
     ///       - This is hardcoded.
     ///    3. `GET /releases/download/.../*.tar.gz.sha256` -> SHA-256 checksum
-    ///       - Requested by [`sha256_checksum::fetch_expected_sha256`][7] (called from
-    ///         [`download_and_verify_archive`][8]) for verification.
+    ///       - Requested by [`sha256_checksum::try_fetch_expected_sha256`][7] (called from
+    ///         [`try_download_and_verify_archive`][8]) for verification.
     ///       - Derived from `archive_bytes`.
     ///    4. `GET /releases/download/.../*.tar.gz` -> raw `.tar.gz` archive bytes
-    ///       - Requested by [`archive_stream::stream_archive_to_disk`][9] (called from
-    ///         [`download_and_verify_archive`][8]) and streamed to extract and
+    ///       - Requested by [`archive_stream::try_stream_archive_to_disk`][9] (called from
+    ///         [`try_download_and_verify_archive`][8]) and streamed to extract and
     ///         self-replace the running binary in place.
     ///       - Derived from `archive_bytes`.
     ///
@@ -213,9 +213,9 @@ pub mod archive_server {
     /// [4]: crate::self_upgrade::try_fetch_manifest
     /// [5]: crate::self_upgrade::ReleaseAsset::check_available
     /// [6]: crate::self_upgrade::UpgradeSource::try_resolve
-    /// [7]: crate::self_upgrade::sha256_checksum::fetch_expected_sha256
-    /// [8]: crate::self_upgrade::download_and_verify_archive
-    /// [9]: crate::self_upgrade::archive_stream::stream_archive_to_disk
+    /// [7]: crate::self_upgrade::sha256_checksum::try_fetch_expected_sha256
+    /// [8]: crate::self_upgrade::try_download_and_verify_archive
+    /// [9]: crate::self_upgrade::archive_stream::try_stream_archive_to_disk
     /// [`self_upgrade`]: mod@crate::self_upgrade
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     #[must_use]
@@ -267,8 +267,8 @@ pub mod archive_server {
         distribution: CrateDistribution,
         status: usize,
     ) -> ServerSpawnResult {
-        // Valid 64-char hex digest so `fetch_expected_sha256` succeeds and execution
-        // proceeds to `stream_archive_to_disk`.
+        // Valid 64-char hex digest so `try_fetch_expected_sha256` succeeds and execution
+        // proceeds to `try_stream_archive_to_disk`.
         let empty_sha256 = Sha256Digest::from_bytes(b"");
         spawn_archive_routes(
             distribution,

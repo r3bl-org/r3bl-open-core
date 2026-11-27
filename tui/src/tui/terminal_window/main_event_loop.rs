@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
-            ColorWheelSpeed, CommonResult, ComponentRegistryMap, Continuation,
+            ColorWheelSpeed, ComponentRegistryMap, Continuation,
             DEBUG_TUI, INFO_DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
@@ -42,7 +42,7 @@ use tokio::sync::mpsc;
 ///
 /// # Returns
 ///
-/// Returns a [`MainEventLoopFuture`] that resolves to a [`CommonResult`] containing:
+/// Returns a [`MainEventLoopFuture`] that resolves to a [`miette::Result`] containing:
 /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
 /// * `event_stream` - The [`InputDevice`] used for input events.
 /// * [`stdout`] - The [`OutputDevice`] used for output.
@@ -149,7 +149,7 @@ use tokio::sync::mpsc;
 /// [`stdout`]: std::io::stdout
 /// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
 /// [`Unpin`]: std::marker::Unpin
-pub fn main_event_loop_impl<S, AS>(
+pub fn try_main_event_loop_impl<S, AS>(
     app: BoxedSafeApp<S, AS>,
     exit_keys: Vec<InputEvent>,
     state: S,
@@ -172,14 +172,14 @@ where
         };
 
         // Start full screen TUI mode.
-        let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
+        let _fullscreen_tui_mode_guard = output_device.try_setup_full_screen_tui()?;
 
         let event_loop_state = EventLoopState::initialize(
             state,
             initial_size,
             output_device.clone(),
             &mut app,
-        )?;
+        );
 
         let result = run_main_event_loop(
             event_loop_state,
@@ -195,7 +195,7 @@ where
         // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here. RAII
         // guards securely restore the terminal to its original state.
 
-        result
+        Ok(result)
     })
 }
 
@@ -225,7 +225,7 @@ where
         initial_size: VPSize,
         output_device: OutputDevice,
         app: &mut BoxedSafeApp<S, AS>,
-    ) -> CommonResult<Self> {
+    ) -> Self {
         // Create communication channel.
         let (main_thread_channel_sender, main_thread_channel_receiver) =
             mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(
@@ -241,7 +241,7 @@ where
             initial_size,
             output_device.clone(),
             OfsBufPool::new(initial_size),
-        )?;
+        );
 
         // Initialize other components.
         let component_registry_map = ComponentRegistryMap::default();
@@ -260,9 +260,9 @@ where
         };
 
         // Initialize the app and perform first render.
-        event_loop_state.initialize_app_and_render(app, &output_device)?;
+        event_loop_state.initialize_app_and_render(app, &output_device);
 
-        Ok(event_loop_state)
+        event_loop_state
     }
 
     /// Initializes the app and performs the first render.
@@ -270,7 +270,7 @@ where
         &mut self,
         app: &mut BoxedSafeApp<S, AS>,
         output_device: &OutputDevice,
-    ) -> CommonResult {
+    ) {
         // Initialize app and start background tasks before the first render. Both these
         // operations are not recorded in telemetry.
         app.app_init_components(&mut self.component_registry_map, &mut self.has_focus);
@@ -289,8 +289,8 @@ where
                         &mut self.component_registry_map,
                         &mut self.has_focus,
                         writer,
-                    )
-                })?;
+                    );
+                });
             },
             @after_block: {
                 self.global_data.hud_data.set_report(telemetry.report());
@@ -298,7 +298,6 @@ where
         );
 
         self.log_startup_info();
-        ok!()
     }
 
     /// Logs startup information if debugging is enabled.
@@ -368,7 +367,7 @@ async fn run_main_event_loop<S, AS>(
     exit_keys: &[InputEvent],
     mut input_device: InputDevice,
     output_device: OutputDevice,
-) -> CommonResult<(GlobalData<S, AS>, InputDevice, OutputDevice)>
+) -> (GlobalData<S, AS>, InputDevice, OutputDevice)
 where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -385,7 +384,7 @@ where
                         &mut app,
                         exit_keys,
                         &output_device,
-                    )? == Continuation::Stop {
+                    ) == Continuation::Stop {
                         break; // Exit requested.
                     }
             }
@@ -412,7 +411,7 @@ where
 
     // Cleanup and return results.
     event_loop_state.log_shutdown_info();
-    Ok((event_loop_state.global_data, input_device, output_device))
+    (event_loop_state.global_data, input_device, output_device)
 }
 
 /// Handles signals received from the main thread channel.
@@ -423,22 +422,22 @@ fn handle_main_thread_signal<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     exit_keys: &[InputEvent],
     output_device: &OutputDevice,
-) -> CommonResult<Continuation>
+) -> Continuation
 where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     match signal {
         TerminalWindowMainThreadSignal::Exit => {
-            Ok(Continuation::Stop) // Request exit.
+            Continuation::Stop // Request exit.
         }
         TerminalWindowMainThreadSignal::Render(_) => {
-            handle_render_signal(event_loop_state, app, output_device)?;
-            Ok(Continuation::Continue)
+            handle_render_signal(event_loop_state, app, output_device);
+            Continuation::Continue
         }
         TerminalWindowMainThreadSignal::ApplyAppSignal(action) => {
             handle_app_signal(&action, event_loop_state, app, exit_keys, output_device);
-            Ok(Continuation::Continue)
+            Continuation::Continue
         }
     }
 }
@@ -448,8 +447,7 @@ fn handle_render_signal<S, AS>(
     event_loop_state: &mut EventLoopState<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
     output_device: &OutputDevice,
-) -> CommonResult
-where
+) where
     S: Display + Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
@@ -465,14 +463,13 @@ where
                     &mut event_loop_state.component_registry_map,
                     &mut event_loop_state.has_focus,
                     writer,
-                )
-            })?;
+                );
+            });
         },
         @after_block: {
             event_loop_state.global_data.hud_data.set_report(telemetry.report());
         }
     );
-    ok!()
 }
 
 /// Handles app signal from the main thread.
@@ -673,15 +670,13 @@ pub fn handle_resize<S, AS>(
     global_data_mut_ref.maybe_saved_ofs_buf = None;
     global_data_mut_ref.ofs_buf_pool.resize(new_size);
 
-    // We don't care about the result of this operation.
     AppManager::render_app(
         app,
         global_data_mut_ref,
         component_registry_map,
         has_focus,
         locked_output_device,
-    )
-    .ok();
+    );
 }
 
 /// **Telemetry**: This function is not recorded in telemetry but its caller is.
@@ -691,7 +686,7 @@ pub fn handle_resize<S, AS>(
 /// 2. Signal from the app.
 #[allow(clippy::too_many_arguments)]
 fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
-    result: CommonResult<EventPropagation>,
+    result: miette::Result<EventPropagation>,
     maybe_input_event: Option<InputEvent>,
     exit_keys: &[InputEvent],
     app: &mut BoxedSafeApp<S, AS>,
@@ -725,8 +720,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                     component_registry_map,
                     has_focus,
                     locked_output_device,
-                )
-                .ok();
+                );
             }
 
             EventPropagation::Consumed => {}
@@ -788,7 +782,7 @@ where
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
         locked_output_device: LockedOutputDevice<'_>,
-    ) -> CommonResult {
+    ) {
         let window_size = global_data_mut_ref.window_size;
 
         // Check to see if the window_size is large enough to render.
@@ -834,8 +828,6 @@ where
                 global_data_mut_ref.pipeline.clear();
             }
         }
-
-        ok!()
     }
 }
 

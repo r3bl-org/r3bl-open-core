@@ -54,7 +54,9 @@ pub enum StopReason {
 /// [`WorkerCreation`]: Self::WorkerCreation
 /// [diagnostic code]: miette::Diagnostic::code
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
-pub enum SubscribeError {
+pub enum SubscribeError<
+    E: std::error::Error + miette::Diagnostic + Send + Sync + 'static,
+> {
     /// Internal state mutex was poisoned by a prior thread panic.
     #[error("RRT internal state mutex poisoned")]
     #[diagnostic(
@@ -68,13 +70,12 @@ pub enum SubscribeError {
 
     /// [`RRTWorker::create_and_register_os_sources()`] failed to acquire OS resources.
     ///
-    /// The inner [`miette::Report`] preserves the full error chain from the worker
-    /// implementation (e.g., [`PollCreationError`], [`SoftwareInterruptCreationError`]).
-    /// Access it via pattern matching.
+    /// The inner error `E` preserves the typed error chain from the worker
+    /// implementation (e.g., [`MioPollWorkerCreateError`]). Access it via pattern
+    /// matching.
     ///
-    /// [`PollCreationError`]: crate::terminal_lib_backends::PollCreationError
+    /// [`MioPollWorkerCreateError`]: crate::MioPollWorkerCreateError
     /// [`RRTWorker::create_and_register_os_sources()`]: crate::RRTWorker::create_and_register_os_sources
-    /// [`SoftwareInterruptCreationError`]: crate::terminal_lib_backends::SoftwareInterruptCreationError
     #[error("Failed to create worker thread resources")]
     #[diagnostic(code(r3bl_tui::rrt::worker_creation))]
     #[cfg_attr(
@@ -101,7 +102,7 @@ pub enum SubscribeError {
              but check Task Manager for handle count"
         ))
     )]
-    WorkerCreation(miette::Report),
+    WorkerCreation(#[source] E),
 
     /// [`std::thread::Builder::spawn()`] failed.
     #[error("Failed to spawn RRT worker thread")]

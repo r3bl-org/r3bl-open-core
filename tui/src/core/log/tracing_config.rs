@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::try_create_layers;
+use super::{TracingInitError, try_create_layers};
 use crate::{GlobalLogFileGuard, SharedWriter};
 use std::fmt::Debug;
 use tracing::dispatcher;
@@ -70,14 +70,14 @@ impl Debug for DisplayPreference {
 /// # Methods
 /// You can use the following methods to initialize the tracing system with this
 /// configuration:
-/// - [`Self::install_global()`]: This will install the global tracing subscriber. There
+/// - [`Self::try_install_global()`]: This will install the global tracing subscriber. There
 ///   can only be one, and it can't be unset, once set, or changed.
-/// - [`Self::install_thread_local()`]: This will install the tracing subscriber for the
+/// - [`Self::try_install_thread_local()`]: This will install the tracing subscriber for the
 ///   current thread.
 ///
 /// [`file`]: std::fs::File
-/// [`Self::install_global()`]: TracingConfig::install_global
-/// [`Self::install_thread_local()`]: TracingConfig::install_thread_local
+/// [`Self::try_install_global()`]: TracingConfig::try_install_global
+/// [`Self::try_install_thread_local()`]: TracingConfig::try_install_thread_local
 /// [`shared writer`]: crate::SharedWriter
 /// [`stderr`]: std::io::stderr
 /// [`stdout`]: std::io::stdout
@@ -116,8 +116,11 @@ impl TracingConfig {
     /// - The tracing layer cannot be initialized
     ///
     /// [`stdout`]: std::io::stdout
-    pub fn install_thread_local(self) -> miette::Result<ThreadLocalLogFileGuard> {
-        try_create_layers(&self).map(|layers| ThreadLocalLogFileGuard {
+    pub fn try_install_thread_local(
+        self,
+    ) -> Result<ThreadLocalLogFileGuard, TracingInitError> {
+        let layers = try_create_layers(&self)?;
+        Ok(ThreadLocalLogFileGuard {
             _default_guard: tracing_subscriber::registry().with(layers).set_default(),
             _log_file_guard: GlobalLogFileGuard,
         })
@@ -128,23 +131,26 @@ impl TracingConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
+    /// Returns [`TracingInitError`] if:
     /// - The file writer cannot be created (invalid path, permissions)
     /// - The tracing layer cannot be initialized
     /// - A global subscriber has already been set
+    ///   ([`TracingInitError::GlobalSubscriberAlreadySet`])
     ///
     /// [`stdout`]: std::io::stdout
-    pub fn install_global(self) -> miette::Result<GlobalLogFileGuard> {
-        try_create_layers(&self).map(|layers| {
-            tracing_subscriber::registry().with(layers).init();
-            GlobalLogFileGuard
-        })
+    pub fn try_install_global(self) -> Result<GlobalLogFileGuard, TracingInitError> {
+        let layers = try_create_layers(&self)?;
+        tracing_subscriber::registry()
+            .with(layers)
+            .try_init()
+            .map_err(TracingInitError::GlobalSubscriberAlreadySet)?;
+        Ok(GlobalLogFileGuard)
     }
 }
 
 /// Combined [RAII] guard for thread-local tracing subscribers.
 ///
-/// Returned by [`TracingConfig::install_thread_local()`]. Holds both the tracing
+/// Returned by [`TracingConfig::try_install_thread_local()`]. Holds both the tracing
 /// [`dispatcher::DefaultGuard`] (which resets the thread-local subscriber on drop) and
 /// a [`GlobalLogFileGuard`] (which flushes the non-blocking file writer on drop). Callers
 /// hold a single value instead of managing two guards separately.

@@ -114,7 +114,7 @@
 //!         it => return it.into_err(),
 //!     };
 //!
-//!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
+//!     multiplexer.try_run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
 //!     ok!()
 //! }
 //! ```

@@ -170,6 +170,18 @@ impl AsRef<Path> for TempDir {
     fn as_ref(&self) -> &Path { &self.inner }
 }
 
+/// Error returned by [`TempDirChildPath::try_new`] when `sub_dir` is absolute or
+/// contains a parent-directory (`..`) component.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error(
+    "sub_dir must be relative and not contain parent components: {}",
+    path.display()
+)]
+pub struct TempDirChildPathError {
+    /// Invalid path rejected by [`TempDirChildPath::try_new`].
+    pub path: PathBuf,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TempDirChildPath {
     inner: PathBuf,
@@ -180,21 +192,20 @@ impl TempDirChildPath {
     ///
     /// # Errors
     ///
-    /// Returns an error if `arg_sub_dir` is absolute or contains a parent-directory
-    /// (`..`) component.
+    /// Returns [`TempDirChildPathError`] if `arg_sub_dir` is absolute or contains a
+    /// parent-directory (`..`) component.
     pub fn try_new(
         parent: &TempDir,
         arg_sub_dir: impl AsRef<Path>,
-    ) -> miette::Result<Self> {
+    ) -> Result<Self, TempDirChildPathError> {
         let sub_dir = arg_sub_dir.as_ref();
         let is_relative = sub_dir.is_relative();
         let has_parent_in_component =
             sub_dir.components().any(|c| c == Component::ParentDir);
         if !is_relative || has_parent_in_component {
-            miette::bail!(
-                "sub_dir must be relative and not contain parent components: {}",
-                sub_dir.display()
-            );
+            return Err(TempDirChildPathError {
+                path: sub_dir.to_path_buf(),
+            });
         }
         let child = parent.inner.join(sub_dir);
         Ok(Self { inner: child })
@@ -240,9 +251,23 @@ mod tests_temp_dir_child_path {
     #[allow(clippy::missing_errors_doc)]
     fn test_try_new_rejects_absolute_and_parent_dir_traversal() -> miette::Result<()> {
         let temp_dir = try_create_temp_dir()?;
-        assert!(TempDirChildPath::try_new(&temp_dir, std::env::temp_dir()).is_err());
-        assert!(TempDirChildPath::try_new(&temp_dir, "../escape").is_err());
-        assert!(TempDirChildPath::try_new(&temp_dir, "a/../../escape").is_err());
+        let abs_path = std::env::temp_dir();
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, &abs_path),
+            Err(TempDirChildPathError { path: abs_path })
+        );
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, "../escape"),
+            Err(TempDirChildPathError {
+                path: PathBuf::from("../escape")
+            })
+        );
+        assert_eq!(
+            TempDirChildPath::try_new(&temp_dir, "a/../../escape"),
+            Err(TempDirChildPathError {
+                path: PathBuf::from("a/../../escape")
+            })
+        );
         Ok(())
     }
 }

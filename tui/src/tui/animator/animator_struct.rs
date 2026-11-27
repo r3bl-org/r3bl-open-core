@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, TerminalWindowMainThreadSignal};
+use crate::TerminalWindowMainThreadSignal;
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
 
@@ -55,19 +55,14 @@ impl Animator {
     #[must_use]
     pub fn is_animation_not_started(&self) -> bool { !self.is_animation_started() }
 
-    /// # Errors
-    ///
-    /// Returns an error if the animation cannot be stopped.
-    pub fn stop(&mut self) -> CommonResult {
-        throws!({
-            if let Some(kill_channel) = &self.animator_kill_channel {
-                let kill_channel_clone = kill_channel.clone();
-                tokio::spawn(async move {
-                    // We don't care about the result of this operation.
-                    kill_channel_clone.send(()).await.ok();
-                });
-                self.animator_kill_channel = None;
-            }
-        });
+    pub fn stop(&mut self) {
+        if let Some(kill_channel) = &self.animator_kill_channel {
+            let kill_channel_clone = kill_channel.clone();
+            tokio::spawn(async move {
+                // We don't care about the result of this operation.
+                kill_channel_clone.send(()).await.ok();
+            });
+            self.animator_kill_channel = None;
+        }
     }
 }

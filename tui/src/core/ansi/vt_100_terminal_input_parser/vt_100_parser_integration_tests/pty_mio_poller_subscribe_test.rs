@@ -148,7 +148,7 @@ fn controlled() {
 
         // Step 2: Create device - this spawns the thread.
         eprintln!("Step 2: Creating device...");
-        let mut device = DirectToAnsiInputDevice::new()
+        let mut device = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
         assert!(
             is_running(),

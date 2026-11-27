@@ -43,15 +43,12 @@
 use clap::Parser;
 use miette::IntoDiagnostic;
 use r3bl_cmdr::env_source::CLIArg;
-use r3bl_tui::{BaseEnv, CommonResult, ok, run_with_safe_stack, set_mimalloc_in_main,
-               try_env_source};
+use r3bl_tui::{BaseEnv, ok, run_in_main_with_safe_stack, try_env_source};
 use std::io::{Write, stdout};
 
-fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(sync => try_main_impl()) }
 
-fn main_impl() -> CommonResult {
-    set_mimalloc_in_main!();
-
+fn try_main_impl() -> miette::Result<()> {
     let cli_arg = CLIArg::parse();
 
     let output =

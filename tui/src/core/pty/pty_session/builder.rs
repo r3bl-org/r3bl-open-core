@@ -3,9 +3,8 @@
 use super::{config::{CaptureFlag, DefaultPtySessionConfig, PtySessionConfig},
             events::{PtyInputEvent, PtyOutputEvent},
             session::{AsyncPtySession, PtySession},
-            spawn_pty_orchestrator_thread};
-use crate::{DefaultSize, HashMap, PtyCommand, PtyPair};
-use miette::{IntoDiagnostic, miette};
+            try_spawn_pty_orchestrator_thread};
+use crate::{DefaultSize, HashMap, PtyCommand, PtyError, PtyPair};
 use std::path::PathBuf;
 
 /// Builder for configuring and spawning [`PTY`] sessions.
@@ -16,7 +15,7 @@ use std::path::PathBuf;
 /// In order to use this, you must:
 /// 1. Create a [`PtySessionBuilder`] using [`new()`].
 /// 2. (Optional) Configure the session using [`with_config()`].
-/// 3. Call [`start()`] to obtain a synchronous [`PtySession`], or [`start_async()`] for
+/// 3. Call [`try_start()`] to obtain a synchronous [`PtySession`], or [`try_start_async()`] for
 ///    an asynchronous [`AsyncPtySession`] adapter.
 ///
 /// For an architectural overview of how this fits into the [`PTY`] stack, the lifecycle
@@ -43,7 +42,7 @@ use std::path::PathBuf;
 ///             DefaultPtySessionConfig
 ///                 + PtySessionConfigToken::NoCaptureOutput,
 ///         )
-///         .start()?;
+///         .try_start()?;
 ///     Ok(())
 /// }
 /// ```
@@ -68,15 +67,15 @@ use std::path::PathBuf;
 ///             DefaultPtySessionConfig
 ///                 + PtySessionConfigToken::NoCaptureOutput,
 ///         )
-///         .start_async()?;
+///         .try_start_async()?;
 ///     Ok(())
 /// }
 /// ```
 ///
 /// [`new()`]: Self::new()
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`start()`]: Self::start()
-/// [`start_async()`]: Self::start_async()
+/// [`try_start()`]: Self::try_start()
+/// [`try_start_async()`]: Self::try_start_async()
 /// [`with_config()`]: Self::with_config()
 /// [Session Layer]: mod@crate::core::pty::pty_session
 #[derive(Debug, Clone)]
@@ -95,10 +94,10 @@ pub struct PtySessionBuilder {
 
     /// Optional working directory for the child process.
     ///
-    /// See [`Self::build()`] for implementation details and rationale regarding
+    /// See [`Self::try_build()`] for implementation details and rationale regarding
     /// current working directory management.
     ///
-    /// [`Self::build()`]: Self#current-working-directory
+    /// [`Self::try_build()`]: Self#current-working-directory
     pub maybe_cwd: Option<PathBuf>,
 
     /// Configuration for the [`PTY`] session.
@@ -157,10 +156,10 @@ impl PtySessionBuilder {
 
     /// Sets the current working directory for the command.
     ///
-    /// See [`Self::build()`] for implementation details and rationale regarding
+    /// See [`Self::try_build()`] for implementation details and rationale regarding
     /// current working directory management.
     ///
-    /// [`Self::build()`]: Self#current-working-directory
+    /// [`Self::try_build()`]: Self#current-working-directory
     #[must_use]
     pub fn cwd(mut self, path: impl Into<PathBuf>) -> Self {
         self.maybe_cwd = Some(path.into());
@@ -220,7 +219,7 @@ impl PtySessionBuilder {
     /// [`new_isolated_test_command()`]: crate::core::test_fixtures::new_isolated_test_command
     /// [`rustup`]: https://rust-lang.github.io/rustup/
     /// [`test_fixtures`]: crate::core::test_fixtures
-    pub fn build(&self) -> miette::Result<PtyCommand> {
+    pub fn try_build(&self) -> Result<PtyCommand, PtyError> {
         let mut builder = portable_pty::CommandBuilder::new(self.command.clone());
         builder.args(&self.cli_args);
 
@@ -230,11 +229,11 @@ impl PtySessionBuilder {
 
         if let Some(cwd) = &self.maybe_cwd {
             if !cwd.exists() {
-                return Err(miette!("CWD does not exist: {:?}", cwd));
+                return Err(PtyError::CwdNotFound { path: cwd.clone() });
             }
             builder.cwd(cwd);
         } else {
-            let current_dir = std::env::current_dir().into_diagnostic()?;
+            let current_dir = std::env::current_dir().map_err(PtyError::Io)?;
             builder.cwd(current_dir);
         }
 
@@ -273,7 +272,7 @@ impl PtySessionBuilder {
     /// fn main() -> miette::Result<()> {
     ///     let mut session = PtySessionBuilder::new("echo")
     ///         .cli_arg("hello")
-    ///         .start()?;
+    ///         .try_start()?;
     ///
     ///     while let Ok(event) = session.rx_output_event.recv() {
     ///         match event {
@@ -300,11 +299,11 @@ impl PtySessionBuilder {
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [Background Threads]: crate::core::pty#the-thread-trio
     /// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
-    /// [Orchestrator Thread]: crate::spawn_pty_orchestrator_thread
-    /// [Reader Thread]: crate::spawn_pty_reader_thread
+    /// [Orchestrator Thread]: crate::try_spawn_pty_orchestrator_thread
+    /// [Reader Thread]: crate::try_spawn_pty_reader_thread
     /// [Session Layer]: mod@crate::core::pty::pty_session
-    /// [Writer Thread]: crate::spawn_pty_writer_thread
-    pub fn start(self) -> miette::Result<PtySession> {
+    /// [Writer Thread]: crate::try_spawn_pty_writer_thread
+    pub fn try_start(self) -> Result<PtySession, PtyError> {
         use std::sync::mpsc::sync_channel;
 
         // Channel for output events (child process → app).
@@ -315,15 +314,15 @@ impl PtySessionBuilder {
         let (input_event_ch_tx_half, input_event_ch_rx_half) =
             sync_channel::<PtyInputEvent>(DefaultSize::PtyChannelBufferSize.into());
 
-        let command = self.build()?;
+        let command = self.try_build()?;
 
         let (pty_pair, controlled_child) =
-            PtyPair::open_and_spawn(self.config.pty_size, command)?;
+            PtyPair::try_open_and_spawn(self.config.pty_size, command)?;
 
         let child_process_termination_handle =
             controlled_child.clone_termination_handle();
 
-        let orchestrator_task_handle = spawn_pty_orchestrator_thread(
+        let orchestrator_task_handle = try_spawn_pty_orchestrator_thread(
             controlled_child,
             pty_pair.into_controller(),
             input_event_ch_tx_half.clone(),
@@ -364,7 +363,7 @@ impl PtySessionBuilder {
     /// async fn main() -> miette::Result<()> {
     ///     let mut session = PtySessionBuilder::new("echo")
     ///         .cli_arg("hello")
-    ///         .start_async()?;
+    ///         .try_start_async()?;
     ///
     ///     loop {
     ///         tokio::select! {
@@ -394,10 +393,10 @@ impl PtySessionBuilder {
     /// [`AsyncPtySession`]: crate::AsyncPtySession
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     /// [`tokio::select!`]: tokio::select
-    pub fn start_async(self) -> miette::Result<AsyncPtySession> {
+    pub fn try_start_async(self) -> Result<AsyncPtySession, PtyError> {
         use tokio::{sync::mpsc::channel, task::spawn_blocking};
 
-        let sync_session = self.start()?;
+        let sync_session = self.try_start()?;
 
         let (async_input_tx, mut async_input_rx) =
             channel::<PtyInputEvent>(DefaultSize::PtyChannelBufferSize.into());
@@ -438,11 +437,7 @@ impl PtySessionBuilder {
             // Partial move of field (since PtySession does not impl Drop).
             let handle = sync_session.orchestrator_task_handle;
 
-            move || {
-                handle
-                    .join()
-                    .map_err(|e| miette!("Orchestrator thread panicked: {e:?}"))?
-            }
+            move || handle.join().map_err(|_| PtyError::OrchestratorPanicked)?
         });
 
         // Final move of remaining field (since PtySession does not impl Drop).
@@ -549,17 +544,17 @@ mod tests {
     #[test]
     fn test_builder_build() {
         let builder = PtySessionBuilder::new("ls").cwd("/");
-        let result = builder.build();
+        let result = builder.try_build();
         assert!(result.is_ok());
 
         let builder =
             PtySessionBuilder::new("ls").cwd("/non_existent_directory_r3bl_test");
-        let result = builder.build();
+        let result = builder.try_build();
         assert!(result.is_err());
 
         // Test build with default CWD (None).
         let builder = PtySessionBuilder::new("ls");
-        let result = builder.build();
+        let result = builder.try_build();
         assert!(result.is_ok());
     }
 

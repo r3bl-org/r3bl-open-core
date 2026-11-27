@@ -107,9 +107,9 @@ pub const DEBUG_ENV_SOURCE: bool = false;
 /// [`script`]: mod@crate::core::script
 pub const DEBUG_SCRIPT: bool = true;
 
-/// Controls debug logging for [`choose`].
+/// Controls debug logging for [`try_choose`].
 ///
-/// [`choose`]: crate::choose
+/// [`try_choose`]: crate::try_choose
 pub const DEBUG_CHOOSE: bool = false;
 
 /// [`Unicode`] replacement character used when a [`grapheme`] cluster cannot be converted

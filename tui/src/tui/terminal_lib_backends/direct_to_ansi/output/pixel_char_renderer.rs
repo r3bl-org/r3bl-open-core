@@ -68,7 +68,7 @@ use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiSty
 ///
 /// - `OfsBufVT100::render_to_ansi()` will call this renderer
 /// - `CliTextInline::Display` will use this renderer
-/// - `choose()` and `readline_async` will use this renderer
+/// - `try_choose()` and `readline_async` will use this renderer
 /// - [`RenderOpOutput`] variant `CompositorNoClipTruncPaintTextWithAttributes` will use
 ///   this renderer
 ///

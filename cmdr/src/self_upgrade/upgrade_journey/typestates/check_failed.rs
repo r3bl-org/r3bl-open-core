@@ -21,7 +21,7 @@ pub enum CheckFailedError {
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
     #[diagnostic(transparent)]
-    FetchManifest(#[from] FetchManifestError),
+    FetchManifest(FetchManifestError),
 
     /// Dedicated or scoped OS thread failed to spawn, initialize its Tokio runtime, or
     /// panicked in the [Control Plane].
@@ -29,7 +29,7 @@ pub enum CheckFailedError {
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
     #[diagnostic(transparent)]
-    ThreadRunner(#[from] ThreadRunnerError),
+    ThreadRunner(ThreadRunnerError),
 }
 
 /// Typestate when the manifest check encountered a network, parse, or thread/runtime

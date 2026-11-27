@@ -40,7 +40,7 @@ use crate::{Continuation, DEBUG_PTY_MUX, InputEvent, VPSize};
 pub fn handle_input(
     event: InputEvent,
     process_manager: &mut ProcessManager,
-) -> miette::Result<Continuation> {
+) -> Continuation {
     let focused_process_buffer = process_manager.focused_process_buffer();
 
     match event {
@@ -113,7 +113,7 @@ pub fn handle_input(
         InputEvent::Shutdown(_) => {
             // Input thread died - signal exit so the mux doesn't hang waiting for
             // events that will never come.
-            return Ok(Continuation::Stop);
+            return Continuation::Stop;
         }
         _ => {
             // Other input events (Focus, BracketedPaste) are
@@ -121,7 +121,7 @@ pub fn handle_input(
         }
     }
 
-    Ok(Continuation::Continue)
+    Continuation::Continue
 }
 
 /// Handles terminal resize events.

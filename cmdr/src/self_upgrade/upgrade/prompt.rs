@@ -2,8 +2,8 @@
 
 use super::ui_strings;
 use r3bl_tui::{DefaultIoDevices, HowToChoose, StyleSheet, TerminalInteractiveStatus,
-            TuiAvailabilityChooseExt, check_is_terminal_interactive, choose,
-            cli_text_inline, cli_text_line, new_style, vp_height};
+            TuiAvailabilityChooseExt, check_is_terminal_interactive, cli_text_inline,
+            cli_text_line, new_style, try_choose, vp_height};
 use smallvec::smallvec;
 
 /// Decision returned by [`prompt_user_to_upgrade`] when asking whether to install an
@@ -11,9 +11,9 @@ use smallvec::smallvec;
 ///
 /// Replaces a raw `bool` return to eliminate boolean blindness and distinguish explicit
 /// user rejection ([`Self::DeclinedByUser`]) from non-interactive sessions
-/// ([`Self::SkippedNonInteractive`]) where a modal [`choose`] dialog cannot be rendered.
+/// ([`Self::SkippedNonInteractive`]) where a modal [`try_choose`] dialog cannot be rendered.
 ///
-/// [`choose`]: r3bl_tui::choose
+/// [`try_choose`]: r3bl_tui::try_choose
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PromptUpgradeDecision {
     /// User explicitly selected `"Yes, upgrade now"`.
@@ -29,10 +29,10 @@ pub enum PromptUpgradeDecision {
 }
 
 impl PromptUpgradeDecision {
-    /// Maps the optional selection returned by [`choose`] into a typed
+    /// Maps the optional selection returned by [`try_choose`] into a typed
     /// [`PromptUpgradeDecision`].
     ///
-    /// [`choose`]: r3bl_tui::choose
+    /// [`try_choose`]: r3bl_tui::try_choose
     #[must_use]
     pub fn from_user_choice(maybe_choice: Option<&str>) -> Self {
         match maybe_choice {
@@ -82,7 +82,7 @@ pub async fn prompt_user_to_upgrade(
     )]];
     let mut io = DefaultIoDevices::default();
 
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         header_lines,
         yes_no_options,
         Some(vp_height(yes_no_options.len())),

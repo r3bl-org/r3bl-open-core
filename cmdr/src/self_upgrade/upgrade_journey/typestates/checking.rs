@@ -113,7 +113,7 @@ impl UpgradeJourney<Checking> {
             Ok(info) => info,
             Err(error) => {
                 return DeferredCheckOutcome::CheckFailed(
-                    self.into_check_failed(error.into()),
+                    self.into_check_failed(CheckFailedError::FetchManifest(error)),
                 );
             }
         };
@@ -165,7 +165,7 @@ impl UpgradeJourney<Checking> {
             Ok(info) => info,
             Err(error) => {
                 return ImmediateCheckOutcome::CheckFailed(
-                    self.into_check_failed(error.into()),
+                    self.into_check_failed(CheckFailedError::FetchManifest(error)),
                 );
             }
         };

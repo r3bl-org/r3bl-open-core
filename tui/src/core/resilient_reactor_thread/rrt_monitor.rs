@@ -390,7 +390,7 @@ impl<W: RRTWorker> ThreadLifecycleMonitor<W> {
         let guard = self.state_monitor.set_state(guard, new_state);
 
         // Automatically wake up both sync OS threads (waiting in try_subscribe) and async
-        // Tokio tasks (waiting in InputSender::send) once the state stabilizes.
+        // Tokio tasks (waiting in InputSender::try_send) once the state stabilizes.
         match thread_state_status {
             ThreadStateStatus::Stable => {
                 self.smart_sender_notify.notify_all();

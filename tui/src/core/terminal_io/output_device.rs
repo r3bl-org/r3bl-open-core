@@ -1,12 +1,27 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AtomicBoolExt, BackpressureStdout, SafeRawTerminal, SendRawTerminal,
-            StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend, TerminalModeController,
-            ansi_output, vp_col, vp_row};
+use crate::{AtomicBoolExt, BackpressureStdout, RawModeError, SafeRawTerminal,
+            SendRawTerminal, StdMutex, TERMINAL_LIB_BACKEND, TerminalLibBackend,
+            TerminalModeController, ansi_output, vp_col, vp_row};
 use crossterm::QueueableCommand;
-use miette::IntoDiagnostic;
 use std::{io::{Write, stdout},
           sync::{Arc, atomic::AtomicBool}};
+
+/// Error returned by terminal output and mode operations.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum TerminalIoError {
+    #[error("Terminal I/O failed")]
+    Io(#[source] std::io::Error),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    RawMode(RawModeError),
+
+    #[error(
+        "Cannot activate full-screen TUI: another FullScreenTuiModeGuard is already active"
+    )]
+    FullScreenAlreadyActive,
+}
 
 /// This struct represents an output device that can be used to write to the terminal.
 /// - It is safe to clone.
@@ -123,8 +138,8 @@ impl OutputDevice {
     /// Returns an error if the underlying I/O write fails.
     ///
     /// [`stdout`]: std::io::stdout
-    pub fn flush(&self) -> miette::Result<()> {
-        self.lock_raw_poison_safe(|writer| writer.flush().into_diagnostic())
+    pub fn try_flush(&self) -> Result<(), TerminalIoError> {
+        self.lock_raw_poison_safe(|writer| writer.flush().map_err(TerminalIoError::Io))
     }
 
     /// Sets up the full-screen TUI environment.
@@ -136,50 +151,53 @@ impl OutputDevice {
     /// # Errors
     /// Returns an error if any terminal mode cannot be set or I/O fails.
     /// Also returns an error if another [`FullScreenTuiModeGuard`] is already active.
-    pub fn setup_full_screen_tui(&self) -> miette::Result<FullScreenTuiModeGuard> {
+    pub fn try_setup_full_screen_tui(
+        &self,
+    ) -> Result<FullScreenTuiModeGuard, TerminalIoError> {
         // Enforce single active instance across all terminals.
         if FULLSCREEN_ACTIVE.try_acquire().is_none() {
-            miette::bail!(
-                "Cannot activate full-screen TUI: another FullScreenTuiModeGuard is already active. \
-                 Only one full-screen terminal session can exist at a time."
-            );
+            return Err(TerminalIoError::FullScreenAlreadyActive);
         }
 
-        let setup_result = (|| -> miette::Result<()> {
+        let setup_result = (|| -> Result<(), TerminalIoError> {
             self.enable_bracketed_paste()?;
             self.enable_mouse_tracking()?;
             self.enable_keyboard_enhancement()?;
             self.enter_alternate_screen()?;
             self.hide_cursor()?;
 
-            self.write(|writer| -> miette::Result<()> {
+            self.write(|writer| -> Result<(), TerminalIoError> {
                 match TERMINAL_LIB_BACKEND {
                     TerminalLibBackend::Crossterm => {
                         writer
                             .queue(crossterm::cursor::MoveTo(0, 0))
-                            .into_diagnostic()?;
+                            .map_err(TerminalIoError::Io)?;
                         writer
                             .queue(crossterm::terminal::Clear(
                                 crossterm::terminal::ClearType::All,
                             ))
-                            .into_diagnostic()?;
+                            .map_err(TerminalIoError::Io)?;
                     }
                     TerminalLibBackend::DirectToAnsi => {
                         let ansi = ansi_output::cursor_movement::cursor_position(
                             vp_row(0).into(),
                             vp_col(0).into(),
                         );
-                        writer.write_all(ansi.as_bytes()).into_diagnostic()?;
+                        writer
+                            .write_all(ansi.as_bytes())
+                            .map_err(TerminalIoError::Io)?;
 
                         let ansi2 = ansi_output::screen_clearing::clear_screen();
-                        writer.write_all(ansi2.as_bytes()).into_diagnostic()?;
+                        writer
+                            .write_all(ansi2.as_bytes())
+                            .map_err(TerminalIoError::Io)?;
                     }
                 }
                 ok!()
             })?;
 
             if matches!(self.paint_mode, PaintMode::Real) {
-                self.flush()?;
+                self.try_flush()?;
             }
 
             ok!()
@@ -191,7 +209,7 @@ impl OutputDevice {
             }),
             Err(err) => {
                 // Clean up partial mode settings and release the gate on failure.
-                drop(self.teardown_full_screen_tui());
+                drop(self.try_teardown_full_screen_tui());
                 FULLSCREEN_ACTIVE.release();
                 Err(err)
             }
@@ -205,7 +223,7 @@ impl OutputDevice {
     ///
     /// # Errors
     /// Returns an error if any terminal mode cannot be reset or I/O fails.
-    pub fn teardown_full_screen_tui(&self) -> miette::Result<()> {
+    pub fn try_teardown_full_screen_tui(&self) -> Result<(), TerminalIoError> {
         self.disable_keyboard_enhancement()?;
         self.disable_bracketed_paste()?;
         self.disable_mouse_tracking()?;
@@ -213,7 +231,7 @@ impl OutputDevice {
         self.show_cursor()?;
 
         if matches!(self.paint_mode, PaintMode::Real) {
-            self.flush()?;
+            self.try_flush()?;
         }
         ok!()
     }
@@ -221,7 +239,7 @@ impl OutputDevice {
 
 /// An [RAII] guard that tears down the TUI environment when dropped.
 ///
-/// This is returned by [`OutputDevice::setup_full_screen_tui()`] and ensures that the
+/// This is returned by [`OutputDevice::try_setup_full_screen_tui()`] and ensures that the
 /// terminal is properly restored (cursor shown, alternate screen exited, mouse and
 /// bracketed paste tracking disabled) even if a panic occurs or the future returns early,
 /// avoiding a [Double Panic Abort].
@@ -240,7 +258,7 @@ impl Drop for FullScreenTuiModeGuard {
     ///
     /// [Double Panic Abort]: crate#the-double-panic-abort-risk
     fn drop(&mut self) {
-        drop(self.output_device.teardown_full_screen_tui());
+        drop(self.output_device.try_teardown_full_screen_tui());
         FULLSCREEN_ACTIVE.release();
     }
 }
@@ -344,18 +362,21 @@ mod tests {
         };
 
         // 1. First setup succeeds.
-        let guard1 = device.setup_full_screen_tui();
+        let guard1 = device.try_setup_full_screen_tui();
         assert!(guard1.is_ok());
 
-        // 2. Second setup while guard1 is alive MUST return an error.
-        let guard2 = device.setup_full_screen_tui();
-        assert!(guard2.is_err());
+        // 2. Second setup while guard1 is alive MUST return FullScreenAlreadyActive.
+        let guard2 = device.try_setup_full_screen_tui();
+        assert!(matches!(
+            guard2,
+            Err(TerminalIoError::FullScreenAlreadyActive)
+        ));
 
         // 3. Dropping guard1 releases the gate.
         drop(guard1);
 
         // 4. Sequential setup now succeeds.
-        let guard3 = device.setup_full_screen_tui();
+        let guard3 = device.try_setup_full_screen_tui();
         assert!(guard3.is_ok());
         drop(guard3);
     }

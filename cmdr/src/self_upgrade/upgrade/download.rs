@@ -20,7 +20,7 @@ use tokio::signal;
 /// failure.
 ///
 /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
-pub async fn download_and_verify_archive(
+pub async fn try_download_and_verify_archive(
     crate_name: &str,
     pinned_version: &str,
     archive_url: &str,
@@ -28,11 +28,11 @@ pub async fn download_and_verify_archive(
     archive_path: &Path,
     maybe_spinner: Option<&Spinner>,
 ) -> Result<(), UpgradeError> {
-    let client = create_http_client()?;
+    let client = create_http_client().map_err(UpgradeError::HttpClientCreateFailed)?;
 
     let expected_sha256 =
-        sha256_checksum::fetch_expected_sha256(&client, sha256_url).await?;
-    archive_stream::stream_archive_to_disk(
+        sha256_checksum::try_fetch_expected_sha256(&client, sha256_url).await?;
+    archive_stream::try_stream_archive_to_disk(
         &client,
         archive_url,
         archive_path,
@@ -49,7 +49,7 @@ pub async fn download_and_verify_archive(
         ));
     }
 
-    sha256_checksum::verify_file_sha256(archive_path, expected_sha256)?;
+    sha256_checksum::try_verify_file_sha256(archive_path, expected_sha256)?;
     Ok(())
 }
 
@@ -71,7 +71,7 @@ pub mod sha256_checksum {
     ///
     /// [`UpgradeError::ChecksumMismatch`]: crate::self_upgrade::UpgradeError::ChecksumMismatch
     /// [`UpgradeError::FileIo`]: crate::self_upgrade::UpgradeError::FileIo
-    pub fn verify_file_sha256(
+    pub fn try_verify_file_sha256(
         file_path: &Path,
         expected: Sha256Digest,
     ) -> Result<(), UpgradeError> {
@@ -95,7 +95,7 @@ pub mod sha256_checksum {
     ///
     /// [`Sha256Digest`]: crate::self_upgrade::Sha256Digest
     /// [`UpgradeError`]: crate::self_upgrade::UpgradeError
-    pub async fn fetch_expected_sha256(
+    pub async fn try_fetch_expected_sha256(
         client: &reqwest::Client,
         sha256_url: &str,
     ) -> Result<Sha256Digest, UpgradeError> {
@@ -141,7 +141,7 @@ pub mod archive_stream {
     ///
     /// Returns [`UpgradeError`] on network failure, file writing failure, or user
     /// cancellation.
-    pub async fn stream_archive_to_disk(
+    pub async fn try_stream_archive_to_disk(
         client: &reqwest::Client,
         archive_url: &str,
         archive_path: &Path,
@@ -236,13 +236,13 @@ mod tests {
         fs::write(&file_path, b"").unwrap();
 
         let empty_digest = Sha256Digest::from_bytes(b"");
-        assert!(sha256_checksum::verify_file_sha256(&file_path, empty_digest).is_ok());
+        assert!(sha256_checksum::try_verify_file_sha256(&file_path, empty_digest).is_ok());
 
         let zero_digest = Sha256Digest::try_decode_hex_str(
             "0000000000000000000000000000000000000000000000000000000000000000",
         )
         .unwrap();
-        match sha256_checksum::verify_file_sha256(&file_path, zero_digest) {
+        match sha256_checksum::try_verify_file_sha256(&file_path, zero_digest) {
             Err(UpgradeError::ChecksumMismatch { expected, actual }) => {
                 assert_eq2!(expected, zero_digest);
                 assert_eq2!(actual, empty_digest);
@@ -255,7 +255,7 @@ mod tests {
     fn test_verify_file_sha256_nonexistent_file() {
         let temp_dir = try_create_temp_dir().unwrap();
         let nonexistent = temp_dir.join("nonexistent.bin");
-        let res_verify = sha256_checksum::verify_file_sha256(
+        let res_verify = sha256_checksum::try_verify_file_sha256(
             &nonexistent,
             Sha256Digest::from_bytes(b""),
         );
@@ -265,7 +265,7 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_expected_sha256_unreachable_url() {
         let client = create_http_client().unwrap();
-        let res_sha256 = sha256_checksum::fetch_expected_sha256(
+        let res_sha256 = sha256_checksum::try_fetch_expected_sha256(
             &client,
             "http://127.0.0.1:1/nonexistent.sha256",
         )

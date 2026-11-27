@@ -139,7 +139,7 @@ impl RustAnalyzerClient {
     /// fails.
     ///
     /// [`stdin`]: std::io::stdin
-    pub fn send_notification(
+    pub fn try_send_notification(
         &mut self,
         method: &str,
         params: Option<Value>,
@@ -162,7 +162,8 @@ impl RustAnalyzerClient {
             })
         };
 
-        let body_bytes = serde_json::to_vec(&notification_json)?;
+        let body_bytes =
+            serde_json::to_vec(&notification_json).map_err(McpServerError::Json)?;
 
         let header = format!(
             "{}{}\r\n\r\n",
@@ -177,9 +178,13 @@ impl RustAnalyzerClient {
             };
         });
 
-        stdin_writer.write_all(header.as_bytes())?;
-        stdin_writer.write_all(&body_bytes)?;
-        stdin_writer.flush()?;
+        stdin_writer
+            .write_all(header.as_bytes())
+            .map_err(McpServerError::Io)?;
+        stdin_writer
+            .write_all(&body_bytes)
+            .map_err(McpServerError::Io)?;
+        stdin_writer.flush().map_err(McpServerError::Io)?;
 
         ok!()
     }
@@ -192,7 +197,7 @@ impl RustAnalyzerClient {
     /// Returns [`McpServerError::ClientNotAvailable`] if not connected,
     /// [`McpServerError::RequestCancelled`] on timeout, or
     /// [`McpServerError::Io`] / [`McpServerError::Json`] on failure.
-    pub fn send_request(
+    pub fn try_send_request(
         &mut self,
         method: &str,
         params: Option<Value>,
@@ -222,7 +227,8 @@ impl RustAnalyzerClient {
             })
         };
 
-        let body_bytes = serde_json::to_vec(&request_json)?;
+        let body_bytes =
+            serde_json::to_vec(&request_json).map_err(McpServerError::Json)?;
 
         let header = format!(
             "{}{}\r\n\r\n",
@@ -243,9 +249,13 @@ impl RustAnalyzerClient {
             .as_mut()
             .ok_or(McpServerError::ClientNotAvailable)?;
 
-        stdin_writer.write_all(header.as_bytes())?;
-        stdin_writer.write_all(&body_bytes)?;
-        stdin_writer.flush()?;
+        stdin_writer
+            .write_all(header.as_bytes())
+            .map_err(McpServerError::Io)?;
+        stdin_writer
+            .write_all(&body_bytes)
+            .map_err(McpServerError::Io)?;
+        stdin_writer.flush().map_err(McpServerError::Io)?;
 
         // Wait for response payload on single-use receiver with timeout.
         let timeout = Duration::from_secs(timing::LSP_REQUEST_TIMEOUT_SECS);

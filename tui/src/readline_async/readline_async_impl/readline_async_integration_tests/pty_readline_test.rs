@@ -95,7 +95,7 @@ mod test_pty_readline {
             )
             .expect("conversion error");
 
-            let result = readline.readline().await;
+            let result = readline.try_readline().await;
             println!("ReadlineEvent: {result:?}");
 
             println!("{MSG_SUCCESS}");

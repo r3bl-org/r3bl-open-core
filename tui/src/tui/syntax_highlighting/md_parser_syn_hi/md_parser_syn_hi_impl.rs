@@ -5,22 +5,27 @@
 
 use super::create_color_wheel_from_heading_data;
 use crate::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, CODE_BLOCK_START_PARTIAL,
-            CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, DATE, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
-            HyperlinkData, InlineString, LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
-            Lines, MdDocument, MdElement, MdLineFragment, NEW_LINE, PrettyPrintDebug,
-            RIGHT_BRACKET, RIGHT_IMAGE, RIGHT_PARENTHESIS, RenderList, STAR, StyleUSSpan,
-            StyleUSSpanLine, StyleUSSpanLines, TAGS, TITLE, TextColorizationPolicy,
-            TuiStyle, TuiStyledTexts, UNCHECKED_OUTPUT, UNDERSCORE, ZeroCopyGapBuffer,
+            CodeBlockLineContent, CodeBlockLines, DATE, FragmentsInOneLine,
+            GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString,
+            LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS, Lines, MdDocument, MdElement,
+            MdLineFragment, NEW_LINE, PrettyPrintDebug, RIGHT_BRACKET, RIGHT_IMAGE,
+            RIGHT_PARENTHESIS, RenderList, STAR, StyleUSSpan, StyleUSSpanLine,
+            StyleUSSpanLines, TAGS, TITLE, TextColorizationPolicy, TuiStyle,
+            TuiStyledTexts, UNCHECKED_OUTPUT, UNDERSCORE, ZeroCopyGapBuffer,
             convert_highlighted_line_from_syntect_to_tui,
-            generate_ordered_list_item_bullet, generate_unordered_list_item_bullet, get_bold_style,
-            get_checkbox_checked_style, get_checkbox_unchecked_style,
+            generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
+            get_bold_style, get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
             get_list_bullet_style, parse_markdown, try_get_syntax_ref};
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
+
+/// Error returned when parsing a markdown document fails.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to parse markdown document")]
+pub struct MdParseError;
 
 /// This is the main function that the [`crate::editor`] uses to display markdown to the
 /// user. It takes a direct reference to [`ZeroCopyGapBuffer`] and converts it into a
@@ -53,7 +58,7 @@ use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 ///
 /// # Returns
 /// - `Ok(StyleUSSpanLines)` - Successfully parsed and styled markdown
-/// - `Err(CommonError)` - Parsing failed
+/// - `Err(MdParseError)` - Parsing failed
 ///
 /// # Errors
 ///
@@ -62,7 +67,7 @@ pub fn try_parse_and_highlight(
     gap_buffer: &ZeroCopyGapBuffer,
     maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
-) -> CommonResult<StyleUSSpanLines> {
+) -> Result<StyleUSSpanLines, MdParseError> {
     // XMARK: Parse markdown from editor and render it.
 
     // Parse using the zero-copy approach - no conversions needed!
@@ -75,9 +80,7 @@ pub fn try_parse_and_highlight(
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
         )),
-        Err(_) => {
-            CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
-        }
+        Err(_) => Err(MdParseError),
     }
 }
 
@@ -103,7 +106,7 @@ mod tests_try_parse_and_highlight {
 
     #[test]
     #[serial]
-    fn from_gap_buffer() -> CommonResult {
+    fn from_gap_buffer() -> miette::Result<()> {
         let _guard = set_color_override();
         throws!({
             let gap_buffer = {

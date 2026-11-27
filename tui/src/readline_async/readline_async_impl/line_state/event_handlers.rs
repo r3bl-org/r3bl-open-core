@@ -53,7 +53,7 @@ impl LineState {
     ///         key: r3bl_tui::Key::Character(ch)
     ///     });
     ///
-    ///     let result = line_state.apply_event_and_render(
+    ///     let result = line_state.try_apply_event_and_render(
     ///         &event,
     ///         &mut stdout,
     ///         &safe_history
@@ -71,7 +71,7 @@ impl LineState {
     ///     key: r3bl_tui::Key::SpecialKey(SpecialKey::Enter)
     /// });
     ///
-    /// let result = line_state.apply_event_and_render(
+    /// let result = line_state.try_apply_event_and_render(
     ///     &enter_event,
     ///     &mut stdout,
     ///     &safe_history
@@ -114,7 +114,7 @@ impl LineState {
     ///     crate::readline_async::readline_async_impl::readline_async_integration_tests::pty_ctrl_navigation_test
     /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-    pub fn apply_event_and_render(
+    pub fn try_apply_event_and_render(
         &mut self,
         event: &InputEvent,
         term: &mut dyn Write,
@@ -123,7 +123,7 @@ impl LineState {
         match event {
             InputEvent::Keyboard(keypress) => match keypress {
                 KeyPress::Plain { key } => {
-                    handle_regular_key(self, *key, term, safe_history)
+                    try_handle_regular_key(self, *key, term, safe_history)
                 }
                 KeyPress::WithModifiers { key, mask } => {
                     // Determine if ONLY Ctrl is pressed (no Shift or Alt)
@@ -137,59 +137,61 @@ impl LineState {
                         && mask.ctrl_key_state == KeyState::NotPressed;
 
                     if is_ctrl_only {
-                        handle_control_key(self, *key, term, safe_history)
+                        try_handle_control_key(self, *key, term, safe_history)
                     } else if is_alt_only {
-                        handle_alt_key(self, *key, term, safe_history)
+                        try_handle_alt_key(self, *key, term, safe_history)
                     } else {
-                        handle_regular_key(self, *key, term, safe_history)
+                        try_handle_regular_key(self, *key, term, safe_history)
                     }
                 }
             },
-            InputEvent::Resize(size) => handle_resize(self, *size, term),
+            InputEvent::Resize(size) => try_handle_resize(self, *size, term),
             _ => Ok(None),
         }
     }
 }
 
 /// Handles control key events (Ctrl+key combinations)
-pub fn handle_control_key(
+pub fn try_handle_control_key(
     line_state: &mut LineState,
     key: Key,
     term: &mut dyn Write,
     _safe_history: &SafeHistory,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     match key {
-        Key::Character('d') => handle_ctrl_d(line_state, term),
-        Key::Character('c') => handle_ctrl_c(line_state, term),
-        Key::Character('l') => handle_ctrl_l(line_state, term),
-        Key::Character('u') => handle_ctrl_u(line_state, term),
-        Key::Character('w') => handle_ctrl_w(line_state, term),
-        Key::Character('a') => handle_ctrl_a(line_state, term),
-        Key::Character('e') => handle_ctrl_e(line_state, term),
-        Key::SpecialKey(SpecialKey::Left) => handle_ctrl_left(line_state, term),
-        Key::SpecialKey(SpecialKey::Right) => handle_ctrl_right(line_state, term),
+        Key::Character('d') => try_handle_ctrl_d(line_state, term),
+        Key::Character('c') => try_handle_ctrl_c(line_state, term),
+        Key::Character('l') => try_handle_ctrl_l(line_state, term),
+        Key::Character('u') => try_handle_ctrl_u(line_state, term),
+        Key::Character('w') => try_handle_ctrl_w(line_state, term),
+        Key::Character('a') => try_handle_ctrl_a(line_state, term),
+        Key::Character('e') => try_handle_ctrl_e(line_state, term),
+        Key::SpecialKey(SpecialKey::Left) => try_handle_ctrl_left(line_state, term),
+        Key::SpecialKey(SpecialKey::Right) => try_handle_ctrl_right(line_state, term),
         _ => Ok(None),
     }
 }
 
 /// Handle Alt key events (Alt+key combinations)
-pub fn handle_alt_key(
+pub fn try_handle_alt_key(
     line_state: &mut LineState,
     key: Key,
     term: &mut dyn Write,
     _safe_history: &SafeHistory,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     match key {
-        Key::Character('b') => handle_alt_b(line_state, term),
-        Key::Character('f') => handle_alt_f(line_state, term),
-        Key::Character('d') => handle_alt_d(line_state, term),
-        Key::SpecialKey(SpecialKey::Backspace) => handle_alt_backspace(line_state, term),
+        Key::Character('b') => try_handle_alt_b(line_state, term),
+        Key::Character('f') => try_handle_alt_f(line_state, term),
+        Key::Character('d') => try_handle_alt_d(line_state, term),
+        Key::SpecialKey(SpecialKey::Backspace) => {
+            try_handle_alt_backspace(line_state, term)
+        }
         _ => Ok(None),
     }
 }
 
 /// Handles regular key events (no modifiers or non-Control modifiers)
-pub fn handle_regular_key(
+pub fn try_handle_regular_key(
     line_state: &mut LineState,
     key: Key,
     term: &mut dyn Write,
@@ -199,16 +201,18 @@ pub fn handle_regular_key(
 
     match key {
         // Internal handlers (modify state, return Ok(None)).
-        Key::SpecialKey(SpecialKey::Enter) => handle_enter(line_state, term),
-        Key::SpecialKey(SpecialKey::Backspace) => handle_backspace(line_state, term),
-        Key::SpecialKey(SpecialKey::Delete) => handle_delete(line_state, term),
-        Key::SpecialKey(SpecialKey::Left) => handle_left(line_state, term),
-        Key::SpecialKey(SpecialKey::Right) => handle_right(line_state, term),
-        Key::SpecialKey(SpecialKey::Home) => handle_home(line_state, term),
-        Key::SpecialKey(SpecialKey::End) => handle_end(line_state, term),
-        Key::SpecialKey(SpecialKey::Up) => handle_up(line_state, term, safe_history),
-        Key::SpecialKey(SpecialKey::Down) => handle_down(line_state, term, safe_history),
-        Key::Character(c) => handle_char(line_state, term, c),
+        Key::SpecialKey(SpecialKey::Enter) => try_handle_enter(line_state, term),
+        Key::SpecialKey(SpecialKey::Backspace) => try_handle_backspace(line_state, term),
+        Key::SpecialKey(SpecialKey::Delete) => try_handle_delete(line_state, term),
+        Key::SpecialKey(SpecialKey::Left) => try_handle_left(line_state, term),
+        Key::SpecialKey(SpecialKey::Right) => try_handle_right(line_state, term),
+        Key::SpecialKey(SpecialKey::Home) => try_handle_home(line_state, term),
+        Key::SpecialKey(SpecialKey::End) => try_handle_end(line_state, term),
+        Key::SpecialKey(SpecialKey::Up) => try_handle_up(line_state, term, safe_history),
+        Key::SpecialKey(SpecialKey::Down) => {
+            try_handle_down(line_state, term, safe_history)
+        }
+        Key::Character(c) => try_handle_char(line_state, term, c),
 
         // Pass-through keys (return event for caller to handle).
         Key::SpecialKey(SpecialKey::Tab) => Ok(Some(ReadlineEvent::Tab)),
@@ -245,19 +249,21 @@ pub fn handle_regular_key(
 }
 
 /// Handles terminal resize events.
-pub fn handle_resize(
+pub fn try_handle_resize(
     line_state: &mut LineState,
     size: VPSize,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
     line_state.term_size = size;
-    line_state.clear_and_render_and_flush(term)?;
+    line_state
+        .clear_and_render_and_flush(term)
+        .map_err(ReadlineError::IO)?;
     Ok(Some(ReadlineEvent::Resized(size)))
 }
 
 // Control key handlers.
-fn handle_ctrl_d(
+fn try_handle_ctrl_d(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -265,39 +271,40 @@ fn handle_ctrl_d(
     // - If line is empty: exit (EOF)
     // - If line is not empty: delete character at cursor (like Delete key)
     if line_state.line.is_empty() {
-        line_state.exit(term)?;
+        line_state.try_exit(term)?;
         Ok(Some(ReadlineEvent::Eof))
     } else {
-        handle_delete(line_state, term)
+        try_handle_delete(line_state, term)
     }
 }
 
 // End of text (Ctrl+C)
-fn handle_ctrl_c(
+fn try_handle_ctrl_c(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     if line_state.print_line_on_control_c == PrintLineOnControlC::Print
         && line_state.pause_state == PauseState::NotPaused
     {
-        line_state.print_and_flush(
+        line_state.try_print_and_flush(
             &[line_state.prompt.as_str(), line_state.line.as_str()].join(""),
             term,
         )?;
     }
-    line_state.exit(term)?;
+    line_state.try_exit(term)?;
     Ok(Some(ReadlineEvent::Interrupted))
 }
 
 // Clear all
-fn handle_ctrl_l(
+fn try_handle_ctrl_l(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
     // ED 2 = Erase entire screen (CSI 2J), then move cursor to home (row 0, col 0).
-    term.write_all(CSI_ERASE_DISPLAY_ALL.as_bytes())?;
+    term.write_all(CSI_ERASE_DISPLAY_ALL.as_bytes())
+        .map_err(ReadlineError::IO)?;
     term.write_all(
         inline_string!(
             "{}",
@@ -307,15 +314,18 @@ fn handle_ctrl_l(
             }
         )
         .as_bytes(),
-    )?;
+    )
+    .map_err(ReadlineError::IO)?;
 
-    line_state.clear_and_render_and_flush(term)?;
+    line_state
+        .clear_and_render_and_flush(term)
+        .map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Clear to start
-fn handle_ctrl_u(
+fn try_handle_ctrl_u(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -337,14 +347,16 @@ fn handle_ctrl_u(
         let remaining = &line_state.line.as_str()[*cursor_byte_pos..];
         line_state.line = GCStringOwned::new(remaining);
         line_state.move_logical_cursor_to_start();
-        line_state.clear_and_render_and_flush(term)?;
+        line_state
+            .clear_and_render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
 
     Ok(None)
 }
 
 // Clear last word (delete word backward)
-fn handle_ctrl_w(
+fn try_handle_ctrl_w(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -378,50 +390,62 @@ fn handle_ctrl_w(
         let backward_count = cursor_pos.distance_from(word_start);
         let movement = -backward_count.as_usize().as_isize_narrowing();
         line_state.shift_logical_cursor_by(movement);
-        line_state.clear_and_render_and_flush(term)?;
+        line_state
+            .clear_and_render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
 
     Ok(None)
 }
 
 /// Move to beginning.
-fn handle_ctrl_a(
+fn try_handle_ctrl_a(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.move_logical_cursor_to_start();
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 /// Move to end.
-fn handle_ctrl_e(
+fn try_handle_ctrl_e(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.move_logical_cursor_to_end();
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 /// Move cursor left to previous word (backward-word navigation).
-fn handle_ctrl_left(
+fn try_handle_ctrl_left(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
 
     if !line_state.cursor_position.is_zero() {
         let cursor_pos = line_state.cursor_position;
@@ -432,20 +456,24 @@ fn handle_ctrl_left(
         line_state.shift_logical_cursor_by(movement);
     }
 
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Move cursor right to next word (forward-word navigation).
-fn handle_ctrl_right(
+fn try_handle_ctrl_right(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
 
     let cursor_pos = line_state.cursor_position;
     let total_segs = line_state.line.segment_count();
@@ -458,8 +486,10 @@ fn handle_ctrl_right(
         line_state.shift_logical_cursor_by(movement);
     }
 
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
@@ -467,13 +497,15 @@ fn handle_ctrl_right(
 // Alt+key handlers.
 
 // Alt+B: backward-word (move cursor to start of previous word)
-fn handle_alt_b(
+fn try_handle_alt_b(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
 
     if !line_state.cursor_position.is_zero() {
         let cursor_pos = line_state.cursor_position;
@@ -484,20 +516,24 @@ fn handle_alt_b(
         line_state.shift_logical_cursor_by(movement);
     }
 
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Alt+F: forward-word (move cursor to start of next word)
-fn handle_alt_f(
+fn try_handle_alt_f(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     early_return_if_paused!(line_state @None);
 
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
 
     let cursor_pos = line_state.cursor_position;
     let total_segs = line_state.line.segment_count();
@@ -510,14 +546,16 @@ fn handle_alt_f(
         line_state.shift_logical_cursor_by(movement);
     }
 
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Alt+D: kill-word (delete from cursor to end of word)
-fn handle_alt_d(
+fn try_handle_alt_d(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -539,7 +577,9 @@ fn handle_alt_d(
             let left = &line_state.line.as_str()[..*start_byte];
             let right = &line_state.line.as_str()[*end_byte..];
             line_state.line = GCStringOwned::new([left, right].join(""));
-            line_state.clear_and_render_and_flush(term)?;
+            line_state
+                .clear_and_render_and_flush(term)
+                .map_err(ReadlineError::IO)?;
         }
     }
 
@@ -547,7 +587,7 @@ fn handle_alt_d(
 }
 
 // Alt+Backspace: backward-kill-word (delete from start of word to cursor)
-fn handle_alt_backspace(
+fn try_handle_alt_backspace(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -580,14 +620,16 @@ fn handle_alt_backspace(
         let backward_count = cursor_pos.distance_from(word_start);
         let movement = -backward_count.as_usize().as_isize_narrowing();
         line_state.shift_logical_cursor_by(movement);
-        line_state.clear_and_render_and_flush(term)?;
+        line_state
+            .clear_and_render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
 
     Ok(None)
 }
 
 // Regular key handlers.
-fn handle_enter(
+fn try_handle_enter(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -595,7 +637,7 @@ fn handle_enter(
     if line_state.print_line_on_enter == PrintLineOnEnter::Print
         && line_state.pause_state == PauseState::NotPaused
     {
-        line_state.print_and_flush(
+        line_state.try_print_and_flush(
             &[
                 line_state.prompt.as_str(),
                 line_state.line.as_str(),
@@ -609,19 +651,19 @@ fn handle_enter(
     // Take line content and reset to empty.
     let line_string = line_state.line.as_str().to_string();
     line_state.line = GCStringOwned::new("");
-    line_state.render_new_line_from_beginning_and_flush(term)?;
+    line_state.try_render_new_line_from_beginning_and_flush(term)?;
 
     // Return line.
     Ok(Some(ReadlineEvent::Line(line_string)))
 }
 
 // Delete (backspace) character from line.
-fn handle_backspace(
+fn try_handle_backspace(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     if let Some(seg) = line_state.grapheme_before_cursor() {
-        line_state.clear(term)?;
+        line_state.clear(term).map_err(ReadlineError::IO)?;
 
         // Create new string without the deleted character.
         let left = {
@@ -635,18 +677,20 @@ fn handle_backspace(
         line_state.line = GCStringOwned::new([left, right].join(""));
 
         line_state.shift_logical_cursor_by(-1);
-        line_state.render_and_flush(term)?;
+        line_state
+            .render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
     Ok(None)
 }
 
 // Delete character from line.
-fn handle_delete(
+fn try_handle_delete(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     if let Some(seg) = line_state.grapheme_at_cursor() {
-        line_state.clear(term)?;
+        line_state.clear(term).map_err(ReadlineError::IO)?;
 
         // Create new string without the deleted character.
         let left = {
@@ -659,66 +703,84 @@ fn handle_delete(
         };
         line_state.line = GCStringOwned::new([left, right].join(""));
 
-        line_state.render_and_flush(term)?;
+        line_state
+            .render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
     Ok(None)
 }
 
 // Move cursor left.
-fn handle_left(
+fn try_handle_left(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.shift_logical_cursor_by(-1);
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Move cursor right.
-fn handle_right(
+fn try_handle_right(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.shift_logical_cursor_by(1);
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Move cursor home.
-fn handle_home(
+fn try_handle_home(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.move_logical_cursor_to_start();
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Move cursor to end.
-fn handle_end(
+fn try_handle_end(
     line_state: &mut LineState,
     term: &mut dyn Write,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
-    line_state.paint_cursor_rewind_to_start(term)?;
+    line_state
+        .paint_cursor_rewind_to_start(term)
+        .map_err(ReadlineError::IO)?;
     line_state.move_logical_cursor_to_end();
-    line_state.paint_cursor_at_current_column(term)?;
-    term.flush()?;
+    line_state
+        .paint_cursor_at_current_column(term)
+        .map_err(ReadlineError::IO)?;
+    term.flush().map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
 
 // Navigate to older history entry.
 #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-fn handle_up(
+fn try_handle_up(
     line_state: &mut LineState,
     term: &mut dyn Write,
     safe_history: &SafeHistory,
@@ -727,9 +789,11 @@ fn handle_up(
         safe_history.write(|history| history.search_next().map(String::from))
     {
         line_state.line = GCStringOwned::new(line);
-        line_state.clear(term)?;
+        line_state.clear(term).map_err(ReadlineError::IO)?;
         line_state.move_logical_cursor_to_end();
-        line_state.render_and_flush(term)?;
+        line_state
+            .render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
 
     Ok(None)
@@ -737,7 +801,7 @@ fn handle_up(
 
 // Navigate to newer history entry.
 #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-fn handle_down(
+fn try_handle_down(
     line_state: &mut LineState,
     term: &mut dyn Write,
     safe_history: &SafeHistory,
@@ -746,22 +810,24 @@ fn handle_down(
         safe_history.write(|history| history.search_previous().map(String::from))
     {
         line_state.line = GCStringOwned::new(line);
-        line_state.clear(term)?;
+        line_state.clear(term).map_err(ReadlineError::IO)?;
         line_state.move_logical_cursor_to_end();
-        line_state.render_and_flush(term)?;
+        line_state
+            .render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
     }
 
     Ok(None)
 }
 
 // Add character to line and output.
-fn handle_char(
+fn try_handle_char(
     line_state: &mut LineState,
     term: &mut dyn Write,
     char_to_insert: char,
 ) -> Result<Option<ReadlineEvent>, ReadlineError> {
     // Clear the line (so we can mutate and re-render subsequently).
-    line_state.clear(term)?;
+    line_state.clear(term).map_err(ReadlineError::IO)?;
 
     // Track segment count before insertion.
     let seg_count_before_insert = line_state.line.segment_count();
@@ -799,7 +865,9 @@ fn handle_char(
     }
 
     // Render the modified line and flush to terminal.
-    line_state.render_and_flush(term)?;
+    line_state
+        .render_and_flush(term)
+        .map_err(ReadlineError::IO)?;
 
     Ok(None)
 }
@@ -838,7 +906,7 @@ mod tests {
         });
 
         let it = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
@@ -862,7 +930,7 @@ mod tests {
         });
 
         let it = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
@@ -886,7 +954,7 @@ mod tests {
         });
 
         let it = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(it, Ok(None)));
 
@@ -913,7 +981,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+D on empty line should return EOF.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Eof))));
@@ -939,7 +1007,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+D on non-empty line should delete char at cursor.
         assert!(matches!(result, Ok(None)));
@@ -967,7 +1035,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(result, Ok(None)));
         // "world" should be deleted, leaving "hello ".
@@ -996,19 +1064,19 @@ mod tests {
 
         // First Ctrl+Left should move to start of "foo".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(12));
 
         // Second Ctrl+Left should move to start of "world".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(6));
 
         // Third Ctrl+Left should move to start of "hello".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(0));
     }
@@ -1034,19 +1102,19 @@ mod tests {
 
         // First Ctrl+Right should move to start of "world" (after hyphen).
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(6));
 
         // Second Ctrl+Right should move to start of "foo".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(12));
 
         // Third Ctrl+Right should move to end (no next word).
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(15));
     }
@@ -1074,19 +1142,19 @@ mod tests {
 
         // First Alt+B should move to start of "three".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(8));
 
         // Second Alt+B should move to start of "two".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(4));
 
         // Third Alt+B should move to start of "one".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(0));
     }
@@ -1112,19 +1180,19 @@ mod tests {
 
         // First Alt+F should move to start of "two".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(4));
 
         // Second Alt+F should move to start of "three".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(8));
 
         // Third Alt+F should move to end (no next word).
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.cursor_position, seg_index(13));
     }
@@ -1150,13 +1218,13 @@ mod tests {
 
         // First Alt+D should delete "foo".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.line.as_str(), " bar baz");
 
         // Second Alt+D should delete " bar".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.line.as_str(), " baz");
     }
@@ -1182,13 +1250,13 @@ mod tests {
 
         // First Alt+Backspace should delete "three".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.line.as_str(), "one two ");
 
         // Second Alt+Backspace should delete "two ".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.line.as_str(), "one ");
     }
@@ -1214,7 +1282,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+C should signal interrupt.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Interrupted))));
@@ -1239,7 +1307,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+L should clear screen and re-render.
         assert!(matches!(result, Ok(None)));
@@ -1267,7 +1335,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+U should delete from cursor to start.
         assert!(matches!(result, Ok(None)));
@@ -1295,7 +1363,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+A should move cursor to start.
         assert!(matches!(result, Ok(None)));
@@ -1322,7 +1390,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Ctrl+E should move cursor to end.
         assert!(matches!(result, Ok(None)));
@@ -1343,7 +1411,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Enter should return the line.
         assert!(matches!(result, Ok(Some(ReadlineEvent::Line(ref s))) if s == "hello"));
@@ -1366,7 +1434,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Backspace should delete character before cursor.
         assert!(matches!(result, Ok(None)));
@@ -1389,7 +1457,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Delete should delete character at cursor.
         assert!(matches!(result, Ok(None)));
@@ -1411,7 +1479,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Left arrow should move cursor left one position.
         assert!(matches!(result, Ok(None)));
@@ -1433,7 +1501,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Home should move cursor to start of line.
         assert!(matches!(result, Ok(None)));
@@ -1455,7 +1523,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // End should move cursor to end of line.
         assert!(matches!(result, Ok(None)));
@@ -1480,7 +1548,7 @@ mod tests {
         });
 
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&up_event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&up_event, stdout, &safe_history))
             .expect("conversion error");
         assert_eq!(line.line.as_str(), "second");
 
@@ -1490,7 +1558,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|term| line.apply_event_and_render(&down_event, term, &safe_history));
+            .write(|term| line.try_apply_event_and_render(&down_event, term, &safe_history));
 
         assert!(matches!(result, Ok(None)));
     }
@@ -1518,7 +1586,7 @@ mod tests {
 
         // Ctrl+W should delete "world".
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
 
         // Should have "hello 🎉 " remaining.
@@ -1543,7 +1611,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         // Should not panic or error on empty line.
         assert!(matches!(result, Ok(None)));
@@ -1571,7 +1639,7 @@ mod tests {
 
         // Ctrl+Left on punctuation-only string.
         safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history))
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history))
             .expect("conversion error");
 
         // Punctuation-only strings are treated as one "word", so jumps to start.
@@ -1601,7 +1669,7 @@ mod tests {
 
         // First Ctrl+Left: should move to start of "test".
         let result = safe_output_terminal.write(|term| {
-            line.apply_event_and_render(&ctrl_left_event, term, &safe_history)
+            line.try_apply_event_and_render(&ctrl_left_event, term, &safe_history)
         });
 
         assert!(matches!(result, Ok(None)));
@@ -1609,7 +1677,7 @@ mod tests {
 
         // Second Ctrl+Left: should move to start of "世界".
         let result = safe_output_terminal.write(|term| {
-            line.apply_event_and_render(&ctrl_left_event, term, &safe_history)
+            line.try_apply_event_and_render(&ctrl_left_event, term, &safe_history)
         });
 
         assert!(matches!(result, Ok(None)));
@@ -1617,7 +1685,7 @@ mod tests {
 
         // Third Ctrl+Left: should move to start of "hello".
         let result = safe_output_terminal.write(|term| {
-            line.apply_event_and_render(&ctrl_left_event, term, &safe_history)
+            line.try_apply_event_and_render(&ctrl_left_event, term, &safe_history)
         });
 
         assert!(matches!(result, Ok(None)));
@@ -1659,7 +1727,7 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                line.apply_event_and_render(&event, stdout, &safe_history)
+                line.try_apply_event_and_render(&event, stdout, &safe_history)
             });
             assert!(
                 matches!(result, Ok(Some(ReadlineEvent::FnKey(n))) if n.get() == expected_num),
@@ -1696,7 +1764,7 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                line.apply_event_and_render(&event, stdout, &safe_history)
+                line.try_apply_event_and_render(&event, stdout, &safe_history)
             });
             match result {
                 Ok(Some(ref readline_event)) => {
@@ -1745,7 +1813,7 @@ mod tests {
             });
 
             let result = safe_output_terminal.write(|stdout| {
-                line.apply_event_and_render(&event, stdout, &safe_history)
+                line.try_apply_event_and_render(&event, stdout, &safe_history)
             });
             assert!(
                 matches!(result, Ok(None)),
@@ -1769,7 +1837,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(
             matches!(result, Ok(Some(ReadlineEvent::UnhandledKey(_)))),
@@ -1790,7 +1858,7 @@ mod tests {
             key: Key::Character('e'),
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event_e, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event_e, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "e");
         assert_eq!(line.line.segment_count().as_usize(), 1);
@@ -1801,7 +1869,7 @@ mod tests {
             key: Key::Character('\u{0301}'),
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&event_accent, stdout, &safe_history)
+            line.try_apply_event_and_render(&event_accent, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "e\u{0301}");
@@ -1815,7 +1883,7 @@ mod tests {
             key: Key::Character('b'),
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event_b, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event_b, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "e\u{0301}b");
         assert_eq!(line.line.segment_count().as_usize(), 2);
@@ -1828,7 +1896,7 @@ mod tests {
             key: Key::Character('x'),
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event_x, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event_x, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "e\u{0301}xb");
         assert_eq!(line.line.segment_count().as_usize(), 3);
@@ -1847,7 +1915,7 @@ mod tests {
         let event = InputEvent::Resize(new_size);
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(
             matches!(result, Ok(Some(ReadlineEvent::Resized(size))) if size == new_size)
@@ -1873,7 +1941,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&ctrl_k, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&ctrl_k, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
 
         // Unhandled Alt key (e.g. Alt+Z) returns Ok(None).
@@ -1886,10 +1954,10 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&alt_z, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&alt_z, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
 
-        // Multi-modifier fallback branch (Shift+Char('A')) calls handle_regular_key.
+        // Multi-modifier fallback branch (Shift+Char('A')) calls try_handle_regular_key.
         let shift_a = InputEvent::Keyboard(KeyPress::WithModifiers {
             key: Key::Character('A'),
             mask: ModifierKeysMask {
@@ -1899,14 +1967,14 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&shift_a, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&shift_a, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "A");
 
         // Non-keyboard, non-resize event (e.g. BracketedPaste) returns Ok(None).
         let paste_event = InputEvent::BracketedPaste("pasted text".to_string());
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&paste_event, stdout, &safe_history)
+            line.try_apply_event_and_render(&paste_event, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
     }
@@ -1926,7 +1994,7 @@ mod tests {
             key: Key::SpecialKey(SpecialKey::Backspace),
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&backspace, stdout, &safe_history)
+            line.try_apply_event_and_render(&backspace, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
@@ -1942,7 +2010,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&alt_backspace, stdout, &safe_history)
+            line.try_apply_event_and_render(&alt_backspace, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
@@ -1957,7 +2025,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&ctrl_u, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&ctrl_u, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
 
@@ -1969,7 +2037,7 @@ mod tests {
             key: Key::SpecialKey(SpecialKey::Delete),
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&delete_key, stdout, &safe_history)
+            line.try_apply_event_and_render(&delete_key, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
@@ -1985,7 +2053,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&alt_d, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&alt_d, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
     }
@@ -2005,7 +2073,7 @@ mod tests {
             key: Key::Character('x'),
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&char_event, stdout, &safe_history)
+            line.try_apply_event_and_render(&char_event, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.line.as_str(), "hello");
@@ -2013,7 +2081,7 @@ mod tests {
         // Resize while paused does not mutate term_size.
         let resize_event = InputEvent::Resize(vp_width(200) + vp_height(50));
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&resize_event, stdout, &safe_history)
+            line.try_apply_event_and_render(&resize_event, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.term_size, vp_width(100) + vp_height(100));
@@ -2041,7 +2109,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(matches!(result, Ok(Some(ReadlineEvent::Interrupted))));
         let output = stdout_mock.get_copy_of_buffer_as_string();
@@ -2065,7 +2133,7 @@ mod tests {
         });
 
         let result = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&event, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&event, stdout, &safe_history));
 
         assert!(
             matches!(result, Ok(Some(ReadlineEvent::Line(ref s))) if s == "secret password")
@@ -2095,7 +2163,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&ctrl_left, stdout, &safe_history)
+            line.try_apply_event_and_render(&ctrl_left, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.cursor_position, seg_index(0));
@@ -2110,7 +2178,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&alt_b, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&alt_b, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.cursor_position, seg_index(0));
 
@@ -2127,7 +2195,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal.write(|stdout| {
-            line.apply_event_and_render(&ctrl_right, stdout, &safe_history)
+            line.try_apply_event_and_render(&ctrl_right, stdout, &safe_history)
         });
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.cursor_position, seg_index(11));
@@ -2142,7 +2210,7 @@ mod tests {
             },
         });
         let res = safe_output_terminal
-            .write(|stdout| line.apply_event_and_render(&alt_f, stdout, &safe_history));
+            .write(|stdout| line.try_apply_event_and_render(&alt_f, stdout, &safe_history));
         assert!(matches!(res, Ok(None)));
         assert_eq!(line.cursor_position, seg_index(11));
     }

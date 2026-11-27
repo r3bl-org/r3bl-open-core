@@ -22,9 +22,7 @@ pub struct PixelCharLine {
 }
 
 impl GetMemSize for PixelCharLine {
-    fn get_mem_size(&self) -> usize {
-        slice_size(self.pixel_chars.as_ref())
-    }
+    fn get_mem_size(&self) -> usize { slice_size(self.pixel_chars.as_ref()) }
 }
 
 impl Debug for PixelCharLine {

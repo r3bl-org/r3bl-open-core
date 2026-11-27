@@ -1,20 +1,19 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CommonResult, LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle,
-            TERMINAL_LIB_BACKEND, TermCol, TermRowDelta, TerminalLibBackend,
-            ansi_output};
+use crate::{LockedOutputDevice, OutputDevice, SharedWriter, SpinnerStyle,
+            TERMINAL_LIB_BACKEND, TermCol, TermRowDelta, TerminalLibBackend, ansi_output};
 use crossterm::{cursor::{Hide, MoveToColumn, MoveToNextLine, MoveToPreviousLine, Show},
                 style::Print,
                 terminal::{Clear, ClearType}};
-use miette::IntoDiagnostic;
+use std::io;
 
 // Allocate specified number of lines in the terminal (ahead of the current cursor
 // position) for the spinner.
 #[allow(clippy::needless_pass_by_value)]
-fn clear_lines_for_spinner(
+fn try_clear_lines_for_spinner(
     output_device: OutputDevice,
     num_lines_to_clear: u16,
-) -> CommonResult {
+) -> io::Result<()> {
     if num_lines_to_clear == 0 {
         return ok!();
     }
@@ -80,13 +79,13 @@ fn clear_lines_for_spinner(
                     TermCol::ONE,
                 ));
 
-                writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                writer.write_all(buf.as_bytes())?;
             }
         }
 
-        writer.flush().into_diagnostic()?;
+        writer.flush()?;
 
-        Ok::<(), miette::Report>(())
+        Ok::<(), io::Error>(())
     })?;
 
     ok!()
@@ -98,12 +97,12 @@ fn clear_lines_for_spinner(
 /// # Errors
 ///
 /// Returns an error if clearing lines fails due to I/O errors.
-pub fn print_start_if_standalone(
+pub fn try_print_start_if_standalone(
     output_device: OutputDevice,
     maybe_shared_writer: &Option<SharedWriter>,
-) -> CommonResult {
+) -> io::Result<()> {
     if maybe_shared_writer.is_none() {
-        clear_lines_for_spinner(output_device, 2)?;
+        try_clear_lines_for_spinner(output_device, 2)?;
     }
     ok!()
 }
@@ -115,11 +114,11 @@ pub fn print_start_if_standalone(
 ///
 /// Returns an error if printing or flushing the output fails.
 #[allow(clippy::needless_pass_by_value)]
-pub fn print_tick_interval_msg(
+pub fn try_print_tick_interval_msg(
     _style: &SpinnerStyle,
     output: &str,
     output_device: OutputDevice,
-) -> CommonResult {
+) -> io::Result<()> {
     // Print the output. And make sure to terminate w/ a newline, so that the
     // output is printed for ReadlineAsyncContext.
     match TERMINAL_LIB_BACKEND {
@@ -142,7 +141,7 @@ pub fn print_tick_interval_msg(
             );
         }
         TerminalLibBackend::DirectToAnsi => {
-            output_device.write(|writer| -> miette::Result<()> {
+            output_device.write(|writer| -> io::Result<()> {
                 let mut buf = String::new();
                 buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
                     TermCol::ONE,
@@ -156,15 +155,15 @@ pub fn print_tick_interval_msg(
                 buf.push_str(&ansi_output::cursor_movement::cursor_to_column(
                     TermCol::ONE,
                 ));
-                writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                writer.write_all(buf.as_bytes())?;
                 ok!()
             })?;
         }
     }
 
     output_device.write(|writer| {
-        writer.flush().into_diagnostic()?;
-        Ok::<(), miette::Report>(())
+        writer.flush()?;
+        Ok::<(), io::Error>(())
     })?;
 
     ok!()
@@ -176,12 +175,12 @@ pub fn print_tick_interval_msg(
 ///
 /// Returns an error if printing or flushing the output fails.
 #[allow(clippy::needless_pass_by_value)]
-pub fn print_tick_final_msg(
+pub fn try_print_tick_final_msg(
     _style: &SpinnerStyle,
     output: &str,
     output_device: OutputDevice,
     maybe_shared_writer: &Option<SharedWriter>,
-) -> CommonResult {
+) -> io::Result<()> {
     output_device.write(|writer| {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
@@ -189,7 +188,7 @@ pub fn print_tick_final_msg(
                     writer,
                     // Ensure cursor is at the beginning of the spinner line. This is
                     // usually true if called after
-                    // print_tick_interval_msg, but it's safer
+                    // try_print_tick_interval_msg, but it's safer
                     // to be explicit.
                     MoveToColumn(0),
                     // Clear the current line (where the spinner interval message was).
@@ -213,7 +212,7 @@ pub fn print_tick_final_msg(
                 buf.push_str(output);
                 buf.push('\n');
                 buf.push_str(ansi_output::screen_clearing::clear_to_end_of_screen());
-                writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                writer.write_all(buf.as_bytes())?;
             }
         }
 
@@ -221,12 +220,12 @@ pub fn print_tick_final_msg(
         // context.
         if maybe_shared_writer.is_none() {
             // We don't care about the result of this operation.
-            drop(print_end_if_standalone(writer));
+            drop(try_print_end_if_standalone(writer));
         }
 
-        writer.flush().into_diagnostic()?;
+        writer.flush()?;
 
-        Ok::<(), miette::Report>(())
+        Ok::<(), io::Error>(())
     })?;
 
     ok!()
@@ -239,7 +238,7 @@ pub fn print_tick_final_msg(
 /// "out of sequence" issues with the output that is printed, that might result from
 /// having to wait to acquire a lock.
 #[allow(clippy::missing_errors_doc)]
-fn print_end_if_standalone(writer: LockedOutputDevice<'_>) -> CommonResult {
+fn try_print_end_if_standalone(writer: LockedOutputDevice<'_>) -> io::Result<()> {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
             queue_commands_no_lock!(
@@ -259,7 +258,7 @@ fn print_end_if_standalone(writer: LockedOutputDevice<'_>) -> CommonResult {
             ));
             buf.push_str(ansi_output::screen_clearing::clear_current_line());
             buf.push_str(ansi_output::cursor_visibility::show_cursor());
-            writer.write_all(buf.as_bytes()).into_diagnostic()?;
+            writer.write_all(buf.as_bytes())?;
         }
     }
 

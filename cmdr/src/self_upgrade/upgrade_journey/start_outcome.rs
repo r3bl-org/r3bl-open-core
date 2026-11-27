@@ -156,30 +156,29 @@ impl DeferredUpgradeOutcome {
     ///      [`ExitOutcome::Completed`].
     ///    - If joining fails with [`ThreadRunnerError::RuntimeInitFailed`] or
     ///      [`ThreadRunnerError::ThreadPanicked`], preserves the diagnostic payload
-    ///      inside [`ExitOutcome::CheckFailed`]
-    ///      ([`CheckFailedError::ThreadRunner`]).
+    ///      inside [`ExitOutcome::CheckFailed`] ([`CheckFailedError::ThreadRunner`]).
     ///
     /// # Terminal State at Exit
     ///
     /// When executing logic that runs on exit using
     /// [`StdThreadTokioRunner::run_blocking`][2], after a TUI application (like `giti` or
     /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
-    /// [`ReadlineAsyncContext`], or [`choose`]) has already dropped its [RAII] guards and
-    /// restored the terminal from [raw mode] back to [cooked mode]. We have designed it
-    /// this way so that the following can work interoperably with full TUI apps:
-    /// 1. [`choose`] can cleanly create its own temporary [raw mode] session for modal
-    ///    prompts and restore [cooked mode] afterward.
+    /// [`ReadlineAsyncContext`], or [`try_choose`]) has already dropped its [RAII] guards
+    /// and restored the terminal from [raw mode] back to [cooked mode]. We have designed
+    /// it this way so that the following can work interoperably with full TUI apps:
+    /// 1. [`try_choose`] can cleanly create its own temporary [raw mode] session for
+    ///    modal prompts and restore [cooked mode] afterward.
     /// 2. [`Spinner`] (in [standalone mode] with `maybe_shared_writer: None`, and not
     ///    embedded inside an active [`ReadlineAsyncContext`]) can run in [cooked mode].
     ///
     /// [1]: crate::self_upgrade::UpgradeStrategy::Deferred
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_blocking
-    /// [`choose`]: r3bl_tui::choose
     /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
     /// [`Spinner`]: r3bl_tui::Spinner
     /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
     /// [`ThreadRunnerError::RuntimeInitFailed`]: crate::self_upgrade::ThreadRunnerError::RuntimeInitFailed
     /// [`ThreadRunnerError::ThreadPanicked`]: crate::self_upgrade::ThreadRunnerError::ThreadPanicked
+    /// [`try_choose`]: r3bl_tui::try_choose
     /// [`UpgradeActionOnExit`]: crate::self_upgrade::UpgradeActionOnExit
     /// [`UpgradeJourney::start`]: crate::self_upgrade::UpgradeJourney::start
     /// [`Upgrading`]: crate::self_upgrade::Upgrading
@@ -206,7 +205,8 @@ impl DeferredUpgradeOutcome {
             Ok(outcome) => outcome,
             Err(thread_err) => {
                 return ExitOutcome::CheckFailed(
-                    checking.into_check_failed(CheckFailedError::from(thread_err)),
+                    checking
+                        .into_check_failed(CheckFailedError::ThreadRunner(thread_err)),
                 );
             }
         };
@@ -279,11 +279,10 @@ mod tests {
     #[test]
     fn test_handle_upgrade_on_exit_preserves_spawn_failure() {
         let strategy = UpgradeStrategy::Deferred(UpgradeActionOnExit::Auto);
-        let error = CheckFailedError::ThreadRunner(
-            ThreadRunnerError::ThreadSpawnFailed {
+        let error =
+            CheckFailedError::ThreadRunner(ThreadRunnerError::ThreadSpawnFailed {
                 src_err: std::io::Error::other("Resource busy"),
-            },
-        );
+            });
         let failed = make_test_journey("0.1.0", UpgradePolicy::Enabled(strategy))
             .into_checking(strategy)
             .into_check_failed(error);

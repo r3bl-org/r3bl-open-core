@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppMain, State};
-use r3bl_tui::{CommonResult, InputEvent, IntoErr, ModifierKeysMask, TerminalWindow,
-               TuiAvailability, key_press, ok};
+use r3bl_tui::{InputEvent, IntoErr, ModifierKeysMask, TerminalWindow, TuiAvailability,
+               key_press, ok};
 
-pub async fn run_app() -> CommonResult {
+pub async fn run_app() -> miette::Result<()> {
     let app = AppMain::new_boxed();
     let exit_keys = &[InputEvent::Keyboard(
         key_press! { @char ModifierKeysMask::new().with_ctrl(), 'q' },

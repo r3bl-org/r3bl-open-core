@@ -24,6 +24,7 @@ Task: HTTP Testing in ROC (`MockHttpServer` Archival & `mockito` Migration)
         - [Sub-phase 8.2: `JsoncParseError`, `FetchManifestError` & `!Eq` Check Outcomes](#sub-phase-82-jsoncparseerror-fetchmanifesterror--eq-check-outcomes)
         - [Sub-phase 8.3: `TokioRuntimeOutcome` & `ThreadRunnerError`](#sub-phase-83-tokioruntimeoutcome--threadrunnererror)
         - [Sub-phase 8.4: `UpgradeError` Overhaul (Delete `Other(String)`)](#sub-phase-84-upgradeerror-overhaul-delete-otherstring)
+    - [Mandatory Manual Review](#mandatory-manual-review)
 
 <!-- END mktoc -->
 
@@ -426,8 +427,8 @@ changing their public signatures:
 #### Phase 8: High-Fidelity Typed Errors (Zero String Squashing)
 
 Following the repo's **High-Fidelity Error Handling** guidelines (`design-philosophy` #5:
-never squash `miette::Report` or `std::error::Error` into `String`), drop `Clone,
-PartialEq, Eq` on error-carrying typestates/outcomes (`CheckFailed`, `Completed`,
+never squash `miette::Report` or `std::error::Error` into `String`), drop
+`Clone, PartialEq, Eq` on error-carrying typestates/outcomes (`CheckFailed`, `Completed`,
 `DeferredCheckOutcome`, `ImmediateCheckOutcome`, `ImmediateUpgradeOutcome`, `ExitOutcome`)
 and replace every string-squashed or `miette::Report`-wrapped error with typed
 `#[derive(Debug, thiserror::Error, miette::Diagnostic)]` definitions using `#[source]` and
@@ -775,31 +776,6 @@ integration tests) with `mockito`.
       `cmdr/src/self_upgrade/check/fetch_manifest.rs` and
       `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs` with `mockito`.
 - [x] Run `./check.fish --check` to verify `r3bl-cmdr` compiles cleanly.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [x] `Cargo.toml`
-    - [x] `cmdr/Cargo.toml`
-    - [x] `tui/Cargo.toml`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/sha256_digest.rs`
-    - [x] `tui/src/core/common/fast_strings/hex_slice.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
-    - [x] `cmdr/src/self_upgrade/constants.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/download.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/release_asset.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/release_target.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/upgrade_source.rs`
-    - [x] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
 
 ### Phase 4: Linear `StartOutcome` & `StartGate`
 
@@ -850,25 +826,6 @@ thread/runtime init and panic diagnostics.
 - [x] Run `./check.fish --check`, `./check.fish --fmt`, and targeted
       `cargo test -p r3bl-cmdr -q self_upgrade` to verify compilation, formatting, and all
       unit/integration tests.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [x] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/start_gate.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`
-    - [x] `cmdr/src/self_upgrade/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_guard_and_disabled_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
 
 ### Phase 5: Deferred Exit & `Skipped`
 
@@ -916,32 +873,6 @@ witness in `ExitOutcome`.
       items inside, and update direct call-site `use` imports and rustdoc links across
       `typestates/`, `integration_tests/`, `start_outcome.rs`, and `self_upgrade/mod.rs`.
 - [x] Run `./check.fish --check` to verify `r3bl-cmdr` compiles cleanly.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/per_process_start_latch.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/skipped.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrade_available.rs`
-    - [x] `cmdr/src/self_upgrade/check/cooldown.rs`
-    - [x] `cmdr/src/self_upgrade/config/upgrade_policy.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade/prompt.rs`
-    - [x] `cmdr/src/self_upgrade/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_guard_and_disabled_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_unhappy_path_tests.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_test.rs`
-    - [x] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/cargo_install_rustup_test.rs`
 
 ### Phase 6: Use-Case Integration Tests
 
@@ -1057,25 +988,6 @@ barrel-exported from `upgrade_journey/mod.rs`, every test file (including newly 
       `Completed(UpgradeFailed)`.
 - [x] Run `./check.fish --check` and targeted `cargo test -p r3bl-cmdr -q self_upgrade` to
       verify compilation and all integration/unit tests pass.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [x] `cmdr/src/self_upgrade/check/remote_version_check_gate.rs`
-    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/not_started.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrading.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/jsonc_golden.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_latch_and_disabled.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_unhappy_paths.rs`
 
 ### Phase 7: Add `mockito` Tests Across ROC
 
@@ -1107,19 +1019,17 @@ Add deterministic `mockito`-backed unit tests for all remaining HTTP client modu
       `{"crate": {"max_version": "1.0.228"}}` extraction, missing `"max_version"` JSON
       field error, and HTTP 500 error.
 - [x] Run `./check.fish --check` to verify compilation.
-- [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
-      implementation and ensure no regressions.
-    - [ ] `cmdr/src/analytics_client/http_client.rs`
-    - [ ] `tui/src/core/script/http_client.rs`
-    - [ ] `tui/src/core/script/download.rs`
-    - [ ] `tui/src/core/script/github_api.rs`
-    - [ ] `tui/src/core/script/crates_api.rs`
 
 ### Phase 8: Eliminate Lossy Error Squashing Across ROC
 
+> **Note:** Phase 8 was implemented prior to `task/cleanup-miette-error-sloppiness.md`.
+> `cleanup-miette-error-sloppiness.md` Phase 9 subsequently replaced the `#[from]`
+> attributes shown in the Target Types snippets above with explicit `#[source]` +
+> `.map_err(...)`.
+
 Eliminate all lossy error-to-`String` squashing (`format!("{err:#}")`, `.to_string()`,
-`UpgradeError::Other(String)`) and `miette::Report`-inside-enum wrappers across
-`r3bl_tui` and `r3bl-cmdr::self_upgrade`. Because `miette::Report` implements a blanket
+`UpgradeError::Other(String)`) and `miette::Report`-inside-enum wrappers across `r3bl_tui`
+and `r3bl-cmdr::self_upgrade`. Because `miette::Report` implements a blanket
 `From<E: miette::Diagnostic + Send + Sync + 'static>`, replacing `miette::Result` on
 `r3bl_tui::script` helpers with typed `thiserror::Error` + `miette::Diagnostic` errors is
 backwards-compatible with all existing `miette::Result` `?` callers while giving
@@ -1143,18 +1053,14 @@ in `http_client.rs`, `temp_dir.rs`, and `permissions.rs` (re-exported via
       `Result<(), FilePermissionsError>`.
 - [x] Run `./check.fish --check` to verify the entire workspace compiles cleanly (existing
       `miette::Result` callers continue using bare `?`).
-- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
-      correct implementation and ensure no regressions.
-    - [ ] `tui/src/core/script/http_client.rs`
-    - [ ] `tui/src/core/script/temp_dir.rs`
-    - [ ] `tui/src/core/script/permissions.rs`
 
 #### Sub-phase 8.2: `JsoncParseError`, `FetchManifestError` & `!Eq` Check Outcomes
 
 Give `JsoncManifest::try_parse_jsonc` a typed `JsoncParseError`, rewrite
-`FetchManifestError` in `fetch_manifest.rs` with typed stage variants (`HttpClientCreateFailed`,
-`HttpRequestFailed`, `JsoncParseFailed`, `CrateNotFoundInManifest`), and drop `Clone,
-PartialEq, Eq` from `CheckFailed` and check-carrying outcome enums.
+`FetchManifestError` in `fetch_manifest.rs` with typed stage variants
+(`HttpClientCreateFailed`, `HttpRequestFailed`, `JsoncParseFailed`,
+`CrateNotFoundInManifest`), and drop `Clone, PartialEq, Eq` from `CheckFailed` and
+check-carrying outcome enums.
 
 - [x] Add `JsoncParseError` (`InvalidSyntax(jsonc_parser::errors::ParseError)`,
       `InvalidSchema(serde_json::Error)`) in
@@ -1178,17 +1084,6 @@ PartialEq, Eq` from `CheckFailed` and check-carrying outcome enums.
       (asserting real `reqwest::Error` status/connect properties instead of string
       diagnostics).
 - [x] Run `./check.fish --check` to verify compilation.
-- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
-      correct implementation and ensure no regressions.
-    - [ ] `cmdr/src/self_upgrade/jsonc_manifest/jsonc_manifest_struct.rs`
-    - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/check_failed.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/checking.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
 
 #### Sub-phase 8.3: `TokioRuntimeOutcome` & `ThreadRunnerError`
 
@@ -1196,14 +1091,14 @@ Eliminate `miette::Report` from `TokioRuntimeOutcome` in `r3bl_tui` and replace 
 string-squashed `ThreadRunnerError` variants with `ThreadSpawnFailed`,
 `RuntimeInitFailed`, and `ThreadPanicked`.
 
-- [x] Update `TokioRuntimeOutcome<T>` in
-      `tui/src/core/common/std_thread_tokio_runner.rs` to hold
-      `FailedToStart(std::io::Error)` and
+- [x] Update `TokioRuntimeOutcome<T>` in `tui/src/core/common/std_thread_tokio_runner.rs`
+      to hold `FailedToStart(std::io::Error)` and
       `Panicked { thread_name: &'static str, panic_msg: String }` (updating its unit
       tests).
 - [x] Update `ThreadRunnerError` in
-      `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs` to drop `Clone, PartialEq,
-      Eq` and use `ThreadSpawnFailed { #[source] src_err: std::io::Error }`,
+      `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs` to drop
+      `Clone, PartialEq,     Eq` and use
+      `ThreadSpawnFailed { #[source] src_err: std::io::Error }`,
       `RuntimeInitFailed { #[source] src_err: std::io::Error }`, and
       `ThreadPanicked { thread_name: &'static str, panic_msg: String }` (updating
       `thread_runner.rs`, `start_outcome.rs`, and `deferred_upgrade_unhappy_paths.rs`
@@ -1214,21 +1109,13 @@ string-squashed `ThreadRunnerError` variants with `ThreadSpawnFailed`,
       `assert_eq2!` comparisons on `UpgradeResolution` / `Completed` in integration tests
       to pattern matches.
 - [x] Run `./check.fish --check` to verify compilation.
-- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
-      correct implementation and ensure no regressions.
-    - [ ] `tui/src/core/common/std_thread_tokio_runner.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/completed.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_happy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_happy_paths.rs`
 
 #### Sub-phase 8.4: `UpgradeError` Overhaul (Delete `Other(String)`)
 
-Delete `UpgradeError::Other(String)` completely and replace all `.map_err(|e|
-UpgradeError::Other(...))` call sites across `perform_upgrade.rs`, `download.rs`, and
-`swap.rs` with structured `UpgradeError` variants preserving `#[source]` errors.
+Delete `UpgradeError::Other(String)` completely and replace all
+`.map_err(|e| UpgradeError::Other(...))` call sites across `perform_upgrade.rs`,
+`download.rs`, and `swap.rs` with structured `UpgradeError` variants preserving
+`#[source]` errors.
 
 - [x] Replace `UpgradeError::Other(String)` (and drop `Clone, PartialEq, Eq`) in
       `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs` with typed variants:
@@ -1242,12 +1129,61 @@ UpgradeError::Other(...))` call sites across `perform_upgrade.rs`, `download.rs`
 - [x] Update `self_replace_unhappy_paths.rs` and `install_via_rustup_unhappy_paths.rs`
       (and rustdoc comments in `cmdr/src/self_upgrade/`) to match the concrete
       `UpgradeError` variants (`DownloadHttpFailed`, `EmptyArchive`,
-      `ArchiveExtractFailed`, `SourceBuildExitedNonZero`) instead of `UpgradeError::Other`.
+      `ArchiveExtractFailed`, `SourceBuildExitedNonZero`) instead of
+      `UpgradeError::Other`.
 - [x] Run `./check.fish --check` to verify compilation across the workspace.
-- [ ] **Mandatory manual review:** Verify every file modified in this sub-phase for
-      correct implementation and ensure no regressions.
-    - [ ] `cmdr/src/self_upgrade/upgrade/perform_upgrade.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/download.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade/swap.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_unhappy_paths.rs`
-    - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_unhappy_paths.rs`
+
+### Mandatory Manual Review
+
+Aggregated manual review checklist for all files modified across Phases 3 through 8
+(Phases 1 and 2 were already reviewed). Stale pre-rename paths from Phases 3 through 5
+(`cooldown.rs`, `start_gate.rs`, and the pre-Phase-6 `integration_tests/*_test(s).rs`
+filenames) are resolved to their current paths. The 16 files that overlap with
+`task/cleanup-miette-error-sloppiness.md` are excluded here because they are reviewed as
+part of that task's manual review checklist.
+
+- [ ] **Mandatory manual review:** Complete manual review of all 39 remaining files.
+    - Cargo manifests:
+        - [x] `Cargo.toml`
+        - [x] `cmdr/Cargo.toml`
+        - [x] `tui/Cargo.toml`
+    - `tui`:
+        - [x] `tui/src/core/common/fast_strings/hex_slice.rs`
+        - [ ] `tui/src/core/common/std_thread_tokio_runner.rs`
+        - [ ] `tui/src/core/script/http_client.rs`
+        - [ ] `tui/src/core/script/permissions.rs`
+    - `cmdr/src/self_upgrade` production:
+        - [ ] `cmdr/src/self_upgrade/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/constants.rs`
+        - [ ] `cmdr/src/self_upgrade/check/fetch_manifest.rs`
+        - [ ] `cmdr/src/self_upgrade/check/remote_version_check_gate.rs`
+        - [ ] `cmdr/src/self_upgrade/config/upgrade_policy.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/prompt.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/release_asset.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/release_target.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade/sha256_digest.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/per_process_start_latch.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/thread_runner.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/exit_outcome.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/skipped.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/state_machine.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/typestates/upgrade_available.rs`
+    - `cmdr/src/self_upgrade` HTTP test fixtures:
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/constants.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/http_server.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/test_fixtures/jsonc_golden.rs`
+    - `cmdr/src/self_upgrade` use-case integration tests:
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/mod.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/start_latch_and_disabled.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_happy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/immediate_upgrade_unhappy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_happy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/deferred_upgrade_unhappy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_happy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/self_replace_unhappy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_happy_paths.rs`
+        - [ ] `cmdr/src/self_upgrade/upgrade_journey/integration_tests/install_via_rustup_unhappy_paths.rs`

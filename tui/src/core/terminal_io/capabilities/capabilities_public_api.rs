@@ -12,12 +12,24 @@ use crate::{AtomicU8Ext as _, IntoErr,
             TTYResult::{IsInteractive, IsNotInteractive},
             TtyStatus, VPSize, VPWidth, is_tty_stderr, is_tty_stdin, is_tty_stdout,
             vp_height, vp_width};
-use miette::IntoDiagnostic;
 use std::{io::Write, sync::atomic::AtomicU8};
+
+/// Error returned by [`try_get_size`] when querying the terminal dimensions fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum TerminalSizeError {
+    /// Crossterm terminal size query failed.
+    #[error("Failed to query terminal window size")]
+    Io(#[source] std::io::Error),
+
+    /// Unix `tcgetwinsize` ioctl failed.
+    #[cfg(unix)]
+    #[error("Failed to query terminal window size via tcgetwinsize")]
+    Errno(#[source] rustix::io::Errno),
+}
 
 /// Returned by [interactive terminal application entry points] (which are fallible).
 ///
-/// Initialization ([`get_size()`], entering [raw mode], etc.) is fallible, since they
+/// Initialization ([`try_get_size()`], entering [raw mode], etc.) is fallible, since they
 /// require the use of [`ioctl`] (which is wrapped by [`rustix`]), so this type has a
 /// [`Broken`] variant to represent this state.
 ///
@@ -176,7 +188,8 @@ pub fn assert_terminal_is_interactive() {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("{}", self.as_err_msg())]
 pub enum TerminalNotInteractiveReason {
     StdinNotInteractive,
     StdoutNotInteractive,
@@ -195,9 +208,7 @@ impl TerminalNotInteractiveReason {
 }
 
 impl IntoErr for TerminalNotInteractiveReason {
-    fn into_err<T>(self) -> miette::Result<T> {
-        Err(miette::miette!("{}", self.as_err_msg()))
-    }
+    fn into_err<T>(self) -> miette::Result<T> { Err(self.into()) }
 }
 
 /// Tracks whether [`emit_stderr_redirection_disclaimer()`] has already run.
@@ -206,7 +217,7 @@ static DISCLAIMER_ALREADY_EMITTED: AtomicU8 = AtomicU8::new(0);
 
 #[must_use]
 pub fn get_terminal_width_no_default() -> Option<VPWidth> {
-    match get_size() {
+    match try_get_size() {
         Ok(size) => Some(size.col_width),
         Err(_) => None,
     }
@@ -215,7 +226,7 @@ pub fn get_terminal_width_no_default() -> Option<VPWidth> {
 /// Gets the terminal width. If there is a problem, return `DEFAULT_WIDTH`.
 #[must_use]
 pub fn get_terminal_width() -> VPWidth {
-    match get_size() {
+    match try_get_size() {
         Ok(size) => size.col_width,
         Err(_) => vp_width(DEFAULT_WIDTH),
     }
@@ -241,26 +252,28 @@ pub fn get_terminal_width() -> VPWidth {
 /// [`tcgetwinsize`]: fn@rustix::termios::tcgetwinsize
 /// [`TERMINAL_LIB_BACKEND`]: crate::tui::TERMINAL_LIB_BACKEND
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-pub fn get_size() -> miette::Result<VPSize> {
+pub fn try_get_size() -> Result<VPSize, TerminalSizeError> {
     #[cfg(unix)]
     {
         use crate::tui::terminal_lib_backends::{TERMINAL_LIB_BACKEND, TerminalLibBackend};
 
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
-                let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+                let (columns, rows) =
+                    crossterm::terminal::size().map_err(TerminalSizeError::Io)?;
                 Ok(vp_width(columns) + vp_height(rows))
             }
             TerminalLibBackend::DirectToAnsi => {
                 let winsize = rustix::termios::tcgetwinsize(std::io::stdout())
-                    .map_err(|e| miette::miette!("tcgetwinsize failed: {}", e))?;
+                    .map_err(TerminalSizeError::Errno)?;
                 Ok(vp_width(winsize.ws_col) + vp_height(winsize.ws_row))
             }
         }
     }
     #[cfg(not(unix))]
     {
-        let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
+        let (columns, rows) =
+            crossterm::terminal::size().map_err(TerminalSizeError::Io)?;
         Ok(vp_width(columns) + vp_height(rows))
     }
 }
@@ -292,10 +305,10 @@ pub fn is_input_interactive() -> TTYResult {
 /// Returns [`TTYResult::IsInteractive`] if [`stdout`] is an interactive [`TTY`].
 ///
 /// This is the primary check for UI components ([`Spinner`], [`ReadlineAsyncContext`],
-/// [`TUI`], [`PTYMux`], [`choose()`]), reflecting that the TUI renders to [`stdout`] and
-/// should not be disabled by [`stderr`] redirection. Diagnostic output (tracing, logs)
-/// is routed to [`stderr`] via [`DisplayPreference::Stderr`], keeping it separate from
-/// TUI rendering.
+/// [`TUI`], [`PTYMux`], [`try_choose()`]), reflecting that the TUI renders to [`stdout`]
+/// and should not be disabled by [`stderr`] redirection. Diagnostic output (tracing,
+/// logs) is routed to [`stderr`] via [`DisplayPreference::Stderr`], keeping it separate
+/// from TUI rendering.
 ///
 /// Example scenario where this returns [`TTYResult::IsInteractive`] despite redirection:
 /// ```bash
@@ -304,7 +317,6 @@ pub fn is_input_interactive() -> TTYResult {
 /// In this case, [`emit_stderr_redirection_disclaimer()`] is called to notify the user
 /// that [`stderr`] is redirected.
 ///
-/// [`choose()`]: crate::choose
 /// [`DisplayPreference::Stderr`]: crate::DisplayPreference::Stderr
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
 /// [`PTYMux`]: crate::PTYMux
@@ -312,6 +324,7 @@ pub fn is_input_interactive() -> TTYResult {
 /// [`Spinner`]: crate::readline_async::Spinner
 /// [`stderr`]: std::io::stderr
 /// [`stdout`]: std::io::stdout
+/// [`try_choose()`]: crate::try_choose
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
 #[must_use]

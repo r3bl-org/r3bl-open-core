@@ -397,7 +397,7 @@ pub fn test_create_failure_then_success() {
 
     let notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("transient error"))),
+            Err(TestWorkerCreateError("transient error")),
             create_ok_result(),
         ],
         no_delay_policy(3),
@@ -435,9 +435,9 @@ pub fn test_persistent_create_failure() {
 
     let _notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("fail 1"))),
-            (Err(miette::miette!("fail 2"))),
-            (Err(miette::miette!("fail 3"))),
+            Err(TestWorkerCreateError("fail 1")),
+            Err(TestWorkerCreateError("fail 2")),
+            Err(TestWorkerCreateError("fail 3")),
         ],
         no_delay_policy(3),
     );
@@ -523,7 +523,7 @@ pub fn test_delay_resets_after_successful_create() {
     };
     let notify_receiver = setup_factory(
         vec![
-            (Err(miette::miette!("transient"))),
+            Err(TestWorkerCreateError("transient")),
             create_ok_result(),
             create_ok_result(),
         ],

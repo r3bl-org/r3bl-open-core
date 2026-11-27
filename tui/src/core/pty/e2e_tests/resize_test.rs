@@ -12,7 +12,7 @@ fn test_pty_resize() {
             DefaultPtySessionConfig
                 + PtySessionConfigToken::Size(vp_width(80) + vp_height(24)),
         )
-        .start()
+        .try_start()
         .expect("Failed to spawn session");
 
     // 1. Resize immediately.

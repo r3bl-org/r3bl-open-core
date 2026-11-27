@@ -7,7 +7,7 @@
 //! This module provides methods for manipulating entire rows in the buffer, such as
 //! getting, setting, swapping, and shifting lines.
 
-use super::{OfsBuf, PixelChar};
+use super::{OfsBuf, OfsBufBoundsError, PixelChar};
 use crate::{CanvasStorage, Flat2DArray, VPRow};
 
 /// Line-level operations.
@@ -22,9 +22,13 @@ impl<S: CanvasStorage> OfsBuf<S> {
     /// # Errors
     ///
     /// Returns an error if the row is out of bounds.
-    pub fn set_line(&mut self, row: VPRow, line: &[PixelChar]) -> miette::Result<()> {
+    pub fn try_set_line(
+        &mut self,
+        row: VPRow,
+        line: &[PixelChar],
+    ) -> Result<(), OfsBufBoundsError> {
         let Some(target_line) = self.get_row_mut(row) else {
-            return Err(miette::miette!("Row index out of bounds"));
+            return Err(OfsBufBoundsError::RowOutOfBounds { row });
         };
         target_line.copy_from_slice(line);
         ok!()
@@ -47,7 +51,11 @@ impl<S: CanvasStorage> OfsBuf<S> {
     /// [`Flat2DArray`]: crate::core::Flat2DArray
     /// [`GrowableBuffer`]: crate::tui::GrowableBuffer
     /// [SIMD]: https://en.wikipedia.org/wiki/SIMD
-    pub fn swap_lines(&mut self, row_1: VPRow, row_2: VPRow) -> miette::Result<()> {
+    pub fn try_swap_lines(
+        &mut self,
+        row_1: VPRow,
+        row_2: VPRow,
+    ) -> Result<(), OfsBufBoundsError> {
         (**self).swap_lines(row_1, row_2)
     }
 }
@@ -101,7 +109,7 @@ mod tests_line_level_ops {
         }
 
         // Clear the line.
-        let result = buffer.clear_line(test_row);
+        let result = buffer.try_clear_line(test_row);
         assert!(result.is_ok());
 
         // Verify all characters are now spacers.
@@ -117,7 +125,7 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Try to clear an invalid row.
-        let result = buffer.clear_line(vp_row(10));
+        let result = buffer.try_clear_line(vp_row(10));
         assert!(result.is_err());
     }
 
@@ -239,7 +247,7 @@ mod tests_line_level_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
-        let result = buffer.shift_lines_in_range(
+        let result = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Up,
             vp_row(1)..vp_row(4),
             vp_len(1),
@@ -300,7 +308,7 @@ mod tests_line_level_ops {
             buffer.set_line(vp_row(3), &create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
-        let result = buffer.shift_lines_in_range(
+        let result = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Down,
             vp_row(1)..vp_row(4),
             vp_len(1),
@@ -353,21 +361,21 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Test invalid row ranges.
-        let result1 = buffer.shift_lines_in_range(
+        let result1 = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Up,
             vp_row(10)..vp_row(12),
             vp_len(1),
         );
         assert!(result1.is_err());
 
-        let result2 = buffer.shift_lines_in_range(
+        let result2 = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Down,
             vp_row(3)..vp_row(1),
             vp_len(1),
         ); // Backward range
         assert!(result2.is_err());
 
-        let result3 = buffer.shift_lines_in_range(
+        let result3 = buffer.try_shift_lines_in_range(
             ShiftLinesDirection::Up,
             vp_row(0)..vp_row(10),
             vp_len(1),

@@ -47,7 +47,7 @@ use crate::UpgradeConfig;
 /// │  │      │   └─► ImmediateUpgrade(CheckFailed(<CheckFailed>))
 /// │  │      ├─► <UpToDate> (remote <= current) ──► touch timestamp file
 /// │  │      │   └─► ImmediateUpgrade(UpToDate(<UpToDate>))
-/// │  │      └─► <Upgrading> (remote > current) ──► perform_upgrade()
+/// │  │      └─► <Upgrading> (remote > current) ──► try_perform_upgrade()
 /// │  │          ├─► <Completed(Upgraded)> ──► touch timestamp file
 /// │  │          │   └─► ImmediateUpgrade(Completed(<Completed>))
 /// │  │          └─► <Completed(UpgradeFailed)>
@@ -80,8 +80,8 @@ use crate::UpgradeConfig;
 ///    ├─ CheckFailed(<CheckFailed>) ► ExitOutcome::CheckFailed(<CheckFailed>)
 ///    └─ UpgradeAvailable(<UpgradeAvailable>) ──► <Upgrading>
 ///       ├─ Executes UpgradeActionOnExit:
-///       │  ├─ Auto ────────────► perform_upgrade()
-///       │  ├─ PromptToUpgrade ─► prompt user ──► perform_upgrade()
+///       │  ├─ Auto ────────────► try_perform_upgrade()
+///       │  ├─ PromptToUpgrade ─► prompt user ──► try_perform_upgrade()
 ///       │  └─ NotifyOnly ──────► print notification
 ///       └─► ExitOutcome::Completed(<Completed>) (touches file if Upgraded)
 ///

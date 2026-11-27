@@ -8,7 +8,7 @@
 //! exit cleanly.
 //! - The preferred way to shut it down is by sending a
 //!   [`LineStateControlSignal::ExitReadlineLoop`] signal (which is done automatically by
-//!   [`ReadlineAsyncContext::request_shutdown()`]).
+//!   [`ReadlineAsyncContext::try_request_shutdown()`]).
 //! - Alternatively, the task will also exit when the [`Readline`] instance is dropped,
 //!   because the [`tokio::sync::mpsc::channel()`]'s [`tokio::sync::mpsc::Sender`] (held
 //!   by [`SharedWriter`]) is dropped, closing the channel.
@@ -21,7 +21,7 @@
 //!   [`SharedWriter::line_state_control_channel_sender`].
 //! - This channel is used to send signals *from* [`SharedWriter`]s *to* this background
 //!   task, to control the [`LineState`] of the terminal.
-//! - Note that [`Readline::readline()`] must be called in a loop while the user is
+//! - Note that [`Readline::try_readline()`] must be called in a loop while the user is
 //!   interacting with the terminal, so that these signals can be processed.
 //!
 //! # Buffering and output
@@ -34,20 +34,20 @@
 //! [`LineStateControlSignal::ExitReadlineLoop`]:
 //!     crate::LineStateControlSignal::ExitReadlineLoop
 //! [`PauseBuffer`]: crate::PauseBuffer
-//! [`Readline::readline()`]: crate::Readline::readline
 //! [`Readline::try_new()`]: crate::Readline::try_new
+//! [`Readline::try_readline()`]: crate::Readline::try_readline
 //! [`Readline`]: crate::Readline
-//! [`ReadlineAsyncContext::request_shutdown()`]:
-//!     crate::ReadlineAsyncContext::request_shutdown
+//! [`ReadlineAsyncContext::try_request_shutdown()`]:
+//!     crate::ReadlineAsyncContext::try_request_shutdown
 //! [`SharedWriter::line_state_control_channel_sender`]:
 //!     crate::SharedWriter::line_state_control_channel_sender
 //! [`SharedWriter`]: crate::SharedWriter
 //! [`tokio::sync::mpsc::channel()`]: tokio::sync::mpsc::channel
 //! [`tokio::sync::mpsc::Sender`]: tokio::sync::mpsc::Sender
 
-use crate::{CommonResultWithError, Continuation, LineState, LineStateControlSignal,
-            OutputDevice, PauseBuffer, PauseState, PauseStateTransition, ReadlineError,
-            SafeLineState, SafePauseBuffer, SendRawTerminal, StdMutex};
+use crate::{Continuation, LineState, LineStateControlSignal, OutputDevice, PauseBuffer,
+            PauseState, PauseStateTransition, ReadlineError, SafeLineState,
+            SafePauseBuffer, SendRawTerminal, StdMutex};
 use std::{io, sync::Arc};
 use tokio::{spawn,
             sync::{broadcast, mpsc},
@@ -157,8 +157,8 @@ pub fn process_line_control_signal(
                 // Try to immediately print the incoming output and flush.
                 output_device
                     .write(|term| {
-                        line_state.print_data_and_flush(buf.as_ref(), term)?;
-                        term.flush()?;
+                        line_state.try_print_data_and_flush(buf.as_ref(), term)?;
+                        term.flush().map_err(ReadlineError::IO)?;
                         ok!()
                     })
                     .into()
@@ -189,7 +189,7 @@ pub fn process_line_control_signal(
                 output_device
                     .write(|term| {
                         // We don't care about the result of this operation.
-                        drop(flush_internal(
+                        drop(try_flush_internal(
                             &self_safe_is_paused_buffer,
                             line_state.pause_state,
                             line_state,
@@ -220,7 +220,7 @@ pub fn process_line_control_signal(
             output_device
                 .write(|term| {
                     // We don't care about the result of this operation.
-                    drop(flush_internal(
+                    drop(try_flush_internal(
                         &self_safe_is_paused_buffer,
                         line_state.pause_state,
                         line_state,
@@ -267,12 +267,12 @@ pub fn process_line_control_signal(
 /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
 ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
 #[allow(clippy::unwrap_in_result)] /* This is for lock.expect("conversion error") */
-pub fn flush_internal(
+pub fn try_flush_internal(
     self_safe_is_paused_buffer: &SafePauseBuffer,
     pause_state: PauseState,
     line_state: &mut LineState,
     term: &mut SendRawTerminal,
-) -> CommonResultWithError<(), ReadlineError> {
+) -> Result<(), ReadlineError> {
     // If paused, then return!
     if pause_state != PauseState::NotPaused {
         return ok!();
@@ -291,8 +291,10 @@ pub fn flush_internal(
         })
     };
 
-    line_state.print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
-    line_state.clear_and_render_and_flush(term)?;
+    line_state.try_print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
+    line_state
+        .clear_and_render_and_flush(term)
+        .map_err(ReadlineError::IO)?;
 
     ok!()
 }
@@ -347,7 +349,7 @@ mod test_pause_and_resume_support {
         });
 
         safe_line_state.write(|line_state| {
-            let result = flush_internal(
+            let result = try_flush_internal(
                 &safe_is_paused_buffer,
                 PauseState::PausedBySpinner,
                 line_state,
@@ -376,7 +378,7 @@ mod test_pause_and_resume_support {
         });
 
         safe_line_state.write(|line_state| {
-            let result = flush_internal(
+            let result = try_flush_internal(
                 &safe_is_paused_buffer,
                 PauseState::NotPaused,
                 line_state,

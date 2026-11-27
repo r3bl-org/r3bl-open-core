@@ -421,10 +421,10 @@ pub fn create_http_client() -> miette::Result<reqwest::Client> {
 
 ```rust
 // ✅ Good: Concrete library error deriving both `thiserror::Error` and `miette::Diagnostic`.
-// `#[from]` generates `From<reqwest::Error>` AND marks the field as `Error::source()`.
+// `#[source]` marks the field as `Error::source()` without generating an implicit `From`.
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 #[error("Failed to create HTTP client")]
-pub struct HttpClientError(#[from] pub reqwest::Error);
+pub struct HttpClientError(#[source] pub reqwest::Error);
 
 pub fn create_http_client() -> Result<reqwest::Client, HttpClientError> {
     reqwest::Client::builder()
@@ -433,12 +433,173 @@ pub fn create_http_client() -> Result<reqwest::Client, HttpClientError> {
         .map_err(HttpClientError)
 }
 
-// Application boundary (`main()` / CLI entry point): bare `?` works automatically
+// Binary entry point (`src/bin/*.rs` / `main()`): bare `?` works automatically
 // because `HttpClientError` implements `miette::Diagnostic`.
-pub fn run_cli() -> miette::Result<()> {
+fn main() -> miette::Result<()> {
     let _client = create_http_client()?;
     Ok(())
 }
+```
+
+### 4-Tier Outcome & Error Naming (`Error` / `Result` / `Outcome` / `Report`)
+
+Keep the four layers of execution and error reporting semantically distinct so callers immediately know whether a type is meant for `?` propagation, programmatic branching, or terminal rendering:
+
+| Suffix | Role | Intended Consumer | Examples |
+| :--- | :--- | :--- | :--- |
+| **`*Error`** | Typed, matchable failure (`thiserror::Error + miette::Diagnostic`) | Callers matching or wrapping `Err(e)` | `CommandRunError`, `HttpClientError`, `RawModeError` |
+| **`*Result`** | `std::result::Result<T, E>` (or thin alias) | `?` propagation | `Result<T, E>`, `miette::Result<T>`, `FsOpResult<T>` |
+| **`*Outcome`** | Structured domain data from an operation that ran (unformatted) | Domain logic inspecting fields or `match`ing variants | `ProcessExecutionOutcome`, `CommandRunOutcome<T>`, `StartOutcome` |
+| **`*Report`** | Human/operator-facing presentation payload (`Display`, colors, `tracing`, diagnostics) | CLI/UI exit boundary (`println!`, logging); never branched on | `CommandRunReport<T>`, `miette::Report` |
+
+#### Bad: Overloading `*Result` Across All Layers
+
+```rust
+// ❌ Bad: A Result wrapping a "Result" enum, while another "Result" is a tuple alias.
+pub enum CommandOutputResult { Success(Output), NonZeroExit(Output), SpawnFailed(io::Error) }
+pub type ResultAndCommand<T> = (Result<T, CommandRunError>, Command);
+pub enum CommandRunResult<T> { Noop(..), Run(..), Fail(..) }
+
+pub async fn handle_branch_new() -> CommonResult<CommandRunResult<Details>> { ... }
+```
+
+#### Good: Distinct Semantic Tiers
+
+```rust
+// ✅ Good: Each name matches its abstraction layer.
+pub enum ProcessExecutionOutcome { Success(Output), NonZeroExit(Output), SpawnFailed(io::Error) }
+pub struct CommandRunOutcome<T> { pub result: Result<T, CommandRunError>, pub command: TokioCommand }
+pub enum CommandRunReport<T: Debug + Display> { Noop(..), Run(..), Fail(..) }
+
+pub async fn try_handle_branch_new() -> Result<CommandRunReport<Details>, GitiBranchError> { ... }
+```
+
+### Error Struct vs. Error Enum (When to Use Each)
+
+Both error structs and error enums derive the exact same `#[derive(Debug, thiserror::Error, miette::Diagnostic)]` macros. Choose the shape strictly by **how many distinct failure modes** the function or module can produce:
+
+| Shape | Cardinality | When to Use | Codebase Examples |
+| :--- | :--- | :--- | :--- |
+| **Unit struct** (`pub struct FooError;`) | 1 failure mode, no data | Single self-explanatory failure with no extra fields or upstream error | `MdParseError`, `StylesheetError`, `RRTWorkerStoppedError`, `InvalidPercentageError` |
+| **Newtype / field struct** (`pub struct FooError(#[source] pub E);`) | 1 failure mode, with cause or context | Single failure wrapping 1 upstream error or context field(s); avoids redundant single-variant enums | `HttpClientError(#[source] pub reqwest::Error)`, `InvalidHexColorError { pub input: String }`, `DisplaySizeTooSmallError { pub row: VPRow }` |
+| **Enum** (`pub enum FooError { A(..), B(..) }`) | 2+ distinct failure modes | Multiple failure categories callers may match on or diagnose differently | `DownloadFileError`, `CommandRunError`, `GapBufferError`, `RawModeError`, `SubscribeError<E>` |
+
+#### Bad: 1-Variant Enum (Redundant Nesting)
+
+```rust
+// ❌ Bad: Only one failure mode, yet forces callers to write `HttpClientError::BuildFailed(e)`
+// and `match` on an enum with a single arm.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum HttpClientError {
+    #[error("Failed to create HTTP client")]
+    BuildFailed(#[source] reqwest::Error),
+}
+```
+
+#### Good: Newtype Error Struct for 1 Failure Mode, Enum for 2+ Failure Modes
+
+```rust
+// ✅ Good (1 failure mode): Newtype struct wraps the single foreign error.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Failed to create HTTP client")]
+pub struct HttpClientError(#[source] pub reqwest::Error);
+
+// ✅ Good (3 failure modes): Higher-level enum wires every wrapped error with `#[source]`
+// and constructs variants explicitly at call sites via `.map_err(...)`.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum DownloadFileError {
+    #[error("Failed to create HTTP client")]
+    HttpClientCreateFailed(#[source] HttpClientError),
+
+    #[error("HTTP download from '{url}' failed")]
+    HttpRequestFailed {
+        url: String,
+        #[source]
+        src_err: reqwest::Error,
+    },
+
+    #[error("Failed to write downloaded file '{}'", path.display())]
+    FileIo {
+        path: PathBuf,
+        #[source]
+        src_err: std::io::Error,
+    },
+}
+
+pub async fn try_download(url: &str) -> Result<(), DownloadFileError> {
+    let client = try_create_http_client()
+        .map_err(DownloadFileError::HttpClientCreateFailed)?;
+    let resp = client.get(url).send().await.map_err(|src_err| {
+        DownloadFileError::HttpRequestFailed { url: url.to_owned(), src_err }
+    })?;
+    // ...
+    Ok(())
+}
+```
+
+#### Why Wrap a Single Third-Party Error in a Newtype Struct?
+
+1. **Enables `miette::Diagnostic` across the orphan rule**: Foreign errors like `reqwest::Error` do not implement `miette::Diagnostic`, and Rust forbids implementing foreign traits on foreign types. A local newtype derives `miette::Diagnostic` so `miette::Result` callers use bare `?` with zero `.into_diagnostic()` noise.
+2. **Adds domain context while preserving `Error::source()`**: `#[error("Failed to create HTTP client")]` says *what* our code was doing, while `#[source]` keeps the inner `reqwest::Error` in the `Caused by:` chain.
+3. **Separates failure domains cleanly**: Client creation (`HttpClientError`) and network I/O (`reqwest::Error`) are distinct types with distinct meanings, even though both originate from `reqwest`.
+4. **Decouples your public API from dependency churn**: Callers depend on `HttpClientError` instead of `reqwest::Error`, allowing you to evolve it into an enum or swap HTTP crates later without breaking downstream signatures.
+
+### Explicit `#[source]` Over Implicit `#[from]`
+
+In `thiserror`, **`#[from]` is strictly `#[source]` plus an auto-generated `impl From<Inner> for Outer`**. We **prefer `#[source]` + explicit `.map_err(...)`** and avoid `#[from]`:
+
+| Attribute | Wires `Error::source()` (`miette` cause chain)? | Generates implicit `From<Inner>`? | Works with extra context fields or duplicate inner types? |
+| :--- | :---: | :---: | :---: |
+| **`#[source]` (Recommended)** | Yes | **No** (explicit `.map_err(...)` at call site) | **Yes** |
+| **`#[from]` (Avoid)** | Yes | **Yes** (implicit conversion on bare `?`) | **No** |
+
+**Why we reject `#[from]` despite extra typing:**
+1. **Zero hidden control flow**: At every `?` site, `.map_err(MyError::Variant)` makes the exact error variant visible inline without jumping to the enum definition to check which `From` impl fired.
+2. **No ambiguity or `From` collisions**: Multiple failure modes frequently wrap the same upstream type (`std::io::Error`, `reqwest::Error`). `#[source]` handles 100% of cases uniformly instead of mixing `#[from]` on some variants and `#[source]` on others.
+3. **Zero runtime or diagnostic loss**: `#[source]` produces the exact same `std::error::Error::source()` chain and `miette` `╰─▶` rendered stack as `#[from]`.
+
+```rust
+// ❌ Avoid: Implicit `#[from]` hides which variant `?` produces and breaks if a second
+// variant also wraps `std::io::Error`.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum ConfigError {
+    #[error("Failed to read config")]
+    ReadFailed(#[from] std::io::Error),
+}
+
+// ✅ Good: Explicit `#[source]` + `.map_err(...)` is unambiguous at every call site and
+// scales cleanly when adding more `std::io::Error` failure modes.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum ConfigError {
+    #[error("Failed to read config")]
+    ReadFailed(#[source] std::io::Error),
+    #[error("Failed to write config")]
+    WriteFailed(#[source] std::io::Error),
+}
+
+fn try_load_config(path: &Path) -> Result<String, ConfigError> {
+    std::fs::read_to_string(path).map_err(ConfigError::ReadFailed)
+}
+```
+
+### Fallible Function Naming (`try_` Prefix)
+
+Every fallible free function or inherent method returning `Result<T, E>` (or a `Future` / availability wrapper resolving to `Result<T, E>`) carries a `try_` prefix so fallibility is self-evident at every call site:
+
+| Category | Convention | Examples |
+| :--- | :--- | :--- |
+| **Fallible free functions & inherent methods** | Prefix with `try_` | `try_from_seed_file`, `try_parse_seed_content`, `try_run_cargo_fmt`, `try_get_workspace_root`, `try_enable_raw_mode`, `DirectToAnsiInputDevice::try_new`, `try_choose` |
+| **Infallible functions & constructors** | No `try_` prefix | `from_bytes`, `is_empty`, `to_format_options`, `Default::default` |
+| **Exceptions (never add `try_`)** | Keep canonical name | `fn main`, `#[test]` functions, trait methods (`FromStr::from_str`, `Display::fmt`, `App`, `Component`, `Run`), unconditional `Err` constructors (`LayoutError::new_error_result*`) |
+
+```rust
+// ❌ Avoid: Call sites cannot tell from the name that this constructor or helper can fail.
+pub fn from_seed(terms_file: Option<&Path>) -> Result<Self, TechnicalTermDictionaryError> { ... }
+pub fn get_workspace_root() -> Result<PathBuf, GetWorkspaceRootError> { ... }
+
+// ✅ Good: `try_` signals fallibility up front and pairs cleanly with concrete typed errors.
+pub fn try_from_seed_file(terms_file: Option<&Path>) -> Result<Self, TechnicalTermDictionaryError> { ... }
+pub fn try_get_workspace_root() -> Result<PathBuf, GetWorkspaceRootError> { ... }
 ```
 
 ### Bad: Using `#[serde(try_from = "String")]` and Manual `FromStr` / `TryFrom` Error Boilerplate on Unit Enums
@@ -666,3 +827,4 @@ pub const SGR_RESET_BYTES: &[u8] = SGR_RESET_STR.as_bytes();
 | Type Co-location       | "Is this floating function constructing or decoding a co-located domain type?"   |
 | Constant Hierarchy     | "Is this atomic (base u8) or a composed sequence (base &str)?"                  |
 | Wrapper Naming         | "Do `Option<T>` values start with `maybe_` and `Result<T, E>` with `res_`?"     |
+| 4-Tier Outcome Naming  | "Is this an `Error`, `Result` alias, domain `Outcome`, or display `Report`?"    |

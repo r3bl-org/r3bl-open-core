@@ -33,7 +33,7 @@
 //!
 //! Each file corresponds directly to a file in `vt_100_pty_output_parser/ops/`:
 //!
-//! - [`vt_100_impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
+//! - [`vt_100_impl_char_ops`] - Character operations (`try_print_char`, ICH, DCH, ECH)
 //! - [`vt_100_impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
 //! - [`vt_100_impl_cursor_ops`] - Cursor movement operations
 //! - [`vt_100_impl_dsr_ops`] - Device Status Report operations

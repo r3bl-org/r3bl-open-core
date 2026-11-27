@@ -2,12 +2,12 @@
 
 use super::types::{git_command_args::{GIT_ARG_GIT_DIR, GIT_ARG_PORCELAIN},
                    git_command_names::{GIT_CMD_REV_PARSE, GIT_CMD_STATUS, GIT_PROGRAM}};
-use crate::{RepoStatus, ResultAndCommand, Run};
+use crate::{CommandRunOutcome, RepoStatus, Run};
 
 /// Runs `git status --porcelain` and reports whether the git repo is clean or not. It is
 /// not clean if files exist that aren't committed yet, and are staged, unstaged,
 /// untracked.
-pub async fn try_is_working_directory_clean() -> ResultAndCommand<RepoStatus> {
+pub async fn try_is_working_directory_clean() -> CommandRunOutcome<RepoStatus> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_STATUS, GIT_ARG_PORCELAIN
@@ -19,9 +19,11 @@ pub async fn try_is_working_directory_clean() -> ResultAndCommand<RepoStatus> {
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        let err = Err(report);
-        return (err, cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let status = if output.is_empty() {
@@ -30,34 +32,40 @@ pub async fn try_is_working_directory_clean() -> ResultAndCommand<RepoStatus> {
         RepoStatus::Dirty
     };
 
-    (Ok(status), cmd)
+    CommandRunOutcome {
+        result: Ok(status),
+        command: cmd,
+    }
 }
 
 /// Checks if we're in a git repository.
 #[allow(clippy::map_unwrap_or)]
-pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
-    let mut cmd = command!(
+pub async fn try_is_git_repo() -> CommandRunOutcome<bool> {
+    let mut command = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_REV_PARSE, GIT_ARG_GIT_DIR
     );
 
-    let res_output = cmd.run().await;
+    let res_output = command.run().await;
     let is_repo = res_output.map(|_output| true).unwrap_or(false);
 
-    (Ok(is_repo), cmd)
+    CommandRunOutcome {
+        result: Ok(is_repo),
+        command,
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{git_test_fixtures::helper_setup_git_repo_with_commit,
-                       types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
-                                                   GIT_CMD_CONFIG, GIT_CMD_INIT},
-                               git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
-                                                 GIT_CONFIG_USER_EMAIL,
-                                                 GIT_CONFIG_USER_NAME},
-                               test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
-                                             TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}}};
-    use super::*;
+    use super::{super::{git_test_fixtures::helper_setup_git_repo_with_commit,
+                        types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+                                                    GIT_CMD_CONFIG, GIT_CMD_INIT},
+                                git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
+                                                  GIT_CONFIG_USER_EMAIL,
+                                                  GIT_CONFIG_USER_NAME},
+                                test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
+                                              TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}}},
+                *};
     use crate::try_write_file;
 
     async fn test_try_is_working_directory_clean() -> miette::Result<()> {
@@ -66,7 +74,7 @@ mod tests {
                 try_create_temp_dir_and_cd!("test_git_folder");
 
             // Assert that running command will error out before git init.
-            assert!(try_is_working_directory_clean().await.0.is_err());
+            assert!(try_is_working_directory_clean().await.result.is_err());
 
             // Run git init.
             let _unused: Vec<_> = command!(program => GIT_PROGRAM, args => GIT_CMD_INIT)
@@ -74,13 +82,19 @@ mod tests {
                 .await?;
 
             // Assert that the working directory is clean after git init.
-            assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
+            assert_eq!(
+                try_is_working_directory_clean().await.result?,
+                RepoStatus::Clean
+            );
 
             // Create a file.
             try_write_file(git_folder, "test_file.txt", "test content")?;
 
             // Assert that the working directory is dirty after creating a file.
-            assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
+            assert_eq!(
+                try_is_working_directory_clean().await.result?,
+                RepoStatus::Dirty
+            );
 
             // Stage the file.
             let _unused: Vec<_> =
@@ -89,7 +103,10 @@ mod tests {
                     .await?;
 
             // Repo is still dirty (changes are staged but not committed).
-            assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Dirty);
+            assert_eq!(
+                try_is_working_directory_clean().await.result?,
+                RepoStatus::Dirty
+            );
 
             // Configure git user for commit. This is necessary to create a commit. This
             // test assumes an environment where no prior local or global git
@@ -115,7 +132,10 @@ mod tests {
                     .await?;
 
             // Assert that the working directory is clean after committing.
-            assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
+            assert_eq!(
+                try_is_working_directory_clean().await.result?,
+                RepoStatus::Clean
+            );
 
             ok!(())
         })
@@ -128,15 +148,13 @@ mod tests {
                 let (_temp_dir_root, _initial_branch) =
                     helper_setup_git_repo_with_commit().await?;
 
-                let (is_repo, _) = try_is_git_repo().await;
-                assert!(is_repo?);
+                assert!(try_is_git_repo().await.result?);
             }
 
             // Test in a non-git directory.
             {
                 let _temp_dir_root = try_create_temp_dir_and_cd!();
-                let (is_repo, _) = try_is_git_repo().await;
-                assert!(!is_repo?);
+                assert!(!try_is_git_repo().await.result?);
             }
 
             ok!(())

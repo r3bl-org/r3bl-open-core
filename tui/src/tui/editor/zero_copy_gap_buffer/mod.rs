@@ -106,7 +106,7 @@
 //!
 //! [`UTF-8`] validation occurs **at the API boundaries** where content enters the system:
 //!
-//! - **[`insert_text_at_grapheme(text: &str)`]** - Rust's `&str` type guarantees valid
+//! - **[`try_insert_text_at_grapheme(text: &str)`]** - Rust's `&str` type guarantees valid
 //!   [`UTF-8`]
 //! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
 //!   validate
@@ -122,7 +122,7 @@
 //!
 //! - **[`as_str()`]** - Zero-copy access to entire buffer
 //! - **[`get_line_content()`]** - Zero-copy access to individual lines
-//! - **[`rebuild_line_segments()`]** - Fast string creation during metadata updates
+//! - **[`try_rebuild_line_segments()`]** - Fast string creation during metadata updates
 //!
 //! This avoids redundant [`UTF-8`] validation in performance-critical paths like:
 //! - Markdown parsing (needs zero-copy `&str` access)
@@ -267,8 +267,8 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
 //! [`grapheme`]: https://unicode.org/reports/tr29/
-//! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
-//! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
+//! [`try_insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::try_insert_text_at_grapheme
+//! [`try_rebuild_line_segments()`]: ZeroCopyGapBuffer::try_rebuild_line_segments
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
@@ -293,6 +293,49 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 
 /// Size increment for extending line capacity in bytes.
 pub const LINE_PAGE_SIZE: usize = 256;
+
+/// Errors returned by [`ZeroCopyGapBuffer`] editing and segment rebuilding operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum GapBufferError {
+    /// Requested line index does not exist in the buffer.
+    #[error("Line index {line_index} out of bounds")]
+    LineIndexOutOfBounds { line_index: usize },
+
+    /// Requested [`grapheme`] segment index exceeds the line's segment count.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    #[error(
+        "Segment index {seg_index} out of bounds for line with {segment_count} segments"
+    )]
+    SegmentIndexOutOfBounds {
+        seg_index: usize,
+        segment_count: usize,
+    },
+
+    /// Requested [`grapheme`] segment range is invalid for the line.
+    ///
+    /// [`grapheme`]: https://unicode.org/reports/tr29/
+    #[error("Invalid segment range {start}..{end} for segment count {segment_count}")]
+    InvalidSegmentRange {
+        start: usize,
+        end: usize,
+        segment_count: usize,
+    },
+
+    /// Requested byte index exceeds the line's content byte length.
+    #[error("Byte index {byte_index} exceeds content length {content_len}")]
+    ByteIndexOutOfBounds {
+        byte_index: usize,
+        content_len: usize,
+    },
+
+    /// Requested exclusive byte end index exceeds the line's content byte length.
+    #[error("Byte end index {end_index} exceeds content length {content_len}")]
+    ByteEndIndexOutOfBounds {
+        end_index: usize,
+        content_len: usize,
+    },
+}
 
 // Re-export core types and constants.
 pub use zcgb_core::*;

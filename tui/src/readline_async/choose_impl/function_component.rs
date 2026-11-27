@@ -4,7 +4,7 @@ use crate::{DEBUG_CHOOSE, OutputDevice, RangeExt, ResizeHint, TERMINAL_LIB_BACKE
             TermRowDelta, TerminalLibBackend, VPHeight, VPSize, ansi_output};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
-use miette::IntoDiagnostic;
+use std::io;
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: VPSize);
@@ -23,12 +23,12 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// # Errors
     ///
     /// Returns an error if the rendering operation fails.
-    fn render(&mut self, state: &mut S) -> miette::Result<()>;
+    fn render(&mut self, state: &mut S) -> io::Result<()>;
 
     /// # Errors
     ///
     /// Returns an error if the viewport allocation fails.
-    fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()> {
+    fn allocate_viewport_height_space(&mut self, state: &mut S) -> io::Result<()> {
         throws!({
             let vp_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +
@@ -51,7 +51,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// # Errors
     ///
     /// Returns an error if clearing the viewport fails.
-    fn clear_viewport_for_resize(&mut self, state: &mut S) -> miette::Result<()> {
+    fn clear_viewport_for_resize(&mut self, state: &mut S) -> io::Result<()> {
         throws!({
             DEBUG_CHOOSE.then(|| {
                 // % is Display, ? is Debug.
@@ -92,7 +92,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     self.get_output_device()
-                        .write(|writer| -> miette::Result<()> {
+                        .write(|writer| -> io::Result<()> {
                             let capacity = ansi_output::estimate_capacity::clear_and_rewind_lines_capacity_hint(
                                 vp_height,
                             );
@@ -119,7 +119,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                                 );
                             }
 
-                            writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                            writer.write_all(buf.as_bytes())?;
                             ok!()
                         })?;
                 }
@@ -133,7 +133,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
     /// # Errors
     ///
     /// Returns an error if clearing the viewport fails.
-    fn clear_viewport(&mut self, state: &mut S) -> miette::Result<()> {
+    fn clear_viewport(&mut self, state: &mut S) -> io::Result<()> {
         throws!({
             let vp_height =
                 /* not including the header */ self.calculate_items_viewport_height(state) +
@@ -156,7 +156,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                 }
                 TerminalLibBackend::DirectToAnsi => {
                     self.get_output_device()
-                        .write(|writer| -> miette::Result<()> {
+                        .write(|writer| -> io::Result<()> {
                             let capacity = ansi_output::estimate_capacity::clear_and_rewind_lines_capacity_hint(
                                 vp_height,
                             );
@@ -184,7 +184,7 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
                                 );
                             }
 
-                            writer.write_all(buf.as_bytes()).into_diagnostic()?;
+                            writer.write_all(buf.as_bytes())?;
                             ok!()
                         })?;
                 }

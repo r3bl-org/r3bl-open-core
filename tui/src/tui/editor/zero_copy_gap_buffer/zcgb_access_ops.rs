@@ -495,7 +495,7 @@ mod benches {
         for i in 0..100 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(
+                .try_insert_text_at_grapheme(
                     c_row(i),
                     c_index(0),
                     "This is a test line with some content",
@@ -514,7 +514,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
             .expect("conversion error");
 
         b.iter(|| {
@@ -531,7 +531,7 @@ mod benches {
         for i in 0..20 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(c_row(i), c_index(0), &format!("Line {i}"))
+                .try_insert_text_at_grapheme(c_row(i), c_index(0), &format!("Line {i}"))
                 .expect("conversion error");
         }
 
@@ -548,7 +548,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::default();
         buffer.add_line();
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Test line")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Test line")
             .expect("conversion error");
 
         b.iter(|| {
@@ -565,7 +565,7 @@ mod benches {
         for i in 0..50 {
             buffer.add_line();
             buffer
-                .insert_text_at_grapheme(c_row(i), c_index(0), "Hello 😀 World")
+                .try_insert_text_at_grapheme(c_row(i), c_index(0), "Hello 😀 World")
                 .expect("conversion error");
         }
 

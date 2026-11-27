@@ -37,14 +37,14 @@ pub fn format_indexing_in_progress_message(status: &ServerReadiness) -> String {
 }
 
 /// Helper to execute an AST query with cold-start indexing readiness gating.
-fn execute_ast_query_with_readiness_gating<F>(
+fn try_execute_ast_query_with_readiness_gating<F>(
     client: &mut RustAnalyzerClient,
     query_fn: F,
 ) -> Result<ToolResult, McpServerError>
 where
     F: FnOnce(&mut RustAnalyzerClient) -> Result<Value, McpServerError>,
 {
-    execute_ast_query_with_readiness_gating_timeout(
+    try_execute_ast_query_with_readiness_gating_timeout(
         client,
         query_fn,
         Duration::from_secs(timing::LSP_INDEXING_WARMUP_TIMEOUT_SECS),
@@ -53,7 +53,7 @@ where
 
 /// Helper to execute an AST query with cold-start indexing readiness gating and explicit
 /// timeout.
-fn execute_ast_query_with_readiness_gating_timeout<F>(
+fn try_execute_ast_query_with_readiness_gating_timeout<F>(
     client: &mut RustAnalyzerClient,
     query_fn: F,
     timeout: Duration,
@@ -91,7 +91,7 @@ where
         }
     }
 
-    let res_tool = ToolResult::json_pretty(&result)?;
+    let res_tool = ToolResult::json_pretty(&result).map_err(McpServerError::Json)?;
     Ok(res_tool)
 }
 
@@ -244,14 +244,14 @@ pub fn get_tools() -> Vec<ToolDefinition> {
 /// # Errors
 ///
 /// Returns an error if argument extraction or the hover request fails.
-pub fn handle_hover(
+pub fn try_handle_hover(
     client: &mut RustAnalyzerClient,
     uri: &str,
     args: &Value,
 ) -> Result<ToolResult, McpServerError> {
     let line: LspLineNumber = args.get_u32_param(param_names::LINE)?;
     let character: LspCharPosition = args.get_u32_param(param_names::CHARACTER)?;
-    execute_ast_query_with_readiness_gating(client, |c| c.hover(uri, line, character))
+    try_execute_ast_query_with_readiness_gating(client, |c| c.hover(uri, line, character))
 }
 
 /// Handles the `rust_analyzer_definition` tool call.
@@ -259,14 +259,14 @@ pub fn handle_hover(
 /// # Errors
 ///
 /// Returns an error if argument extraction or the definition request fails.
-pub fn handle_definition(
+pub fn try_handle_definition(
     client: &mut RustAnalyzerClient,
     uri: &str,
     args: &Value,
 ) -> Result<ToolResult, McpServerError> {
     let line: LspLineNumber = args.get_u32_param(param_names::LINE)?;
     let character: LspCharPosition = args.get_u32_param(param_names::CHARACTER)?;
-    execute_ast_query_with_readiness_gating(client, |c| {
+    try_execute_ast_query_with_readiness_gating(client, |c| {
         c.definition(uri, line, character)
     })
 }
@@ -276,14 +276,14 @@ pub fn handle_definition(
 /// # Errors
 ///
 /// Returns an error if argument extraction or the references request fails.
-pub fn handle_references(
+pub fn try_handle_references(
     client: &mut RustAnalyzerClient,
     uri: &str,
     args: &Value,
 ) -> Result<ToolResult, McpServerError> {
     let line: LspLineNumber = args.get_u32_param(param_names::LINE)?;
     let character: LspCharPosition = args.get_u32_param(param_names::CHARACTER)?;
-    execute_ast_query_with_readiness_gating(client, |c| {
+    try_execute_ast_query_with_readiness_gating(client, |c| {
         c.references(uri, line, character)
     })
 }
@@ -293,14 +293,14 @@ pub fn handle_references(
 /// # Errors
 ///
 /// Returns an error if argument extraction or the completion request fails.
-pub fn handle_completion(
+pub fn try_handle_completion(
     client: &mut RustAnalyzerClient,
     uri: &str,
     args: &Value,
 ) -> Result<ToolResult, McpServerError> {
     let line: LspLineNumber = args.get_u32_param(param_names::LINE)?;
     let character: LspCharPosition = args.get_u32_param(param_names::CHARACTER)?;
-    execute_ast_query_with_readiness_gating(client, |c| {
+    try_execute_ast_query_with_readiness_gating(client, |c| {
         c.completion(uri, line, character)
     })
 }
@@ -310,7 +310,7 @@ pub fn handle_completion(
 /// # Errors
 ///
 /// Returns an error if the document symbols request fails.
-pub fn handle_symbols(
+pub fn try_handle_symbols(
     client: &mut RustAnalyzerClient,
     uri: &str,
     file_path: &str,
@@ -318,11 +318,11 @@ pub fn handle_symbols(
     DEBUG_MCP_TOOLS.then(|| {
         // % is Display, ? is Debug.
         tracing::debug! {
-            message = "handle_symbols",
+            message = "try_handle_symbols",
             file_path = %file_path,
         };
     });
-    execute_ast_query_with_readiness_gating(client, |c| c.document_symbols(uri))
+    try_execute_ast_query_with_readiness_gating(client, |c| c.document_symbols(uri))
 }
 
 /// Handles the `rust_analyzer_format` tool call.
@@ -330,12 +330,12 @@ pub fn handle_symbols(
 /// # Errors
 ///
 /// Returns an error if the formatting request fails.
-pub fn handle_format(
+pub fn try_handle_format(
     client: &mut RustAnalyzerClient,
     uri: &str,
 ) -> Result<ToolResult, McpServerError> {
     let result = client.formatting(uri)?;
-    let res_tool = ToolResult::json_pretty(&result)?;
+    let res_tool = ToolResult::json_pretty(&result).map_err(McpServerError::Json)?;
     Ok(res_tool)
 }
 
@@ -344,7 +344,7 @@ pub fn handle_format(
 /// # Errors
 ///
 /// Returns an error if argument extraction or the code action request fails.
-pub fn handle_code_actions(
+pub fn try_handle_code_actions(
     client: &mut RustAnalyzerClient,
     uri: &str,
     args: &Value,
@@ -355,7 +355,7 @@ pub fn handle_code_actions(
     let end_character: LspCharPosition =
         args.get_u32_param(param_names::END_CHARACTER)?;
 
-    execute_ast_query_with_readiness_gating(client, |c| {
+    try_execute_ast_query_with_readiness_gating(client, |c| {
         c.code_actions(uri, line, character, end_line, end_character)
     })
 }
@@ -438,7 +438,7 @@ pub fn format_file_diagnostics(file_path: &str, raw_diagnostics: &Value) -> Valu
 /// # Errors
 ///
 /// Returns an error if the diagnostics query fails.
-pub fn handle_diagnostics(
+pub fn try_handle_diagnostics(
     client: &mut RustAnalyzerClient,
     uri: &str,
     file_path: &str,
@@ -471,7 +471,7 @@ pub fn handle_diagnostics(
     }
 
     let diagnostics = format_file_diagnostics(file_path, &result);
-    let res_tool = ToolResult::json_pretty(&diagnostics)?;
+    let res_tool = ToolResult::json_pretty(&diagnostics).map_err(McpServerError::Json)?;
     Ok(res_tool)
 }
 
@@ -613,13 +613,14 @@ pub fn format_workspace_diagnostics(workspace_root: &Path, raw_result: &Value) -
 /// # Errors
 ///
 /// Returns an error if workspace diagnostics query fails.
-pub fn handle_workspace_diagnostics(
+pub fn try_handle_workspace_diagnostics(
     client: &mut RustAnalyzerClient,
     workspace_root: &Path,
 ) -> Result<ToolResult, McpServerError> {
     let result = client.workspace_diagnostics()?;
     let formatted = format_workspace_diagnostics(workspace_root, &result);
-    let tool_result = ToolResult::json_pretty(&formatted)?;
+    let tool_result =
+        ToolResult::json_pretty(&formatted).map_err(McpServerError::Json)?;
     Ok(tool_result)
 }
 
@@ -843,7 +844,7 @@ mod tests {
             health: "ok".to_string(),
             message: None,
         });
-        let res = execute_ast_query_with_readiness_gating(&mut client, |_| {
+        let res = try_execute_ast_query_with_readiness_gating(&mut client, |_| {
             Ok(json!({ "contents": "hover text" }))
         })
         .unwrap();
@@ -855,7 +856,7 @@ mod tests {
             health: "ok".to_string(),
             message: Some("Scanning stdlib".to_string()),
         });
-        let res_indexing = execute_ast_query_with_readiness_gating_timeout(
+        let res_indexing = try_execute_ast_query_with_readiness_gating_timeout(
             &mut client,
             |_| Ok(Value::Null),
             Duration::from_millis(10),
@@ -866,7 +867,7 @@ mod tests {
 
         // Case 3: Cancelled/timed out request while InProgress returns informative
         // message
-        let res_cancelled = execute_ast_query_with_readiness_gating_timeout(
+        let res_cancelled = try_execute_ast_query_with_readiness_gating_timeout(
             &mut client,
             |_| Err(McpServerError::RequestCancelled),
             Duration::from_millis(10),

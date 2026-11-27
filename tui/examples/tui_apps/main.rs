@@ -18,18 +18,18 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI, IntoErr, TuiAvailability, VPSize,
+use r3bl_tui::{DEBUG_TUI, IntoErr, TuiAvailability, VPSize,
                assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
-               fg_slate_gray, get_size, inline_string,
+               fg_slate_gray, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
-               run_with_safe_stack, set_mimalloc_in_main, tui_color};
+               run_in_main_with_safe_stack, try_get_size, tui_color};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
-fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
 
 /// Main event loop for the TUI demo application.
 ///
@@ -39,10 +39,8 @@ fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
 ///
 /// [`InputDevice`]: r3bl_tui::InputDevice
 /// [`stdin`]: std::io::stdin
-#[tokio::main]
 #[allow(clippy::needless_return)]
-async fn main_impl() -> CommonResult {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     let args: Vec<String> = std::env::args().collect();
@@ -57,7 +55,7 @@ async fn main_impl() -> CommonResult {
         None
     };
 
-    let size = get_size()?;
+    let size = try_get_size()?;
 
     // Show welcome message once at startup.
     let msg = inline_string!("{}", &generate_help_msg(size));
@@ -94,7 +92,7 @@ async fn main_impl() -> CommonResult {
 
         tracing::debug!(message = "tui_apps: ⏳ waiting for readline input");
 
-        let result_readline_event = rl_ctx.read_line().await;
+        let result_readline_event = rl_ctx.try_read_line().await;
 
         match result_readline_event {
             Ok(readline_event) => {
@@ -118,7 +116,7 @@ async fn main_impl() -> CommonResult {
                             message = "tui_apps: 🗑️ dropped ReadlineAsyncContext before example"
                         );
 
-                        if run_user_selected_example(input).await.is_err() {
+                        if try_run_user_selected_example(input).await.is_err() {
                             break;
                         }
 
@@ -170,7 +168,7 @@ async fn main_impl() -> CommonResult {
 /// This function will take the terminal out of raw mode when it returns. This is because
 /// the examples below will use `r3bl_tui` which will put the terminal in raw mode, use
 /// alt screen, and then restore it all when it exits.
-async fn run_user_selected_example(selection: String) -> CommonResult {
+async fn try_run_user_selected_example(selection: String) -> miette::Result<()> {
     use AutoCompleteCommand::{Commander, Editor, Exit, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
 
@@ -185,7 +183,7 @@ async fn run_user_selected_example(selection: String) -> CommonResult {
             Editor => ex_editor::launcher::run_app().await,
             Slides => ex_pitch::launcher::run_app().await,
             Commander => ex_rc::launcher::run_app().await,
-            Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
+            Exit => Err(miette::miette!("Exiting...")),
         },
         Err(_) => {
             // Print invalid selection message (raw mode is disabled at this point).

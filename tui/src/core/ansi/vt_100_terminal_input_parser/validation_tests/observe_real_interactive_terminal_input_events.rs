@@ -71,7 +71,7 @@ pub async fn observe_terminal() -> IoResult<()> {
     let terminal_name = detect_terminal_name();
 
     // Enable raw mode for entire test using unified API.
-    crate::enable_raw_mode().map_err(|e| std::io::Error::other(e.to_string()))?;
+    crate::try_enable_raw_mode().map_err(|e| std::io::Error::other(e.to_string()))?;
 
     let mut stdout = std::io::stdout();
 
@@ -112,7 +112,7 @@ pub async fn observe_terminal() -> IoResult<()> {
 
     // Cleanup
     disable_terminal_capture_mode()?;
-    crate::disable_raw_mode().map_err(|e| std::io::Error::other(e.to_string()))?;
+    crate::try_disable_raw_mode().map_err(|e| std::io::Error::other(e.to_string()))?;
     std::thread::sleep(Duration::from_millis(200));
     std::io::stdout().flush()?;
 

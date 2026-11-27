@@ -38,7 +38,7 @@ impl RustAnalyzerClient {
             "identifier": lsp_framing::RUST_ANALYZER_BINARY
         });
 
-        let response = self.send_request(lsp_methods::DIAGNOSTIC, Some(params))?;
+        let response = self.try_send_request(lsp_methods::DIAGNOSTIC, Some(params))?;
 
         let Some(items) = response.get("items") else {
             return Ok(json!([]));
@@ -90,7 +90,7 @@ impl RustAnalyzerClient {
             "previousResultId": null
         });
 
-        let pull_response = self.send_request("workspace/diagnostic", Some(params));
+        let pull_response = self.try_send_request("workspace/diagnostic", Some(params));
 
         let report = RawWorkspaceDiagnosticsResult::classify(pull_response)
             .unwrap_or_else_fallback(|| self.collect_cached_workspace_diagnostics());

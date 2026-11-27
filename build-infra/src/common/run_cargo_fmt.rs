@@ -3,8 +3,7 @@
 //! Run `cargo fmt` on specified files.
 
 use crate::cargo_rustdoc_fmt::{CARGO_ARGS_SEPARATOR, CARGO_PROGRAM, FMT_SUBCOMMAND};
-use miette::{IntoDiagnostic, Result, WrapErr};
-use r3bl_tui::{CommandOutputResult, ok};
+use r3bl_tui::{ProcessExecutionOutcome, ok};
 use std::{path::PathBuf, process::Command};
 
 /// Run `cargo fmt` on the specified files.
@@ -16,22 +15,24 @@ use std::{path::PathBuf, process::Command};
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The file list is empty (no-op, returns Ok)
+/// Returns [`RunCargoFmtError`] if:
 /// - `cargo fmt` command fails to execute
 /// - `cargo fmt` exits with non-zero status
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use r3bl_build_infra::common::cargo_fmt_runner::run_cargo_fmt_on_files;
+/// use r3bl_build_infra::common::run_cargo_fmt::try_run_cargo_fmt;
 /// use std::path::PathBuf;
 ///
 /// let files = vec![PathBuf::from("src/lib.rs"), PathBuf::from("src/main.rs")];
-/// run_cargo_fmt_on_files(&files, true)?;
+/// try_run_cargo_fmt(&files, true)?;
 /// # Ok::<(), miette::Report>(())
 /// ```
-pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
+pub fn try_run_cargo_fmt(
+    files: &[PathBuf],
+    verbose: bool,
+) -> Result<(), RunCargoFmtError> {
     // No-op if no files to format.
     if files.is_empty() {
         return ok!();
@@ -45,34 +46,51 @@ pub fn run_cargo_fmt_on_files(files: &[PathBuf], verbose: bool) -> Result<()> {
     }
 
     // Build cargo fmt command with file arguments.
-    let mut cmd = Command::new(CARGO_PROGRAM);
-    cmd.arg(FMT_SUBCOMMAND).arg(CARGO_ARGS_SEPARATOR);
+    let mut command = Command::new(CARGO_PROGRAM);
+    command.arg(FMT_SUBCOMMAND).arg(CARGO_ARGS_SEPARATOR);
 
     for file in files {
-        cmd.arg(file);
+        command.arg(file);
     }
 
     // Execute command
-    let res_cmd_output = cmd.output();
-    match CommandOutputResult::from(res_cmd_output) {
-        CommandOutputResult::Success(_) => {
+    let res_output = command.output();
+    match ProcessExecutionOutcome::from(res_output) {
+        ProcessExecutionOutcome::Success(_) => {
             if verbose {
                 println!("cargo fmt completed successfully");
             }
             ok!()
         }
-        CommandOutputResult::NonZeroExit(output) => {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(miette::miette!(
-                "cargo fmt failed with exit code: {:?}\n{}",
-                output.status.code(),
-                stderr
-            ))
+        ProcessExecutionOutcome::NonZeroExit(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+            Err(RunCargoFmtError::NonZeroExit {
+                exit_code: output.status.code(),
+                stderr,
+            })
         }
-        CommandOutputResult::SpawnFailed(err) => Err(err)
-            .into_diagnostic()
-            .wrap_err("Failed to execute cargo fmt command"),
+        ProcessExecutionOutcome::SpawnFailed(err) => {
+            Err(RunCargoFmtError::SpawnFailed(err))
+        }
     }
+}
+
+/// Errors returned when invoking `cargo fmt` on workspace files.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum RunCargoFmtError {
+    /// Failed to spawn the `cargo fmt` subprocess.
+    #[error("Failed to execute cargo fmt command")]
+    SpawnFailed(#[source] std::io::Error),
+
+    /// The `cargo fmt` subprocess exited with a non-zero status.
+    #[error("cargo fmt failed with exit code {exit_code:?}: {stderr}")]
+    NonZeroExit {
+        /// Process exit code, or `None` if terminated by a signal.
+        exit_code: Option<i32>,
+
+        /// Captured standard error output from `cargo fmt`.
+        stderr: String,
+    },
 }
 
 #[cfg(test)]
@@ -82,7 +100,7 @@ mod tests {
     #[test]
     fn test_empty_file_list() {
         // Should succeed with empty list
-        let result = run_cargo_fmt_on_files(&[], false);
+        let result = try_run_cargo_fmt(&[], false);
         assert!(result.is_ok());
     }
 
@@ -90,7 +108,7 @@ mod tests {
     fn test_nonexistent_file() {
         // cargo fmt should handle this gracefully or error
         let files = vec![PathBuf::from("/nonexistent/file.rs")];
-        let result = run_cargo_fmt_on_files(&files, false);
+        let result = try_run_cargo_fmt(&files, false);
         // We expect this to potentially fail, which is correct behavior
         // The test just ensures the function handles it without panicking
         drop(result);

@@ -25,8 +25,8 @@ use tokio::sync::{broadcast, mpsc};
 /// Data written to a [`crate::SharedWriter`] is only output when a line feed (`'\n'`) has
 /// been written and either is executing on the associated `Readline` instance both in
 /// `readline.rs`:
-/// - `Readline::readline()`.
-/// - `manage_shared_writer_output::flush_internal()`.
+/// - `Readline::try_readline()`.
+/// - `manage_shared_writer_output::try_flush_internal()`.
 ///
 /// If you want to output data without a newline, you can call [`SharedWriter::flush()`].
 ///

@@ -45,8 +45,8 @@
 //!    ╰─────────────────────╯ <- AtAbsoluteBottom
 //! ```
 
-use crate::{ChUnit, DEBUG_CHOOSE, RangeBoundsResult, ViewportBoundsCheck, ch,
-            fg_green, vp_idx, vp_len};
+use crate::{ChUnit, DEBUG_CHOOSE, RangeBoundsResult, ViewportBoundsCheck, ch, fg_green,
+            vp_idx, vp_len};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {

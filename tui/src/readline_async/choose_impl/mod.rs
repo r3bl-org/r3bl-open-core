@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module provides the implementation for the [`choose()`] function, which creates
-//! an interactive selection UI in the terminal. It allows users to select one or multiple
-//! items from a list using keyboard navigation.
+//! This module provides the implementation for the [`try_choose()`] function, which
+//! creates an interactive selection UI in the terminal. It allows users to select one or
+//! multiple items from a list using keyboard navigation.
 //!
 //! The implementation is cross-platform (macOS, Linux, Windows) and automatically adapts
 //! to terminal capabilities (color support, input methods).
@@ -14,7 +14,7 @@
 //! # use r3bl_tui::readline_async::*;
 //! # async fn example() -> miette::Result<()> {
 //! let mut io_devices = DefaultIoDevices::default();
-//! match choose(
+//! match try_choose(
 //!     "Select an item",
 //!     &["option 1", "option 2", "option 3"],
 //!     None,  // default height
@@ -45,8 +45,8 @@
 //! You can also create custom styles by constructing a [`StyleSheet`] with your own
 //! [`TuiStyle`] settings. See the examples for detailed styling demonstrations.
 //!
-//! [`choose()`]: crate::choose
 //! [`StyleSheet`]: crate::StyleSheet
+//! [`try_choose()`]: crate::try_choose
 //! [`tui/examples/choose_interactive.rs`]:
 //!     https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/choose_interactive.rs
 //! [`TuiStyle`]: crate::TuiStyle
@@ -57,7 +57,8 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
-// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their
+// macros).
 #[macro_use]
 mod crossterm_macros;
 

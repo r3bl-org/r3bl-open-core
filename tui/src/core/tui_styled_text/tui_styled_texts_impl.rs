@@ -122,10 +122,10 @@ mod impl_debug {
 mod tests {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::{CommonResult, TuiStyle, TuiStylesheet, ch, tui_style_id};
+    use crate::{TuiStyle, TuiStylesheet, ch, tui_style_id};
 
     #[test]
-    fn test_create_styled_text_with_dsl() -> CommonResult {
+    fn test_create_styled_text_with_dsl() -> miette::Result<()> {
         throws!({
             let st_vec = helpers::create_styled_text()?;
             assert_eq2!(st_vec.is_empty(), false);
@@ -136,7 +136,7 @@ mod tests {
     mod helpers {
         use super::*;
 
-        pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
+        pub fn create_styled_text() -> miette::Result<TuiStyledTexts> {
             throws_with_return!({
                 let stylesheet = create_stylesheet()?;
                 let maybe_style1 = stylesheet.find_style_by_id(1);
@@ -155,7 +155,7 @@ mod tests {
             })
         }
 
-        pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+        pub fn create_stylesheet() -> miette::Result<TuiStylesheet> {
             throws_with_return!({
                 tui_stylesheet! {
                     TuiStyle {

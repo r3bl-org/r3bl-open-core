@@ -7,7 +7,7 @@ use std::time::Duration;
 #[tokio::test]
 async fn test_async_session_with_cat() {
     let mut session = cross_platform_commands::cat()
-        .start_async()
+        .try_start_async()
         .expect("Failed to spawn async session");
 
     // 1. Send input.
@@ -74,7 +74,7 @@ async fn test_async_session_with_cat() {
 #[tokio::test]
 async fn test_async_session_kill_reporting() {
     let mut session = cross_platform_commands::sleep(10)
-        .start_async()
+        .try_start_async()
         .expect("Failed to spawn async session");
 
     // Terminate the child process externally via the termination handle.
@@ -118,7 +118,7 @@ async fn test_async_session_kill_reporting() {
 #[tokio::test]
 async fn test_async_session_early_channel_drop() {
     let mut session = cross_platform_commands::cat()
-        .start_async()
+        .try_start_async()
         .expect("Failed to spawn async session");
 
     #[cfg(unix)]

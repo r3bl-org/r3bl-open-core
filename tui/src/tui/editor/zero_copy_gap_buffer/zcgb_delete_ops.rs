@@ -39,8 +39,8 @@
 //!
 //! # Operations
 //!
-//! - [`delete_grapheme_at()`]: Delete single [`grapheme`] cluster
-//! - [`delete_range()`]: Delete range of [`grapheme`] clusters
+//! - [`try_delete_grapheme_at()`]: Delete single [`grapheme`] cluster
+//! - [`try_delete_range()`]: Delete range of [`grapheme`] clusters
 //! - Internal helpers for byte-level manipulation and cleanup
 //!
 //! # Null-Padding Invariant
@@ -59,7 +59,7 @@
 //! 3. The newline character is properly repositioned
 //! 4. All unused capacity remains null-padded
 //!
-//! See [`delete_bytes_at_range`] for the core
+//! See [`try_delete_bytes_at_range`] for the core
 //! null-padding logic.
 //!
 //! # [`UTF-8`] Safety in Deletion Operations
@@ -69,16 +69,16 @@
 //!
 //! ## Grapheme-Level Safety
 //!
-//! - **[`delete_grapheme_at()`]**: Only deletes complete [`grapheme`] clusters, never
+//! - **[`try_delete_grapheme_at()`]**: Only deletes complete [`grapheme`] clusters, never
 //!   splits [`UTF-8`] sequences
-//! - **[`delete_range()`]**: Operates on [`grapheme`] boundaries, ensuring no
+//! - **[`try_delete_range()`]**: Operates on [`grapheme`] boundaries, ensuring no
 //!   mid-character cuts
 //! - **Segment-based indexing**: Uses pre-computed [`grapheme`] boundaries from segment
 //!   metadata
 //!
 //! ## Byte-Level Safety
 //!
-//! The low-level [`delete_bytes_at_range()`]
+//! The low-level [`try_delete_bytes_at_range()`]
 //! operates on **pre-validated byte boundaries**:
 //! - Callers ensure byte positions align with [`UTF-8`] character boundaries
 //! - Content shifting preserves [`UTF-8`] validity by moving complete byte sequences
@@ -95,19 +95,18 @@
 //! This allows deletion operations to be **extremely fast** with no validation overhead.
 //!
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
-//! [`delete_bytes_at_range()`]: ZeroCopyGapBuffer::delete_bytes_at_range
-//! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
-//! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
-//! [`delete_range()`]: ZeroCopyGapBuffer::delete_range
 //! [`grapheme`]: https://unicode.org/reports/tr29/
+//! [`try_delete_bytes_at_range()`]: ZeroCopyGapBuffer::try_delete_bytes_at_range
+//! [`try_delete_bytes_at_range`]: ZeroCopyGapBuffer::try_delete_bytes_at_range
+//! [`try_delete_grapheme_at()`]: ZeroCopyGapBuffer::try_delete_grapheme_at
+//! [`try_delete_range()`]: ZeroCopyGapBuffer::try_delete_range
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 
-use super::ZeroCopyGapBuffer;
+use super::{GapBufferError, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset, CIndex, CRow,
             CursorBoundsCheck, LINE_FEED_BYTE, NUL, RangeBoundsExt, RangeValidityStatus,
             c_len};
-use miette::{Result, miette};
 use std::ops::Range;
 
 impl ZeroCopyGapBuffer {
@@ -133,26 +132,27 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
-    pub fn delete_grapheme_at(
+    pub fn try_delete_grapheme_at(
         &mut self,
         arg_line_index: impl Into<CRow>,
         arg_seg_index: impl Into<CIndex>,
-    ) -> Result<()> {
+    ) -> Result<(), GapBufferError> {
         let line_index: CRow = arg_line_index.into();
         let seg_index: CIndex = arg_seg_index.into();
         // Validate line index.
-        let line_info = self.get_line_info(line_index).ok_or_else(|| {
-            miette!("Line index {} out of bounds", line_index.as_usize())
-        })?;
+        let line_info = self.get_line_info(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_index.as_usize(),
+            },
+        )?;
 
         // Validate segment index using sophisticated bounds checking.
         let segments_count = c_len(line_info.grapheme_segments.len());
         if seg_index.overflows(segments_count) == ArrayOverflowResult::Overflowed {
-            return Err(miette!(
-                "Segment index {} out of bounds for line with {} segments",
-                seg_index.as_usize(),
-                line_info.grapheme_segments.len()
-            ));
+            return Err(GapBufferError::SegmentIndexOutOfBounds {
+                seg_index: seg_index.as_usize(),
+                segment_count: line_info.grapheme_segments.len(),
+            });
         }
 
         // Get the segment to delete.
@@ -161,10 +161,10 @@ impl ZeroCopyGapBuffer {
         let delete_end = segment.end_byte_index;
 
         // Perform the actual deletion.
-        self.delete_bytes_at_range(line_index, delete_start, delete_end)?;
+        self.try_delete_bytes_at_range(line_index, delete_start, delete_end)?;
 
         // Rebuild segments for this line.
-        self.rebuild_line_segments(line_index)?;
+        self.try_rebuild_line_segments(line_index)?;
 
         ok!()
     }
@@ -191,19 +191,21 @@ impl ZeroCopyGapBuffer {
     ///
     /// [`grapheme`]: https://unicode.org/reports/tr29/
     /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
-    pub fn delete_range(
+    pub fn try_delete_range(
         &mut self,
         arg_line_index: impl Into<CRow>,
         arg_start_seg: impl Into<CIndex>,
         arg_end_seg: impl Into<CIndex>,
-    ) -> Result<()> {
+    ) -> Result<(), GapBufferError> {
         let line_index: CRow = arg_line_index.into();
         let start_seg: CIndex = arg_start_seg.into();
         let end_seg: CIndex = arg_end_seg.into();
         // Validate line index.
-        let line_info = self.get_line_info(line_index).ok_or_else(|| {
-            miette!("Line index {} out of bounds", line_index.as_usize())
-        })?;
+        let line_info = self.get_line_info(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_index.as_usize(),
+            },
+        )?;
 
         let delete_range: Range<CIndex> = start_seg..end_seg;
         let segments_count = c_len(line_info.grapheme_segments.len());
@@ -214,12 +216,11 @@ impl ZeroCopyGapBuffer {
             if delete_range.is_empty() {
                 return ok!(); // Empty range - nothing to delete
             }
-            return Err(miette!(
-                "Invalid range: start {} must be less than end {} and within segment count {}",
-                start_seg.as_usize(),
-                end_seg.as_usize(),
-                segments_count.as_usize()
-            ));
+            return Err(GapBufferError::InvalidSegmentRange {
+                start: start_seg.as_usize(),
+                end: end_seg.as_usize(),
+                segment_count: segments_count.as_usize(),
+            });
         }
 
         // Get byte range to delete.
@@ -238,10 +239,10 @@ impl ZeroCopyGapBuffer {
         };
 
         // Perform the actual deletion.
-        self.delete_bytes_at_range(line_index, delete_start, delete_end)?;
+        self.try_delete_bytes_at_range(line_index, delete_start, delete_end)?;
 
         // Rebuild segments for this line.
-        self.rebuild_line_segments(line_index)?;
+        self.try_rebuild_line_segments(line_index)?;
 
         ok!()
     }
@@ -273,19 +274,21 @@ impl ZeroCopyGapBuffer {
     /// - The byte positions exceed the content length
     ///
     /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
-    pub fn delete_bytes_at_range(
+    pub fn try_delete_bytes_at_range(
         &mut self,
         arg_line_index: impl Into<CRow>,
         arg_start_index: impl Into<ByteIndex>,
         arg_end_index: impl Into<ByteIndex>,
-    ) -> Result<()> {
+    ) -> Result<(), GapBufferError> {
         let line_index: CRow = arg_line_index.into();
         let start_index: ByteIndex = arg_start_index.into();
         let end_index: ByteIndex = arg_end_index.into();
         // Get line info and validate line index.
-        let line_info = self.get_line_info(line_index).ok_or_else(|| {
-            miette!("Line index {} out of bounds", line_index.as_usize())
-        })?;
+        let line_info = self.get_line_info(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_index.as_usize(),
+            },
+        )?;
 
         // Validate range using type-safe bounds checking.
         if start_index >= end_index {
@@ -298,22 +301,20 @@ impl ZeroCopyGapBuffer {
         if start_index.overflows(line_info.content_byte_len)
             == ArrayOverflowResult::Overflowed
         {
-            return Err(miette!(
-                "Start position {} exceeds content length {}",
-                start_index.as_usize(),
-                line_info.content_byte_len.as_usize()
-            ));
+            return Err(GapBufferError::ByteIndexOutOfBounds {
+                byte_index: start_index.as_usize(),
+                content_len: line_info.content_byte_len.as_usize(),
+            });
         }
 
         // Check if end position is within valid range.
         // For exclusive ranges, end can equal content length (e.g., 0..5 for content
         // length 5).
         if end_index.as_usize() > line_info.content_byte_len.as_usize() {
-            return Err(miette!(
-                "End position {} exceeds content length {}",
-                end_index.as_usize(),
-                line_info.content_byte_len.as_usize()
-            ));
+            return Err(GapBufferError::ByteEndIndexOutOfBounds {
+                end_index: end_index.as_usize(),
+                content_len: line_info.content_byte_len.as_usize(),
+            });
         }
 
         // Extract values needed for buffer operations before mutable operations.
@@ -352,22 +353,21 @@ impl ZeroCopyGapBuffer {
         self.buffer[null_start..null_end].fill(NUL);
 
         // Update line metadata.
-        let line_info_mut = self.get_line_info_mut(line_index).ok_or_else(|| {
-            miette!(
-                "Line {} not found when updating metadata",
-                line_index.as_usize()
-            )
-        })?;
+        let line_info_mut = self.get_line_info_mut(line_index).ok_or(
+            GapBufferError::LineIndexOutOfBounds {
+                line_index: line_index.as_usize(),
+            },
+        )?;
         line_info_mut.content_byte_len = new_content_len;
 
         ok!()
     }
 
-    // The [`rebuild_line_segments`] method is now in
+    // The [`try_rebuild_line_segments`] method is now in
     // implementations::segment_builder and is accessible directly on.
     // [`ZeroCopyGapBuffer`].
     //
-    // [`rebuild_line_segments`]: Self::rebuild_line_segments
+    // [`try_rebuild_line_segments`]: Self::try_rebuild_line_segments
 }
 
 #[cfg(test)]
@@ -382,12 +382,12 @@ mod tests {
 
         // Insert initial text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello World")
             .expect("conversion error");
 
         // Delete the space (index 5).
         buffer
-            .delete_grapheme_at(c_row(0), c_index(5))
+            .try_delete_grapheme_at(c_row(0), c_index(5))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -404,12 +404,12 @@ mod tests {
 
         // Insert initial text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello World!")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello World!")
             .expect("conversion error");
 
         // Delete "World" (indices 6-11).
         buffer
-            .delete_range(c_row(0), c_index(6), c_index(11))
+            .try_delete_range(c_row(0), c_index(6), c_index(11))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -425,12 +425,12 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
             .expect("conversion error");
 
         // Delete first character.
         buffer
-            .delete_grapheme_at(c_row(0), c_index(0))
+            .try_delete_grapheme_at(c_row(0), c_index(0))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -443,12 +443,12 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
             .expect("conversion error");
 
         // Delete last character.
         buffer
-            .delete_grapheme_at(c_row(0), c_index(4))
+            .try_delete_grapheme_at(c_row(0), c_index(4))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -462,12 +462,12 @@ mod tests {
 
         // Insert text with emoji.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello 😀 World")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello 😀 World")
             .expect("conversion error");
 
         // Delete the emoji (index 6).
         buffer
-            .delete_grapheme_at(c_row(0), c_index(6))
+            .try_delete_grapheme_at(c_row(0), c_index(6))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -484,12 +484,12 @@ mod tests {
 
         // Insert text with compound grapheme cluster.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "👨‍👩‍👧‍👦 Family")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "👨‍👩‍👧‍👦 Family")
             .expect("conversion error");
 
         // Delete the family emoji (1 grapheme cluster).
         buffer
-            .delete_grapheme_at(c_row(0), c_index(0))
+            .try_delete_grapheme_at(c_row(0), c_index(0))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -505,12 +505,12 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
             .expect("conversion error");
 
         // Delete all characters.
         buffer
-            .delete_range(c_row(0), c_index(0), c_index(5))
+            .try_delete_range(c_row(0), c_index(0), c_index(5))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -527,24 +527,24 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
             .expect("conversion error");
 
         // Try to delete beyond the end.
-        let result = buffer.delete_grapheme_at(c_row(0), c_index(10));
+        let result = buffer.try_delete_grapheme_at(c_row(0), c_index(10));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
 
         // Try to delete from invalid line.
-        let result = buffer.delete_grapheme_at(c_row(5), c_index(0));
+        let result = buffer.try_delete_grapheme_at(c_row(5), c_index(0));
         assert!(result.is_err());
 
         // Try empty range (start == end) - should succeed as no-op.
-        let result = buffer.delete_range(c_row(0), c_index(3), c_index(3));
+        let result = buffer.try_delete_range(c_row(0), c_index(3), c_index(3));
         assert!(result.is_ok()); // Empty range is valid and does nothing
 
         // Try truly invalid range (start > end).
-        let result = buffer.delete_range(c_row(0), c_index(4), c_index(3));
+        let result = buffer.try_delete_range(c_row(0), c_index(4), c_index(3));
         assert!(result.is_ok()); // This is also treated as empty range and does nothing
     }
 
@@ -554,10 +554,10 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "Hello")
             .expect("conversion error");
         buffer
-            .delete_grapheme_at(c_row(0), c_index(2))
+            .try_delete_grapheme_at(c_row(0), c_index(2))
             .expect("conversion error"); // Delete 'l'
 
         // Check that the buffer is properly null-padded.
@@ -586,12 +586,12 @@ mod tests {
 
         // Insert text with mixed Unicode.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0), "a😀b🌍c")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0), "a😀b🌍c")
             .expect("conversion error");
 
         // Delete range including emojis (indices 1-4, which is "😀b🌍").
         buffer
-            .delete_range(c_row(0), c_index(1), c_index(4))
+            .try_delete_range(c_row(0), c_index(1), c_index(4))
             .expect("conversion error");
 
         let content = buffer.get_line_content(c_row(0)).expect("conversion error");
@@ -620,12 +620,12 @@ mod benches {
         b.iter(|| {
             // Setup: insert text.
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
 
             // Benchmark: delete a character.
             buffer
-                .delete_grapheme_at(c_row(0), black_box(c_index(5)))
+                .try_delete_grapheme_at(c_row(0), black_box(c_index(5)))
                 .expect("conversion error");
 
             // Cleanup: clear rest of content.
@@ -634,7 +634,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
+                .try_delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -648,12 +648,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
 
             // Benchmark: delete "Beautiful " (indices 6-16).
             buffer
-                .delete_range(c_row(0), black_box(c_index(6)), black_box(c_index(16)))
+                .try_delete_range(c_row(0), black_box(c_index(6)), black_box(c_index(16)))
                 .expect("conversion error");
 
             // Cleanup
@@ -662,7 +662,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
+                .try_delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -676,12 +676,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
 
             // Benchmark: delete the emoji.
             buffer
-                .delete_grapheme_at(c_row(0), black_box(c_index(6)))
+                .try_delete_grapheme_at(c_row(0), black_box(c_index(6)))
                 .expect("conversion error");
 
             // Cleanup
@@ -690,7 +690,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
+                .try_delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -704,12 +704,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
 
             // Benchmark: delete first 5 chars.
             buffer
-                .delete_range(c_row(0), black_box(c_index(0)), black_box(c_index(5)))
+                .try_delete_range(c_row(0), black_box(c_index(0)), black_box(c_index(5)))
                 .expect("conversion error");
 
             // Cleanup
@@ -718,7 +718,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
+                .try_delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }
@@ -732,7 +732,7 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
             let count = buffer
                 .get_line_info(0)
@@ -741,7 +741,7 @@ mod benches {
 
             // Benchmark: delete all content.
             buffer
-                .delete_range(
+                .try_delete_range(
                     c_row(0),
                     black_box(c_index(0)),
                     black_box(count.eol_cursor_position()),
@@ -759,12 +759,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_text_at_grapheme(c_row(0), c_index(0), test_text)
+                .try_insert_text_at_grapheme(c_row(0), c_index(0), test_text)
                 .expect("conversion error");
 
             // Benchmark: delete the complex family emoji.
             buffer
-                .delete_grapheme_at(c_row(0), black_box(c_index(8)))
+                .try_delete_grapheme_at(c_row(0), black_box(c_index(8)))
                 .expect("conversion error");
 
             // Cleanup
@@ -773,7 +773,7 @@ mod benches {
                 .expect("conversion error")
                 .grapheme_count;
             buffer
-                .delete_range(c_row(0), c_index(0), count.eol_cursor_position())
+                .try_delete_range(c_row(0), c_index(0), count.eol_cursor_position())
                 .expect("conversion error");
         });
     }

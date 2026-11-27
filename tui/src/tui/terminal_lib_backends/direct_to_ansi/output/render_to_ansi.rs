@@ -12,7 +12,8 @@ use crate::{CRLF_BYTES, CursorBoundsCheck, OfsBufVT100, SGR_RESET_BYTES, vp_row}
 ///
 /// This trait defines a unified interface for converting various buffer types to [`ANSI`]
 /// escape sequence byte arrays. This enables both the full TUI and lightweight
-/// [`choose()`] rendering paths to converge on a single [`ANSI`] generation mechanism.
+/// [`try_choose()`] rendering paths to converge on a single [`ANSI`] generation
+/// mechanism.
 ///
 /// ## Architecture
 ///
@@ -50,9 +51,9 @@ use crate::{CRLF_BYTES, CursorBoundsCheck, OfsBufVT100, SGR_RESET_BYTES, vp_row}
 ///    future direct [`ANSI`] backend
 ///
 /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-/// [`choose()`]: crate::choose
 /// [`crossterm`]: crossterm
 /// [`OfsBufVT100`]: crate::core::ansi::OfsBufVT100
+/// [`try_choose()`]: crate::try_choose
 pub trait RenderToAnsi {
     /// Render this buffer to [`ANSI`] escape sequence bytes.
     ///

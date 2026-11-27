@@ -456,8 +456,8 @@ mod render_helper {
 mod tests {
     use super::{render_helper::style_eq, *};
     use crate::{Flat2DArray, RenderOpsLocalData, VPWidth,
-                compositor_render_ops_to_ofs_buf::print_text_with_attributes, vp_col,
-                vp_height, vp_row, vp_width};
+                compositor_render_ops_to_ofs_buf::try_print_text_with_attributes,
+                vp_col, vp_height, vp_row, vp_width};
 
     /// Helper function to make an `OfsBuf`.
     fn make_ofs_buf_plain_text() -> OfsBuf {
@@ -481,7 +481,7 @@ mod tests {
             ..Default::default()
         };
         let maybe_max_display_col_count: Option<VPWidth> = Some(vp_width(10));
-        print_text_with_attributes(
+        try_print_text_with_attributes(
             text,
             maybe_style.as_ref(),
             &mut ofs_buf,

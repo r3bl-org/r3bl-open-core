@@ -257,7 +257,7 @@ impl LineMetadata {
     ///
     /// let mut buffer = ZeroCopyGapBuffer::default();
     /// buffer.add_line();
-    /// buffer.insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello").expect("conversion error");
+    /// buffer.try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello").expect("conversion error");
     ///
     /// let line_info = buffer.get_line_info(0u16).expect("conversion error");
     ///
@@ -636,7 +636,7 @@ mod tests {
 
         // Insert some text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -652,7 +652,7 @@ mod tests {
 
         // Insert some text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -669,7 +669,7 @@ mod tests {
 
         // Insert text with multi-byte characters.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "H😀llo")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "H😀llo")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -703,7 +703,7 @@ mod tests {
 
         // Insert some text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -719,7 +719,7 @@ mod tests {
 
         // Insert some text.
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hello")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -736,7 +736,7 @@ mod tests {
 
         // Insert text with emoji: "H😀llo".
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "H😀llo")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "H😀llo")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -773,7 +773,7 @@ mod tests {
 
         // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c".
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "a👨‍👩‍👧‍👦b世界c")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "a👨‍👩‍👧‍👦b世界c")
             .expect("conversion error");
 
         let line_info = buffer.get_line_info(0u16).expect("conversion error");
@@ -802,7 +802,7 @@ mod tests {
         // Columns: 0    1   23     4    5   6   7   8   9A      B    C   D
         // (A=10,B=11,C=12,D=13)
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦XelLo🙏🏽Bye")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦XelLo🙏🏽Bye")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");
@@ -859,7 +859,7 @@ mod tests {
         // Content: "Hi📦X"
         // 'H' (col 0), 'i' (col 1), '📦' (cols 2..4, width 2), 'X' (col 4)
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");
@@ -903,7 +903,7 @@ mod tests {
         // 'H' (col 0, width 1), 'i' (col 1, width 1), '📦' (cols 2..4, width 2), 'X' (col
         // 4, width 1)
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");
@@ -948,7 +948,7 @@ mod tests {
 
         // Content: "Hi📦X"
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");
@@ -1003,7 +1003,7 @@ mod tests {
 
         // Content: "Hi📦X"
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");
@@ -1036,7 +1036,7 @@ mod tests {
 
         // Content: "Hi📦X"
         buffer
-            .insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
+            .try_insert_text_at_grapheme(c_row(0), c_index(0u16), "Hi📦X")
             .expect("conversion error");
 
         let line = buffer.get_line(c_row(0)).expect("conversion error");

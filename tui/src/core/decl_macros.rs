@@ -6,9 +6,9 @@
 /// # Example 1
 ///
 /// ```
-/// use r3bl_tui::{CommonResult, throws};
+/// use r3bl_tui::throws;
 ///
-/// fn test_simple_2_col_layout() -> CommonResult {
+/// fn test_simple_2_col_layout() -> miette::Result<()> {
 ///     let input_event = Some("a");
 ///     throws! {
 ///         match input_event {
@@ -22,9 +22,9 @@
 /// # Example 2
 ///
 /// ```
-/// use r3bl_tui::{CommonResult, throws};
+/// use r3bl_tui::throws;
 ///
-/// fn test_simple_2_col_layout() -> CommonResult {
+/// fn test_simple_2_col_layout() -> miette::Result<()> {
 ///     throws!({
 ///         let result: miette::Result<&str> = Ok("foo bar");
 ///         _ = result?;
@@ -49,8 +49,8 @@ macro_rules! throws {
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::{throws_with_return, CommonResult};
-/// fn function_returns_string() -> CommonResult<&'static str> {
+/// use r3bl_tui::throws_with_return;
+/// fn function_returns_string() -> miette::Result<&'static str> {
 ///     throws_with_return!({
 ///         println!("⛵ Draw -> draw: {}\r", "state");
 ///         "Hello, World!"

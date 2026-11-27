@@ -351,14 +351,14 @@ pub(crate) mod osc { // Cross-folder osc_codes/osc_sender/maybe_more links.
     /// - `OSC 10, 11, 12, 13, 14, 17, 19`: Decodes terminal color responses
     ///   ([`TerminalColorRole`]) into [`VT100InputEventIR::TerminalColorReport`]. These
     ///   responses arrive asynchronously on [`stdin`] in reply to queries constructed via
-    ///   [`OscSequence::ColorQuery`] or emitted via [`OscSender::send_color_query`].
+    ///   [`OscSequence::ColorQuery`] or emitted via [`OscSender::try_send_color_query`].
     /// - `OSC 52`: Inbound clipboard responses are ignored
     ///   ([`VT100InputEventIR::Ignored`]).
     /// - All other or malformed [`OSC`] sequences: safely ignored
     ///   ([`VT100InputEventIR::Ignored`]).
     ///
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
-    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
     /// [`stdin`]: std::io::stdin
     /// [`TerminalColorRole`]: crate::TerminalColorRole

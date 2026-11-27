@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CaptureFlag, ControllerReader, PtyOscProgressScanner, PtyOutputEvent,
-            PtySessionConfig, READ_BUFFER_SIZE};
-use miette::miette;
+use crate::{CaptureFlag, ControllerReader, PtyError, PtyOscProgressScanner,
+            PtyOutputEvent, PtySessionConfig, READ_BUFFER_SIZE};
 use std::{io::Read, sync::mpsc::SyncSender, thread::JoinHandle};
 
 /// Spawns a dedicated thread that reads [`PTY`] output and sends [`PtyOutputEvent`]s.
@@ -32,15 +31,15 @@ use std::{io::Read, sync::mpsc::SyncSender, thread::JoinHandle};
 /// [`OSC`]: crate::OscSequence
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [Backpressure Architecture]: crate::core::pty#backpressure-architecture
-pub fn spawn_pty_reader_thread(
+pub fn try_spawn_pty_reader_thread(
     mut reader: ControllerReader,
     output_event_ch_tx_half: SyncSender<PtyOutputEvent>,
     arg_config: impl Into<PtySessionConfig>,
-) -> miette::Result<JoinHandle<miette::Result<()>>> {
+) -> Result<JoinHandle<()>, PtyError> {
     let config = arg_config.into();
-    std::thread::Builder::new()
+    let handle = std::thread::Builder::new()
         .name("pty-reader".into())
-        .spawn(move || -> miette::Result<()> {
+        .spawn(move || {
             let mut buf = [0u8; READ_BUFFER_SIZE];
             let mut progress_scanner = PtyOscProgressScanner::new();
 
@@ -79,7 +78,7 @@ pub fn spawn_pty_reader_thread(
                     }
                 }
             }
-            ok!()
         })
-        .map_err(|e| miette!("Failed to spawn pty-reader thread: {e}"))
+        .map_err(PtyError::Io)?;
+    Ok(handle)
 }

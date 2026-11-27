@@ -4,9 +4,11 @@ use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
             TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
             contains_ansi_escape_sequence, emit_stderr_redirection_disclaimer,
-            get_terminal_width, print_start_if_standalone, print_tick_final_msg,
-            print_tick_interval_msg, render_final_tick, render_tick};
-use std::{sync::Arc, time::Duration};
+            get_terminal_width, render_final_tick, render_tick,
+            try_print_start_if_standalone, try_print_tick_final_msg,
+            try_print_tick_interval_msg};
+use miette::IntoDiagnostic;
+use std::{io, sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
 
 /// [`Spinner`] is an [interactive terminal application entry point] that displays an
@@ -28,7 +30,7 @@ use tokio::{sync::broadcast, time::interval};
 /// Pass a [`SharedWriter`] to coordinate output, so nothing gets clobbered. While the
 /// spinner is active, async terminal output is paused. Ctrl+C and Ctrl+D cancellation is
 /// supported when **both** the readline and spinner are active:
-/// - The readline is active when [`read_line()`] is called.
+/// - The readline is active when [`try_read_line()`] is called.
 /// - The spinner is active when [`Spinner::try_start()`] is called.
 ///
 /// **Embedded mode internals**
@@ -88,7 +90,6 @@ use tokio::{sync::broadcast, time::interval};
 ///     crate::apply_event_to_line_state_and_render
 /// [`OutputDevice`]: crate::OutputDevice
 /// [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
-/// [`read_line()`]: crate::readline_async::ReadlineAsyncContext::read_line()
 /// [`Readline::is_spinner_active()`]: crate::Readline::is_spinner_active
 /// [`ReadlineAsyncContext`]: crate::readline_async::ReadlineAsyncContext
 /// [`ReadlineLockManager`'s lock hierarchy]:
@@ -98,6 +99,7 @@ use tokio::{sync::broadcast, time::interval};
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
 /// [`tokio::sync::broadcast::Sender`]: tokio::sync::broadcast::Sender
+/// [`try_read_line()`]: crate::readline_async::ReadlineAsyncContext::try_read_line()
 /// [interactive terminal application entry point]:
 ///     crate#interactive-terminal-application-entry-points
 /// [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
@@ -236,9 +238,9 @@ impl Spinner {
                     };
 
                     // Start task.
-                    spinner.try_start_task().await?;
+                    spinner.try_start_task().await.into_diagnostic()?;
 
-                    Ok(spinner)
+                    Ok::<_, miette::Report>(spinner)
                 };
                 match init().await {
                     Ok(spinner) => TuiAvailability::Available(spinner),
@@ -296,7 +298,7 @@ impl Spinner {
     /// [`tokio::sync::oneshot::channel`]: tokio::sync::oneshot::channel
     /// [Terminal Restoration: Panic, Drop, and Mutex Poison-Safety]:
     ///     crate#terminal-restoration-panic-drop-and-mutex-poison-safety
-    pub async fn try_start_task(&mut self) -> miette::Result<()> {
+    pub async fn try_start_task(&mut self) -> io::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
 
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {
@@ -323,7 +325,7 @@ impl Spinner {
         let self_safe_is_shutdown = self.safe_is_shutdown.clone();
 
         // This does nothing if this is used in a `ReadlineAsyncContext` context.
-        print_start_if_standalone(
+        try_print_start_if_standalone(
             self.output_device.clone(),
             &self.maybe_shared_writer,
         )?;
@@ -370,7 +372,7 @@ impl Spinner {
                                 get_terminal_width(),
                             );
                             // We don't care about the result of this operation.
-                            print_tick_final_msg(
+                            try_print_tick_final_msg(
                                 &style_clone,
                                 &final_output,
                                 output_device_clone.clone(),
@@ -420,7 +422,7 @@ impl Spinner {
                                 get_terminal_width(),
                             );
                             // We don't care about the result of this operation.
-                            print_tick_interval_msg(
+                            try_print_tick_interval_msg(
                                 &style_clone,
                                 &output,
                                 output_device_clone.clone()

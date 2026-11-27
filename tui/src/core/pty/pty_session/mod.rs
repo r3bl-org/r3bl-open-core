@@ -8,10 +8,10 @@
 //!
 //! ## Synchronous Core and Async Adapter
 //!
-//! 1. **Synchronous Mode ([`PtySessionBuilder::start()`])**: Returns a purely synchronous
+//! 1. **Synchronous Mode ([`PtySessionBuilder::try_start()`])**: Returns a purely synchronous
 //!    [`PtySession`] using standard library channels and OS threads. No [`tokio`] runtime
 //!    is needed.
-//! 2. **Asynchronous Adapter ([`PtySessionBuilder::start_async()`])**: Returns an
+//! 2. **Asynchronous Adapter ([`PtySessionBuilder::try_start_async()`])**: Returns an
 //!    [`AsyncPtySession`] backed by [`tokio`] channels and bridge tasks for applications
 //!    driving interactions via [`tokio::select!`].
 //!
@@ -26,12 +26,12 @@
 //! ## Synchronous Lifecycle (Core)
 //!
 //! Synchronous applications configure the builder and call
-//! [`PtySessionBuilder::start()`]. Events are drained using the standard library
+//! [`PtySessionBuilder::try_start()`]. Events are drained using the standard library
 //! receiver, and the session is joined on exit:
 //!
 //! ```text
 //! ┌───────────────────┐     ┌───────────────┐     ┌──────────────────────┐
-//! │ PtySessionBuilder │ ──► │     start     │ ──► │  rx_output_event.    │
+//! │ PtySessionBuilder │ ──► │   try_start   │ ──► │  rx_output_event.    │
 //! │ (Configuration)   │     │   (Startup)   │     │       recv()         │
 //! └───────────────────┘     └───────────────┘     └───────┬──────────────┘
 //!                                                         │
@@ -41,7 +41,7 @@
 //!                          (PtyOutputEvent::Output)                (session.send_input())
 //! ```
 //!
-//! See [`PtySession`] and [`PtySessionBuilder::start()`] for complete code examples.
+//! See [`PtySession`] and [`PtySessionBuilder::try_start()`] for complete code examples.
 //!
 //! ## Asynchronous Lifecycle (Adapter)
 //!
@@ -50,18 +50,18 @@
 //! not require pinning for use in [`select!`] branches.
 //!
 //! ```text
-//! ┌───────────────────┐     ┌───────────────┐     ┌──────────────────────┐
-//! │ PtySessionBuilder │ ──► │  start_async  │ ──► │    tokio::select!    │
-//! │ (Configuration)   │     │   (Startup)   │     │ (Active Interaction) │
-//! └───────────────────┘     └───────────────┘     └───────┬──────────────┘
-//!                                                         │
-//!                                     ┌───────────────────┴───────────────────┐
-//!                                     │                                       │
-//!                           📥 Receive Output Events                📤 Send Input Events
-//!                          (PtyOutputEvent::Output)                (session.tx_input_event)
+//! ┌───────────────────┐     ┌─────────────────┐     ┌──────────────────────┐
+//! │ PtySessionBuilder │ ──► │ try_start_async │ ──► │    tokio::select!    │
+//! │ (Configuration)   │     │    (Startup)    │     │ (Active Interaction) │
+//! └───────────────────┘     └─────────────────┘     └───────┬──────────────┘
+//!                                                           │
+//!                                       ┌───────────────────┴───────────────────┐
+//!                                       │                                       │
+//!                             📥 Receive Output Events                📤 Send Input Events
+//!                            (PtyOutputEvent::Output)                (session.tx_input_event)
 //! ```
 //!
-//! See [`AsyncPtySession`] and [`PtySessionBuilder::start_async()`] for complete code
+//! See [`AsyncPtySession`] and [`PtySessionBuilder::try_start_async()`] for complete code
 //! examples.
 //!
 //! [3-layer Functional Stack]: crate::core::pty#the-functional-stack
@@ -70,15 +70,15 @@
 //! [`PtyInputEvent`]: crate::PtyInputEvent
 //! [`PtyOutputEvent`]: crate::PtyOutputEvent
 //! [`PtySession`]: crate::PtySession
-//! [`PtySessionBuilder::start()`]: crate::PtySessionBuilder::start
-//! [`PtySessionBuilder::start_async()`]: crate::PtySessionBuilder::start_async
+//! [`PtySessionBuilder::try_start()`]: crate::PtySessionBuilder::try_start
+//! [`PtySessionBuilder::try_start_async()`]: crate::PtySessionBuilder::try_start_async
 //! [`PtySessionBuilder`]: crate::PtySessionBuilder
 //! [`select!`]: tokio::select
 //! [`tokio::select!`]: tokio::select
 //! [`tokio::task::JoinHandle`]: tokio::task::JoinHandle
 //! [`tokio`]: tokio
 //! [Application Layer]: crate::core::pty#the-functional-stack
-//! [Core Async Concepts]: crate::main_event_loop_impl#core-async-concepts-pin-and-unpin
+//! [Core Async Concepts]: crate::try_main_event_loop_impl#core-async-concepts-pin-and-unpin
 //! [Engine Layer]: crate::core::pty::pty_engine
 //! [Thread Trio]: crate::core::pty#the-thread-trio
 

@@ -14,9 +14,10 @@
 
 use super::super::CanvasStorage;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CPos, Flat2DArray,
-            NarrowingCastToU16, PixelChar, RangeConstructExt, RangeExclusive,
-            ShiftLinesDirection, VPHeight, VPLength, VPRow, VPSize, VPWidth, Viewport,
-            ViewportPanValidity, ViewportToCanvasExt, c_pos, vp_height, vp_row};
+            NarrowingCastToU16, OfsBufBoundsError, PixelChar, RangeConstructExt,
+            RangeExclusive, ShiftLinesDirection, VPHeight, VPLength, VPRow, VPSize,
+            VPWidth, Viewport, ViewportPanValidity, ViewportToCanvasExt, c_pos,
+            vp_height, vp_row};
 
 impl CanvasStorage for Flat2DArray<PixelChar> {
     fn get_viewport(&self) -> Viewport {
@@ -110,15 +111,16 @@ impl CanvasStorage for Flat2DArray<PixelChar> {
         &mut self,
         row_index_1: VPRow,
         row_index_2: VPRow,
-    ) -> miette::Result<()> {
+    ) -> Result<(), OfsBufBoundsError> {
         let vp = self.get_viewport();
         let r1 = vp.to_canvas(row_index_1);
         let r2 = vp.to_canvas(row_index_2);
 
-        if r1.overflows(self.height) == ArrayOverflowResult::Overflowed
-            || r2.overflows(self.height) == ArrayOverflowResult::Overflowed
-        {
-            return Err(miette::miette!("Row index out of bounds"));
+        if r1.overflows(self.height) == ArrayOverflowResult::Overflowed {
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: row_index_1 });
+        }
+        if r2.overflows(self.height) == ArrayOverflowResult::Overflowed {
+            return Err(OfsBufBoundsError::RowOutOfBounds { row: row_index_2 });
         }
         self.as_simd_mut().swap_rows(r1, r2);
         Ok(())

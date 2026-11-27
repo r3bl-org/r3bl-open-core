@@ -117,7 +117,7 @@ impl PtyTestChild {
     ///
     /// 1. **Drop `pty_pair`**: closes the parent's controller [`fd`]. The `buf_reader`'s
     ///    cloned controller [`fd`] remains valid. The controlled [`fd`] must already be
-    ///    closed by the caller (via [`PtyPair::open_and_spawn()`]) before the
+    ///    closed by the caller (via [`PtyPair::try_open_and_spawn()`]) before the
     ///    controller's reading phase begins; that ensures [`EIO`] (or [`EOF`] on some
     ///    platforms) arrives when the child process exits rather than only when
     ///    [`Self::drain_and_wait()`] is reached.
@@ -150,7 +150,7 @@ impl PtyTestChild {
     ///   the same reader used during the test's reading phase (so buffered data is
     ///   consumed).
     /// - `pty_pair` - The [`PTY`] pair to drop. The controlled side should already have
-    ///   been closed via [`PtyPair::open_and_spawn()`] before the controller's reading
+    ///   been closed via [`PtyPair::try_open_and_spawn()`] before the controller's reading
     ///   phase started.
     ///
     /// # Panics
@@ -163,7 +163,7 @@ impl PtyTestChild {
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     /// [`fd`]: https://manpages.debian.org/open.2
     /// [`PTY`]: crate::PtyPair#pty-primer
-    /// [`PtyPair::open_and_spawn()`]: crate::PtyPair::open_and_spawn
+    /// [`PtyPair::try_open_and_spawn()`]: crate::PtyPair::try_open_and_spawn
     /// [`PtyPair`]: crate::PtyPair
     /// [`read()`]: https://manpages.debian.org/read.2
     /// [`std::process::exit(0)`]: std::process::exit
@@ -178,7 +178,7 @@ impl PtyTestChild {
     ) -> u32 {
         // Step 1: Drop pty_pair to release the controller side's main handle. The
         // parent's copy of the controlled fd is already closed (via
-        // PtyPair::open_and_spawn), which is the primary resource leak deadlock
+        // PtyPair::try_open_and_spawn), which is the primary resource leak deadlock
         // safeguard. Dropping the pair here ensures the parent is in a clean state where
         // only the buf_reader (a clone) is actively reading.
         drop(pty_pair);

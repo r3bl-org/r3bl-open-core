@@ -1,12 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{DialogEngine, DialogEngineConfig, DialogEngineMode};
-use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer,
-            DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
-            EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
-            GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
-            KeyPress, MinSize, PartialFlexBox, RangeBoundsResult, RenderOpCommon,
-            RenderOpIR, RenderOpIRVec, RenderPipeline, SpecialKey, SystemClipboard,
+use crate::{ColorWheel, DialogBuffer, DialogChoice, DialogEngineArgs, DialogEvent,
+            EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
+            GCStringOwned, GlobalData, GradientGenerationPolicy, HasDialogBuffers,
+            InlineString, InputEvent, InvalidPercentageError, Key, KeyPress, MinSize,
+            PartialFlexBox, RangeBoundsResult, RenderOpCommon, RenderOpIR,
+            RenderOpIRVec, RenderPipeline, SpecialKey, SystemClipboard,
             TextColorizationPolicy, TuiStyle, VPBoundingBox, VPPos, VPSize,
             ViewportBoundsCheck, WideningCastToU8, WideningCastToU16, ZOrder, c_col,
             c_row, ch,
@@ -14,6 +14,20 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             tui_style_attrib::{Dim, Underline},
             tui_style_attribs, u16, vp_col, vp_height, vp_row, vp_width};
 use std::{borrow::Cow, fmt::Debug};
+
+/// Errors returned by [`DialogEngineApi`] layout and rendering operations.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+pub enum DialogEngineError {
+    #[error("Window size is too small; minimum size is {min_cols} cols x {min_rows} rows")]
+    DisplaySizeTooSmall { min_cols: u8, min_rows: u8 },
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    InvalidPercentage(InvalidPercentageError),
+
+    #[error("Dialog buffer does not exist for component id {id:?}")]
+    DialogBufferNotFound { id: FlexBoxId },
+}
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -30,8 +44,11 @@ pub struct DialogEngineApi;
 impl DialogEngineApi {
     /// # Errors
     ///
-    /// Returns an error if the rendering operation fails.
-    pub fn render_engine<S, AS>(args: DialogEngineArgs<'_, S, AS>) -> CommonResult
+    /// Returns [`DialogEngineError`] if the display size is too small, percentage layout
+    /// calculation fails, or the dialog buffer does not exist in state.
+    pub fn try_render_engine<S, AS>(
+        args: DialogEngineArgs<'_, S, AS>,
+    ) -> Result<(), DialogEngineError>
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         AS: Debug + Default + Clone + Sync + Send,
@@ -60,7 +77,7 @@ impl DialogEngineApi {
                 }
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
-                    let it = impl_internal::make_flex_box_for_dialog(
+                    let it = impl_internal::try_make_flex_box_for_dialog(
                         self_id,
                         dialog_engine.dialog_options,
                         window_size,
@@ -114,7 +131,7 @@ impl DialogEngineApi {
             }
         }
 
-        impl_internal::render_editor(
+        impl_internal::try_render_editor(
             origin_pos,
             bounds_size,
             DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus),
@@ -130,16 +147,12 @@ impl DialogEngineApi {
     /// - [`DialogEngineApplyResponse::UpdateEditorBuffer`] => the editor buffer was
     ///   updated.
     /// - [`DialogEngineApplyResponse::Noop`] => otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the event handling fails.
     pub fn apply_event<S, AS>(
         mut_state: &mut S,
         self_id: FlexBoxId,
         dialog_engine: &mut DialogEngine,
         input_event: InputEvent,
-    ) -> CommonResult<DialogEngineApplyResponse>
+    ) -> DialogEngineApplyResponse
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         AS: Debug + Default + Clone + Sync + Send,
@@ -151,7 +164,7 @@ impl DialogEngineApi {
             dialog_engine,
         ) {
             dialog_engine.reset();
-            return Ok(DialogEngineApplyResponse::DialogChoice(choice));
+            return DialogEngineApplyResponse::DialogChoice(choice);
         }
 
         // Was up / down pressed to select autocomplete results & vert scroll the results
@@ -161,7 +174,7 @@ impl DialogEngineApi {
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {
-            return Ok(DialogEngineApplyResponse::SelectScrollResultsPanel);
+            return DialogEngineApplyResponse::SelectScrollResultsPanel;
         }
 
         // Otherwise, pass the event to the editor engine.
@@ -171,7 +184,7 @@ impl DialogEngineApi {
             let it = mut_state.get_mut_dialog_buffer(self_id);
             match it {
                 Some(it) => it,
-                None => return Ok(DialogEngineApplyResponse::Noop),
+                None => return DialogEngineApplyResponse::Noop,
             }
         };
 
@@ -180,15 +193,15 @@ impl DialogEngineApi {
             &mut dialog_engine.editor_engine,
             input_event,
             &mut SystemClipboard,
-        )?;
+        );
 
         match result {
             // If the editor engine applied the event, return the new editor buffer.
             EditorEngineApplyEventResult::Applied => {
-                Ok(DialogEngineApplyResponse::UpdateEditorBuffer)
+                DialogEngineApplyResponse::UpdateEditorBuffer
             }
             EditorEngineApplyEventResult::NotApplied => {
-                Ok(DialogEngineApplyResponse::Noop) /* Otherwise, return noop. */
+                DialogEngineApplyResponse::Noop /* Otherwise, return noop. */
             }
         }
     }
@@ -240,12 +253,12 @@ mod impl_internal {
     /// ```
     ///
     /// [`Surface`]: crate::Surface
-    pub fn make_flex_box_for_dialog(
+    pub fn try_make_flex_box_for_dialog(
         dialog_id: FlexBoxId,
         dialog_options: DialogEngineConfig,
         window_size: VPSize,
         maybe_surface_bounds: Option<VPBoundingBox>,
-    ) -> CommonResult<PartialFlexBox> {
+    ) -> Result<PartialFlexBox, DialogEngineError> {
         let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
             surface_bounds.bounds_size
         } else {
@@ -262,15 +275,10 @@ mod impl_internal {
         if window_size.col_width < vp_width(MinSize::Col.as_u16_widening())
             || window_size.row_height < vp_height(MinSize::Row.as_u16_widening())
         {
-            let min_col = MinSize::Col.as_u8_widening();
-            let min_row = MinSize::Row.as_u8_widening();
+            let min_cols = MinSize::Col.as_u8_widening();
+            let min_rows = MinSize::Row.as_u8_widening();
 
-            return CommonError::new_error_result(
-                CommonErrorType::DisplaySizeTooSmall,
-                &format!(
-                    "Window size is too small. Min size is {min_col} cols x {min_row} rows"
-                ),
-            );
+            return Err(DialogEngineError::DisplaySizeTooSmall { min_cols, min_rows });
         }
 
         let (origin_pos, bounds_size) = match dialog_options.mode {
@@ -280,7 +288,8 @@ mod impl_internal {
                     let col_count = {
                         let percent =
                             pc!(DisplayConstants::DialogComponentBorderWidthPercent
-                                .as_u16_widening())?;
+                                .as_u16_widening())
+                            .map_err(DialogEngineError::InvalidPercentage)?;
                         vp_width(percent.apply_to(*surface_size.col_width))
                     };
                     let row_count = vp_height(
@@ -321,7 +330,8 @@ mod impl_internal {
                     let col_count = {
                         let percent =
                             pc!(DisplayConstants::DialogComponentBorderWidthPercent
-                                .as_u16_widening())?;
+                                .as_u16_widening())
+                            .map_err(DialogEngineError::InvalidPercentage)?;
                         vp_width(percent.apply_to(*surface_size.col_width))
                     };
                     let size = col_count + row_count;
@@ -362,11 +372,11 @@ mod impl_internal {
         })
     }
 
-    pub fn render_editor<S, AS>(
+    pub fn try_render_editor<S, AS>(
         origin_pos: VPPos,
         bounds_size: VPSize,
         args: DialogEngineArgs<'_, S, AS>,
-    ) -> CommonResult
+    ) -> Result<(), DialogEngineError>
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         AS: Debug + Default + Clone + Sync + Send,
@@ -409,12 +419,7 @@ mod impl_internal {
             match it {
                 Some(it) => it,
                 None => {
-                    return CommonError::new_error_result(
-                        CommonErrorType::NotFound,
-                        &format!(
-                            "Dialog buffer does not exist for component id:{self_id:?}"
-                        ),
-                    );
+                    return Err(DialogEngineError::DialogBufferNotFound { id: self_id });
                 }
             }
         };
@@ -427,7 +432,7 @@ mod impl_internal {
             has_focus,
             global_data.window_size,
             &mut temp_pipeline,
-        )?;
+        );
 
         temp_pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
         global_data.pipeline.join_into(temp_pipeline);
@@ -1003,7 +1008,10 @@ mod test_dialog_engine_api_render_engine {
         };
         let has_focus = &mut HasFocus::default();
         let args = DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
-        assert_eq2!(DialogEngineApi::render_engine(args).is_err(), true);
+        assert_eq2!(
+            DialogEngineApi::try_render_engine(args),
+            Err(DialogEngineError::DialogBufferNotFound { id: self_id })
+        );
     }
 
     #[test]
@@ -1017,7 +1025,7 @@ mod test_dialog_engine_api_render_engine {
         };
         let has_focus = &mut HasFocus::default();
         let args = DialogEngineArgs::new(self_id, global_data, dialog_engine, has_focus);
-        DialogEngineApi::render_engine(args).expect("conversion error");
+        DialogEngineApi::try_render_engine(args).expect("conversion error");
         let render_ops = global_data.pipeline.get(&ZOrder::Glass);
         assert!(!render_ops.is_empty());
     }
@@ -1028,24 +1036,14 @@ mod test_dialog_api_make_flex_box_for_dialog {
     use super::*;
     use crate::Surface;
 
-    /// More info on `is` and downcasting:
-    /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
-    /// - <https://doc.rust-lang.org/std/any/trait.Any.html>
     #[test]
     fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
         let window_size = VPSize::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
-        // The window size is too small and will result in this error.
-        // Err(
-        //   CommonError {
-        //       err_type: DisplaySizeTooSmall,
-        //       err_msg: Some(
-        //           "Window size is too small. Min size is 65 cols x 10 rows",
-        //       ),
-        //   },
-        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
+        // The window size is too small and will result in DisplaySizeTooSmall.
+        let result_flex_box = dbg!(impl_internal::try_make_flex_box_for_dialog(
             dialog_id,
             DialogEngineConfig {
                 mode: DialogEngineMode::ModalSimple,
@@ -1055,50 +1053,20 @@ mod test_dialog_api_make_flex_box_for_dialog {
             Some(surface.bounds),
         ));
 
-        // Assert that a general `CommonError` is returned.
-        let my_err = result_flex_box.err();
-        // More info on downcast_ref::<T>(): https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-        assert_eq2!(
-            my_err
-                .as_ref()
-                .expect("conversion error")
-                .is::<CommonError>(),
-            true
-        );
-
-        // Assert that this specific error is returned.
-        let result = matches!(
-            my_err
-                .as_ref()
-                .expect("conversion error")
-                .downcast_ref::<CommonError>(),
-            Some(CommonError {
-                error_type: CommonErrorType::DisplaySizeTooSmall,
-                error_message: _,
-            })
-        );
-
-        assert_eq2!(result, true);
+        assert!(matches!(
+            result_flex_box,
+            Err(DialogEngineError::DisplaySizeTooSmall { .. })
+        ));
     }
 
-    /// More info on `is` and downcasting:
-    /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
-    /// - <https://doc.rust-lang.org/std/any/trait.Any.html>
     #[test]
     fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
         let surface = Surface::default();
         let window_size = VPSize::default();
         let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
-        // The window size is too small and will result in this error.
-        // Err(
-        //   CommonError {
-        //       err_type: DisplaySizeTooSmall,
-        //       err_msg: Some(
-        //           "Window size is too small. Min size is 65 cols x 10 rows",
-        //       ),
-        //   },
-        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
+        // The window size is too small and will result in DisplaySizeTooSmall.
+        let result_flex_box = dbg!(impl_internal::try_make_flex_box_for_dialog(
             dialog_id,
             DialogEngineConfig {
                 mode: DialogEngineMode::ModalAutocomplete,
@@ -1108,30 +1076,10 @@ mod test_dialog_api_make_flex_box_for_dialog {
             Some(surface.bounds),
         ));
 
-        // Assert that a general `CommonError` is returned.
-        let my_err = result_flex_box.err();
-        // More info on downcast_ref::<T>(): https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-        assert_eq2!(
-            my_err
-                .as_ref()
-                .expect("conversion error")
-                .is::<CommonError>(),
-            true
-        );
-
-        // Assert that this specific error is returned.
-        let result = matches!(
-            my_err
-                .as_ref()
-                .expect("conversion error")
-                .downcast_ref::<CommonError>(),
-            Some(CommonError {
-                error_type: CommonErrorType::DisplaySizeTooSmall,
-                error_message: _,
-            })
-        );
-
-        assert_eq2!(result, true);
+        assert!(matches!(
+            result_flex_box,
+            Err(DialogEngineError::DisplaySizeTooSmall { .. })
+        ));
     }
 
     #[test]
@@ -1149,7 +1097,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
-        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::try_make_flex_box_for_dialog(
             self_id,
             DialogEngineConfig {
                 mode: DialogEngineMode::ModalSimple,
@@ -1188,7 +1136,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
         let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
-        let result_flex_box = dbg!(impl_internal::make_flex_box_for_dialog(
+        let result_flex_box = dbg!(impl_internal::try_make_flex_box_for_dialog(
             self_id,
             DialogEngineConfig {
                 mode: DialogEngineMode::ModalAutocomplete,
@@ -1224,15 +1172,12 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Esc));
-        let response = dbg!(
-            DialogEngineApi::apply_event::<_, ()>(
-                state,
-                self_id,
-                dialog_engine,
-                input_event,
-            )
-            .expect("conversion error")
-        );
+        let response = dbg!(DialogEngineApi::apply_event::<_, ()>(
+            state,
+            self_id,
+            dialog_engine,
+            input_event,
+        ));
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
@@ -1245,15 +1190,10 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Enter));
-        let response = dbg!(
-            DialogEngineApi::apply_event::<mock_real_objects_for_dialog::State, ()>(
-                state,
-                self_id,
-                dialog_engine,
-                input_event
-            )
-            .expect("conversion error")
-        );
+        let response = dbg!(DialogEngineApi::apply_event::<
+            mock_real_objects_for_dialog::State,
+            (),
+        >(state, self_id, dialog_engine, input_event));
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
             &response
         {
@@ -1271,15 +1211,10 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@char 'a'));
-        let response = dbg!(
-            DialogEngineApi::apply_event::<mock_real_objects_for_dialog::State, ()>(
-                state,
-                self_id,
-                dialog_engine,
-                input_event
-            )
-            .expect("conversion error")
-        );
+        let response = dbg!(DialogEngineApi::apply_event::<
+            mock_real_objects_for_dialog::State,
+            (),
+        >(state, self_id, dialog_engine, input_event));
         if let DialogEngineApplyResponse::UpdateEditorBuffer = &response {
             let editor_content = state
                 .get_mut_dialog_buffer(self_id)

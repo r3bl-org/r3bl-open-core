@@ -16,7 +16,7 @@
 //! - `Vec::with_capacity`:       62.16 ns/iter
 //! - **`Vec` is 2.3x faster, `Vec::with_capacity` is 4.1x faster**
 //!
-//! ### Random access pattern (simulating `print_text_with_attributes)`:
+//! ### Random access pattern (simulating `try_print_text_with_attributes)`:
 //! - `SmallVec`:                351.90 ns/iter
 //! - `Vec`:                     117.50 ns/iter
 //! - `Vec::with_capacity`:       72.62 ns/iter
@@ -155,7 +155,7 @@ mod pixel_char_benchmarks {
         });
     }
 
-    // Benchmark 2: Random access pattern (simulating print_text_with_attributes)
+    // Benchmark 2: Random access pattern (simulating try_print_text_with_attributes)
     #[bench]
     fn bench_smallvec_random_access(b: &mut Bencher) {
         let chars = create_test_pixel_chars(80);

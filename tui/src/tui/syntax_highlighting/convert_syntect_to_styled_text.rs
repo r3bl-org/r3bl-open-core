@@ -374,7 +374,7 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use crate::{CommonResult, InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet, ch,
+    use crate::{InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet, ch,
                 convert_style_from_syntect_to_tui, tui_style_attrib, tui_style_id};
     use smallvec::smallvec;
 
@@ -462,12 +462,12 @@ mod tests_convert_style_and_color {
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
-        let result = stylesheet.add_style(style1);
+        let result = stylesheet.try_add_style(style1);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
-        let result = stylesheet.add_style(style2);
+        let result = stylesheet.try_add_style(style2);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
@@ -508,12 +508,12 @@ mod tests_convert_style_and_color {
         let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
-        let result = stylesheet.add_style(style1);
+        let result = stylesheet.try_add_style(style1);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 1);
 
         let style2 = make_a_style(2);
-        let result = stylesheet.add_style(style2);
+        let result = stylesheet.try_add_style(style2);
         result.expect("conversion error");
         assert_eq2!(stylesheet.styles.len(), 2);
 
@@ -534,7 +534,7 @@ mod tests_convert_style_and_color {
     }
 
     #[test]
-    fn test_stylesheet_builder() -> CommonResult {
+    fn test_stylesheet_builder() -> miette::Result<()> {
         throws!({
             let id_2 = 2;
             let style1 = make_a_style(1);
@@ -600,7 +600,7 @@ mod tests_convert_style_and_color {
             );
             assert_eq2!(stylesheet.find_styles_by_ids(&[13, 41]), None);
             let style7 = make_a_style(7);
-            let result = stylesheet.add_style(style7);
+            let result = stylesheet.try_add_style(style7);
             result.expect("conversion error");
             assert_eq2!(stylesheet.styles.len(), 7);
             assert_eq2!(

@@ -278,7 +278,7 @@ fn controller(context: PtyTestContext) {
 /// # Example Flow
 ///
 /// ```text
-/// LineState::print_data_and_flush()
+/// LineState::try_print_data_and_flush()
 ///         │
 ///         ▼
 /// ┌─────────────────────┐
@@ -371,7 +371,7 @@ fn controlled() {
         while let Ok(signal) = rx.try_recv() {
             if let LineStateControlSignal::Line(data) = signal {
                 line_state
-                    .print_data_and_flush(data.as_bytes(), &mut capture_output_bytes)
+                    .try_print_data_and_flush(data.as_bytes(), &mut capture_output_bytes)
                     .expect("conversion error");
             }
         }

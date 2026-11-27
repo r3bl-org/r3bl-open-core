@@ -147,7 +147,7 @@ fn controlled() {
         // Read 3 readline events (2 lines + 1 Ctrl+C).
         let mut count = 0;
         while count < 3 {
-            match readline.readline().await {
+            match readline.try_readline().await {
                 Ok(event) => {
                     println!("EventReceived: {event:?}");
                     std::io::stdout().flush().expect("conversion error");

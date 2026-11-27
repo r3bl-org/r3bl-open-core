@@ -163,7 +163,7 @@ fn controlled() {
 
         // Step 2: Create device A - this spawns thread #1.
         eprintln!("{GLYPH_STEP} Step 2: Creating device A...");
-        let mut device_a = DirectToAnsiInputDevice::new()
+        let mut device_a = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         // Signal that we're ready for input, then read.
@@ -216,7 +216,7 @@ fn controlled() {
 
         // Step 4: Create device B - this should spawn thread #2.
         eprintln!("{GLYPH_STEP} Step 4: Creating device B (should spawn new thread)...");
-        let mut device_b = DirectToAnsiInputDevice::new()
+        let mut device_b = DirectToAnsiInputDevice::try_new()
             .expect("Failed to initialize DirectToAnsiInputDevice");
 
         println!("{DEVICE_B_CREATED}");

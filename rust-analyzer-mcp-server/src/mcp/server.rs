@@ -16,9 +16,10 @@ use crate::{constants::{debug_flags::DEBUG_MCP_SERVER, mcp_methods, mcp_protocol
             error::McpServerError,
             lsp::{RustAnalyzerClient, canonicalize_path, path_to_file_uri},
             mcp::{JsonRpcErrorPayload, McpRequest, McpResponse, ToolResult, get_tools,
-                  handle_code_actions, handle_completion, handle_definition,
-                  handle_diagnostics, handle_format, handle_hover, handle_references,
-                  handle_symbols, handle_workspace_diagnostics},
+                  try_handle_code_actions, try_handle_completion,
+                  try_handle_definition, try_handle_diagnostics, try_handle_format,
+                  try_handle_hover, try_handle_references, try_handle_symbols,
+                  try_handle_workspace_diagnostics},
             value_ext::ValueExt};
 use r3bl_tui::ok;
 use serde_json::{Value, json};
@@ -51,8 +52,8 @@ impl RustAnalyzerMCPServer {
     ///
     /// [`stdin`]: std::io::stdin
     /// [`stdout`]: std::io::stdout
-    pub fn start(workspace_root: PathBuf) -> Result<(), McpServerError> {
-        Self::new(workspace_root).enter_main_event_loop()
+    pub fn try_start(workspace_root: PathBuf) -> Result<(), McpServerError> {
+        Self::new(workspace_root).try_enter_main_event_loop()
     }
 
     /// Creates a new MCP server rooted in the specified workspace directory path.
@@ -71,10 +72,10 @@ impl RustAnalyzerMCPServer {
     /// # Errors
     ///
     /// Returns an error if starting the `rust-analyzer` client process fails.
-    pub fn ensure_client_started(&mut self) -> Result<(), McpServerError> {
+    pub fn try_ensure_client_started(&mut self) -> Result<(), McpServerError> {
         if self.client.is_none() {
             let mut client = RustAnalyzerClient::new(self.workspace_root.clone());
-            client.start()?;
+            client.try_start()?;
             self.client = Some(client);
         }
         ok!()
@@ -86,13 +87,14 @@ impl RustAnalyzerMCPServer {
     /// # Errors
     ///
     /// Returns an error if file reading or LSP communication fails.
-    pub fn open_document_if_needed(
+    pub fn try_open_document_if_needed(
         &mut self,
         file_path: &str,
     ) -> Result<String, McpServerError> {
         let absolute_path = canonicalize_path(&self.workspace_root.join(file_path));
         let uri = path_to_file_uri(&absolute_path);
-        let content = std::fs::read_to_string(&absolute_path)?;
+        let content =
+            std::fs::read_to_string(&absolute_path).map_err(McpServerError::Io)?;
 
         if let Some(client) = &mut self.client {
             client.open_document(&uri, &content)?;
@@ -108,76 +110,76 @@ impl RustAnalyzerMCPServer {
     /// Returns an error if the tool name is unknown or if executing the tool handler
     /// fails.
     #[allow(clippy::too_many_lines)]
-    pub fn handle_tool_call(
+    pub fn try_handle_tool_call(
         &mut self,
         tool_name: &str,
         args: Value,
     ) -> Result<ToolResult, McpServerError> {
-        self.ensure_client_started()?;
+        self.try_ensure_client_started()?;
 
         match tool_name {
             tool_names::HOVER => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_hover(client, &uri, &args)
+                try_handle_hover(client, &uri, &args)
             }
             tool_names::DEFINITION => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_definition(client, &uri, &args)
+                try_handle_definition(client, &uri, &args)
             }
             tool_names::REFERENCES => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_references(client, &uri, &args)
+                try_handle_references(client, &uri, &args)
             }
             tool_names::COMPLETION => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_completion(client, &uri, &args)
+                try_handle_completion(client, &uri, &args)
             }
             tool_names::SYMBOLS => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_symbols(client, &uri, file_path)
+                try_handle_symbols(client, &uri, file_path)
             }
             tool_names::FORMAT => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_format(client, &uri)
+                try_handle_format(client, &uri)
             }
             tool_names::CODE_ACTIONS => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_code_actions(client, &uri, &args)
+                try_handle_code_actions(client, &uri, &args)
             }
             tool_names::SET_WORKSPACE => {
                 let workspace_path = args.get_str_param(param_names::WORKSPACE_PATH)?;
@@ -189,7 +191,7 @@ impl RustAnalyzerMCPServer {
 
                 self.workspace_root =
                     canonicalize_path(std::path::Path::new(workspace_path));
-                self.ensure_client_started()?;
+                self.try_ensure_client_started()?;
 
                 Ok(ToolResult::text(format!(
                     "Workspace set to: {}",
@@ -198,12 +200,12 @@ impl RustAnalyzerMCPServer {
             }
             tool_names::DIAGNOSTICS => {
                 let file_path = args.get_str_param(param_names::FILE_PATH)?;
-                let uri = self.open_document_if_needed(file_path)?;
+                let uri = self.try_open_document_if_needed(file_path)?;
                 let client = self
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_diagnostics(client, &uri, file_path)
+                try_handle_diagnostics(client, &uri, file_path)
             }
             tool_names::WORKSPACE_DIAGNOSTICS => {
                 let workspace_root = self.workspace_root.clone();
@@ -211,7 +213,7 @@ impl RustAnalyzerMCPServer {
                     .client
                     .as_mut()
                     .ok_or(McpServerError::ClientNotAvailable)?;
-                handle_workspace_diagnostics(client, workspace_root.as_path())
+                try_handle_workspace_diagnostics(client, workspace_root.as_path())
             }
             _ => Err(McpServerError::UnknownTool(tool_name.to_string())),
         }
@@ -267,7 +269,7 @@ impl RustAnalyzerMCPServer {
                         .cloned()
                         .unwrap_or_else(|| json!({}));
 
-                    match self.handle_tool_call(tool_name, args) {
+                    match self.try_handle_tool_call(tool_name, args) {
                         Ok(result) => match serde_json::to_value(result) {
                             Ok(res_serialized) => {
                                 McpResponse::success(request.id, res_serialized)
@@ -314,18 +316,18 @@ impl RustAnalyzerMCPServer {
     ///
     /// [`stdin`]: std::io::stdin
     /// [`stdout`]: std::io::stdout
-    pub fn enter_main_event_loop(&mut self) -> Result<(), McpServerError> {
+    pub fn try_enter_main_event_loop(&mut self) -> Result<(), McpServerError> {
         DEBUG_MCP_SERVER.then(|| {
             // % is Display, ? is Debug.
             tracing::info! {
-                message = "RustAnalyzerMCPServer::enter_main_event_loop",
+                message = "RustAnalyzerMCPServer::try_enter_main_event_loop",
                 status = "starting",
             };
         });
 
         // Eagerly start the rust-analyzer subprocess in the background so indexing begins
         // immediately while the MCP host negotiates the initial handshake.
-        let _ignored_eager_start = self.ensure_client_started();
+        let _ignored_eager_start = self.try_ensure_client_started();
 
         let stdin = std::io::stdin();
         let mut stdout = std::io::stdout().lock();
@@ -333,7 +335,7 @@ impl RustAnalyzerMCPServer {
         // Read newline-delimited JSON-RPC requests from stdin and dispatch them to the
         // appropriate tool handler.
         for line in stdin.lock().lines() {
-            let line = line?;
+            let line = line.map_err(McpServerError::Io)?;
             let trimmed_line = line.trim();
             if trimmed_line.is_empty() {
                 continue;
@@ -365,9 +367,10 @@ impl RustAnalyzerMCPServer {
             let response_payload = self.handle_request(request);
             if let Some(response) = response_payload {
                 // Write the response to stdout as a single line of JSON.
-                serde_json::to_writer(&mut stdout, &response)?;
-                stdout.write_all(b"\n")?;
-                stdout.flush()?;
+                serde_json::to_writer(&mut stdout, &response)
+                    .map_err(McpServerError::Json)?;
+                stdout.write_all(b"\n").map_err(McpServerError::Io)?;
+                stdout.flush().map_err(McpServerError::Io)?;
             }
         }
 

@@ -285,7 +285,7 @@ mod tests {
                                                link_known_terms_for_test};
 
     fn test_registry() -> TechnicalTermDictionary {
-        TechnicalTermDictionary::from_seed(None).unwrap()
+        TechnicalTermDictionary::try_from_seed_file(None).unwrap()
     }
 
     #[test]

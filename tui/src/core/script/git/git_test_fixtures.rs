@@ -64,7 +64,7 @@ pub async fn helper_setup_git_repo_with_commit() -> miette::Result<(
         .await?;
 
     // Get current branch name.
-    let initial_branch = try_get_current_branch_name().await.0?;
+    let initial_branch = try_get_current_branch_name().await.result?;
     assert_eq!(initial_branch.as_str(), TEST_DEFAULT_BRANCH);
 
     ok!((tmp_dir_root, initial_branch))

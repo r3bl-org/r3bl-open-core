@@ -6,7 +6,7 @@ use super::types::{git_command_args::{GIT_ARG_DIFF_FILTER_NO_DELETES, GIT_ARG_HE
                                       GIT_ARG_NAME_ONLY, GIT_ARG_NO_COMMIT_ID,
                                       GIT_ARG_RECURSIVE},
                    git_command_names::{GIT_CMD_DIFF, GIT_CMD_DIFF_TREE, GIT_PROGRAM}};
-use crate::{ResultAndCommand, Run};
+use crate::{CommandRunOutcome, Run};
 use std::path::PathBuf;
 
 /// Gets list of changed files matching any of the provided extensions.
@@ -26,31 +26,40 @@ use std::path::PathBuf;
 ///
 /// # async fn example() {
 /// // Get ALL changed files (no filtering)
-/// let (files, _cmd) = try_get_changed_files_by_ext(&[]).await;
+/// let files = try_get_changed_files_by_ext(&[]).await.result;
 ///
 /// // Get changed Rust files only
-/// let (files, _cmd) = try_get_changed_files_by_ext(&["rs"]).await;
+/// let files = try_get_changed_files_by_ext(&["rs"]).await.result;
 ///
 /// // Get changed Rust and TOML files
-/// let (files, _cmd) = try_get_changed_files_by_ext(&["rs", "toml"]).await;
+/// let files = try_get_changed_files_by_ext(&["rs", "toml"]).await.result;
 /// # }
 /// ```
 pub async fn try_get_changed_files_by_ext(
     extensions: &[&str],
-) -> ResultAndCommand<Vec<PathBuf>> {
+) -> CommandRunOutcome<Vec<PathBuf>> {
     // First check for staged and unstaged files
-    let (res_changed_files, cmd) = get_working_tree_changes(extensions).await;
+    let CommandRunOutcome {
+        result: res_changed_files,
+        command,
+    } = get_working_tree_changes(extensions).await;
     let Ok(changed_files) = res_changed_files else {
         #[allow(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_changed_files.unwrap_err();
-        return (Err(report), cmd);
+        let err = res_changed_files.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command,
+        };
     };
 
     if !changed_files.is_empty() {
-        return (Ok(changed_files), cmd);
+        return CommandRunOutcome {
+            result: Ok(changed_files),
+            command,
+        };
     }
 
     // Working tree is clean, check most recent commit
@@ -58,7 +67,9 @@ pub async fn try_get_changed_files_by_ext(
 }
 
 /// Gets files with staged or unstaged changes matching the extensions.
-async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<PathBuf>> {
+async fn get_working_tree_changes(
+    extensions: &[&str],
+) -> CommandRunOutcome<Vec<PathBuf>> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_DIFF, GIT_ARG_NAME_ONLY, GIT_ARG_DIFF_FILTER_NO_DELETES, GIT_ARG_HEAD
@@ -70,8 +81,11 @@ async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<P
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        return (Err(report), cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let files: Vec<PathBuf> = String::from_utf8_lossy(&output)
@@ -93,13 +107,16 @@ async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<P
         .map(PathBuf::from)
         .collect();
 
-    (Ok(files), cmd)
+    CommandRunOutcome {
+        result: Ok(files),
+        command: cmd,
+    }
 }
 
 /// Gets files from the most recent commit matching the extensions.
 async fn get_files_from_last_commit(
     extensions: &[&str],
-) -> ResultAndCommand<Vec<PathBuf>> {
+) -> CommandRunOutcome<Vec<PathBuf>> {
     let mut cmd = command!(
         program => GIT_PROGRAM,
         args => GIT_CMD_DIFF_TREE, GIT_ARG_NO_COMMIT_ID, GIT_ARG_NAME_ONLY, GIT_ARG_RECURSIVE, GIT_ARG_DIFF_FILTER_NO_DELETES, GIT_ARG_HEAD
@@ -111,8 +128,11 @@ async fn get_files_from_last_commit(
             clippy::unwrap_used,
             reason = "Error is already checked via let Ok() else"
         )]
-        let report = res_output.unwrap_err();
-        return (Err(report), cmd);
+        let err = res_output.unwrap_err();
+        return CommandRunOutcome {
+            result: Err(err),
+            command: cmd,
+        };
     };
 
     let files: Vec<PathBuf> = String::from_utf8_lossy(&output)
@@ -134,19 +154,22 @@ async fn get_files_from_last_commit(
         .map(PathBuf::from)
         .collect();
 
-    (Ok(files), cmd)
+    CommandRunOutcome {
+        result: Ok(files),
+        command: cmd,
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
-                                                GIT_CMD_CONFIG, GIT_CMD_INIT},
-                              git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
-                                                GIT_CONFIG_USER_EMAIL,
-                                                GIT_CONFIG_USER_NAME},
-                              test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
-                                            TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}};
-    use super::*;
+    use super::{super::types::{git_command_names::{GIT_CMD_ADD, GIT_CMD_COMMIT,
+                                                   GIT_CMD_CONFIG, GIT_CMD_INIT},
+                               git_config_keys::{GIT_CONFIG_COMMIT_GPGSIGN,
+                                                 GIT_CONFIG_USER_EMAIL,
+                                                 GIT_CONFIG_USER_NAME},
+                               test_config::{TEST_EMAIL, TEST_GPG_SIGN_DISABLED,
+                                             TEST_INITIAL_COMMIT_MSG, TEST_USER_NAME}},
+                *};
     use crate::try_write_file;
 
     async fn test_try_get_changed_files_by_ext() -> miette::Result<()> {
@@ -200,24 +223,21 @@ mod tests {
                 .await?;
 
             // Test: Get all changed files (empty extensions array).
-            let (all_files, _) = try_get_changed_files_by_ext(&[]).await;
-            let all_files = all_files?;
+            let all_files = try_get_changed_files_by_ext(&[]).await.result?;
             assert_eq!(all_files.len(), 4);
 
             // Test: Get only .rs files.
-            let (rs_files, _) = try_get_changed_files_by_ext(&["rs"]).await;
-            let rs_files = rs_files?;
+            let rs_files = try_get_changed_files_by_ext(&["rs"]).await.result?;
             assert_eq!(rs_files.len(), 1);
             assert!(rs_files[0].to_string_lossy().contains("test.rs"));
 
             // Test: Get .rs and .toml files.
-            let (config_files, _) = try_get_changed_files_by_ext(&["rs", "toml"]).await;
-            let config_files = config_files?;
+            let config_files =
+                try_get_changed_files_by_ext(&["rs", "toml"]).await.result?;
             assert_eq!(config_files.len(), 2);
 
             // Test: Get .md files.
-            let (md_files, _) = try_get_changed_files_by_ext(&["md"]).await;
-            let md_files = md_files?;
+            let md_files = try_get_changed_files_by_ext(&["md"]).await.result?;
             assert_eq!(md_files.len(), 1);
             assert!(md_files[0].to_string_lossy().contains("README.md"));
 

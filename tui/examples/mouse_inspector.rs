@@ -48,9 +48,9 @@ use r3bl_tui::{DefaultIoDevices, InputDevice, InputEvent, Key, KeyPress, KeyStat
                ModifierKeysMask, MouseInput, MouseInputKind, NarrowingCastToU16,
                OutputDevice, PaintMode, TermCol, TermRow, TerminalModeController,
                TuiAvailabilityChooseExt, VPPos, ansi_output,
-               assert_terminal_is_interactive, choose, ok,
+               assert_terminal_is_interactive, ok,
                readline_async::{HowToChoose, StyleSheet},
-               set_mimalloc_in_main, vp_col, vp_row};
+               run_in_main_with_safe_stack, try_choose, vp_col, vp_row};
 use std::collections::VecDeque;
 
 /// Helper: Clear screen and position cursor at home (0,0).
@@ -229,10 +229,10 @@ impl MouseInspector {
     }
 }
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::needless_return)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
     println!("🖱️ Interactive Mouse Event Inspector - Visualize & Debug Mouse Input");
@@ -247,7 +247,7 @@ async fn main() -> miette::Result<()> {
     // Ask user for confirmation before taking over screen.
     let maybe_user_choice = {
         let mut default_io_devices = DefaultIoDevices::default();
-        choose(
+        try_choose(
             "🚀 Ready to launch the Mouse Event Inspector?",
             &["Yes, launch Mouse Inspector", "No, exit"],
             None,
@@ -275,7 +275,7 @@ async fn main() -> miette::Result<()> {
 
     // Start raw mode and full screen TUI
     let _raw_mode_guard = output_device.enter_raw_mode()?;
-    let _fullscreen_tui_mode_guard = output_device.setup_full_screen_tui()?;
+    let _fullscreen_tui_mode_guard = output_device.try_setup_full_screen_tui()?;
 
     // Clear screen
     clear_screen_and_home(&output_device);
@@ -284,7 +284,7 @@ async fn main() -> miette::Result<()> {
     let result = run_inspector(&mut input_device, &mut output_device).await;
 
     if matches!(output_device.paint_mode, PaintMode::Real) {
-        output_device.flush()?;
+        output_device.try_flush()?;
     }
     // `_fullscreen_tui_mode_guard` and `_raw_mode_guard` are dropped here,
     // which securely restores the terminal to its original state.

@@ -33,7 +33,7 @@ use std::collections::VecDeque;
 ///
 ///     // 2. Read lines in an event loop.
 ///     loop {
-///         match ctx.read_line().await? {
+///         match ctx.try_read_line().await? {
 ///             ReadlineEvent::Line(line) => {
 ///                 if line == "exit" {
 ///                     break;
@@ -48,7 +48,7 @@ use std::collections::VecDeque;
 ///         }
 ///     }
 ///
-///     ctx.request_shutdown(None).await?;
+///     ctx.try_request_shutdown(None).await?;
 ///     ctx.await_shutdown().await;
 ///     ok!()
 /// }

@@ -88,7 +88,7 @@ use crate::{DEBUG_VT100_PARSER, ED_ERASE_ALL, ED_ERASE_ALL_AND_SCROLLBACK,
 pub fn clear_canvas(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params.extract_nth_single_opt_raw(0).unwrap_or(0);
 
-    let result = match mode {
+    match mode {
         ED_ERASE_TO_END => performer.ofs_buf_vt_100.erase_display_from_cursor_to_end(),
 
         ED_ERASE_FROM_START => performer
@@ -98,21 +98,14 @@ pub fn clear_canvas(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
         ED_ERASE_ALL => performer.ofs_buf_vt_100.erase_display_entire(),
 
         ED_ERASE_ALL_AND_SCROLLBACK => {
-            performer.ofs_buf_vt_100.erase_display_scrollback()
+            performer.ofs_buf_vt_100.erase_display_scrollback();
         }
 
         _ => {
             DEBUG_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} J: Unsupported Erase Display mode", mode);
             });
-            ok!()
         }
-    };
-
-    if let Err(err) = result {
-        DEBUG_VT100_PARSER.then(|| {
-            tracing::error!("Failed to erase display (mode {}): {:?}", mode, err);
-        });
     }
 }
 
@@ -140,7 +133,7 @@ pub fn clear_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let mode = params
         .extract_nth_single_opt_raw(0)
         .unwrap_or(EL_ERASE_TO_END);
-    let result = match mode {
+    match mode {
         EL_ERASE_TO_END => performer.ofs_buf_vt_100.erase_line_from_cursor_to_end(),
         EL_ERASE_FROM_START => performer.ofs_buf_vt_100.erase_line_from_start_to_cursor(),
         EL_ERASE_ALL => performer.ofs_buf_vt_100.erase_line_entire(),
@@ -148,12 +141,6 @@ pub fn clear_line(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
             DEBUG_VT100_PARSER.then(|| {
                 tracing::warn!("CSI {} K: Unsupported Erase Line mode", mode);
             });
-            ok!()
         }
-    };
-    if let Err(err) = result {
-        DEBUG_VT100_PARSER.then(|| {
-            tracing::error!("Failed to erase line (mode {}): {:?}", mode, err);
-        });
     }
 }

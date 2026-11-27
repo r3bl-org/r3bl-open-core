@@ -111,7 +111,7 @@ pub enum InputEvent {
     /// Terminal dynamic color query report ([`OSC`] 10, 11, 12, 13, 14, 17, or 19).
     ///
     /// Emitted on [`stdin`] in response to dynamic color queries sent to the terminal via
-    /// [`OscSequence::ColorQuery`] or [`OscSender::send_color_query`]. Contains the
+    /// [`OscSequence::ColorQuery`] or [`OscSender::try_send_color_query`]. Contains the
     /// resolved [`RgbValue`] and the functional [`TerminalColorRole`]:
     ///
     /// | [`OSC`] Code | Role Variant                               | Description                      |
@@ -131,7 +131,7 @@ pub enum InputEvent {
     ///
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
-    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
     /// [`OscSequence::ColorQuery`]: crate::core::ansi::osc::OscSequence::ColorQuery
     /// [`RgbValue`]: crate::RgbValue
     /// [`stdin`]: std::io::stdin

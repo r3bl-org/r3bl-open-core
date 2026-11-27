@@ -1,20 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`PTY`]-based integration test for [`main_event_loop_impl`].
+//! [`PTY`]-based integration test for [`try_main_event_loop_impl`].
 //!
 //! Verifies that the full event loop works end-to-end in a real pseudoterminal:
 //! the controller sends keystrokes (Up, Up, x) through the [`PTY`], and the
-//! controlled process runs [`main_event_loop_impl`] with a minimal [`App`] that
+//! controlled process runs [`try_main_event_loop_impl`] with a minimal [`App`] that
 //! counts Up-arrow presses and exits on 'x'.
 //!
 //! [`App`]: crate::tui::App
-//! [`main_event_loop_impl`]: crate::main_event_loop_impl
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
+//! [`try_main_event_loop_impl`]: crate::try_main_event_loop_impl
 
-use crate::{App, CommonResult, ComponentRegistryMap, EventPropagation, GlobalData,
+use crate::{App, ComponentRegistryMap, EventPropagation, GlobalData,
             HasFocus, InputDevice, InputEvent, Key, KeyPress, MSG_CONTROLLED_READY,
             MSG_CONTROLLED_STARTING, MSG_SUCCESS, OutputDevice, PtyTestContext,
-            TerminalWindowMainThreadSignal, main_event_loop_impl, vp_height,
+            TerminalWindowMainThreadSignal, try_main_event_loop_impl, vp_height,
             vp_width};
 use std::{fmt::{Debug, Display, Formatter},
           io::Write};
@@ -93,7 +93,7 @@ fn controlled() {
         println!("{MSG_CONTROLLED_READY}");
         std::io::stdout().flush().expect("conversion error");
 
-        let result = main_event_loop_impl(
+        let result = try_main_event_loop_impl(
             app,
             exit_keys,
             state,
@@ -166,7 +166,7 @@ impl App for AppMainTest {
         _global_data: &mut GlobalData<State, AppSignal>,
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
-    ) -> CommonResult {
+    ) -> miette::Result<()> {
         assert!(
             self.data.start_called,
             "app_start must be called before app_render"
@@ -184,7 +184,7 @@ impl App for AppMainTest {
         global_data: &mut GlobalData<State, AppSignal>,
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation> {
+    ) -> miette::Result<EventPropagation> {
         let continuation = if matches!(
             input_event,
             InputEvent::Keyboard(
@@ -213,7 +213,7 @@ impl App for AppMainTest {
         global_data: &mut GlobalData<State, AppSignal>,
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         _has_focus: &mut HasFocus,
-    ) -> CommonResult<EventPropagation> {
+    ) -> miette::Result<EventPropagation> {
         throws_with_return!({
             if let AppSignal::Add = action {
                 global_data.state.counter += 1;

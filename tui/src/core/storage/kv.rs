@@ -9,12 +9,12 @@
 //! - It is a wrapper around the [`kv`] crate, to make it trivially simple to use. There
 //!   are only 4 functions that allow you access to the capabilities of the key/value
 //!   embedded store.
-//!   - [`load_or_create_store`]
-//!   - [`load_or_create_bucket_from_store`]
-//!   - [`insert_into_bucket`]
-//!   - [`get_from_bucket`]
-//!   - [`remove_from_bucket`]
-//!   - [`is_key_contained_in_bucket`]
+//!   - [`try_load_or_create_store`]
+//!   - [`try_load_or_create_bucket_from_store`]
+//!   - [`try_insert_into_bucket`]
+//!   - [`try_get_from_bucket`]
+//!   - [`try_remove_from_bucket`]
+//!   - [`try_is_key_contained_in_bucket`]
 //! - And provide lots of really fine grained errors, using [`miette`] and [`thiserror`]
 //!   (see [`kv_error`]).
 //! - The values are serialized to JSON (from Rust struct) before they are saved.
@@ -35,7 +35,6 @@
 
 use crate::fg_cyan;
 use kv::{Config, Json, Store};
-use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
@@ -47,11 +46,11 @@ use std::fmt::{Debug, Display};
 ///
 /// The [`kv::Bucket`] stores the following key/value pairs.
 /// - `KeyT`: The generic type `<KeyT>`. This will not be serialized or deserialized. This
-///   also has a trait bound on [`kv::Key`]. See [`insert_into_bucket`] for an example of
+///   also has a trait bound on [`kv::Key`]. See [`try_insert_into_bucket`] for an example of
 ///   this.
 /// - `ValueT`: This type makes it concrete that [`Json`] will be used to serialize and
 ///   deserialize the data from the generic type `<ValueT>`, which has trait bounds on
-///   [`Serialize`], [`Deserialize`]. See [`insert_into_bucket`] for an example of this.
+///   [`Serialize`], [`Deserialize`]. See [`try_insert_into_bucket`] for an example of this.
 pub type KVBucket<'a, KeyT, ValueT> = kv::Bucket<'a, KeyT, Json<ValueT>>;
 
 mod default_settings {
@@ -90,9 +89,9 @@ mod default_settings {
 /// - The store cannot be opened due to I/O errors or permission issues
 /// - The database is corrupted or locked by another process
 #[tracing::instrument]
-pub fn load_or_create_store(
+pub fn try_load_or_create_store(
     maybe_db_folder_path: Option<&String>,
-) -> miette::Result<Store> {
+) -> Result<Store, KvErrorCouldNot> {
     // Configure the database folder location.
     let db_folder_path = maybe_db_folder_path.cloned().unwrap_or_else(|| {
         default_settings::get(default_settings::Keys::StoreFolderPath)
@@ -101,12 +100,10 @@ pub fn load_or_create_store(
     let cfg = Config::new(db_folder_path.clone());
 
     // Open the key/store store using the Config.
-    let store =
-        Store::new(cfg)
-            .into_diagnostic()
-            .wrap_err(KvErrorCouldNot::CreateDbFolder {
-                db_folder_path: db_folder_path.clone(),
-            })?;
+    let store = Store::new(cfg).map_err(|src_err| KvErrorCouldNot::CreateDbFolder {
+        db_folder_path: db_folder_path.clone(),
+        src_err,
+    })?;
 
     // % is Display, ? is Debug.
     tracing::debug!(
@@ -122,27 +119,27 @@ pub fn load_or_create_store(
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The bucket cannot be created in the store
-/// - The store is corrupted or inaccessible
+/// Returns [`KvErrorCouldNot::CreateBucketFromStore`] if the bucket cannot be created or
+/// the store is inaccessible.
 #[tracing::instrument(fields(store = ?store.path(), buckets = ?store.buckets()))]
-pub fn load_or_create_bucket_from_store<
+pub fn try_load_or_create_bucket_from_store<
     'a,
     KeyT: for<'k> kv::Key<'k>,
     ValueT: Serialize + for<'d> Deserialize<'d>,
 >(
     store: &Store,
     maybe_bucket_name: Option<&String>,
-) -> miette::Result<KVBucket<'a, KeyT, ValueT>> {
+) -> Result<KVBucket<'a, KeyT, ValueT>, KvErrorCouldNot> {
     let bucket_name = maybe_bucket_name
         .cloned()
         .unwrap_or_else(|| default_settings::get(default_settings::Keys::BucketName));
 
-    let my_payload_bucket: KVBucket<'_, KeyT, ValueT> = store
-        .bucket(Some(&bucket_name))
-        .into_diagnostic()
-        .wrap_err(KvErrorCouldNot::CreateBucketFromStore {
-            bucket_name: bucket_name.clone(),
+    let my_payload_bucket: KVBucket<'_, KeyT, ValueT> =
+        store.bucket(Some(&bucket_name)).map_err(|src_err| {
+            KvErrorCouldNot::CreateBucketFromStore {
+                bucket_name: bucket_name.clone(),
+                src_err,
+            }
         })?;
 
     // % is Display, ? is Debug.
@@ -158,12 +155,10 @@ pub fn load_or_create_bucket_from_store<
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The value cannot be serialized to JSON format
-/// - The key/value pair cannot be saved to the bucket due to I/O errors
-/// - The bucket is corrupted or the store is locked
+/// Returns [`KvErrorCouldNot::SaveKeyValuePairToBucket`] if serialization or persistence
+/// fails.
 #[tracing::instrument(skip(bucket))]
-pub fn insert_into_bucket<
+pub fn try_insert_into_bucket<
     'a,
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
@@ -171,15 +166,14 @@ pub fn insert_into_bucket<
     bucket: &'a KVBucket<'a, KeyT, ValueT>,
     key: KeyT,
     value: ValueT,
-) -> miette::Result<()> {
+) -> Result<(), KvErrorCouldNot> {
     let value_str = inline_string!("{:?}", value);
     let value_str_fmt = fg_cyan(&value_str).bold();
 
     // Serialize the Rust struct into a JSON payload.
     bucket
         .set(&key, &Json(value))
-        .into_diagnostic()
-        .wrap_err(KvErrorCouldNot::SaveKeyValuePairToBucket)?;
+        .map_err(KvErrorCouldNot::SaveKeyValuePairToBucket)?;
 
     // % is Display, ? is Debug.
     tracing::debug!(
@@ -196,22 +190,19 @@ pub fn insert_into_bucket<
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The key cannot be found and an I/O error occurs
-/// - The value cannot be deserialized from JSON format
-/// - The bucket is corrupted or inaccessible
+/// Returns [`KvErrorCouldNot::LoadKeyValuePairFromBucket`] if reading or deserialization
+/// fails.
 #[tracing::instrument(skip(bucket))]
-pub fn get_from_bucket<
+pub fn try_get_from_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
     bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
-) -> miette::Result<Option<ValueT>> {
+) -> Result<Option<ValueT>, KvErrorCouldNot> {
     let maybe_value: Option<Json<ValueT>> = bucket
         .get(&key)
-        .into_diagnostic()
-        .wrap_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
+        .map_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
     let it = match maybe_value {
         // Deserialize the JSON payload into a Rust struct.
@@ -231,21 +222,18 @@ pub fn get_from_bucket<
 
 /// # Errors
 ///
-/// Returns an error if:
-/// - The removal operation fails due to I/O errors
-/// - The bucket is corrupted or the store is locked
+/// Returns [`KvErrorCouldNot::RemoveKeyValuePairFromBucket`] if removal fails.
 #[tracing::instrument(skip(bucket))]
-pub fn remove_from_bucket<
+pub fn try_remove_from_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
     bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
-) -> miette::Result<Option<ValueT>> {
+) -> Result<Option<ValueT>, KvErrorCouldNot> {
     let maybe_value: Option<Json<ValueT>> = bucket
         .remove(&key)
-        .into_diagnostic()
-        .wrap_err(KvErrorCouldNot::RemoveKeyValuePairFromBucket)?;
+        .map_err(KvErrorCouldNot::RemoveKeyValuePairFromBucket)?;
 
     let it = match maybe_value {
         // Deserialize the JSON payload into a Rust struct.
@@ -265,21 +253,18 @@ pub fn remove_from_bucket<
 
 /// # Errors
 ///
-/// Returns an error if:
-/// - The contains check fails due to I/O errors
-/// - The bucket is corrupted or inaccessible
+/// Returns [`KvErrorCouldNot::LoadKeyValuePairFromBucket`] if the bucket lookup fails.
 #[tracing::instrument(skip(bucket))]
-pub fn is_key_contained_in_bucket<
+pub fn try_is_key_contained_in_bucket<
     KeyT: Debug + Display + for<'k> kv::Key<'k>,
     ValueT: Debug + Serialize + for<'d> Deserialize<'d>,
 >(
     bucket: &KVBucket<'_, KeyT, ValueT>,
     key: KeyT,
-) -> miette::Result<bool> {
+) -> Result<bool, KvErrorCouldNot> {
     let it = bucket
         .contains(&key)
-        .into_diagnostic()
-        .wrap_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
+        .map_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
     // % is Display, ? is Debug.
     tracing::debug!(
@@ -299,10 +284,10 @@ pub fn iterate_bucket<
     mut fn_mut: impl FnMut(KeyT, ValueT),
 ) {
     for item in /* keep only the Ok variants */ bucket.iter().flatten() {
-        let Ok(key) = item.key::<KeyT>().into_diagnostic() else {
+        let Ok(key) = item.key::<KeyT>() else {
             continue;
         };
-        let Ok(encoded_value) = item.value::<Json<ValueT>>().into_diagnostic() else {
+        let Ok(encoded_value) = item.value::<Json<ValueT>>() else {
             continue;
         };
         let Json(value) = encoded_value; /* decode the value */
@@ -311,35 +296,30 @@ pub fn iterate_bucket<
 }
 
 pub mod kv_error {
-    #[allow(dead_code)]
     #[derive(thiserror::Error, Debug, miette::Diagnostic)]
     pub enum KvErrorCouldNot {
         #[error("📑 Could not create db folder: '{db_folder_path}' on disk")]
-        CreateDbFolder { db_folder_path: String },
+        CreateDbFolder {
+            db_folder_path: String,
+            #[source]
+            src_err: kv::Error,
+        },
 
         #[error("📦 Could not create bucket from store: '{bucket_name}'")]
-        CreateBucketFromStore { bucket_name: String },
+        CreateBucketFromStore {
+            bucket_name: String,
+            #[source]
+            src_err: kv::Error,
+        },
 
         #[error("🔽 Could not save key/value pair to bucket")]
-        SaveKeyValuePairToBucket,
+        SaveKeyValuePairToBucket(#[source] kv::Error),
 
         #[error("🔼 Could not load key/value pair from bucket")]
-        LoadKeyValuePairFromBucket,
+        LoadKeyValuePairFromBucket(#[source] kv::Error),
 
         #[error("❌ Could not remove key/value pair from bucket")]
-        RemoveKeyValuePairFromBucket,
-
-        #[error("🔍 Could not get item from iterator from bucket")]
-        GetItemFromIteratorFromBucket,
-
-        #[error("🔍 Could not get key from item from iterator from bucket")]
-        GetKeyFromItemFromIteratorFromBucket,
-
-        #[error("🔍 Could not get value from item from iterator from bucket")]
-        GetValueFromItemFromIteratorFromBucket,
-
-        #[error("⚡ Could not execute transaction")]
-        ExecuteTransaction,
+        RemoveKeyValuePairFromBucket(#[source] kv::Error),
     }
 }
 use kv_error::KvErrorCouldNot;
@@ -364,16 +344,16 @@ mod kv_tests {
 
         // Create the key/value store.
         let path_str = path_buf.as_path().to_string_lossy().to_string();
-        let store = load_or_create_store(Some(&path_str))?;
+        let store = try_load_or_create_store(Some(&path_str))?;
 
         // Check that the key/value store folder exists.
         assert!(check_folder_exists(path_buf.as_path()));
 
         // A bucket provides typed access to a section of the key/value store.
-        let bucket = load_or_create_bucket_from_store(&store, Some(&bucket_name))?;
+        let bucket = try_load_or_create_bucket_from_store(&store, Some(&bucket_name))?;
 
         // Check if "foo" is contained in the bucket.
-        assert!(!(is_key_contained_in_bucket(&bucket, "foo".to_string())?));
+        assert!(!(try_is_key_contained_in_bucket(&bucket, "foo".to_string())?));
 
         // Nothing to iterate (empty bucket).
         let mut count = 0;
@@ -383,34 +363,29 @@ mod kv_tests {
         assert_eq!(count, 0);
 
         // Save to bucket.
-        insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string())?;
+        try_insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string())?;
 
         // Check if "foo" is contained in the bucket.
-        assert!(is_key_contained_in_bucket(&bucket, "foo".to_string())?);
+        assert!(try_is_key_contained_in_bucket(&bucket, "foo".to_string())?);
 
         // Load from bucket.
         assert_eq!(
-            get_from_bucket(&bucket, "foo".to_string())?,
+            try_get_from_bucket(&bucket, "foo".to_string())?,
             Some("bar".to_string())
         );
 
         // Enumerate contents of bucket.
         let mut map = HashMap::default();
         for result_item in bucket.iter() {
-            let item = result_item
-                .into_diagnostic()
-                .wrap_err(KvErrorCouldNot::GetItemFromIteratorFromBucket)?;
-
+            let item = result_item.map_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
             let key = item
                 .key::<String>()
-                .into_diagnostic()
-                .wrap_err(KvErrorCouldNot::GetKeyFromItemFromIteratorFromBucket)?;
+                .map_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
             // Deserialize the JSON payload into a Rust struct.
             let Json(payload) = item
                 .value::<Json<String>>()
-                .into_diagnostic()
-                .wrap_err(KvErrorCouldNot::GetValueFromItemFromIteratorFromBucket)?;
+                .map_err(KvErrorCouldNot::LoadKeyValuePairFromBucket)?;
 
             map.insert(key.clone(), payload);
         }
@@ -419,15 +394,15 @@ mod kv_tests {
 
         // Remove from bucket.
         assert_eq!(
-            remove_from_bucket(&bucket, "foo".to_string())?,
+            try_remove_from_bucket(&bucket, "foo".to_string())?,
             Some("bar".to_string())
         );
 
         // Check if "foo" is contained in the bucket.
-        assert!(!(is_key_contained_in_bucket(&bucket, "foo".to_string())?));
+        assert!(!(try_is_key_contained_in_bucket(&bucket, "foo".to_string())?));
 
         // Remove from bucket.
-        assert_eq!(remove_from_bucket(&bucket, "foo".to_string())?, None);
+        assert_eq!(try_remove_from_bucket(&bucket, "foo".to_string())?, None);
 
         ok!()
     }
@@ -442,23 +417,27 @@ mod kv_tests {
 
         // Create the key/value store.
         let path_str = path_buf.as_path().to_string_lossy().to_string();
-        let store = load_or_create_store(Some(&path_str))?;
+        let store = try_load_or_create_store(Some(&path_str))?;
 
         // Check that the kv store folder exists.
         assert!(check_folder_exists(path_buf.as_path()));
 
         // A bucket provides typed access to a section of the key/value store.
-        let bucket = load_or_create_bucket_from_store(&store, Some(&bucket_name))?;
+        let bucket = try_load_or_create_bucket_from_store(&store, Some(&bucket_name))?;
 
         // Insert key/value pair into bucket.
-        insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string())?;
+        try_insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string())?;
+
+        use miette::IntoDiagnostic;
+        use std::error::Error;
 
         // Check for errors. The following line will induce errors, since we are
         // intentionally trying to access a bucket that doesn't exist.
         store.drop_bucket(bucket_name).into_diagnostic()?;
 
         // Insert into bucket.
-        let result = insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string());
+        let result =
+            try_insert_into_bucket(&bucket, "foo".to_string(), "bar".to_string());
         match result {
             Err(e) => {
                 assert_eq!(e.to_string(), "🔽 Could not save key/value pair to bucket");
@@ -468,32 +447,27 @@ mod kv_tests {
             }
         }
 
-        // Get from bucket. Take a deeper look in the chain of miette errors.
-        let result = get_from_bucket(&bucket, "foo".to_string());
+        // Get from bucket. Take a deeper look in the chain of source errors.
+        let result = try_get_from_bucket(&bucket, "foo".to_string());
         match result {
             Err(e) => {
-                let mut iter = e.chain();
                 // First.
                 assert_eq!(
-                    iter.next()
-                        .map(ToString::to_string)
-                        .expect("conversion error"),
+                    e.to_string(),
                     "🔼 Could not load key/value pair from bucket"
                 );
 
-                // Second.
-                let second = iter
-                    .next()
-                    .map(ToString::to_string)
-                    .expect("conversion error");
+                // Second (`kv::Error`).
+                let second_err = e.source().expect("expected kv::Error source");
+                let second = second_err.to_string();
                 assert!(second.contains("Error in Sled: Collection"));
                 assert!(second.contains("does not exist"));
 
-                // Third.
-                let third = iter
-                    .next()
-                    .map(ToString::to_string)
-                    .expect("conversion error");
+                // Third (`sled::Error`).
+                let third = second_err
+                    .source()
+                    .expect("expected sled::Error source")
+                    .to_string();
                 assert!(third.contains("Collection"));
                 assert!(third.contains("does not exist"));
             }
@@ -503,7 +477,7 @@ mod kv_tests {
         }
 
         // Remove from bucket.
-        let result = remove_from_bucket(&bucket, "foo".to_string());
+        let result = try_remove_from_bucket(&bucket, "foo".to_string());
         match result {
             Err(e) => {
                 assert_eq!(
@@ -517,7 +491,7 @@ mod kv_tests {
         }
 
         // Check if key exists in bucket.
-        let result = is_key_contained_in_bucket(&bucket, "foo".to_string());
+        let result = try_is_key_contained_in_bucket(&bucket, "foo".to_string());
         match result {
             Err(e) => {
                 assert_eq!(

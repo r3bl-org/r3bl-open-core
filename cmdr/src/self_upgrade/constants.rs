@@ -20,6 +20,24 @@ pub const R3BL_VERSIONS_JSONC_URL: &str = formatcp!(
     file = VERSIONS_JSONC_FILE,
 );
 
+/// Endpoint routes and URLs for anonymized analytics reporting.
+pub mod analytics_endpoint {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    /// Route path for reporting anonymized analytics events (`"add_analytics_event"`).
+    pub const ADD_EVENT_PATH: &str = "add_analytics_event";
+
+    /// HTTPS endpoint URL for reporting anonymized analytics events
+    /// (`"https://r3bl.com/add_analytics_event"`).
+    pub const ADD_EVENT_URL: &str = formatcp!(
+        "{scheme}://{host}/{path}",
+        scheme = url_schemes::HTTPS,
+        host = R3BL_HOST,
+        path = ADD_EVENT_PATH,
+    );
+}
+
 /// Property keys used in the [`R3BL_VERSIONS_JSONC_URL`] manifest.
 ///
 /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL

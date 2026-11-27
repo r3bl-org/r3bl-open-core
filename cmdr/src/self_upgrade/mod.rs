@@ -120,10 +120,10 @@
 //!      ([`UpgradeStrategy::Immediate`], current thread only).
 //!
 //! 2. Execution Plane (Network, Disk & Build Operations, etc.)
-//!    - [`check/`][manifest] and [`upgrade/`][`perform_upgrade`] perform the actual HTTP
-//!      manifest fetch ([`try_fetch_manifest`]), [`mtime`] timestamp file reads/writes
-//!      ([`RemoteVersionCheckGate`]), archive download, SHA-256 check, binary swap,
-//!      [`PTY`] source build ([`perform_upgrade`]), and user prompt
+//!    - [`check/`][manifest] and [`upgrade/`][`try_perform_upgrade`] perform the actual
+//!      HTTP manifest fetch ([`try_fetch_manifest`]), [`mtime`] timestamp file
+//!      reads/writes ([`RemoteVersionCheckGate`]), archive download, SHA-256 check,
+//!      binary swap, [`PTY`] source build ([`try_perform_upgrade`]), and user prompt
 //!      ([`prompt_user_to_upgrade`]).
 //!    - These functions are stateless with respect to the state machine: they don't know
 //!      or care which [`UpgradeJourney<State>`] is active, and they never import or touch
@@ -170,11 +170,11 @@
 //!
 //! - Who resolves it:
 //!   - Evaluated by [`UpgradeSource::try_resolve`] (and its pure decision function
-//!     [`pure_evaluator::evaluate_upgrade_source_pure`]). If a binary download fails
+//!     [`pure_evaluator::try_evaluate_upgrade_source_pure`]). If a binary download fails
 //!     mid-stream, [`UpgradeSource::try_fallback_to_source`][10] evaluates fallback
 //!     viability.
 //! - Where it is called:
-//!   - Invoked by [`perform_upgrade`] immediately before dispatching to download or
+//!   - Invoked by [`try_perform_upgrade`] immediately before dispatching to download or
 //!     compilation routines.
 //! - When it runs:
 //!   - Right after manifest evaluation confirms that a newer version is available, and
@@ -238,7 +238,6 @@
 //! [`mtime`]: https://en.wikipedia.org/wiki/MAC_times
 //! [`notify-only`]: crate::self_upgrade::UpgradeActionOnExit::NotifyOnly
 //! [`NotStarted`]: crate::self_upgrade::NotStarted
-//! [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
 //! [`PerProcessStartLatch`]: crate::self_upgrade::upgrade_journey::per_process_start_latch::PerProcessStartLatch
 //! [`prompt-to-upgrade`]: crate::self_upgrade::UpgradeActionOnExit::PromptToUpgrade
 //! [`prompt_user_to_upgrade`]: crate::self_upgrade::prompt_user_to_upgrade
@@ -253,6 +252,7 @@
 //! [`StartOutcome::ImmediateUpgrade`]: crate::self_upgrade::StartOutcome::ImmediateUpgrade
 //! [`StartOutcome`]: crate::self_upgrade::StartOutcome
 //! [`StateMarker`]: crate::self_upgrade::StateMarker
+//! [`try_perform_upgrade`]: crate::self_upgrade::try_perform_upgrade
 //! [`upgrade_journey!`]: crate::upgrade_journey
 //! [`UpgradeAvailable`]: crate::self_upgrade::UpgradeAvailable
 //! [`UpgradeCLIArgs`]: crate::self_upgrade::UpgradeCLIArgs

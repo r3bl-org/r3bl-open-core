@@ -10,15 +10,14 @@
 #[macro_export]
 macro_rules! queue_commands {
     ($output_device:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic;
         $output_device.write(|writer| {
             $(
                 ::crossterm::QueueableCommand::queue(
                     writer,
                     $command
-                ).into_diagnostic()?;
+                )?;
             )*
-            Ok::<(), miette::Report>(())
+            Ok::<(), ::std::io::Error>(())
         })?
     }}
 }
@@ -31,55 +30,11 @@ macro_rules! queue_commands {
 #[macro_export]
 macro_rules! queue_commands_no_lock {
     ($writer:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic;
         $(
             ::crossterm::QueueableCommand::queue(
                 $writer,
                 $command
-            ).into_diagnostic()?;
+            )?;
         )*
-    }}
-}
-
-/// This is a macro to execute commands to the output device immediately. It locks the
-/// output device before executing the commands, and unlocks it after. This is good for
-/// one and done commands that you want to execute in one go. If you have complex
-/// interactions with the output device, you should use
-/// [`crate::execute_commands_no_lock`!] instead, when you have to explicitly lock the
-/// output device and hold the lock for the span of operations that you wish to perform;
-/// this avoids undefined behavior (in terms of output order).
-#[macro_export]
-macro_rules! execute_commands {
-    ($output_device:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic;
-        $output_device.write(|writer| {
-            $(
-                ::crossterm::QueueableCommand::queue(
-                    writer,
-                    $command
-                ).into_diagnostic()?;
-            )*
-            writer.flush().into_diagnostic()?;
-            Ok::<(), miette::Report>(())
-        })?
-    }}
-}
-
-/// This is similar to [`execute_commands`!], but it does not lock the output device. The
-/// use case for this macro is when you have an already locked output device and you want
-/// to execute commands without locking it again. This is important if you don't want to
-/// get into issues with output generated in the wrong order, due to lock contention
-/// leading to undefined behavior (in terms of output order).
-#[macro_export]
-macro_rules! execute_commands_no_lock {
-    ($writer:expr $(, $command:expr)* $(,)?) => {{
-        use miette::IntoDiagnostic;
-        $(
-            ::crossterm::QueueableCommand::queue(
-                $writer,
-                $command
-            ).into_diagnostic()?;
-        )*
-        $writer.flush().into_diagnostic()?;
     }}
 }

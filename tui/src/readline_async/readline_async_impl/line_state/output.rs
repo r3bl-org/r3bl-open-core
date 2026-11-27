@@ -21,30 +21,33 @@ impl LineState {
     /// Returns an error if writing to the terminal fails.
     ///
     /// [`SharedWriter`]: crate::SharedWriter
-    pub fn print_data_and_flush(
+    pub fn try_print_data_and_flush(
         &mut self,
         data: &[u8],
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
-        self.clear(term)?;
+        self.clear(term).map_err(ReadlineError::IO)?;
 
         // If last written data was not newline, restore the cursor.
         if self.ends_with_newline == EndsWithNewline::No {
             // Move up 1 row, to column 0, then right to the last position.
             term.write_all(
                 inline_string!("{}", CsiSequence::CursorUp(TermRowDelta::ONE)).as_bytes(),
-            )?;
+            )
+            .map_err(ReadlineError::IO)?;
             term.write_all(
                 inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                     .as_bytes(),
-            )?;
+            )
+            .map_err(ReadlineError::IO)?;
             // Only emit CursorForward if the delta is non-zero (illegal states
             // unrepresentable).
             if let Some(cols_right) = TermColDelta::new(self.last_line_length.as_u16()) {
                 term.write_all(
                     inline_string!("{}", CsiSequence::CursorForward(cols_right))
                         .as_bytes(),
-                )?;
+                )
+                .map_err(ReadlineError::IO)?;
             }
         }
 
@@ -65,13 +68,14 @@ impl LineState {
         let segments: Vec<_> = data.split_inclusive(|b| *b == LINE_FEED_BYTE).collect();
         let last_idx = segments.len().saturating_sub(1);
         for (idx, line) in segments.into_iter().enumerate() {
-            term.write_all(line)?;
+            term.write_all(line).map_err(ReadlineError::IO)?;
             // Emit CHA(1) after each segment, unless this is the final newline-terminated
             // segment (which is positioned by the upcoming `render_and_flush()`).
             let is_last = idx == last_idx;
             let ends_with_newline = line.ends_with(&[LINE_FEED_BYTE]);
             if !(is_last && ends_with_newline) {
-                term.write_all(cha_1.as_bytes())?;
+                term.write_all(cha_1.as_bytes())
+                    .map_err(ReadlineError::IO)?;
             }
         }
 
@@ -98,19 +102,22 @@ impl LineState {
                 if new_len >= term_width {
                     self.last_line_length =
                         vp_width((new_len % term_width).as_u16_narrowing());
-                    term.write_all(&[LINE_FEED_BYTE])?;
+                    term.write_all(&[LINE_FEED_BYTE])
+                        .map_err(ReadlineError::IO)?;
                 } else {
                     self.last_line_length = vp_width((new_len).as_u16_narrowing());
                 }
-                term.write_all(&[LINE_FEED_BYTE])?; // Move to beginning of line and make new line
+                term.write_all(&[LINE_FEED_BYTE])
+                    .map_err(ReadlineError::IO)?; // Move to beginning of line and make new line
             }
         }
 
         term.write_all(
             inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                 .as_bytes(),
-        )?;
-        self.render_and_flush(term)?;
+        )
+        .map_err(ReadlineError::IO)?;
+        self.render_and_flush(term).map_err(ReadlineError::IO)?;
 
         ok!()
     }
@@ -118,22 +125,22 @@ impl LineState {
     /// Prints a string to the terminal and re-renders the prompt.
     ///
     /// This is a convenience wrapper around
-    /// [`print_data_and_flush`] that accepts a string
+    /// [`try_print_data_and_flush`] that accepts a string
     /// slice. Respects pause state - does nothing if paused.
     ///
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
     ///
-    /// [`print_data_and_flush`]: Self::print_data_and_flush
-    pub fn print_and_flush(
+    /// [`try_print_data_and_flush`]: Self::try_print_data_and_flush
+    pub fn try_print_and_flush(
         &mut self,
         string: &str,
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
         early_return_if_paused!(self @Unit);
 
-        self.print_data_and_flush(string.as_bytes(), term)?;
+        self.try_print_data_and_flush(string.as_bytes(), term)?;
 
         ok!()
     }
@@ -146,14 +153,14 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn update_prompt(
+    pub fn try_update_prompt(
         &mut self,
         prompt: &str,
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
-        self.clear(term)?;
+        self.clear(term).map_err(ReadlineError::IO)?;
         self.prompt.set(prompt);
-        self.render_and_flush(term)?;
+        self.render_and_flush(term).map_err(ReadlineError::IO)?;
 
         ok!()
     }
@@ -166,15 +173,16 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
+    pub fn try_exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
         self.line = GCStringOwned::new("");
-        self.clear(term)?;
+        self.clear(term).map_err(ReadlineError::IO)?;
 
         term.write_all(
             inline_string!("{}", CsiSequence::CursorHorizontalAbsolute(TermCol::ONE))
                 .as_bytes(),
-        )?;
-        term.flush()?;
+        )
+        .map_err(ReadlineError::IO)?;
+        term.flush().map_err(ReadlineError::IO)?;
 
         ok!()
     }
@@ -187,14 +195,15 @@ impl LineState {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
-    pub fn render_new_line_from_beginning_and_flush(
+    pub fn try_render_new_line_from_beginning_and_flush(
         &mut self,
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
         early_return_if_paused!(self @Unit);
 
         self.move_logical_cursor_to_start();
-        self.clear_and_render_and_flush(term)?;
+        self.clear_and_render_and_flush(term)
+            .map_err(ReadlineError::IO)?;
 
         ok!()
     }
@@ -263,7 +272,7 @@ mod tests {
 
     /// Regression test for issue #442: extra blank line before prompt.
     ///
-    /// Verifies that `print_data_and_flush` with newline-terminated data produces
+    /// Verifies that `try_print_data_and_flush` with newline-terminated data produces
     /// exactly one LF in the output, preventing extra blank lines before the prompt.
     #[test]
     fn test_print_data_no_extra_newlines_issue_442() {
@@ -278,7 +287,7 @@ mod tests {
 
         // First log line (ends with newline).
         line_state
-            .print_data_and_flush(b"line 1\n", &mut stdout_mock)
+            .try_print_data_and_flush(b"line 1\n", &mut stdout_mock)
             .expect("conversion error");
 
         // Verify ends_with_newline is Yes.
@@ -293,7 +302,7 @@ mod tests {
 
         // Second log line (ends with newline).
         line_state
-            .print_data_and_flush(b"line 2\n", &mut stdout_mock)
+            .try_print_data_and_flush(b"line 2\n", &mut stdout_mock)
             .expect("conversion error");
 
         // Verify the stripped output has exactly 1 newline.
@@ -331,7 +340,7 @@ mod tests {
 
         // Partial line (no newline at end).
         line_state
-            .print_data_and_flush(b"partial", &mut stdout_mock)
+            .try_print_data_and_flush(b"partial", &mut stdout_mock)
             .expect("conversion error");
 
         // Verify ends_with_newline is No.
@@ -371,7 +380,7 @@ mod tests {
 
         // Multiple lines in single call.
         line_state
-            .print_data_and_flush(b"line1\nline2\n", &mut stdout_mock)
+            .try_print_data_and_flush(b"line1\nline2\n", &mut stdout_mock)
             .expect("conversion error");
 
         let decoded = describe_ansi_output(&stdout_mock.get_copy_of_buffer());
@@ -395,7 +404,7 @@ mod tests {
         line_state.line = GCStringOwned::new("some content");
         let mut stdout_mock = StdoutMock::default();
 
-        line_state.exit(&mut stdout_mock).expect("conversion error");
+        line_state.try_exit(&mut stdout_mock).expect("conversion error");
 
         // Line should be cleared.
         assert!(line_state.line.is_empty());
@@ -407,7 +416,7 @@ mod tests {
         let mut stdout_mock = StdoutMock::default();
 
         line_state
-            .update_prompt("new> ", &mut stdout_mock)
+            .try_update_prompt("new> ", &mut stdout_mock)
             .expect("conversion error");
 
         assert_eq!(line_state.prompt.as_str(), "new> ");
@@ -421,13 +430,13 @@ mod tests {
 
         // Data ending with newline.
         line_state
-            .print_data_and_flush(b"hello\n", &mut stdout_mock)
+            .try_print_data_and_flush(b"hello\n", &mut stdout_mock)
             .expect("conversion error");
         assert_eq!(line_state.ends_with_newline, EndsWithNewline::Yes);
 
         // Data not ending with newline.
         line_state
-            .print_data_and_flush(b"world", &mut stdout_mock)
+            .try_print_data_and_flush(b"world", &mut stdout_mock)
             .expect("conversion error");
         assert_eq!(line_state.ends_with_newline, EndsWithNewline::No);
     }

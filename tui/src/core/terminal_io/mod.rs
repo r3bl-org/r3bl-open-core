@@ -14,7 +14,7 @@
 //! - [`ModifierKeysMask`] - Bitflags for Shift, Ctrl, Alt, etc.
 //! - [`MouseInput`] - Mouse events (click, scroll, move)
 //! - [`TerminalInteractiveStatus`] - Interactivity status (TTY vs pipe)
-//! - [`get_size()`] - Detect terminal window size
+//! - [`try_get_size()`] - Detect terminal window size
 //!
 //! # Testing
 //!
@@ -32,7 +32,6 @@
 //! [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
 //! [`CrosstermInputDevice`]: crate::CrosstermInputDevice
 //! [`DirectToAnsiInputDevice`]: crate::direct_to_ansi::DirectToAnsiInputDevice
-//! [`get_size()`]: crate::get_size
 //! [`InputDevice`]: crate::InputDevice
 //! [`InputEvent`]: crate::InputEvent
 //! [`KeyPress`]: crate::KeyPress
@@ -40,8 +39,10 @@
 //! [`MouseInput`]: crate::MouseInput
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`TerminalInteractiveStatus`]: crate::TerminalInteractiveStatus
+//! [`try_get_size()`]: crate::try_get_size
 
-// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their macros).
+// Attach. Upward #[macro_use] propagation (must precede modules below that invoke their
+// macros).
 #[macro_use]
 mod key_press;
 

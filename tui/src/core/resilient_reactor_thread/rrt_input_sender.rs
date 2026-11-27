@@ -4,6 +4,12 @@ use super::{RRTWorker, ThreadLifecycleMonitor, ThreadState};
 use std::{future::Future,
           sync::{Arc, MutexGuard}};
 
+/// Error returned by [`InputSender::try_send()`] when the RRT worker thread is permanently
+/// stopped and can no longer receive messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Worker thread is permanently stopped")]
+pub struct RRTWorkerStoppedError;
+
 /// Sends a message into the blocking worker thread, transparently handling worker
 /// lifecycle events.
 #[derive(Clone, Debug)]
@@ -33,7 +39,7 @@ impl<W: RRTWorker> InputSender<W> {
     /// [`smart_sender_notify`]: ThreadLifecycleMonitor::smart_sender_notify
     /// [`Stopped`]: ThreadState::Stopped
     #[allow(clippy::needless_continue)]
-    pub async fn send(&self, msg: W::Input) -> Result<(), miette::Report> {
+    pub async fn try_send(&self, msg: W::Input) -> Result<(), RRTWorkerStoppedError> {
         loop {
             // We use an inner block scope here because the Rust compiler's async
             // state machine generator is conservative and does not realize that
@@ -48,7 +54,7 @@ impl<W: RRTWorker> InputSender<W> {
 
                 // Early return if the worker is permanently stopped.
                 if let ThreadState::Stopped = &*guard {
-                    return Err(miette::miette!("Worker thread is permanently stopped"));
+                    return Err(RRTWorkerStoppedError);
                 }
 
                 // At this point, we might have a sender or we might have to wait, if the
@@ -163,7 +169,7 @@ impl<W: RRTWorker> InputSender<W> {
 
         // 3. RETURN THE FUTURE TO BE AWAITED OUTSIDE
         //
-        // We return the future so `send()` can await it. If the worker thread *just*
+        // We return the future so `try_send()` can await it. If the worker thread *just*
         // fired `notify_all()` during step 2, the `await` will return instantly because
         // our name was already on the queue. If it hasn't fired yet, we safely go to
         // sleep.

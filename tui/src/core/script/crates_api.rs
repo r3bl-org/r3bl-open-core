@@ -1,7 +1,33 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_SCRIPT, fg_magenta, script::http_client};
-use miette::IntoDiagnostic;
+use crate::{DEBUG_SCRIPT, fg_magenta,
+            script::http_client::{self, HttpClientError}};
+
+/// Error returned by [`try_get_latest_release_version_from_crates_io`] when HTTP client
+/// creation, the crates.io API request, or JSON field extraction fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum CratesApiError {
+    /// Failed to construct the shared [`reqwest::Client`].
+    #[error("Failed to create HTTP client")]
+    HttpClientCreateFailed(#[source] HttpClientError),
+
+    /// Network error, non-2xx HTTP status, or JSON decoding failure for `url`.
+    #[error("crates.io API request to '{url}' failed")]
+    HttpRequestFailed {
+        /// Request URL sent to the crates.io API endpoint.
+        url: String,
+        /// Underlying [`reqwest::Error`].
+        #[source]
+        src_err: reqwest::Error,
+    },
+
+    /// JSON response was valid JSON, and lacked a string `crate.max_version` field.
+    #[error("Missing 'crate.max_version' string field in crates.io JSON from '{url}'")]
+    MissingMaxVersion {
+        /// Endpoint URL whose response lacked `crate.max_version`.
+        url: String,
+    },
+}
 
 mod constants {
     pub const CRATE: &str = "crate";
@@ -11,14 +37,15 @@ mod constants {
 
 /// # Errors
 ///
-/// Returns an error if:
-/// - The HTTP client cannot be created
-/// - The network request fails
-/// - The crates.io API returns an error status
-/// - The response JSON is malformed or missing expected fields
+/// Returns [`CratesApiError`] if:
+/// - The HTTP client cannot be created ([`CratesApiError::HttpClientCreateFailed`])
+/// - The network request fails, returns a non-2xx status, or returns malformed JSON
+///   ([`CratesApiError::HttpRequestFailed`])
+/// - The response JSON is missing `crate.max_version`
+///   ([`CratesApiError::MissingMaxVersion`])
 pub async fn try_get_latest_release_version_from_crates_io(
     crate_name: &str,
-) -> miette::Result<String> {
+) -> Result<String, CratesApiError> {
     let url = constants::CRATE_INFO.replace("{crate_name}", crate_name);
     try_get_latest_release_version_from_url(&url).await
 }
@@ -27,14 +54,15 @@ pub async fn try_get_latest_release_version_from_crates_io(
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The HTTP client cannot be created
-/// - The network request fails
-/// - The endpoint returns a non-2xx status
-/// - The response JSON is malformed or missing `crate.max_version`
+/// Returns [`CratesApiError`] if:
+/// - The HTTP client cannot be created ([`CratesApiError::HttpClientCreateFailed`])
+/// - The network request fails, returns a non-2xx status, or returns malformed JSON
+///   ([`CratesApiError::HttpRequestFailed`])
+/// - The response JSON is missing `crate.max_version`
+///   ([`CratesApiError::MissingMaxVersion`])
 pub(super) async fn try_get_latest_release_version_from_url(
     url: &str,
-) -> miette::Result<String> {
+) -> Result<String, CratesApiError> {
     use self::constants::{CRATE, MAX_VERSION};
 
     DEBUG_SCRIPT.then(|| {
@@ -44,16 +72,31 @@ pub(super) async fn try_get_latest_release_version_from_url(
         );
     });
 
-    let client = http_client::create_http_client()?;
-    let response = client.get(url).send().await.into_diagnostic()?;
-    let response = response.error_for_status().into_diagnostic()?;
-    let response: serde_json::Value = response.json().await.into_diagnostic()?;
+    let client = http_client::create_http_client()
+        .map_err(CratesApiError::HttpClientCreateFailed)?;
+    let response = client.get(url).send().await.map_err(|src_err| {
+        CratesApiError::HttpRequestFailed {
+            url: url.to_owned(),
+            src_err,
+        }
+    })?;
+    let response = response.error_for_status().map_err(|src_err| {
+        CratesApiError::HttpRequestFailed {
+            url: url.to_owned(),
+            src_err,
+        }
+    })?;
+    let response: serde_json::Value = response.json().await.map_err(|src_err| {
+        CratesApiError::HttpRequestFailed {
+            url: url.to_owned(),
+            src_err,
+        }
+    })?;
 
     let Some(version) = response[CRATE][MAX_VERSION].as_str() else {
-        return Err(miette::miette!(
-            "Failed to get version from JSON: {:?}",
-            response
-        ));
+        return Err(CratesApiError::MissingMaxVersion {
+            url: url.to_owned(),
+        });
     };
 
     ok!(version.to_owned())
@@ -97,13 +140,14 @@ mod tests {
             .create_async()
             .await;
 
-        let err = try_get_latest_release_version_from_url(&format!(
-            "{}/api/v1/crates/serde",
-            server.url()
-        ))
-        .await
-        .unwrap_err();
-        assert!(err.to_string().contains("Failed to get version from JSON"));
+        let req_url = format!("{}/api/v1/crates/serde", server.url());
+        let err = try_get_latest_release_version_from_url(&req_url)
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            CratesApiError::MissingMaxVersion { ref url } if url == &req_url
+        ));
         mock.assert_async().await;
     }
 
@@ -117,12 +161,13 @@ mod tests {
             .create_async()
             .await;
 
-        let res = try_get_latest_release_version_from_url(&format!(
-            "{}/api/v1/crates/serde",
-            server.url()
-        ))
-        .await;
-        assert!(res.is_err());
+        let req_url = format!("{}/api/v1/crates/serde", server.url());
+        let res = try_get_latest_release_version_from_url(&req_url).await;
+        assert!(matches!(
+            res,
+            Err(CratesApiError::HttpRequestFailed { ref url, ref src_err })
+                if url == &req_url && src_err.status() == Some(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
+        ));
         mock.assert_async().await;
     }
 }

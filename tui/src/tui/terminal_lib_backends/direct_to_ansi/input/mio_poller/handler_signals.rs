@@ -3,7 +3,7 @@
 //! Event handlers for signal processing.
 
 use super::{super::channel_types::PollerEvent, MioPollWorker};
-use crate::{Continuation, core::resilient_reactor_thread::RRTEvent, get_size,
+use crate::{Continuation, core::resilient_reactor_thread::RRTEvent, try_get_size,
             tui::DEBUG_MIO_POLLER};
 use signal_hook::consts::SIGWINCH;
 use tokio::sync::broadcast::Sender;
@@ -14,7 +14,7 @@ use tokio::sync::broadcast::Sender;
 /// resize event to the channel. Multiple coalesced signals result in one event
 /// since we query the current size at send time.
 ///
-/// If [`get_size()`] fails (rare - typically means TTY disconnected), the signal
+/// If [`try_get_size()`] fails (rare - typically means TTY disconnected), the signal
 /// is silently dropped since there is no useful size to report.
 ///
 /// This variant is used by [`MioPollWorker`] which implements the generic
@@ -24,10 +24,10 @@ use tokio::sync::broadcast::Sender;
 ///
 /// - [`Continuation::Continue`]: Successfully processed.
 ///
-/// [`get_size()`]: crate::get_size
 /// [`MioPollWorker`]: super::MioPollWorker
 /// [`RRTWorker`]: crate::RRTWorker
 /// [`SIGWINCH`]: signal_hook::consts::SIGWINCH
+/// [`try_get_size()`]: crate::try_get_size
 pub fn consume_pending_signals_with_sender(
     worker: &mut MioPollWorker,
     sender: &Sender<RRTEvent<PollerEvent>>,
@@ -38,11 +38,11 @@ pub fn consume_pending_signals_with_sender(
     if sigwinch_arrived {
         // Query terminal size. If it fails, drop the signal - there's no useful size to
         // report (typically means TTY disconnected).
-        let Some(size) = get_size().ok() else {
+        let Some(size) = try_get_size().ok() else {
             DEBUG_MIO_POLLER.then(|| {
                 tracing::debug!(
                     message =
-                        "mio-poller-thread: SIGWINCH received but get_size() failed"
+                        "mio-poller-thread: SIGWINCH received but try_get_size() failed"
                 );
             });
             return Continuation::Continue;

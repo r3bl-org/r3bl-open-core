@@ -139,7 +139,7 @@ pub enum OscSequence {
     /// [`TerminalColorRole::Background`] -> `OSC 11`, [`TerminalColorRole::Foreground`]
     /// -> `OSC 10`).
     ///
-    /// When emitted (e.g. via [`OscSender::send_color_query`]), the terminal emulator
+    /// When emitted (e.g. via [`OscSender::try_send_color_query`]), the terminal emulator
     /// responds asynchronously over [`stdin`]. That response is framed by
     /// [`vt_100_terminal_input_parser`] and parsed by [`parse_osc_response`] into
     /// [`InputEvent::TerminalColorReport`].
@@ -152,7 +152,7 @@ pub enum OscSequence {
     /// [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
     /// [`InputEvent::TerminalColorReport`]: crate::InputEvent::TerminalColorReport
     /// [`OSC`]: crate::core::ansi::osc::OscSequence
-    /// [`OscSender::send_color_query`]: crate::core::ansi::osc::OscSender::send_color_query
+    /// [`OscSender::try_send_color_query`]: crate::core::ansi::osc::OscSender::try_send_color_query
     /// [`parse_osc_response`]: crate::core::ansi::vt_100_terminal_input_parser::chunk_decoder::terminal_events::osc::parse_osc_response
     /// [`stdin`]: std::io::stdin
     /// [`TerminalColorRole::Background`]: crate::TerminalColorRole::Background

@@ -223,7 +223,7 @@ fn test_lsp_client_start_and_shutdown() {
     assert!(!client.is_running());
 
     client
-        .start()
+        .try_start()
         .expect("Failed to start rust-analyzer client");
     assert!(client.is_running());
 

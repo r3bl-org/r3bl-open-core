@@ -6,7 +6,7 @@ use crate::{PtyInputEvent, PtyOutputEvent};
 #[test]
 fn test_session_with_cat() {
     let session = cross_platform_commands::cat()
-        .start()
+        .try_start()
         .expect("Failed to spawn session");
 
     // 1. Send input.

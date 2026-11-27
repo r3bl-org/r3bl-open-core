@@ -7,7 +7,7 @@ use crate::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionConfigToken};
 fn test_unexpected_exit_reporting() {
     let mut session = cross_platform_commands::sleep(10)
         .with_config(DefaultPtySessionConfig + PtySessionConfigToken::NoCaptureOutput)
-        .start()
+        .try_start()
         .expect("Failed to spawn session");
 
     // Kill the process externally.

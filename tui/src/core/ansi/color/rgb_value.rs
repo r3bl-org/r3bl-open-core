@@ -8,9 +8,14 @@
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
 use super::{AnsiValue, convert::convert_rgb_into_ansi256};
-use crate::{TransformColor,
-            common::{CommonError, CommonErrorType, CommonResult, LossyConvertToByte},
-            parse_hex_color};
+use crate::{TransformColor, common::LossyConvertToByte, parse_hex_color};
+
+/// Error returned when parsing an invalid hex color string.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, miette::Diagnostic)]
+#[error("Invalid hex color format: '{input}'")]
+pub struct InvalidHexColorError {
+    pub input: String,
+}
 
 /// Represents a color in [`RGB`] (24-bit [`truecolor`]) format.
 ///
@@ -59,17 +64,14 @@ impl RgbValue {
 
     /// # Errors
     ///
-    /// Returns an error if the input string is not a valid hex color format.
-    ///
-    /// See [`CommonResult`] for error details.
-    ///
-    /// [`CommonResult`]: crate::common::CommonResult
-    pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
+    /// Returns [`InvalidHexColorError`] if the input string is not a valid hex color
+    /// format.
+    pub fn try_from_hex_color(input: &str) -> Result<RgbValue, InvalidHexColorError> {
         match parse_hex_color(input) {
             Ok((_, color)) => Ok(color),
-            Err(_) => CommonError::new_error_result_with_only_type(
-                CommonErrorType::InvalidHexColorFormat,
-            ),
+            Err(_) => Err(InvalidHexColorError {
+                input: input.to_string(),
+            }),
         }
     }
 
@@ -121,7 +123,12 @@ mod tests {
         {
             let hex_color = "#ff000";
             let value = RgbValue::try_from_hex_color(hex_color);
-            assert!(value.is_err());
+            assert_eq!(
+                value,
+                Err(InvalidHexColorError {
+                    input: "#ff000".to_string()
+                })
+            );
         }
     }
 

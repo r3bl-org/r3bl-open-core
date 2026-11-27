@@ -21,7 +21,7 @@ pub enum UpgradeFailedError {
     /// [Execution Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
     #[diagnostic(transparent)]
-    PerformUpgrade(#[from] UpgradeError),
+    PerformUpgrade(UpgradeError),
 
     /// Scoped OS thread failed to spawn, initialize its Tokio runtime, or panicked in
     /// the [Control Plane].
@@ -29,7 +29,7 @@ pub enum UpgradeFailedError {
     /// [Control Plane]: mod@crate::self_upgrade#control-plane-vs-execution-plane
     #[error(transparent)]
     #[diagnostic(transparent)]
-    ThreadRunner(#[from] ThreadRunnerError),
+    ThreadRunner(ThreadRunnerError),
 }
 
 /// Terminal outcome recorded inside [`Completed`] after an immediate upgrade or exit

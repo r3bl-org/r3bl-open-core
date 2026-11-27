@@ -2,12 +2,13 @@
 
 use r3bl_tui::{CliTextInline, DEBUG_CHOOSE, DefaultIoDevices, InlineVec,
                TuiAvailabilityChooseExt, TuiColor, TuiStyle,
-               assert_terminal_is_interactive, choose, cli_text_inline, cli_text_line,
-               cli_text_lines, get_size, inline_vec,
+               assert_terminal_is_interactive, cli_text_inline, cli_text_line,
+               cli_text_lines, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
-               set_mimalloc_in_main, throws, tui_color, vp_height, vp_width};
+               run_in_main_with_safe_stack, throws, try_choose, try_get_size, tui_color,
+               vp_height, vp_width};
 
 const MULTI_LINE_HEADER: &str = "Multi line header";
 const SINGLE_LINE_HEADER: &str = "Single line header";
@@ -19,13 +20,13 @@ const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
 const SINGLE_SELECT_13_ITEMS_VPH_5: &str = "Single select, 13 items, viewport height = 5";
 const SINGLE_SELECT_2_ITEMS_VPH_5: &str = "Single select, 2 items, viewport height = 5";
 
-#[tokio::main]
+fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main_impl()) }
+
 #[allow(clippy::too_many_lines)]
-async fn main() -> miette::Result<()> {
-    set_mimalloc_in_main!();
+async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
-    let size = get_size()?;
+    let size = try_get_size()?;
 
     throws!({
         let _log_guard = DEBUG_CHOOSE.then(|| {
@@ -51,7 +52,7 @@ async fn main() -> miette::Result<()> {
         // Choose which example to run.
         let maybe_user_choice = {
             let mut default_io_devices = DefaultIoDevices::default();
-            choose(
+            try_choose(
                 "Select which example to run",
                 &[
                     MULTI_LINE_HEADER,
@@ -147,7 +148,7 @@ async fn multi_line_header() -> miette::Result<()> {
     instructions.push(line_5);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         instructions,
         &[
             "item 1 of 13",
@@ -186,7 +187,7 @@ async fn multi_line_header() -> miette::Result<()> {
 
 async fn single_line_header(max_width_col_count: u16) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         "🦜 Please select one or more items. This is an example of a very long header text 🐧. You can pass emoji here 🐥 and text gets clipped off correctly 🐒, based on terminal size".to_string(),
         &[
             "item 1 of 13",
@@ -246,7 +247,7 @@ async fn multiple_select_single_item() -> miette::Result<()> {
     let list = inline_vec!["one element"];
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         instructions,
         list,
         Some(vp_height(6)),
@@ -286,7 +287,7 @@ async fn multiple_select_13_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         instructions,
         &[
             "item 1 of 13",
@@ -349,7 +350,7 @@ async fn multiple_select_2_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
         Some(vp_height(max_height_row_count)),
@@ -387,7 +388,7 @@ async fn single_select_13_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         "Single select",
         &[
             "item 1 of 13",
@@ -449,7 +450,7 @@ async fn single_select_2_items_vph_5(
     instructions.push(inline_vec![header]);
 
     let mut default_io_devices = DefaultIoDevices::default();
-    let maybe_user_choice = choose(
+    let maybe_user_choice = try_choose(
         instructions,
         &["item 1 of 2", "item 2 of 2"],
         Some(vp_height(max_height_row_count)),

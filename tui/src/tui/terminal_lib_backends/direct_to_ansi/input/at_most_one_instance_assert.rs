@@ -39,7 +39,7 @@ pub fn claim_and_assert() {
     let device_already_exists = DEVICE_EXISTS.swap(true, Ordering::SeqCst);
     assert!(
         !device_already_exists,
-        "DirectToAnsiInputDevice::new() called while another device exists. \
+        "DirectToAnsiInputDevice::try_new() called while another device exists. \
          Use device.try_subscribe() (fallible) to get a guard, then guard.try_subscribe() \
          for additional receivers."
     );

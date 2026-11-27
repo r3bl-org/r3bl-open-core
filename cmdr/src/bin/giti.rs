@@ -12,19 +12,14 @@ use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
                 report_analytics,
                 upgrade_check::{self, ExitContext}};
-use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
-               run_with_safe_stack, set_mimalloc_in_main};
+use r3bl_tui::{CommandRunReport, log::try_initialize_logging_global,
+               run_in_main_with_safe_stack};
 
-fn main() -> CommonResult { run_with_safe_stack!(main_impl()) }
+fn main() {
+    run_in_main_with_safe_stack!(async => main_impl());
+}
 
-// Note: The `tokio::main` macro internally calls `.expect("Failed building the Runtime")`
-// when initializing the Tokio runtime. This is unavoidable and safe, as runtime creation
-// failure is a fatal error that should panic. The lint must be suppressed here.
-#[tokio::main]
-#[allow(clippy::unwrap_in_result)]
-async fn main_impl() -> CommonResult {
-    set_mimalloc_in_main!();
-
+async fn main_impl() {
     // If no args are passed, the following line will fail, and help will be printed
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
     let cli_arg = CLIArg::parse();
@@ -54,8 +49,6 @@ async fn main_impl() -> CommonResult {
     should_log.then(|| {
         tracing::debug!(message = "Stop logging...");
     });
-
-    ok!()
 }
 
 pub async fn launch_giti(cli_arg: CLIArg) {
@@ -64,7 +57,7 @@ pub async fn launch_giti(cli_arg: CLIArg) {
         CLICommand::Branch {
             sub_cmd,
             maybe_branch_name,
-        } => branch::handle_branch_command(sub_cmd, maybe_branch_name).await,
+        } => branch::try_handle_branch_command(sub_cmd, maybe_branch_name).await,
         CLICommand::Commit {} => unimplemented!(),
         CLICommand::Remote {} => unimplemented!(),
     };
@@ -74,8 +67,8 @@ pub async fn launch_giti(cli_arg: CLIArg) {
         // This branch is for both successful and unsuccessful command executions. Even
         // though the `res` is not `Err` it does not mean that the command ran
         // successfully, it may have failed gracefully.
-        Ok(res_cmd_run) => {
-            display_command_run_result(res_cmd_run).await;
+        Ok(report) => {
+            display_command_run_report(report).await;
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
@@ -101,8 +94,8 @@ pub async fn report_unrecoverable_errors(report: miette::Report) {
     upgrade_check::show_exit_message(ExitContext::Error).await;
 }
 
-/// Command ran and produced result: success, not success, fail, no-op.
-pub async fn display_command_run_result(res_run: CommandRunResult<CommandRunDetails>) {
-    println!("{res_run}");
+/// Command ran and produced report: success, not success, fail, no-op.
+pub async fn display_command_run_report(report: CommandRunReport<CommandRunDetails>) {
+    println!("{report}");
     upgrade_check::show_exit_message(ExitContext::Normal).await;
 }

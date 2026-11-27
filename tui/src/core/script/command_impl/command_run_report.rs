@@ -1,25 +1,24 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink, fg_slate_gray};
+use crate::{InlineString, InlineVec, TokioCommand, fg_lizard_green, fg_orange, fg_pink,
+            fg_slate_gray};
 use std::{fmt::{Debug, Display, Error, Formatter},
           result::Result as StdResult};
-use tokio::process::Command;
 
-/// Hold all the possible outcomes of executing a [`Command`].
+/// Hold all the possible outcomes of executing a [`TokioCommand`].
 ///
 /// This is used to report the success or failure to a user (display via [`stdout`]
 /// output) or operator (debug via log output).
 ///
 /// # Summary
-/// - High-level command execution result for CLI tools (specifically giti)
+/// - High-level command execution report for CLI tools
 /// - Three states: Noop (command not run), Run (success), Fail (error)
 /// - Carries user-friendly messages and command details
-/// - Uses [`Command`] for one-shot command execution
+/// - Uses [`TokioCommand`] for one-shot command execution
 ///
-/// [`Command`]: tokio::process::Command
 /// [`stdout`]: std::io::stdout
 #[derive(Debug)]
-pub enum CommandRunResult<T: Debug + Display> {
+pub enum CommandRunReport<T: Debug + Display> {
     /// Command was not run (probably because the command would be a no-op).
     Noop(
         /* no-op message */ InlineString,
@@ -30,33 +29,33 @@ pub enum CommandRunResult<T: Debug + Display> {
     Run(
         /* success message */ InlineString,
         /* command-specific details */ T,
-        /* command */ Command,
+        /* command */ TokioCommand,
     ),
 
     /// Command ran and produced non-zero `request_shutdown` code. Or it failed to run,
     /// and never got the chance to generate an `request_shutdown` code.
     Fail(
         /* error message */ InlineString,
-        /* command */ Command,
+        /* command */ TokioCommand,
         /* error report */ miette::Report,
     ),
 }
 
-/// Display impl for [`CommandRunResult`]. This also generates log output.
-mod display_impl_for_command_run_result {
+/// Display impl for [`CommandRunReport`]. This also generates log output.
+mod display_impl_for_command_run_report {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl<T: Debug + Display> Display for CommandRunResult<T> {
+    impl<T: Debug + Display> Display for CommandRunReport<T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
-                CommandRunResult::Fail(error_msg, cmd, error_report) => {
+                CommandRunReport::Fail(error_msg, cmd, error_report) => {
                     let header = "🗴 Command ran unsuccessfully";
                     // Log output. % is Display, ? is Debug.
                     tracing::error!(
                         message = %header,
                         error_msg = %error_msg,
-                        cmd = %fmt_cmd_str(cmd)?,
+                        cmd = %try_fmt_cmd_str(cmd)?,
                         error_report = ?error_report
                     );
                     // Display output.
@@ -67,14 +66,14 @@ mod display_impl_for_command_run_result {
                         b = error_msg,
                     )
                 }
-                CommandRunResult::Run(success_msg, cmd_details, cmd) => {
+                CommandRunReport::Run(success_msg, cmd_details, cmd) => {
                     let header = "🗸 Command ran successfully";
                     // Log output. % is Display, ? is Debug.
                     tracing::info!(
                         message = %header,
                         success_msg = %success_msg,
                         cmd_details = %fmt_details_str(cmd_details),
-                        cmd = %fmt_cmd_str(cmd)?
+                        cmd = %try_fmt_cmd_str(cmd)?
                     );
                     // Display output.
                     write!(
@@ -84,7 +83,7 @@ mod display_impl_for_command_run_result {
                         b = success_msg,
                     )
                 }
-                CommandRunResult::Noop(noop_msg, cmd_details) => {
+                CommandRunReport::Noop(noop_msg, cmd_details) => {
                     let header = "❯ No command ran";
                     // Log output. % is Display, ? is Debug.
                     tracing::warn!(
@@ -110,7 +109,7 @@ mod display_impl_for_command_run_result {
     }
 
     /// Formats the command as a string for display.
-    pub fn fmt_cmd_str(cmd: &Command) -> StdResult<InlineString, Error> {
+    pub fn try_fmt_cmd_str(cmd: &TokioCommand) -> StdResult<InlineString, Error> {
         use std::fmt::Write;
 
         // Convert the tokio::process::Command to a standard Command.

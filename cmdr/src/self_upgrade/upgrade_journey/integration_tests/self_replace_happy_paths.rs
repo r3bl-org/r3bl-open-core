@@ -6,7 +6,7 @@
 //!
 //! # Why Subprocess Isolation Is Required
 //!
-//! [`binary_replacement::apply_extracted_binaries`] inspects [`std::env::current_exe()`]
+//! [`binary_replacement::try_apply_extracted_binaries`] inspects [`std::env::current_exe()`]
 //! and invokes [`self_replace::self_replace`] on that executable path. Running
 //! in-process would overwrite the `cargo test` runner binary inside `target/debug/deps/`.
 //!
@@ -22,7 +22,7 @@
 //!    temporary copy on disk and installs the sibling binaries (`edi`, `env-source`) next
 //!    to it.
 //!
-//! [`binary_replacement::apply_extracted_binaries`]: crate::self_upgrade::binary_replacement::apply_extracted_binaries
+//! [`binary_replacement::try_apply_extracted_binaries`]: crate::self_upgrade::binary_replacement::try_apply_extracted_binaries
 //! [`DeferredUpgradeOutcome::handle_upgrade_on_exit`]: crate::self_upgrade::DeferredUpgradeOutcome::handle_upgrade_on_exit
 //! [`self_replace::self_replace`]: self_replace::self_replace
 //! [`self_replace`]: mod@self_replace

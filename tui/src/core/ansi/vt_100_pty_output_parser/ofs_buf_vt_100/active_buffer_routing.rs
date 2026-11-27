@@ -5,9 +5,9 @@
 
 use super::{AlternateBuffer, OfsBufVT100, PrimaryBuffer};
 use crate::{ActiveScreenBuffer, CanvasStorage, DEBUG_VT100_PARSER,
-            NarrowingCastToU16, PixelChar, RangeExclusive, ScrollbackAmount,
-            ShiftLinesDirection, VPCol, VPLength, VPPos, VPRow, VPSize, VPWidth,
-            Viewport, ViewportPanValidity, vp_col};
+            NarrowingCastToU16, OfsBufBoundsError, PixelChar, RangeExclusive,
+            ScrollbackAmount, ShiftLinesDirection, VPCol, VPLength, VPPos, VPRow,
+            VPSize, VPWidth, Viewport, ViewportPanValidity, vp_col};
 
 impl OfsBufVT100 {
     /// Returns a reference to the currently active screen buffer (either the
@@ -175,7 +175,7 @@ pub trait OfsBufOpsVT100 {
     /// # Errors
     ///
     /// Returns an error if the position is out of bounds.
-    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> miette::Result<()>;
+    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> Result<(), OfsBufBoundsError>;
 
     #[must_use]
     fn get_row(&self, vp_row: VPRow) -> Option<&[PixelChar]>;
@@ -199,7 +199,7 @@ pub trait OfsBufOpsVT100 {
         vp_row: VPRow,
         source_range: RangeExclusive<VPCol>,
         dest_start: VPCol,
-    ) -> miette::Result<()>;
+    ) -> Result<(), OfsBufBoundsError>;
 
     fn shift_lines_in_range(
         &mut self,
@@ -225,7 +225,7 @@ pub trait OfsBufOpsVT100 {
         vp_row: VPRow,
         col_range: RangeExclusive<VPCol>,
         fill_char: PixelChar,
-    ) -> miette::Result<()>;
+    ) -> Result<(), OfsBufBoundsError>;
 
     #[must_use]
     fn get_char(&self, vp_pos: VPPos) -> Option<PixelChar> {
@@ -242,8 +242,8 @@ impl OfsBufOpsVT100 for PrimaryBuffer {
 
     fn get_viewport(&self) -> Viewport { self.get_storage().get_viewport() }
 
-    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> miette::Result<()> {
-        self.set_char(vp_pos, char)
+    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> Result<(), OfsBufBoundsError> {
+        self.try_set_char(vp_pos, char)
     }
 
     fn get_row(&self, vp_row: VPRow) -> Option<&[PixelChar]> { self.get_row(vp_row) }
@@ -266,8 +266,8 @@ impl OfsBufOpsVT100 for PrimaryBuffer {
         vp_row: VPRow,
         source_range: RangeExclusive<VPCol>,
         dest_start: VPCol,
-    ) -> miette::Result<()> {
-        self.copy_chars_within_line(vp_row, source_range, dest_start)
+    ) -> Result<(), OfsBufBoundsError> {
+        self.try_copy_chars_within_line(vp_row, source_range, dest_start)
     }
 
     fn shift_lines_in_range(
@@ -303,8 +303,8 @@ impl OfsBufOpsVT100 for PrimaryBuffer {
         vp_row: VPRow,
         col_range: RangeExclusive<VPCol>,
         fill_char: PixelChar,
-    ) -> miette::Result<()> {
-        self.fill_char_range(vp_row, col_range, fill_char)
+    ) -> Result<(), OfsBufBoundsError> {
+        self.try_fill_char_range(vp_row, col_range, fill_char)
     }
 }
 
@@ -315,8 +315,8 @@ impl OfsBufOpsVT100 for AlternateBuffer {
 
     fn get_viewport(&self) -> Viewport { self.get_storage().get_viewport() }
 
-    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> miette::Result<()> {
-        self.set_char(vp_pos, char)
+    fn set_char(&mut self, vp_pos: VPPos, char: PixelChar) -> Result<(), OfsBufBoundsError> {
+        self.try_set_char(vp_pos, char)
     }
 
     fn get_row(&self, vp_row: VPRow) -> Option<&[PixelChar]> { self.get_row(vp_row) }
@@ -338,8 +338,8 @@ impl OfsBufOpsVT100 for AlternateBuffer {
         vp_row: VPRow,
         source_range: RangeExclusive<VPCol>,
         dest_start: VPCol,
-    ) -> miette::Result<()> {
-        self.copy_chars_within_line(vp_row, source_range, dest_start)
+    ) -> Result<(), OfsBufBoundsError> {
+        self.try_copy_chars_within_line(vp_row, source_range, dest_start)
     }
 
     fn shift_lines_in_range(
@@ -375,7 +375,7 @@ impl OfsBufOpsVT100 for AlternateBuffer {
         vp_row: VPRow,
         col_range: RangeExclusive<VPCol>,
         fill_char: PixelChar,
-    ) -> miette::Result<()> {
-        self.fill_char_range(vp_row, col_range, fill_char)
+    ) -> Result<(), OfsBufBoundsError> {
+        self.try_fill_char_range(vp_row, col_range, fill_char)
     }
 }

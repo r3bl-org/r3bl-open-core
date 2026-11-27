@@ -121,7 +121,7 @@ impl UpgradeJourney<NotStarted> {
     ///
     /// 2. **Immediate upgrade ([`UpgradeStrategy::Immediate`], `--upgrade`)**:
     ///    - Checks the manifest (`5s` timeout, bypassing the `1h` cooldown) and runs
-    ///      [`perform_upgrade`] on the current thread if a newer version exists,
+    ///      [`try_perform_upgrade`] on the current thread if a newer version exists,
     ///      returning [`StartOutcome::ImmediateUpgrade`].
     ///
     /// 3. **Deferred upgrade on exit ([`UpgradeStrategy::Deferred`],
@@ -149,8 +149,8 @@ impl UpgradeJourney<NotStarted> {
     /// [3]: r3bl_tui::StdThreadTokioRunner::run_non_blocking
     /// [`DEBUG_SELF_UPGRADE`]: crate::DEBUG_SELF_UPGRADE
     /// [`DeferredCheckHandle`]: crate::self_upgrade::DeferredCheckHandle
-    /// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
     /// [`self_upgrade`]: mod@crate::self_upgrade
+    /// [`try_perform_upgrade`]: crate::self_upgrade::try_perform_upgrade
     /// [`UpgradeJourney<Disabled>`]: crate::self_upgrade::UpgradeJourney
     /// [`UpgradePolicy::Disabled`]: crate::self_upgrade::UpgradePolicy::Disabled
     /// [`UpgradeStrategy::Deferred`]: crate::self_upgrade::UpgradeStrategy::Deferred
@@ -300,7 +300,7 @@ impl UpgradeJourney<NotStarted> {
 
                 ImmediateUpgradeOutcome::CheckFailed(
                     fallback_checking
-                        .into_check_failed(CheckFailedError::from(thread_err)),
+                        .into_check_failed(CheckFailedError::ThreadRunner(thread_err)),
                 )
             }
         }
@@ -323,7 +323,7 @@ impl UpgradeJourney<NotStarted> {
                 })
             }
             Err(thread_err) => DeferredUpgradeOutcome::DeferredCheckSpawnFailed(
-                checking.into_check_failed(CheckFailedError::from(thread_err)),
+                checking.into_check_failed(CheckFailedError::ThreadRunner(thread_err)),
             ),
         }
     }

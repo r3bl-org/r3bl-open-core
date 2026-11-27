@@ -2,44 +2,55 @@
 
 use crate::{Buffer, BufferAtom};
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
-use miette::IntoDiagnostic;
 use std::io::{Read, Write};
+
+/// Error returned by [`try_compress`] and [`try_decompress`] when gzip encoding or
+/// decoding fails.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum CompressionError {
+    /// Failed to compress bytes with [`GzEncoder`].
+    #[error("Failed to compress payload")]
+    CompressFailed(#[source] std::io::Error),
+
+    /// Failed to decompress bytes with [`GzDecoder`].
+    #[error("Failed to decompress payload")]
+    DecompressFailed(#[source] std::io::Error),
+}
 
 /// Compress the payload using the [`flate2`] crate.
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The compression algorithm fails
-/// - Writing to the encoder fails due to I/O errors
+/// Returns [`CompressionError::CompressFailed`] if writing to or finishing the gzip
+/// encoder fails.
 #[allow(clippy::map_unwrap_or)]
-pub fn compress(data: &[BufferAtom]) -> miette::Result<Buffer> {
+pub fn try_compress(data: &[BufferAtom]) -> Result<Buffer, CompressionError> {
     let uncompressed_size = data.len();
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(data).into_diagnostic()?;
-    let it = encoder.finish().into_diagnostic();
-    let compressed_size = it.as_ref().map(Vec::len).unwrap_or(0);
+    encoder
+        .write_all(data)
+        .map_err(CompressionError::CompressFailed)?;
+    let res_compressed = encoder.finish().map_err(CompressionError::CompressFailed);
+    let compressed_size = res_compressed.as_ref().map(Vec::len).unwrap_or(0);
 
     log_compression_stats("Compression", uncompressed_size, compressed_size);
 
-    it
+    res_compressed
 }
 
 /// Decompress the payload using the [`flate2`] crate.
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The data is not in valid gzip format
-/// - The decompression algorithm fails
-/// - Reading from the decoder fails due to I/O errors
-pub fn decompress(data: &[BufferAtom]) -> miette::Result<Buffer> {
+/// Returns [`CompressionError::DecompressFailed`] if the data is not valid gzip or
+/// reading from the decoder fails.
+pub fn try_decompress(data: &[BufferAtom]) -> Result<Buffer, CompressionError> {
     let compressed_size = data.len();
     let mut decoder = GzDecoder::new(data);
     let mut decompressed_data = Vec::new();
     decoder
         .read_to_end(&mut decompressed_data)
-        .into_diagnostic()?;
+        .map_err(CompressionError::DecompressFailed)?;
     let uncompressed_size = decompressed_data.len();
 
     log_compression_stats("Decompression", uncompressed_size, compressed_size);

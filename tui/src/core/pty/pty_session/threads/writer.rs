@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyInputEvent,
-            PtyOutputEvent};
-use miette::miette;
+use crate::{Continuation, Controller, ControllerWriter, LINE_FEED_BYTE, PtyError,
+            PtyInputEvent, PtyOutputEvent};
 use std::{io::Write,
           sync::{Arc, Mutex,
                  mpsc::{Receiver, SyncSender}},
@@ -27,17 +26,17 @@ use std::{io::Write,
 ///
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 /// [`send()`]: std::sync::mpsc::SyncSender::send
-pub fn spawn_pty_writer_thread(
+pub fn try_spawn_pty_writer_thread(
     mut writer: ControllerWriter,
     controller: Arc<Mutex<Option<Controller>>>,
     input_event_ch_rx_half: Receiver<PtyInputEvent>,
     output_event_ch_tx_half: SyncSender<PtyOutputEvent>,
-) -> miette::Result<JoinHandle<miette::Result<()>>> {
-    std::thread::Builder::new()
+) -> Result<JoinHandle<Result<(), PtyError>>, PtyError> {
+    let handle = std::thread::Builder::new()
         .name("pty-writer".into())
-        .spawn(move || -> miette::Result<()> {
+        .spawn(move || -> Result<(), PtyError> {
             while let Ok(input) = input_event_ch_rx_half.recv() {
-                match impl_writer::handle_pty_input_event(
+                match impl_writer::try_handle_pty_input_event(
                     input,
                     &mut writer,
                     &controller,
@@ -46,7 +45,7 @@ pub fn spawn_pty_writer_thread(
                     Continuation::Continue => {}
                     Continuation::Stop => break,
                     Continuation::Restart => {
-                        unreachable!("handle_pty_input_event never returns Restart")
+                        unreachable!("try_handle_pty_input_event never returns Restart")
                     }
                     Continuation::ReturnError(()) => {
                         unimplemented!(
@@ -59,7 +58,8 @@ pub fn spawn_pty_writer_thread(
             }
             ok!()
         })
-        .map_err(|e| miette!("Failed to spawn pty-writer thread: {e}"))
+        .map_err(PtyError::Io)?;
+    Ok(handle)
 }
 
 mod impl_writer {
@@ -78,39 +78,24 @@ mod impl_writer {
     /// [`EOF`]: https://en.wikipedia.org/wiki/End-of-file
     const WIN_CONSOLE_EOF_BYTES: [u8; 3] = [26, b'\r', b'\n'];
 
-    pub fn handle_pty_input_event(
+    pub fn try_handle_pty_input_event(
         input: PtyInputEvent,
         writer: &mut ControllerWriter,
         controller: &Arc<Mutex<Option<Controller>>>,
         output_event_ch_tx_half: &SyncSender<PtyOutputEvent>,
-    ) -> miette::Result<Continuation> {
+    ) -> Result<Continuation, PtyError> {
         match input {
             PtyInputEvent::Write(bytes) => {
-                write_to_pty_with_flush(
-                    writer,
-                    &bytes,
-                    "Write failed",
-                    output_event_ch_tx_half,
-                )?;
+                try_write_to_pty_with_flush(writer, &bytes, output_event_ch_tx_half)?;
             }
             PtyInputEvent::WriteLine(text) => {
                 let mut data = text.into_bytes();
                 data.push(LINE_FEED_BYTE);
-                write_to_pty_with_flush(
-                    writer,
-                    &data,
-                    "WriteLine failed",
-                    output_event_ch_tx_half,
-                )?;
+                try_write_to_pty_with_flush(writer, &data, output_event_ch_tx_half)?;
             }
             PtyInputEvent::SendControl(ctrl, mode) => {
                 let bytes = ctrl.to_bytes(mode);
-                write_to_pty_with_flush(
-                    writer,
-                    &bytes,
-                    "SendControl failed",
-                    output_event_ch_tx_half,
-                )?;
+                try_write_to_pty_with_flush(writer, &bytes, output_event_ch_tx_half)?;
             }
             PtyInputEvent::Resize(size) => {
                 if let Ok(guard) = controller.lock() {
@@ -121,7 +106,7 @@ mod impl_writer {
                         let _unused = output_event_ch_tx_half.send(
                             PtyOutputEvent::WriteError(format!("Resize failed: {e}")),
                         );
-                        miette!("Failed to resize PTY")
+                        PtyError::ControllerFailed(e.into())
                     })?;
                 }
             }
@@ -129,7 +114,7 @@ mod impl_writer {
                 writer.flush().map_err(|e| {
                     let _unused = output_event_ch_tx_half
                         .send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
-                    miette!("Failed to flush PTY")
+                    PtyError::Io(e)
                 })?;
             }
             PtyInputEvent::Close => {
@@ -155,21 +140,20 @@ mod impl_writer {
         Ok(Continuation::Continue)
     }
 
-    pub fn write_to_pty_with_flush(
+    pub fn try_write_to_pty_with_flush(
         writer: &mut ControllerWriter,
         data: &[u8],
-        error_msg: &str,
         output_event_ch_tx_half: &SyncSender<PtyOutputEvent>,
-    ) -> miette::Result<()> {
+    ) -> Result<(), PtyError> {
         writer.write_all(data).map_err(|e| {
             let _unused = output_event_ch_tx_half
                 .send(PtyOutputEvent::WriteError(format!("Write failed: {e}")));
-            miette!("{error_msg}")
+            PtyError::Io(e)
         })?;
         writer.flush().map_err(|e| {
             let _unused = output_event_ch_tx_half
                 .send(PtyOutputEvent::WriteError(format!("Flush failed: {e}")));
-            miette!("{error_msg}")
+            PtyError::Io(e)
         })?;
         ok!()
     }

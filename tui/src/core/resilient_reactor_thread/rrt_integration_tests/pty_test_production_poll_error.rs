@@ -17,6 +17,7 @@
 //! [`StdinEvent::Error`]: crate::tui::terminal_lib_backends::direct_to_ansi::input::channel_types::StdinEvent::Error
 
 use crate::{Continuation, PtyTestContext, PtyTestMode, RRTEvent, RRTWorker,
+            RRTWorkerAndInterrupt,
             tui::terminal_lib_backends::direct_to_ansi::input::{channel_types::{PollerEvent,
                                                                                 StdinEvent},
                                                                 mio_poller::MioPollWorker}};
@@ -62,7 +63,10 @@ fn controlled() {
     println!("{POLL_ERROR_READY}");
     std::io::stdout().flush().expect("Failed to flush");
 
-    let (mut worker, _waker) = MioPollWorker::create_and_register_os_sources(
+    let RRTWorkerAndInterrupt {
+        mut worker,
+        interrupt: _waker,
+    } = MioPollWorker::create_and_register_os_sources(
         (),
         tokio::sync::broadcast::channel(1).1,
     )

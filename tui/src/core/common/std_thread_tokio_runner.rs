@@ -32,10 +32,10 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 /// require an active Tokio reactor, such as:
 /// - **[`Spinner`]** (spawns a background animation task driven by
 ///   [`tokio::time::interval`]).
-/// - **[`choose`]** and **[`ReadlineAsyncContext`]** (drive async terminal input
+/// - **[`try_choose`]** and **[`ReadlineAsyncContext`]** (drive async terminal input
 ///   streams).
-/// - **[`PtySessionBuilder::start_async`]** (streams child-process [`PTY`] output over
-///   async channels).
+/// - **[`PtySessionBuilder::try_start_async`]** (streams child-process [`PTY`] output
+///   over async channels).
 /// - **Async I/O, timers, and signal handling** (such as [`reqwest::Client`],
 ///   [`tokio::time::timeout`], and [`tokio::signal::ctrl_c`] via [`tokio::select!`]).
 ///
@@ -65,15 +65,14 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 ///        [`std::thread::scope`] so `async_fn` can borrow stack references without
 ///        `'static` bounds or [`Arc`] cloning.
 ///      - [`Self::run_non_blocking`] runs in the background while the CLI/TUI application
-///        executes and returns a [`StdThreadTokioJoinHandle`] to be joined at
-///        application exit.
+///        executes and returns a [`StdThreadTokioJoinHandle`] to be joined at application
+///        exit.
 ///
 /// [`Arc`]: std::sync::Arc
 /// [`async`]: https://doc.rust-lang.org/std/keyword.async.html
-/// [`choose`]: crate::choose
 /// [`Handle::block_on`]: tokio::runtime::Handle::block_on
 /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
-/// [`PtySessionBuilder::start_async`]: crate::core::pty::PtySessionBuilder::start_async
+/// [`PtySessionBuilder::try_start_async`]: crate::core::pty::PtySessionBuilder::try_start_async
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`reqwest::Client`]: reqwest::Client
 /// [`Spinner`]: crate::Spinner
@@ -82,6 +81,7 @@ use std::thread::{JoinHandle, ScopedJoinHandle};
 /// [`tokio::task::block_in_place`]: tokio::task::block_in_place
 /// [`tokio::time::interval`]: tokio::time::interval
 /// [`tokio::time::timeout`]: tokio::time::timeout
+/// [`try_choose`]: crate::try_choose
 /// [af]: std::ops::AsyncFnOnce
 /// [bo]: tokio::runtime::Runtime::block_on
 /// [ct]: tokio::runtime::Builder::new_current_thread

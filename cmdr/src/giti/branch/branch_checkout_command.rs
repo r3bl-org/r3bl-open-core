@@ -2,12 +2,13 @@
 
 use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, ui_str},
             prefix_single_select_instruction_header};
-use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, DefaultIoDevices,
-               RepoStatus, TuiAvailabilityChooseExt, choose, cli_text_inline,
-               cli_text_line, inline_vec,
+use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, DefaultIoDevices,
+               RepoStatus, TuiAvailabilityChooseExt, cli_text_inline, cli_text_line,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet},
-               try_checkout_existing_local_branch, try_get_current_branch_name,
-               try_get_local_branches, try_is_working_directory_clean, vp_height};
+               try_checkout_existing_local_branch, try_choose,
+               try_get_current_branch_name, try_get_local_branches,
+               try_is_working_directory_clean, vp_height};
 
 /// The main function for `giti branch checkout` command.
 ///
@@ -17,14 +18,14 @@ use r3bl_tui::{BranchExists, CommandRunResult, CommonResult, DefaultIoDevices,
 /// - Git operations fail (not a git repository, permission issues, etc.)
 /// - User interaction fails (terminal I/O issues)
 /// - Branch checkout fails (conflicts, invalid branch name, etc.)
-pub async fn handle_branch_checkout_command(
+pub async fn try_handle_branch_checkout_command(
     maybe_branch_name: Option<String>,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+) -> miette::Result<CommandRunReport<CommandRunDetails>> {
     match maybe_branch_name {
         Some(ref branch_name) => {
-            command_execute::checkout_branch_if_not_current(branch_name).await
+            command_execute::try_checkout_branch_if_not_current(branch_name).await
         }
-        None => user_interaction::handle_branch_selection().await,
+        None => user_interaction::try_handle_branch_selection().await,
     }
 }
 
@@ -48,16 +49,15 @@ mod command_execute {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn checkout_branch_if_not_current(
+    pub async fn try_checkout_branch_if_not_current(
         branch_name: &str,
-    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = try_get_local_branches().await;
-        let (_, branch_info) = res?;
+    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+        let (_, branch_info) = try_get_local_branches().await.result?;
 
         // Early return if the branch does not exist locally.
         match branch_info.exists_locally(branch_name) {
             BranchExists::No => {
-                let it = CommandRunResult::Noop(
+                let it = CommandRunReport::Noop(
                     ui_str::branch_checkout_display::error_branch_does_not_exist_msg(
                         branch_name,
                     ),
@@ -69,11 +69,10 @@ mod command_execute {
         }
 
         // Early return if the branch_name is already checked out.
-        let (res, _cmd) = try_get_current_branch_name().await;
-        let current_branch = res?;
+        let current_branch = try_get_current_branch_name().await.result?;
 
         if branch_name == current_branch.as_str() {
-            let it = CommandRunResult::Noop(
+            let it = CommandRunReport::Noop(
                 ui_str::branch_checkout_display::info_already_on_current_branch_msg(
                     &current_branch,
                 ),
@@ -83,8 +82,8 @@ mod command_execute {
         }
 
         // Early return if there are modified files.
-        if let (Ok(RepoStatus::Dirty), _cmd) = try_is_working_directory_clean().await {
-            let it = CommandRunResult::Noop(
+        if let Ok(RepoStatus::Dirty) = try_is_working_directory_clean().await.result {
+            let it = CommandRunReport::Noop(
                 ui_str::modified_files_display::warn_modified_files_exist_msg(
                     branch_name,
                 ),
@@ -93,17 +92,20 @@ mod command_execute {
             return Ok(it);
         }
 
-        checkout_branch(branch_name, &current_branch).await
+        try_checkout_branch(branch_name, &current_branch).await
     }
 
-    pub async fn checkout_branch(
+    pub async fn try_checkout_branch(
         branch_name: &str,
         current_branch: &str,
-    ) -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res_output, cmd) = try_checkout_existing_local_branch(branch_name).await;
+    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+        let CommandRunOutcome {
+            result: res_output,
+            command: cmd,
+        } = try_checkout_existing_local_branch(branch_name).await;
         match res_output {
             Ok(()) => {
-                let it = CommandRunResult::Run(
+                let it = CommandRunReport::Run(
                     ui_str::branch_checkout_display::info_checkout_success_msg(
                         branch_name,
                         current_branch,
@@ -113,13 +115,13 @@ mod command_execute {
                 );
                 Ok(it)
             }
-            Err(report) => {
-                let it = CommandRunResult::Fail(
+            Err(err) => {
+                let it = CommandRunReport::Fail(
                     ui_str::branch_checkout_display::error_failed_to_checkout_branch_msg(
                         branch_name,
                     ),
                     cmd,
-                    report,
+                    err.into(),
                 );
                 Ok(it)
             }
@@ -131,12 +133,10 @@ mod user_interaction {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn handle_branch_selection()
-    -> CommonResult<CommandRunResult<CommandRunDetails>> {
-        let (res, _cmd) = try_get_local_branches().await;
-
+    pub async fn try_handle_branch_selection()
+    -> miette::Result<CommandRunReport<CommandRunDetails>> {
         // Early return if the command fails.
-        let Ok((_, branch_info)) = res else {
+        let Ok((_, branch_info)) = try_get_local_branches().await.result else {
             return Ok(noop());
         };
 
@@ -154,7 +154,7 @@ mod user_interaction {
         };
 
         let mut default_io_devices = DefaultIoDevices::default();
-        let maybe_user_choice = choose(
+        let maybe_user_choice = try_choose(
             header_with_instructions,
             branch_info.other_branches,
             Some(vp_height(20)),
@@ -172,11 +172,12 @@ mod user_interaction {
         };
 
         // Actually checkout the user selected branch.
-        command_execute::checkout_branch(&user_choice, &branch_info.current_branch).await
+        command_execute::try_checkout_branch(&user_choice, &branch_info.current_branch)
+            .await
     }
 
-    fn noop() -> CommandRunResult<CommandRunDetails> {
-        CommandRunResult::Noop(
+    fn noop() -> CommandRunReport<CommandRunDetails> {
+        CommandRunReport::Noop(
             ui_str::branch_checkout_display::no_suitable_branch_available_msg(),
             details::empty(),
         )

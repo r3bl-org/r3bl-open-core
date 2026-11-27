@@ -3,7 +3,7 @@
 use crate::TuiStyle;
 
 /// This is different from [`crate::TuiStylesheet`], since this encapsulates styling
-/// information that is specific to [`crate::choose()`] that are not generalized.
+/// information that is specific to [`crate::try_choose()`] that are not generalized.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StyleSheet {
     pub focused_and_selected_style: TuiStyle,

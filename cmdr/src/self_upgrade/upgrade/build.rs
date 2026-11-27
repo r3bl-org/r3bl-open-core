@@ -150,7 +150,7 @@ pub(crate) mod toolchain_setup {
                 toolchain_cli_args::NIGHTLY_TOOLCHAIN,
                 toolchain_cli_args::FORCE,
             ])
-            .start_async()
+            .try_start_async()
             .map_err(Error::other)?;
 
         loop {
@@ -230,7 +230,7 @@ pub(crate) mod cargo_installer {
         let mut session = PtySessionBuilder::new(toolchain_bin::CARGO)
             .cli_args(args)
             .with_config(DefaultPtySessionConfig + PtySessionConfigToken::CaptureOsc)
-            .start_async()
+            .try_start_async()
             .map_err(Error::other)?;
 
         loop {

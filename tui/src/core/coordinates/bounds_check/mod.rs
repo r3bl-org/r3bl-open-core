@@ -305,7 +305,7 @@
 //!
 //! // Convert to exclusive range for Rust iteration
 //! let iter_range = scroll_region.to_exclusive();  // vp_row(2)..vp_row(6)
-//! // buffer.shift_lines_in_range(ShiftLinesDirection::Up, iter_range, len(1));
+//! // buffer.try_shift_lines_in_range(ShiftLinesDirection::Up, iter_range, len(1));
 //! ```
 //!
 //! ### Decision Tree: Which Trait Do I Need?

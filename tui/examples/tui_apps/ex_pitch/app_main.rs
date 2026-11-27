@@ -2,14 +2,14 @@
 
 use crate::ex_pitch::state::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 use r3bl_tui::{App, ArrayBoundsCheck, ArrayOverflowResult, BoxedSafeApp, CIndex,
-               CommonResult, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI,
-               EditMode, EditorComponent, EditorEngineConfig, EventPropagation,
-               FlexBoxId, GlobalData, HasFocus, InputEvent, Key, KeyPress,
-               LayoutDirection, LayoutManagement, LengthOps, ModifierKeysMask,
-               NumericValue, PerformPositioningAndSizing, RenderOpCommon, RenderOpIR,
-               RenderOpIRVec, RenderPipeline, SPACER_GLYPH, Surface, SurfaceProps,
-               SurfaceRender, TerminalWindowMainThreadSignal, TuiStylesheet, VPSize,
-               ZOrder, box_end, box_start, c_len, glyphs, inline_string, new_style, ok,
+               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI, EditMode,
+               EditorComponent, EditorEngineConfig, EventPropagation, FlexBoxId,
+               GlobalData, HasFocus, InputEvent, Key, KeyPress, LayoutDirection,
+               LayoutManagement, LengthOps, ModifierKeysMask, NumericValue,
+               PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpIRVec,
+               RenderPipeline, SPACER_GLYPH, Surface, SurfaceProps, SurfaceRender,
+               TerminalWindowMainThreadSignal, TuiStylesheet, VPSize, ZOrder, box_end,
+               box_start, c_len, glyphs, inline_string, new_style, ok,
                render_component_in_current_box, render_tui_styled_texts_into,
                req_size_pc, send_signal, surface, throws_with_return, tui_color,
                tui_styled_text, tui_styled_texts, tui_stylesheet, vp_col, vp_height,
@@ -93,7 +93,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             // Ctrl + n => next slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('n'),
@@ -139,7 +139,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             _has_focus: &mut HasFocus,
-        ) -> CommonResult<EventPropagation> {
+        ) -> miette::Result<EventPropagation> {
             throws_with_return!({
                 let state = &mut global_data.state;
                 match action {
@@ -160,7 +160,7 @@ mod app_main_impl_app_trait {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let window_size = global_data.window_size;
 
             // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender)
@@ -217,7 +217,7 @@ mod perform_layout {
             global_data: &mut GlobalData<State, AppSignal>,
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
-        ) -> CommonResult {
+        ) -> miette::Result<()> {
             let component_id = FlexBoxId::from(Id::Editor);
             // Layout editor component, and render it.
             {
@@ -306,7 +306,7 @@ mod stylesheet {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
+    pub fn create_stylesheet() -> miette::Result<TuiStylesheet> {
         throws_with_return!({
             tui_stylesheet! {
                 new_style! {

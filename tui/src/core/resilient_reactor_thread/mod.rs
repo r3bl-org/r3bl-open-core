@@ -727,6 +727,9 @@
 //! # #[derive(Debug)]
 //! # struct MyInterrupt;
 //! # impl RRTSoftwareInterrupt for MyInterrupt { fn trigger_software_interrupt(&self) {} }
+//! # #[derive(Debug, thiserror::Error, miette::Diagnostic)]
+//! # #[error("my worker error")]
+//! # struct MyCreateError;
 //! #
 //! // 1. Define your worker (creates resources + runs the work loop)
 //! #[derive(Debug)]
@@ -735,14 +738,18 @@
 //! impl RRTWorker for MyWorker {
 //!     type Output = MyEvent;
 //!     type Interrupt = MyInterrupt;
+//!     type CreateError = MyCreateError;
 //!
 //!     fn create_and_register_os_sources(
 //!         _config: Self::Config,
 //!         _receiver: tokio::sync::broadcast::Receiver<Self::Input>,
-//!     ) -> miette::Result<(Self, Self::Interrupt)> {
+//!     ) -> Result<RRTWorkerAndInterrupt<Self>, Self::CreateError> {
 //!         // Create worker with OS resources and a coupled RRTSoftwareInterrupt.
 //!         // e.g., create mio::Poll, register fds, create mio::Waker from registry.
-//!         Ok((MyWorker { /* ... */ }, MyInterrupt))
+//!         Ok(RRTWorkerAndInterrupt {
+//!             worker: MyWorker { /* ... */ },
+//!             interrupt: MyInterrupt,
+//!         })
 //!     }
 //!
 //!     fn block_until_ready_then_dispatch(&mut self, sender: &Sender<RRTEvent<Self::Output>>) -> Continuation {

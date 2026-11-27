@@ -4,7 +4,7 @@ use super::{ReleaseAsset, ReleaseTarget,
             super::{CrateDistribution, CrateName, CrateVersion, EndpointUrl,
                     NoViableSourceReason, UpgradeError, toolchain_bin,
                     toolchain_cli_args}};
-use r3bl_tui::CommandOutputResult;
+use r3bl_tui::ProcessExecutionOutcome;
 
 /// Resolved execution source for performing the upgrade.
 ///
@@ -14,10 +14,10 @@ use r3bl_tui::CommandOutputResult;
 /// the exact execution path before initiating downloads or builds.
 ///
 /// Evaluated by [`UpgradeSource::try_resolve`] prior to calling
-/// [`perform_upgrade`].
+/// [`try_perform_upgrade`].
 ///
-/// [`perform_upgrade`]: crate::self_upgrade::perform_upgrade
 /// [`R3BL_VERSIONS_JSONC_URL`]: crate::self_upgrade::R3BL_VERSIONS_JSONC_URL
+/// [`try_perform_upgrade`]: crate::self_upgrade::try_perform_upgrade
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpgradeSource {
     /// Pre-compiled binary release archive.
@@ -95,7 +95,7 @@ mod impl_upgrade_source {
             };
 
             if release_asset_urls.is_some() {
-                return pure_evaluator::evaluate_upgrade_source_pure(
+                return pure_evaluator::try_evaluate_upgrade_source_pure(
                     crate_name,
                     pinned_version,
                     distribution,
@@ -105,7 +105,7 @@ mod impl_upgrade_source {
             }
 
             if distribution == CrateDistribution::ClosedSource {
-                return pure_evaluator::evaluate_upgrade_source_pure(
+                return pure_evaluator::try_evaluate_upgrade_source_pure(
                     crate_name,
                     pinned_version,
                     CrateDistribution::ClosedSource,
@@ -117,7 +117,7 @@ mod impl_upgrade_source {
             let has_rustup =
                 toolchain_probe::is_toolchain_binary_on_path(toolchain_bin::RUSTUP);
 
-            pure_evaluator::evaluate_upgrade_source_pure(
+            pure_evaluator::try_evaluate_upgrade_source_pure(
                 crate_name,
                 pinned_version,
                 CrateDistribution::OpenSource,
@@ -148,7 +148,7 @@ mod impl_upgrade_source {
 
             let has_rustup =
                 toolchain_probe::is_toolchain_binary_on_path(toolchain_bin::RUSTUP);
-            pure_evaluator::evaluate_source_fallback_pure(
+            pure_evaluator::try_evaluate_source_fallback_pure(
                 crate_name,
                 pinned_version,
                 has_rustup,
@@ -171,7 +171,7 @@ pub mod pure_evaluator {
     /// Returns [`UpgradeError::NoViableUpgradeSource`] if `release_asset_urls` is `None`
     /// and either `distribution` is [`CrateDistribution::ClosedSource`] or `rustup` is
     /// unavailable.
-    pub fn evaluate_upgrade_source_pure(
+    pub fn try_evaluate_upgrade_source_pure(
         crate_name: &CrateName,
         pinned_version: CrateVersion,
         distribution: CrateDistribution,
@@ -196,7 +196,7 @@ pub mod pure_evaluator {
 
         // Open-source fallback: requires rustup to install and execute the nightly
         // toolchain.
-        evaluate_source_fallback_pure(crate_name, pinned_version, has_rustup)
+        try_evaluate_source_fallback_pure(crate_name, pinned_version, has_rustup)
     }
 
     /// Resolves the open-source `crates.io` compilation fallback source (`rustup`).
@@ -204,7 +204,7 @@ pub mod pure_evaluator {
     /// # Errors
     ///
     /// Returns [`UpgradeError::NoViableUpgradeSource`] if `rustup` is not on `$PATH`.
-    pub fn evaluate_source_fallback_pure(
+    pub fn try_evaluate_source_fallback_pure(
         crate_name: &CrateName,
         pinned_version: CrateVersion,
         has_rustup: bool,
@@ -237,8 +237,8 @@ pub mod toolchain_probe {
             .arg(toolchain_cli_args::VERSION)
             .output();
         matches!(
-            CommandOutputResult::from(res_output),
-            CommandOutputResult::Success(_)
+            ProcessExecutionOutcome::from(res_output),
+            ProcessExecutionOutcome::Success(_)
         )
     }
 }
@@ -260,7 +260,7 @@ mod tests {
         let closed_name = CrateName::from("r3bl-closed");
 
         // Open source with release asset available -> ReleaseArchive.
-        let res_open = pure_evaluator::evaluate_upgrade_source_pure(
+        let res_open = pure_evaluator::try_evaluate_upgrade_source_pure(
             &cmdr_name,
             v_0_0_25,
             CrateDistribution::OpenSource,
@@ -278,7 +278,7 @@ mod tests {
         );
 
         // Closed source with release asset available -> ReleaseArchive.
-        let res_closed = pure_evaluator::evaluate_upgrade_source_pure(
+        let res_closed = pure_evaluator::try_evaluate_upgrade_source_pure(
             &closed_name,
             v_1_0_0,
             CrateDistribution::ClosedSource,
@@ -302,7 +302,7 @@ mod tests {
         let cmdr_name = CrateName::from("r3bl-cmdr");
 
         // rustup on PATH -> BuildFromSourceRustup.
-        let res_rustup = pure_evaluator::evaluate_upgrade_source_pure(
+        let res_rustup = pure_evaluator::try_evaluate_upgrade_source_pure(
             &cmdr_name,
             v_0_0_25,
             CrateDistribution::OpenSource,
@@ -318,7 +318,7 @@ mod tests {
         );
 
         // No rustup on PATH -> Err(NoViableUpgradeSource).
-        let res_none = pure_evaluator::evaluate_upgrade_source_pure(
+        let res_none = pure_evaluator::try_evaluate_upgrade_source_pure(
             &cmdr_name,
             v_0_0_25,
             CrateDistribution::OpenSource,
@@ -339,7 +339,7 @@ mod tests {
         let closed_name = CrateName::from("r3bl-closed");
 
         // Closed source even with rustup installed -> Err(NoViableUpgradeSource).
-        let res = pure_evaluator::evaluate_upgrade_source_pure(
+        let res = pure_evaluator::try_evaluate_upgrade_source_pure(
             &closed_name,
             CrateVersion::try_parse("1.0.0").unwrap(),
             CrateDistribution::ClosedSource,

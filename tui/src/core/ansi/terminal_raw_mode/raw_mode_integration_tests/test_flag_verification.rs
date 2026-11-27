@@ -124,7 +124,7 @@ fn controlled() {
     let stdin = std::io::stdin();
 
     // Enable raw mode using the guard
-    let _guard = match RawModeGuard::new() {
+    let _guard = match RawModeGuard::try_new() {
         Ok(guard) => guard,
         Err(err) => {
             eprintln!("{GLYPH_WARNING} Controlled: Failed to enable raw mode: {err}");
